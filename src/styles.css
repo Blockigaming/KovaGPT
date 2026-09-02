@@ -2104,6 +2104,15 @@ body {
     scrollbar-width: none;
   }
 
+  .kova-settings-dialog {
+    background-color: var(--surface-modal);
+    color: var(--popover-foreground);
+    /* DialogContent sets a duration for its open/close motion. Without an
+       explicit property list, theme colors interpolate at a different pace
+       from the inner Settings surface and briefly split the panel in two. */
+    transition-property: opacity, transform;
+  }
+
   .kova-settings-dialog [role="tab"] {
     min-height: 2.5rem;
     transition:

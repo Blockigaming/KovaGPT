@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
@@ -73,7 +73,8 @@ export const Route = createFileRoute("/projects")({
 });
 
 function ProjectsPage() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +92,10 @@ function ProjectsPage() {
   });
   const [showArchived, setShowArchived] = useState(false);
   const [deletingProject, setDeletingProject] = useState<ProjectSummary | null>(null);
+  const [resolvedUserKey, setResolvedUserKey] = useState<string | null>(null);
+  const currentUserKeyRef = useRef(userKey);
+  const refreshSequenceRef = useRef(0);
+  currentUserKeyRef.current = userKey;
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("kova-projects-view", view);
@@ -129,6 +134,7 @@ function ProjectsPage() {
   const [renameBusy, setRenameBusy] = useState(false);
 
   async function togglePin(p: ProjectSummary) {
+    const operationUserKey = userKey;
     const next = !p.pinned_at;
     setProjects((prev) =>
       prev.map((x) =>
@@ -138,11 +144,13 @@ function ProjectsPage() {
     try {
       await fnPin({ data: { id: p.id, pinned: next } });
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed to pin");
       void refresh();
     }
   }
   async function toggleArchive(p: ProjectSummary) {
+    const operationUserKey = userKey;
     const archive = !p.archived_at;
     setProjects((prev) =>
       prev.map((x) =>
@@ -151,29 +159,37 @@ function ProjectsPage() {
     );
     try {
       await fnArchive({ data: { id: p.id, archived: archive } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.success(archive ? "Project archived" : "Project restored");
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed");
       void refresh();
     }
   }
   async function handleDuplicate(p: ProjectSummary) {
+    const operationUserKey = userKey;
     try {
       const { id } = await fnDuplicate({ data: { id: p.id } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.success("Project duplicated");
       void refresh();
       await navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed to duplicate");
     }
   }
   async function handleDelete(p: ProjectSummary) {
+    const operationUserKey = userKey;
     const prev = projects;
     setProjects((cur) => cur.filter((x) => x.id !== p.id));
     try {
       await fnDelete({ data: { id: p.id } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.success("Project deleted");
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       setProjects(prev);
       toast.error(e instanceof Error ? e.message : "Failed to delete");
     }
@@ -185,6 +201,7 @@ function ProjectsPage() {
   }
   async function saveRename() {
     if (!renameFor || !renameName.trim()) return;
+    const operationUserKey = userKey;
     setRenameBusy(true);
     const target = renameFor;
     const nextName = renameName.trim();
@@ -196,42 +213,85 @@ function ProjectsPage() {
     );
     try {
       await fnUpdate({ data: { id: target.id, name: nextName, description: nextDesc || null } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       setRenameFor(null);
       toast.success("Project updated");
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed to update");
       void refresh();
     } finally {
-      setRenameBusy(false);
+      if (currentUserKeyRef.current === operationUserKey) setRenameBusy(false);
     }
   }
 
   async function refresh() {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !userKey || currentUserKeyRef.current !== userKey) return;
+    const requestUserKey = userKey;
+    const requestId = ++refreshSequenceRef.current;
     setLoading(true);
     setLoadError(null);
     try {
       const [p, i] = await Promise.all([fnList(), fnInvites()]);
+      if (requestId !== refreshSequenceRef.current || currentUserKeyRef.current !== requestUserKey)
+        return;
       setProjects(p);
       setInvites(i);
     } catch (e) {
+      if (requestId !== refreshSequenceRef.current || currentUserKeyRef.current !== requestUserKey)
+        return;
       setLoadError(e instanceof Error ? e.message : "Could not load your projects.");
     } finally {
-      setLoading(false);
+      if (
+        requestId === refreshSequenceRef.current &&
+        currentUserKeyRef.current === requestUserKey
+      ) {
+        setResolvedUserKey(requestUserKey);
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) refresh(); /* eslint-disable-next-line */
-  }, [isLoaded, isSignedIn]);
+    if (!isLoaded) return;
+
+    refreshSequenceRef.current += 1;
+    setProjects([]);
+    setInvites([]);
+    setLoadError(null);
+    setQuery("");
+    setShowArchived(false);
+    setDropProjectId(null);
+    setCreateOpen(false);
+    setName("");
+    setDescription("");
+    setBusy(false);
+    setAiBusy(false);
+    setRenameFor(null);
+    setRenameName("");
+    setRenameDesc("");
+    setRenameBusy(false);
+    setDeletingProject(null);
+
+    if (!isSignedIn || !userKey) {
+      setResolvedUserKey(null);
+      setLoading(false);
+      return;
+    }
+
+    setResolvedUserKey(null);
+    void refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [isLoaded, isSignedIn, userKey]);
 
   async function handleCreate() {
     if (!name.trim()) return;
+    const operationUserKey = userKey;
     setBusy(true);
     try {
       const { id } = await fnCreate({
         data: { name: name.trim(), description: description.trim() || null },
       });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       setCreateOpen(false);
       setName("");
       setDescription("");
@@ -260,9 +320,10 @@ function ProjectsPage() {
       void refresh();
       await navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed to create project");
     } finally {
-      setBusy(false);
+      if (currentUserKeyRef.current === operationUserKey) setBusy(false);
     }
   }
 
@@ -283,6 +344,7 @@ function ProjectsPage() {
   ];
   const [aiBusy, setAiBusy] = useState(false);
   async function generateWithKova() {
+    const operationUserKey = userKey;
     setAiBusy(true);
     try {
       const res = await fetchWithTimeoutAuthenticated(
@@ -299,9 +361,11 @@ function ProjectsPage() {
         throw new Error(data?.error || "Suggestion service unavailable");
       }
       const data = (await res.json()) as { name?: string; description?: string };
+      if (currentUserKeyRef.current !== operationUserKey) return;
       if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(
         e instanceof DOMException && e.name === "TimeoutError"
           ? "Suggestion timed out. Check your connection and try again."
@@ -310,73 +374,72 @@ function ProjectsPage() {
             : "Couldn't generate suggestion",
       );
     } finally {
-      setAiBusy(false);
+      if (currentUserKeyRef.current === operationUserKey) setAiBusy(false);
     }
   }
 
   async function handleAccept(id: string) {
+    const operationUserKey = userKey;
     try {
       const { project_id } = await fnAccept({ data: { invite_id: id } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.success("Joined project");
       navigate({ to: "/projects/$projectId", params: { projectId: project_id } });
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
   async function handleDecline(id: string) {
+    const operationUserKey = userKey;
     try {
       await fnDecline({ data: { invite_id: id } });
+      if (currentUserKeyRef.current !== operationUserKey) return;
       setInvites((prev) => prev.filter((i) => i.invite_id !== id));
     } catch (e) {
+      if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
 
-  if (!isLoaded) {
-    return (
-      <AppShell>
-        <div className="max-w-5xl mx-auto p-6 md:p-8 w-full space-y-6">
-          <div className="h-8 w-40 rounded bg-muted animate-pulse" />
-          <SkeletonGrid count={6} minWidth={240} />
-        </div>
-      </AppShell>
-    );
-  }
-  if (!isSignedIn) {
-    return (
-      <AppShell>
-        <div className="kova-empty-state mx-auto mt-12 max-w-2xl">
-          <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold mb-2">Sign in to use Projects</h1>
-          <p className="text-muted-foreground mb-6">
-            Create shared workspaces, invite teammates, and collaborate on chats.
-          </p>
-          <SignInButton mode="modal">
-            <Button>Sign in</Button>
-          </SignInButton>
-        </div>
-      </AppShell>
-    );
-  }
+  const isLoading =
+    !isLoaded || Boolean(isSignedIn && (!userKey || loading || resolvedUserKey !== userKey));
 
   return (
     <AppShell>
-      <div className="kova-page kova-secondary-page pb-24 lg:pb-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        aria-labelledby="projects-title"
+        aria-busy={isLoading || undefined}
+        className="kova-page kova-secondary-page pb-24 lg:pb-8"
+      >
         <WorkspacePageHeader
           icon={FolderKanban}
           title="Projects"
+          titleId="projects-title"
           description="Shared workspaces for your chats, files, instructions, and team."
           actions={
-            <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
-              <Plus className="mr-1.5 h-4 w-4" />
-              New project
-            </Button>
+            isSignedIn && !isLoading ? (
+              <Button
+                onClick={() => setCreateOpen(true)}
+                className="hidden min-h-11 lg:inline-flex"
+              >
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                New project
+              </Button>
+            ) : null
           }
         />
 
-        {invites.length > 0 && (
-          <div className="mb-6 border rounded-xl p-4 bg-accent/30">
-            <div className="text-sm font-medium mb-3">Pending invitations</div>
+        {!isLoading && isSignedIn && invites.length > 0 && (
+          <section
+            className="mb-6 rounded-xl border bg-accent/30 p-4"
+            aria-labelledby="project-invitations-title"
+          >
+            <h2 id="project-invitations-title" className="mb-3 text-sm font-medium">
+              Pending invitations
+            </h2>
             <div className="space-y-2">
               {invites.map((inv) => (
                 <div
@@ -388,27 +451,60 @@ function ProjectsPage() {
                     <div className="text-xs text-muted-foreground">Role: {inv.role}</div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleAccept(inv.invite_id)}>
-                      <Check className="w-3.5 h-3.5 mr-1" />
+                    <Button
+                      size="sm"
+                      className="min-h-11"
+                      onClick={() => handleAccept(inv.invite_id)}
+                    >
+                      <Check className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
                       Accept
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDecline(inv.invite_id)}>
-                      <XIcon className="w-3.5 h-3.5 mr-1" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="min-h-11"
+                      onClick={() => handleDecline(inv.invite_id)}
+                    >
+                      <XIcon className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
                       Decline
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {loading ? (
-          <SkeletonGrid count={6} minWidth={240} />
+        {isLoading ? (
+          <section role="status" aria-labelledby="projects-loading-title" className="space-y-6">
+            <h2 id="projects-loading-title" className="sr-only">
+              Loading projects
+            </h2>
+            <SkeletonGrid count={6} minWidth={240} />
+          </section>
+        ) : !isSignedIn ? (
+          <section
+            className="kova-empty-state mx-auto mt-8 max-w-2xl"
+            aria-labelledby="projects-sign-in-title"
+          >
+            <FolderKanban
+              className="mx-auto mb-4 h-10 w-10 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <h2 id="projects-sign-in-title" className="mb-2 text-xl font-semibold">
+              Sign in to use Projects
+            </h2>
+            <p className="mb-6 text-muted-foreground">
+              Create shared workspaces, invite teammates, and collaborate on chats.
+            </p>
+            <SignInButton mode="modal">
+              <Button className="min-h-11">Sign in</Button>
+            </SignInButton>
+          </section>
         ) : loadError ? (
           <ErrorState
             title="Couldn't load your projects"
-            description={loadError}
+            description="Your projects are temporarily unavailable. Try again in a moment."
             onRetry={refresh}
           />
         ) : projects.length === 0 ? (
@@ -416,9 +512,9 @@ function ProjectsPage() {
             icon={FolderKanban}
             title="No projects yet"
             description="Create a project to collaborate on chats, files, notes, and tasks with your team."
-            tip="Press N to start a new chat, or click New project to begin."
+            tip="Create one project for each long-running goal or team workspace."
             action={
-              <Button onClick={() => setCreateOpen(true)}>
+              <Button className="min-h-11" onClick={() => setCreateOpen(true)}>
                 <Plus className="w-4 h-4 mr-1.5" />
                 Create project
               </Button>
@@ -532,8 +628,8 @@ function ProjectsPage() {
                     <DropdownMenuTrigger asChild>
                       <button
                         onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 rounded-md hover:bg-background/70 opacity-70 hover:opacity-100 data-[state=open]:opacity-100 transition"
-                        aria-label="Project options"
+                        className="flex h-11 w-11 items-center justify-center rounded-md opacity-70 transition hover:bg-background/70 hover:opacity-100 data-[state=open]:opacity-100"
+                        aria-label={`Options for ${p.name}`}
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
@@ -619,13 +715,13 @@ function ProjectsPage() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search projects"
-                      className="pl-9"
+                      className="h-11 pl-9"
                     />
                   </div>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    className="h-11 rounded-md border border-input bg-background px-3 text-sm"
                     aria-label="Sort projects"
                   >
                     <option value="recent">Recent</option>
@@ -640,17 +736,19 @@ function ProjectsPage() {
                   >
                     <button
                       type="button"
-                      className={`kova-icon-button ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
+                      className={`kova-icon-button min-h-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
                       onClick={() => setView("grid")}
                       aria-label="Grid view"
+                      aria-pressed={view === "grid"}
                     >
                       Grid
                     </button>
                     <button
                       type="button"
-                      className={`kova-icon-button ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
+                      className={`kova-icon-button min-h-11 ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
                       onClick={() => setView("list")}
                       aria-label="List view"
+                      aria-pressed={view === "list"}
                     >
                       List
                     </button>
@@ -662,6 +760,11 @@ function ProjectsPage() {
                     icon={SearchIcon}
                     title="No matches"
                     description={`Nothing matches "${query}". Try a different search.`}
+                    action={
+                      <Button className="min-h-11" variant="outline" onClick={() => setQuery("")}>
+                        Clear search
+                      </Button>
+                    }
                   />
                 ) : (
                   <>
@@ -672,7 +775,9 @@ function ProjectsPage() {
                         <button
                           type="button"
                           onClick={() => setShowArchived((v) => !v)}
-                          className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground mb-2 px-1"
+                          aria-expanded={showArchived}
+                          aria-controls="archived-projects"
+                          className="mb-2 flex min-h-11 items-center gap-1.5 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
                         >
                           {showArchived ? (
                             <ChevronDown className="w-3.5 h-3.5" />
@@ -683,6 +788,7 @@ function ProjectsPage() {
                         </button>
                         {showArchived && (
                           <div
+                            id="archived-projects"
                             className={
                               view === "list" ? "kova-list opacity-80" : "kova-grid opacity-80"
                             }
@@ -700,16 +806,19 @@ function ProjectsPage() {
             );
           })()
         )}
-      </div>
+      </main>
 
       {/* Mobile floating new-project button */}
-      <button
-        onClick={() => setCreateOpen(true)}
-        className="lg:hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center transition-colors"
-        aria-label="New project"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {!isLoading && isSignedIn ? (
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="lg:hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center transition-colors"
+          aria-label="New project"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      ) : null}
 
       <Dialog open={!!renameFor} onOpenChange={(o) => !o && setRenameFor(null)}>
         <DialogContent>

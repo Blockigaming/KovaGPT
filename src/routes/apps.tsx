@@ -5,10 +5,8 @@ import {
   CONNECTOR_CATALOG,
   GOOGLE_CONNECT_IDS,
   type ConnectorItem,
-  type ConnectorCategory,
 } from "@/lib/connectors-catalog";
 import {
-  Link2,
   Search,
   Check,
   Loader2,
@@ -84,24 +82,11 @@ const RECOMMENDED_IDS = new Set([
   "apple",
 ]);
 
-const FILTER_CATEGORIES: (ConnectorCategory | "All")[] = [
-  "All",
-  "Productivity",
-  "Email",
-  "Storage & Files",
-  "Calendar",
-  "Notes & Docs",
-  "Communication",
-  "Education",
-  "Social & Media",
-  "Development",
-];
-
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "KovaGPT Apps" },
+      { title: "KovaGPT Apps & Plugins" },
       {
         name: "description",
         content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
@@ -240,7 +225,8 @@ function AppCard({
   onDetails: () => void;
   onUseInChat: () => void;
 }) {
-  const baseBtn = "text-xs px-3 py-1.5 rounded-full transition-colors shrink-0 font-medium";
+  const baseBtn =
+    "inline-flex min-h-11 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors shrink-0";
 
   let action: React.ReactNode;
   if (!configured) {
@@ -299,7 +285,7 @@ function AppCard({
   }
 
   return (
-    <li className="kova-card kova-connector-card rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
+    <li className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row">
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -308,13 +294,19 @@ function AppCard({
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2">
+      <div className="flex w-full shrink-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-col sm:items-end">
         {action}
-        <button onClick={onDetails} className="text-xs text-muted-foreground hover:text-foreground">
+        <button
+          onClick={onDetails}
+          className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground"
+        >
           Details
         </button>
         {state === "connected" && (
-          <button onClick={onUseInChat} className="text-xs font-medium hover:underline">
+          <button
+            onClick={onUseInChat}
+            className="inline-flex min-h-11 items-center px-2 text-xs font-medium hover:underline"
+          >
             Use in chat
           </button>
         )}
@@ -332,22 +324,37 @@ function GitHubManager() {
     [busy, setBusy] = useState(false),
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState<number[]>([]);
-  const reload = useCallback(
-    () =>
-      load()
-        .then(setData)
-        .catch(() => toast.error("GitHub status unavailable")),
-    [load],
-  );
+  const [loadError, setLoadError] = useState(false);
+  const reload = useCallback(() => {
+    setLoadError(false);
+    return load()
+      .then(setData)
+      .catch(() => {
+        setLoadError(true);
+        toast.error("GitHub status unavailable");
+      });
+  }, [load]);
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   useEffect(() => {
     void reload();
   }, [reload]);
+  if (!data && loadError)
+    return (
+      <section role="alert" className="rounded-xl border border-destructive/40 p-5">
+        <h2 className="font-medium">GitHub connection status is unavailable</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your connection was not changed. Try loading its status again.
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => void reload()}>
+          Try again
+        </Button>
+      </section>
+    );
   if (!data)
     return (
       <div
-        className="h-28 animate-pulse rounded-xl bg-muted"
+        className="h-28 animate-pulse rounded-xl bg-muted motion-reduce:animate-none"
         role="status"
         aria-label="Loading GitHub"
       />
@@ -404,7 +411,7 @@ function GitHubManager() {
           </span>
         ) : !data.accounts.length ? (
           <button
-            className="rounded-full bg-foreground px-4 py-2 text-sm text-background"
+            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background"
             onClick={() => void connect()}
           >
             Connect GitHub
@@ -412,13 +419,13 @@ function GitHubManager() {
         ) : (
           <div className="flex gap-2">
             <button
-              className="rounded-full border px-3 py-2 text-sm"
+              className="min-h-11 rounded-full border px-3 text-sm"
               onClick={() => void refresh().then(reload)}
             >
               Refresh installations
             </button>
             <button
-              className="rounded-full border px-3 py-2 text-sm text-destructive"
+              className="min-h-11 rounded-full border px-3 text-sm text-destructive"
               onClick={() => setDisconnectOpen(true)}
             >
               Disconnect
@@ -520,7 +527,7 @@ function GitHubManager() {
         <div className="mt-4">
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
-              className="min-h-10 flex-1 rounded-xl border px-3"
+              className="min-h-11 flex-1 rounded-xl border px-3"
               placeholder="Search GitHub repositories"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -528,14 +535,14 @@ function GitHubManager() {
             <button
               disabled={!selected.length || busy}
               onClick={() => void update(true)}
-              className="rounded-full border px-3 text-sm"
+              className="min-h-11 rounded-full border px-3 text-sm"
             >
               Grant selected
             </button>
             <button
               disabled={!selected.length || busy}
               onClick={() => void update(false)}
-              className="rounded-full border px-3 text-sm text-destructive"
+              className="min-h-11 rounded-full border px-3 text-sm text-destructive"
             >
               Remove selected
             </button>
@@ -586,7 +593,6 @@ function AppsPage() {
   const generationRef = useRef(0);
   const [lifecycleVersion, setLifecycleVersion] = useState(0);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<ConnectorCategory | "All">("All");
   const [connecting, setConnecting] = useState<Record<string, true>>({});
   const [failed, setFailed] = useState<Record<string, true>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
@@ -603,7 +609,6 @@ function AppsPage() {
   useEffect(() => {
     generationRef.current += 1;
     setQuery("");
-    setCategory("All");
     setActivity([]);
     setActivityPrincipal(null);
     setGoogleStatus(null);
@@ -633,7 +638,6 @@ function AppsPage() {
       setConnecting({});
       setFailed({});
       setQuery("");
-      setCategory("All");
       setLifecycleVersion((value) => value + 1);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -697,7 +701,7 @@ function AppsPage() {
             ? "Session expired, try again"
             : err === "exchange_failed"
               ? "Google sign-in failed, try again"
-              : `Google error: ${err}`;
+              : "Google sign-in could not be completed";
       toast.error(msg);
     }
     if (ok || err) {
@@ -768,7 +772,6 @@ function AppsPage() {
     const q = query.trim().toLowerCase();
     return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
       (c) => {
-        if (category !== "All" && c.category !== category) return false;
         if (!q) return true;
         return (
           c.label.toLowerCase().includes(q) ||
@@ -777,12 +780,11 @@ function AppsPage() {
         );
       },
     );
-  }, [query, category]);
+  }, [query]);
 
   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
   const connectedList = filtered.filter((c) => isConnected(c.id));
   const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
-  const otherList = filtered.filter((c) => !isConnected(c.id) && !RECOMMENDED_IDS.has(c.id));
 
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
@@ -859,11 +861,14 @@ function AppsPage() {
     );
   };
 
-  const showAllApps = query.trim().length > 0 || category !== "All";
-
   return (
     <AppShell>
-      <main className="kova-page kova-secondary-page max-w-5xl space-y-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        aria-labelledby="apps-title"
+        className="kova-page kova-secondary-page max-w-5xl space-y-8"
+      >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -925,99 +930,83 @@ function AppsPage() {
         </Dialog>
         <WorkspacePageHeader
           icon={PanelsTopLeft}
-          title="Your KovaGPT workspace"
-          description="Connect supported services with explicit permissions. Tokens stay server-side and consequential write actions require confirmation."
+          title="Apps & plugins"
+          titleId="apps-title"
+          description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
-
-        <div className="space-y-3">
-          <div className="relative max-w-md">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search apps"
-              className="h-10 pl-9"
+        {!isLoaded ? (
+          <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
+            <h2 id="apps-loading-title" className="sr-only">
+              Loading apps and plugins
+            </h2>
+            <div
+              aria-hidden="true"
+              className="h-28 animate-pulse rounded-xl bg-muted motion-reduce:animate-none"
             />
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {FILTER_CATEGORIES.map((c) => {
-              const active = category === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setCategory(c)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition ${
-                    active
-                      ? "bg-foreground text-background border-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
-                  {c}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {!isSignedIn && (
-          <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground flex items-start gap-3">
-            <LogIn className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
-            <div>
-              Sign in to connect apps. Your connections are saved to your KovaGPT account so they
-              follow you across devices.
-            </div>
-          </div>
-        )}
-
-        {isSignedIn && <GitHubManager />}
-
-        {filtered.length === 0 ? (
-          <div className="kova-empty-state">
-            <Search className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm font-medium">No apps match your filters</p>
-            <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>
-            <button
-              onClick={() => {
-                setQuery("");
-                setCategory("All");
-              }}
-              className="mt-3 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent"
-            >
-              Clear filters
-            </button>
-          </div>
+          </section>
+        ) : !isSignedIn ? (
+          <section
+            className="kova-empty-state mx-auto max-w-2xl"
+            aria-labelledby="apps-sign-in-title"
+          >
+            <LogIn className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <h2 id="apps-sign-in-title" className="mt-3 text-xl font-semibold">
+              Sign in to connect services
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Connect Google, Gmail, Drive, Calendar, and GitHub to use authorized context across
+              your workspace.
+            </p>
+            <SignInButton mode="modal">
+              <Button className="mt-5 min-h-11">Sign in</Button>
+            </SignInButton>
+          </section>
         ) : (
           <>
-            {connectedList.length === 0 && !query && category === "All" && (
-              <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
-                You haven't connected any apps yet. Start with a recommended one below.
-              </div>
-            )}
-            <Section
-              title="Connected"
-              subtitle="Apps that are ready to use in chat."
-              icon={<Check className="w-3.5 h-3.5 text-emerald-400/90" />}
-              items={connectedList}
-            />
-            <Section
-              title="Recommended"
-              subtitle="The most useful starting points."
-              icon={<Sparkles className="w-3.5 h-3.5 text-foreground/70" />}
-              items={recommendedList}
-            />
-            {showAllApps ? (
-              <Section
-                title={category === "All" ? "All apps" : category}
-                subtitle="Connected Google apps are available to the assistant in chat."
-                icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
-                items={otherList}
+            <label className="relative block max-w-md">
+              <span className="sr-only">Search apps and plugins</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search apps and plugins"
+                className="h-11 pl-9"
               />
+            </label>
+
+            <GitHubManager />
+
+            {filtered.length === 0 ? (
+              <section className="kova-empty-state" aria-labelledby="apps-empty-title">
+                <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
+                  No matching apps or plugins
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 min-h-11"
+                  onClick={() => setQuery("")}
+                >
+                  Clear search
+                </Button>
+              </section>
             ) : (
-              otherList.length > 0 && (
-                <div className="rounded-xl border border-border p-5 text-sm text-muted-foreground flex items-center justify-between gap-3">
-                  <span>Browse the full catalog by picking a category above or searching.</span>
-                </div>
-              )
+              <>
+                <Section
+                  title="Connected"
+                  subtitle="Ready to use in chat."
+                  icon={<Check className="h-3.5 w-3.5 text-emerald-400/90" aria-hidden="true" />}
+                  items={connectedList}
+                />
+                <Section
+                  title="Available connections"
+                  subtitle="Connect only the access you want to use."
+                  icon={<Sparkles className="h-3.5 w-3.5 text-foreground/70" aria-hidden="true" />}
+                  items={recommendedList}
+                />
+              </>
             )}
           </>
         )}

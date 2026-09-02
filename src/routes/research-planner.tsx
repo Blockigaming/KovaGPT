@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Download, FlaskConical, Plus, Save, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
+import { Button } from "@/components/ui/button";
 import { listProjects, createProjectChat, type ProjectSummary } from "@/lib/projects.functions";
 import {
   listResearchTemplates,
@@ -37,7 +38,7 @@ const starter = [
 function ResearchPlanner() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
-  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const principal = isLoaded && (!isSignedIn || userKey) ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const generationRef = useRef(0);
@@ -62,6 +63,28 @@ function ResearchPlanner() {
     [source, setSource] = useState<"balanced" | "primary" | "academic" | "recent">("balanced"),
     [projectId, setProjectId] = useState(""),
     [saving, setSaving] = useState(false);
+
+  const loadSavedWorkspaceData = useCallback(
+    async (generation: number, expectedPrincipal: string) => {
+      try {
+        const [nextTemplates, nextProjects] = await Promise.all([list({}), getProjects({})]);
+        if (generationRef.current !== generation || principalRef.current !== expectedPrincipal)
+          return;
+        setTemplates(nextTemplates);
+        setProjects(nextProjects);
+      } catch (reason) {
+        if (generationRef.current !== generation || principalRef.current !== expectedPrincipal)
+          return;
+        setError(reason instanceof Error ? reason.message : "Research plans could not be loaded");
+      } finally {
+        if (generationRef.current === generation && principalRef.current === expectedPrincipal) {
+          setLoading(false);
+        }
+      }
+    },
+    [getProjects, list],
+  );
+
   useEffect(() => {
     const generation = generationRef.current + 1;
     generationRef.current = generation;
@@ -120,22 +143,8 @@ function ResearchPlanner() {
     if (generationRef.current !== generation || principalRef.current !== principal) return;
     setDataPrincipal(principal);
     setDataGeneration(generation);
-    Promise.all([list({}), getProjects({})])
-      .then(([t, p]) => {
-        if (generationRef.current !== generation || principalRef.current !== principal) return;
-        setTemplates(t);
-        setProjects(p);
-      })
-      .catch((e) => {
-        if (generationRef.current !== generation || principalRef.current !== principal) return;
-        setError(e instanceof Error ? e.message : "Research plans could not be loaded");
-      })
-      .finally(() => {
-        if (generationRef.current === generation && principalRef.current === principal) {
-          setLoading(false);
-        }
-      });
-  }, [getProjects, isSignedIn, list, principal, userKey]);
+    void loadSavedWorkspaceData(generation, principal);
+  }, [isSignedIn, loadSavedWorkspaceData, principal, userKey]);
 
   useEffect(() => {
     if (!isLoaded || !principal) return;
@@ -165,10 +174,12 @@ function ResearchPlanner() {
     .split(/[\n,]/)
     .map((value) => value.trim())
     .filter(Boolean);
+  const hasValidSteps = steps.length > 0 && steps.every((step) => step.trim().length > 0);
   const planText = () =>
     `Research question: ${question}${sourceContext ? `\nExisting authorized context:\n${sourceContext}` : ""}\nSource preference: ${source}\nAllowed websites: ${allowed.length ? allowed.join(", ") : "No allow list"}\nPlan:\n${steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
   const savePlan = async () => {
-    if (!dataReady || dataGeneration !== generationRef.current) return;
+    if (!dataReady || dataGeneration !== generationRef.current || !name.trim() || !hasValidSteps)
+      return;
     const generation = generationRef.current;
     setSaving(true);
     try {
@@ -189,7 +200,13 @@ function ResearchPlanner() {
     }
   };
   const launch = () => {
-    if (!dataReady || dataGeneration !== generationRef.current || !question.trim()) return;
+    if (
+      !dataReady ||
+      dataGeneration !== generationRef.current ||
+      !question.trim() ||
+      !hasValidSteps
+    )
+      return;
     const handoff = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
       "kova-research-launch",
@@ -201,6 +218,16 @@ function ResearchPlanner() {
       return;
     }
     navigate({ to: "/" });
+  };
+  const retryLoad = () => {
+    if (!principal || !isSignedIn) return;
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    setDataPrincipal(principal);
+    setDataGeneration(generation);
+    setLoading(true);
+    setError(null);
+    void loadSavedWorkspaceData(generation, principal);
   };
   const download = () => {
     const url = URL.createObjectURL(
@@ -214,7 +241,12 @@ function ResearchPlanner() {
   };
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        aria-busy={loading || !dataReady || undefined}
+        className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={FlaskConical}
           title="Research Planner"
@@ -222,15 +254,37 @@ function ResearchPlanner() {
           description="Design and reuse plans before starting Deep Research. Real provider-backed research runs appear only after authorization and a real run begins."
         />
         {!isSignedIn && !loading ? (
-          <div className="mt-6 rounded-2xl border p-8 text-center">
-            Sign in to save and reuse research plans.
-          </div>
+          <section
+            className="mt-6 rounded-2xl border p-8 text-center"
+            aria-labelledby="research-sign-in-title"
+          >
+            <h2 id="research-sign-in-title" className="text-lg font-semibold">
+              Sign in to plan research
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Save reusable plans and continue them in your projects and workspace.
+            </p>
+            <SignInButton mode="modal">
+              <Button className="mt-5">Sign in</Button>
+            </SignInButton>
+          </section>
         ) : loading || !dataReady ? (
-          <div className="mt-6 h-48 animate-pulse rounded-2xl bg-muted" />
+          <section aria-busy="true" aria-labelledby="research-loading-title" className="mt-6">
+            <h2 id="research-loading-title" className="sr-only">
+              Loading research plans
+            </h2>
+            <div aria-hidden="true" className="h-48 animate-pulse rounded-2xl bg-muted" />
+          </section>
         ) : error ? (
-          <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
-            {error}
-          </div>
+          <section role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
+            <h2 className="font-medium">Research plans could not be loaded</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your saved plans are temporarily unavailable. Try again in a moment.
+            </p>
+            <Button variant="outline" className="mt-4" onClick={retryLoad}>
+              Try again
+            </Button>
+          </section>
         ) : (
           <>
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_19rem]">
@@ -254,6 +308,7 @@ function ResearchPlanner() {
                       <div className="flex items-center justify-between gap-3">
                         <strong>Attached workspace context</strong>
                         <button
+                          type="button"
                           onClick={() => setSourceContext("")}
                           className="text-xs hover:underline"
                         >
@@ -299,6 +354,7 @@ function ResearchPlanner() {
                         aria-label={`Research step ${index + 1}`}
                       />
                       <button
+                        type="button"
                         disabled={index === 0}
                         onClick={() =>
                           setSteps((all) => {
@@ -313,6 +369,7 @@ function ResearchPlanner() {
                         <ArrowUp className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
                         disabled={index === steps.length - 1}
                         onClick={() =>
                           setSteps((all) => {
@@ -327,9 +384,15 @@ function ResearchPlanner() {
                         <ArrowDown className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setSteps((all) => all.filter((_, i) => i !== index))}
+                        type="button"
+                        disabled={steps.length === 1}
+                        onClick={() =>
+                          setSteps((all) =>
+                            all.length === 1 ? all : all.filter((_, i) => i !== index),
+                          )
+                        }
                         aria-label={`Remove step ${index + 1}`}
-                        className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                        className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -337,6 +400,7 @@ function ResearchPlanner() {
                   ))}
                 </ol>
                 <button
+                  type="button"
                   onClick={() => setSteps((all) => [...all, ""])}
                   className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 hover:bg-accent"
                 >
@@ -345,7 +409,8 @@ function ResearchPlanner() {
                 </button>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
-                    disabled={saving || !name.trim() || steps.some((step) => !step.trim())}
+                    type="button"
+                    disabled={saving || !name.trim() || !hasValidSteps}
                     onClick={savePlan}
                     className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 disabled:opacity-50"
                   >
@@ -353,6 +418,7 @@ function ResearchPlanner() {
                     {saving ? "Saving…" : "Save template"}
                   </button>
                   <button
+                    type="button"
                     onClick={download}
                     className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4"
                   >
@@ -360,16 +426,24 @@ function ResearchPlanner() {
                     Export
                   </button>
                   <button
-                    disabled={!question.trim() || steps.some((step) => !step.trim())}
+                    type="button"
+                    disabled={!question.trim() || !hasValidSteps}
                     onClick={launch}
                     className="min-h-11 rounded-xl bg-foreground px-4 text-background disabled:opacity-50"
                   >
                     Start Deep Research
                   </button>
                   <button
-                    disabled={!question.trim()}
+                    type="button"
+                    disabled={!question.trim() || !hasValidSteps}
                     onClick={() => {
-                      if (!dataReady || dataGeneration !== generationRef.current) return;
+                      if (
+                        !dataReady ||
+                        dataGeneration !== generationRef.current ||
+                        !question.trim() ||
+                        !hasValidSteps
+                      )
+                        return;
                       const handoff = writePrincipalHandoff(
                         safeBrowserStorage("sessionStorage"),
                         "kova-work-draft",
@@ -407,9 +481,17 @@ function ResearchPlanner() {
                       ))}
                     </select>
                     <button
-                      disabled={!projectId || !question.trim()}
+                      type="button"
+                      disabled={!projectId || !question.trim() || !hasValidSteps}
                       onClick={async () => {
-                        if (!dataReady || dataGeneration !== generationRef.current) return;
+                        if (
+                          !dataReady ||
+                          dataGeneration !== generationRef.current ||
+                          !projectId ||
+                          !question.trim() ||
+                          !hasValidSteps
+                        )
+                          return;
                         const generation = generationRef.current;
                         try {
                           const row = await createChat({
@@ -459,6 +541,7 @@ function ResearchPlanner() {
                     {templates.map((template) => (
                       <li key={template.id}>
                         <button
+                          type="button"
                           onClick={() => {
                             setName(template.name);
                             setSteps(template.steps);

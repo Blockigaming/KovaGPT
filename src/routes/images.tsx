@@ -19,6 +19,7 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -515,29 +516,39 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
-      <main className="flex-1 flex flex-col min-w-0">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        aria-labelledby="images-title"
+        className="flex min-w-0 flex-1 flex-col"
+      >
         <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen((v) => !v)}
-              className="p-2 rounded-lg hover:bg-accent transition mr-1"
+              className="mr-1 flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-accent"
               aria-label="Toggle sidebar"
             >
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
           <div className="ml-auto flex items-center gap-2">
-            {isSignedIn ? (
+            {!isLoaded ? (
+              <div
+                aria-hidden="true"
+                className="h-11 w-36 animate-pulse rounded-full bg-muted motion-reduce:animate-none"
+              />
+            ) : isSignedIn ? (
               <UserButton />
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-semibold px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  <button className="min-h-11 rounded-full bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-muted text-foreground hover:bg-accent transition whitespace-nowrap">
+                  <button className="min-h-11 whitespace-nowrap rounded-full bg-muted px-3 text-sm font-medium text-foreground transition hover:bg-accent sm:px-4">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -548,7 +559,12 @@ function ImagesPage() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
-            <h1 className="text-[34px] sm:text-[40px] font-semibold tracking-tight">Images</h1>
+            <h1
+              id="images-title"
+              className="text-[34px] font-semibold tracking-tight sm:text-[40px]"
+            >
+              Images
+            </h1>
 
             {/* Prompt */}
             <form
@@ -578,11 +594,11 @@ function ImagesPage() {
                 <button
                   type="submit"
                   disabled={!prompt.trim() || loading}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
                   aria-label="Generate"
                 >
                   {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                   ) : (
                     <ArrowUp className="h-4 w-4" />
                   )}
@@ -598,7 +614,7 @@ function ImagesPage() {
                   <button
                     type="button"
                     onClick={() => scrollPresets(-1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles left"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -606,7 +622,7 @@ function ImagesPage() {
                   <button
                     type="button"
                     onClick={() => scrollPresets(1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles right"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -623,12 +639,13 @@ function ImagesPage() {
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
+                      aria-label={`Use ${p.label} style`}
                       className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
                     >
                       <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
                         <img
                           src={p.image}
-                          alt={p.label}
+                          alt=""
                           loading="lazy"
                           width={512}
                           height={512}
@@ -648,10 +665,17 @@ function ImagesPage() {
             {(loading || result || error) && (
               <section className="mt-8">
                 {loading && !result && (
-                  <div className="max-w-md mx-auto aspect-square rounded-2xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] animate-[imgAura_6s_ease-in-out_infinite]" />
+                  <div
+                    role="status"
+                    aria-labelledby="image-generating-label"
+                    className="relative mx-auto aspect-square max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20 ring-1 ring-border"
+                  >
+                    <span id="image-generating-label" className="sr-only">
+                      Generating image
+                    </span>
+                    <div className="absolute inset-0 animate-[imgAura_6s_ease-in-out_infinite] bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] motion-reduce:animate-none" />
                     <div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]"
+                      className="absolute inset-0 animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/25 to-transparent motion-reduce:animate-none"
                       style={{ backgroundSize: "200% 100%" }}
                     />
                     <div className="absolute inset-0 backdrop-blur-2xl" />
@@ -659,7 +683,7 @@ function ImagesPage() {
                       {Array.from({ length: 14 }).map((_, i) => (
                         <span
                           key={i}
-                          className="absolute rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.9)] animate-[floatUp_5s_linear_infinite]"
+                          className="absolute animate-[floatUp_5s_linear_infinite] rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.9)] motion-reduce:animate-none"
                           style={{
                             left: `${(i * 37) % 100}%`,
                             bottom: `-${(i * 13) % 40}px`,
@@ -673,8 +697,11 @@ function ImagesPage() {
                     </div>
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white drop-shadow-lg">
                       <div className="relative w-14 h-14">
-                        <div className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                        <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white animate-pulse" />
+                        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
+                        <Sparkles
+                          className="absolute inset-0 m-auto h-6 w-6 animate-pulse text-white motion-reduce:animate-none"
+                          aria-hidden="true"
+                        />
                       </div>
                       <div className="text-sm font-medium tracking-wide">Generating image…</div>
                     </div>
@@ -695,7 +722,7 @@ function ImagesPage() {
                           saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
                         }
                         disabled={savingImage}
-                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <Bookmark className="h-4 w-4" />{" "}
                         {savingImage ? "Saving…" : "Save to Library"}
@@ -704,41 +731,68 @@ function ImagesPage() {
                         type="button"
                         onClick={() => generate(resultPrompt)}
                         disabled={loading}
-                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <RefreshCw className="h-4 w-4" /> Generate again
                       </button>
                       <button
                         type="button"
                         onClick={() => copyGeneratedImage(result)}
-                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
                       >
                         <Copy className="h-4 w-4" /> Copy image
                       </button>
                       <a
                         href={result}
                         download="kovagpt-image.png"
-                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
                       >
                         <Download className="w-4 h-4" /> Download
                       </a>
                     </div>
                   </div>
                 )}
-                {error && <div className="mt-3 text-sm text-destructive text-center">{error}</div>}
+                {error && (
+                  <div role="alert" className="mt-3 text-center text-sm text-destructive">
+                    The image could not be generated. Please try again.
+                  </div>
+                )}
               </section>
             )}
 
             {/* My images */}
-            <section className="mt-10">
-              <h2 className="text-[22px] font-semibold tracking-tight mb-3">My images</h2>
-              {history.length === 0 ? (
+            <section className="mt-10" aria-labelledby="image-history-title">
+              <h2
+                id="image-history-title"
+                className="mb-3 text-[22px] font-semibold tracking-tight"
+              >
+                Image history
+              </h2>
+              {!isLoaded ? (
+                <div
+                  role="status"
+                  className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground"
+                >
+                  Loading image history…
+                </div>
+              ) : !isSignedIn ? (
+                <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10">
+                  <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                  <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+                    Sign in to generate images and keep your image history available across
+                    sessions.
+                  </p>
+                  <SignInButton mode="modal">
+                    <Button className="mt-5 min-h-11">Sign in</Button>
+                  </SignInButton>
+                </div>
+              ) : history.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border p-10 text-center">
                   <div className="mx-auto w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center mb-3">
-                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                    <Sparkles className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nothing here yet. Pick a style or describe an image above.
+                    Your generated images will appear here. Pick a style or describe an image above.
                   </p>
                 </div>
               ) : (
@@ -759,7 +813,7 @@ function ImagesPage() {
                       >
                         <img
                           src={h.imageUrl}
-                          alt={h.prompt}
+                          alt=""
                           loading="lazy"
                           decoding="async"
                           className="absolute inset-0 h-full w-full object-cover "
@@ -777,6 +831,7 @@ function ImagesPage() {
                               inputRef.current?.focus();
                             }}
                             className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            aria-label={`Reuse prompt: ${h.prompt}`}
                           >
                             Reuse
                           </button>
@@ -784,7 +839,7 @@ function ImagesPage() {
                             href={h.imageUrl}
                             download={`kovagpt-${h.id}.png`}
                             className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label="Download"
+                            aria-label={`Download image: ${h.prompt}`}
                           >
                             <Download className="h-3.5 w-3.5" />
                           </a>
@@ -792,7 +847,7 @@ function ImagesPage() {
                             type="button"
                             onClick={() => removeFromHistory(h.id)}
                             className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label="Remove"
+                            aria-label={`Remove image: ${h.prompt}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -882,7 +937,7 @@ function ImagesPage() {
                     setPrompt(lightbox.prompt);
                     setLightbox(null);
                   }}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-black transition hover:opacity-90"
                 >
                   <Sparkles className="w-4 h-4" /> Reuse prompt
                 </button>
@@ -892,21 +947,21 @@ function ImagesPage() {
                     setLightbox(null);
                     void generate(item.prompt);
                   }}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
                 >
                   <RefreshCw className="h-4 w-4" /> Generate again
                 </button>
                 <button
                   onClick={() => saveGeneratedImage(lightbox)}
                   disabled={savingImage}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   <Bookmark className="h-4 w-4" /> Save
                 </button>
                 <a
                   href={lightbox.imageUrl}
                   download={`kovagpt-${lightbox.id}.png`}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
                 >
                   <Download className="w-4 h-4" /> Download
                 </a>
@@ -915,7 +970,7 @@ function ImagesPage() {
                     removeFromHistory(lightbox.id);
                     setLightbox(null);
                   }}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-destructive"
                 >
                   <Trash2 className="w-4 h-4" /> Remove
                 </button>

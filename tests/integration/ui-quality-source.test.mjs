@@ -10,6 +10,7 @@ const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
+const publicShell = await readFile("src/components/public/PublicShell.tsx", "utf8");
 const publicSite = await readFile("src/components/public/PublicSite.tsx", "utf8");
 const resetPassword = await readFile("src/routes/reset-password.tsx", "utf8");
 const seoLanding = await readFile("src/components/SeoLanding.tsx", "utf8");
@@ -73,8 +74,11 @@ test("core chat surfaces use shared workspace primitives", () => {
     2,
     "adjacent public-site marks remain decorative",
   );
-  assert.match(seoLanding, /<NovaLogo decorative className="w-6 h-6" \/>/);
-  assert.match(pricing, /<NovaLogo decorative className="w-6 h-6" \/>/);
+  assert.match(publicShell, /<NovaLogo decorative className="h-7 w-7" \/>/);
+  assert.match(seoLanding, /<PublicShell>/);
+  assert.doesNotMatch(seoLanding, /<NovaLogo/);
+  assert.match(pricing, /<PublicShell>/);
+  assert.doesNotMatch(pricing, /<NovaLogo/);
   assert.match(resetPassword, /<NovaLogo decorative className="w-4 h-4" \/>/);
   assert.match(
     uiQuality,
