@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { basename, extname, join, relative } from "node:path";
 
 const root = process.cwd();
 const strictLock = process.argv.includes("--strict-lock");
@@ -58,7 +58,11 @@ export function hasLovableBundlePath(path) {
 }
 
 export function hasReadableBundleContent(path) {
-  return readable.has(extname(path));
+  return readable.has(extname(path).toLowerCase());
+}
+
+export function hasReadableRuntimeContent(path) {
+  return hasReadableBundleContent(path) || [".env.example", "Dockerfile"].includes(basename(path));
 }
 
 function trackedFiles() {
@@ -140,7 +144,7 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     if (hasLovableRuntimeSource(path)) {
       errors.push(`${path}: Lovable-named runtime source`);
     }
-    if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
+    if (!hasReadableRuntimeContent(path)) continue;
     const source = readIfPresent(path);
     if (source === null) continue;
 

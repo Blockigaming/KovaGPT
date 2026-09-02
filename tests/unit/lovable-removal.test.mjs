@@ -7,6 +7,7 @@ import {
   hasLovableBundlePath,
   hasLovableRuntimeSource,
   hasReadableBundleContent,
+  hasReadableRuntimeContent,
 } from "../../scripts/release/zero-lovable.mjs";
 
 const root = process.cwd();
@@ -46,10 +47,17 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   for (const path of [
     "dist/client/app.js.map",
     "dist/client/license.txt",
+    "dist/client/RUNTIME.TXT",
     "dist/client/logo.svg",
   ]) {
     assert.equal(hasReadableBundleContent(path), true, path);
   }
+  assert.equal(hasReadableRuntimeContent("worker/Dockerfile"), true);
+  assert.equal(hasReadableRuntimeContent("worker/.env.example"), true);
+  assert.equal(
+    hasLovableRuntimeSource("worker/Dockerfile", "ENV LOVABLE_API_KEY=test"),
+    true,
+  );
   const deletedPath = "src/routes/lovable/pending-delete.ts";
   assert.equal(existsSync(join(root, deletedPath)), false);
   assert.doesNotMatch(
