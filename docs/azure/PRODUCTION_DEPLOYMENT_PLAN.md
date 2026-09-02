@@ -31,7 +31,7 @@ It must supply `KOVAGPTPROD_AZURE_CLIENT_ID`, `KOVAGPTPROD_AZURE_TENANT_ID`, `KO
 
 Grant the OIDC identity only the read and deployment-validation permissions needed for ACR pull, Bicep validation, and resource-group what-if. Do not grant a production apply role while this workflow is plan-only.
 
-The protected plan accepts the `acr-git` source context emitted by the repository Dockerfile. Its concurrency policy queues later runs instead of allowing an ineligible dispatch to cancel a plan that is awaiting approval or already running.
+The protected plan accepts the `acr-git` source context emitted by the repository Dockerfile. Its `cancel-in-progress: false` policy prevents a running plan from being canceled. GitHub concurrency retains at most one running and one pending run per group and does not guarantee FIFO ordering, so this serializes eligible plans but is not a durable queue.
 
 ## Blockers before an apply workflow can exist
 

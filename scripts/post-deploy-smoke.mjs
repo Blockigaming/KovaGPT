@@ -25,8 +25,7 @@ if (
 }
 
 const SUPABASE_PROJECT_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co/giu;
-const EXACT_SUPABASE_URL_BOUNDARY_PATTERN = /^(?:$|[\s<>"'`])/u;
-const QUOTED_SUPABASE_USERINFO_TAIL_PATTERN = /^["'`][^"'`\s<>/]*@/u;
+const SUPABASE_URL_DELIMITERS = new Set(['"', "'", "`"]);
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =
@@ -193,10 +192,22 @@ function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
   SUPABASE_PROJECT_URL_PATTERN.lastIndex = 0;
   for (const match of source.matchAll(SUPABASE_PROJECT_URL_PATTERN)) {
     const rawUrl = match[0];
-    const tail = source.slice(match.index + rawUrl.length);
+    const openingDelimiterIndex = match.index - 1;
+    const closingDelimiterIndex = match.index + rawUrl.length;
+    const openingDelimiter = source[openingDelimiterIndex];
+    const closingDelimiter = source[closingDelimiterIndex];
+    const isEscaped = (index) => {
+      let backslashes = 0;
+      for (let offset = index - 1; offset >= 0 && source[offset] === "\\"; offset -= 1) {
+        backslashes += 1;
+      }
+      return backslashes % 2 === 1;
+    };
     if (
-      !EXACT_SUPABASE_URL_BOUNDARY_PATTERN.test(tail) ||
-      QUOTED_SUPABASE_USERINFO_TAIL_PATTERN.test(tail)
+      !SUPABASE_URL_DELIMITERS.has(openingDelimiter) ||
+      closingDelimiter !== openingDelimiter ||
+      isEscaped(openingDelimiterIndex) ||
+      isEscaped(closingDelimiterIndex)
     ) {
       throw nonCanonicalSupabaseUrl();
     }

@@ -28,6 +28,26 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
   assert.match(rootRoute, /"Cache-Control": "no-store, max-age=0"/u);
   assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
   assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
+  assert.match(workflow, /name: Derive authenticated staging gates/u);
+  assert.match(workflow, /readFileSync\("artifacts\/release\/authenticated-smoke\.json"/u);
+  assert.match(workflow, /report\.target !== process\.env\.KOVA_STAGING_ALLOWED_HOST/u);
+  assert.match(workflow, /report\.orphans\.length === 0/u);
+  assert.match(workflow, /report\.cleanup === "orphaned" \? "failed"/u);
+  assert.match(workflow, /workflow\.isolation\?\.select === true/u);
+  assert.match(
+    workflow,
+    /KOVA_GATE_AUTHENTICATED_CRUD: "\$\{\{ steps\.authenticated-evidence\.outputs\.authenticated_crud \}\}"/u,
+  );
+  assert.match(
+    workflow,
+    /KOVA_GATE_OWNER_ISOLATION: "\$\{\{ steps\.authenticated-evidence\.outputs\.owner_isolation \}\}"/u,
+  );
+  assert.match(
+    workflow,
+    /KOVA_SMOKE_CLEANUP: "\$\{\{ steps\.authenticated-evidence\.outputs\.cleanup \}\}"/u,
+  );
+  assert.doesNotMatch(workflow, /KOVA_GATE_AUTHENTICATED_CRUD: passed/u);
+  assert.doesNotMatch(workflow, /KOVA_GATE_OWNER_ISOLATION: passed/u);
   assert.match(workflow, /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u);
   assert.doesNotMatch(workflow, /PLAYWRIGHT_BASE_URL=\$\{\{/u);
 
@@ -313,6 +333,28 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.notEqual(delimitedUserinfoAttack.code, 0);
     assert.match(delimitedUserinfoAttack.stderr, /non-canonical Supabase URL/u);
 
+    for (const userinfoDelimiter of [" ", "\t", "\n", "<", ">", "' "]) {
+      scripts.set(
+        "/assets/preloaded.js",
+        'export const bad = "https://' +
+          expectedProjectRef +
+          ".supabase.co" +
+          userinfoDelimiter +
+          '@attacker.example";',
+      );
+      const userinfoDelimiterAttack = await runSmoke();
+      assert.notEqual(userinfoDelimiterAttack.code, 0);
+      assert.match(userinfoDelimiterAttack.stderr, /non-canonical Supabase URL/u);
+    }
+
+    scripts.set(
+      "/assets/preloaded.js",
+      "export const bad = 'https://" + expectedProjectRef + ".supabase.co\" @attacker.example';",
+    );
+    const oppositeQuoteSpaceAttack = await runSmoke();
+    assert.notEqual(oppositeQuoteSpaceAttack.code, 0);
+    assert.match(oppositeQuoteSpaceAttack.stderr, /non-canonical Supabase URL/u);
+
     for (const suffix of ["/wrong-base", "?wrong=true", "#wrong"]) {
       scripts.set(
         "/assets/preloaded.js",
@@ -341,7 +383,19 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     );
     const embeddedOtherProject = await runSmoke();
     assert.notEqual(embeddedOtherProject.code, 0);
-    assert.match(embeddedOtherProject.stderr, /unexpected Supabase project URL/u);
+    assert.match(embeddedOtherProject.stderr, /non-canonical Supabase URL/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'const good = "https://' +
+        expectedProjectRef +
+        '.supabase.co"; const bad = "https://' +
+        otherProjectRef +
+        '.supabase.co";',
+    );
+    const otherProject = await runSmoke();
+    assert.notEqual(otherProject.code, 0);
+    assert.match(otherProject.stderr, /unexpected Supabase project URL/u);
 
     scripts.set(
       "/assets/preloaded.js",
@@ -393,4 +447,7 @@ test("production planning documentation records the apply blockers without claim
   assert.match(documentation, /Single-revision mode sends 100% of traffic/u);
   assert.match(documentation, /denial of unauthorized raw-origin requests/u);
   assert.match(documentation, /separate reviewed pull request/u);
+  assert.match(documentation, /does not guarantee FIFO ordering/u);
+  assert.match(documentation, /not a durable queue/u);
+  assert.doesNotMatch(documentation, /queues later runs/u);
 });

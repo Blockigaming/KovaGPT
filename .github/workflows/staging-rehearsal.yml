@@ -61,6 +61,64 @@ jobs:
           KOVA_STAGING_SECONDARY_TOKEN: "${{ secrets.STAGING_SECONDARY_TOKEN }}"
           SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
+      - name: Derive authenticated staging gates
+        id: authenticated-evidence
+        env:
+          KOVA_STAGING_ALLOWED_HOST: "${{ vars.STAGING_ALLOWED_HOST }}"
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from "node:fs";
+
+          const report = JSON.parse(
+            readFileSync("artifacts/release/authenticated-smoke.json", "utf8"),
+          );
+          const requiredWorkflows = ["agents", "projects", "writing", "library", "scheduledTasks"];
+          const allowedStatuses = new Set(["passed", "failed", "unavailable", "skipped"]);
+          const statusPrecedence = ["failed", "unavailable", "skipped"];
+
+          if (report.schemaVersion !== 1) throw new Error("Unsupported authenticated smoke schema");
+          if (report.target !== process.env.KOVA_STAGING_ALLOWED_HOST) {
+            throw new Error("Authenticated smoke target does not match the protected staging host");
+          }
+          if (!Array.isArray(report.orphans)) throw new Error("Authenticated smoke orphans are invalid");
+          if (!new Set(["cleaned", "orphaned"]).has(report.cleanup)) {
+            throw new Error("Authenticated smoke cleanup status is invalid");
+          }
+          if ((report.cleanup === "cleaned") !== (report.orphans.length === 0)) {
+            throw new Error("Authenticated smoke cleanup and orphan evidence disagree");
+          }
+
+          const workflows = requiredWorkflows.map((name) => {
+            const workflow = report.workflows?.[name];
+            if (!workflow || !allowedStatuses.has(workflow.status)) {
+              throw new Error(`Authenticated smoke workflow ${name} has invalid evidence`);
+            }
+            return workflow;
+          });
+          const workflowStatus =
+            statusPrecedence.find((status) => workflows.some((workflow) => workflow.status === status)) ??
+            "passed";
+          const authenticatedCrud = report.cleanup === "orphaned" ? "failed" : workflowStatus;
+          const isolationPassed = workflows.every(
+            (workflow) =>
+              workflow.cleanup === "cleaned" &&
+              workflow.isolation?.select === true &&
+              workflow.isolation?.update === true &&
+              workflow.isolation?.delete === true,
+          );
+          const ownerIsolation =
+            authenticatedCrud === "passed" && !isolationPassed ? "failed" : authenticatedCrud;
+          const output = [
+            `authenticated_crud=${authenticatedCrud}`,
+            `owner_isolation=${ownerIsolation}`,
+            `cleanup=${report.cleanup}`,
+          ].join("\n");
+          appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          console.log(
+            `Authenticated staging gates: CRUD=${authenticatedCrud}, owner isolation=${ownerIsolation}, cleanup=${report.cleanup}`,
+          );
+          NODE
       - run: npm run test:e2e -- --reporter=line
         env:
           PLAYWRIGHT_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
@@ -70,14 +128,14 @@ jobs:
         env:
           KOVA_RELEASE_TARGET: staging
           KOVA_STAGING_CREDENTIALS: "1"
-          KOVA_SMOKE_CLEANUP: cleaned
+          KOVA_SMOKE_CLEANUP: "${{ steps.authenticated-evidence.outputs.cleanup }}"
           KOVA_GATE_REPOSITORY: passed
           KOVA_GATE_ISOLATED_DATABASE: passed
           KOVA_GATE_LOCAL_BROWSER: passed
           KOVA_GATE_DEPLOYED_EDGE: passed
           KOVA_GATE_UNAUTHENTICATED_SMOKE: passed
-          KOVA_GATE_AUTHENTICATED_CRUD: passed
-          KOVA_GATE_OWNER_ISOLATION: passed
+          KOVA_GATE_AUTHENTICATED_CRUD: "${{ steps.authenticated-evidence.outputs.authenticated_crud }}"
+          KOVA_GATE_OWNER_ISOLATION: "${{ steps.authenticated-evidence.outputs.owner_isolation }}"
           KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run
           KOVA_GATE_STAGING_E2E: passed
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
