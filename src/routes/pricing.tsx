@@ -29,9 +29,9 @@ const CUSTOMER_FEATURES = {
     "Deep Research and Adaptive Memory",
   ],
   pro: [
-    "Everything in Plus",
-    "Extra high and Pro modes",
+    "Instant, Medium, High, Extra high, and Pro modes",
     "KovaGPT's highest usage limits",
+    "Deep Research and Adaptive Memory",
     "Built for heavy daily use",
   ],
 } as const;
@@ -141,7 +141,10 @@ function PricingPage() {
           </p>
         </section>
 
-        <section className="mt-10 grid gap-4 md:grid-cols-3 md:items-stretch lg:gap-5" aria-label="KovaGPT plans">
+        <section
+          className="mt-10 grid gap-4 md:grid-cols-3 md:items-stretch lg:gap-5"
+          aria-label="KovaGPT plans"
+        >
           <PlanCard
             icon={Sparkles}
             name={CAPABILITY_REGISTRY.plans.free.name}
@@ -188,7 +191,9 @@ function PricingPage() {
         <section className="mt-14 rounded-2xl border border-border bg-card/50 p-5 sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-7">
           <div>
             <p className="text-sm font-medium text-muted-foreground">KovaGPT Enterprise</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Need a plan for an organization?</h2>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+              Need a plan for an organization?
+            </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
               Talk with Kova about security, deployment, support, and commercial requirements before
               anything is purchased.
@@ -206,7 +211,9 @@ function PricingPage() {
         <section className="mx-auto mt-16 max-w-4xl">
           <div className="text-center">
             <h2 className="text-2xl font-semibold tracking-tight">Questions before you choose?</h2>
-            <p className="mt-2 text-sm text-muted-foreground">The important details, without the fine-print wall.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The important details, without the fine-print wall.
+            </p>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <FaqCard
