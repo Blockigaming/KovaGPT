@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: kovagpt-azure-production-plan
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   AZURE_CORE_OUTPUT: none
@@ -150,7 +150,7 @@ jobs:
             value.sourceSha !== sourceSha ||
             value.sourceTree !== sourceTree ||
             value.supabaseProjectRef !== projectRef ||
-            value.sourceContext !== "git-archive"
+            value.sourceContext !== "acr-git"
           ) {
             throw new Error("The candidate provenance does not match the selected production source");
           }

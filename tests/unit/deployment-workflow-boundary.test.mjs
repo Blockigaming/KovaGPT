@@ -11,18 +11,16 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
   assert.match(workflow, /environment: staging/u);
   assert.match(workflow, /persist-credentials: false/u);
-  assert.match(
-    workflow,
-    /name: Verify the externally deployed staging build is the exact workflow SHA/u,
-  );
+  assert.match(workflow, /name: Verify the externally deployed staging build and browser target/u);
   assert.match(workflow, /run: npm run smoke:deployment/u);
   assert.match(workflow, /KOVA_EXPECTED_SHA: "\$\{\{ github\.sha \}\}"/u);
-  assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
-  assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
   assert.match(
     workflow,
-    /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u,
+    /KOVA_EXPECTED_SUPABASE_URL: "\$\{\{ secrets\.STAGING_SUPABASE_URL \}\}"/u,
   );
+  assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
+  assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
+  assert.match(workflow, /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u);
   assert.doesNotMatch(workflow, /PLAYWRIGHT_BASE_URL=\$\{\{/u);
 
   const identityGate = workflow.indexOf("run: npm run smoke:deployment");
@@ -55,16 +53,18 @@ test("production Azure workflow is protected, OIDC-based, digest-bound, and plan
   );
   assert.match(workflow, /environment:\n      name: production/u);
   assert.match(workflow, /permissions:\n  contents: read\n  id-token: write/u);
+  assert.match(workflow, /azure\/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca/u);
+  assert.match(workflow, /persist-credentials: false/u);
   assert.match(
     workflow,
-    /azure\/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca/u,
+    /concurrency:\n  group: kovagpt-azure-production-plan\n  cancel-in-progress: false/u,
   );
-  assert.match(workflow, /persist-credentials: false/u);
   assert.match(workflow, /@sha256:/u);
   assert.match(workflow, /org\.opencontainers\.image\.revision/u);
   assert.match(workflow, /com\.kovagpt\.source\.tree/u);
   assert.match(workflow, /com\.kovagpt\.browser\.config-verified/u);
   assert.match(workflow, /browser-config-provenance\.json/u);
+  assert.match(workflow, /value\.sourceContext !== "acr-git"/u);
   assert.match(workflow, /infra\/azure\/production\/main\.bicep/u);
   assert.match(workflow, /--result-format ResourceIdOnly/u);
   assert.doesNotMatch(
@@ -93,29 +93,29 @@ test("production Azure workflow is protected, OIDC-based, digest-bound, and plan
   }
 });
 
+test("deployment smoke bounds every request and inspects the deployed browser bundle", () => {
+  const smoke = read("scripts/post-deploy-smoke.mjs");
+
+  assert.match(smoke, /KOVA_SMOKE_REQUEST_TIMEOUT_MS/u);
+  assert.match(smoke, /AbortController/u);
+  assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
+  assert.match(smoke, /No deployed JavaScript assets were found/u);
+  assert.match(smoke, /does not contain the expected Supabase project URL/u);
+  assert.match(smoke, /contains an unexpected Supabase project URL/u);
+  assert.doesNotMatch(smoke, /await fetch\(/u);
+});
+
 test("production planning documentation records the apply blockers without claiming deployment", () => {
   const documentation = read("docs/azure/PRODUCTION_DEPLOYMENT_PLAN.md");
 
   assert.match(documentation, /plan-only/u);
   assert.match(documentation, /required reviewers/u);
   assert.match(documentation, /OIDC/u);
-  assert.match(
-    documentation,
-    /exact inventoried production Container App name/u,
-  );
+  assert.match(documentation, /exact inventoried production Container App name/u);
   assert.match(documentation, /complete Container App environment list/u);
-  assert.match(
-    documentation,
-    /Staging images contain staging browser configuration/u,
-  );
-  assert.match(
-    documentation,
-    /embedded provenance file alone do not authenticate/u,
-  );
-  assert.match(
-    documentation,
-    /role identifiers are declared but no production role assignments/u,
-  );
+  assert.match(documentation, /Staging images contain staging browser configuration/u);
+  assert.match(documentation, /embedded provenance file alone do not authenticate/u);
+  assert.match(documentation, /role identifiers are declared but no production role assignments/u);
   assert.match(documentation, /declared but unused/u);
   assert.match(documentation, /Single-revision mode sends 100% of traffic/u);
   assert.match(documentation, /denial of unauthorized raw-origin requests/u);

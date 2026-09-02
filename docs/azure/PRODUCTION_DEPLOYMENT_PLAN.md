@@ -11,7 +11,7 @@
 
 It has no deployment command, Container App update, DNS operation, Cloudflare credential, or traffic-shift step. Running the plan is not production deployment evidence.
 
-The staging rehearsal is also non-deploying. An owner must deploy the staging digest through an independently reviewed Azure path first. The rehearsal then requires `/api/version` and `X-Kova-Build` to match the exact workflow SHA before it performs edge, smoke, authenticated, or browser checks and before it emits candidate evidence.
+The staging rehearsal is also non-deploying. An owner must deploy the staging digest through an independently reviewed Azure path first. The rehearsal then requires `/api/version` and `X-Kova-Build` to match the exact workflow SHA and scans the deployed JavaScript dependency graph for the expected staging Supabase URL (and no other Supabase project URL) before it performs edge, authenticated, or browser checks and before it emits candidate evidence. Every smoke request has a bounded per-request timeout.
 
 The current rehearsal has no authorized administrator-diagnostics step, so that gate is recorded as `not-run`, not `passed`. Its report therefore cannot satisfy the existing production guard until a real protected check is implemented. The staging report proves source/runtime checks only; it does not prove that the staging artifact is suitable for production, because browser-safe Supabase configuration is compiled for a specific environment.
 
@@ -30,6 +30,8 @@ The environment must supply these non-secret variables:
 It must supply `KOVAGPTPROD_AZURE_CLIENT_ID`, `KOVAGPTPROD_AZURE_TENANT_ID`, `KOVAGPTPROD_AZURE_SUBSCRIPTION_ID`, and `KOVA_PRODUCTION_BICEP_PARAMETERS_JSON` as protected settings. The last value uses the shape in `infra/azure/production/main.parameters.example.json`; the workflow replaces `imageReference` with the reviewed digest and rejects placeholders or a mismatched ACR/Supabase target.
 
 Grant the OIDC identity only the read and deployment-validation permissions needed for ACR pull, Bicep validation, and resource-group what-if. Do not grant a production apply role while this workflow is plan-only.
+
+The protected plan accepts the `acr-git` source context emitted by the repository Dockerfile. Its concurrency policy queues later runs instead of allowing an ineligible dispatch to cancel a plan that is awaiting approval or already running.
 
 ## Blockers before an apply workflow can exist
 

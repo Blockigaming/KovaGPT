@@ -39,11 +39,12 @@ jobs:
           npm run lint
           npm run build
       - run: npm run test:unit && npm run test:integration && npm run test:api && npm run test:a11y && npm run test:visual && npm run test:browser
-      - name: Verify the externally deployed staging build is the exact workflow SHA
+      - name: Verify the externally deployed staging build and browser target
         run: npm run smoke:deployment
         env:
           KOVA_SMOKE_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
           KOVA_EXPECTED_SHA: "${{ github.sha }}"
+          KOVA_EXPECTED_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
       - run: npm run release:edge
         env:
           {
