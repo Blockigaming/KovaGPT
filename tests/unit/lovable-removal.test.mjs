@@ -58,7 +58,10 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   );
   assert.ok(
     gate.indexOf("if (hasLovableBundlePath(bundlePath))") <
-      gate.indexOf("if (!hasReadableBundleContent(path)) continue;", gate.indexOf("filesUnder")),
+      gate.indexOf(
+        "if (!hasReadableBundleContent(path)) continue;",
+        gate.indexOf("filesUnder"),
+      ),
   );
 });
 
