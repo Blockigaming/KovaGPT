@@ -94,18 +94,21 @@ async function addSubscription(database, { environment, priceId, status = "activ
   );
 }
 
-test("opaque live Prices resolve while the same Price in sandbox cannot grant live access", async () => {
-  const database = await createDatabase();
-  try {
-    await addSubscription(database, { environment: "sandbox", priceId: proPriceId });
-    assert.equal(await tier(database), "free");
+test(
+  "opaque live Prices resolve while the same Price in sandbox cannot grant live access",
+  async () => {
+    const database = await createDatabase();
+    try {
+      await addSubscription(database, { environment: "sandbox", priceId: proPriceId });
+      assert.equal(await tier(database), "free");
 
-    await addSubscription(database, { environment: "live", priceId: plusPriceId });
-    assert.equal(await tier(database), "plus");
-  } finally {
-    await database.close();
-  }
-});
+      await addSubscription(database, { environment: "live", priceId: plusPriceId });
+      assert.equal(await tier(database), "plus");
+    } finally {
+      await database.close();
+    }
+  },
+);
 
 test("historical and rotated exact Prices may share a lookup key", async () => {
   const database = await createDatabase();

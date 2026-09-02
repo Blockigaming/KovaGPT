@@ -200,9 +200,10 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
 });
 
 test("zero-Lovable dependency and lock checks are deterministic", () => {
-  assert.deepEqual(inspectPackageManifest({ dependencies: { "@lovable.dev/email-js": "1" } }), [
-    "dependencies:@lovable.dev/email-js",
-  ]);
+  assert.deepEqual(
+    inspectPackageManifest({ dependencies: { "@lovable.dev/email-js": "1" } }),
+    ["dependencies:@lovable.dev/email-js"],
+  );
   assert.deepEqual(inspectPackageManifest({ dependencies: { react: "1" } }), []);
   assert.deepEqual(
     inspectLockRoot({ packages: { "": { dependencies: { "@lovable.dev/email-js": "1" } } } }),
