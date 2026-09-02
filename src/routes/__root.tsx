@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -102,7 +101,11 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+    >
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
@@ -118,14 +121,18 @@ function NotFoundComponent() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
 function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4" role="main">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+    >
       <section
         className="max-w-md rounded-[var(--kova-radius-panel)] border border-border bg-card p-6 text-center shadow-sm"
         aria-labelledby="route-error-title"
@@ -310,31 +317,6 @@ function RootThemeManager() {
   return null;
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  "/": "KovaGPT",
-  "/pricing": "KovaGPT Billing",
-  "/library": "KovaGPT Library",
-  "/images": "KovaGPT Images",
-  "/projects": "KovaGPT Projects",
-  "/help": "KovaGPT Help",
-  "/memory": "KovaGPT Memory",
-  "/settings": "KovaGPT Settings",
-  "/status": "KovaGPT Status",
-};
-
-function PageTitleManager() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  useEffect(() => {
-    const exact = PAGE_TITLES[pathname];
-    const section = pathname.split("/").filter(Boolean)[0];
-    const fallback = section
-      ? `KovaGPT ${section.charAt(0).toUpperCase()}${section.slice(1)}`
-      : "KovaGPT";
-    document.title = exact ?? fallback;
-  }, [pathname]);
-  return null;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -347,7 +329,6 @@ function RootComponent() {
           Skip to content
         </a>
         <RootThemeManager />
-        <PageTitleManager />
         <PlatformRuntime />
         <Outlet />
         <Toaster />

@@ -1,11 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, ArrowLeft, Sparkles, Zap, Crown, X, Building2 } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Check, Sparkles, Zap, Crown, X, Building2 } from "lucide-react";
 import { useState } from "react";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 const PRICING_TIERS = ["free", "plus", "pro"] as const;
@@ -135,21 +134,12 @@ function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm hover:opacity-80">
-            <ArrowLeft className="w-4 h-4" />
-            Back to KovaGPT
-          </Link>
-          <div className="flex items-center gap-2">
-            <NovaLogo className="w-6 h-6" />
-            <span className="font-semibold">KovaGPT</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="kova-secondary-page kova-pricing-page max-w-6xl mx-auto px-6 py-16">
+    <PublicShell>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-6 py-16"
+      >
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Upgrade your plan</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -210,63 +200,61 @@ function PricingPage() {
           Stripe hosts checkout. Confirm the price, trial eligibility, renewal date, and available
           payment methods before purchase.
         </p>
+
+        <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
+
+        {isOpen && (
+          <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4">
+            <div className="relative w-full max-w-2xl bg-background rounded-xl border border-border overflow-hidden">
+              <button
+                onClick={closeCheckout}
+                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
+                aria-label="Close checkout"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {checkoutElement}
+            </div>
+          </div>
+        )}
+        <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
+          Published daily allowances are listed above. Provider outages, maintenance, and account
+          eligibility can still limit a feature.
+        </p>
+
+        <section className="mx-auto max-w-5xl px-6 mt-16">
+          <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
+          <div className="grid gap-5 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border border-border bg-card/50 p-5">
+              <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
+              <p className="text-muted-foreground">
+                Open Billing in Settings to see the options available for your subscription and when
+                a change takes effect.
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card/50 p-5">
+              <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
+              <p className="text-muted-foreground">
+                You can wait until your limit resets or upgrade to a higher plan for more usage.
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card/50 p-5">
+              <h3 className="font-medium mb-1">Can I switch plans?</h3>
+              <p className="text-muted-foreground">
+                Available plan changes appear in Billing. Review the portal or checkout confirmation
+                for timing and price before accepting.
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card/50 p-5">
+              <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
+              <p className="text-muted-foreground">
+                Published daily allowances reset rather than rolling over.
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
-
-      <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
-
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4">
-          <div className="relative w-full max-w-2xl bg-background rounded-xl border border-border overflow-hidden">
-            <button
-              onClick={closeCheckout}
-              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
-              aria-label="Close checkout"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            {checkoutElement}
-          </div>
-        </div>
-      )}
-      <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
-        Published daily allowances are listed above. Provider outages, maintenance, and account
-        eligibility can still limit a feature.
-      </p>
-
-      <section className="mx-auto max-w-5xl px-6 mt-16">
-        <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
-        <div className="grid gap-5 text-sm sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card/50 p-5">
-            <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
-            <p className="text-muted-foreground">
-              Open Billing in Settings to see the options available for your subscription and when a
-              change takes effect.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card/50 p-5">
-            <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
-            <p className="text-muted-foreground">
-              You can wait until your limit resets or upgrade to a higher plan for more usage.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card/50 p-5">
-            <h3 className="font-medium mb-1">Can I switch plans?</h3>
-            <p className="text-muted-foreground">
-              Available plan changes appear in Billing. Review the portal or checkout confirmation
-              for timing and price before accepting.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card/50 p-5">
-            <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
-            <p className="text-muted-foreground">
-              Published daily allowances reset rather than rolling over.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+    </PublicShell>
   );
 }
 

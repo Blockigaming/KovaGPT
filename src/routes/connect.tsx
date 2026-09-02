@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/connect")({
   head: () => ({
@@ -80,8 +80,8 @@ function ConnectPage() {
     : "https://claude.ai/customize/connectors";
 
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="mb-3 text-4xl font-bold tracking-tight">
           Connect KovaGPT to your assistant
         </h1>
@@ -269,7 +269,6 @@ function ConnectPage() {
           </Link>
         </div>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }
