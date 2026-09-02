@@ -3,6 +3,7 @@ import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
 import { parseCheckoutRequest } from "@/lib/checkout-request.mjs";
+import { stripeErrorDiagnostic } from "@/lib/stripe-error-diagnostics.mjs";
 import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -54,6 +55,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     return parsed;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
+    let checkoutStage = "configuration";
     try {
       const plan = resolveBillingPlan(data.priceId);
       if (!plan) throw new Error("Invalid priceId");
@@ -63,6 +65,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const stripe = createStripeClient(BILLING_ENV);
 
       // Prevent duplicate active subscriptions for the same user in this env.
+      checkoutStage = "subscription_lookup";
       const { data: existing, error: existingError } = await context.supabase
         .from("subscriptions")
         .select("status, current_period_end, cancel_at_period_end")
@@ -90,6 +93,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         }
       }
 
+      checkoutStage = "price_lookup";
       const prices = await stripe.prices.list({
         lookup_keys: [plan.lookupKey],
         active: true,
@@ -104,6 +108,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         throw new Error("Price not found");
       }
 
+      checkoutStage = "customer_resolution";
       const customerId = await resolveOrCreateCustomer(stripe, {
         email: customerEmail,
         userId,
@@ -114,6 +119,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       //   2) the Stripe Customer we resolved has no subscription history
       //      (so recreating a KovaGPT account with the same email/userId
       //      doesn't grant a second trial).
+      checkoutStage = "trial_eligibility";
       let isPlusTrialEligible = plan.trialPeriodDays > 0 && !existing;
       if (isPlusTrialEligible) {
         const prior = await stripe.subscriptions.list({
@@ -140,13 +146,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           }),
         },
       };
+      checkoutStage = "checkout_session_create";
       const session = await stripe.checkout.sessions.create(sessionParams);
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
-      console.error("[billing-checkout] Stripe request failed", {
-        error: error instanceof Error ? error.name : "unknown_error",
-      });
+      console.error(
+        "[billing-checkout] Stripe request failed",
+        stripeErrorDiagnostic(error, checkoutStage),
+      );
       return { error: "Checkout is unavailable right now. Try again." };
     }
   });
