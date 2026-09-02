@@ -633,7 +633,6 @@ function LibraryPage() {
         tabIndex={-1}
         className="kova-page kova-secondary-page"
         aria-labelledby="library-title"
-        aria-busy={!isLoaded || loading || undefined}
       >
         <WorkspacePageHeader
           title="Library"

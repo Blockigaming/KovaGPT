@@ -34,6 +34,8 @@ test("Library reserves controls for real content and presents honest empty state
   assert.match(routes.library, /aria-pressed=\{filter === item\.id\}/);
   assert.match(routes.library, /actions=\{\s*principalReady \? \(/);
   assert.doesNotMatch(routes.library, /principalReady && \(items\.length > 0 \|\| loadError\)/);
+  assert.match(routes.library, /role="status"[\s\S]{0,180}Loading Library/);
+  assert.doesNotMatch(routes.library, /aria-busy=\{!isLoaded \|\| loading \|\| undefined\}/);
   assert.doesNotMatch(routes.library, /Storage totals require backend usage records/);
   assert.doesNotMatch(routes.library, />\s*\{loadError\}\s*</);
 });
