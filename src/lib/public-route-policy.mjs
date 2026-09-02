@@ -28,7 +28,6 @@ const RESERVED_PUBLIC_SEGMENTS = new Set([
   "scheduled-tasks",
   "audit-log",
   "mcp",
-  "lovable",
   "supabase",
   "stripe",
   "azure",

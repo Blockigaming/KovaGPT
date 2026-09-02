@@ -31,17 +31,18 @@ test("Playwright starts the built preview app before browser tests", () => {
   assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:8080"/);
 });
 
-test("legacy Lovable email routes are inert tombstones and never report delivery success", () => {
+test("retired compatibility email routes are absent and support delivery remains fail closed", () => {
   const support = read("src/routes/api/public/help-submit.ts");
-  const transactional = read("src/routes/lovable/email/transactional/send.ts");
-  const authPreview = read("src/routes/lovable/email/auth/preview.ts");
-  assert.match(support, /KOVA_EMAIL_QUEUE_ENABLED/);
-  assert.match(support, /Email delivery is not configured/);
-  for (const source of [transactional, authPreview]) {
-    assert.match(source, /legacyLovableRouteGone/);
-    assert.doesNotMatch(source, /success:\s*true|queued:\s*true|processed:/u);
-    assert.doesNotMatch(source, /@lovable\.dev|LOVABLE_API_KEY|sendLovableEmail/iu);
+  for (const path of [
+    "src/routes/lovable/email/transactional/send.ts",
+    "src/routes/lovable/email/auth/preview.ts",
+  ]) {
+    assert.equal(existsSync(path), false, path);
   }
+  assert.match(support, /KOVA_EMAIL_QUEUE_ENABLED/u);
+  assert.match(support, /Email delivery is not configured/u);
+  assert.match(support, /rpc\("enqueue_email"/u);
+  assert.doesNotMatch(support, /\/lovable|legacyLovable/iu);
 });
 
 test("MCP validates Supabase bearer tokens and uses the real user id for created tasks", () => {

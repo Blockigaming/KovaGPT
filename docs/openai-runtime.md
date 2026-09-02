@@ -1,5 +1,7 @@
 # KovaGPT direct OpenAI runtime
 
+> **Zero-Lovable status (supersedes historical compatibility language):** The direct OpenAI runtime remains current, but the former Lovable compatibility routes are only a removal candidate in PR #227. That PR must not merge or deploy until an owner checks Azure, Cloudflare, Supabase, provider configuration, and logs for legitimate external callers and migrates any caller found. The current removal authority is `docs/release-reconciliation/zero-lovable-classification.md`.
+
 ## Active request flow and inventory
 
 The only active text-generation flow is browser chat -> `POST /api/chat` -> bounded validation -> trusted-IP/authentication -> server billing entitlement -> catalog routing -> conservative token/cost preflight -> atomic Supabase reservation/concurrency lease -> `provider.server.ts` -> OpenAI `POST /v1/responses` -> server Responses-to-Kova SSE adapter -> existing streaming UI -> atomic usage reconciliation. Stop or disconnect cancels the provider reader and finalizes the lease. No browser module receives a provider credential, model override, provider URL, or output limit.
@@ -15,7 +17,7 @@ The only active text-generation flow is browser chat -> `POST /api/chat` -> boun
 | Images                          | chat/images UI            | `/api/chat`, `/api/generate-image`   | OpenAI Images                | verified user, daily image quota                     |
 | Project RAG                     | project ingestion/query   | `project-rag.server.ts`              | OpenAI Embeddings            | authenticated project boundary                       |
 
-Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. Lovable-named editor metadata, email, OAuth consent, deployment, Supabase, auth, database, and storage functionality is unrelated and remains. Lovable AI is neither active nor a fallback.
+Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. On the historical base for this document, unrelated Lovable-named compatibility surfaces still remained; PR #227 proposes their removal subject to the external-caller evidence gate above. Lovable AI is neither active nor a fallback.
 
 ## Versioned model catalog
 
