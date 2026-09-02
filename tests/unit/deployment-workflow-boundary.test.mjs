@@ -283,6 +283,26 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.notEqual(delimitedUserinfoAttack.code, 0);
     assert.match(delimitedUserinfoAttack.stderr, /non-canonical Supabase URL/u);
 
+    const otherProjectRef = "otherstageproject123";
+    const templateDelimiter = String.fromCharCode(96);
+    scripts.set(
+      "/assets/preloaded.js",
+      [
+        'const good = "https://',
+        expectedProjectRef,
+        '.supabase.co"; const bad = ',
+        templateDelimiter,
+        "prefix https://",
+        otherProjectRef,
+        ".supabase.co",
+        templateDelimiter,
+        ";",
+      ].join(""),
+    );
+    const embeddedOtherProject = await runSmoke();
+    assert.notEqual(embeddedOtherProject.code, 0);
+    assert.match(embeddedOtherProject.stderr, /unexpected Supabase project URL/u);
+
     scripts.set(
       "/assets/preloaded.js",
       'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',

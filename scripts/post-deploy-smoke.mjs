@@ -24,11 +24,7 @@ if (
   );
 }
 
-const QUOTED_HTTPS_URL_PATTERNS = [
-  /"(https:\/\/[^"\\\s<>]+)"/giu,
-  /'(https:\/\/[^'\\\s<>]+)'/giu,
-  /`(https:\/\/[^`\\\s<>]+)`/giu,
-];
+const HTTPS_URL_IN_LITERAL_PATTERN = /https:\/\/[^\s<>]+/giu;
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =
@@ -171,20 +167,109 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
   return { source: decoded.join(""), bytes };
 }
 
+function countOccurrences(source, token) {
+  let count = 0;
+  let offset = 0;
+  while (true) {
+    const index = source.indexOf(token, offset);
+    if (index < 0) return count;
+    count += 1;
+    offset = index + token.length;
+  }
+}
+
+function collectJavaScriptStringLiterals(source) {
+  const literals = [];
+  let offset = 0;
+
+  while (offset < source.length) {
+    const character = source[offset];
+    const next = source[offset + 1];
+    if (character === "/" && next === "/") {
+      offset += 2;
+      while (offset < source.length && source[offset] !== "\n") offset += 1;
+      continue;
+    }
+    if (character === "/" && next === "*") {
+      offset += 2;
+      while (offset < source.length && !(source[offset] === "*" && source[offset + 1] === "/")) {
+        offset += 1;
+      }
+      offset = Math.min(offset + 2, source.length);
+      continue;
+    }
+    if (character !== "'" && character !== '"' && character !== "`") {
+      offset += 1;
+      continue;
+    }
+
+    const delimiter = character;
+    let value = "";
+    let escaped = false;
+    let dynamic = false;
+    let closed = false;
+    offset += 1;
+
+    while (offset < source.length) {
+      const current = source[offset];
+      if (current === "\\") {
+        escaped = true;
+        value += current;
+        offset += 1;
+        if (offset < source.length) {
+          value += source[offset];
+          offset += 1;
+        }
+        continue;
+      }
+      if (current === delimiter) {
+        closed = true;
+        offset += 1;
+        break;
+      }
+      if (delimiter !== "`" && (current === "\n" || current === "\r")) break;
+      if (delimiter === "`" && current === "$" && source[offset + 1] === "{") {
+        dynamic = true;
+      }
+      value += current;
+      offset += 1;
+    }
+
+    if (closed) literals.push({ value, escaped, dynamic });
+  }
+
+  return literals;
+}
+
+function nonCanonicalSupabaseUrl() {
+  return new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+}
+
 function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
-  let foundSupabaseLiteral = false;
-  for (const pattern of QUOTED_HTTPS_URL_PATTERNS) {
-    pattern.lastIndex = 0;
-    for (const match of source.matchAll(pattern)) {
-      const rawUrl = match[1];
-      if (!rawUrl.toLowerCase().includes(".supabase.co")) continue;
-      foundSupabaseLiteral = true;
+  const token = ".supabase.co";
+  const totalOccurrences = countOccurrences(source.toLowerCase(), token);
+  let accountedOccurrences = 0;
+
+  for (const literal of collectJavaScriptStringLiterals(source)) {
+    const literalOccurrences = countOccurrences(literal.value.toLowerCase(), token);
+    if (literalOccurrences === 0) continue;
+    accountedOccurrences += literalOccurrences;
+    if (literal.escaped || literal.dynamic) throw nonCanonicalSupabaseUrl();
+
+    let coveredOccurrences = 0;
+    HTTPS_URL_IN_LITERAL_PATTERN.lastIndex = 0;
+    for (const match of literal.value.matchAll(HTTPS_URL_IN_LITERAL_PATTERN)) {
+      const rawUrl = match[0];
+      const candidateOccurrences = countOccurrences(rawUrl.toLowerCase(), token);
+      if (candidateOccurrences === 0) continue;
+      if (candidateOccurrences !== 1) throw nonCanonicalSupabaseUrl();
+      coveredOccurrences += candidateOccurrences;
 
       let candidate;
       try {
         candidate = new URL(rawUrl);
       } catch {
-        throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+        throw nonCanonicalSupabaseUrl();
       }
 
       const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
@@ -195,15 +280,15 @@ function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
         candidate.password ||
         candidate.port
       ) {
-        throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+        throw nonCanonicalSupabaseUrl();
       }
       discoveredProjectRefs.add(hostname[1]);
     }
+
+    if (coveredOccurrences !== literalOccurrences) throw nonCanonicalSupabaseUrl();
   }
 
-  if (!foundSupabaseLiteral && source.toLowerCase().includes(".supabase.co")) {
-    throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
-  }
+  if (accountedOccurrences !== totalOccurrences) throw nonCanonicalSupabaseUrl();
 }
 
 function addJavaScriptReference(candidate, parent, queue, seen) {
