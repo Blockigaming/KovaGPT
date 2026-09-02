@@ -15,7 +15,7 @@ const releaseJob = workflow.slice(
 test("each browser group runs on a fresh runner without reducing coverage", () => {
   assert.match(
     workflow,
-    /browser:\n(?:    if: [^\n]+\n)?    name: Browser \(\$\{\{ matrix\.id \}\}\)/,
+    /browser:\n    if: >-\n(?:      [^\n]+\n)+    name: Browser \(\$\{\{ matrix\.id \}\}\)/,
   );
   assert.match(workflow, /needs: verify/);
   assert.match(workflow, /fail-fast: false/);
