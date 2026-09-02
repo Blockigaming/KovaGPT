@@ -467,7 +467,7 @@ function LibraryPage() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-[var(--kova-radius-input)] hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-input)] hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`Actions for ${item.title}`}
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -577,7 +577,7 @@ function LibraryPage() {
         data-library-item={item.item_type}
       >
         {!workspaceReference ? (
-          <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85">
+          <label className="absolute z-10 m-3 grid h-11 w-11 place-items-center rounded-lg bg-background/85">
             <span className="sr-only">Select {item.title}</span>
             <input
               type="checkbox"
@@ -628,116 +628,152 @@ function LibraryPage() {
 
   return (
     <AppShell>
-      <main className="kova-page kova-secondary-page" aria-labelledby="library-title">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-page kova-secondary-page"
+        aria-labelledby="library-title"
+        aria-busy={!isLoaded || loading || undefined}
+      >
         <WorkspacePageHeader
           title="Library"
           titleId="library-title"
           description="Chats, work, files, images, responses, and reusable context in one place."
           meta={
-            storageTotal !== null
-              ? `Known file storage: ${humanBytes(storageTotal)}`
-              : "Storage totals require backend usage records and are omitted here."
+            storageTotal !== null ? `Known file storage: ${humanBytes(storageTotal)}` : undefined
           }
           actions={
-            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />{" "}
-              Refresh
-            </Button>
+            principalReady && (items.length > 0 || loadError) ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="min-h-11"
+                onClick={load}
+                disabled={loading}
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
+                />{" "}
+                Refresh
+              </Button>
+            ) : null
           }
         />
 
         {!isSignedIn && isLoaded ? (
-          <section className="kova-card p-4 text-sm" aria-label="Guest Library notice">
-            <div className="font-medium">You are browsing as a guest.</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Items you save stay in this browser. Sign in to keep them across devices.
-            </p>
+          <section
+            className="flex flex-col gap-4 rounded-xl border border-border/70 bg-muted/25 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            aria-labelledby="guest-library-title"
+          >
+            <div>
+              <h2 id="guest-library-title" className="font-medium">
+                Saved in this browser
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Guest items stay on this device. Sign in to keep new items across devices.
+              </p>
+            </div>
             <SignInButton mode="modal">
-              <button className="mt-3 min-h-10 rounded-full bg-foreground px-4 text-xs font-medium text-background hover:opacity-90">
-                Sign in to save permanently
-              </button>
+              <Button size="sm" className="min-h-11 shrink-0">
+                Sign in
+              </Button>
             </SignInButton>
           </section>
         ) : null}
 
-        <section className="kova-toolbar" aria-label="Library toolbar">
-          <label className="relative min-w-[220px] flex-1">
-            <span className="sr-only">Search Library</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search Library"
-              className="h-10 rounded-[var(--kova-radius-input)] pl-9"
-            />
-          </label>
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as SortId)}
-            className="kova-select"
-            aria-label="Sort Library"
-          >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="name">Name</option>
-            <option value="size">Size</option>
-          </select>
-          <div
-            className="flex rounded-[var(--kova-radius-input)] border border-border p-1"
-            role="group"
-            aria-label="Library view"
-          >
-            <button
-              type="button"
-              className={`kova-icon-button ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
-              onClick={() => setView("grid")}
-              aria-label="Grid view"
-            >
-              <Grid2X2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className={`kova-icon-button ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
-              onClick={() => setView("list")}
-              aria-label="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </section>
+        {items.length > 0 && !loadError ? (
+          <>
+            <section className="kova-toolbar" aria-label="Library toolbar">
+              <label className="relative min-w-[220px] flex-1">
+                <span className="sr-only">Search Library</span>
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search Library"
+                  className="h-11 rounded-[var(--kova-radius-input)] pl-9"
+                />
+              </label>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as SortId)}
+                className="kova-select min-h-11"
+                aria-label="Sort Library"
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="name">Name</option>
+                <option value="size">Size</option>
+              </select>
+              <div
+                className="flex rounded-[var(--kova-radius-input)] border border-border p-1"
+                role="group"
+                aria-label="Library view"
+              >
+                <button
+                  type="button"
+                  className={`kova-icon-button min-h-11 min-w-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
+                  onClick={() => setView("grid")}
+                  aria-label="Grid view"
+                  aria-pressed={view === "grid"}
+                >
+                  <Grid2X2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={`kova-icon-button min-h-11 min-w-11 ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
+                  onClick={() => setView("list")}
+                  aria-label="List view"
+                  aria-pressed={view === "list"}
+                >
+                  <List className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </section>
 
-        <div
-          className="flex gap-2 overflow-x-auto pb-1"
-          role="tablist"
-          aria-label="Library filters"
-        >
-          {filters.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={filter === item.id}
-              onClick={() => setFilter(item.id)}
-              className={`min-h-10 shrink-0 rounded-full border px-4 text-sm font-medium transition ${filter === item.id ? "border-foreground bg-foreground text-background" : "border-border bg-[var(--surface-secondary)] text-muted-foreground hover:text-foreground"}`}
+            <div
+              className="flex gap-2 overflow-x-auto pb-1"
+              role="group"
+              aria-label="Library filters"
             >
-              {item.label}
-            </button>
-          ))}
-        </div>
+              {filters.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={filter === item.id}
+                  onClick={() => setFilter(item.id)}
+                  className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition ${filter === item.id ? "border-foreground bg-foreground text-background" : "border-border bg-[var(--surface-secondary)] text-muted-foreground hover:text-foreground"}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-        {selected.length ? (
+        {selected.length && !loadError ? (
           <section
             className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/40 p-3"
             aria-label="Selected Library actions"
           >
             <span className="text-sm font-medium">{selected.length} selected</span>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="min-h-11"
+                onClick={() => setSelected([])}
+              >
                 Clear
               </Button>
               <Button
                 size="sm"
                 variant="outline"
+                className="min-h-11"
                 onClick={() => {
                   if (!favoritesReady || !favoritesKey) return;
                   const next = new Set(visibleFavorites);
@@ -751,6 +787,7 @@ function LibraryPage() {
               <Button
                 size="sm"
                 variant="outline"
+                className="min-h-11"
                 onClick={() =>
                   addManyToContextPack(
                     items.filter((item) => selected.includes(item.id)).map(toHandoff),
@@ -760,7 +797,12 @@ function LibraryPage() {
               >
                 Add to Context Pack
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()}>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="min-h-11"
+                onClick={() => void deleteSelected()}
+              >
                 Delete
               </Button>
             </div>
@@ -769,31 +811,42 @@ function LibraryPage() {
 
         {loadError ? (
           <section className="kova-empty-state" role="alert">
-            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" />
+            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <h2 className="mt-3 font-medium">Could not load Library</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
-            <Button className="mt-4" onClick={load}>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your saved items are temporarily unavailable. Try again in a moment.
+            </p>
+            <Button className="mt-4 min-h-11" onClick={load}>
               Retry
             </Button>
           </section>
         ) : loading && items.length === 0 ? (
-          <ul className="kova-grid" aria-hidden="true">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <li
-                key={index}
-                className="h-52 rounded-[var(--kova-radius-card)] bg-[var(--skeleton-base)] animate-pulse"
-              />
-            ))}
-          </ul>
+          <section role="status" aria-labelledby="library-loading-title">
+            <h2 id="library-loading-title" className="sr-only">
+              Loading Library
+            </h2>
+            <ul className="kova-grid" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <li
+                  key={index}
+                  className="h-52 animate-pulse rounded-[var(--kova-radius-card)] bg-[var(--skeleton-base)] motion-reduce:animate-none"
+                />
+              ))}
+            </ul>
+          </section>
         ) : filtered.length === 0 ? (
-          <section className="kova-empty-state">
-            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" />
-            <h2 className="mt-3 font-medium">
-              {items.length === 0 ? "Your Library is empty" : "No matches"}
+          <section className="kova-empty-state" aria-labelledby="library-empty-title">
+            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <h2 id="library-empty-title" className="mt-3 font-medium">
+              {items.length === 0
+                ? isSignedIn
+                  ? "Your Library is empty"
+                  : "Nothing saved in this browser"
+                : "No matches"}
             </h2>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
               {items.length === 0
-                ? "Save responses, generated images, research reports, or uploads and they will appear here."
+                ? "Save a response, generated image, research report, or upload to find it here."
                 : `Nothing matches “${query}”.`}
             </p>
           </section>

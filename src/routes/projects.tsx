@@ -410,17 +410,22 @@ function ProjectsPage() {
       <main
         id="main-content"
         tabIndex={-1}
+        aria-labelledby="projects-title"
         aria-busy={isLoading || undefined}
         className="kova-page kova-secondary-page pb-24 lg:pb-8"
       >
         <WorkspacePageHeader
           icon={FolderKanban}
           title="Projects"
+          titleId="projects-title"
           description="Shared workspaces for your chats, files, instructions, and team."
           actions={
             isSignedIn && !isLoading ? (
-              <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
-                <Plus className="mr-1.5 h-4 w-4" />
+              <Button
+                onClick={() => setCreateOpen(true)}
+                className="hidden min-h-11 lg:inline-flex"
+              >
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 New project
               </Button>
             ) : null
@@ -428,8 +433,13 @@ function ProjectsPage() {
         />
 
         {!isLoading && isSignedIn && invites.length > 0 && (
-          <div className="mb-6 border rounded-xl p-4 bg-accent/30">
-            <div className="text-sm font-medium mb-3">Pending invitations</div>
+          <section
+            className="mb-6 rounded-xl border bg-accent/30 p-4"
+            aria-labelledby="project-invitations-title"
+          >
+            <h2 id="project-invitations-title" className="mb-3 text-sm font-medium">
+              Pending invitations
+            </h2>
             <div className="space-y-2">
               {invites.map((inv) => (
                 <div
@@ -441,19 +451,28 @@ function ProjectsPage() {
                     <div className="text-xs text-muted-foreground">Role: {inv.role}</div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleAccept(inv.invite_id)}>
-                      <Check className="w-3.5 h-3.5 mr-1" />
+                    <Button
+                      size="sm"
+                      className="min-h-11"
+                      onClick={() => handleAccept(inv.invite_id)}
+                    >
+                      <Check className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
                       Accept
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDecline(inv.invite_id)}>
-                      <XIcon className="w-3.5 h-3.5 mr-1" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="min-h-11"
+                      onClick={() => handleDecline(inv.invite_id)}
+                    >
+                      <XIcon className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
                       Decline
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {isLoading ? (
@@ -479,7 +498,7 @@ function ProjectsPage() {
               Create shared workspaces, invite teammates, and collaborate on chats.
             </p>
             <SignInButton mode="modal">
-              <Button>Sign in</Button>
+              <Button className="min-h-11">Sign in</Button>
             </SignInButton>
           </section>
         ) : loadError ? (
@@ -495,7 +514,7 @@ function ProjectsPage() {
             description="Create a project to collaborate on chats, files, notes, and tasks with your team."
             tip="Create one project for each long-running goal or team workspace."
             action={
-              <Button onClick={() => setCreateOpen(true)}>
+              <Button className="min-h-11" onClick={() => setCreateOpen(true)}>
                 <Plus className="w-4 h-4 mr-1.5" />
                 Create project
               </Button>
@@ -609,8 +628,8 @@ function ProjectsPage() {
                     <DropdownMenuTrigger asChild>
                       <button
                         onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 rounded-md hover:bg-background/70 opacity-70 hover:opacity-100 data-[state=open]:opacity-100 transition"
-                        aria-label="Project options"
+                        className="flex h-11 w-11 items-center justify-center rounded-md opacity-70 transition hover:bg-background/70 hover:opacity-100 data-[state=open]:opacity-100"
+                        aria-label={`Options for ${p.name}`}
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
@@ -696,13 +715,13 @@ function ProjectsPage() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search projects"
-                      className="pl-9"
+                      className="h-11 pl-9"
                     />
                   </div>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    className="h-11 rounded-md border border-input bg-background px-3 text-sm"
                     aria-label="Sort projects"
                   >
                     <option value="recent">Recent</option>
@@ -717,17 +736,19 @@ function ProjectsPage() {
                   >
                     <button
                       type="button"
-                      className={`kova-icon-button ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
+                      className={`kova-icon-button min-h-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
                       onClick={() => setView("grid")}
                       aria-label="Grid view"
+                      aria-pressed={view === "grid"}
                     >
                       Grid
                     </button>
                     <button
                       type="button"
-                      className={`kova-icon-button ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
+                      className={`kova-icon-button min-h-11 ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
                       onClick={() => setView("list")}
                       aria-label="List view"
+                      aria-pressed={view === "list"}
                     >
                       List
                     </button>
@@ -739,6 +760,11 @@ function ProjectsPage() {
                     icon={SearchIcon}
                     title="No matches"
                     description={`Nothing matches "${query}". Try a different search.`}
+                    action={
+                      <Button className="min-h-11" variant="outline" onClick={() => setQuery("")}>
+                        Clear search
+                      </Button>
+                    }
                   />
                 ) : (
                   <>
@@ -749,7 +775,9 @@ function ProjectsPage() {
                         <button
                           type="button"
                           onClick={() => setShowArchived((v) => !v)}
-                          className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground mb-2 px-1"
+                          aria-expanded={showArchived}
+                          aria-controls="archived-projects"
+                          className="mb-2 flex min-h-11 items-center gap-1.5 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
                         >
                           {showArchived ? (
                             <ChevronDown className="w-3.5 h-3.5" />
@@ -760,6 +788,7 @@ function ProjectsPage() {
                         </button>
                         {showArchived && (
                           <div
+                            id="archived-projects"
                             className={
                               view === "list" ? "kova-list opacity-80" : "kova-grid opacity-80"
                             }
