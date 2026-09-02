@@ -1,0 +1,33 @@
+name: PR formatting artifact
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - "src/lib/ai/provider.server.ts"
+      - "src/lib/ai/provider-transport.server.mjs"
+      - ".github/workflows/pr-format-artifact.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx prettier --write src/lib/ai/provider.server.ts src/lib/ai/provider-transport.server.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: provider-prettier-output
+          path: |
+            src/lib/ai/provider.server.ts
+            src/lib/ai/provider-transport.server.mjs
+          if-no-files-found: error
+          retention-days: 1
