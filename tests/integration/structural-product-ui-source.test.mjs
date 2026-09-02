@@ -10,8 +10,9 @@ const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const images = await readFile("src/routes/images.tsx", "utf8");
 const connect = await readFile("src/routes/connect.tsx", "utf8");
 
-test("signed-out navigation stays focused and does not advertise unavailable Maps", () => {
+test("primary navigation stays focused and does not advertise unavailable features", () => {
   assert.doesNotMatch(sidebar, /renderNavLink\("\/maps"/);
+  assert.doesNotMatch(sidebar, /scheduled-tasks/);
   assert.doesNotMatch(sidebar, /SignInButton|SignUpButton/);
   assert.match(sidebar, /showSignedOut \? renderNavLink\("\/pricing", "Plans"/);
   assert.match(sidebar, /Start with KovaGPT/);
