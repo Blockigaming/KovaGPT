@@ -5,45 +5,16 @@ import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
 import { parseCheckoutRequest } from "@/lib/checkout-request.mjs";
 import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { resolveStripeCustomerId } from "@/lib/stripe-customer-mapping.mjs";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
 
-async function resolveOrCreateCustomer(
-  stripe: ReturnType<typeof createStripeClient>,
-  options: { email?: string; userId?: string },
-): Promise<string> {
-  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
-    throw new Error("Invalid userId");
-  }
-  if (options.userId) {
-    const found = await stripe.customers.search({
-      query: `metadata['userId']:'${options.userId}'`,
-      limit: 1,
-    });
-    if (found.data.length) return found.data[0].id;
-  }
-  if (options.email) {
-    const existing = await stripe.customers.list({
-      email: options.email,
-      limit: 1,
-    });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, {
-          metadata: { ...customer.metadata, userId: options.userId },
-        });
-      }
-      return customer.id;
-    }
-  }
-  const created = await stripe.customers.create({
-    ...(options.email && { email: options.email }),
-    ...(options.userId && { metadata: { userId: options.userId } }),
-  });
-  return created.id;
+export function billingPortalConfigurationId(): string | null {
+  const value = process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID;
+  return value && /^bpc_[a-zA-Z0-9]+$/u.test(value) ? value : null;
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
@@ -104,16 +75,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         throw new Error("Price not found");
       }
 
-      const customerId = await resolveOrCreateCustomer(stripe, {
-        email: customerEmail,
+      const customerId = await resolveStripeCustomerId({
+        stripe,
+        supabase: supabaseAdmin,
+        environment: BILLING_ENV,
         userId,
+        email: customerEmail,
       });
 
-      // Free-trial eligibility for Plus. A user is eligible only if:
-      //   1) they have no subscription row in this env, AND
-      //   2) the Stripe Customer we resolved has no subscription history
-      //      (so recreating a KovaGPT account with the same email/userId
-      //      doesn't grant a second trial).
+      // Free-trial eligibility for Plus. A user is eligible only if they have
+      // no subscription row and their mapped Stripe Customer has no history.
       let isPlusTrialEligible = plan.trialPeriodDays > 0 && !existing;
       if (isPlusTrialEligible) {
         const prior = await stripe.subscriptions.list({
@@ -153,32 +124,35 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
 type PortalResult = { url: string } | { error: string };
 
-// Opens the Stripe Billing Portal so users can update payment methods,
-// cancel, or view invoices. The customer id is resolved from the most
-// recent subscription row for this user + env (RLS-scoped via `context.supabase`).
+// Opens an explicitly configured Stripe Billing Portal. The internal mapping,
+// not an email or browser-provided value, is the customer identity authority.
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
-    const { supabase, userId } = context;
-    const { data: sub, error: subscriptionError } = await supabase
-      .from("subscriptions")
+    const { data: mapping, error: mappingError } = await supabaseAdmin
+      .from("stripe_customer_mappings")
       .select("stripe_customer_id")
-      .eq("user_id", userId)
+      .eq("user_id", context.userId)
       .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
-    if (subscriptionError) {
+    if (mappingError) {
       return { error: "Billing account couldn't be verified. Try again." };
     }
-    if (!sub?.stripe_customer_id) {
+    if (!mapping?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
+    }
+    const configuration = billingPortalConfigurationId();
+    if (!configuration) {
+      return {
+        error: "The billing portal is not configured. Contact support for billing help.",
+      };
     }
     try {
       const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
-        customer: sub.stripe_customer_id,
+        customer: mapping.stripe_customer_id,
+        configuration,
         // The browser cannot choose an arbitrary post-portal redirect.
         return_url: "https://kovagpt.com/",
       });
@@ -208,19 +182,19 @@ export type SubscriptionSummary = {
   cancelAtPeriodEnd: boolean;
   trialing: boolean;
   hasBillingAccount: boolean;
+  billingPortalAvailable: boolean;
 };
 
-// Server-verified subscription summary for the current user. Reads through
-// the RLS-scoped supabase client on the middleware context, so users only
-// ever see their own row.
+// Server-verified subscription summary for the current user. Subscription rows
+// are RLS-scoped; customer identity is read from the server-only mapping table.
 export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: { environment: StripeEnv }) => data)
-  .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
+  .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { supabase, userId } = context;
     const { data: row, error: subscriptionError } = await supabase
       .from("subscriptions")
-      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
+      .select("price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
       .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
@@ -229,6 +203,14 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     if (subscriptionError) {
       throw new Error("Billing details couldn't be verified.");
     }
+    const { data: mapping, error: mappingError } = await supabaseAdmin
+      .from("stripe_customer_mappings")
+      .select("stripe_customer_id")
+      .eq("user_id", userId)
+      .eq("environment", BILLING_ENV)
+      .maybeSingle();
+    if (mappingError) throw new Error("Billing details couldn't be verified.");
+
     const priceId = row?.price_id ?? null;
     const now = Date.now();
     const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
@@ -238,6 +220,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
         (!row.current_period_end || end > now)) ||
         (row.status === "canceled" && end > now));
     const tier = active ? tierForLookupKey(priceId) : "free";
+    const hasBillingAccount = !!mapping?.stripe_customer_id;
     return {
       tier,
       status: row?.status ?? null,
@@ -245,6 +228,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       currentPeriodEnd: row?.current_period_end ?? null,
       cancelAtPeriodEnd: !!row?.cancel_at_period_end,
       trialing: row?.status === "trialing",
-      hasBillingAccount: !!row?.stripe_customer_id,
+      hasBillingAccount,
+      billingPortalAvailable: hasBillingAccount && !!billingPortalConfigurationId(),
     };
   });

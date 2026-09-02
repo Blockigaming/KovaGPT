@@ -9,6 +9,26 @@ const getEnv = (key: string): string => {
 
 export type StripeEnv = "sandbox" | "live";
 
+export type VerifiedStripeEvent = {
+  id: string;
+  created: number;
+  type: string;
+  data: { object: unknown };
+};
+
+export class StripeWebhookVerificationError extends Error {
+  readonly status = 400;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "StripeWebhookVerificationError";
+  }
+}
+
+function rejectWebhook(message: string): never {
+  throw new StripeWebhookVerificationError(message);
+}
+
 export function getConnectionApiKey(env: StripeEnv): string {
   return env === "sandbox" ? getEnv("STRIPE_SANDBOX_API_KEY") : getEnv("STRIPE_LIVE_API_KEY");
 }
@@ -32,36 +52,75 @@ export function getStripeErrorMessage(error: unknown): string {
   return "Stripe request failed";
 }
 
-export async function verifyWebhook(
-  req: Request,
-  env: StripeEnv,
-): Promise<{ id?: string; created?: number; type: string; data: { object: unknown } }> {
+function parseVerifiedStripeEvent(body: string): VerifiedStripeEvent {
+  let value: unknown;
+  try {
+    value = JSON.parse(body);
+  } catch {
+    rejectWebhook("Invalid webhook payload");
+  }
+  if (!value || typeof value !== "object") rejectWebhook("Invalid webhook payload");
+
+  const event = value as {
+    id?: unknown;
+    created?: unknown;
+    type?: unknown;
+    data?: unknown;
+  };
+  if (typeof event.id !== "string" || !event.id.trim()) {
+    rejectWebhook("Invalid webhook event id");
+  }
+  if (typeof event.created !== "number" || !Number.isSafeInteger(event.created)) {
+    rejectWebhook("Invalid webhook event timestamp");
+  }
+  if (typeof event.type !== "string" || !event.type.trim()) {
+    rejectWebhook("Invalid webhook event type");
+  }
+  if (!event.data || typeof event.data !== "object" || !("object" in event.data)) {
+    rejectWebhook("Invalid webhook event data");
+  }
+
+  return {
+    id: event.id,
+    created: event.created,
+    type: event.type,
+    data: { object: (event.data as { object: unknown }).object },
+  };
+}
+
+export async function verifyWebhook(req: Request, env: StripeEnv): Promise<VerifiedStripeEvent> {
   const signature = req.headers.get("stripe-signature");
   const maxBodyBytes = 2 * 1024 * 1024;
   const contentLength = Number(req.headers.get("content-length") ?? "0");
-  if (contentLength > maxBodyBytes) throw new Error("Webhook payload too large");
+  if (!Number.isFinite(contentLength) || contentLength < 0 || contentLength > maxBodyBytes) {
+    rejectWebhook("Webhook payload too large");
+  }
   const body = await req.text();
-  if (body.length > maxBodyBytes) throw new Error("Webhook payload too large");
+  if (Buffer.byteLength(body, "utf8") > maxBodyBytes) {
+    rejectWebhook("Webhook payload too large");
+  }
   const secret =
     env === "sandbox"
       ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")
       : getEnv("PAYMENTS_LIVE_WEBHOOK_SECRET");
 
-  if (!signature || !body) throw new Error("Missing signature or body");
+  if (!signature || !body) rejectWebhook("Missing signature or body");
 
   let timestamp: string | undefined;
   const v1Signatures: string[] = [];
   for (const part of signature.split(",")) {
     const [key, value] = part.split("=", 2);
     if (key === "t") timestamp = value;
-    if (key === "v1") v1Signatures.push(value);
+    if (key === "v1" && value) v1Signatures.push(value);
   }
-  if (!timestamp || v1Signatures.length === 0) {
-    throw new Error("Invalid signature format");
+  if (!timestamp || !/^\d+$/u.test(timestamp) || v1Signatures.length === 0) {
+    rejectWebhook("Invalid signature format");
   }
 
-  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
-  if (age > 300) throw new Error("Webhook timestamp too old");
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isSafeInteger(timestampSeconds)) rejectWebhook("Invalid signature timestamp");
+  const age = Math.abs(Date.now() / 1000 - timestampSeconds);
+  if (age > 300) rejectWebhook("Webhook timestamp too old");
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -78,8 +137,8 @@ export async function verifyWebhook(
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
   if (!v1Signatures.some((candidate) => timingSafeEqualText(candidate, expected))) {
-    throw new Error("Invalid webhook signature");
+    rejectWebhook("Invalid webhook signature");
   }
 
-  return JSON.parse(body);
+  return parseVerifiedStripeEvent(body);
 }

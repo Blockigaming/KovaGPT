@@ -48,14 +48,27 @@ export function verifyCheckoutRequestBoundary() {
   return failures;
 }
 
-export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, checkoutSource }) {
+export function verifyStripeTestPath({
+  webhookSource,
+  reliabilitySource,
+  stripeSource,
+  planSource,
+  checkoutSource,
+}) {
   const failures = [];
   if (!/normalizeStripeEnvironment/u.test(webhookSource))
     failures.push("webhook environment parser missing");
   if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource))
     failures.push("sandbox/live allowlist missing");
-  if (!/processed_stripe_events/u.test(webhookSource) || !/23505/u.test(webhookSource))
-    failures.push("webhook idempotency missing");
+  if (
+    !/processed_stripe_events/u.test(reliabilitySource) ||
+    !/POSTGRES_UNIQUE_VIOLATION/u.test(reliabilitySource)
+  )
+    failures.push("webhook completion idempotency missing");
+  if (!/stripe_customer_mappings/u.test(reliabilitySource))
+    failures.push("webhook customer mapping missing");
+  if (!/retrieveSubscription/u.test(reliabilitySource))
+    failures.push("authoritative subscription retrieval missing");
   if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource))
     failures.push("sandbox webhook secret missing");
   if (!/PAYMENTS_LIVE_WEBHOOK_SECRET/u.test(stripeSource))
@@ -96,6 +109,10 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
     failures.push("Checkout return URL remains browser-selectable");
   if (!CHECKOUT_VALIDATOR_PATTERN.test(checkoutSource))
     failures.push("sanitized Checkout validator missing");
+  if (!/resolveStripeCustomerId/u.test(checkoutSource))
+    failures.push("durable Stripe customer mapping missing");
+  if (/customers\.(?:list|search|update)/u.test(checkoutSource))
+    failures.push("email or metadata customer reassignment remains reachable");
 
   failures.push(...verifyCheckoutRequestBoundary());
   return failures;
@@ -104,6 +121,7 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const failures = verifyStripeTestPath({
     webhookSource: readFileSync("src/routes/api/public/payments/webhook.ts", "utf8"),
+    reliabilitySource: readFileSync("src/lib/webhook-reliability.mjs", "utf8"),
     stripeSource: readFileSync("src/lib/stripe.server.ts", "utf8"),
     planSource: readFileSync("src/lib/billing-plans.ts", "utf8"),
     checkoutSource: readFileSync("src/utils/payments.functions.ts", "utf8"),

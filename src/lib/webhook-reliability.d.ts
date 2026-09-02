@@ -4,11 +4,21 @@ declare module "@/lib/webhook-reliability.mjs" {
     status: number;
   }
 
+  export function invoiceSubscriptionId(invoice: unknown): string | null;
+
   export function processStripeEvent(input: {
     supabase: unknown;
-    event: unknown;
+    event: {
+      id: string;
+      created: number;
+      type: string;
+      data: { object: unknown };
+    };
     environment: "live" | "sandbox";
-    resolvePriceId: (item: never) => string | undefined;
+    resolvePriceId: (item: unknown) => string | undefined;
+    retrieveSubscription: (id: string) => Promise<unknown>;
+    billingOutcome?: (type: string) => string;
+    correlationId?: string | null;
     now?: () => string;
   }): Promise<{ duplicate: boolean }>;
 

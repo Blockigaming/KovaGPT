@@ -9,19 +9,19 @@ export class WebhookProcessingError extends Error {
   }
 }
 
-function fail(code, status, cause) {
+function fail(code, status = 500, cause) {
   throw new WebhookProcessingError(code, status, cause);
 }
 
 function requireResult(result, code, { requireData = false } = {}) {
   if (result?.error) fail(code, 500, result.error);
-  if (requireData && !result?.data) fail(`${code}_no_rows`, 500);
+  if (requireData && !result?.data) fail(`${code}_no_rows`);
   return result?.data ?? null;
 }
 
 function affectedRows(result, code) {
   const data = requireResult(result, code);
-  if (!Array.isArray(data)) fail(`${code}_missing_affected_rows`, 500);
+  if (!Array.isArray(data)) fail(`${code}_missing_affected_rows`);
   return data.length;
 }
 
@@ -33,15 +33,25 @@ function stringId(value) {
   return null;
 }
 
-function subscriptionRow(subscription, eventType, environment, resolvePriceId, now) {
-  const userId = subscription?.metadata?.userId;
+export function invoiceSubscriptionId(invoice) {
+  if (invoice?.parent?.type !== "subscription_details") return null;
+  return stringId(invoice.parent.subscription_details?.subscription);
+}
+
+function eventSubscriptionId(event) {
+  if (event.type.startsWith("customer.subscription.")) return stringId(event.data?.object);
+  if (event.type.startsWith("invoice.")) return invoiceSubscriptionId(event.data?.object);
+  return null;
+}
+
+function subscriptionRow(subscription, eventType, environment, userId, resolvePriceId, now, event) {
   const item = subscription?.items?.data?.[0];
   const priceId = resolvePriceId(item);
   const customerId = stringId(subscription?.customer);
   const productId = stringId(item?.price?.product);
 
-  if (!subscription?.id || !userId || !item || !priceId || !customerId || !productId) {
-    fail("subscription_metadata_incomplete", 422);
+  if (!subscription?.id || !item || !priceId || !customerId || !productId) {
+    fail("authoritative_subscription_incomplete");
   }
 
   const periodStart = item.current_period_start ?? subscription.current_period_start;
@@ -60,6 +70,8 @@ function subscriptionRow(subscription, eventType, environment, resolvePriceId, n
       eventType === "customer.subscription.deleted" || Boolean(subscription.cancel_at_period_end),
     environment,
     updated_at: now(),
+    last_stripe_event_created_at: new Date(event.created * 1000).toISOString(),
+    last_stripe_event_id: event.id,
   };
 }
 
@@ -67,42 +79,143 @@ const subscriptionEvents = new Set([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
 ]);
+
+const invoiceEvents = new Set([
+  "invoice.paid",
+  "invoice.payment_failed",
+  "invoice.payment_action_required",
+  "invoice.voided",
+  "invoice.marked_uncollectible",
+]);
+
+async function mappedUserId(supabase, environment, customerId) {
+  const result = await supabase
+    .from("stripe_customer_mappings")
+    .select("user_id")
+    .eq("environment", environment)
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  const mapping = requireResult(result, "stripe_customer_mapping_lookup_failed", {
+    requireData: true,
+  });
+  if (typeof mapping.user_id !== "string" || !mapping.user_id) {
+    fail("stripe_customer_mapping_missing");
+  }
+  return mapping.user_id;
+}
+
+async function currentSubscriptionTimestamp(supabase, environment, subscriptionId) {
+  const result = await supabase
+    .from("subscriptions")
+    .select("last_stripe_event_created_at")
+    .eq("environment", environment)
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  return requireResult(result, "subscription_event_order_lookup_failed")
+    ?.last_stripe_event_created_at;
+}
+
+function isCurrentEvent(created, persisted) {
+  if (!persisted) return true;
+  return created * 1000 >= Date.parse(persisted);
+}
 
 export async function processStripeEvent({
   supabase,
   event,
   environment,
   resolvePriceId,
+  retrieveSubscription,
+  billingOutcome = () => "observed",
+  correlationId = null,
   now = () => new Date().toISOString(),
 }) {
-  if (!event?.id || !event?.type) fail("stripe_event_incomplete", 400);
+  if (
+    !event?.id ||
+    !event?.type ||
+    !Number.isSafeInteger(event.created) ||
+    !event?.data ||
+    !("object" in event.data)
+  ) {
+    fail("stripe_event_incomplete", 400);
+  }
+  if (environment !== "sandbox" && environment !== "live") {
+    fail("stripe_environment_invalid", 400);
+  }
 
   const existing = await supabase
     .from("processed_stripe_events")
     .select("event_id")
+    .eq("environment", environment)
     .eq("event_id", event.id)
     .maybeSingle();
   if (requireResult(existing, "stripe_event_lookup_failed")) {
     return { duplicate: true };
   }
 
-  if (subscriptionEvents.has(event.type)) {
-    const row = subscriptionRow(event.data?.object, event.type, environment, resolvePriceId, now);
-    const mutated = await supabase
-      .from("subscriptions")
-      .upsert(row, { onConflict: "stripe_subscription_id" })
-      .select("stripe_subscription_id")
-      .maybeSingle();
-    requireResult(mutated, "subscription_upsert_failed", { requireData: true });
+  const subscriptionId = eventSubscriptionId(event);
+  let authoritativeSubscription = null;
+  if (subscriptionEvents.has(event.type) || (invoiceEvents.has(event.type) && subscriptionId)) {
+    if (!subscriptionId) fail("stripe_subscription_id_missing");
+    try {
+      authoritativeSubscription = await retrieveSubscription(subscriptionId);
+    } catch (error) {
+      fail("stripe_subscription_retrieve_failed", 500, error);
+    }
+    if (!authoritativeSubscription || authoritativeSubscription.id !== subscriptionId) {
+      fail("stripe_subscription_retrieve_mismatch");
+    }
+
+    const customerId = stringId(authoritativeSubscription.customer);
+    if (!customerId) fail("stripe_subscription_customer_missing");
+    const userId = await mappedUserId(supabase, environment, customerId);
+    const persisted = await currentSubscriptionTimestamp(supabase, environment, subscriptionId);
+    if (isCurrentEvent(event.created, persisted)) {
+      const row = subscriptionRow(
+        authoritativeSubscription,
+        event.type,
+        environment,
+        userId,
+        resolvePriceId,
+        now,
+        event,
+      );
+      const mutated = await supabase
+        .from("subscriptions")
+        .upsert(row, { onConflict: "stripe_subscription_id,environment" })
+        .select("stripe_subscription_id")
+        .maybeSingle();
+      requireResult(mutated, "subscription_upsert_failed", {
+        requireData: true,
+      });
+    }
   }
 
+  const object = event.data.object;
+  const customerId =
+    stringId(authoritativeSubscription?.customer) ?? stringId(object?.customer) ?? null;
   const recorded = await supabase
     .from("processed_stripe_events")
     .insert({
       event_id: event.id,
       type: event.type,
       environment,
+      processed_at: now(),
+      event_created_at: new Date(event.created * 1000).toISOString(),
+      correlation_id:
+        typeof correlationId === "string" && /^[0-9a-f-]{36}$/iu.test(correlationId)
+          ? correlationId
+          : null,
+      object_id: stringId(object),
+      customer_id: customerId,
+      subscription_id: subscriptionId,
+      invoice_id: event.type.startsWith("invoice.") ? stringId(object) : null,
+      checkout_session_id: event.type.startsWith("checkout.session.") ? stringId(object) : null,
+      outcome: billingOutcome(event.type),
+      retryable: false,
     })
     .select("event_id")
     .maybeSingle();
@@ -119,7 +232,9 @@ async function deliveryStatus(supabase, delivery) {
     .select("delivery_id,status")
     .eq("delivery_id", delivery)
     .maybeSingle();
-  return requireResult(result, "github_delivery_lookup_failed", { requireData: true });
+  return requireResult(result, "github_delivery_lookup_failed", {
+    requireData: true,
+  });
 }
 
 async function markGitHubDelivery(supabase, delivery, values, code) {
@@ -168,7 +283,9 @@ export async function processGitHubDelivery({
       return { duplicate: true };
     }
   } else {
-    requireResult(inserted, "github_delivery_record_failed", { requireData: true });
+    requireResult(inserted, "github_delivery_record_failed", {
+      requireData: true,
+    });
   }
 
   try {
@@ -179,8 +296,6 @@ export async function processGitHubDelivery({
         .delete()
         .eq("id", installationId)
         .select("id");
-      // Zero rows is an idempotent success: a prior attempt may have revoked it before
-      // its final delivery-status write failed.
       affectedRows(revoked, "github_installation_revoke_failed");
     }
 
@@ -194,7 +309,6 @@ export async function processGitHubDelivery({
         .update({ explicitly_granted: false, revoked_at: now() })
         .eq("id", repositoryId);
       if (installationId) revoke = revoke.eq("installation_id", installationId);
-      // GitHub can deliver before repository discovery finishes, so an untracked row is a safe no-op.
       affectedRows(await revoke.select("id"), "github_repository_revoke_failed");
     }
 

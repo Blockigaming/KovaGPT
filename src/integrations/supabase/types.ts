@@ -763,21 +763,51 @@ export type Database = {
       };
       processed_stripe_events: {
         Row: {
+          checkout_session_id: string | null;
+          correlation_id: string | null;
+          customer_id: string | null;
           environment: string;
+          event_created_at: string | null;
           event_id: string;
+          invoice_id: string | null;
+          object_id: string | null;
+          outcome: string;
+          payload_hash: string | null;
           processed_at: string;
+          retryable: boolean;
+          subscription_id: string | null;
           type: string;
         };
         Insert: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment: string;
+          event_created_at?: string | null;
           event_id: string;
+          invoice_id?: string | null;
+          object_id?: string | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type: string;
         };
         Update: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment?: string;
+          event_created_at?: string | null;
           event_id?: string;
+          invoice_id?: string | null;
+          object_id?: string | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type?: string;
         };
         Relationships: [];
@@ -1254,6 +1284,30 @@ export type Database = {
           status?: string;
           title?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_customer_mappings: {
+        Row: {
+          created_at: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          stripe_customer_id?: string;
+          updated_at?: string;
+          user_id?: string | null;
         };
         Relationships: [];
       };

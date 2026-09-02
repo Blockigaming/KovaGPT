@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 82,
+  "migrationCount": 83,
   "tables": [
     "account_audit_entries",
     "agent_approvals",
@@ -113,6 +113,7 @@
     "scheduled_task_runs",
     "scheduled_tasks",
     "shared_chats",
+    "stripe_customer_mappings",
     "subscriptions",
     "support_tickets",
     "suppressed_emails",
@@ -557,6 +558,7 @@
     "shared_owner_select",
     "shared_owner_update",
     "shared_recipient_select",
+    "stripe_customer_mappings_deny_clients",
     "sync job owner read",
     "task runs owner read",
     "tasks_select_members",
@@ -711,6 +713,7 @@
     "scheduled_task_runs",
     "scheduled_tasks",
     "shared_chats",
+    "stripe_customer_mappings",
     "subscriptions",
     "support_tickets",
     "suppressed_emails",
@@ -837,6 +840,7 @@
     "all on public.goals to service_role",
     "all on public.processed_stripe_events to service_role",
     "all on public.project_file_chunks to service_role",
+    "all on public.stripe_customer_mappings to service_role",
     "all on public.subscriptions to service_role",
     "all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_credit_ledger,public.developer_api_requests,public.credit_purchases to service_role",
     "delete on public.google_oauth_tokens to authenticated",
@@ -1067,6 +1071,7 @@
     "all on public.operational_events from anon",
     "all on public.processed_stripe_events from anon, authenticated",
     "all on public.processed_stripe_events from anon, authenticated",
+    "all on public.stripe_customer_mappings from public, anon, authenticated",
     "all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_credit_ledger,public.developer_api_requests,public.credit_purchases from public,anon,authenticated",
     "all on public.writing_documents, public.writing_document_versions from anon",
     "all on sequences from anon, authenticated",
@@ -1078,5 +1083,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "fb508ba80c60043cccf912d19af58aafdeec2ce6e36416c0b48aef5293841b9d"
+  "sha256": "94bb1406d95af92911db714af4c088169ff2b5272fd96bf02b0b416177ab0900"
 }

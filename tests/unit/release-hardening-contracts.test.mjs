@@ -112,8 +112,9 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
   assert.deepEqual(verifyCheckoutRequestBoundary(), []);
 
   const valid = {
-    webhookSource:
-      'normalizeStripeEnvironment value === "sandbox" || value === "live" processed_stripe_events 23505',
+    webhookSource: 'normalizeStripeEnvironment value === "sandbox" || value === "live"',
+    reliabilitySource:
+      "processed_stripe_events POSTGRES_UNIQUE_VIOLATION stripe_customer_mappings retrieveSubscription",
     stripeSource:
       'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
     planSource: "plus_monthly pro_monthly",

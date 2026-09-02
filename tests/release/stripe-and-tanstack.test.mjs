@@ -14,6 +14,10 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
     ),
+    reliability = await readFile(
+      new URL("../../src/lib/webhook-reliability.mjs", import.meta.url),
+      "utf8",
+    ),
     pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
 
   assert.equal(pkg.dependencies.stripe, "22.6.0");
@@ -35,8 +39,12 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
   );
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
-  assert.match(hook, /code.*23505/);
-  assert.match(hook, /processed_stripe_events"\)\.delete/);
+  assert.match(hook, /processStripeEvent/);
+  assert.match(reliability, /POSTGRES_UNIQUE_VIOLATION/);
+  assert.match(reliability, /processed_stripe_events/);
+  assert.match(reliability, /stripe_customer_mappings/);
+  assert.match(reliability, /retrieveSubscription/);
+  assert.doesNotMatch(reliability, /processed_stripe_events"\)\s*\.delete/);
   assert.match(hook, /correlationId/);
   assert.doesNotMatch(hook, /console\.(log|error)/);
 });

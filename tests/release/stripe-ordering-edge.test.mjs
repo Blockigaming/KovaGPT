@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (p) => readFile(new URL(`../../${p}`, import.meta.url), "utf8");
 test("Stripe ordering metadata prevents stale entitlement updates", async () => {
-  const route = await read("src/routes/api/public/payments/webhook.ts"),
-    sql = await read("supabase/migrations/20260803121000_stripe_event_ordering.sql");
-  assert.match(route, /last_stripe_event_created_at\.lte/);
-  assert.match(route, /event_created_at/);
-  assert.match(route, /23505/);
-  assert.match(sql, /last_stripe_event_created_at/);
-  assert.match(sql, /processed_stripe_events_order_idx/);
+  const reliability = await read("src/lib/webhook-reliability.mjs"),
+    orderingSql = await read("supabase/migrations/20260803121000_stripe_event_ordering.sql"),
+    identitySql = await read(
+      "supabase/migrations/20260901234000_stripe_customer_identity_and_completion.sql",
+    );
+  assert.match(reliability, /currentSubscriptionTimestamp/);
+  assert.match(reliability, /last_stripe_event_created_at/);
+  assert.match(reliability, /POSTGRES_UNIQUE_VIOLATION/);
+  assert.match(reliability, /stripe_subscription_id,environment/);
+  assert.match(orderingSql, /processed_stripe_events_order_idx/);
+  assert.match(identitySql, /primary key \(event_id, environment\)/);
 });
 test("edge contract enforces security headers CSRF and request size", async () => {
   const edge = await read("scripts/release/edge-contract.mjs"),

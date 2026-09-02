@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 82,
-  "latest": "20260824094500_day15_canonical_workspace_rpc_aliases.sql",
+  "count": 83,
+  "latest": "20260901234000_stripe_customer_identity_and_completion.sql",
   "migrations": [
     {
       "order": 1,
@@ -1669,6 +1669,20 @@
       "reversible": false,
       "rls": [],
       "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 83,
+      "filename": "20260901234000_stripe_customer_identity_and_completion.sql",
+      "timestamp": "20260901234000",
+      "sha256": "77dfd95247e11c390a697f8876dc4ced9ea2536c4b2bd02bbe52420cf5c9f8c1",
+      "tables": ["stripe_customer_mappings"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["stripe_customer_mappings"],
+      "policies": ["stripe_customer_mappings_deny_clients"],
       "indexes": []
     }
   ]
