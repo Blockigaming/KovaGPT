@@ -166,6 +166,7 @@ jobs:
           parameters_path="$RUNNER_TEMP/kova-production-plan.parameters.json"
           umask 077
           PARAMETERS_PATH="$parameters_path" node <<'NODE'
+          const { createHash } = require("node:crypto");
           const fs = require("fs");
           const raw = process.env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON;
           if (!raw) throw new Error("KOVA_PRODUCTION_BICEP_PARAMETERS_JSON is required");
@@ -184,6 +185,27 @@ jobs:
           const expectedUrl = `https://${process.env.KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co`;
           if (document.parameters.supabaseUrl?.value !== expectedUrl) {
             throw new Error("The Bicep Supabase URL does not match the approved production project");
+          }
+          const publishableKey = document.parameters.supabasePublishableKey?.value;
+          if (
+            typeof publishableKey !== "string" ||
+            !/^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey)
+          ) {
+            throw new Error("The protected Supabase publishable key is invalid");
+          }
+          const provenance = JSON.parse(
+            fs.readFileSync(
+              `${process.env.RUNNER_TEMP}/browser-config-provenance.json`,
+              "utf8",
+            ),
+          );
+          const publishableKeySha256 = createHash("sha256")
+            .update(publishableKey)
+            .digest("hex");
+          if (provenance.publishableKeySha256 !== publishableKeySha256) {
+            throw new Error(
+              "The candidate publishable-key fingerprint does not match the protected production key",
+            );
           }
           fs.writeFileSync(process.env.PARAMETERS_PATH, `${JSON.stringify(document, null, 2)}\n`, {
             mode: 0o600,

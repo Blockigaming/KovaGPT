@@ -1,6 +1,8 @@
 const base = new URL(process.env.KOVA_SMOKE_BASE_URL || "http://127.0.0.1:4173");
 const expectedSha = process.env.KOVA_EXPECTED_SHA;
-if (!expectedSha) throw new Error("KOVA_EXPECTED_SHA is required");
+if (!/^[a-f0-9]{40}$/u.test(expectedSha || "")) {
+  throw new Error("KOVA_EXPECTED_SHA must be an exact lowercase 40-character Git SHA");
+}
 
 const timeoutValue = process.env.KOVA_SMOKE_REQUEST_TIMEOUT_MS || "10000";
 const requestTimeoutMs = Number(timeoutValue);
@@ -22,7 +24,9 @@ if (
   throw new Error("KOVA_SMOKE_MAX_JAVASCRIPT_BYTES must be an integer from 1024 through 67108864");
 }
 
-const HTTPS_URL_IN_LITERAL_PATTERN = /https:\/\/[^\s<>]+/giu;
+const SUPABASE_PROJECT_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co/giu;
+const EXACT_SUPABASE_URL_BOUNDARY_PATTERN = /^(?:$|[\s<>"'`])/u;
+const QUOTED_SUPABASE_USERINFO_TAIL_PATTERN = /^["'`][^"'`\s<>/]*@/u;
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =
@@ -75,6 +79,15 @@ function normalizeExpectedSupabaseUrl(raw) {
   };
 }
 
+function verifyRootBuildIdentity(rootHtml, expectedBuildSha) {
+  const buildMetaPattern =
+    /<meta\b(?=[^>]*\bname=["']kova-build["'])(?=[^>]*\bcontent=["']([a-f0-9]{40})["'])[^>]*>/giu;
+  const buildShas = [...rootHtml.matchAll(buildMetaPattern)].map((match) => match[1]);
+  if (buildShas.length !== 1 || buildShas[0] !== expectedBuildSha) {
+    throw new Error("The deployed HTML does not contain the expected build SHA");
+  }
+}
+
 async function request(pathOrUrl, consume = (response) => response) {
   const url = pathOrUrl instanceof URL ? pathOrUrl : new URL(pathOrUrl, base);
   const controller = new AbortController();
@@ -105,6 +118,20 @@ async function read(path, expectedType) {
       throw new Error(`${path} returned ${type || "no content type"}`);
     return { response, body: await response.text() };
   });
+}
+
+function assertNotCacheable(response, path) {
+  const directives = (response.headers.get("cache-control") || "")
+    .toLowerCase()
+    .split(",")
+    .map((directive) => directive.trim().replace(/\s+/gu, ""));
+  const hasPositiveAge = directives.some((directive) => {
+    const match = /^(?:s-maxage|max-age)=(\d+)$/u.exec(directive);
+    return match && Number(match[1]) > 0;
+  });
+  if (!directives.includes("no-store") || hasPositiveAge) {
+    throw new Error(`${path} returned a cacheable response`);
+  }
 }
 
 async function readBoundedJavaScript(response, url, maximumBytes) {
@@ -158,128 +185,44 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
   return { source: decoded.join(""), bytes };
 }
 
-function countOccurrences(source, token) {
-  let count = 0;
-  let offset = 0;
-  while (true) {
-    const index = source.indexOf(token, offset);
-    if (index < 0) return count;
-    count += 1;
-    offset = index + token.length;
-  }
-}
-
-function collectJavaScriptStringLiterals(source) {
-  const literals = [];
-  let offset = 0;
-
-  while (offset < source.length) {
-    const character = source[offset];
-    const next = source[offset + 1];
-    if (character === "/" && next === "/") {
-      offset += 2;
-      while (offset < source.length && source[offset] !== "\n") offset += 1;
-      continue;
-    }
-    if (character === "/" && next === "*") {
-      offset += 2;
-      while (offset < source.length && !(source[offset] === "*" && source[offset + 1] === "/")) {
-        offset += 1;
-      }
-      offset = Math.min(offset + 2, source.length);
-      continue;
-    }
-    if (character !== "'" && character !== '"' && character !== "`") {
-      offset += 1;
-      continue;
-    }
-
-    const delimiter = character;
-    let value = "";
-    let escaped = false;
-    let dynamic = false;
-    let closed = false;
-    offset += 1;
-
-    while (offset < source.length) {
-      const current = source[offset];
-      if (current === "\\") {
-        escaped = true;
-        value += current;
-        offset += 1;
-        if (offset < source.length) {
-          value += source[offset];
-          offset += 1;
-        }
-        continue;
-      }
-      if (current === delimiter) {
-        closed = true;
-        offset += 1;
-        break;
-      }
-      if (delimiter !== "`" && (current === "\n" || current === "\r")) break;
-      if (delimiter === "`" && current === "$" && source[offset + 1] === "{") {
-        dynamic = true;
-      }
-      value += current;
-      offset += 1;
-    }
-
-    if (closed) literals.push({ value, escaped, dynamic });
-  }
-
-  return literals;
-}
-
 function nonCanonicalSupabaseUrl() {
   return new Error("The deployed browser bundle contains a non-canonical Supabase URL");
 }
 
 function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
-  const token = ".supabase.co";
-  const totalOccurrences = countOccurrences(source.toLowerCase(), token);
-  let accountedOccurrences = 0;
-
-  for (const literal of collectJavaScriptStringLiterals(source)) {
-    const literalOccurrences = countOccurrences(literal.value.toLowerCase(), token);
-    if (literalOccurrences === 0) continue;
-    accountedOccurrences += literalOccurrences;
-    if (literal.escaped || literal.dynamic) throw nonCanonicalSupabaseUrl();
-
-    let coveredOccurrences = 0;
-    HTTPS_URL_IN_LITERAL_PATTERN.lastIndex = 0;
-    for (const match of literal.value.matchAll(HTTPS_URL_IN_LITERAL_PATTERN)) {
-      const rawUrl = match[0];
-      const candidateOccurrences = countOccurrences(rawUrl.toLowerCase(), token);
-      if (candidateOccurrences === 0) continue;
-      if (candidateOccurrences !== 1) throw nonCanonicalSupabaseUrl();
-      coveredOccurrences += candidateOccurrences;
-
-      let candidate;
-      try {
-        candidate = new URL(rawUrl);
-      } catch {
-        throw nonCanonicalSupabaseUrl();
-      }
-
-      const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
-      if (
-        candidate.protocol !== "https:" ||
-        !hostname ||
-        candidate.username ||
-        candidate.password ||
-        candidate.port
-      ) {
-        throw nonCanonicalSupabaseUrl();
-      }
-      discoveredProjectRefs.add(hostname[1]);
+  SUPABASE_PROJECT_URL_PATTERN.lastIndex = 0;
+  for (const match of source.matchAll(SUPABASE_PROJECT_URL_PATTERN)) {
+    const rawUrl = match[0];
+    const tail = source.slice(match.index + rawUrl.length);
+    if (
+      !EXACT_SUPABASE_URL_BOUNDARY_PATTERN.test(tail) ||
+      QUOTED_SUPABASE_USERINFO_TAIL_PATTERN.test(tail)
+    ) {
+      throw nonCanonicalSupabaseUrl();
     }
 
-    if (coveredOccurrences !== literalOccurrences) throw nonCanonicalSupabaseUrl();
-  }
+    let candidate;
+    try {
+      candidate = new URL(rawUrl);
+    } catch {
+      throw nonCanonicalSupabaseUrl();
+    }
 
-  if (accountedOccurrences !== totalOccurrences) throw nonCanonicalSupabaseUrl();
+    const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
+    if (
+      candidate.protocol !== "https:" ||
+      !hostname ||
+      candidate.username ||
+      candidate.password ||
+      candidate.port ||
+      candidate.pathname !== "/" ||
+      candidate.search ||
+      candidate.hash
+    ) {
+      throw nonCanonicalSupabaseUrl();
+    }
+    discoveredProjectRefs.add(hostname[1]);
+  }
 }
 
 function addJavaScriptReference(candidate, parent, queue, seen) {
@@ -304,12 +247,13 @@ function discoverJavaScript(source, parent, pattern, queue, seen) {
   }
 }
 
-async function verifyDeployedBrowserTarget(rootHtml, expected) {
+async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha) {
   const queue = [];
   const seen = new Set();
   discoverJavaScript(rootHtml, base, HTML_JAVASCRIPT_PATTERN, queue, seen);
   if (queue.length === 0) throw new Error("No deployed JavaScript assets were found");
 
+  verifyRootBuildIdentity(rootHtml, expectedBuildSha);
   const discoveredProjectRefs = new Set();
   let scannedAssets = 0;
   let scannedBytes = 0;
@@ -344,6 +288,7 @@ async function verifyDeployedBrowserTarget(rootHtml, expected) {
 }
 
 const version = await read("/api/version", "application/json");
+assertNotCacheable(version.response, "/api/version");
 const identity = JSON.parse(version.body);
 if (identity.sha !== expectedSha || version.response.headers.get("x-kova-build") !== expectedSha) {
   throw new Error(`deployed build ${identity.sha || "unknown"} does not match ${expectedSha}`);
@@ -351,10 +296,13 @@ if (identity.sha !== expectedSha || version.response.headers.get("x-kova-build")
 
 let rootBody = "";
 for (const path of ["/", "/pricing", "/modes", "/~oauth/callback", "/robots.txt", "/sitemap.xml"]) {
-  const { body } = await read(
-    path,
-    path.endsWith(".xml") ? "xml" : path.endsWith(".txt") ? "text" : "text/html",
-  );
+  const expectedType = path.endsWith(".xml")
+    ? "xml"
+    : path.endsWith(".txt")
+      ? "text"
+      : "text/html";
+  const { response, body } = await read(path, expectedType);
+  if (expectedType === "text/html") assertNotCacheable(response, path);
   if (path === "/") rootBody = body;
   if (/voice synthesis|voice mode|Basic Mode|Creative Mode|Precise Mode/i.test(body)) {
     throw new Error(`${path} contains retired product claims`);
@@ -362,7 +310,7 @@ for (const path of ["/", "/pricing", "/modes", "/~oauth/callback", "/robots.txt"
 }
 
 if (expectedSupabaseUrl) {
-  await verifyDeployedBrowserTarget(rootBody, expectedSupabaseUrl);
+  await verifyDeployedBrowserTarget(rootBody, expectedSupabaseUrl, expectedSha);
 }
 
 const missing = await request(`/release-smoke-missing-${Date.now()}`);

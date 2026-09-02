@@ -29,6 +29,7 @@ jobs:
             echo "::error::STAGING_SUPABASE_URL must be an https://<project-ref>.supabase.co URL."
             exit 1
           fi
+          export VITE_SUPABASE_URL="$staging_url"
           if [[ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]]; then
             echo "::error::STAGING_SUPABASE_PUBLISHABLE_KEY is required."
             exit 1

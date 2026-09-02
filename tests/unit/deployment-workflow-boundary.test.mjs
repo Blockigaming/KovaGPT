@@ -9,6 +9,7 @@ const read = (path) => readFileSync(path, "utf8");
 
 test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the app", () => {
   const workflow = read(".github/workflows/staging-rehearsal.yml");
+  const rootRoute = read("src/routes/__root.tsx");
 
   assert.match(workflow, /^on: \{ workflow_dispatch: \{\} \}$/mu);
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
@@ -21,6 +22,10 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
     workflow,
     /KOVA_EXPECTED_SUPABASE_URL: "\$\{\{ secrets\.STAGING_SUPABASE_URL \}\}"/u,
   );
+  assert.match(workflow, /export VITE_SUPABASE_URL="\$staging_url"/u);
+  assert.match(rootRoute, /name: "kova-build"/u);
+  assert.match(rootRoute, /import\.meta\.env\.VITE_KOVA_BUILD_SHA/u);
+  assert.match(rootRoute, /"Cache-Control": "no-store, max-age=0"/u);
   assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
   assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
   assert.match(workflow, /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u);
@@ -68,6 +73,9 @@ test("production Azure workflow is protected, OIDC-based, digest-bound, and plan
   assert.match(workflow, /com\.kovagpt\.browser\.config-verified/u);
   assert.match(workflow, /browser-config-provenance\.json/u);
   assert.match(workflow, /value\.sourceContext !== "acr-git"/u);
+  assert.match(workflow, /document\.parameters\.supabasePublishableKey/u);
+  assert.match(workflow, /createHash\("sha256"\)/u);
+  assert.match(workflow, /provenance\.publishableKeySha256 !== publishableKeySha256/u);
   assert.match(workflow, /infra\/azure\/production\/main\.bicep/u);
   assert.match(workflow, /--result-format ResourceIdOnly/u);
   assert.doesNotMatch(
@@ -106,11 +114,14 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /JAVASCRIPT_CONTENT_TYPES/u);
   assert.match(smoke, /JAVASCRIPT_DEPENDENCY_PATTERNS/u);
   assert.match(smoke, /new URL\(rawUrl\)/u);
+  assert.match(smoke, /assertNotCacheable/u);
+  assert.match(smoke, /verifyRootBuildIdentity/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
   assert.match(smoke, /contains an unexpected Supabase project URL/u);
   assert.doesNotMatch(smoke, /QUOTED_JAVASCRIPT_PATTERN/u);
+  assert.doesNotMatch(smoke, /collectJavaScriptStringLiterals/u);
   assert.doesNotMatch(smoke, /await fetch\(/u);
 });
 
@@ -119,6 +130,8 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
   const expectedProjectRef = "stagingprojectref123";
   const requestedPaths = [];
   let assetContentType = "application/javascript";
+  let browserBuildSha = expectedSha;
+  let htmlCacheControl = "no-store, max-age=0";
   const scripts = new Map([
     [
       "/assets/index.js",
@@ -133,7 +146,12 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     ["/assets/root.js", "export const root = true;"],
     [
       "/assets/preloaded.js",
-      'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+      [
+        String.raw`const quotePattern = /["']/;`,
+        'const tracingAllowlist = "*.supabase.co";',
+        'const bareSuffix = ".supabase.co";',
+        'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+      ].join(" "),
     ],
   ]);
 
@@ -143,13 +161,21 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       response.writeHead(200, {
         "content-type": "application/json",
         "x-kova-build": expectedSha,
+        "cache-control": "no-store, max-age=0",
       });
       response.end(JSON.stringify({ sha: expectedSha }));
       return;
     }
     if (request.url === "/") {
-      response.writeHead(200, { "content-type": "text/html" });
-      response.end('<script type="module" src="/assets/index.js"></script>');
+      response.writeHead(200, {
+        "content-type": "text/html",
+        "cache-control": htmlCacheControl,
+      });
+      response.end(
+        '<meta name="kova-build" content="' +
+          browserBuildSha +
+          '"><script type="module" src="/assets/index.js"></script>',
+      );
       return;
     }
     if (scripts.has(request.url)) {
@@ -168,7 +194,10 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       return;
     }
     if (["/pricing", "/modes", "/~oauth/callback"].includes(request.url)) {
-      response.writeHead(200, { "content-type": "text/html" });
+      response.writeHead(200, {
+        "content-type": "text/html",
+        "cache-control": htmlCacheControl,
+      });
       response.end("<main>KovaGPT</main>");
       return;
     }
@@ -215,6 +244,12 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.ok(passing.paths.includes("/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/stripe.js"));
+
+    htmlCacheControl = "public, max-age=300";
+    const cacheableHtml = await runSmoke();
+    assert.notEqual(cacheableHtml.code, 0);
+    assert.match(cacheableHtml.stderr, /returned a cacheable response/u);
+    htmlCacheControl = "no-store, max-age=0";
 
     assetContentType = "text/html";
     const fallback = await runSmoke();
@@ -276,6 +311,16 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.notEqual(delimitedUserinfoAttack.code, 0);
     assert.match(delimitedUserinfoAttack.stderr, /non-canonical Supabase URL/u);
 
+    for (const suffix of ["/wrong-base", "?wrong=true", "#wrong"]) {
+      scripts.set(
+        "/assets/preloaded.js",
+        'export const bad = "https://' + expectedProjectRef + ".supabase.co" + suffix + '";',
+      );
+      const nonRootUrl = await runSmoke();
+      assert.notEqual(nonRootUrl.code, 0);
+      assert.match(nonRootUrl.stderr, /non-canonical Supabase URL/u);
+    }
+
     const otherProjectRef = "otherstageproject123";
     const templateDelimiter = String.fromCharCode(96);
     scripts.set(
@@ -300,6 +345,11 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       "/assets/preloaded.js",
       'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
     );
+    browserBuildSha = "b".repeat(40);
+    const staleBrowserBundle = await runSmoke();
+    assert.notEqual(staleBrowserBundle.code, 0);
+    assert.match(staleBrowserBundle.stderr, /does not contain the expected build SHA/u);
+    browserBuildSha = expectedSha;
     scripts.set("/assets/index.js", 'const deps = ["assets/preloaded.js", "assets/oversized.js"];');
     scripts.set("/assets/oversized.js", "x".repeat(8192));
     const oversized = await runSmoke({ KOVA_SMOKE_MAX_JAVASCRIPT_BYTES: "4096" });
