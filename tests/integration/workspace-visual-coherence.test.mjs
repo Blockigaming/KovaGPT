@@ -42,6 +42,26 @@ test("Library reserves controls for real content and presents honest empty state
   assert.doesNotMatch(routes.library, />\s*\{loadError\}\s*</);
 });
 
+test("Library preview owns modal focus and mutation errors stay actionable", () => {
+  assert.match(routes.library, /from "@\/components\/ui\/dialog"/);
+  assert.match(
+    routes.library,
+    /const previewReturnFocusRef = useRef<HTMLButtonElement \| null>\(null\)/,
+  );
+  assert.match(routes.library, /onFocus=\{\(event\) => \{\s*previewReturnFocusRef\.current/);
+  assert.match(routes.library, /onPointerDown=\{\(event\) => \{\s*previewReturnFocusRef\.current/);
+  assert.match(routes.library, /<Dialog\s+[\s\S]*?open=\{Boolean\(visiblePreviewItem\)\}/);
+  assert.match(routes.library, /<DialogContent[\s\S]*?onCloseAutoFocus=\{/);
+  assert.match(routes.library, /if \(trigger\?\.isConnected\) trigger\.focus\(\)/);
+  assert.doesNotMatch(routes.library, /window\.addEventListener\("keydown"/);
+  assert.match(routes.library, /Could not delete this Library item\. Please try again\./);
+  assert.match(
+    routes.library,
+    /Some selected items could not be deleted\. Review your Library and try again\./,
+  );
+  assert.doesNotMatch(routes.library, /toast\.error\([^\n]*\.message/);
+});
+
 test("Images gives every repeated control a single contextual accessible name", () => {
   assert.match(routes.images, /aria-label=\{`Use \$\{p\.label\} style`\}/);
   assert.match(routes.images, /src=\{p\.image\}[\s\S]{0,80}alt=""/);
