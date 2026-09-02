@@ -1,6 +1,6 @@
 -- Reconcile storage contracts that earlier INSERT ... ON CONFLICT DO NOTHING
--- migrations could not update, and make future postgres-owned public objects
--- deny browser-role access until a later migration grants it explicitly.
+-- migrations could not update, and make future postgres-owned public tables
+-- and sequences deny browser-role access until a later migration grants it explicitly.
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
