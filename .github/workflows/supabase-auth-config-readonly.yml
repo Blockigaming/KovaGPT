@@ -40,108 +40,113 @@ jobs:
           const fs = require('node:fs');
           const crypto = require('node:crypto');
 
-          const candidates = [
-            'SUPABASE_ACCESS_TOKEN',
-            'SUPABASE_PERSONAL_ACCESS_TOKEN',
-            'SUPABASE_PAT',
-            'SUPABASE_TOKEN',
-            'SUPABASE_MANAGEMENT_API_TOKEN',
-            'SUPABASE_MANAGEMENT_TOKEN',
-            'SB_ACCESS_TOKEN',
-            'SUPABASE_CLI_TOKEN',
-          ];
-          const availability = Object.fromEntries(
-            candidates.map(name => [name, Boolean(process.env[`TOKEN_${name}`])]),
-          );
-          console.log(`TOKEN_NAME_AVAILABILITY=${JSON.stringify(availability)}`);
+          void (async () => {
+            const candidates = [
+              'SUPABASE_ACCESS_TOKEN',
+              'SUPABASE_PERSONAL_ACCESS_TOKEN',
+              'SUPABASE_PAT',
+              'SUPABASE_TOKEN',
+              'SUPABASE_MANAGEMENT_API_TOKEN',
+              'SUPABASE_MANAGEMENT_TOKEN',
+              'SB_ACCESS_TOKEN',
+              'SUPABASE_CLI_TOKEN',
+            ];
+            const availability = Object.fromEntries(
+              candidates.map(name => [name, Boolean(process.env[`TOKEN_${name}`])]),
+            );
+            console.log(`TOKEN_NAME_AVAILABILITY=${JSON.stringify(availability)}`);
 
-          const selected = candidates.find(name => process.env[`TOKEN_${name}`]);
-          if (!selected) {
-            fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify({
-              project_ref: process.env.PROJECT_REF,
-              captured_at: new Date().toISOString(),
-              token_name_availability: availability,
-              authoritative_config_read: false,
-              reason: 'No supported Supabase Management API credential is available to this environment.',
-            }, null, 2));
-            throw new Error('No supported Supabase Management API credential is available.');
-          }
+            const selected = candidates.find(name => process.env[`TOKEN_${name}`]);
+            if (!selected) {
+              fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify({
+                project_ref: process.env.PROJECT_REF,
+                captured_at: new Date().toISOString(),
+                token_name_availability: availability,
+                authoritative_config_read: false,
+                reason: 'No supported Supabase Management API credential is available to this environment.',
+              }, null, 2));
+              throw new Error('No supported Supabase Management API credential is available.');
+            }
 
-          const endpoint = `https://api.supabase.com/v1/projects/${process.env.PROJECT_REF}/config/auth`;
-          const response = await fetch(endpoint, {
-            headers: {
-              Authorization: `Bearer ${process.env[`TOKEN_${selected}`]}`,
-              Accept: 'application/json',
-            },
-          });
-          const responseText = await response.text();
-          if (!response.ok) {
-            fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify({
+            const endpoint = `https://api.supabase.com/v1/projects/${process.env.PROJECT_REF}/config/auth`;
+            const response = await fetch(endpoint, {
+              headers: {
+                Authorization: `Bearer ${process.env[`TOKEN_${selected}`]}`,
+                Accept: 'application/json',
+              },
+            });
+            const responseText = await response.text();
+            if (!response.ok) {
+              fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify({
+                project_ref: process.env.PROJECT_REF,
+                captured_at: new Date().toISOString(),
+                token_name_availability: availability,
+                selected_token_name: selected,
+                authoritative_config_read: false,
+                http_status: response.status,
+                response_excerpt: responseText.slice(0, 500),
+              }, null, 2));
+              throw new Error(`Management API GET failed with HTTP ${response.status}`);
+            }
+
+            const config = JSON.parse(responseText);
+            const subject = String(config.mailer_subjects_recovery || '');
+            const body = String(config.mailer_templates_recovery_content || '');
+            const hash = crypto.createHash('sha256').update(body).digest('hex');
+            const hookConfig = {};
+            for (const [key, value] of Object.entries(config)) {
+              if (!/hook.*send.*email|send.*email.*hook/i.test(key)) continue;
+              if (/secret|token|key/i.test(key)) hookConfig[key] = '[redacted]';
+              else if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
+                try {
+                  const parsed = new URL(value);
+                  hookConfig[key] = `${parsed.origin}${parsed.pathname}`;
+                } catch {
+                  hookConfig[key] = '[configured string]';
+                }
+              } else {
+                hookConfig[key] = value;
+              }
+            }
+
+            const evidence = {
               project_ref: process.env.PROJECT_REF,
               captured_at: new Date().toISOString(),
               token_name_availability: availability,
               selected_token_name: selected,
-              authoritative_config_read: false,
-              http_status: response.status,
-              response_excerpt: responseText.slice(0, 500),
-            }, null, 2));
-            throw new Error(`Management API GET failed with HTTP ${response.status}`);
-          }
-
-          const config = JSON.parse(responseText);
-          const subject = String(config.mailer_subjects_recovery || '');
-          const body = String(config.mailer_templates_recovery_content || '');
-          const hash = crypto.createHash('sha256').update(body).digest('hex');
-          const hookConfig = {};
-          for (const [key, value] of Object.entries(config)) {
-            if (!/hook.*send.*email|send.*email.*hook/i.test(key)) continue;
-            if (/secret|token|key/i.test(key)) hookConfig[key] = '[redacted]';
-            else if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
-              try {
-                const parsed = new URL(value);
-                hookConfig[key] = `${parsed.origin}${parsed.pathname}`;
-              } catch {
-                hookConfig[key] = '[configured string]';
-              }
-            } else {
-              hookConfig[key] = value;
-            }
-          }
-
-          const evidence = {
-            project_ref: process.env.PROJECT_REF,
-            captured_at: new Date().toISOString(),
-            token_name_availability: availability,
-            selected_token_name: selected,
-            authoritative_config_read: true,
-            recovery: {
-              subject,
-              body,
-              body_sha256: hash,
-              body_bytes: Buffer.byteLength(body),
-              matches_expected_diagnostic_subject:
-                subject === process.env.EXPECTED_DIAGNOSTIC_SUBJECT,
-              has_confirmation_url: body.includes('{{ .ConfirmationURL }}'),
-              has_public_kova_logo:
-                body.includes(`https://${process.env.PROJECT_REF}.supabase.co/storage/v1/object/public/brand-assets/kova-logo.png`),
-              dark_markers: {
-                hash_0b1020: body.toLowerCase().includes('#0b1020'),
-                hash_0a0b0d: body.toLowerCase().includes('#0a0b0d'),
-                hash_15171c: body.toLowerCase().includes('#15171c'),
+              authoritative_config_read: true,
+              recovery: {
+                subject,
+                body,
+                body_sha256: hash,
+                body_bytes: Buffer.byteLength(body),
+                matches_expected_diagnostic_subject:
+                  subject === process.env.EXPECTED_DIAGNOSTIC_SUBJECT,
+                has_confirmation_url: body.includes('{{ .ConfirmationURL }}'),
+                has_public_kova_logo:
+                  body.includes(`https://${process.env.PROJECT_REF}.supabase.co/storage/v1/object/public/brand-assets/kova-logo.png`),
+                dark_markers: {
+                  hash_0b1020: body.toLowerCase().includes('#0b1020'),
+                  hash_0a0b0d: body.toLowerCase().includes('#0a0b0d'),
+                  hash_15171c: body.toLowerCase().includes('#15171c'),
+                },
               },
-            },
-            send_email_hook: hookConfig,
-          };
-          fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify(evidence, null, 2));
-          console.log(`SELECTED_TOKEN_NAME=${selected}`);
-          console.log(`RECOVERY_SUBJECT=${JSON.stringify(subject)}`);
-          console.log(`RECOVERY_BODY_SHA256=${hash}`);
-          console.log(`RECOVERY_BODY_BYTES=${Buffer.byteLength(body)}`);
-          console.log(`MATCHES_EXPECTED_DIAGNOSTIC_SUBJECT=${evidence.recovery.matches_expected_diagnostic_subject}`);
-          console.log(`HAS_CONFIRMATION_URL=${evidence.recovery.has_confirmation_url}`);
-          console.log(`HAS_PUBLIC_KOVA_LOGO=${evidence.recovery.has_public_kova_logo}`);
-          console.log(`DARK_MARKERS=${JSON.stringify(evidence.recovery.dark_markers)}`);
-          console.log(`SEND_EMAIL_HOOK_SUMMARY=${JSON.stringify(hookConfig)}`);
+              send_email_hook: hookConfig,
+            };
+            fs.writeFileSync('/tmp/supabase-auth-config-probe.json', JSON.stringify(evidence, null, 2));
+            console.log(`SELECTED_TOKEN_NAME=${selected}`);
+            console.log(`RECOVERY_SUBJECT=${JSON.stringify(subject)}`);
+            console.log(`RECOVERY_BODY_SHA256=${hash}`);
+            console.log(`RECOVERY_BODY_BYTES=${Buffer.byteLength(body)}`);
+            console.log(`MATCHES_EXPECTED_DIAGNOSTIC_SUBJECT=${evidence.recovery.matches_expected_diagnostic_subject}`);
+            console.log(`HAS_CONFIRMATION_URL=${evidence.recovery.has_confirmation_url}`);
+            console.log(`HAS_PUBLIC_KOVA_LOGO=${evidence.recovery.has_public_kova_logo}`);
+            console.log(`DARK_MARKERS=${JSON.stringify(evidence.recovery.dark_markers)}`);
+            console.log(`SEND_EMAIL_HOOK_SUMMARY=${JSON.stringify(hookConfig)}`);
+          })().catch(error => {
+            console.error(error instanceof Error ? error.stack : String(error));
+            process.exitCode = 1;
+          });
           NODE
 
       - name: Upload read-only evidence
