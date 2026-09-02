@@ -75,6 +75,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         .limit(1)
         .maybeSingle();
       if (existingError) {
+        console.error(
+          "[billing-checkout] Subscription lookup failed",
+          stripeErrorDiagnostic(existingError, checkoutStage),
+        );
         return { error: "Billing status couldn't be verified. Try again." };
       }
       if (existing) {
