@@ -19,6 +19,7 @@ import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
+import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
 
@@ -193,6 +194,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
         { name: "application-name", content: "KovaGPT" },
+        { name: "kova-build", content: import.meta.env.VITE_KOVA_BUILD_SHA || "unknown" },
+        { name: "kova-supabase-url", content: SUPABASE_BROWSER_CONFIG.url || "missing" },
+        {
+          name: "kova-supabase-publishable-key",
+          content: SUPABASE_BROWSER_CONFIG.publishableKey || "missing",
+        },
         { name: "robots", content: robots },
         { title: "KovaGPT" },
         ...(indexable
@@ -255,6 +262,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     };
   },
   headers: ({ matches }) => ({
+    "Cache-Control": "no-store, max-age=0",
     "X-Robots-Tag": getActiveSeoState(matches).robots,
   }),
 
