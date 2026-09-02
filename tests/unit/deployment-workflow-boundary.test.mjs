@@ -243,6 +243,36 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.notEqual(userinfoAttack.code, 0);
     assert.match(userinfoAttack.stderr, /non-canonical Supabase URL/u);
 
+    const apostrophe = String.fromCharCode(39);
+    const doubleQuote = String.fromCharCode(34);
+    scripts.set(
+      "/assets/preloaded.js",
+      [
+        "export const bad = \"https://",
+        expectedProjectRef,
+        ".supabase.co",
+        apostrophe,
+        "@attacker.example\";",
+      ].join(""),
+    );
+    const apostropheUserinfoAttack = await runSmoke();
+    assert.notEqual(apostropheUserinfoAttack.code, 0);
+    assert.match(apostropheUserinfoAttack.stderr, /non-canonical Supabase URL/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
+      [
+        "export const bad = 'https://",
+        expectedProjectRef,
+        ".supabase.co",
+        doubleQuote,
+        "@attacker.example';",
+      ].join(""),
+    );
+    const quoteUserinfoAttack = await runSmoke();
+    assert.notEqual(quoteUserinfoAttack.code, 0);
+    assert.match(quoteUserinfoAttack.stderr, /non-canonical Supabase URL/u);
+
     scripts.set(
       "/assets/preloaded.js",
       'export const bad = "https://' +

@@ -24,7 +24,11 @@ if (
   );
 }
 
-const ABSOLUTE_HTTPS_URL_PATTERN = /https:\/\/[^\s"'`\\<>]+/giu;
+const QUOTED_HTTPS_URL_PATTERNS = [
+  /"(https:\/\/[^"\\\s<>]+)"/giu,
+  /'(https:\/\/[^'\\\s<>]+)'/giu,
+  /`(https:\/\/[^`\\\s<>]+)`/giu,
+];
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =
@@ -168,29 +172,37 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
 }
 
 function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
-  ABSOLUTE_HTTPS_URL_PATTERN.lastIndex = 0;
-  for (const match of source.matchAll(ABSOLUTE_HTTPS_URL_PATTERN)) {
-    const rawUrl = match[0];
-    if (!rawUrl.toLowerCase().includes(".supabase.co")) continue;
+  let foundSupabaseLiteral = false;
+  for (const pattern of QUOTED_HTTPS_URL_PATTERNS) {
+    pattern.lastIndex = 0;
+    for (const match of source.matchAll(pattern)) {
+      const rawUrl = match[1];
+      if (!rawUrl.toLowerCase().includes(".supabase.co")) continue;
+      foundSupabaseLiteral = true;
 
-    let candidate;
-    try {
-      candidate = new URL(rawUrl);
-    } catch {
-      throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
-    }
+      let candidate;
+      try {
+        candidate = new URL(rawUrl);
+      } catch {
+        throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+      }
 
-    const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
-    if (
-      candidate.protocol !== "https:" ||
-      !hostname ||
-      candidate.username ||
-      candidate.password ||
-      candidate.port
-    ) {
-      throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+      const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
+      if (
+        candidate.protocol !== "https:" ||
+        !hostname ||
+        candidate.username ||
+        candidate.password ||
+        candidate.port
+      ) {
+        throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+      }
+      discoveredProjectRefs.add(hostname[1]);
     }
-    discoveredProjectRefs.add(hostname[1]);
+  }
+
+  if (!foundSupabaseLiteral && source.toLowerCase().includes(".supabase.co")) {
+    throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
   }
 }
 
