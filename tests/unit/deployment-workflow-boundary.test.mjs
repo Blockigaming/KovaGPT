@@ -116,6 +116,7 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /new URL\(rawUrl\)/u);
   assert.match(smoke, /assertNotCacheable/u);
   assert.match(smoke, /verifyRootBuildIdentity/u);
+  assert.match(smoke, /source\.includes\(expectedBuildSha\)/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
@@ -151,6 +152,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
         'const tracingAllowlist = "*.supabase.co";',
         'const bareSuffix = ".supabase.co";',
         'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+        'export const buildSha = "' + expectedSha + '";',
       ].join(" "),
     ],
   ]);
@@ -343,13 +345,24 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
 
     scripts.set(
       "/assets/preloaded.js",
-      'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+      'export const supabaseUrl = "https://' +
+        expectedProjectRef +
+        '.supabase.co"; export const buildSha = "' +
+        "b".repeat(40) +
+        '";',
     );
-    browserBuildSha = "b".repeat(40);
     const staleBrowserBundle = await runSmoke();
     assert.notEqual(staleBrowserBundle.code, 0);
     assert.match(staleBrowserBundle.stderr, /does not contain the expected build SHA/u);
-    browserBuildSha = expectedSha;
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'export const supabaseUrl = "https://' +
+        expectedProjectRef +
+        '.supabase.co"; export const buildSha = "' +
+        expectedSha +
+        '";',
+    );
     scripts.set("/assets/index.js", 'const deps = ["assets/preloaded.js", "assets/oversized.js"];');
     scripts.set("/assets/oversized.js", "x".repeat(8192));
     const oversized = await runSmoke({ KOVA_SMOKE_MAX_JAVASCRIPT_BYTES: "4096" });

@@ -255,6 +255,7 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
 
   verifyRootBuildIdentity(rootHtml, expectedBuildSha);
   const discoveredProjectRefs = new Set();
+  let foundExpectedBuildSha = false;
   let scannedAssets = 0;
   let scannedBytes = 0;
 
@@ -270,6 +271,7 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
     });
     scannedAssets += 1;
     scannedBytes += result.bytes;
+    if (result.source.includes(expectedBuildSha)) foundExpectedBuildSha = true;
 
     discoverSupabaseProjectRefs(result.source, discoveredProjectRefs);
     for (const pattern of JAVASCRIPT_DEPENDENCY_PATTERNS) {
@@ -284,6 +286,9 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
   }
   if ([...discoveredProjectRefs].some((projectRef) => projectRef !== expected.projectRef)) {
     throw new Error("The deployed browser bundle contains an unexpected Supabase project URL");
+  }
+  if (!foundExpectedBuildSha) {
+    throw new Error("The deployed browser bundle does not contain the expected build SHA");
   }
 }
 
