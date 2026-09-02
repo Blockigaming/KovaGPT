@@ -1,0 +1,55 @@
+name: Apply provider review fixes
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/apply-provider-review-fixes.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply review fixes
+        run: |
+          cat .github/tmp/provider-review-*.patch > /tmp/provider-review.patch
+          git apply --check /tmp/provider-review.patch
+          git apply /tmp/provider-review.patch
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format and run focused regressions
+        run: |
+          npx prettier --write \
+            src/lib/ai/provider-transport.server.d.mts \
+            src/lib/ai/provider-transport.server.mjs \
+            src/lib/ai/provider.server.ts \
+            src/routes/api/chat.ts \
+            tests/unit/provider-timeout-regression.test.mjs
+          node --test tests/unit/provider-timeout-regression.test.mjs
+      - name: Commit fixes and remove temporary files
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          git rm .github/workflows/apply-provider-review-fixes.yml .github/tmp/provider-review-*.patch
+          git add \
+            src/lib/ai/provider-transport.server.d.mts \
+            src/lib/ai/provider-transport.server.mjs \
+            src/lib/ai/provider.server.ts \
+            src/routes/api/chat.ts \
+            tests/unit/provider-timeout-regression.test.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(ai): close provider timeout edge cases"
+          git push origin "HEAD:${HEAD_BRANCH}"
