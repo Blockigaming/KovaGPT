@@ -28,11 +28,10 @@ test("email brand system is light-default and dark-mode adaptive", async () => {
   assert.match(brand, /\/terms/);
 });
 
-test("every Kova email uses the shared brand system", async () => {
+test("every KovaGPT email uses the shared brand system", async () => {
   for (const template of templates) {
     const source = await readFile(new URL(`src/lib/email-templates/${template}`, root), "utf8");
     assert.match(source, /from "\.\/_brand"/, `${template} must import the shared brand system`);
     assert.doesNotMatch(source, /const LOGO_URL/, `${template} must not define a separate logo`);
   }
 });
-\n  assert.match(brand, /KovaGPT will never ask/);\n  assert.doesNotMatch(brand, />\\s*Kova\\s*</);
