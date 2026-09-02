@@ -1,0 +1,202 @@
+--- a/src/lib/ai/provider-transport.server.mjs
++++ b/src/lib/ai/provider-transport.server.mjs
+@@ -9,11 +9,15 @@
+   }
+ }
+ 
++export function isProviderTimeoutError(error) {
++  return Boolean(error && typeof error === "object" && error.code === "provider_timeout");
++}
++
+ export function isAbortError(error) {
+   return Boolean(
+     error &&
+     typeof error === "object" &&
+-    (error.name === "AbortError" || error.code === "provider_timeout"),
++    (error.name === "AbortError" || isProviderTimeoutError(error)),
+   );
+ }
+ 
+@@ -27,17 +31,23 @@
+ function abortReason(signal, phase) {
+   if (signal?.reason instanceof Error) return signal.reason;
+   if (signal?.reason && typeof signal.reason === "object") return signal.reason;
+-  return new ProviderTransportTimeoutError(phase);
++  const error = new Error(`${phase}_aborted`);
++  error.name = "AbortError";
++  return error;
+ }
+ 
+ export function createRequestDeadline(parentSignal, timeoutMs, phase = "provider_request") {
+   const boundedTimeoutMs = timeoutMsOrThrow(timeoutMs);
+   const controller = new AbortController();
+   let timedOut = false;
++  let parentAborted = false;
+   let cleaned = false;
+   let timeoutError;
++  let timer;
+ 
+   const onParentAbort = () => {
++    parentAborted = true;
++    if (timer) clearTimeout(timer);
+     if (!controller.signal.aborted) {
+       controller.abort(abortReason(parentSignal, phase));
+     }
+@@ -46,16 +56,19 @@
+   if (parentSignal?.aborted) onParentAbort();
+   else parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+ 
+-  const timer = setTimeout(() => {
+-    timedOut = true;
+-    timeoutError = new ProviderTransportTimeoutError(phase);
+-    if (!controller.signal.aborted) controller.abort(timeoutError);
+-  }, boundedTimeoutMs);
++  if (!parentAborted) {
++    timer = setTimeout(() => {
++      if (cleaned || parentAborted || controller.signal.aborted) return;
++      timedOut = true;
++      timeoutError = new ProviderTransportTimeoutError(phase);
++      controller.abort(timeoutError);
++    }, boundedTimeoutMs);
++  }
+ 
+   const cleanup = () => {
+     if (cleaned) return;
+     cleaned = true;
+-    clearTimeout(timer);
++    if (timer) clearTimeout(timer);
+     parentSignal?.removeEventListener("abort", onParentAbort);
+   };
+ 
+@@ -64,11 +77,10 @@
+     timeoutMs: boundedTimeoutMs,
+     phase,
+     didTimeout: () => timedOut,
++    didParentAbort: () => parentAborted,
+     normalize(error) {
+       if (timedOut) return timeoutError ?? new ProviderTransportTimeoutError(phase);
+-      if (controller.signal.aborted && isAbortError(controller.signal.reason)) {
+-        return controller.signal.reason;
+-      }
++      if (controller.signal.aborted) return abortReason(controller.signal, phase);
+       return error;
+     },
+     cleanup,
+@@ -101,6 +113,31 @@
+   };
+ }
+ 
++function cancelReaderWithoutWaiting(reader, reason) {
++  try {
++    void Promise.resolve(reader.cancel(reason)).catch(() => undefined);
++  } catch {
++    // Cancellation is best-effort and must never extend the request lifetime.
++  }
++}
++
++function cancelBodyWithoutWaiting(body, reason) {
++  if (!body) return;
++  try {
++    void Promise.resolve(body.cancel(reason)).catch(() => undefined);
++  } catch {
++    // Cancellation is best-effort and must never extend the request lifetime.
++  }
++}
++
++function deadlineOutcome(deadline, error) {
++  if (deadline.didTimeout() || isProviderTimeoutError(error)) return "timeout";
++  if (deadline.didParentAbort() || (deadline.signal.aborted && isAbortError(error))) {
++    return "aborted";
++  }
++  return "failed";
++}
++
+ export function wrapResponseBodyWithDeadline(response, deadline, onFinish) {
+   const finish = finishOnce(onFinish);
+   if (!response.body) {
+@@ -128,8 +165,8 @@
+ 
+   const onAbort = () => {
+     const error = deadline.normalize(abortReason(deadline.signal, deadline.phase));
+-    if (!settle(deadline.didTimeout() ? "timeout" : "aborted", error)) return;
+-    void reader.cancel(error).catch(() => undefined);
++    if (!settle(deadlineOutcome(deadline, error), error)) return;
++    cancelReaderWithoutWaiting(reader, error);
+     try {
+       activeController?.error(error);
+     } catch {
+@@ -156,14 +193,14 @@
+         controller.enqueue(value);
+       } catch (error) {
+         const normalized = deadline.normalize(error);
+-        if (!settle(deadline.didTimeout() ? "timeout" : "failed", normalized)) return;
+-        await reader.cancel(normalized).catch(() => undefined);
++        if (!settle(deadlineOutcome(deadline, normalized), normalized)) return;
++        cancelReaderWithoutWaiting(reader, normalized);
+         controller.error(normalized);
+       }
+     },
+-    async cancel(reason) {
++    cancel(reason) {
+       if (!settle("cancelled", reason)) return;
+-      await reader.cancel(reason).catch(() => undefined);
++      cancelReaderWithoutWaiting(reader, reason);
+     },
+   });
+ 
+@@ -175,21 +212,41 @@
+ }
+ 
+ export async function fetchWithDeadline(fetchImpl, input, init, deadline, onFinish) {
++  const fetchPromise = Promise.resolve().then(() =>
++    fetchImpl(input, {
++      ...init,
++      signal: deadline.signal,
++    }),
++  );
++
++  void fetchPromise.then(
++    (lateResponse) => {
++      if (!deadline.signal.aborted) return;
++      cancelBodyWithoutWaiting(
++        lateResponse.body,
++        deadline.normalize(abortReason(deadline.signal, deadline.phase)),
++      );
++    },
++    () => undefined,
++  );
++
+   try {
+     const response = await waitForPromiseWithSignal(
+-      fetchImpl(input, {
+-        ...init,
+-        signal: deadline.signal,
+-      }),
++      fetchPromise,
+       deadline.signal,
+       deadline.phase,
+     );
++    if (deadline.signal.aborted) {
++      const error = deadline.normalize(abortReason(deadline.signal, deadline.phase));
++      cancelBodyWithoutWaiting(response.body, error);
++      throw error;
++    }
+     return wrapResponseBodyWithDeadline(response, deadline, onFinish);
+   } catch (error) {
+     const normalized = deadline.normalize(error);
+     deadline.cleanup();
+     onFinish?.({
+-      outcome: deadline.didTimeout() ? "timeout" : "failed",
++      outcome: deadlineOutcome(deadline, normalized),
+       error: normalized,
+     });
+     throw normalized;
+@@ -333,7 +390,7 @@
+     } catch (error) {
+       deadline.cleanup();
+       const normalized = deadline.normalize(error);
+-      if (isAbortError(normalized)) {
++      if (isProviderTimeoutError(normalized)) {
+         log?.("warn", "managed_identity.token.timeout", {
+           timeoutMs,
+           durationMs: now() - startedAt,
