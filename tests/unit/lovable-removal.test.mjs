@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import {
+  hasLovableBundlePath,
+  hasLovableRuntimeSource,
+} from "../../scripts/release/zero-lovable.mjs";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -29,7 +33,18 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
 
   const gate = read("scripts/release/zero-lovable.mjs");
   assert.match(gate, /Lovable-named runtime source/u);
-  assert.match(gate, /Lovable-named bundle asset or content/u);
+  assert.match(gate, /Lovable-named bundle asset/u);
+  assert.match(gate, /Lovable-named bundle content/u);
+  assert.equal(hasLovableRuntimeSource("worker/src/lovable-proxy.mjs"), true);
+  assert.equal(hasLovableRuntimeSource("worker/src/proxy.mjs", "Lovable relay"), true);
+  assert.equal(hasLovableRuntimeSource("workers/lovable-agent.mjs"), true);
+  assert.equal(hasLovableRuntimeSource("src/assets/lovable-logo.png"), true);
+  assert.equal(hasLovableRuntimeSource("tests/fixtures/lovable-proxy.mjs"), false);
+  assert.equal(hasLovableBundlePath("dist/client/lovable-logo.png"), true);
+  assert.ok(
+    gate.indexOf("if (hasLovableBundlePath(bundlePath))") <
+      gate.indexOf("if (!readable.has(extname(path))) continue;", gate.indexOf("filesUnder")),
+  );
 });
 
 test("Kova-owned OAuth consent, suppression, and auth-email templates remain intact", () => {

@@ -20,6 +20,7 @@ const readable = new Set([
   ".yml",
 ]);
 const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
+const runtimeSourcePrefixes = ["src/", "worker/", "workers/"];
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
@@ -40,6 +41,17 @@ const forbiddenPatterns = [
     pattern: /lovable_(?:external_id|managed)/iu,
   },
 ];
+
+export function hasLovableRuntimeSource(path, source = "") {
+  return (
+    runtimeSourcePrefixes.some((prefix) => path.startsWith(prefix)) &&
+    (/lovable/iu.test(path) || /lovable/iu.test(source))
+  );
+}
+
+export function hasLovableBundlePath(path) {
+  return /lovable/iu.test(path);
+}
 
 function trackedFiles() {
   try {
@@ -116,11 +128,14 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   for (const path of files) {
     if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
     if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
+    if (hasLovableRuntimeSource(path)) {
+      errors.push(`${path}: Lovable-named runtime source`);
+    }
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
     const source = readIfPresent(path);
     if (source === null) continue;
 
-    if (path.startsWith("src/") && (/lovable/iu.test(path) || /lovable/iu.test(source))) {
+    if (hasLovableRuntimeSource(path, source)) {
       errors.push(`${path}: Lovable-named runtime source`);
     }
 
@@ -135,11 +150,14 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   for (const bundleRoot of ["dist/client", "dist/server"]) {
     if (!existsSync(join(root, bundleRoot))) continue;
     for (const path of filesUnder(join(root, bundleRoot))) {
+      const bundlePath = relative(root, path).replaceAll("\\", "/");
+      if (hasLovableBundlePath(bundlePath)) {
+        errors.push(`${bundlePath}: Lovable-named bundle asset`);
+      }
       if (!readable.has(extname(path))) continue;
       const source = readFileSync(path, "utf8");
-      const bundlePath = relative(root, path).replaceAll("\\", "/");
-      if (/lovable/iu.test(bundlePath) || /lovable/iu.test(source)) {
-        errors.push(`${bundlePath}: Lovable-named bundle asset or content`);
+      if (/lovable/iu.test(source)) {
+        errors.push(`${bundlePath}: Lovable-named bundle content`);
       }
       for (const rule of forbiddenPatterns) {
         if (rule.pattern.test(source)) {

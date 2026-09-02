@@ -6,7 +6,7 @@ Production may not contain a Lovable package, credential, hosted runtime, route,
 
 ## Runtime removal candidate
 
-The repository inventory at base SHA `60782f74f6fa19a64d5f53894d033026f69fe6e9` found seven active compatibility route modules:
+The repository inventory at base SHA `dc8c9c5dadee2e5e989b96c25fa1537aa84c9c3e` found seven active compatibility route modules:
 
 - the historical OAuth redirect at `/.lovable/oauth/consent`;
 - six inert email tombstones under `/lovable/email/*`.
