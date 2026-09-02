@@ -102,42 +102,33 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
+    <main id="main-content" className="kova-state-screen">
+      <section className="kova-state-panel" aria-labelledby="not-found-title">
+        <p className="kova-state-eyebrow">404 · KovaGPT</p>
+        <h1 id="not-found-title">We couldn't find that page</h1>
+        <p>The page you're looking for doesn't exist or has been moved.</p>
+        <div className="kova-state-actions">
+          <Link to="/" className="kova-state-primary">
+            Return home
           </Link>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 
 function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4" role="main">
-      <section
-        className="max-w-md rounded-[var(--kova-radius-panel)] border border-border bg-card p-6 text-center shadow-sm"
-        aria-labelledby="route-error-title"
-      >
-        <h1 id="route-error-title" className="text-xl font-semibold text-foreground">
-          KovaGPT couldn't load this page
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <main id="main-content" className="kova-state-screen">
+      <section className="kova-state-panel" aria-labelledby="route-error-title">
+        <p className="kova-state-eyebrow">KovaGPT workspace</p>
+        <h1 id="route-error-title">KovaGPT couldn't load this page</h1>
+        <p>
           Something went wrong while loading this page. Retry or return home. If the problem keeps
           happening, contact support and describe what you were doing.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="kova-state-actions">
           <button
             type="button"
             onClick={async () => {
@@ -147,14 +138,11 @@ function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
                 reset();
               }
             }}
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="kova-state-primary"
           >
             Retry
           </button>
-          <a
-            href="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
+          <a href="/" className="kova-state-secondary">
             Return home
           </a>
         </div>

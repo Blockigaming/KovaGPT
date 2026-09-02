@@ -143,30 +143,63 @@ export function ErrorState({
 }
 
 /* ---------- Error boundary ---------- */
-type EBState = { error: Error | null };
+type EBState = { error: Error | null; incidentId: string | null };
+
+function createIncidentId() {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `KOVA-${timestamp}-${random}`;
+}
+
 export class AppErrorBoundary extends Component<
   { children: ReactNode; fallback?: (err: Error, reset: () => void) => ReactNode },
   EBState
 > {
-  state: EBState = { error: null };
+  state: EBState = { error: null, incidentId: null };
   static getDerivedStateFromError(error: Error) {
-    return { error };
+    return { error, incidentId: createIncidentId() };
   }
   componentDidCatch(error: Error) {
     if (import.meta.env.DEV) console.error("[AppErrorBoundary]", error);
   }
-  reset = () => this.setState({ error: null });
+  reset = () => this.setState({ error: null, incidentId: null });
   render() {
     if (this.state.error) {
       if (this.props.fallback) return this.props.fallback(this.state.error, this.reset);
       return (
-        <div className="p-6">
-          <ErrorState
-            title="This page hit an unexpected error"
-            description={this.state.error.message}
-            onRetry={this.reset}
-          />
-        </div>
+        <main id="main-content" className="kova-state-screen" data-app-error-boundary>
+          <section
+            className="kova-state-panel"
+            role="alert"
+            aria-labelledby="app-error-title"
+            aria-describedby="app-error-description app-error-reference"
+          >
+            <div className="kova-state-mark" aria-hidden="true">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <p className="kova-state-eyebrow">KovaGPT workspace</p>
+            <h1 id="app-error-title">We couldn't load this workspace</h1>
+            <p id="app-error-description">
+              KovaGPT encountered an unexpected problem. Reload the workspace or return home, then
+              try again.
+            </p>
+            <p id="app-error-reference" className="kova-state-reference">
+              Reference <code>{this.state.incidentId}</code>
+            </p>
+            <div className="kova-state-actions">
+              <button
+                type="button"
+                className="kova-state-primary"
+                onClick={() => window.location.reload()}
+              >
+                Reload workspace
+              </button>
+              <a className="kova-state-secondary" href="/">
+                Return home
+              </a>
+            </div>
+          </section>
+        </main>
       );
     }
     return this.props.children;

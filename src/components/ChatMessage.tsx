@@ -396,6 +396,7 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
+      data-message-role={message.role}
       className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >

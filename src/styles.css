@@ -2,6 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./styles/chatgpt-parity.css";
+@import "./styles/chatgpt-final-parity.css";
+@import "./styles/core-workspace.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -2169,27 +2171,4 @@ body {
   .kova-plan-card:hover {
     transform: none;
   }
-}
-
-/* DAY10 composer focus contract */
-.kova-composer:focus-within {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
-}
-
-/* FINAL composer keyboard focus contract */
-.kova-composer:focus-within,
-.kova-composer:has(textarea:focus),
-.kova-composer:has(textarea:focus-visible) {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
-  outline-style: solid !important;
-}
-
-/* Day 10 final accessibility focus contract */
-.kova-composer:focus-within {
-  outline-width: 2px !important;
-  outline-style: solid !important;
-  outline-color: currentColor !important;
-  outline-offset: 2px !important;
 }
