@@ -643,7 +643,7 @@ function LibraryPage() {
             storageTotal !== null ? `Known file storage: ${humanBytes(storageTotal)}` : undefined
           }
           actions={
-            principalReady && (items.length > 0 || loadError) ? (
+            principalReady ? (
               <Button
                 size="sm"
                 variant="outline"

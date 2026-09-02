@@ -32,6 +32,8 @@ test("Library reserves controls for real content and presents honest empty state
   assert.match(routes.library, /Saved in this browser/);
   assert.match(routes.library, /role="group"\s+aria-label="Library filters"/);
   assert.match(routes.library, /aria-pressed=\{filter === item\.id\}/);
+  assert.match(routes.library, /actions=\{\s*principalReady \? \(/);
+  assert.doesNotMatch(routes.library, /principalReady && \(items\.length > 0 \|\| loadError\)/);
   assert.doesNotMatch(routes.library, /Storage totals require backend usage records/);
   assert.doesNotMatch(routes.library, />\s*\{loadError\}\s*</);
 });
@@ -45,6 +47,10 @@ test("Images gives every repeated control a single contextual accessible name", 
   assert.match(routes.images, /aria-label=\{`Remove image: \$\{h\.prompt\}`\}/);
   assert.match(routes.images, /Image history/);
   assert.match(routes.images, /!isSignedIn \? \([\s\S]*Sign in to generate images/);
+  assert.match(routes.images, /role="status"[\s\S]{0,420}Generating image/);
+  assert.doesNotMatch(routes.images, /aria-busy=\{loading \|\| undefined\}/);
+  assert.match(routes.images, /The image could not be generated\. Please try again\./);
+  assert.doesNotMatch(routes.images, /Check your prompt and try again/);
   assert.doesNotMatch(routes.images, />\s*\{error\}\s*</);
 });
 

@@ -520,7 +520,6 @@ function ImagesPage() {
         id="main-content"
         tabIndex={-1}
         aria-labelledby="images-title"
-        aria-busy={loading || undefined}
         className="flex min-w-0 flex-1 flex-col"
       >
         <header className="h-14 flex items-center px-3 shrink-0">
@@ -755,7 +754,7 @@ function ImagesPage() {
                 )}
                 {error && (
                   <div role="alert" className="mt-3 text-center text-sm text-destructive">
-                    The image could not be generated. Check your prompt and try again.
+                    The image could not be generated. Please try again.
                   </div>
                 )}
               </section>
