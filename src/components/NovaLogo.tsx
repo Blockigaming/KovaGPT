@@ -10,12 +10,18 @@ export function NovaLogo({
   animated = false,
   pulse = false,
   mark = false,
+  decorative = false,
+  alt = "KovaGPT",
 }: {
   className?: string;
   animated?: boolean;
   pulse?: boolean;
   /** Render only the compass mark (no white tile) so it sits on any surface. */
   mark?: boolean;
+  /** Use when adjacent visible text already names the KovaGPT brand. */
+  decorative?: boolean;
+  /** Accessible name when the logo is the only content naming the brand. */
+  alt?: string;
   /** @deprecated kept for backwards compatibility */
   bare?: boolean;
 }) {
@@ -23,7 +29,9 @@ export function NovaLogo({
     <img
       src="/kova-logo.png?v=20260807"
       className={`${className} block shrink-0 object-contain ${animated ? "animate-kova-float" : ""}`}
-      alt="KovaGPT logo"
+      data-logo-variant={mark ? "mark" : "standard"}
+      alt={decorative ? "" : alt}
+      aria-hidden={decorative || undefined}
     />
   );
 
