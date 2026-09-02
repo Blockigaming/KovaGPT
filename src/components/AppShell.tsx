@@ -12,7 +12,7 @@ import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import {
   type Conversation,
   chatStoragePrincipal,
@@ -34,6 +34,7 @@ import {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { isLoaded, user } = useUser();
+  const { openSignIn } = useClerkSafe();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
   const [conversationState, setConversationState] = useState<{
@@ -42,9 +43,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
   const conversations = principalReady ? conversationState.items : [];
-  // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
-  // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
@@ -55,6 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
+
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     try {
@@ -63,6 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, [sidebarOpen]);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -70,6 +72,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/help" as never });
   }, [navigate]);
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
+
+  const openSettings = useCallback(
+    (tab?: string) => {
+      if (isLoaded && !user) {
+        setSettingsOpen(false);
+        openSignIn();
+        return;
+      }
+      if (!isLoaded) return;
+      settingsReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setSettingsTab(tab);
+      setSettingsOpen(true);
+    },
+    [isLoaded, openSignIn, user],
+  );
 
   useEffect(() => {
     if (!isLoaded) {
@@ -115,35 +133,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         "open-library": () => {
           navigate({ to: "/library" });
         },
-        "open-settings": () => {
-          settingsReturnFocusRef.current =
-            document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          setSettingsTab(undefined);
-          setSettingsOpen(true);
-        },
+        "open-settings": () => openSettings(),
         "generate-image": () => {
           navigate({ to: "/images" });
         },
         "toggle-sidebar": () => {
-          setSidebarOpen((v) => !v);
+          setSidebarOpen((value) => !value);
         },
         "focus-input": () => {
-          const el = document.querySelector<HTMLTextAreaElement>(
+          const element = document.querySelector<HTMLTextAreaElement>(
             'textarea, [contenteditable="true"]',
           );
-          el?.focus();
+          element?.focus();
         },
       },
       isLoaded ? userKey : undefined,
     );
-  }, [isLoaded, navigate, userKey]);
-
-  const openSettings = useCallback((tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  }, []);
+  }, [isLoaded, navigate, openSettings, userKey]);
 
   useEffect(() => {
     const handleOpenSettings = (event: Event) => {
@@ -175,7 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleDelete = (id: string) => {
     if (!principalReady) return;
-    const next = conversations.filter((c) => c.id !== id);
+    const next = conversations.filter((conversation) => conversation.id !== id);
     setConversationState({ principal: storagePrincipal, items: next });
     saveConversations(userKey, next);
   };
@@ -183,28 +189,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div
       className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 1024) {
-          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
-          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (touch && touch.clientX < 24 && window.innerWidth < 1024) {
+          (event.currentTarget as HTMLDivElement).dataset.swipeStart = String(touch.clientX);
+          (event.currentTarget as HTMLDivElement).dataset.swipeY = String(touch.clientY);
         }
       }}
-      onTouchMove={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
-        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
-        if (!isNaN(start) && e.touches[0]) {
-          const dx = e.touches[0].clientX - start;
-          const dy = Math.abs(e.touches[0].clientY - startY);
+      onTouchMove={(event) => {
+        const element = event.currentTarget as HTMLDivElement;
+        const start = element.dataset.swipeStart
+          ? parseFloat(element.dataset.swipeStart)
+          : Number.NaN;
+        const startY = element.dataset.swipeY ? parseFloat(element.dataset.swipeY) : Number.NaN;
+        if (!Number.isNaN(start) && event.touches[0]) {
+          const dx = event.touches[0].clientX - start;
+          const dy = Math.abs(event.touches[0].clientY - startY);
           if (dx > 60 && dy < 40) {
             setSidebarOpen(true);
-            delete el.dataset.swipeStart;
+            delete element.dataset.swipeStart;
           }
         }
       }}
-      onTouchEnd={(e) => {
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
+      onTouchEnd={(event) => {
+        delete (event.currentTarget as HTMLDivElement).dataset.swipeStart;
       }}
     >
       <Sidebar
@@ -214,15 +222,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         onNew={handleNew}
         onDelete={handleDelete}
         open={sidebarOpen}
-        onToggle={() => setSidebarOpen((v) => !v)}
+        onToggle={() => setSidebarOpen((value) => !value)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-        {!sidebarOpen && (
+        {!sidebarOpen ? (
           <button
             onClick={() => {
               setSidebarOpen(true);
@@ -232,17 +240,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
+            className="fixed left-3 top-3 z-30 hidden items-center justify-center rounded-md border border-border bg-background/90 p-2 shadow-sm transition hover:bg-accent lg:flex"
             aria-label="Open sidebar"
           >
-            <PanelLeft className="w-4 h-4" />
+            <PanelLeft className="h-4 w-4" />
           </button>
-        )}
+        ) : null}
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
       <Suspense fallback={null}>
-        {settingsOpen && (
+        {settingsOpen && user ? (
           <SettingsDialog
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
@@ -255,7 +263,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onOpenHelp={openHelp}
             initialTab={settingsTab}
           />
-        )}
+        ) : null}
         <OnboardingDialog />
       </Suspense>
       <TimersWidget userKey={userKey} principalResolved={isLoaded} />
