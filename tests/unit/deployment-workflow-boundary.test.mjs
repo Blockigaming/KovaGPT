@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { readFileSync } from "node:fs";
@@ -22,6 +23,11 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
     workflow,
     /KOVA_EXPECTED_SUPABASE_URL: "\$\{\{ secrets\.STAGING_SUPABASE_URL \}\}"/u,
   );
+  assert.match(
+    workflow,
+    /KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256: "\$\{\{ steps\.staging-build\.outputs\.supabase_publishable_key_sha256 \}\}"/u,
+  );
+  assert.match(workflow, /createHash\("sha256"\)\.update\(publishableKey\)/u);
   assert.match(workflow, /export VITE_SUPABASE_URL="\$staging_url"/u);
   assert.match(rootRoute, /name: "kova-build"/u);
   assert.match(rootRoute, /import\.meta\.env\.VITE_KOVA_BUILD_SHA/u);
@@ -48,6 +54,8 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
   );
   assert.doesNotMatch(workflow, /KOVA_GATE_AUTHENTICATED_CRUD: passed/u);
   assert.doesNotMatch(workflow, /KOVA_GATE_OWNER_ISOLATION: passed/u);
+  assert.match(workflow, /KOVA_STAGING_VALIDATED=0/u);
+  assert.doesNotMatch(workflow, /KOVA_STAGING_VALIDATED=1/u);
   assert.match(workflow, /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u);
   assert.doesNotMatch(workflow, /PLAYWRIGHT_BASE_URL=\$\{\{/u);
 
@@ -138,6 +146,8 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /verifyRootBuildIdentity/u);
   assert.match(smoke, /source\.includes\(expectedBuildSha\)/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
+  assert.match(smoke, /KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256/u);
+  assert.match(smoke, /SUPABASE_PUBLISHABLE_KEY_PATTERN/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
   assert.match(smoke, /contains an unexpected Supabase project URL/u);
@@ -149,6 +159,10 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
 test("deployment smoke safely traverses and validates deployed JavaScript", async () => {
   const expectedSha = "a".repeat(40);
   const expectedProjectRef = "stagingprojectref123";
+  const expectedPublishableKey = "sb_publishable_" + "x".repeat(32);
+  const expectedPublishableKeySha256 = createHash("sha256")
+    .update(expectedPublishableKey)
+    .digest("hex");
   const requestedPaths = [];
   let assetContentType = "application/javascript";
   let browserBuildSha = expectedSha;
@@ -172,6 +186,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
         'const tracingAllowlist = "*.supabase.co";',
         'const bareSuffix = ".supabase.co";',
         'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+        'export const supabaseKey = "' + expectedPublishableKey + '";',
         'export const buildSha = "' + expectedSha + '";',
       ].join(" "),
     ],
@@ -240,6 +255,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
         KOVA_SMOKE_BASE_URL: "http://127.0.0.1:" + address.port,
         KOVA_EXPECTED_SHA: expectedSha,
         KOVA_EXPECTED_SUPABASE_URL: "https://" + expectedProjectRef + ".supabase.co",
+        KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256: expectedPublishableKeySha256,
         KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
         ...extraEnv,
       },
@@ -401,7 +417,23 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       "/assets/preloaded.js",
       'export const supabaseUrl = "https://' +
         expectedProjectRef +
-        '.supabase.co"; export const buildSha = "' +
+        '.supabase.co"; export const supabaseKey = "sb_publishable_' +
+        "y".repeat(32) +
+        '"; export const buildSha = "' +
+        expectedSha +
+        '";',
+    );
+    const wrongPublishableKey = await runSmoke();
+    assert.notEqual(wrongPublishableKey.code, 0);
+    assert.match(wrongPublishableKey.stderr, /publishable-key fingerprint/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'export const supabaseUrl = "https://' +
+        expectedProjectRef +
+        '.supabase.co"; export const supabaseKey = "' +
+        expectedPublishableKey +
+        '"; export const buildSha = "' +
         "b".repeat(40) +
         '";',
     );
@@ -413,7 +445,9 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       "/assets/preloaded.js",
       'export const supabaseUrl = "https://' +
         expectedProjectRef +
-        '.supabase.co"; export const buildSha = "' +
+        '.supabase.co"; export const supabaseKey = "' +
+        expectedPublishableKey +
+        '"; export const buildSha = "' +
         expectedSha +
         '";',
     );
@@ -447,6 +481,7 @@ test("production planning documentation records the apply blockers without claim
   assert.match(documentation, /Single-revision mode sends 100% of traffic/u);
   assert.match(documentation, /denial of unauthorized raw-origin requests/u);
   assert.match(documentation, /separate reviewed pull request/u);
+  assert.match(documentation, /release-candidate manifest keeps `validation\.staging` false/u);
   assert.match(documentation, /does not guarantee FIFO ordering/u);
   assert.match(documentation, /not a durable queue/u);
   assert.doesNotMatch(documentation, /queues later runs/u);

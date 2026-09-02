@@ -17,6 +17,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run release:db:isolated
       - name: Validate and build staging artifact
+        id: staging-build
         env:
           VITE_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           VITE_SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
@@ -34,6 +35,17 @@ jobs:
             echo "::error::STAGING_SUPABASE_PUBLISHABLE_KEY is required."
             exit 1
           fi
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { appendFileSync } from "node:fs";
+
+          const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          if (!/^sb_publishable_[A-Za-z0-9_-]+$/u.test(publishableKey || "")) {
+            throw new Error("STAGING_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key");
+          }
+          const fingerprint = createHash("sha256").update(publishableKey).digest("hex");
+          appendFileSync(process.env.GITHUB_OUTPUT, `supabase_publishable_key_sha256=${fingerprint}\n`);
+          NODE
           node scripts/validate-public-build-env.mjs
           npm run release:validate
           npm run typecheck
@@ -46,6 +58,7 @@ jobs:
           KOVA_SMOKE_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
           KOVA_EXPECTED_SHA: "${{ github.sha }}"
           KOVA_EXPECTED_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
+          KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256: "${{ steps.staging-build.outputs.supabase_publishable_key_sha256 }}"
       - run: npm run release:edge
         env:
           {
@@ -122,7 +135,7 @@ jobs:
       - run: npm run test:e2e -- --reporter=line
         env:
           PLAYWRIGHT_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
-      - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=1 KOVA_RELEASE_TARGET=staging npm run release:candidate
+      - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=0 KOVA_RELEASE_TARGET=staging npm run release:candidate
       - name: Consolidate immutable staging evidence
         run: npm run release:launch-report
         env:

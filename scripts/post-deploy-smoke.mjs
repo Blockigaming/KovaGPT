@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const base = new URL(process.env.KOVA_SMOKE_BASE_URL || "http://127.0.0.1:4173");
 const expectedSha = process.env.KOVA_EXPECTED_SHA;
 if (!/^[a-f0-9]{40}$/u.test(expectedSha || "")) {
@@ -11,6 +13,17 @@ if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 1000 || requestTim
 }
 
 const expectedSupabaseUrl = normalizeExpectedSupabaseUrl(process.env.KOVA_EXPECTED_SUPABASE_URL);
+const expectedSupabasePublishableKeySha256 =
+  process.env.KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256;
+if (
+  Boolean(expectedSupabaseUrl) !== Boolean(expectedSupabasePublishableKeySha256) ||
+  (expectedSupabasePublishableKeySha256 &&
+    !/^[a-f0-9]{64}$/u.test(expectedSupabasePublishableKeySha256))
+) {
+  throw new Error(
+    "KOVA_EXPECTED_SUPABASE_URL and a valid KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256 must be provided together",
+  );
+}
 const MAX_JAVASCRIPT_ASSETS = 256;
 const MAX_JAVASCRIPT_BYTES = 64 * 1024 * 1024;
 const maximumBytesValue =
@@ -25,6 +38,7 @@ if (
 }
 
 const SUPABASE_PROJECT_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co/giu;
+const SUPABASE_PUBLISHABLE_KEY_PATTERN = /sb_publishable_[A-Za-z0-9_-]+/gu;
 const SUPABASE_URL_DELIMITERS = new Set(['"', "'", "`"]);
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
@@ -236,6 +250,13 @@ function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
   }
 }
 
+function discoverSupabasePublishableKeyFingerprints(source, discoveredFingerprints) {
+  SUPABASE_PUBLISHABLE_KEY_PATTERN.lastIndex = 0;
+  for (const match of source.matchAll(SUPABASE_PUBLISHABLE_KEY_PATTERN)) {
+    discoveredFingerprints.add(createHash("sha256").update(match[0]).digest("hex"));
+  }
+}
+
 function addJavaScriptReference(candidate, parent, queue, seen) {
   let url;
   try {
@@ -258,7 +279,12 @@ function discoverJavaScript(source, parent, pattern, queue, seen) {
   }
 }
 
-async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha) {
+async function verifyDeployedBrowserTarget(
+  rootHtml,
+  expected,
+  expectedBuildSha,
+  expectedPublishableKeySha256,
+) {
   const queue = [];
   const seen = new Set();
   discoverJavaScript(rootHtml, base, HTML_JAVASCRIPT_PATTERN, queue, seen);
@@ -266,6 +292,7 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
 
   verifyRootBuildIdentity(rootHtml, expectedBuildSha);
   const discoveredProjectRefs = new Set();
+  const discoveredPublishableKeyFingerprints = new Set();
   let foundExpectedBuildSha = false;
   let scannedAssets = 0;
   let scannedBytes = 0;
@@ -285,6 +312,7 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
     if (result.source.includes(expectedBuildSha)) foundExpectedBuildSha = true;
 
     discoverSupabaseProjectRefs(result.source, discoveredProjectRefs);
+    discoverSupabasePublishableKeyFingerprints(result.source, discoveredPublishableKeyFingerprints);
     for (const pattern of JAVASCRIPT_DEPENDENCY_PATTERNS) {
       discoverJavaScript(result.source, url, pattern, queue, seen);
     }
@@ -297,6 +325,14 @@ async function verifyDeployedBrowserTarget(rootHtml, expected, expectedBuildSha)
   }
   if ([...discoveredProjectRefs].some((projectRef) => projectRef !== expected.projectRef)) {
     throw new Error("The deployed browser bundle contains an unexpected Supabase project URL");
+  }
+  if (
+    discoveredPublishableKeyFingerprints.size !== 1 ||
+    !discoveredPublishableKeyFingerprints.has(expectedPublishableKeySha256)
+  ) {
+    throw new Error(
+      "The deployed browser bundle does not match the protected Supabase publishable-key fingerprint",
+    );
   }
   if (!foundExpectedBuildSha) {
     throw new Error("The deployed browser bundle does not contain the expected build SHA");
@@ -322,7 +358,12 @@ for (const path of ["/", "/pricing", "/modes", "/~oauth/callback", "/robots.txt"
 }
 
 if (expectedSupabaseUrl) {
-  await verifyDeployedBrowserTarget(rootBody, expectedSupabaseUrl, expectedSha);
+  await verifyDeployedBrowserTarget(
+    rootBody,
+    expectedSupabaseUrl,
+    expectedSha,
+    expectedSupabasePublishableKeySha256,
+  );
 }
 
 const missing = await request(`/release-smoke-missing-${Date.now()}`);

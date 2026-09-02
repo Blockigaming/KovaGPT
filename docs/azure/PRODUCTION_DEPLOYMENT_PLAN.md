@@ -13,7 +13,7 @@ It has no deployment command, Container App update, DNS operation, Cloudflare cr
 
 The staging rehearsal is also non-deploying. An owner must deploy the staging digest through an independently reviewed Azure path first. The rehearsal then requires `/api/version` and `X-Kova-Build` to match the exact workflow SHA and scans the deployed JavaScript dependency graph for the expected staging Supabase URL (and no other Supabase project URL) before it performs edge, authenticated, or browser checks and before it emits candidate evidence. Every smoke request has a bounded per-request timeout.
 
-The current rehearsal has no authorized administrator-diagnostics step, so that gate is recorded as `not-run`, not `passed`. Its report therefore cannot satisfy the existing production guard until a real protected check is implemented. The staging report proves source/runtime checks only; it does not prove that the staging artifact is suitable for production, because browser-safe Supabase configuration is compiled for a specific environment.
+The current rehearsal has no authorized administrator-diagnostics step, so that gate is recorded as `not-run`, not `passed`. Its report therefore cannot satisfy the existing production guard until a real protected check is implemented, and the release-candidate manifest keeps `validation.staging` false. The staging report proves source/runtime checks only; it does not prove that the staging artifact is suitable for production, because browser-safe Supabase configuration is compiled for a specific environment.
 
 ## Protected environment contract
 
