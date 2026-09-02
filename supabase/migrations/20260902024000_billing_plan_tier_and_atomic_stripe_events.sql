@@ -140,6 +140,36 @@ revoke execute on function public.user_plan_tier(uuid)
   from public, anon, authenticated;
 grant execute on function public.user_plan_tier(uuid) to service_role;
 
+create or replace function public.effective_user_plan_tier(_user_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  with principals as (
+    select _user_id as user_id
+    union
+    select public.family_owner_of(_user_id)
+  ),
+  tiers as (
+    select public.user_plan_tier(principal.user_id) as tier
+    from principals as principal
+    where principal.user_id is not null
+  )
+  select case
+    when bool_or(tier = 'pro') then 'pro'
+    when bool_or(tier = 'plus') then 'plus'
+    else 'free'
+  end
+  from tiers;
+$;
+
+revoke execute on function public.effective_user_plan_tier(uuid)
+  from public, anon, authenticated;
+grant execute on function public.effective_user_plan_tier(uuid)
+  to service_role;
+
 create or replace function public.current_user_plan_tier()
 returns text
 language sql
@@ -156,6 +186,24 @@ $$;
 revoke execute on function public.current_user_plan_tier()
   from public, anon;
 grant execute on function public.current_user_plan_tier()
+  to authenticated, service_role;
+
+create or replace function public.current_effective_plan_tier()
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select case
+    when auth.uid() is null then 'free'
+    else public.effective_user_plan_tier(auth.uid())
+  end;
+$;
+
+revoke execute on function public.current_effective_plan_tier()
+  from public, anon;
+grant execute on function public.current_effective_plan_tier()
   to authenticated, service_role;
 
 create or replace function public.user_subscription_summary(_user_id uuid)
