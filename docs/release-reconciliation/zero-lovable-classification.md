@@ -22,15 +22,13 @@ No production source caller referenced any of those URLs. Their only repository 
 
 ## Inventory classification
 
-| Surface | Result |
-| --- | --- |
-| Package declarations and npm lock root | No Lovable dependency |
-| Environment example and production runtime source | No Lovable variable or credential |
-| AI, Stripe, email, and webhook providers | No Lovable runtime endpoint or caller |
-| Active route source and generated route tree | Removed in this candidate |
-| Browser and server bundle names/content | Enforced by the strict build scanner |
-| Tests and security scanners | Retained only as negative assertions |
-| Documentation | Historical references retained where they explain removal evidence |
+- Package declarations and npm lock root: no Lovable dependency.
+- Environment example and production runtime source: no Lovable variable or credential.
+- AI, Stripe, email, and webhook providers: no Lovable runtime endpoint or caller.
+- Active route source and generated route tree: removed in this candidate.
+- Browser and server bundle names/content: enforced by the strict build scanner.
+- Tests and security scanners: retained only as negative assertions.
+- Documentation: historical references retained where they explain removal evidence.
 
 ## Removed active artifacts
 
