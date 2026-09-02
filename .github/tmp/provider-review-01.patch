@@ -1,0 +1,18 @@
+--- a/src/lib/ai/provider-transport.server.d.mts
++++ b/src/lib/ai/provider-transport.server.d.mts
+@@ -11,6 +11,7 @@
+   constructor(phase?: string);
+ }
+ 
++export function isProviderTimeoutError(error: unknown): boolean;
+ export function isAbortError(error: unknown): boolean;
+ 
+ export type RequestDeadline = {
+@@ -18,6 +19,7 @@
+   timeoutMs: number;
+   phase: string;
+   didTimeout(): boolean;
++  didParentAbort(): boolean;
+   normalize(error: unknown): unknown;
+   cleanup(): void;
+ };
