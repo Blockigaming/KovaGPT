@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
+const STRIPE_PAYMENT_PERMISSION_WARNING =
+  "Potential permissions policy violation: payment is not allowed in this document.";
+
 const sse = (...chunks: string[]) =>
   chunks
     .map((content) =>
@@ -15,7 +18,11 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left logo
 }, testInfo) => {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:"))
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:") &&
+      message.text() !== STRIPE_PAYMENT_PERMISSION_WARNING
+    )
       errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
@@ -28,7 +35,11 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left logo
     });
   });
   await page.route("**/api/title", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: '{"title":"Mock chat"}' }),
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"title":"Mock chat"}',
+    }),
   );
   let requests = 0;
   await page.route("**/api/chat", async (route) => {
@@ -45,7 +56,10 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left logo
   await waitForKovaHydration(page);
   await expect(page.locator("aside img[alt='KovaGPT logo']")).toHaveCount(1);
   if (testInfo.project.name === "desktop-1280x800") {
-    await page.screenshot({ path: "test-results/openai-migration-logo.png", fullPage: false });
+    await page.screenshot({
+      path: "test-results/openai-migration-logo.png",
+      fullPage: false,
+    });
   }
   const input = page.getByRole("textbox").first();
   await input.fill("Hello mocked runtime");
@@ -103,7 +117,11 @@ test("Stop aborts a slow generation without duplicating the assistant message", 
   await page.route("**/api/chat", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 30_000));
     await route
-      .fulfill({ status: 200, contentType: "text/event-stream", body: sse("too late", "[DONE]") })
+      .fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: sse("too late", "[DONE]"),
+      })
       .catch(() => undefined);
   });
   await page.goto("/");

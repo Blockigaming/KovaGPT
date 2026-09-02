@@ -38,19 +38,29 @@ import { useChatBranches } from "@/hooks/useChatBranches";
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
 const SettingsDialog = lazy(() =>
-  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+  import("@/components/SettingsDialog").then((m) => ({
+    default: m.SettingsDialog,
+  })),
 );
 const OnboardingDialog = lazy(() =>
-  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
+  import("@/components/OnboardingDialog").then((m) => ({
+    default: m.OnboardingDialog,
+  })),
 );
 const LimitReachedDialog = lazy(() =>
-  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
+  import("@/components/LimitReachedDialog").then((m) => ({
+    default: m.LimitReachedDialog,
+  })),
 );
 const ShareChatDialog = lazy(() =>
-  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
+  import("@/components/ShareChatDialog").then((m) => ({
+    default: m.ShareChatDialog,
+  })),
 );
 const ChatWorkspaceDialog = lazy(() =>
-  import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
+  import("@/components/ChatWorkspaceDialog").then((m) => ({
+    default: m.ChatWorkspaceDialog,
+  })),
 );
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
@@ -395,7 +405,9 @@ function KovaGPT() {
     setRecentLibraryError(null);
     lastLoadedDraftRef.current = null;
 
-    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
+    const loaded = loadSettings(userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
     setSettings(loaded);
     setSettingsPrincipal(storagePrincipal);
     applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "system"));
@@ -495,7 +507,10 @@ function KovaGPT() {
         return;
       }
       try {
-        candidates.push({ createdAt: result.createdAt, apply: prepare(result.value) });
+        candidates.push({
+          createdAt: result.createdAt,
+          apply: prepare(result.value),
+        });
       } catch {
         rejectedHandoff = true;
       }
@@ -550,7 +565,10 @@ function KovaGPT() {
 
     consume<{
       prompt: string;
-      pack?: { name: string; items: { title: string; content: string }[] } | null;
+      pack?: {
+        name: string;
+        items: { title: string; content: string }[];
+      } | null;
     }>("kova-prompt-launch", (launch) => {
       if (
         typeof launch?.prompt !== "string" ||
@@ -680,7 +698,10 @@ function KovaGPT() {
     const el = scrollRef.current;
     if (!el) return;
     if (nearBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: isStreaming ? "auto" : "smooth",
+      });
       setShowJumpToLatest(false);
     } else {
       setShowJumpToLatest(true);
@@ -733,9 +754,10 @@ function KovaGPT() {
         memoryEnabled: true,
         temporary: false,
         // The memory endpoint intentionally accepts only the latest bounded window.
-        messages: active.messages
-          .slice(-30)
-          .map((message) => ({ role: message.role, content: message.content.slice(0, 2000) })),
+        messages: active.messages.slice(-30).map((message) => ({
+          role: message.role,
+          content: message.content.slice(0, 2000),
+        })),
       };
       void enqueueMemoryWrite({
         principal: userKey,
@@ -973,7 +995,11 @@ function KovaGPT() {
               : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
-      const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
+      const assistantMsg: Message = {
+        id: newId(),
+        role: "assistant",
+        content: "",
+      };
 
       const editIndex =
         existingConversation && editingMessage?.conversationId === existingConversation.id
@@ -1269,7 +1295,11 @@ function KovaGPT() {
             );
           }
         } else {
-          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const err = e as Error & {
+            requestId?: string;
+            category?: string;
+            retryable?: boolean;
+          };
           const raw = err.message || "Something went wrong";
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
@@ -1507,7 +1537,11 @@ function KovaGPT() {
           setConversations((prev) =>
             prev.map((c) =>
               c.id === id
-                ? { ...c, pinned: !c.pinned, pinnedAt: !c.pinned ? Date.now() : undefined }
+                ? {
+                    ...c,
+                    pinned: !c.pinned,
+                    pinnedAt: !c.pinned ? Date.now() : undefined,
+                  }
                 : c,
             ),
           );
@@ -1579,7 +1613,9 @@ function KovaGPT() {
                       const transcript = active.messages
                         .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
                         .join("\n\n");
-                      const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
+                      const blob = new Blob([transcript], {
+                        type: "text/markdown;charset=utf-8",
+                      });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
@@ -1706,6 +1742,7 @@ function KovaGPT() {
                   onSubmit={() => send(input, attachments)}
                   onStop={stop}
                   isStreaming={isStreaming}
+                  disabled={!principalReady}
                   attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
@@ -2015,6 +2052,7 @@ function KovaGPT() {
                 onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
+                disabled={!principalReady}
                 attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}

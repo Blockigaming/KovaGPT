@@ -36,6 +36,9 @@ test("ChatGPT parity transformer is exact and idempotent", () => {
     assert.deepEqual(first.changed, Object.keys(fixtures).sort());
     assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /deep_research/u);
     assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /label: "Search the web"/u);
+    assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /label: "Create an image"/u);
+    assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /label: "Analyze data"/u);
+    assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /label: "Analyze files"/u);
     assert.match(
       readFileSync("src/components/ChatInput.tsx", "utf8"),
       /data-testid="send-button"/u,

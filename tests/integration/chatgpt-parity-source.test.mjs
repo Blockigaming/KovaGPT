@@ -54,8 +54,20 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
   assert.match(chatInput, /COMPOSER_TOOLS\.map/);
+  for (const [id, label] of [
+    ["web_search", "Search the web"],
+    ["deep_research", "Deep research"],
+    ["image", "Create an image"],
+    ["data_analysis", "Analyze data"],
+    ["file_analysis", "Analyze files"],
+  ]) {
+    assert.match(chatInput, new RegExp(`id: "${id}", label: "${label}"`));
+  }
+  assert.match(chatInput, /const lockedRow = \(tool: ComposerAction\)[\s\S]{0,300}<button/);
+  assert.match(chatInput, /<button[\s\S]{0,160}disabled[\s\S]{0,160}aria-disabled="true"/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
+  assert.equal((route.match(/disabled=\{!principalReady\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);

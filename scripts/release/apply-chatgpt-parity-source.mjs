@@ -12,7 +12,9 @@ const replacements = [
     after: `const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
   { id: "deep_research", label: "Deep research", icon: Telescope },
-  { id: "image", label: "Create Image", icon: ImagePlus },
+  { id: "image", label: "Create an image", icon: ImagePlus },
+  { id: "data_analysis", label: "Analyze data", icon: Brain },
+  { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];`,
   },
   {

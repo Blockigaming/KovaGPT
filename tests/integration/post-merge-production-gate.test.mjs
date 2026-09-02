@@ -76,6 +76,10 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(ci, /--project=phone-320x700[\s\S]*--project=phone-430x932/);
   assert.match(ci, /--project=tablet-768x1024[\s\S]*--project=tablet-1024x768/);
   assert.match(ci, /--project=desktop-1280x800[\s\S]*--project=desktop-1728x1117/);
+  assert.match(
+    ci,
+    /release-e2e:[\s\S]*KOVA_BROWSER_PREVIEW: "node"[\s\S]*--project=desktop-1440x900 --shard=\$\{\{ matrix\.shard \}\}\/3/,
+  );
 
   assert.match(boundedJson, /new TextDecoder\("utf-8", { fatal: true }\)/);
   assert.match(boundedJson, /bytesRead \+= value\.byteLength/);

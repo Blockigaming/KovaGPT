@@ -5,12 +5,22 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("browser CI uses the Node preview without changing the production preset", async () => {
-  const [viteConfig, workflow] = await Promise.all([
+  const [viteConfig, workflow, parity, shellParity, productionAudit] = await Promise.all([
     read("vite.config.ts"),
     read(".github/workflows/ci.yml"),
+    read("tests/e2e/chatgpt-parity.spec.ts"),
+    read("tests/e2e/chatgpt-shell-parity.spec.ts"),
+    read("tests/e2e/production-audit.spec.ts"),
   ]);
   const verifyJob = workflow.slice(workflow.indexOf("  verify:"), workflow.indexOf("\n  browser:"));
-  const browserJob = workflow.slice(workflow.indexOf("\n  browser:"));
+  const browserJob = workflow.slice(
+    workflow.indexOf("\n  browser:"),
+    workflow.indexOf("\n  release-e2e:"),
+  );
+  const releaseJob = workflow.slice(
+    workflow.indexOf("\n  release-e2e:"),
+    workflow.indexOf("\n  e2e-report:"),
+  );
 
   assert.match(
     viteConfig,
@@ -38,4 +48,16 @@ test("browser CI uses the Node preview without changing the production preset", 
     browserJob,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}/,
   );
+  assert.match(releaseJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
+  assert.match(
+    releaseJob,
+    /npm run test:e2e -- --project=desktop-1440x900 --shard=\$\{\{ matrix\.shard \}\}\/3 --reporter=blob/,
+  );
+  for (const source of [parity, shellParity]) {
+    assert.match(source, /const selfEnumeratingProject = "desktop-1440x900"/);
+    assert.match(source, /testInfo\.project\.name !== selfEnumeratingProject/);
+  }
+  assert.match(productionAudit, /const routeBatches = Array\.from/);
+  assert.match(productionAudit, /routes\.slice\(index \* 8, index \* 8 \+ 8\)/);
+  assert.match(productionAudit, /test\.setTimeout\(45_000\)/);
 });

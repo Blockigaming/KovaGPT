@@ -54,7 +54,12 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+  | "web_search"
+  | "deep_research"
+  | "image"
+  | "study"
+  | "data_analysis"
+  | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -64,7 +69,10 @@ type ComposerAction = {
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
-  { id: "image", label: "Create Image", icon: ImagePlus },
+  { id: "deep_research", label: "Deep research", icon: Telescope },
+  { id: "image", label: "Create an image", icon: ImagePlus },
+  { id: "data_analysis", label: "Analyze data", icon: Brain },
+  { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];
 
 const PROMPT_SHORTCUTS = [
@@ -601,6 +609,8 @@ export function ChatInput({
     const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
+    const dataAnalysisTool = COMPOSER_TOOLS.find((tool) => tool.id === "data_analysis");
+    const fileAnalysisTool = COMPOSER_TOOLS.find((tool) => tool.id === "file_analysis");
 
     const photosRow = (
       <button
@@ -663,20 +673,21 @@ export function ChatInput({
     };
 
     if (!user) {
-      const lockedRow = (
-        key: string,
-        Icon: React.ComponentType<{ className?: string }>,
-        label: string,
-      ) => (
-        <div
-          key={key}
-          aria-disabled="true"
-          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
-        >
-          <Icon className={`${iconClass} opacity-70`} />
-          <span className="opacity-70">{label}</span>
-        </div>
-      );
+      const lockedRow = (tool: ComposerAction) => {
+        const Icon = tool.icon;
+        return (
+          <button
+            key={`locked-${tool.id}`}
+            type="button"
+            disabled
+            aria-disabled="true"
+            className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+          >
+            <Icon className={`${iconClass} opacity-70`} />
+            <span className="opacity-70">{tool.label}</span>
+          </button>
+        );
+      };
       return (
         <>
           {photosRow}
@@ -686,8 +697,10 @@ export function ChatInput({
           <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
-          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
-          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {deepResearchTool ? lockedRow(deepResearchTool) : null}
+          {imageTool ? lockedRow(imageTool) : null}
+          {dataAnalysisTool ? lockedRow(dataAnalysisTool) : null}
+          {fileAnalysisTool ? lockedRow(fileAnalysisTool) : null}
           <button
             type="button"
             className={rowClass}
@@ -738,7 +751,6 @@ export function ChatInput({
             outlineColor: "currentColor",
             outlineOffset: "2px",
           }}
-
           tabIndex={-1}
           className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}
         >

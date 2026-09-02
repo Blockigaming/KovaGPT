@@ -1585,6 +1585,11 @@ body {
 /* Desktop refinement layer: tighter density and quieter elevation while
    preserving the established Kova tokens and mobile behavior. */
 @media (min-width: 1024px) {
+  .kova-sidebar[data-collapsed="true"] {
+    width: 0 !important;
+    border-right-width: 0 !important;
+  }
+
   html {
     font-size: 16px;
   }

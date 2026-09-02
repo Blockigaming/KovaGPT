@@ -132,9 +132,9 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/depth.spec.ts", 5, 5],
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
     ["tests/e2e/final-readiness.spec.ts", 2, 2],
-    ["tests/e2e/functional-reliability.spec.ts", 1, 1],
-    ["tests/e2e/high-impact-chat.spec.ts", 5, 5],
-    ["tests/e2e/mobile-quality.spec.ts", 5, 5],
+    ["tests/e2e/functional-reliability.spec.ts", 1, 0],
+    ["tests/e2e/high-impact-chat.spec.ts", 1, 0],
+    ["tests/e2e/mobile-quality.spec.ts", 5, 4],
     ["tests/e2e/mobile-shell-ui-truth.spec.ts", 2, 2],
     ["tests/e2e/model-selector.spec.ts", 1, 1],
     ["tests/e2e/multimodal-canvas.spec.ts", 2, 2],
@@ -144,17 +144,24 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/responsive.spec.ts", 2, 2],
     ["tests/e2e/secondary-screens.spec.ts", 3, 3],
     ["tests/e2e/seo-indexing.spec.ts", 3, 2],
-    ["tests/e2e/ui-quality.spec.ts", 3, 3],
+    ["tests/e2e/ui-quality.spec.ts", 3, 2],
   ];
   const paths = contracts.map(([path]) => path);
-  const [helper, guardSpec, ...specs] = await Promise.all([
+  const [helper, guardSpec, home, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
     read("tests/e2e/hydration-interaction-guard.spec.ts"),
+    read("src/routes/index.tsx"),
     ...paths.map(read),
   ]);
 
   assert.match(helper, /toHaveAttribute\(\s*"data-kova-hydration"\s*,\s*"ready"\s*,\s*\{/s);
   assert.match(helper, /timeout: 30_000/);
+  assert.match(
+    helper,
+    /seedGuestConversationsAfterHydration[\s\S]*await waitForKovaHydration\(page\);[\s\S]*"nova-gpt-conversations-v3:guest"[\s\S]*"kova:conversations-imported"/,
+  );
+  assert.doesNotMatch(helper, /nova-gpt-conversations-v2/);
+  assert.equal((home.match(/disabled=\{!principalReady\}/g) ?? []).length, 2);
   assert.match(guardSpec, /resourceType\(\) === "script"/);
   assert.match(guardSpec, /"data-kova-hydration"\s*,\s*"pending"/s);
   assert.match(guardSpec, /toBeDisabled\(\)/);
@@ -176,6 +183,19 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   }
 
   const highImpact = specsByPath.get("tests/e2e/high-impact-chat.spec.ts");
+  for (const path of [
+    "tests/e2e/functional-reliability.spec.ts",
+    "tests/e2e/high-impact-chat.spec.ts",
+    "tests/e2e/mobile-quality.spec.ts",
+    "tests/e2e/ui-quality.spec.ts",
+  ]) {
+    const source = specsByPath.get(path);
+    assert.match(
+      source,
+      /await page\.goto\([^;]+;[\s\S]*await seedGuestConversationsAfterHydration\(/,
+    );
+    assert.doesNotMatch(source, /addInitScript[\s\S]{0,500}nova-gpt-conversations-v2/);
+  }
   assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
   assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
   assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);

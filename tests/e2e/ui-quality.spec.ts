@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { waitForKovaHydration } from "./hydration";
+import { seedGuestConversationsAfterHydration, waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "desktop-1440x900"]);
 
@@ -22,12 +22,18 @@ test("empty workspace remains contained and composer focus is deliberate", async
     return {
       borderRadius: Number.parseFloat(style.borderRadius),
       borderColor: style.borderColor,
-      shadow: style.boxShadow,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: Number.parseFloat(style.outlineWidth || "0"),
+      outlineColor: style.outlineColor,
+      outlineOffset: Number.parseFloat(style.outlineOffset || "0"),
     };
   });
   expect(focused.borderRadius).toBeGreaterThanOrEqual(16);
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(focused.shadow).not.toBe("none");
+  expect(focused.outlineStyle).toBe("solid");
+  expect(focused.outlineWidth).toBeGreaterThanOrEqual(2);
+  expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(focused.outlineOffset).toBeGreaterThanOrEqual(2);
 
   if (page.viewportSize()!.width >= 1024) {
     const metrics = await composer.evaluate((element) => {
@@ -81,33 +87,34 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
 test("rich conversation rhythm and actions remain stable at every core viewport", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "workspace-quality",
-          title: "Workspace quality review with a title that truncates cleanly",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            { id: "user-quality", role: "user", content: "Explain the result clearly." },
-            {
-              id: "assistant-quality",
-              role: "assistant",
-              content:
-                "## Result\n\nReadable copy with a [source](https://example.com).\n\n| Metric | Value |\n|---|---:|\n| Stability | 100 |\n\n```ts\nconst longValue = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz';\n```",
-            },
-          ],
-        },
-      ]),
-    );
-    localStorage.setItem("nova-gpt-pending-active", "workspace-quality");
-  });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
+  const now = Date.now();
+  await seedGuestConversationsAfterHydration(page, [
+    {
+      id: "workspace-quality",
+      title: "Workspace quality review with a title that truncates cleanly",
+      mode: "instant",
+      createdAt: now,
+      updatedAt: now,
+      messages: [
+        {
+          id: "user-quality",
+          role: "user",
+          content: "Explain the result clearly.",
+        },
+        {
+          id: "assistant-quality",
+          role: "assistant",
+          content:
+            "## Result\n\nReadable copy with a [source](https://example.com).\n\n| Metric | Value |\n|---|---:|\n| Stability | 100 |\n\n```ts\nconst longValue = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz';\n```",
+        },
+      ],
+    },
+  ]);
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  await page.getByRole("button", { name: /Open chat Workspace quality review/ }).click();
   await expect(page.locator(".kova-user-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
 

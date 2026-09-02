@@ -23,7 +23,10 @@ test.describe("mobile shell UI truth", () => {
     expect(box!.y).toBeLessThanOrEqual(1);
     expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
-    const close = page.getByRole("button", { name: "Close navigation", exact: true });
+    const close = page.getByRole("button", {
+      name: "Close navigation",
+      exact: true,
+    });
     const closeBox = await close.boundingBox();
     expect(closeBox?.width).toBeGreaterThanOrEqual(44);
     expect(closeBox?.height).toBeGreaterThanOrEqual(44);
@@ -43,13 +46,15 @@ test.describe("mobile shell UI truth", () => {
     const opener =
       viewport.width < 1024
         ? page.getByRole("button", { name: "Open menu" })
-        : page.locator('[data-testid="model-selector-trigger"]:visible').first();
+        : page.getByRole("button", { name: "New chat", exact: true }).first();
     await opener.focus();
     const openerHandle = await opener.elementHandle();
     expect(openerHandle).not.toBeNull();
     await page.keyboard.press("Control+K");
 
-    const palette = page.getByRole("dialog", { name: "Search chats and actions" });
+    const palette = page.getByRole("dialog", {
+      name: "Search chats and actions",
+    });
     await expect(palette).toBeVisible();
     await expect(
       palette.getByRole("combobox", { name: "Search commands and chats" }),

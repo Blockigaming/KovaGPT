@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
 const themes = ["light", "dark"] as const;
+const selfEnumeratingProject = "desktop-1440x900";
 
 async function verifyConversationShell(page: Page, width: number, theme: (typeof themes)[number]) {
   await page.setViewportSize({ width, height: width < 768 ? 812 : 900 });
@@ -34,6 +35,13 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
 }
 
 test.describe("ChatGPT-like Kova conversation shell", () => {
+  test.beforeEach(({ page: _page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== selfEnumeratingProject,
+      "This suite enumerates its own viewport matrix from one canonical project.",
+    );
+  });
+
   test("signed-out shell is responsive, accessible, restrained, and voice-free", async ({
     page,
   }) => {

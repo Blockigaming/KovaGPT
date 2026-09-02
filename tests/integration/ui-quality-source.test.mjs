@@ -16,6 +16,16 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(home, /What can I help with\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
+  for (const label of [
+    "Search the web",
+    "Deep research",
+    "Create an image",
+    "Analyze data",
+    "Analyze files",
+  ]) {
+    assert.match(composer, new RegExp(`label: "${label}"`));
+  }
+  assert.match(composer, /const lockedRow = \(tool: ComposerAction\)/);
   assert.match(composer, /PROMPT_SHORTCUTS/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.

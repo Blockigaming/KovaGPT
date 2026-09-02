@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const workflow = readFileSync(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
+const browserJob = workflow.slice(
+  workflow.indexOf("\n  browser:"),
+  workflow.indexOf("\n  release-e2e:"),
+);
+const releaseJob = workflow.slice(
+  workflow.indexOf("\n  release-e2e:"),
+  workflow.indexOf("\n  e2e-report:"),
+);
 
 test("each browser group runs on a fresh runner without reducing coverage", () => {
   assert.match(
@@ -26,14 +34,14 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
   ];
   for (const project of singleRunProjects) {
     assert.equal(
-      workflow.match(new RegExp(`--project=${project}`, "g"))?.length,
+      browserJob.match(new RegExp(`--project=${project}`, "g"))?.length,
       1,
       `${project} must appear exactly once`,
     );
   }
 
   assert.equal(
-    workflow.match(/--project=desktop-1440x900/g)?.length,
+    browserJob.match(/--project=desktop-1440x900/g)?.length,
     2,
     "desktop-1440x900 must be split across two fresh runners",
   );
@@ -44,6 +52,11 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
     /npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}/,
   );
   assert.match(workflow, /name: playwright-artifacts-\$\{\{ matrix\.id \}\}/);
+  assert.match(releaseJob, /KOVA_BROWSER_PREVIEW: "node"/);
+  assert.match(
+    releaseJob,
+    /--project=desktop-1440x900 --shard=\$\{\{ matrix\.shard \}\}\/3 --reporter=blob/,
+  );
 });
 
 test("third-party CI actions are pinned to immutable revisions", () => {

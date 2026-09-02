@@ -387,8 +387,9 @@ export function Sidebar({
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
           } as React.CSSProperties
         }
+        data-collapsed={collapsed ? "true" : "false"}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
-          collapsed ? "lg:!w-0 lg:border-r-0" : ""
+          collapsed ? "lg:!w-0 lg:!border-r-0" : ""
         } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
           open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         }`}

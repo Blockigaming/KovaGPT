@@ -2,6 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { waitForKovaHydration } from "./hydration";
 
+const STRIPE_PAYMENT_PERMISSION_WARNING =
+  "Potential permissions policy violation: payment is not allowed in this document.";
+
 /**
  * Responsive smoke suite. Runs against every viewport project in
  * playwright.config.ts. Verifies core invariants:
@@ -51,7 +54,9 @@ test.describe("KovaGPT responsive shell", () => {
 
     // No uncaught console errors (excluding known 3rd-party auth noise).
     const filtered = errors.filter(
-      (e) => !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
+      (e) =>
+        e !== STRIPE_PAYMENT_PERMISSION_WARNING &&
+        !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
     );
     expect(filtered, `unexpected client errors: ${filtered.join("\n")}`).toEqual([]);
   });
@@ -64,11 +69,14 @@ test.describe("KovaGPT responsive shell", () => {
 
     if (isPhone) {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
-      await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toBeVisible();
+      await expect(page.getByText("KovaGPT", { exact: true }).first()).toBeVisible();
     }
+    await expect(page.locator('[data-testid="model-selector-trigger"]')).toHaveCount(0);
 
     // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+
-    const collapsedTrigger = page.getByRole("button", { name: /open sidebar/i });
+    const collapsedTrigger = page.getByRole("button", {
+      name: /open sidebar/i,
+    });
     if (width >= 1200) {
       // Persistent sidebar starts open on desktop; the fixed trigger should NOT be visible.
       await expect(collapsedTrigger)

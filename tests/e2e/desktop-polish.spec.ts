@@ -13,6 +13,7 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
 
   const sidebar = page.locator(".kova-sidebar");
   await expect(sidebar).toHaveCSS("width", "0px");
+  await expect(sidebar).toHaveCSS("border-right-width", "0px");
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
 
   const openSidebar = page.getByRole("button", { name: "Open sidebar" });
@@ -27,6 +28,7 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
   await expect(collapseSidebar).toBeFocused();
   await collapseSidebar.click();
   await expect(sidebar).toHaveCSS("width", "0px");
+  await expect(sidebar).toHaveCSS("border-right-width", "0px");
   await expect(openSidebar).toBeFocused();
 
   const composer = page.locator(".kova-composer");

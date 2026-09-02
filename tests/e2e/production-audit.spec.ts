@@ -43,24 +43,32 @@ const routes = [
   "/reset-password",
 ];
 
-test("implemented routes render without server errors or horizontal overflow", async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(90_000);
-  for (const route of routes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
-    await expect(page.locator("body")).toBeVisible();
-    const overflow = await page.evaluate(() => ({
-      width: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(overflow.scrollWidth, `${route} should fit the viewport`).toBeLessThanOrEqual(
-      overflow.width + 1,
-    );
-  }
-});
+const routeBatches = Array.from({ length: Math.ceil(routes.length / 8) }, (_, index) =>
+  routes.slice(index * 8, index * 8 + 8),
+);
+
+for (const [batchIndex, batch] of routeBatches.entries()) {
+  test(`implemented route batch ${batchIndex + 1}/${routeBatches.length} renders safely`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440x900");
+    test.setTimeout(45_000);
+    for (const route of batch) {
+      const response = await page.goto(route, {
+        waitUntil: "domcontentloaded",
+      });
+      expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
+      await expect(page.locator("body"), `${route} should render a body`).toBeVisible();
+      const overflow = await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(overflow.scrollWidth, `${route} should fit the viewport`).toBeLessThanOrEqual(
+        overflow.width + 1,
+      );
+    }
+  });
+}
 
 test("guest chat, authentication, command palette, and mobile navigation stay operable", async ({
   page,
