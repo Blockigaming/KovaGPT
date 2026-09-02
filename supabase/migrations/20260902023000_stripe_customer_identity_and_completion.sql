@@ -121,13 +121,30 @@ begin
 end;
 $$;
 
-alter table public.subscriptions
-  drop constraint if exists subscriptions_stripe_subscription_id_key;
-
-alter table public.processed_stripe_events
-  drop constraint if exists processed_stripe_events_pkey;
-alter table public.processed_stripe_events
-  add constraint processed_stripe_events_pkey primary key (event_id, environment);
+-- Keep the legacy single-column uniqueness contracts throughout the rollback
+-- window. The new composite keys are additive; a later, separately reviewed
+-- contract migration may remove the legacy keys after rollback is retired.
+do $
+begin
+  if not exists (
+    select 1
+    from pg_constraint constraint_row
+    where constraint_row.conrelid = 'public.processed_stripe_events'::regclass
+      and constraint_row.contype = 'u'
+      and (
+        select array_agg(attribute.attname order by key_column.position)
+        from unnest(constraint_row.conkey) with ordinality key_column(attnum, position)
+        join pg_attribute attribute
+          on attribute.attrelid = constraint_row.conrelid
+         and attribute.attnum = key_column.attnum
+      ) = array['event_id', 'environment']::name[]
+  ) then
+    alter table public.processed_stripe_events
+      add constraint processed_stripe_events_event_environment_key
+      unique (event_id, environment);
+  end if;
+end;
+$;
 
 alter table public.subscriptions
   drop constraint if exists subscriptions_environment_check;
