@@ -19,9 +19,7 @@ if (
   maxJavaScriptBytes < 1024 ||
   maxJavaScriptBytes > MAX_JAVASCRIPT_BYTES
 ) {
-  throw new Error(
-    "KOVA_SMOKE_MAX_JAVASCRIPT_BYTES must be an integer from 1024 through 67108864",
-  );
+  throw new Error("KOVA_SMOKE_MAX_JAVASCRIPT_BYTES must be an integer from 1024 through 67108864");
 }
 
 const HTTPS_URL_IN_LITERAL_PATTERN = /https:\/\/[^\s<>]+/giu;
@@ -31,8 +29,7 @@ const STATIC_IMPORT_PATTERN =
   /\bimport\s*(?:[^"'`]*?\bfrom\s*)?["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
 const EXPORT_FROM_PATTERN =
   /\bexport\s+[^"'`]*?\bfrom\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
-const VITE_PRELOAD_ASSET_PATTERN =
-  /["'`]((?:\/?assets\/)[^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const VITE_PRELOAD_ASSET_PATTERN = /["'`]((?:\/?assets\/)[^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
 const HTML_JAVASCRIPT_PATTERN =
   /<(?:script|link)\b[^>]*\b(?:src|href)=(?:"([^"]+\.m?js(?:\?[^"#]*)?)"|'([^']+\.m?js(?:\?[^'#]*)?)')[^>]*>/giu;
 const JAVASCRIPT_DEPENDENCY_PATTERNS = [
@@ -117,9 +114,7 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
     .toLowerCase();
   if (!JAVASCRIPT_CONTENT_TYPES.has(contentType)) {
     throw new Error(
-      url.pathname +
-        " returned non-JavaScript content type " +
-        (contentType || "none"),
+      url.pathname + " returned non-JavaScript content type " + (contentType || "none"),
     );
   }
 
@@ -130,9 +125,7 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
     Number.isInteger(declaredBytes) &&
     declaredBytes > maximumBytes
   ) {
-    throw new Error(
-      "Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes",
-    );
+    throw new Error("Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes");
   }
   if (!response.body) {
     throw new Error(url.pathname + " returned no readable JavaScript body");
@@ -150,9 +143,7 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
       bytes += value.byteLength;
       if (bytes > maximumBytes) {
         await reader.cancel().catch(() => {});
-        throw new Error(
-          "Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes",
-        );
+        throw new Error("Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes");
       }
       decoded.push(decoder.decode(value, { stream: true }));
     }

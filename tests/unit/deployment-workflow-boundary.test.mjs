@@ -188,8 +188,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
         ...process.env,
         KOVA_SMOKE_BASE_URL: "http://127.0.0.1:" + address.port,
         KOVA_EXPECTED_SHA: expectedSha,
-        KOVA_EXPECTED_SUPABASE_URL:
-          "https://" + expectedProjectRef + ".supabase.co",
+        KOVA_EXPECTED_SUPABASE_URL: "https://" + expectedProjectRef + ".supabase.co",
         KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
         ...extraEnv,
       },
@@ -225,9 +224,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
 
     scripts.set(
       "/assets/preloaded.js",
-      'export const bad = "https://' +
-        expectedProjectRef +
-        '.supabase.co.attacker.example";',
+      'export const bad = "https://' + expectedProjectRef + '.supabase.co.attacker.example";',
     );
     const suffixAttack = await runSmoke();
     assert.notEqual(suffixAttack.code, 0);
@@ -235,9 +232,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
 
     scripts.set(
       "/assets/preloaded.js",
-      'export const bad = "https://' +
-        expectedProjectRef +
-        '.supabase.co@attacker.example";',
+      'export const bad = "https://' + expectedProjectRef + '.supabase.co@attacker.example";',
     );
     const userinfoAttack = await runSmoke();
     assert.notEqual(userinfoAttack.code, 0);
@@ -248,11 +243,11 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     scripts.set(
       "/assets/preloaded.js",
       [
-        "export const bad = \"https://",
+        'export const bad = "https://',
         expectedProjectRef,
         ".supabase.co",
         apostrophe,
-        "@attacker.example\";",
+        '@attacker.example";',
       ].join(""),
     );
     const apostropheUserinfoAttack = await runSmoke();
@@ -275,9 +270,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
 
     scripts.set(
       "/assets/preloaded.js",
-      'export const bad = "https://' +
-        expectedProjectRef +
-        '.supabase.co;@attacker.example";',
+      'export const bad = "https://' + expectedProjectRef + '.supabase.co;@attacker.example";',
     );
     const delimitedUserinfoAttack = await runSmoke();
     assert.notEqual(delimitedUserinfoAttack.code, 0);
@@ -307,10 +300,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       "/assets/preloaded.js",
       'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
     );
-    scripts.set(
-      "/assets/index.js",
-      'const deps = ["assets/preloaded.js", "assets/oversized.js"];',
-    );
+    scripts.set("/assets/index.js", 'const deps = ["assets/preloaded.js", "assets/oversized.js"];');
     scripts.set("/assets/oversized.js", "x".repeat(8192));
     const oversized = await runSmoke({ KOVA_SMOKE_MAX_JAVASCRIPT_BYTES: "4096" });
     assert.notEqual(oversized.code, 0);
