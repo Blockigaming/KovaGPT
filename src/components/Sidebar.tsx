@@ -1,7 +1,5 @@
 import {
   Archive,
-  ArrowUpRight,
-  ChevronRight,
   Calendar,
   Copy as CopyIcon,
   CreditCard,
@@ -9,8 +7,6 @@ import {
   FolderOpen,
   HelpCircle,
   ImageIcon,
-  LifeBuoy,
-  Map,
   Blocks,
   MoreHorizontal,
   PanelLeft,
@@ -19,9 +15,8 @@ import {
   Search,
   Settings as SettingsIcon,
   Share2,
-  Sparkles,
-  Telescope,
   SquarePen,
+  Telescope,
   Trash2,
   X,
   type LucideIcon,
@@ -29,7 +24,7 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { UserButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,10 +87,11 @@ export function Sidebar({
   const showSignedOut = isLoaded && !isSignedIn;
   const collapsed = !open;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isOn = (p: string) => pathname === p;
+  const isOn = (path: string) => pathname === path;
 
   useEffect(() => {
     const openSearch = () => {
+      if (!showSignedIn) return;
       setSearchOpen(true);
       if (!open) onToggle();
       window.requestAnimationFrame(() => {
@@ -107,7 +103,7 @@ export function Sidebar({
 
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
-  }, [open, onToggle]);
+  }, [open, onToggle, showSignedIn]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -132,7 +128,7 @@ export function Sidebar({
         drawerRef.current.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      ).filter((element) => !element.hasAttribute("disabled") && element.offsetParent !== null);
       if (items.length === 0) return;
       const first = items[0];
       const last = items[items.length - 1];
@@ -166,13 +162,7 @@ export function Sidebar({
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
 
-  const renderNavLink = (
-    to: string,
-    title: string,
-    Icon: LucideIcon,
-    active = isOn(to),
-    badge?: string,
-  ) => (
+  const renderNavLink = (to: string, title: string, Icon: LucideIcon, active = isOn(to)) => (
     <Link
       to={to as never}
       className={navItemClass(active)}
@@ -183,11 +173,6 @@ export function Sidebar({
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
-      {badge && !collapsed ? (
-        <span className="ml-auto rounded-full bg-sidebar-hover px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {badge}
-        </span>
-      ) : null}
     </Link>
   );
 
@@ -196,78 +181,86 @@ export function Sidebar({
     ? searchConversations(conversations, searchQuery).map((result) => result.conversation)
     : conversations;
   const pinned = filtered
-    .filter((c) => c.pinned)
+    .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+  const recents = filtered
+    .filter((conversation) => !conversation.pinned)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 
-  const renderRow = (c: Conversation) => (
+  const renderRow = (conversation: Conversation) => (
     <div
-      key={c.id}
+      key={conversation.id}
       className={`kova-chat-row group relative mx-2 flex h-9 items-center gap-1 rounded-lg px-1.5 text-sm transition-colors duration-100 ${
-        activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
+        activeId === conversation.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => {
-          onSelect(c.id);
+          onSelect(conversation.id);
           closeAfterMobileNavigation();
         }}
-        aria-label={`Open chat ${c.title}`}
-        aria-current={activeId === c.id ? "page" : undefined}
-        title={c.title}
+        aria-label={`Open chat ${conversation.title}`}
+        aria-current={activeId === conversation.id ? "page" : undefined}
+        title={conversation.title}
       >
-        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        {conversation.pinned ? (
+          <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
+        ) : null}
+        <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
       </button>
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
               className="rounded p-1 opacity-100 transition hover:bg-background/40 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
               aria-label="Chat options"
             >
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuContent align="end" className="w-44" onClick={(event) => event.stopPropagation()}>
             {onRename ? (
               <DropdownMenuItem
-                aria-label={`Rename ${c.title}`}
+                aria-label={`Rename ${conversation.title}`}
                 onClick={() => {
-                  setRenameChat(c);
-                  setRenameTitle(c.title);
+                  setRenameChat(conversation);
+                  setRenameTitle(conversation.title);
                 }}
               >
                 Rename
               </DropdownMenuItem>
             ) : null}
             {onTogglePin ? (
-              <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
-                {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
-                {c.pinned ? "Unpin" : "Pin"}
+              <DropdownMenuItem onClick={() => onTogglePin(conversation.id)}>
+                {conversation.pinned ? (
+                  <PinOff className="mr-2 h-4 w-4" />
+                ) : (
+                  <Pin className="mr-2 h-4 w-4" />
+                )}
+                {conversation.pinned ? "Unpin" : "Pin"}
               </DropdownMenuItem>
             ) : null}
             {onShare ? (
-              <DropdownMenuItem onClick={() => onShare(c.id)}>
+              <DropdownMenuItem onClick={() => onShare(conversation.id)}>
                 <Share2 className="mr-2 h-4 w-4" /> Share
               </DropdownMenuItem>
             ) : null}
             {onDuplicate ? (
-              <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
+              <DropdownMenuItem onClick={() => onDuplicate(conversation.id)}>
                 <CopyIcon className="mr-2 h-4 w-4" /> Duplicate
               </DropdownMenuItem>
             ) : null}
             {onArchive ? (
-              <DropdownMenuItem onClick={() => onArchive(c.id)}>
+              <DropdownMenuItem onClick={() => onArchive(conversation.id)}>
                 <Archive className="mr-2 h-4 w-4" /> Archive
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => onDelete(c.id)}
+              onClick={() => onDelete(conversation.id)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -323,6 +316,7 @@ export function Sidebar({
           </form>
         </div>
       ) : null}
+
       {open ? (
         <button
           type="button"
@@ -372,21 +366,15 @@ export function Sidebar({
           >
             <ImageIcon className="h-[18px] w-[18px]" />
           </Link>
-          <div className="mt-auto flex flex-col items-center gap-1">
-            <div onClick={(e) => e.stopPropagation()}>
-              <UserButton />
-            </div>
+          <div className="mt-auto" onClick={(event) => event.stopPropagation()}>
+            <UserButton />
           </div>
         </div>
       ) : null}
 
       <aside
         ref={drawerRef}
-        style={
-          {
-            "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
-          } as React.CSSProperties
-        }
+        style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
           collapsed ? "lg:!w-0 lg:border-r-0" : ""
         } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
@@ -404,19 +392,6 @@ export function Sidebar({
               <NovaLogo className="h-6 w-6 rounded-md" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
-
-            {showSignedOut ? (
-              <button
-                type="button"
-                onClick={() => setSearchOpen((v) => !v)}
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="h-[18px] w-[18px]" />
-              </button>
-            ) : null}
-
             <button
               onClick={onToggle}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
@@ -442,12 +417,7 @@ export function Sidebar({
             </button>
           </div>
 
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-border"
-          />
-
-          {searchOpen && !collapsed ? (
+          {searchOpen && showSignedIn && !collapsed ? (
             <div className="px-2 pb-1 pt-2">
               <label className="sr-only" htmlFor="sidebar-chat-search">
                 Search chats
@@ -456,20 +426,20 @@ export function Sidebar({
                 id="sidebar-chat-search"
                 autoFocus
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search titles, messages, or operators…"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search chats"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-0.5 px-2 pt-2">
+          <nav className="flex flex-col gap-0.5 px-2 pt-2" aria-label="Workspace">
             <button
               onClick={() => {
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(isOn("/"))}
+              className={`${navItemClass(isOn("/"))} kova-new-chat`}
               aria-label="New chat"
               title="New chat"
             >
@@ -480,7 +450,7 @@ export function Sidebar({
             {showSignedIn ? (
               <button
                 type="button"
-                onClick={() => setSearchOpen((v) => !v)}
+                onClick={() => setSearchOpen((value) => !value)}
                 className={navItemClass(false)}
                 aria-label="Search chats"
                 title="Search chats"
@@ -489,91 +459,67 @@ export function Sidebar({
                 <span className={labelClass}>Search</span>
               </button>
             ) : null}
+
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Plugins", Blocks)}
-            {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "New")}
+
+            {showSignedIn ? renderNavLink("/apps", "Plugins", Blocks) : null}
+            {showSignedIn ? renderNavLink("/research-planner", "Deep research", Telescope) : null}
 
             {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink(
-                  "/scheduled-tasks",
-                  "Scheduled tasks status",
-                  Calendar,
-                  isOn("/scheduled-tasks"),
-                )
+              ? renderNavLink("/scheduled-tasks", "Scheduled tasks", Calendar)
               : null}
             {showSignedIn && tier !== "plus" && tier !== "pro"
-              ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
+              ? renderNavLink("/pricing", "Plans", CreditCard)
               : null}
-          </div>
+            {showSignedOut ? renderNavLink("/pricing", "Plans", CreditCard) : null}
+          </nav>
 
           <div
             className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
             role="group"
             aria-label="Chats"
           >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
-            />
-            {!collapsed && showSignedIn ? (
-              <>
-                {!isLoaded && conversations.length === 0 ? (
-                  <div className="space-y-2 px-3 pt-4" aria-hidden="true">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="mx-2 h-8 rounded-lg bg-sidebar-hover/50 animate-pulse"
-                        style={{ opacity: 1 - i * 0.15 }}
-                      />
-                    ))}
+            {showSignedIn && !collapsed ? (
+              filtered.length === 0 ? (
+                <div className="px-5 py-4 text-sm text-muted-foreground">
+                  {q ? "No matches" : "Your chats will appear here"}
+                </div>
+              ) : (
+                <>
+                  {pinned.length > 0 ? (
+                    <>
+                      <div className="flex items-center gap-1.5 px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
+                        <Pin className="h-3 w-3" /> Pinned
+                      </div>
+                      {pinned.map(renderRow)}
+                    </>
+                  ) : null}
+                  <div className="px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
+                    Recent chats
                   </div>
-                ) : filtered.length === 0 ? (
-                  <div className="px-5 py-3 text-sm text-muted-foreground">
-                    {q ? "No matches" : "No chats yet"}
-                  </div>
-                ) : (
-                  <>
-                    {pinned.length > 0 ? (
-                      <>
-                        <div className="flex items-center gap-1.5 px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
-                          <Pin className="h-3 w-3" /> Pinned
-                        </div>
-                        {pinned.map(renderRow)}
-                      </>
-                    ) : null}
-                    <div className="px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
-                      Recent chats
-                    </div>
-                    {recents.length === 0 ? (
-                      <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>
-                    ) : (
-                      recents.map(renderRow)
-                    )}
-                  </>
-                )}
-              </>
-            ) : collapsed ? (
-              <div
-                className="px-2 pt-3 text-center text-xs text-muted-foreground"
-                aria-hidden="true"
-              >
-                •••
+                  {recents.length === 0 ? (
+                    <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>
+                  ) : (
+                    recents.map(renderRow)
+                  )}
+                </>
+              )
+            ) : showSignedOut && !collapsed ? (
+              <div className="mx-3 mt-4 rounded-xl border border-border/60 bg-background/40 p-3.5">
+                <p className="text-sm font-medium text-foreground">Start with KovaGPT</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Chat freely, create images, or compare plans. Sign in from the top bar when you want
+                  saved history and account features.
+                </p>
               </div>
             ) : null}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
-            />
           </div>
 
-          <div
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
-          >
-            {!isLoaded ? null : showSignedIn ? (
-              <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
+          <div className="mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))]">
+            {showSignedIn ? (
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     onOpenSettings("general");
@@ -596,76 +542,27 @@ export function Sidebar({
                 >
                   <HelpCircle className="h-[18px] w-[18px]" />
                 </button>
-                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <div onClick={(event) => event.stopPropagation()} className="shrink-0">
                   <UserButton />
                 </div>
-                {!collapsed ? (
-                  <span className="min-w-0 truncate text-sm text-muted-foreground">
-                    {user?.firstName || "Account"}
-                  </span>
-                ) : null}
+                <span className="min-w-0 truncate text-sm text-muted-foreground">
+                  {user?.firstName || "Account"}
+                </span>
               </div>
             ) : showSignedOut ? (
-              <div className={collapsed ? "" : "-mx-2.5 -mb-2.5"}>
-                <div className={`flex flex-col gap-0.5 ${collapsed ? "" : "px-2 pb-2"}`}>
-                  <Link
-                    to="/pricing"
-                    className={navItemClass(isOn("/pricing"))}
-                    aria-label="See plans and pricing"
-                    title="See plans and pricing"
-                    onClick={closeAfterMobileNavigation}
-                  >
-                    <Sparkles className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>See plans and pricing</span>
-                    {!collapsed ? (
-                      <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : null}
-                  </Link>
-                  <button
-                    onClick={() => {
-                      onOpenSettings("general");
-                      closeAfterMobileNavigation();
-                    }}
-                    className={navItemClass(false)}
-                    aria-label="Settings"
-                    title="Settings"
-                  >
-                    <SettingsIcon className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>Settings</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenHelp();
-                      closeAfterMobileNavigation();
-                    }}
-                    className={navItemClass(false)}
-                    aria-label="Help"
-                    title="Help"
-                  >
-                    <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>Help</span>
-                    {!collapsed ? (
-                      <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : null}
-                  </button>
-                </div>
-                {!collapsed ? (
-                  <div className="border-t border-border/60 px-4 pb-4 pt-4">
-                    <p className="text-[15px] font-semibold text-foreground">
-                      Get responses tailored to you
-                    </p>
-                    <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
-                      Log in to get answers based on saved chats, plus create images and use
-                      advanced models.
-                    </p>
-                    <SignInButton mode="modal">
-                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
-                        Log in
-                      </button>
-                    </SignInButton>
-                  </div>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenHelp();
+                  closeAfterMobileNavigation();
+                }}
+                className={navItemClass(false)}
+                aria-label="Help"
+                title="Help"
+              >
+                <HelpCircle className="h-[18px] w-[18px] shrink-0" />
+                <span className={labelClass}>Help</span>
+              </button>
             ) : null}
           </div>
         </div>
