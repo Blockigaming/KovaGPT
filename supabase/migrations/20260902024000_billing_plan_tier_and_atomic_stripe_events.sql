@@ -89,7 +89,7 @@ on public.subscriptions
 for each row
 execute function public.normalize_legacy_live_subscription_price();
 
-create or replace function public.user_plan_tier(_user_id uuid)
+create or replace function public.billing_user_plan_tier(_user_id uuid)
 returns text
 language sql
 stable
@@ -136,9 +136,33 @@ as $$
   from resolution;
 $$;
 
-revoke execute on function public.user_plan_tier(uuid)
+revoke execute on function public.billing_user_plan_tier(uuid)
   from public, anon, authenticated;
-grant execute on function public.user_plan_tier(uuid) to service_role;
+grant execute on function public.billing_user_plan_tier(uuid) to service_role;
+
+create or replace function public.user_plan_tier(_user_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select case
+    when auth.uid() = _user_id then
+      public.billing_user_plan_tier(_user_id)
+    when coalesce(
+      nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+      ''
+    ) = 'service_role' then
+      public.billing_user_plan_tier(_user_id)
+    else 'free'
+  end;
+$$;
+
+revoke execute on function public.user_plan_tier(uuid)
+  from public, anon;
+grant execute on function public.user_plan_tier(uuid)
+  to authenticated, service_role;
 
 create or replace function public.effective_user_plan_tier(_user_id uuid)
 returns text
@@ -147,22 +171,46 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  with principals as (
-    select _user_id as user_id
-    union
-    select public.family_owner_of(_user_id)
+  with own_resolution as (
+    select
+      public.billing_user_plan_tier(_user_id) as tier,
+      (
+        select count(*)
+        from public.subscriptions as subscription
+        where subscription.user_id = _user_id
+          and subscription.environment = 'live'
+          and (
+            (
+              subscription.status in ('active', 'trialing', 'past_due')
+              and (
+                subscription.current_period_end is null
+                or subscription.current_period_end > now()
+              )
+            )
+            or (
+              subscription.status = 'canceled'
+              and subscription.current_period_end > now()
+            )
+          )
+      ) as active_subscription_count
   ),
-  tiers as (
-    select public.user_plan_tier(principal.user_id) as tier
-    from principals as principal
-    where principal.user_id is not null
+  principal_tiers as (
+    select own.tier
+    from own_resolution as own
+    union all
+    select public.billing_user_plan_tier(public.family_owner_of(_user_id))
+    where public.family_owner_of(_user_id) is not null
   )
   select case
-    when bool_or(tier = 'pro') then 'pro'
-    when bool_or(tier = 'plus') then 'plus'
+    when own.active_subscription_count > 0 and own.tier = 'free'
+      then 'free'
+    when bool_or(principal.tier = 'pro') then 'pro'
+    when bool_or(principal.tier = 'plus') then 'plus'
     else 'free'
   end
-  from tiers;
+  from own_resolution as own
+  cross join principal_tiers as principal
+  group by own.active_subscription_count, own.tier;
 $$;
 
 revoke execute on function public.effective_user_plan_tier(uuid)
@@ -179,7 +227,7 @@ set search_path = public, pg_temp
 as $$
   select case
     when auth.uid() is null then 'free'
-    else public.user_plan_tier(auth.uid())
+    else public.billing_user_plan_tier(auth.uid())
   end;
 $$;
 
@@ -213,25 +261,10 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  with resolved as (
-    select
-      public.user_plan_tier(_user_id) as tier,
-      public.effective_user_plan_tier(_user_id) as effective_tier
-  ),
-  chosen as (
-    select
-      subscription.price_id,
-      subscription.status,
-      subscription.current_period_end,
-      subscription.cancel_at_period_end
+  with active_live_subscriptions as (
+    select subscription.id
     from public.subscriptions as subscription
-    join public.billing_plan_tiers as mapping
-      on mapping.environment = 'live'
-      and mapping.stripe_price_id = subscription.price_id
-    cross join resolved
-    where resolved.tier in ('plus', 'pro')
-      and mapping.tier = resolved.tier
-      and subscription.user_id = _user_id
+    where subscription.user_id = _user_id
       and subscription.environment = 'live'
       and (
         (
@@ -246,6 +279,28 @@ as $$
           and subscription.current_period_end > now()
         )
       )
+  ),
+  resolved as (
+    select
+      public.billing_user_plan_tier(_user_id) as tier,
+      public.effective_user_plan_tier(_user_id) as effective_tier,
+      (select count(*) from active_live_subscriptions) as active_subscription_count
+  ),
+  chosen as (
+    select
+      subscription.price_id,
+      subscription.status,
+      subscription.current_period_end,
+      subscription.cancel_at_period_end
+    from public.subscriptions as subscription
+    join active_live_subscriptions as active_subscription
+      on active_subscription.id = subscription.id
+    join public.billing_plan_tiers as mapping
+      on mapping.environment = 'live'
+      and mapping.stripe_price_id = subscription.price_id
+    cross join resolved
+    where resolved.tier in ('plus', 'pro')
+      and mapping.tier = resolved.tier
     order by
       subscription.current_period_end desc nulls first,
       subscription.created_at desc,
@@ -255,12 +310,22 @@ as $$
   select jsonb_build_object(
     'tier', resolved.tier,
     'effectiveTier', resolved.effective_tier,
+    'activeSubscriptionCount', resolved.active_subscription_count,
+    'billingConflict',
+      resolved.active_subscription_count > 1
+      or (
+        resolved.active_subscription_count = 1
+        and resolved.tier = 'free'
+      ),
     'inherited',
-      case
-        when resolved.effective_tier = 'pro' and resolved.tier <> 'pro' then true
-        when resolved.effective_tier = 'plus' and resolved.tier = 'free' then true
-        else false
-      end,
+      resolved.active_subscription_count = 0
+      and (
+        (resolved.effective_tier = 'pro' and resolved.tier <> 'pro')
+        or (
+          resolved.effective_tier = 'plus'
+          and resolved.tier = 'free'
+        )
+      ),
     'status', chosen.status,
     'priceId', chosen.price_id,
     'currentPeriodEnd', chosen.current_period_end,
@@ -287,6 +352,8 @@ as $$
     when auth.uid() is null then jsonb_build_object(
       'tier', 'free',
       'effectiveTier', 'free',
+      'activeSubscriptionCount', 0,
+      'billingConflict', false,
       'inherited', false,
       'status', null,
       'priceId', null,
@@ -342,6 +409,7 @@ create table if not exists public.stripe_checkout_attempts (
   environment text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   stripe_price_id text not null,
+  trial_eligible boolean not null default false,
   idempotency_key uuid not null,
   session_expires_at timestamptz not null,
   idempotency_expires_at timestamptz not null,
@@ -380,16 +448,61 @@ alter table public.processed_stripe_events
   add column if not exists completed_at timestamptz;
 
 update public.processed_stripe_events
-set completed_at = coalesce(completed_at, processed_at)
-where processing_status = 'completed';
+set processing_status = 'completed',
+    completed_at = coalesce(completed_at, processed_at),
+    lease_token = null,
+    lease_expires_at = null
+where processing_status is distinct from 'completed'
+   or completed_at is null
+   or lease_token is not null
+   or lease_expires_at is not null;
 
 alter table public.processed_stripe_events
   drop constraint if exists processed_stripe_events_processing_status_check;
 alter table public.processed_stripe_events
   add constraint processed_stripe_events_processing_status_check
-  check (processing_status in ('pending', 'processing', 'completed')) not valid;
+  check (processing_status = 'completed') not valid;
 alter table public.processed_stripe_events
   validate constraint processed_stripe_events_processing_status_check;
+
+-- In-flight work is deliberately separate from the rollback-compatible
+-- completed-event ledger. An old application revision therefore never mistakes
+-- a pending lease for an already applied webhook.
+create table if not exists public.stripe_event_processing_claims (
+  event_id text primary key,
+  event_created_at timestamptz not null,
+  event_type text not null,
+  environment text not null,
+  outcome text not null,
+  subscription_id text,
+  correlation_id uuid,
+  object_id text,
+  customer_id text,
+  invoice_id text,
+  checkout_session_id text,
+  observation_sequence bigint,
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint stripe_event_processing_claims_environment_check
+    check (environment in ('sandbox', 'live'))
+);
+
+alter table public.stripe_event_processing_claims enable row level security;
+revoke all on public.stripe_event_processing_claims
+  from public, anon, authenticated;
+grant all on public.stripe_event_processing_claims to service_role;
+
+drop policy if exists "Stripe event processing claims deny clients"
+  on public.stripe_event_processing_claims;
+create policy "Stripe event processing claims deny clients"
+  on public.stripe_event_processing_claims
+  as restrictive
+  for all
+  to public
+  using (false)
+  with check (false);
 
 create or replace function public.begin_stripe_event(
   _event_id text,
@@ -411,7 +524,8 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  _event_row public.processed_stripe_events%rowtype;
+  _completed_event public.processed_stripe_events%rowtype;
+  _claim public.stripe_event_processing_claims%rowtype;
   _sync_row public.stripe_subscription_sync_state%rowtype;
   _observation_sequence bigint;
   _lease_token uuid;
@@ -429,70 +543,78 @@ begin
     raise exception 'stripe_event_incomplete' using errcode = '22023';
   end if;
 
-  insert into public.processed_stripe_events (
-    event_id,
-    type,
-    environment,
-    processed_at,
-    event_created_at,
-    correlation_id,
-    object_id,
-    customer_id,
-    subscription_id,
-    invoice_id,
-    checkout_session_id,
-    outcome,
-    retryable,
-    processing_status
-  )
-  values (
-    _event_id,
-    _event_type,
-    _environment,
-    now(),
-    _event_created_at,
-    _correlation_id,
-    _object_id,
-    _customer_id,
-    _subscription_id,
-    _invoice_id,
-    _checkout_session_id,
-    _outcome,
-    true,
-    'pending'
-  )
-  on conflict (event_id) do nothing;
-
   select event_row.*
-  into _event_row
+  into _completed_event
   from public.processed_stripe_events as event_row
   where event_row.event_id = _event_id
   for update;
 
-  if _event_row.environment is distinct from _environment
-    or _event_row.type is distinct from _event_type then
-    raise exception 'stripe_event_identity_conflict'
-      using errcode = '22023';
-  end if;
+  if found then
+    if _completed_event.environment is distinct from _environment
+      or _completed_event.type is distinct from _event_type then
+      raise exception 'stripe_event_identity_conflict'
+        using errcode = '22023';
+    end if;
 
-  if _event_row.processing_status = 'completed' then
     return jsonb_build_object(
       'duplicate', true,
       'busy', false,
-      'observationSequence', _event_row.observation_sequence,
+      'observationSequence', _completed_event.observation_sequence,
       'leaseToken', null,
       'leaseExpiresAt', null
     );
   end if;
 
-  if _event_row.lease_token is not null
-    and _event_row.lease_expires_at > clock_timestamp() then
+  insert into public.stripe_event_processing_claims (
+    event_id,
+    event_created_at,
+    event_type,
+    environment,
+    outcome,
+    subscription_id,
+    correlation_id,
+    object_id,
+    customer_id,
+    invoice_id,
+    checkout_session_id
+  )
+  values (
+    _event_id,
+    _event_created_at,
+    _event_type,
+    _environment,
+    _outcome,
+    _subscription_id,
+    _correlation_id,
+    _object_id,
+    _customer_id,
+    _invoice_id,
+    _checkout_session_id
+  )
+  on conflict (event_id) do nothing;
+
+  select claim_row.*
+  into _claim
+  from public.stripe_event_processing_claims as claim_row
+  where claim_row.event_id = _event_id
+  for update;
+
+  if _claim.environment is distinct from _environment
+    or _claim.event_type is distinct from _event_type
+    or _claim.event_created_at is distinct from _event_created_at
+    or _claim.subscription_id is distinct from _subscription_id then
+    raise exception 'stripe_event_identity_conflict'
+      using errcode = '22023';
+  end if;
+
+  if _claim.lease_token is not null
+    and _claim.lease_expires_at > clock_timestamp() then
     return jsonb_build_object(
       'duplicate', false,
       'busy', true,
-      'observationSequence', _event_row.observation_sequence,
+      'observationSequence', _claim.observation_sequence,
       'leaseToken', null,
-      'leaseExpiresAt', _event_row.lease_expires_at
+      'leaseExpiresAt', _claim.lease_expires_at
     );
   end if;
 
@@ -540,12 +662,11 @@ begin
       and stripe_subscription_id = _subscription_id;
   end if;
 
-  update public.processed_stripe_events
-  set processing_status = 'processing',
-      observation_sequence = _observation_sequence,
+  update public.stripe_event_processing_claims
+  set observation_sequence = _observation_sequence,
       lease_token = _lease_token,
       lease_expires_at = _lease_expires_at,
-      retryable = true
+      updated_at = now()
   where event_id = _event_id;
 
   return jsonb_build_object(
@@ -607,48 +728,185 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  _event_row public.processed_stripe_events%rowtype;
+  _completed_event public.processed_stripe_events%rowtype;
+  _claim public.stripe_event_processing_claims%rowtype;
   _sync_row public.stripe_subscription_sync_state%rowtype;
   _mapping_found boolean := false;
   _mapped_user_id uuid;
   _persisted_user_id uuid;
   _persisted_customer_id text;
   _subscription_applied boolean := false;
+  _ledger_inserted boolean := false;
+  _completion_outcome text;
 begin
   select event_row.*
-  into _event_row
+  into _completed_event
   from public.processed_stripe_events as event_row
   where event_row.event_id = _event_id
   for update;
 
+  if found then
+    if _completed_event.environment is distinct from _environment then
+      raise exception 'stripe_event_identity_conflict'
+        using errcode = '22023';
+    end if;
+    return jsonb_build_object(
+      'duplicate', true,
+      'subscriptionApplied', false,
+      'orphaned', _completed_event.outcome = 'orphaned_customer'
+    );
+  end if;
+
+  select claim_row.*
+  into _claim
+  from public.stripe_event_processing_claims as claim_row
+  where claim_row.event_id = _event_id
+  for update;
+
   if not found
-    or _event_row.environment is distinct from _environment then
+    or _claim.environment is distinct from _environment then
     raise exception 'stripe_event_claim_missing'
       using errcode = 'P0001';
   end if;
 
-  if _event_row.processing_status = 'completed' then
-    return jsonb_build_object(
-      'duplicate', true,
-      'subscriptionApplied', false,
-      'orphaned', _event_row.outcome = 'orphaned_customer'
-    );
-  end if;
-
-  if _event_row.processing_status <> 'processing'
-    or _event_row.lease_token is distinct from _lease_token
-    or _event_row.observation_sequence is distinct from _observation_sequence then
+  if _claim.lease_token is distinct from _lease_token
+    or _claim.observation_sequence is distinct from _observation_sequence
+    or _claim.lease_expires_at <= clock_timestamp() then
     raise exception 'stripe_event_lease_stale'
       using errcode = 'P0001';
   end if;
 
+  _completion_outcome := _claim.outcome;
+
+  if _apply_subscription then
+    if coalesce(btrim(_claim.subscription_id), '') = ''
+      or coalesce(btrim(_customer_id), '') = ''
+      or coalesce(btrim(_product_id), '') = ''
+      or coalesce(btrim(_price_id), '') = ''
+      or coalesce(btrim(_status), '') = '' then
+      raise exception 'authoritative_subscription_incomplete'
+        using errcode = '22023';
+    end if;
+
+    select sync_row.*
+    into _sync_row
+    from public.stripe_subscription_sync_state as sync_row
+    where sync_row.environment = _environment
+      and sync_row.stripe_subscription_id = _claim.subscription_id
+    for update;
+
+    if not found
+      or _sync_row.active_event_id is distinct from _event_id
+      or _sync_row.active_lease_token is distinct from _lease_token
+      or _sync_row.active_observation_sequence is distinct from _observation_sequence
+      or _sync_row.active_lease_expires_at <= clock_timestamp()
+      or _sync_row.applied_observation_sequence >= _observation_sequence then
+      raise exception 'stripe_subscription_observation_stale'
+        using errcode = 'P0001';
+    end if;
+
+    select true, mapping.user_id
+    into _mapping_found, _mapped_user_id
+    from public.stripe_customer_mappings as mapping
+    where mapping.environment = _environment
+      and mapping.stripe_customer_id = _customer_id
+    for update;
+
+    if not coalesce(_mapping_found, false) then
+      raise exception 'stripe_customer_mapping_missing'
+        using errcode = 'P0001';
+    end if;
+
+    if _mapped_user_id is null then
+      _completion_outcome := 'orphaned_customer';
+    elsif _environment = 'live'
+      and not exists (
+        select 1
+        from public.billing_plan_tiers as mapping
+        where mapping.environment = _environment
+          and mapping.stripe_price_id = _price_id
+      ) then
+      raise exception 'stripe_price_not_registered'
+        using errcode = 'P0001';
+    end if;
+  end if;
+
+  insert into public.processed_stripe_events (
+    event_id,
+    type,
+    environment,
+    processed_at,
+    event_created_at,
+    correlation_id,
+    object_id,
+    customer_id,
+    subscription_id,
+    invoice_id,
+    checkout_session_id,
+    outcome,
+    retryable,
+    processing_status,
+    observation_sequence,
+    completed_at
+  )
+  values (
+    _event_id,
+    _claim.event_type,
+    _environment,
+    now(),
+    _claim.event_created_at,
+    _claim.correlation_id,
+    _claim.object_id,
+    coalesce(_customer_id, _claim.customer_id),
+    _claim.subscription_id,
+    _claim.invoice_id,
+    _claim.checkout_session_id,
+    _completion_outcome,
+    false,
+    'completed',
+    _observation_sequence,
+    now()
+  )
+  on conflict (event_id) do nothing
+  returning true into _ledger_inserted;
+
+  if not coalesce(_ledger_inserted, false) then
+    update public.stripe_subscription_sync_state
+    set active_event_id = null,
+        active_observation_sequence = null,
+        active_lease_token = null,
+        active_lease_expires_at = null,
+        updated_at = now()
+    where environment = _environment
+      and stripe_subscription_id = _claim.subscription_id
+      and active_event_id = _event_id
+      and active_observation_sequence = _observation_sequence
+      and active_lease_token = _lease_token;
+
+    delete from public.stripe_event_processing_claims
+    where event_id = _event_id;
+
+    return jsonb_build_object(
+      'duplicate', true,
+      'subscriptionApplied', false,
+      'orphaned', false
+    );
+  end if;
+
   if not _apply_subscription then
-    update public.processed_stripe_events
-    set processing_status = 'completed',
-        retryable = false,
-        completed_at = now(),
-        lease_token = null,
-        lease_expires_at = null
+    update public.stripe_subscription_sync_state
+    set active_event_id = null,
+        active_observation_sequence = null,
+        active_lease_token = null,
+        active_lease_expires_at = null,
+        updated_at = now()
+    where environment = _environment
+      and stripe_subscription_id = _claim.subscription_id
+      and active_event_id = _event_id
+      and active_observation_sequence = _observation_sequence
+      and active_lease_token = _lease_token;
+
+    delete from public.stripe_event_processing_claims
     where event_id = _event_id;
 
     return jsonb_build_object(
@@ -656,43 +914,6 @@ begin
       'subscriptionApplied', false,
       'orphaned', false
     );
-  end if;
-
-  if coalesce(btrim(_event_row.subscription_id), '') = ''
-    or coalesce(btrim(_customer_id), '') = ''
-    or coalesce(btrim(_product_id), '') = ''
-    or coalesce(btrim(_price_id), '') = ''
-    or coalesce(btrim(_status), '') = '' then
-    raise exception 'authoritative_subscription_incomplete'
-      using errcode = '22023';
-  end if;
-
-  select sync_row.*
-  into _sync_row
-  from public.stripe_subscription_sync_state as sync_row
-  where sync_row.environment = _environment
-    and sync_row.stripe_subscription_id = _event_row.subscription_id
-  for update;
-
-  if not found
-    or _sync_row.active_event_id is distinct from _event_id
-    or _sync_row.active_lease_token is distinct from _lease_token
-    or _sync_row.active_observation_sequence is distinct from _observation_sequence
-    or _sync_row.applied_observation_sequence >= _observation_sequence then
-    raise exception 'stripe_subscription_observation_stale'
-      using errcode = 'P0001';
-  end if;
-
-  select true, mapping.user_id
-  into _mapping_found, _mapped_user_id
-  from public.stripe_customer_mappings as mapping
-  where mapping.environment = _environment
-    and mapping.stripe_customer_id = _customer_id
-  for update;
-
-  if not _mapping_found then
-    raise exception 'stripe_customer_mapping_missing'
-      using errcode = 'P0001';
   end if;
 
   if _mapped_user_id is null then
@@ -704,16 +925,9 @@ begin
         active_lease_expires_at = null,
         updated_at = now()
     where environment = _environment
-      and stripe_subscription_id = _event_row.subscription_id;
+      and stripe_subscription_id = _claim.subscription_id;
 
-    update public.processed_stripe_events
-    set processing_status = 'completed',
-        outcome = 'orphaned_customer',
-        retryable = false,
-        customer_id = _customer_id,
-        completed_at = now(),
-        lease_token = null,
-        lease_expires_at = null
+    delete from public.stripe_event_processing_claims
     where event_id = _event_id;
 
     return jsonb_build_object(
@@ -721,17 +935,6 @@ begin
       'subscriptionApplied', false,
       'orphaned', true
     );
-  end if;
-
-  if _environment = 'live'
-    and not exists (
-      select 1
-      from public.billing_plan_tiers as mapping
-      where mapping.environment = _environment
-        and mapping.stripe_price_id = _price_id
-    ) then
-    raise exception 'stripe_price_not_registered'
-      using errcode = 'P0001';
   end if;
 
   insert into public.subscriptions as persisted (
@@ -752,7 +955,7 @@ begin
   )
   values (
     _mapped_user_id,
-    _event_row.subscription_id,
+    _claim.subscription_id,
     _customer_id,
     _product_id,
     _price_id,
@@ -762,7 +965,7 @@ begin
     _cancel_at_period_end,
     _environment,
     now(),
-    _event_row.event_created_at,
+    _claim.event_created_at,
     _event_id,
     _observation_sequence
   )
@@ -789,7 +992,7 @@ begin
     into _persisted_user_id, _persisted_customer_id
     from public.subscriptions as subscription
     where subscription.environment = _environment
-      and subscription.stripe_subscription_id = _event_row.subscription_id;
+      and subscription.stripe_subscription_id = _claim.subscription_id;
 
     if _persisted_user_id is distinct from _mapped_user_id
       or _persisted_customer_id is distinct from _customer_id then
@@ -809,15 +1012,9 @@ begin
       active_lease_expires_at = null,
       updated_at = now()
   where environment = _environment
-    and stripe_subscription_id = _event_row.subscription_id;
+    and stripe_subscription_id = _claim.subscription_id;
 
-  update public.processed_stripe_events
-  set processing_status = 'completed',
-      retryable = false,
-      customer_id = _customer_id,
-      completed_at = now(),
-      lease_token = null,
-      lease_expires_at = null
+  delete from public.stripe_event_processing_claims
   where event_id = _event_id;
 
   return jsonb_build_object(
@@ -860,7 +1057,8 @@ grant execute on function public.complete_stripe_event(
 create or replace function public.claim_stripe_checkout_attempt(
   _user_id uuid,
   _environment text,
-  _price_id text
+  _price_id text,
+  _trial_eligible boolean
 )
 returns jsonb
 language plpgsql
@@ -906,16 +1104,13 @@ begin
     where subscription.user_id = _user_id
       and subscription.environment = _environment
       and (
-        (
-          subscription.status in ('active', 'trialing', 'past_due')
+        subscription.status not in ('canceled', 'incomplete_expired')
+        or (
+          subscription.status = 'canceled'
           and (
             subscription.current_period_end is null
             or subscription.current_period_end > _now
           )
-        )
-        or (
-          subscription.status = 'canceled'
-          and subscription.current_period_end > _now
         )
       )
   ) then
@@ -927,6 +1122,7 @@ begin
     environment,
     user_id,
     stripe_price_id,
+    trial_eligible,
     idempotency_key,
     session_expires_at,
     idempotency_expires_at
@@ -935,33 +1131,39 @@ begin
     _environment,
     _user_id,
     _price_id,
+    _trial_eligible,
     gen_random_uuid(),
     _now + interval '23 hours',
     _now + interval '24 hours'
   )
   on conflict (environment, user_id) do update
   set stripe_price_id = case
-        when attempt.idempotency_expires_at <= _now
+        when attempt.session_expires_at <= _now
           then excluded.stripe_price_id
         else attempt.stripe_price_id
       end,
+      trial_eligible = case
+        when attempt.session_expires_at <= _now
+          then excluded.trial_eligible
+        else attempt.trial_eligible
+      end,
       idempotency_key = case
-        when attempt.idempotency_expires_at <= _now
+        when attempt.session_expires_at <= _now
           then excluded.idempotency_key
         else attempt.idempotency_key
       end,
       session_expires_at = case
-        when attempt.idempotency_expires_at <= _now
+        when attempt.session_expires_at <= _now
           then excluded.session_expires_at
         else attempt.session_expires_at
       end,
       idempotency_expires_at = case
-        when attempt.idempotency_expires_at <= _now
+        when attempt.session_expires_at <= _now
           then excluded.idempotency_expires_at
         else attempt.idempotency_expires_at
       end,
       updated_at = now()
-  where attempt.idempotency_expires_at <= _now
+  where attempt.session_expires_at <= _now
     or attempt.stripe_price_id = excluded.stripe_price_id
   returning attempt.* into _attempt;
 
@@ -973,7 +1175,8 @@ begin
   return jsonb_build_object(
     'idempotencyKey', _attempt.idempotency_key,
     'sessionExpiresAt', _attempt.session_expires_at,
-    'stripeCustomerId', _mapped_customer_id
+    'stripeCustomerId', _mapped_customer_id,
+    'trialEligible', _attempt.trial_eligible
   );
 end;
 $$;
@@ -981,10 +1184,12 @@ $$;
 revoke execute on function public.claim_stripe_checkout_attempt(
   uuid,
   text,
-  text
+  text,
+  boolean
 ) from public, anon, authenticated;
 grant execute on function public.claim_stripe_checkout_attempt(
   uuid,
   text,
-  text
+  text,
+  boolean
 ) to service_role;

@@ -785,48 +785,63 @@ export type Database = {
       processed_stripe_events: {
         Row: {
           checkout_session_id: string | null;
+          completed_at: string | null;
           correlation_id: string | null;
           customer_id: string | null;
           environment: string;
           event_created_at: string | null;
           event_id: string;
           invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
           object_id: string | null;
+          observation_sequence: number | null;
           outcome: string;
           payload_hash: string | null;
           processed_at: string;
+          processing_status: string;
           retryable: boolean;
           subscription_id: string | null;
           type: string;
         };
         Insert: {
           checkout_session_id?: string | null;
+          completed_at?: string | null;
           correlation_id?: string | null;
           customer_id?: string | null;
           environment: string;
           event_created_at?: string | null;
           event_id: string;
           invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
           object_id?: string | null;
+          observation_sequence?: number | null;
           outcome?: string;
           payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
           retryable?: boolean;
           subscription_id?: string | null;
           type: string;
         };
         Update: {
           checkout_session_id?: string | null;
+          completed_at?: string | null;
           correlation_id?: string | null;
           customer_id?: string | null;
           environment?: string;
           event_created_at?: string | null;
           event_id?: string;
           invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
           object_id?: string | null;
+          observation_sequence?: number | null;
           outcome?: string;
           payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
           retryable?: boolean;
           subscription_id?: string | null;
           type?: string;
@@ -1308,6 +1323,132 @@ export type Database = {
         };
         Relationships: [];
       };
+      stripe_checkout_attempts: {
+        Row: {
+          created_at: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          trial_eligible: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          idempotency_expires_at?: string;
+          idempotency_key?: string;
+          session_expires_at?: string;
+          stripe_price_id?: string;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      stripe_event_processing_claims: {
+        Row: {
+          checkout_session_id: string | null;
+          correlation_id: string | null;
+          created_at: string;
+          customer_id: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          object_id: string | null;
+          observation_sequence: number | null;
+          outcome: string;
+          subscription_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment?: string;
+          event_created_at?: string;
+          event_id?: string;
+          event_type?: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_subscription_sync_state: {
+        Row: {
+          active_event_id: string | null;
+          active_lease_expires_at: string | null;
+          active_lease_token: string | null;
+          active_observation_sequence: number | null;
+          applied_observation_sequence: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment?: string;
+          stripe_subscription_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       stripe_customer_mappings: {
         Row: {
           created_at: string;
@@ -1342,6 +1483,7 @@ export type Database = {
           id: string;
           last_stripe_event_created_at: string | null;
           last_stripe_event_id: string | null;
+          last_stripe_observation_sequence: number | null;
           price_id: string;
           product_id: string;
           status: string;
@@ -1359,6 +1501,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id: string;
           product_id: string;
           status?: string;
@@ -1376,6 +1519,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id?: string;
           product_id?: string;
           status?: string;
@@ -1657,6 +1801,7 @@ export type Database = {
         Args: {
           _environment: string;
           _price_id: string;
+          _trial_eligible: boolean;
           _user_id: string;
         };
         Returns: Json;
@@ -1935,6 +2080,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      billing_user_plan_tier: { Args: { _user_id: string }; Returns: string };
       effective_user_plan_tier: { Args: { _user_id: string }; Returns: string };
       user_plan_tier: { Args: { _user_id: string }; Returns: string };
       user_subscription_summary: { Args: { _user_id: string }; Returns: Json };

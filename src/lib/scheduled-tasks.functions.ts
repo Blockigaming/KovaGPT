@@ -34,7 +34,7 @@ async function ensurePlusOrAbove(supabase: unknown): Promise<"plus" | "pro"> {
   const client = supabase as {
     rpc: (name: string) => Promise<{ data: unknown; error: { message: string } | null }>;
   };
-  const { data, error } = await client.rpc("current_user_plan_tier");
+  const { data, error } = await client.rpc("current_effective_plan_tier");
   if (error) {
     console.error("[serverfn]", error.message);
     throw new Error("Request failed. Please try again.");

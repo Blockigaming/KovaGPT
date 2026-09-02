@@ -1,5 +1,5 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
-import { resolveUserBillingTier } from "@/lib/billing-entitlement.server";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { createClient } from "@supabase/supabase-js";
 
 import { resolveAgentEntitlement } from "./entitlement-policy.mjs";
@@ -17,7 +17,7 @@ export const AGENT_LIMITS: Record<
 };
 
 export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEntitlement | null> {
-  const tier = await resolveUserBillingTier(caller.supabaseAdmin, caller.userId);
+  const tier = await resolveEffectiveBillingTier(caller.supabaseAdmin, caller.userId);
   return resolveAgentEntitlement(tier);
 }
 

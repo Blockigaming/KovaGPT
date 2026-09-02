@@ -65,13 +65,14 @@ test("saved-memory deletion is authenticated, serialized after writes, and truth
   assert.match(memoryApi, /delete\(\)\.eq\("user_id", caller\.auth\.userId\)/);
 });
 
-test("family-plan entitlement is resolved by the server and picks the highest active tier", () => {
+test("family-plan entitlement uses the centralized effective database resolver", () => {
   const auth = read("src/lib/api-auth.server.ts");
+  const resolver = read("src/lib/billing-entitlement.server.ts");
   const chatApi = read("src/routes/api/chat.ts");
 
-  assert.match(auth, /resolveSubscriptionTier/);
-  assert.match(auth, /resolved = higherTier\(resolved, tierForLookupKey\(row\.price_id\)\)/);
-  assert.match(auth, /\.rpc\("family_owner_of"/);
-  assert.match(auth, /resolveSubscriptionTier\(caller, ownerId\)/);
+  assert.match(auth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, caller\.userId\)/);
+  assert.match(resolver, /\.rpc\("effective_user_plan_tier"/);
+  assert.doesNotMatch(auth, /tierForLookupKey|\.from\("subscriptions"\)/);
+  assert.doesNotMatch(resolver, /tierForLookupKey|\.from\("subscriptions"\)/);
   assert.match(chatApi, /callerTier = isOwner \? "pro" : await getCallerTier\(auth\)/);
 });

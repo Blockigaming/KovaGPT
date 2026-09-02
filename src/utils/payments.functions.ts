@@ -47,11 +47,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const hasActiveSubscription = (subscriptionHistory ?? []).some((subscription) => {
         const periodEnd = subscription.current_period_end
           ? new Date(subscription.current_period_end).getTime()
-          : 0;
+          : null;
         return (
-          (["active", "trialing", "past_due"].includes(subscription.status) &&
-            (!subscription.current_period_end || periodEnd > Date.now())) ||
-          (subscription.status === "canceled" && periodEnd > Date.now())
+          !["canceled", "incomplete_expired"].includes(subscription.status) ||
+          (subscription.status === "canceled" &&
+            (periodEnd === null || !Number.isFinite(periodEnd) || periodEnd > Date.now()))
         );
       });
       if (hasActiveSubscription) {
@@ -84,24 +84,45 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         email: customerEmail,
       });
 
-      // Free-trial eligibility for Plus. A user is eligible only if they have
-      // no subscription row and their mapped Stripe Customer has no history.
-      let isPlusTrialEligible =
-        plan.trialPeriodDays > 0 && (subscriptionHistory ?? []).length === 0;
-      if (isPlusTrialEligible) {
-        const prior = await stripe.subscriptions.list({
-          customer: customerId,
-          status: "all",
-          limit: 1,
-        });
-        if (prior.data.length > 0) isPlusTrialEligible = false;
+      // The database check is concurrency-safe, while this authoritative
+      // Customer read closes the webhook-lag window before a new Session exists.
+      // Scheduled cancellations remain Stripe "active" and must still block.
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      let stripeHasHistory = false;
+      let stripeHasBlockingSubscription = false;
+      for await (const subscription of stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 100,
+      })) {
+        stripeHasHistory = true;
+        const canceledAndExpired =
+          subscription.status === "canceled" &&
+          Number.isSafeInteger(subscription.current_period_end) &&
+          subscription.current_period_end <= nowSeconds;
+        if (subscription.status !== "incomplete_expired" && !canceledAndExpired) {
+          stripeHasBlockingSubscription = true;
+          break;
+        }
       }
+      if (stripeHasBlockingSubscription) {
+        return {
+          error:
+            "You already have an open subscription. Resume or manage it in Billing, or wait until it expires before starting another.",
+        };
+      }
+
+      const requestedTrialEligibility =
+        plan.trialPeriodDays > 0 &&
+        (subscriptionHistory ?? []).length === 0 &&
+        !stripeHasHistory;
 
       const { data: checkoutAttempt, error: checkoutAttemptError } =
         await supabaseAdmin.rpc("claim_stripe_checkout_attempt", {
           _user_id: userId,
           _environment: BILLING_ENV,
           _price_id: stripePrice.id,
+          _trial_eligible: requestedTrialEligibility,
         });
       if (checkoutAttemptError) {
         const active = checkoutAttemptError.message?.includes(
@@ -125,6 +146,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         typeof attempt.idempotencyKey === "string" ? attempt.idempotencyKey : "";
       const attemptCustomerId =
         typeof attempt.stripeCustomerId === "string" ? attempt.stripeCustomerId : "";
+      const attemptTrialEligible = attempt.trialEligible === true;
       const sessionExpiresAt =
         typeof attempt.sessionExpiresAt === "string"
           ? Math.floor(new Date(attempt.sessionExpiresAt).getTime() / 1000)
@@ -150,7 +172,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         metadata: { userId },
         subscription_data: {
           metadata: { userId },
-          ...(isPlusTrialEligible && {
+          ...(attemptTrialEligible && {
             trial_period_days: plan.trialPeriodDays,
           }),
         },
@@ -159,7 +181,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         idempotencyKey: `kova-checkout-${BILLING_ENV}-${userId}-${idempotencyKey}`,
       });
 
-      return { clientSecret: session.client_secret ?? "" };
+      if (!session.client_secret) {
+        throw new Error("Checkout Session client secret missing");
+      }
+      return { clientSecret: session.client_secret };
     } catch (error) {
       console.error("[billing-checkout] Stripe request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
@@ -224,6 +249,8 @@ export type SubscriptionSummary = {
   tier: "free" | "plus" | "pro";
   effectiveTier: "free" | "plus" | "pro";
   inherited: boolean;
+  activeSubscriptionCount: number;
+  billingConflict: boolean;
   status: string | null;
   priceId: string | null;
   currentPeriodEnd: string | null;
@@ -268,6 +295,16 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     }
     const effectiveTier = effectiveTierValue;
     const inherited = summary.inherited === true;
+    const activeSubscriptionCount =
+      typeof summary.activeSubscriptionCount === "number" &&
+      Number.isSafeInteger(summary.activeSubscriptionCount) &&
+      summary.activeSubscriptionCount >= 0
+        ? summary.activeSubscriptionCount
+        : null;
+    if (activeSubscriptionCount === null) {
+      throw new Error("Billing details couldn't be verified.");
+    }
+    const billingConflict = summary.billingConflict === true;
     const status = typeof summary.status === "string" ? summary.status : null;
     const priceId = typeof summary.priceId === "string" ? summary.priceId : null;
     const currentPeriodEnd =
@@ -288,6 +325,8 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       tier,
       effectiveTier,
       inherited,
+      activeSubscriptionCount,
+      billingConflict,
       status,
       priceId,
       currentPeriodEnd,

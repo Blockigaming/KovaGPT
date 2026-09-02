@@ -35,7 +35,7 @@ async function planTier(supabase: unknown): Promise<"free" | "plus" | "pro"> {
     const client = supabase as {
       rpc: (name: string) => Promise<{ data: unknown }>;
     };
-    const { data } = await client.rpc("current_user_plan_tier");
+    const { data } = await client.rpc("current_effective_plan_tier");
     const tier = String(data ?? "free");
     if (tier === "pro" || tier === "plus") return tier;
   } catch {
@@ -241,7 +241,7 @@ export const duplicateProject = createServerFn({ method: "POST" })
     if (sErr || !src) throw new Error("Project not found");
 
     // Enforce plan cap
-    const tier = await planTier(context.supabase, context.userId);
+    const tier = await planTier(context.supabase);
     const cap = PROJECT_LIMITS[tier].projects;
     const { count } = await context.supabase
       .from("projects")

@@ -10,7 +10,7 @@ export async function resolveUserBillingTier(
   supabaseAdmin: SupabaseClient<Database>,
   userId: string,
 ): Promise<BillingTier> {
-  const { data, error } = await supabaseAdmin.rpc("user_plan_tier", {
+  const { data, error } = await supabaseAdmin.rpc("billing_user_plan_tier", {
     _user_id: userId,
   });
   if (error) {

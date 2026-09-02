@@ -306,7 +306,7 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
     };
     let tier: "free" | "plus" | "pro" = "free";
     try {
-      const { data: t } = await s.rpc("current_user_plan_tier");
+      const { data: t } = await s.rpc("current_effective_plan_tier");
       const v = String(t ?? "free");
       if (v === "pro" || v === "plus") tier = v;
     } catch {

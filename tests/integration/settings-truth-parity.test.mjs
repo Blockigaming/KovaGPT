@@ -63,7 +63,10 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.match(settings, /Refresh billing status/);
   assert.match(settings, /Select Refresh billing status to retry/);
   assert.match(settings, /This shared plan is managed by the Family Sharing owner/);
+  assert.match(settings, /Your own .* subscription is still[\s\S]*billed and can be managed below/);
+  assert.match(settings, /billing conflict was detected/i);
   assert.match(settings, /No Stripe billing account is linked/);
+  assert.doesNotMatch(settings, /plan changes in the Stripe billing portal/);
   assert.match(settings, /parseAllowedBillingPortalUrl\(res\.url\)/);
   assert.match(settings, /createPortalSession\(\{ data: \{\} \}\)/);
   assert.match(settings, /billingPortalAvailable/);
@@ -78,6 +81,9 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.doesNotMatch(portal, /data\.environment|data\.returnUrl/);
   assert.match(billing, /parseAllowedBillingPortalUrl\(portal\.url\)/);
   assert.match(billing, /existingError/);
+  assert.match(billing, /activeSubscriptionCount/);
+  assert.match(billing, /billingConflict/);
+  assert.match(billing, /effectiveTier/);
   assert.match(billing, /subscriptionError/);
   assert.doesNotMatch(billing, /getStripeErrorMessage/);
   assert.doesNotMatch(billing, /return \{ error: error\./);

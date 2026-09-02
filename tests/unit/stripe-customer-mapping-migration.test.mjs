@@ -31,7 +31,7 @@ async function createDatabase() {
   return database;
 }
 
-test("migration backfills only real Customer ids and isolates identity by environment", async () => {
+test("migration backfills real Customer ids and preserves rollback uniqueness", async () => {
   const database = await createDatabase();
   try {
     await database.exec(`
@@ -66,17 +66,25 @@ test("migration backfills only real Customer ids and isolates identity by enviro
       },
     ]);
 
-    await database.exec(`
-      INSERT INTO public.processed_stripe_events (event_id, type, environment)
-      VALUES ('evt_same', 'test', 'live'), ('evt_same', 'test', 'sandbox');
-    `);
-    await database.exec(`
-      INSERT INTO public.subscriptions
-        (user_id, stripe_subscription_id, stripe_customer_id, environment)
-      VALUES
-        ('22222222-2222-2222-2222-222222222222', 'sub_shared', 'cus_second', 'live'),
-        ('22222222-2222-2222-2222-222222222222', 'sub_shared', 'cus_second', 'sandbox');
-    `);
+    await assert.rejects(
+      () =>
+        database.exec(`
+          INSERT INTO public.processed_stripe_events (event_id, type, environment)
+          VALUES ('evt_same', 'test', 'live'), ('evt_same', 'test', 'sandbox');
+        `),
+      /duplicate key|unique constraint/iu,
+    );
+    await assert.rejects(
+      () =>
+        database.exec(`
+          INSERT INTO public.subscriptions
+            (user_id, stripe_subscription_id, stripe_customer_id, environment)
+          VALUES
+            ('22222222-2222-2222-2222-222222222222', 'sub_shared', 'cus_second', 'live'),
+            ('22222222-2222-2222-2222-222222222222', 'sub_shared', 'cus_second', 'sandbox');
+        `),
+      /duplicate key|unique constraint/iu,
+    );
 
     await database.exec("DELETE FROM auth.users WHERE id = '11111111-1111-1111-1111-111111111111'");
     const detached = await database.query(`

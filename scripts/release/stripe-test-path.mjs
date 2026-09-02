@@ -61,12 +61,16 @@ export function verifyStripeTestPath({
   if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource))
     failures.push("sandbox/live allowlist missing");
   if (
-    !/processed_stripe_events/u.test(reliabilitySource) ||
+    !/rpc\("begin_stripe_event"/u.test(reliabilitySource) ||
     !/rpc\("complete_stripe_event"/u.test(reliabilitySource)
   )
-    failures.push("atomic webhook completion missing");
-  if (/currentSubscriptionTimestamp|subscription_event_order_lookup/u.test(reliabilitySource))
-    failures.push("webhook retains a read-then-write ordering check");
+    failures.push("leased atomic webhook completion missing");
+  if (
+    /currentSubscriptionTimestamp|subscription_event_order_lookup|event_created_at.*event_id/su.test(
+      reliabilitySource,
+    )
+  )
+    failures.push("webhook retains a non-causal Event ordering check");
   if (!/retrieveSubscription/u.test(reliabilitySource))
     failures.push("authoritative subscription retrieval missing");
   if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource))
@@ -115,6 +119,24 @@ export function verifyStripeTestPath({
     failures.push("durable Stripe customer mapping missing");
   if (/customers\.(?:list|search|update)/u.test(checkoutSource))
     failures.push("email or metadata customer reassignment remains reachable");
+  if (!/claim_stripe_checkout_attempt/u.test(checkoutSource))
+    failures.push("durable Checkout attempt claim missing");
+  if (!/_trial_eligible:\s*requestedTrialEligibility/u.test(checkoutSource))
+    failures.push("Checkout trial eligibility is not frozen in the durable attempt");
+  if (!/idempotencyKey:\s*`kova-checkout-/u.test(checkoutSource))
+    failures.push("Stripe Checkout idempotency key missing");
+  if (!/subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/u.test(checkoutSource))
+    failures.push("authoritative all-status subscription precheck missing");
+  if (
+    !/subscription\.status !== "incomplete_expired" && !canceledAndExpired/u.test(
+      checkoutSource,
+    )
+  )
+    failures.push("Checkout does not fail closed for nonterminal or unknown statuses");
+  if (/client_secret\s*\?\?\s*""/u.test(checkoutSource))
+    failures.push("Checkout accepts a missing client secret");
+  if (!/if \(!session\.client_secret\)/u.test(checkoutSource))
+    failures.push("Checkout missing-client-secret guard absent");
 
   failures.push(...verifyCheckoutRequestBoundary());
   return failures;

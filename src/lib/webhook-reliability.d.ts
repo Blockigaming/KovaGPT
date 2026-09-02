@@ -15,11 +15,11 @@ declare module "@/lib/webhook-reliability.mjs" {
       data: { object: unknown };
     };
     environment: "live" | "sandbox";
-    resolvePriceId: (item: unknown) => string | undefined;
+    resolvePriceId: (item: unknown) => string | undefined | Promise<string | undefined>;
     retrieveSubscription: (id: string) => Promise<unknown>;
     billingOutcome?: (type: string) => string;
     correlationId?: string | null;
-  }): Promise<{ duplicate: boolean; stale: boolean }>;
+  }): Promise<{ duplicate: boolean; orphaned: boolean }>;
 
   export function processGitHubDelivery(input: {
     supabase: unknown;
