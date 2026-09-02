@@ -782,6 +782,55 @@ workflow run, result, artifact checksum/link, and cleanup result. Redact all sec
 create a release/tag or close canonical issue #197 until every applicable production gate is
 proven.
 
+### MAN-11 — Resolve the truncated original specification
+
+- **Status:** `OWNER_REQUIRED`
+- **Kind:** product/specification authority
+- **Service/account/project:** the owner's authoritative KovaGPT final-goal source. The supplied
+  767-line copy ends in Section 9, **Search and Citations**, immediately after “support mobile.”
+- **Owner:** the person or organization authorized to define and accept KovaGPT's product scope
+- **Prerequisites:** preserve the truncated copy and the reconstructed scope/evidence index used
+  for this closure effort; do not delay unrelated autonomous work while this item is open
+- **Why manual:** only the specification owner can supply the missing authoritative text or decide
+  that the repository-, issue-, provider-, and production-derived reconstruction is the complete
+  intended scope. Automation cannot invent that authority.
+
+**Exact owner action:** choose and record one outcome. Either (A) provide the canonical continuation
+or complete untruncated specification, identify its source/version, and confirm that it continues
+from the exact final visible text; or (B) state explicitly that no continuation is available or
+required and approve the reconstructed scope sources named in the governing mandate as the
+authoritative completion scope. For outcome A, the release owner must create a requirement-delta
+matrix mapping every newly supplied requirement to a route/control, issue, test, production proof,
+or an honest `BLOCKED`/`OWNER_REQUIRED`/reasoned `NOT_APPLICABLE` disposition. New requirements do
+not inherit a pass from earlier work.
+
+For a supplied artifact, record non-secret integrity and continuity checks such as:
+
+```bash
+sha256sum '<canonical complete specification>'
+wc -l '<canonical complete specification>'
+tail -n 30 '<preserved truncated specification>'
+sed -n '750,790p' '<canonical complete specification>'
+```
+
+**Risk:** accepting a wrong revision can add unauthorized scope; accepting the truncation as
+complete without owner authority can omit release-critical requirements. **Consequence of not
+performing:** KovaGPT may not be declared fully compliant with the original specification, and
+canonical issue #197 must remain open, although other independent release gates may continue.
+**Evidence already collected:** the governing mandate identifies the 767-line cutoff and requires
+this handoff item if the missing continuation remains unresolved. **Automated work already
+complete:** visible requirements were treated as binding minimums and remaining scope was
+reconstructed from the repository, routes/APIs, schema, issues/PRs, production behavior, provider
+configuration, navigation/SEO, tests, documentation, and artifacts.
+
+**Rollback:** no provider mutation is involved. If the supplied artifact or owner decision is later
+shown to be wrong, supersede the scope record without deleting it, reopen every affected gate, and
+re-triage the delta. **Exact proof required:** owner identity/authority and UTC decision; either the
+canonical artifact/link, version and SHA-256 plus prefix/continuity confirmation and completed
+delta matrix, or an explicit no-continuation approval naming the reconstructed scope sources and
+why they are sufficient; affected issue/test/evidence links; and confirmation that no new
+requirement was silently marked complete.
+
 ## Copyable checklist for the KovaGPT Manual conversation
 
 - [ ] Sign in to and positively identify the KovaGPT Azure tenant/subscription/resources,
@@ -818,6 +867,9 @@ proven.
 - [ ] Run exact-production anonymous/authenticated smoke, two-user isolation, Stripe sandbox,
       physical Safari/iPhone, accessibility/visual, monitoring, cleanup, and rollback evidence.
       (`MAN-10`)
+- [ ] Supply the canonical continuation/full original specification after Section 9 “support
+      mobile” and triage its complete delta, or explicitly approve the reconstructed scope as
+      authoritative; keep #197 open until one outcome has exact proof. (`MAN-11`)
 
 Until every applicable item is proven: **Maximum autonomous work completed; KovaGPT is not yet
 fully complete because the owner-required gates above remain.**
