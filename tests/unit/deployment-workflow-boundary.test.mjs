@@ -100,6 +100,7 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /AbortController/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
+  assert.match(smoke, /candidate\\.startsWith\\("assets\\/"\\)/u);
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
   assert.match(smoke, /contains an unexpected Supabase project URL/u);
   assert.doesNotMatch(smoke, /await fetch\(/u);

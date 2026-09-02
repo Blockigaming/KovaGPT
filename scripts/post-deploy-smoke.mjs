@@ -81,7 +81,8 @@ async function read(path, expectedType) {
 function addJavaScriptReference(candidate, parent, queue, seen) {
   let url;
   try {
-    url = new URL(candidate, parent);
+    const resolutionBase = candidate.startsWith("assets/") ? new URL("/", base) : parent;
+    url = new URL(candidate, resolutionBase);
   } catch {
     return;
   }
