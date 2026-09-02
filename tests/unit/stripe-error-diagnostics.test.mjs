@@ -11,7 +11,11 @@ test("retains only allowlisted Stripe operational fields", () => {
       requestId: "req_123",
       message: "contains customer@example.com and sk_live_secret",
       stack: "secret stack",
-      raw: { message: "raw secret", param: "customer", doc_url: "https://example.test" },
+      raw: {
+        message: "raw secret",
+        param: "customer",
+        doc_url: "https://example.test",
+      },
     },
     "checkout_session_create",
   );
@@ -53,10 +57,26 @@ test("normalizes unknown failures", () => {
 test("does not execute or leak hostile getters", () => {
   const hostile = {};
   Object.defineProperties(hostile, {
-    type: { get() { throw new Error("do not leak"); } },
-    code: { get() { throw new Error("do not leak"); } },
-    requestId: { get() { throw new Error("do not leak"); } },
-    message: { get() { throw new Error("do not leak"); } },
+    type: {
+      get() {
+        throw new Error("do not leak");
+      },
+    },
+    code: {
+      get() {
+        throw new Error("do not leak");
+      },
+    },
+    requestId: {
+      get() {
+        throw new Error("do not leak");
+      },
+    },
+    message: {
+      get() {
+        throw new Error("do not leak");
+      },
+    },
   });
   assert.deepEqual(stripeErrorDiagnostic(hostile, "customer_resolution"), {
     stage: "customer_resolution",
