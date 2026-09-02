@@ -68,7 +68,7 @@ export function BrandHeader() {
             src={KOVA_LOGO_URL}
             width="30"
             height="30"
-            alt="Kova"
+            alt="KovaGPT"
             style={{
               display: "block",
               width: "30px",
@@ -89,7 +89,7 @@ export function BrandHeader() {
               margin: 0,
             }}
           >
-            Kova
+            KovaGPT
           </Text>
         </Column>
       </Row>
@@ -108,7 +108,7 @@ export function BrandFooter() {
       }}
     >
       <Text className="kova-muted" style={styles.footerText}>
-        Kova will never ask you to reply with your password or verification code.
+        KovaGPT will never ask you to reply with your password or verification code.
       </Text>
       <Text className="kova-muted" style={styles.footerText}>
         <Link className="kova-link" href="mailto:support@kovagpt.com" style={styles.footerLink}>
