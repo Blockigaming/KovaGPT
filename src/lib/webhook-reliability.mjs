@@ -52,9 +52,14 @@ function stripeTimestamp(value) {
   return new Date(value * 1000).toISOString();
 }
 
-function subscriptionRow(subscription, eventType, resolvePriceId) {
+async function subscriptionRow(subscription, eventType, resolvePriceId) {
   const item = subscription?.items?.data?.[0];
-  const priceId = resolvePriceId(item);
+  let priceId;
+  try {
+    priceId = await resolvePriceId(item);
+  } catch (error) {
+    fail("stripe_price_registry_lookup_failed", 500, error);
+  }
   const customerId = stringId(subscription?.customer);
   const productId = stringId(item?.price?.product);
   if (!subscription?.id || !item || !priceId || !customerId || !productId) {
@@ -93,9 +98,35 @@ const invoiceEvents = new Set([
 
 function correlationUuid(value) {
   return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value)
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value,
+    )
     ? value
     : null;
+}
+
+function beginResult(result) {
+  const value = requireResult(result, "stripe_event_begin_failed", {
+    requireData: true,
+  });
+  if (
+    typeof value !== "object" ||
+    typeof value.duplicate !== "boolean" ||
+    typeof value.busy !== "boolean"
+  ) {
+    fail("stripe_event_begin_invalid");
+  }
+  if (!value.duplicate && !value.busy) {
+    if (
+      !Number.isSafeInteger(value.observationSequence) ||
+      value.observationSequence <= 0 ||
+      typeof value.leaseToken !== "string" ||
+      !value.leaseToken
+    ) {
+      fail("stripe_event_lease_invalid");
+    }
+  }
+  return value;
 }
 
 function completionResult(result) {
@@ -106,7 +137,7 @@ function completionResult(result) {
     typeof value !== "object" ||
     typeof value.duplicate !== "boolean" ||
     typeof value.subscriptionApplied !== "boolean" ||
-    typeof value.stale !== "boolean"
+    typeof value.orphaned !== "boolean"
   ) {
     fail("stripe_event_completion_invalid");
   }
@@ -135,21 +166,38 @@ export async function processStripeEvent({
     fail("stripe_environment_invalid", 400);
   }
 
-  const existing = await supabase
-    .from("processed_stripe_events")
-    .select("event_id")
-    .eq("environment", environment)
-    .eq("event_id", event.id)
-    .maybeSingle();
-  if (requireResult(existing, "stripe_event_lookup_failed")) {
-    return { duplicate: true, stale: false };
+  const subscriptionId = eventSubscriptionId(event);
+  const requiresSubscription = subscriptionEvents.has(event.type);
+  if (requiresSubscription && !subscriptionId) {
+    fail("stripe_subscription_id_missing");
   }
 
-  const subscriptionId = eventSubscriptionId(event);
-  let authoritativeSubscription = null;
+  const object = event.data.object;
+  const claim = beginResult(
+    await supabase.rpc("begin_stripe_event", {
+      _event_id: event.id,
+      _event_created_at: new Date(event.created * 1000).toISOString(),
+      _event_type: event.type,
+      _environment: environment,
+      _outcome: billingOutcome(event.type),
+      _subscription_id: subscriptionId,
+      _correlation_id: correlationUuid(correlationId),
+      _object_id: stringId(object),
+      _customer_id: stringId(object?.customer),
+      _invoice_id: event.type.startsWith("invoice.") ? stringId(object) : null,
+      _checkout_session_id: event.type.startsWith("checkout.session.")
+        ? stringId(object)
+        : null,
+      _lease_seconds: 90,
+    }),
+  );
+
+  if (claim.duplicate) return { duplicate: true, orphaned: false };
+  if (claim.busy) fail("stripe_event_busy", 503);
+
   let row = null;
-  if (subscriptionEvents.has(event.type) || (invoiceEvents.has(event.type) && subscriptionId)) {
-    if (!subscriptionId) fail("stripe_subscription_id_missing");
+  if (requiresSubscription || (invoiceEvents.has(event.type) && subscriptionId)) {
+    let authoritativeSubscription;
     try {
       authoritativeSubscription = await retrieveSubscription(subscriptionId);
     } catch (error) {
@@ -158,35 +206,30 @@ export async function processStripeEvent({
     if (!authoritativeSubscription || authoritativeSubscription.id !== subscriptionId) {
       fail("stripe_subscription_retrieve_mismatch");
     }
-    row = subscriptionRow(authoritativeSubscription, event.type, resolvePriceId);
+    row = await subscriptionRow(authoritativeSubscription, event.type, resolvePriceId);
   }
 
-  const object = event.data.object;
-  const customerId = row?.customerId ?? stringId(object?.customer) ?? null;
-  const completed = await supabase.rpc("complete_stripe_event", {
-    _event_id: event.id,
-    _event_created_at: new Date(event.created * 1000).toISOString(),
-    _event_type: event.type,
-    _environment: environment,
-    _outcome: billingOutcome(event.type),
-    _apply_subscription: Boolean(row),
-    _correlation_id: correlationUuid(correlationId),
-    _object_id: stringId(object),
-    _customer_id: customerId,
-    _subscription_id: row?.subscriptionId ?? subscriptionId,
-    _invoice_id: event.type.startsWith("invoice.") ? stringId(object) : null,
-    _checkout_session_id: event.type.startsWith("checkout.session.")
-      ? stringId(object)
-      : null,
-    _product_id: row?.productId ?? null,
-    _price_id: row?.priceId ?? null,
-    _status: row?.status ?? null,
-    _current_period_start: row?.currentPeriodStart ?? null,
-    _current_period_end: row?.currentPeriodEnd ?? null,
-    _cancel_at_period_end: row?.cancelAtPeriodEnd ?? false,
-  });
-  const result = completionResult(completed);
-  return { duplicate: result.duplicate, stale: result.stale };
+  const completed = completionResult(
+    await supabase.rpc("complete_stripe_event", {
+      _event_id: event.id,
+      _environment: environment,
+      _lease_token: claim.leaseToken,
+      _observation_sequence: claim.observationSequence,
+      _apply_subscription: Boolean(row),
+      _customer_id: row?.customerId ?? stringId(object?.customer),
+      _product_id: row?.productId ?? null,
+      _price_id: row?.priceId ?? null,
+      _status: row?.status ?? null,
+      _current_period_start: row?.currentPeriodStart ?? null,
+      _current_period_end: row?.currentPeriodEnd ?? null,
+      _cancel_at_period_end: row?.cancelAtPeriodEnd ?? false,
+    }),
+  );
+
+  return {
+    duplicate: completed.duplicate,
+    orphaned: completed.orphaned,
+  };
 }
 
 async function deliveryStatus(supabase, delivery) {

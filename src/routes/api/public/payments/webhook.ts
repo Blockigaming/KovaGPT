@@ -36,17 +36,31 @@ export function normalizeStripeEnvironment(value: string | null): StripeEnv | nu
   return value === "sandbox" || value === "live" ? value : null;
 }
 
-function priceIdFrom(value: unknown, environment: StripeEnv): string | undefined {
+async function priceIdFrom(
+  value: unknown,
+  environment: StripeEnv,
+): Promise<string | undefined> {
   const item = value as StripeLineItemLike | undefined;
-  const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, item?.price?.id];
-  for (const candidate of candidates) {
-    const plan = resolveBillingPlan(candidate ?? undefined);
-    const priceId = item?.price?.id;
-    if (!plan || !priceId || !/^price_[A-Za-z0-9]+$/u.test(priceId)) continue;
-    if (environment === "live" && priceId !== plan.livePriceId) return undefined;
-    return priceId;
+  const priceId = item?.price?.id;
+  if (!priceId || !/^price_[A-Za-z0-9]+$/u.test(priceId)) return undefined;
+
+  if (environment === "live") {
+    const { data, error } = await supabaseAdmin
+      .from("billing_plan_tiers")
+      .select("stripe_price_id")
+      .eq("environment", environment)
+      .eq("stripe_price_id", priceId)
+      .maybeSingle();
+    if (error) {
+      throw new WebhookProcessingError("stripe_price_registry_lookup_failed", 500, error);
+    }
+    return data?.stripe_price_id === priceId ? priceId : undefined;
   }
-  return undefined;
+
+  const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, priceId];
+  return candidates.some((candidate) => resolveBillingPlan(candidate ?? undefined))
+    ? priceId
+    : undefined;
 }
 
 export async function handleWebhook(
@@ -88,7 +102,11 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
             category: "billing",
             operation: "stripe_webhook_processed",
             metadata: {
-              eventType: result.duplicate ? "duplicate" : "completed",
+              eventType: result.orphaned
+                ? "orphaned_customer"
+                : result.duplicate
+                  ? "duplicate"
+                  : "completed",
               environment,
             },
           });
