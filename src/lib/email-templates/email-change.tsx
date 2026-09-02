@@ -35,30 +35,21 @@ export const EmailChangeEmail = ({
           Confirm your new email
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          You requested to change your {siteName} email from {oldEmail} to{" "}
-          {newEmail}. Confirm the change below.
+          You requested to change your {siteName} email from {oldEmail} to {newEmail}. Confirm the
+          change below.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button
-            className="kova-button"
-            style={styles.button}
-            href={confirmationUrl}
-          >
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
             Confirm new email
           </Button>
         </Section>
         <Text className="kova-text" style={styles.text}>
-          If you did not request this change, do not confirm it and contact Kova
-          support.
+          If you did not request this change, do not confirm it and contact Kova support.
         </Text>
         <Text className="kova-muted" style={styles.fallbackLabel}>
           If the button does not work, copy and paste this link:
         </Text>
-        <Link
-          className="kova-link"
-          style={styles.fallbackLink}
-          href={confirmationUrl}
-        >
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

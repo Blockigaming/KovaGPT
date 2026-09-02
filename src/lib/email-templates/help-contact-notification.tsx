@@ -9,13 +9,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import {
-  BrandFooter,
-  BrandHeader,
-  EmailHead,
-  brandColors,
-  styles,
-} from "./_brand";
+import { BrandFooter, BrandHeader, EmailHead, brandColors, styles } from "./_brand";
 import type { TemplateEntry } from "./registry";
 
 interface Props {
@@ -48,10 +42,7 @@ const Email = ({
         <Heading className="kova-heading" style={styles.h1}>
           {variant === "bug" ? "Bug report" : "Help request"}
         </Heading>
-        <Text
-          className="kova-muted"
-          style={{ ...styles.text, color: brandColors.muted }}
-        >
+        <Text className="kova-muted" style={{ ...styles.text, color: brandColors.muted }}>
           From {name} &lt;{email}&gt;
         </Text>
         <Hr
@@ -68,10 +59,7 @@ const Email = ({
           <Text className="kova-muted" style={styles.label}>
             Message
           </Text>
-          <Text
-            className="kova-text"
-            style={{ ...styles.text, whiteSpace: "pre-wrap" }}
-          >
+          <Text className="kova-text" style={{ ...styles.text, whiteSpace: "pre-wrap" }}>
             {message}
           </Text>
         </Section>
@@ -79,16 +67,10 @@ const Email = ({
           className="kova-divider"
           style={{ borderColor: brandColors.border, margin: "22px 0" }}
         />
-        <Text
-          className="kova-muted"
-          style={{ ...styles.footerText, wordBreak: "break-all" }}
-        >
+        <Text className="kova-muted" style={{ ...styles.footerText, wordBreak: "break-all" }}>
           URL: {url || "—"}
         </Text>
-        <Text
-          className="kova-muted"
-          style={{ ...styles.footerText, wordBreak: "break-all" }}
-        >
+        <Text className="kova-muted" style={{ ...styles.footerText, wordBreak: "break-all" }}>
           User agent: {userAgent || "—"}
         </Text>
         <BrandFooter />

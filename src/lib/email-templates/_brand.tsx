@@ -1,13 +1,5 @@
 import * as React from "react";
-import {
-  Column,
-  Head,
-  Img,
-  Link,
-  Row,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Column, Head, Img, Link, Row, Section, Text } from "@react-email/components";
 
 export const KOVA_LOGO_URL = "https://kovagpt.com/kova-logo.png";
 export const KOVA_SITE_URL = "https://kovagpt.com";
@@ -116,31 +108,18 @@ export function BrandFooter() {
       }}
     >
       <Text className="kova-muted" style={styles.footerText}>
-        Kova will never ask you to reply with your password or verification
-        code.
+        Kova will never ask you to reply with your password or verification code.
       </Text>
       <Text className="kova-muted" style={styles.footerText}>
-        <Link
-          className="kova-link"
-          href="mailto:support@kovagpt.com"
-          style={styles.footerLink}
-        >
+        <Link className="kova-link" href="mailto:support@kovagpt.com" style={styles.footerLink}>
           Support
         </Link>
         {"  ·  "}
-        <Link
-          className="kova-link"
-          href={`${KOVA_SITE_URL}/privacy`}
-          style={styles.footerLink}
-        >
+        <Link className="kova-link" href={`${KOVA_SITE_URL}/privacy`} style={styles.footerLink}>
           Privacy
         </Link>
         {"  ·  "}
-        <Link
-          className="kova-link"
-          href={`${KOVA_SITE_URL}/terms`}
-          style={styles.footerLink}
-        >
+        <Link className="kova-link" href={`${KOVA_SITE_URL}/terms`} style={styles.footerLink}>
           Terms
         </Link>
       </Text>

@@ -1,21 +1,12 @@
 import * as React from "react";
-import {
-  Body,
-  Container,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from "@react-email/components";
+import { Body, Container, Heading, Html, Preview, Text } from "@react-email/components";
 import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 
 interface ReauthenticationEmailProps {
   token: string;
 }
 
-export const ReauthenticationEmail = ({
-  token,
-}: ReauthenticationEmailProps) => (
+export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
     <Preview>Your Kova verification code</Preview>
@@ -32,8 +23,7 @@ export const ReauthenticationEmail = ({
           {token}
         </Text>
         <Text className="kova-text" style={styles.text}>
-          If you did not initiate this request, you can safely ignore this
-          email.
+          If you did not initiate this request, you can safely ignore this email.
         </Text>
         <BrandFooter />
       </Container>

@@ -15,10 +15,7 @@ const templates = [
 ];
 
 test("email brand system is light-default and dark-mode adaptive", async () => {
-  const brand = await readFile(
-    new URL("src/lib/email-templates/_brand.tsx", root),
-    "utf8",
-  );
+  const brand = await readFile(new URL("src/lib/email-templates/_brand.tsx", root), "utf8");
 
   assert.match(brand, /backgroundColor: brandColors\.bg/);
   assert.match(brand, /name="color-scheme" content="light dark"/);
@@ -31,19 +28,8 @@ test("email brand system is light-default and dark-mode adaptive", async () => {
 
 test("every Kova email uses the shared brand system", async () => {
   for (const template of templates) {
-    const source = await readFile(
-      new URL(`src/lib/email-templates/${template}`, root),
-      "utf8",
-    );
-    assert.match(
-      source,
-      /from "\.\/_brand"/,
-      `${template} must import the shared brand system`,
-    );
-    assert.doesNotMatch(
-      source,
-      /const LOGO_URL/,
-      `${template} must not define a separate logo`,
-    );
+    const source = await readFile(new URL(`src/lib/email-templates/${template}`, root), "utf8");
+    assert.match(source, /from "\.\/_brand"/, `${template} must import the shared brand system`);
+    assert.doesNotMatch(source, /const LOGO_URL/, `${template} must not define a separate logo`);
   }
 });

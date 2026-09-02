@@ -19,11 +19,7 @@ interface SignupEmailProps {
   confirmationUrl: string;
 }
 
-export const SignupEmail = ({
-  siteName,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+export const SignupEmail = ({ siteName, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
     <Preview>Confirm your email for {siteName}</Preview>
@@ -34,26 +30,17 @@ export const SignupEmail = ({
           Confirm your email
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          Welcome to {siteName}. Confirm {recipient} to finish setting up your
-          account.
+          Welcome to {siteName}. Confirm {recipient} to finish setting up your account.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button
-            className="kova-button"
-            style={styles.button}
-            href={confirmationUrl}
-          >
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
             Confirm email
           </Button>
         </Section>
         <Text className="kova-muted" style={styles.fallbackLabel}>
           If the button does not work, copy and paste this link:
         </Text>
-        <Link
-          className="kova-link"
-          style={styles.fallbackLink}
-          href={confirmationUrl}
-        >
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

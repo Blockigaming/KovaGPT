@@ -18,10 +18,7 @@ interface InviteEmailProps {
   confirmationUrl: string;
 }
 
-export const InviteEmail = ({
-  siteName,
-  confirmationUrl,
-}: InviteEmailProps) => (
+export const InviteEmail = ({ siteName, confirmationUrl }: InviteEmailProps) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
     <Preview>You have been invited to {siteName}</Preview>
@@ -32,26 +29,17 @@ export const InviteEmail = ({
           You’re invited
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          Accept your invitation to join {siteName} and finish setting up your
-          account.
+          Accept your invitation to join {siteName} and finish setting up your account.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button
-            className="kova-button"
-            style={styles.button}
-            href={confirmationUrl}
-          >
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
             Accept invitation
           </Button>
         </Section>
         <Text className="kova-muted" style={styles.fallbackLabel}>
           If the button does not work, copy and paste this link:
         </Text>
-        <Link
-          className="kova-link"
-          style={styles.fallbackLink}
-          href={confirmationUrl}
-        >
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

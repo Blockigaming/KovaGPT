@@ -1,13 +1,5 @@
 import * as React from "react";
-import {
-  Body,
-  Container,
-  Heading,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Container, Heading, Html, Preview, Section, Text } from "@react-email/components";
 import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 import type { TemplateEntry } from "./registry";
 
@@ -28,9 +20,8 @@ const Email = ({ name, topic, variant = "help" }: Props) => (
           Thanks{name ? `, ${name}` : ""}
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          We received your {variant === "bug" ? "bug report" : "message"}.
-          Someone from Kova support will respond as soon as possible, usually
-          within one business day.
+          We received your {variant === "bug" ? "bug report" : "message"}. Someone from Kova support
+          will respond as soon as possible, usually within one business day.
         </Text>
         {topic ? (
           <Section className="kova-card" style={styles.card}>
@@ -43,8 +34,8 @@ const Email = ({ name, topic, variant = "help" }: Props) => (
           </Section>
         ) : null}
         <Text className="kova-text" style={styles.text}>
-          If there is anything else we should know, reply to this email and it
-          will be added to your request.
+          If there is anything else we should know, reply to this email and it will be added to your
+          request.
         </Text>
         <Text
           className="kova-muted"
@@ -61,9 +52,7 @@ const Email = ({ name, topic, variant = "help" }: Props) => (
 export const template = {
   component: Email,
   subject: (data: Record<string, unknown>) =>
-    data.variant === "bug"
-      ? "We received your Kova bug report"
-      : "We received your Kova message",
+    data.variant === "bug" ? "We received your Kova bug report" : "We received your Kova message",
   displayName: "Help / bug - auto-reply to user",
   previewData: {
     name: "Jane",
