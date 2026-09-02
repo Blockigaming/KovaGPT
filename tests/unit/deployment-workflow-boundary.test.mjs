@@ -61,6 +61,15 @@ test("production Azure workflow is protected, OIDC-based, digest-bound, and plan
   assert.match(workflow, /com\.kovagpt\.browser\.config-verified/u);
   assert.match(workflow, /browser-config-provenance\.json/u);
   assert.match(workflow, /infra\/azure\/production\/main\.bicep/u);
+  assert.match(workflow, /--result-format ResourceIdOnly/u);
+  assert.doesNotMatch(
+    workflow.slice(0, workflow.indexOf("jobs:")),
+    /KOVA_PRODUCTION_BICEP_PARAMETERS_JSON/u,
+  );
+  assert.match(
+    workflow,
+    /name: Render protected production parameters for planning[\s\S]*env:[\s\S]*KOVA_PRODUCTION_BICEP_PARAMETERS_JSON:/u,
+  );
 
   const validate = workflow.indexOf("az deployment group validate");
   const whatIf = workflow.indexOf("az deployment group what-if");

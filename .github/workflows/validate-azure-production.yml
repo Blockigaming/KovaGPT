@@ -27,7 +27,6 @@ env:
   IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
   IMAGE_REFERENCE: ${{ inputs.image_reference }}
   KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
-  KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
   RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_RESOURCE_GROUP }}
 
 jobs:
@@ -68,6 +67,10 @@ jobs:
           fi
           if [[ ! "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]; then
             echo "::error::The production Supabase project ref is invalid."
+            exit 1
+          fi
+          if [[ ! "$RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ ]]; then
+            echo "::error::The production resource group name is invalid."
             exit 1
           fi
 
@@ -156,6 +159,8 @@ jobs:
       - name: Render protected production parameters for planning
         id: parameters
         shell: bash
+        env:
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
         run: |
           set -euo pipefail
           parameters_path="$RUNNER_TEMP/kova-production-plan.parameters.json"
@@ -211,7 +216,7 @@ jobs:
             --template-file infra/azure/production/main.bicep \
             --parameters "@${{ steps.parameters.outputs.path }}" \
             --no-pretty-print \
-            --result-format FullResourcePayloads \
+            --result-format ResourceIdOnly \
             --only-show-errors \
             --output jsonc
 
