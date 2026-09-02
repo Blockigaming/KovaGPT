@@ -144,7 +144,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/responsive.spec.ts", 2, 2],
     ["tests/e2e/secondary-screens.spec.ts", 3, 3],
     ["tests/e2e/seo-indexing.spec.ts", 3, 2],
-    ["tests/e2e/ui-quality.spec.ts", 3, 3],
+    ["tests/e2e/ui-quality.spec.ts", 6, 6],
   ];
   const paths = contracts.map(([path]) => path);
   const [helper, guardSpec, ...specs] = await Promise.all([
@@ -162,7 +162,8 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   assert.match(guardSpec, /toEqual\(\["k", "o"\]\)/);
   const specsByPath = new Map();
   for (let index = 0; index < specs.length; index += 1) {
-    const [path, expectedGotos, expectedWaits] = contracts[index];
+    const [path, expectedGotos, expectedWaits, expectedAdjacentWaits = expectedWaits] =
+      contracts[index];
     const gotoCount = specs[index].match(/await page\.goto\(/g)?.length ?? 0;
     const waitCount = specs[index].match(/await waitForKovaHydration\(page\)/g)?.length ?? 0;
     const adjacentWaitCount =
@@ -171,7 +172,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     assert.match(specs[index], /from "\.\/hydration"/);
     assert.equal(gotoCount, expectedGotos, `${path} navigation count`);
     assert.equal(waitCount, expectedWaits, `${path} hydration wait count`);
-    assert.equal(adjacentWaitCount, expectedWaits, `${path} wait placement`);
+    assert.equal(adjacentWaitCount, expectedAdjacentWaits, `${path} post-goto wait placement`);
     specsByPath.set(path, specs[index]);
   }
 
@@ -179,4 +180,9 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
   assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
   assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);
+
+  const uiQuality = specsByPath.get("tests/e2e/ui-quality.spec.ts");
+  assert.match(uiQuality, /await page\.route\("\*\*\/api\/chat"/);
+  assert.match(uiQuality, /await page\.getByRole\("button", \{ name: "Send" \}\)\.click\(\)/);
+  assert.doesNotMatch(uiQuality, /await page\.goBack\(\)/);
 });

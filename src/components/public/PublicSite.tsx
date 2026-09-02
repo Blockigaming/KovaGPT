@@ -21,7 +21,7 @@ export function PublicSite({ children }: { children: ReactNode }) {
           aria-label="Public navigation"
         >
           <Link to="/" className="flex min-h-11 items-center gap-2 font-semibold">
-            <NovaLogo mark className="h-7 w-7" />
+            <NovaLogo decorative mark className="h-7 w-7" />
             KovaGPT
           </Link>
           <div className="ml-auto hidden items-center gap-1 md:flex">
@@ -71,7 +71,7 @@ export function PublicSite({ children }: { children: ReactNode }) {
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto]">
           <div>
             <div className="flex items-center gap-2 font-semibold">
-              <NovaLogo mark className="h-6 w-6" />
+              <NovaLogo decorative mark className="h-6 w-6" />
               KovaGPT
             </div>
             <p className="mt-3 max-w-md text-sm text-muted-foreground">
