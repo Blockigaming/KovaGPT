@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
-import "@/styles/chatgpt-final-parity.css";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
 

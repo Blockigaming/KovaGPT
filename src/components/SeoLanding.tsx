@@ -21,7 +21,7 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
       <header className="border-b border-border">
         <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <NovaLogo className="w-6 h-6" />
+            <NovaLogo decorative className="w-6 h-6" />
             <span className="font-semibold">KovaGPT</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">

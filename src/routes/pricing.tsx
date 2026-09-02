@@ -143,7 +143,7 @@ function PricingPage() {
             Back to KovaGPT
           </Link>
           <div className="flex items-center gap-2">
-            <NovaLogo className="w-6 h-6" />
+            <NovaLogo decorative className="w-6 h-6" />
             <span className="font-semibold">KovaGPT</span>
           </div>
         </div>
