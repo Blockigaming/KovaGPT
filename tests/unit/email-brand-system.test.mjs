@@ -22,6 +22,8 @@ test("email brand system is light-default and dark-mode adaptive", async () => {
   assert.match(brand, /@media \(prefers-color-scheme: dark\)/);
   assert.match(brand, /\[data-ogsc\]/);
   assert.match(brand, /mailto:support@kovagpt\.com/);
+  assert.match(brand, /KovaGPT will never ask/);
+  assert.doesNotMatch(brand, />\\s*Kova\\s*</);
   assert.match(brand, /\/privacy/);
   assert.match(brand, /\/terms/);
 });
