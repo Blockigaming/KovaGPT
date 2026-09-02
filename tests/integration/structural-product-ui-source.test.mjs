@@ -4,6 +4,8 @@ import test from "node:test";
 
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const shell = await readFile("src/components/AppShell.tsx", "utf8");
+const root = await readFile("src/routes/__root.tsx", "utf8");
+const homeRedesign = await readFile("src/styles/structural-product-redesign.css", "utf8");
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const images = await readFile("src/routes/images.tsx", "utf8");
 const connect = await readFile("src/routes/connect.tsx", "utf8");
@@ -14,6 +16,16 @@ test("signed-out navigation stays focused and does not advertise unavailable Map
   assert.match(sidebar, /showSignedOut \? renderNavLink\("\/pricing", "Plans"/);
   assert.match(sidebar, /Start with KovaGPT/);
   assert.match(sidebar, /Sign in from the top bar/);
+});
+
+test("home empty state carries a purposeful Kova identity without replacing chat runtime", () => {
+  assert.match(root, /structural-product-redesign\.css\?url/);
+  assert.match(homeRedesign, /\.kova-empty-chat \.kova-greeting::before/);
+  assert.match(homeRedesign, /content: "KOVA"/);
+  assert.match(
+    homeRedesign,
+    /Ask a question, make a plan, create something, or research what matters\./,
+  );
 });
 
 test("shared settings entry authenticates guests before rendering account settings", () => {
