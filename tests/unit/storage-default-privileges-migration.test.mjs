@@ -29,7 +29,9 @@ async function createDatabase() {
     RETURNS uuid
     LANGUAGE sql
     STABLE
-    AS $$ SELECT NULL::uuid $$;
+    AS $
+      SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid
+    $;
 
     CREATE FUNCTION storage.foldername(input text)
     RETURNS text[]
@@ -62,8 +64,19 @@ async function createDatabase() {
       ON storage.objects FOR SELECT
       USING (bucket_id = 'agent-evidence' AND (storage.foldername(name))[1] = auth.uid()::text);
 
+    GRANT USAGE ON SCHEMA auth, storage TO authenticated;
+    GRANT SELECT ON storage.objects TO authenticated;
+
     CREATE TABLE public.existing_client_table (id integer PRIMARY KEY);
     GRANT SELECT ON public.existing_client_table TO anon, authenticated;
+
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+      GRANT ALL ON TABLES TO anon, authenticated;
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+      GRANT SELECT, USAGE ON SEQUENCES TO anon, authenticated;
+
+    CREATE TABLE public.pre_hardening_default_table (id integer PRIMARY KEY);
+    CREATE SEQUENCE public.pre_hardening_default_sequence;
   `);
   return database;
 }
@@ -106,6 +119,23 @@ test("bucket reconciliation is exact and idempotent", async () => {
     assert.deepEqual(policies.rows, [
       { policyname: "Owners read agent evidence", roles: ["authenticated"] },
     ]);
+
+    const ownerA = "11111111-1111-4111-8111-111111111111";
+    const ownerB = "22222222-2222-4222-8222-222222222222";
+    await database.exec(`
+      INSERT INTO storage.objects (bucket_id, name)
+      VALUES
+        ('agent-evidence', '${ownerA}/own.json'),
+        ('agent-evidence', '${ownerB}/other.json'),
+        ('library-images', '${ownerA}/not-agent-evidence.png');
+      SELECT set_config('request.jwt.claim.sub', '${ownerA}', false);
+      SET ROLE authenticated;
+    `);
+    const visibleToOwnerA = await database.query(`
+      SELECT name FROM storage.objects ORDER BY name
+    `);
+    await database.exec(`RESET ROLE; RESET "request.jwt.claim.sub";`);
+    assert.deepEqual(visibleToOwnerA.rows, [{ name: `${ownerA}/own.json` }]);
   } finally {
     await database.close();
   }
@@ -129,6 +159,10 @@ test("default ACL hardening affects future postgres-owned objects only", async (
         has_table_privilege('anon', 'public.existing_client_table', 'SELECT') AS existing_anon,
         has_table_privilege('authenticated', 'public.existing_client_table', 'SELECT')
           AS existing_authenticated,
+        has_table_privilege('anon', 'public.pre_hardening_default_table', 'SELECT')
+          AS pre_hardening_table_anon,
+        has_sequence_privilege('authenticated', 'public.pre_hardening_default_sequence', 'USAGE')
+          AS pre_hardening_sequence_authenticated,
         has_table_privilege('anon', 'public.future_table', 'SELECT') AS future_table_anon,
         has_table_privilege('authenticated', 'public.future_table', 'SELECT')
           AS future_table_authenticated,
@@ -146,6 +180,8 @@ test("default ACL hardening affects future postgres-owned objects only", async (
       {
         existing_anon: true,
         existing_authenticated: true,
+        pre_hardening_table_anon: true,
+        pre_hardening_sequence_authenticated: true,
         future_table_anon: false,
         future_table_authenticated: false,
         future_sequence_anon: false,
