@@ -26,6 +26,7 @@ const subscription = {
   status: "active",
   metadata: { userId: "untrusted_stripe_metadata" },
   items: {
+    has_more: false,
     data: [
       {
         price: {
@@ -256,4 +257,33 @@ test("non-applying subscription-adjacent event still completes its lease", async
   assert.equal(retrieves, 0);
   assert.equal(database.calls[0].args._subscription_id, "sub_123");
   assert.equal(database.calls[1].args._apply_subscription, false);
+});
+
+test("authoritative snapshots reject ambiguous or paginated subscription items", async () => {
+  const invalidItems = [
+    { data: [], has_more: false },
+    {
+      data: [
+        subscription.items.data[0],
+        { ...subscription.items.data[0], price: { ...subscription.items.data[0].price } },
+      ],
+      has_more: false,
+    },
+    { data: [subscription.items.data[0]], has_more: true },
+    { data: [subscription.items.data[0]] },
+  ];
+
+  for (const items of invalidItems) {
+    const database = new FakeSupabase(successfulSteps().slice(0, 1));
+    await assert.rejects(
+      () =>
+        processStripe(database, subscriptionEvent, {
+          retrieveSubscription: async () => ({ ...subscription, items }),
+        }),
+      (error) =>
+        error.code === "authoritative_subscription_items_ambiguous" &&
+        error.status === 500,
+    );
+    assert.equal(database.calls.length, 1);
+  }
 });

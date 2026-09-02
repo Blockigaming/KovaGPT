@@ -94,7 +94,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I switch plans?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "If plan switching is supported, you can manage your subscription from your account settings.",
+                text: "Self-service plan switching is not currently available. Cancel in Billing and wait until the current period ends before starting a different plan, or contact support@kovagpt.com.",
               },
             },
             {
@@ -252,8 +252,9 @@ function PricingPage() {
           <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
             <p className="text-muted-foreground">
-              Available plan changes appear in Billing. Review the portal or checkout confirmation
-              for timing and price before accepting.
+              Self-service plan switching is not currently available. Cancel in Billing and wait
+              until the current period ends before starting a different plan, or contact
+              support@kovagpt.com.
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card/50 p-5">

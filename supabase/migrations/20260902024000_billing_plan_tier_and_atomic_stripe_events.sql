@@ -2,6 +2,8 @@
 -- authoritative Stripe subscription observation behind a database-issued
 -- lease, and make concurrent Checkout creation converge on one attempt.
 
+begin;
+
 create table if not exists public.billing_plan_tiers (
   environment text not null,
   stripe_price_id text not null,
@@ -731,7 +733,6 @@ declare
   _completed_event public.processed_stripe_events%rowtype;
   _claim public.stripe_event_processing_claims%rowtype;
   _sync_row public.stripe_subscription_sync_state%rowtype;
-  _mapping_found boolean := false;
   _mapped_user_id uuid;
   _persisted_user_id uuid;
   _persisted_customer_id text;
@@ -805,14 +806,14 @@ begin
         using errcode = 'P0001';
     end if;
 
-    select true, mapping.user_id
-    into _mapping_found, _mapped_user_id
+    select mapping.user_id
+    into _mapped_user_id
     from public.stripe_customer_mappings as mapping
     where mapping.environment = _environment
       and mapping.stripe_customer_id = _customer_id
     for update;
 
-    if not coalesce(_mapping_found, false) then
+    if not found then
       raise exception 'stripe_customer_mapping_missing'
         using errcode = 'P0001';
     end if;
@@ -977,8 +978,32 @@ begin
       current_period_end = excluded.current_period_end,
       cancel_at_period_end = excluded.cancel_at_period_end,
       updated_at = excluded.updated_at,
-      last_stripe_event_created_at = excluded.last_stripe_event_created_at,
-      last_stripe_event_id = excluded.last_stripe_event_id,
+      -- Compatibility-only audit maximum for the rollback revision. This
+      -- tuple never orders authoritative snapshots; the observation lease does.
+      last_stripe_event_created_at = case
+        when persisted.last_stripe_event_created_at is null
+          or (
+            excluded.last_stripe_event_created_at,
+            excluded.last_stripe_event_id
+          ) > (
+            persisted.last_stripe_event_created_at,
+            coalesce(persisted.last_stripe_event_id, '')
+          )
+          then excluded.last_stripe_event_created_at
+        else persisted.last_stripe_event_created_at
+      end,
+      last_stripe_event_id = case
+        when persisted.last_stripe_event_created_at is null
+          or (
+            excluded.last_stripe_event_created_at,
+            excluded.last_stripe_event_id
+          ) > (
+            persisted.last_stripe_event_created_at,
+            coalesce(persisted.last_stripe_event_id, '')
+          )
+          then excluded.last_stripe_event_id
+        else persisted.last_stripe_event_id
+      end,
       last_stripe_observation_sequence =
         excluded.last_stripe_observation_sequence
   where persisted.user_id = excluded.user_id
@@ -1193,3 +1218,5 @@ grant execute on function public.claim_stripe_checkout_attempt(
   text,
   boolean
 ) to service_role;
+
+commit;

@@ -24,4 +24,9 @@ test("browser and server live credentials must target the approved Stripe accoun
   assert.match(rollout, /browser publishable key and server key must be verified/);
   assert.match(rollout, /Azure Key Vault/);
   assert.match(rollout, /Payment Method Domain/);
+  assert.match(rollout, /stripe\.com\/files\/ips\/ips_webhooks\.json/);
+  assert.match(rollout, /Cloudflare[\s\S]*webhook source IPs/i);
+  assert.match(rollout, /Customer[\s\S]*reads\/updates\/deletion/);
+  assert.match(rollout, /restricted-key permissions/);
+  assert.match(rollout, /deletes that Customer immediately before deleting the auth user/);
 });

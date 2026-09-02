@@ -22,6 +22,9 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
 
   assert.equal(pkg.dependencies.stripe, "22.6.0");
   assert.match(stripeSource, /apiVersion: "2026-08-26\.dahlia"/);
+  assert.match(stripeSource, /const stripeClients = new Map/);
+  assert.match(stripeSource, /cached\?\.apiKey === connectionApiKey/);
+  assert.match(stripeSource, /stripeClients\.set\(env,/);
   assert.match(stripeSource, /req\.text\(\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
@@ -43,8 +46,9 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   );
   assert.match(
     checkoutSource,
-    /subscription\.status !== "incomplete_expired" && !canceledAndExpired/,
+    /stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/,
   );
+  assert.doesNotMatch(checkoutSource, /subscription\.current_period_end/);
   assert.match(checkoutSource, /if \(!session\.client_secret\)/);
   assert.doesNotMatch(checkoutSource, /client_secret \?\? ""/);
   assert.match(

@@ -53,7 +53,16 @@ function stripeTimestamp(value) {
 }
 
 async function subscriptionRow(subscription, eventType, resolvePriceId) {
-  const item = subscription?.items?.data?.[0];
+  const items = subscription?.items;
+  if (
+    !items ||
+    items.has_more !== false ||
+    !Array.isArray(items.data) ||
+    items.data.length !== 1
+  ) {
+    fail("authoritative_subscription_items_ambiguous");
+  }
+  const item = items.data[0];
   let priceId;
   try {
     priceId = await resolvePriceId(item);
@@ -62,11 +71,18 @@ async function subscriptionRow(subscription, eventType, resolvePriceId) {
   }
   const customerId = stringId(subscription?.customer);
   const productId = stringId(item?.price?.product);
-  if (!subscription?.id || !item || !priceId || !customerId || !productId) {
+  if (
+    !subscription?.id ||
+    !item ||
+    !priceId ||
+    !customerId ||
+    !productId ||
+    typeof subscription.status !== "string"
+  ) {
     fail("authoritative_subscription_incomplete");
   }
-  const periodStart = item.current_period_start ?? subscription.current_period_start;
-  const periodEnd = item.current_period_end ?? subscription.current_period_end;
+  const periodStart = item.current_period_start;
+  const periodEnd = item.current_period_end;
   return {
     subscriptionId: subscription.id,
     customerId,

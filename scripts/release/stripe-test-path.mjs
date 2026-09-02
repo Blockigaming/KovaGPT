@@ -66,13 +66,18 @@ export function verifyStripeTestPath({
   )
     failures.push("leased atomic webhook completion missing");
   if (
-    /currentSubscriptionTimestamp|subscription_event_order_lookup|event_created_at.*event_id/su.test(
+    /currentSubscriptionTimestamp|subscription_event_order_lookup|\.(?:order|gt|gte)\(\s*["'](?:event_created_at|event_id)/u.test(
       reliabilitySource,
     )
   )
     failures.push("webhook retains a non-causal Event ordering check");
-  if (!/retrieveSubscription/u.test(reliabilitySource))
-    failures.push("authoritative subscription retrieval missing");
+  const beginCall = reliabilitySource.indexOf('rpc("begin_stripe_event"');
+  const retrieveCall = reliabilitySource.indexOf(
+    "await retrieveSubscription(subscriptionId)",
+  );
+  const completeCall = reliabilitySource.indexOf('rpc("complete_stripe_event"');
+  if (!(beginCall >= 0 && retrieveCall > beginCall && completeCall > retrieveCall))
+    failures.push("webhook does not claim before GET and complete after projection");
   if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource))
     failures.push("sandbox webhook secret missing");
   if (!/PAYMENTS_LIVE_WEBHOOK_SECRET/u.test(stripeSource))
@@ -127,12 +132,8 @@ export function verifyStripeTestPath({
     failures.push("Stripe Checkout idempotency key missing");
   if (!/subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/u.test(checkoutSource))
     failures.push("authoritative all-status subscription precheck missing");
-  if (
-    !/subscription\.status !== "incomplete_expired" && !canceledAndExpired/u.test(
-      checkoutSource,
-    )
-  )
-    failures.push("Checkout does not fail closed for nonterminal or unknown statuses");
+  if (!/stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/u.test(checkoutSource))
+    failures.push("Checkout does not use the authoritative status projection");
   if (/client_secret\s*\?\?\s*""/u.test(checkoutSource))
     failures.push("Checkout accepts a missing client secret");
   if (!/if \(!session\.client_secret\)/u.test(checkoutSource))

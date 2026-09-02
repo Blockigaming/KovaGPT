@@ -179,6 +179,25 @@ async function claimCheckout(database, { priceId = plusPriceId, trialEligible = 
   return result.rows[0]?.result;
 }
 
+test("billing migration is atomic and safe to re-run", async () => {
+  const source = await readFile(atomicMigration, "utf8");
+  assert.match(source, /^begin;$/mu);
+  assert.match(source, /^commit;\s*$/mu);
+
+  const database = await createDatabase();
+  try {
+    await database.exec(source);
+    const result = await database.query(`
+      SELECT
+        to_regclass('public.stripe_event_processing_claims') IS NOT NULL AS claims,
+        to_regclass('public.stripe_checkout_attempts') IS NOT NULL AS checkout
+    `);
+    assert.deepEqual(result.rows, [{ claims: true, checkout: true }]);
+  } finally {
+    await database.close();
+  }
+});
+
 test("completed-event ledger contains no pending lease rows", async () => {
   const database = await createDatabase();
   try {
@@ -308,7 +327,7 @@ test("event created time and ID are audit metadata, not causal ordering", async 
 
     const sameSecondSmallerId = await beginEvent(database, {
       id: "evt_0",
-      created: "2026-09-02T00:01:00Z",
+      created: "2026-09-02T00:02:00Z",
     });
     await completeEvent(database, {
       id: "evt_0",
@@ -326,10 +345,12 @@ test("event created time and ID are audit metadata, not causal ordering", async 
       WHERE stripe_subscription_id = 'sub_atomic'
     `);
     assert.equal(state.rows[0].status, "active");
-    assert.equal(state.rows[0].last_stripe_event_id, "evt_0");
+    // The authoritative state follows the newest database observation, while
+    // rollback-only audit columns retain their monotonic tuple maximum.
+    assert.equal(state.rows[0].last_stripe_event_id, "evt_z");
     assert.equal(
       new Date(state.rows[0].last_stripe_event_created_at).toISOString(),
-      "2026-09-02T00:01:00.000Z",
+      "2026-09-02T00:02:00.000Z",
     );
     assert.equal(
       state.rows[0].last_stripe_observation_sequence,

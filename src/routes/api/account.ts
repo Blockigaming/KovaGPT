@@ -7,6 +7,7 @@ import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 import { disconnectAllFinance } from "@/finances/plaid.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
+import { retireStripeCustomerForAccountDeletion } from "@/lib/stripe-account-deletion.mjs";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
@@ -59,34 +60,60 @@ export const Route = createFileRoute("/api/account")({
           return jsonError("Type DELETE to confirm account deletion.", 400);
         }
 
-        // Stop paid service before deleting the auth user. If billing cannot be
-        // verified or canceled, keep the account intact so no one can be billed
-        // after losing access to the billing portal.
-        const { data: subscriptions, error: subscriptionError } = await auth.supabaseAdmin
-          .from("subscriptions")
-          .select("stripe_subscription_id, status, environment")
-          .eq("user_id", auth.userId);
-        if (subscriptionError) {
+        // Stripe is authoritative here: webhook persistence can lag Checkout.
+        // Keep the auth user and immutable Customer mapping until every mapped
+        // Customer has been paginated and every nonterminal subscription has a
+        // proven terminal cancellation.
+        const [mappingResult, localResult] = await Promise.all([
+          auth.supabaseAdmin
+            .from("stripe_customer_mappings")
+            .select("environment, stripe_customer_id")
+            .eq("user_id", auth.userId),
+          auth.supabaseAdmin
+            .from("subscriptions")
+            .select("status, environment")
+            .eq("user_id", auth.userId),
+        ]);
+        if (mappingResult.error || localResult.error) {
           return jsonError("Billing status could not be verified. Please try again.", 503);
         }
-        for (const subscription of subscriptions ?? []) {
-          if (TERMINAL_SUBSCRIPTION_STATES.has(subscription.status)) continue;
-          if (!subscription.stripe_subscription_id) continue;
-          const environment: StripeEnv = subscription.environment === "live" ? "live" : "sandbox";
-          try {
-            await createStripeClient(environment).subscriptions.cancel(
-              subscription.stripe_subscription_id,
-            );
-          } catch (error) {
-            console.error("[account-delete] subscription cancellation failed", {
-              environment,
-              error: error instanceof Error ? error.name : "unknown_error",
-            });
+
+        const mappedEnvironments = new Set(
+          (mappingResult.data ?? []).map((mapping) => mapping.environment),
+        );
+        const unmappedOpenSubscription = (localResult.data ?? []).some(
+          (subscription) =>
+            !TERMINAL_SUBSCRIPTION_STATES.has(subscription.status) &&
+            !mappedEnvironments.has(subscription.environment),
+        );
+        if (unmappedOpenSubscription) {
+          return jsonError(
+            "Billing identity could not be verified, so your account was not deleted. Contact support.",
+            503,
+          );
+        }
+
+        const verifiedBillingMappings: Array<{
+          environment: StripeEnv;
+          customerId: string;
+        }> = [];
+        for (const mapping of mappingResult.data ?? []) {
+          const environment: StripeEnv | null =
+            mapping.environment === "live"
+              ? "live"
+              : mapping.environment === "sandbox"
+                ? "sandbox"
+                : null;
+          if (!environment || !/^cus_[A-Za-z0-9]+$/u.test(mapping.stripe_customer_id)) {
             return jsonError(
-              "Your subscription could not be canceled, so your account was not deleted. Manage billing or contact support.",
-              502,
+              "Billing identity could not be verified, so your account was not deleted. Contact support.",
+              503,
             );
           }
+          verifiedBillingMappings.push({
+            environment,
+            customerId: mapping.stripe_customer_id,
+          });
         }
 
         try {
@@ -135,6 +162,27 @@ export const Route = createFileRoute("/api/account")({
             "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
             503,
           );
+        }
+
+        // Retire each immutable mapped Customer as the final external barrier.
+        // Customer deletion catches Checkout completions racing the earlier scan,
+        // immediately cancels their subscriptions, and prevents later completion.
+        for (const mapping of verifiedBillingMappings) {
+          try {
+            await retireStripeCustomerForAccountDeletion({
+              stripe: createStripeClient(mapping.environment),
+              customerId: mapping.customerId,
+            });
+          } catch (error) {
+            console.error("[account-delete] authoritative Stripe customer retirement failed", {
+              environment: mapping.environment,
+              error: error instanceof Error ? error.name : "unknown_error",
+            });
+            return jsonError(
+              "Your billing account could not be retired, so your account was not deleted. Manage billing or contact support.",
+              502,
+            );
+          }
         }
 
         const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);

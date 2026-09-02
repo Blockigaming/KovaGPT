@@ -13,8 +13,11 @@ following through the approved Azure configuration and secret-reference workflow
   acct_1UAeDgAEZlsb6DBY.
 - STRIPE_LIVE_ACCOUNT_ID: the operator-verified value acct_1UAeDgAEZlsb6DBY used by readiness
   to bind browser, server, webhook, and Portal configuration to one account.
-- STRIPE_LIVE_API_KEY: server-only, least-privilege live key for the same account. Prefer a
-  restricted key and store it in Azure Key Vault; never commit or log it.
+- STRIPE_LIVE_API_KEY: server-only restricted live key for the same account, stored in Azure Key
+  Vault and never committed or logged. The owner must verify that it permits Price reads, Customer
+  reads/updates/deletion, Checkout Session reads/writes, Subscription reads/cancellation, and
+  Billing Portal Session creation. Account deletion fails closed unless Customer deletion is
+  authorized; environment-shape readiness cannot introspect restricted-key permissions.
 - PAYMENTS_LIVE_WEBHOOK_SECRET: server-only signing secret for the exact live endpoint.
 - STRIPE_BILLING_PORTAL_CONFIGURATION_ID: owner-approved identifier
   bpc_1UB2ZxAEZlsb6DBYU3PoJJPU.
@@ -32,7 +35,10 @@ the origin.
 No live webhook endpoint currently exists. Create and verify
 https://kovagpt.com/api/public/payments/webhook?env=live only during the approved rollout, using the
 exact signing secret and the lifecycle events handled in source. The handler verifies the raw body
-signature and timestamp before processing.
+signature and timestamp before processing. At Cloudflare, restrict this exact path to Stripe's current
+webhook source IPs imported from https://stripe.com/files/ips/ips_webhooks.json. Verify the official
+list immediately before enablement and subscribe the owner to Stripe's API announce list; do not
+hardcode a copy in application source.
 
 Register and verify kovagpt.com as a live Payment Method Domain before claiming Apple Pay or Google
 Pay availability. Domain registration is environment-specific and remains an owner-run blocker.
@@ -54,9 +60,11 @@ cancellation. Do not advertise plan changes unless the owner separately enables 
    lease protocol.
 4. Apply the two forward billing migrations in timestamp order. Verify the exact live Plus and Pro
    Price IDs and retain a registry row for every still-valid historical Price ID.
-5. Confirm stripe_event_processing_claims is empty before switching revisions. Deploy the new
+5. Verify the Cloudflare webhook-path rule uses Stripe's current official source-IP feed and rejects
+   non-Stripe source networks before application signature verification.
+6. Confirm stripe_event_processing_claims is empty before switching revisions. Deploy the new
    revision with live billing still disabled, then verify account/key provenance and configuration.
-6. Create or enable the live webhook endpoint and perform one owner-authorized, reversible smoke
+7. Create or enable the live webhook endpoint and perform one owner-authorized, reversible smoke
    test before enabling general Checkout traffic.
 
 Stripe explicitly documents that webhook event ordering is not guaranteed and that Event created
@@ -66,12 +74,23 @@ and idempotency. Before each authoritative Stripe GET, begin_stripe_event alloca
 database-monotonic observation sequence and a short lease. complete_stripe_event accepts only the
 current lease, atomically applies that observation, and records the completed event. In-flight work
 lives in stripe_event_processing_claims, separate from the rollback-compatible completed ledger.
+The legacy last_stripe_event_created_at/last_stripe_event_id columns retain only their monotonic
+tuple maximum for rollback compatibility; they never decide which authoritative snapshot applies.
 
 Checkout similarly uses a durable per-user/environment attempt. Concurrent requests reuse one
 Stripe idempotency key, frozen Price/trial parameters, and Session expiry. The attempt rotates as
 soon as the Session expires. A read of the mapped Customer's current Stripe subscriptions closes the
 webhook-lag window before Session creation; the database RPC repeats the local active-subscription
 check while holding the durable row.
+
+Account deletion does not trust webhook-lagged subscription rows. It resolves each immutable mapped
+Customer, paginates and cancels every nonterminal or unknown Stripe subscription, then permanently
+deletes that Customer immediately before deleting the auth user. Customer deletion is the final
+barrier against an already-authorized Checkout request completing between the scan and auth
+deletion. Any unverified mapping, cancellation, Customer deletion, or restricted-key permission
+fails the account deletion without deleting auth identity; a retry accepts only Stripe's exact
+deleted-Customer response as idempotent proof. Successful auth deletion leaves the mapping's
+user_id null as the minimal event-audit tombstone and never recreates entitlement.
 
 ## Rollback
 

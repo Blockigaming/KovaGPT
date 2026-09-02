@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { timingSafeEqualText } from "@/lib/http-security.server";
+import { stripeEventMatchesEnvironment } from "@/lib/stripe-event-mode.mjs";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -9,9 +10,12 @@ const getEnv = (key: string): string => {
 
 export type StripeEnv = "sandbox" | "live";
 
+const stripeClients = new Map<StripeEnv, { apiKey: string; client: Stripe }>();
+
 export type VerifiedStripeEvent = {
   id: string;
   created: number;
+  livemode: boolean;
   type: string;
   data: { object: unknown };
 };
@@ -35,10 +39,14 @@ export function getConnectionApiKey(env: StripeEnv): string {
 
 export function createStripeClient(env: StripeEnv): Stripe {
   const connectionApiKey = getConnectionApiKey(env);
+  const cached = stripeClients.get(env);
+  if (cached?.apiKey === connectionApiKey) return cached.client;
 
-  return new Stripe(connectionApiKey, {
+  const client = new Stripe(connectionApiKey, {
     apiVersion: "2026-08-26.dahlia",
   });
+  stripeClients.set(env, { apiKey: connectionApiKey, client });
+  return client;
 }
 
 export function getStripeErrorMessage(error: unknown): string {
@@ -52,7 +60,7 @@ export function getStripeErrorMessage(error: unknown): string {
   return "Stripe request failed";
 }
 
-function parseVerifiedStripeEvent(body: string): VerifiedStripeEvent {
+function parseVerifiedStripeEvent(body: string, env: StripeEnv): VerifiedStripeEvent {
   let value: unknown;
   try {
     value = JSON.parse(body);
@@ -64,6 +72,7 @@ function parseVerifiedStripeEvent(body: string): VerifiedStripeEvent {
   const event = value as {
     id?: unknown;
     created?: unknown;
+    livemode?: unknown;
     type?: unknown;
     data?: unknown;
   };
@@ -79,10 +88,17 @@ function parseVerifiedStripeEvent(body: string): VerifiedStripeEvent {
   if (!event.data || typeof event.data !== "object" || !("object" in event.data)) {
     rejectWebhook("Invalid webhook event data");
   }
+  if (
+    typeof event.livemode !== "boolean" ||
+    !stripeEventMatchesEnvironment(event.livemode, env)
+  ) {
+    rejectWebhook("Webhook environment mismatch");
+  }
 
   return {
     id: event.id,
     created: event.created,
+    livemode: event.livemode,
     type: event.type,
     data: { object: (event.data as { object: unknown }).object },
   };
@@ -140,5 +156,5 @@ export async function verifyWebhook(req: Request, env: StripeEnv): Promise<Verif
     rejectWebhook("Invalid webhook signature");
   }
 
-  return parseVerifiedStripeEvent(body);
+  return parseVerifiedStripeEvent(body, env);
 }

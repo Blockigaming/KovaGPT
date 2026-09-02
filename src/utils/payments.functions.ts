@@ -7,6 +7,7 @@ import { BILLING_ENV, resolveBillingPlan } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveStripeCustomerId } from "@/lib/stripe-customer-mapping.mjs";
+import { stripeSubscriptionBlocksCheckout } from "@/lib/stripe-subscription-status.mjs";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
@@ -96,11 +97,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         limit: 100,
       })) {
         stripeHasHistory = true;
-        const canceledAndExpired =
-          subscription.status === "canceled" &&
-          Number.isSafeInteger(subscription.current_period_end) &&
-          subscription.current_period_end <= nowSeconds;
-        if (subscription.status !== "incomplete_expired" && !canceledAndExpired) {
+        if (stripeSubscriptionBlocksCheckout(subscription, nowSeconds)) {
           stripeHasBlockingSubscription = true;
           break;
         }
