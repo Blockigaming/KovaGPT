@@ -11,10 +11,42 @@ if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 1000 || requestTim
 const expectedSupabaseUrl = normalizeExpectedSupabaseUrl(process.env.KOVA_EXPECTED_SUPABASE_URL);
 const MAX_JAVASCRIPT_ASSETS = 256;
 const MAX_JAVASCRIPT_BYTES = 64 * 1024 * 1024;
-const SUPABASE_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co\b/giu;
-const QUOTED_JAVASCRIPT_PATTERN = /["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const maximumBytesValue =
+  process.env.KOVA_SMOKE_MAX_JAVASCRIPT_BYTES || String(MAX_JAVASCRIPT_BYTES);
+const maxJavaScriptBytes = Number(maximumBytesValue);
+if (
+  !Number.isInteger(maxJavaScriptBytes) ||
+  maxJavaScriptBytes < 1024 ||
+  maxJavaScriptBytes > MAX_JAVASCRIPT_BYTES
+) {
+  throw new Error(
+    "KOVA_SMOKE_MAX_JAVASCRIPT_BYTES must be an integer from 1024 through 67108864",
+  );
+}
+
+const ABSOLUTE_HTTPS_URL_PATTERN = /https:\/\/[^\s"'`\\<>()\[\]{},;]+/giu;
+const DYNAMIC_IMPORT_PATTERN =
+  /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
+const STATIC_IMPORT_PATTERN =
+  /\bimport\s*(?:[^"'`]*?\bfrom\s*)?["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const EXPORT_FROM_PATTERN =
+  /\bexport\s+[^"'`]*?\bfrom\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const VITE_PRELOAD_ASSET_PATTERN =
+  /["'`]((?:\/?assets\/)[^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
 const HTML_JAVASCRIPT_PATTERN =
   /<(?:script|link)\b[^>]*\b(?:src|href)=(?:"([^"]+\.m?js(?:\?[^"#]*)?)"|'([^']+\.m?js(?:\?[^'#]*)?)')[^>]*>/giu;
+const JAVASCRIPT_DEPENDENCY_PATTERNS = [
+  DYNAMIC_IMPORT_PATTERN,
+  STATIC_IMPORT_PATTERN,
+  EXPORT_FROM_PATTERN,
+  VITE_PRELOAD_ASSET_PATTERN,
+];
+const JAVASCRIPT_CONTENT_TYPES = new Set([
+  "application/ecmascript",
+  "application/javascript",
+  "text/ecmascript",
+  "text/javascript",
+]);
 
 function normalizeExpectedSupabaseUrl(raw) {
   if (!raw) return undefined;
@@ -78,6 +110,90 @@ async function read(path, expectedType) {
   });
 }
 
+async function readBoundedJavaScript(response, url, maximumBytes) {
+  const contentType = (response.headers.get("content-type") || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!JAVASCRIPT_CONTENT_TYPES.has(contentType)) {
+    throw new Error(
+      url.pathname +
+        " returned non-JavaScript content type " +
+        (contentType || "none"),
+    );
+  }
+
+  const declaredValue = response.headers.get("content-length");
+  const declaredBytes = declaredValue === null ? undefined : Number(declaredValue);
+  if (
+    Number.isFinite(declaredBytes) &&
+    Number.isInteger(declaredBytes) &&
+    declaredBytes > maximumBytes
+  ) {
+    throw new Error(
+      "Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes",
+    );
+  }
+  if (!response.body) {
+    throw new Error(url.pathname + " returned no readable JavaScript body");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const decoded = [];
+  let bytes = 0;
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maximumBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error(
+          "Deployed JavaScript scan exceeded " + maxJavaScriptBytes + " bytes",
+        );
+      }
+      decoded.push(decoder.decode(value, { stream: true }));
+    }
+    decoded.push(decoder.decode());
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(url.pathname + " is not valid UTF-8 JavaScript");
+    }
+    throw error;
+  }
+
+  return { source: decoded.join(""), bytes };
+}
+
+function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
+  ABSOLUTE_HTTPS_URL_PATTERN.lastIndex = 0;
+  for (const match of source.matchAll(ABSOLUTE_HTTPS_URL_PATTERN)) {
+    const rawUrl = match[0];
+    if (!rawUrl.toLowerCase().includes(".supabase.co")) continue;
+
+    let candidate;
+    try {
+      candidate = new URL(rawUrl);
+    } catch {
+      throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+    }
+
+    const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
+    if (
+      candidate.protocol !== "https:" ||
+      !hostname ||
+      candidate.username ||
+      candidate.password ||
+      candidate.port
+    ) {
+      throw new Error("The deployed browser bundle contains a non-canonical Supabase URL");
+    }
+    discoveredProjectRefs.add(hostname[1]);
+  }
+}
+
 function addJavaScriptReference(candidate, parent, queue, seen) {
   let url;
   try {
@@ -116,21 +232,17 @@ async function verifyDeployedBrowserTarget(rootHtml, expected) {
     }
 
     const url = queue.shift();
-    const source = await request(url, async (response) => {
-      if (!response.ok) throw new Error(`${url.pathname} returned ${response.status}`);
-      return response.text();
+    const result = await request(url, async (response) => {
+      if (!response.ok) throw new Error(url.pathname + " returned " + response.status);
+      return readBoundedJavaScript(response, url, maxJavaScriptBytes - scannedBytes);
     });
     scannedAssets += 1;
-    scannedBytes += Buffer.byteLength(source);
-    if (scannedBytes > MAX_JAVASCRIPT_BYTES) {
-      throw new Error("Deployed JavaScript scan exceeded 64 MiB");
-    }
+    scannedBytes += result.bytes;
 
-    SUPABASE_URL_PATTERN.lastIndex = 0;
-    for (const match of source.matchAll(SUPABASE_URL_PATTERN)) {
-      discoveredProjectRefs.add(match[1].toLowerCase());
+    discoverSupabaseProjectRefs(result.source, discoveredProjectRefs);
+    for (const pattern of JAVASCRIPT_DEPENDENCY_PATTERNS) {
+      discoverJavaScript(result.source, url, pattern, queue, seen);
     }
-    discoverJavaScript(source, url, QUOTED_JAVASCRIPT_PATTERN, queue, seen);
   }
 
   if (!discoveredProjectRefs.has(expected.projectRef)) {

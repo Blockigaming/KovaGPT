@@ -100,29 +100,40 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   const smoke = read("scripts/post-deploy-smoke.mjs");
 
   assert.match(smoke, /KOVA_SMOKE_REQUEST_TIMEOUT_MS/u);
+  assert.match(smoke, /KOVA_SMOKE_MAX_JAVASCRIPT_BYTES/u);
   assert.match(smoke, /AbortController/u);
+  assert.match(smoke, /response\.body\.getReader\(\)/u);
+  assert.match(smoke, /JAVASCRIPT_CONTENT_TYPES/u);
+  assert.match(smoke, /JAVASCRIPT_DEPENDENCY_PATTERNS/u);
+  assert.match(smoke, /new URL\(rawUrl\)/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
-  assert.ok(smoke.includes('candidate.startsWith("assets/")'));
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
   assert.match(smoke, /contains an unexpected Supabase project URL/u);
+  assert.doesNotMatch(smoke, /QUOTED_JAVASCRIPT_PATTERN/u);
   assert.doesNotMatch(smoke, /await fetch\(/u);
 });
 
-test("deployment smoke resolves Vite root, relative, and preload-map asset paths", async () => {
+test("deployment smoke safely traverses and validates deployed JavaScript", async () => {
   const expectedSha = "a".repeat(40);
   const expectedProjectRef = "stagingprojectref123";
   const requestedPaths = [];
+  let assetContentType = "application/javascript";
   const scripts = new Map([
     [
       "/assets/index.js",
-      'import "./relative.js"; import "/assets/root.js"; const deps = ["assets/preloaded.js"];',
+      [
+        'import "./relative.js";',
+        'import "/assets/root.js";',
+        'const deps = ["assets/preloaded.js"];',
+        'const stripe = "https://js.stripe.com/v3/stripe.js";',
+      ].join(" "),
     ],
     ["/assets/relative.js", "export const relative = true;"],
     ["/assets/root.js", "export const root = true;"],
     [
       "/assets/preloaded.js",
-      `export const supabaseUrl = "https://${expectedProjectRef}.supabase.co";`,
+      'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
     ],
   ]);
 
@@ -142,7 +153,7 @@ test("deployment smoke resolves Vite root, relative, and preload-map asset paths
       return;
     }
     if (scripts.has(request.url)) {
-      response.writeHead(200, { "content-type": "application/javascript" });
+      response.writeHead(200, { "content-type": assetContentType });
       response.end(scripts.get(request.url));
       return;
     }
@@ -170,35 +181,88 @@ test("deployment smoke resolves Vite root, relative, and preload-map asset paths
   const address = server.address();
   assert.ok(address && typeof address === "object");
 
-  const child = spawn(process.execPath, ["scripts/post-deploy-smoke.mjs"], {
-    env: {
-      ...process.env,
-      KOVA_SMOKE_BASE_URL: `http://127.0.0.1:${address.port}`,
-      KOVA_EXPECTED_SHA: expectedSha,
-      KOVA_EXPECTED_SUPABASE_URL: `https://${expectedProjectRef}.supabase.co`,
-      KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let stdout = "";
-  let stderr = "";
-  child.stdout.on("data", (chunk) => {
-    stdout += chunk;
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
+  async function runSmoke(extraEnv = {}) {
+    requestedPaths.length = 0;
+    const child = spawn(process.execPath, ["scripts/post-deploy-smoke.mjs"], {
+      env: {
+        ...process.env,
+        KOVA_SMOKE_BASE_URL: "http://127.0.0.1:" + address.port,
+        KOVA_EXPECTED_SHA: expectedSha,
+        KOVA_EXPECTED_SUPABASE_URL:
+          "https://" + expectedProjectRef + ".supabase.co",
+        KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
+        ...extraEnv,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    const [code] = await once(child, "exit");
+    return { code, stdout, stderr, paths: [...requestedPaths] };
+  }
 
-  const [code] = await once(child, "exit");
-  server.close();
-  await once(server, "close");
+  try {
+    const passing = await runSmoke();
+    assert.equal(passing.code, 0, passing.stderr);
+    assert.match(passing.stdout, /passed smoke checks/u);
+    assert.ok(passing.paths.includes("/assets/relative.js"));
+    assert.ok(passing.paths.includes("/assets/root.js"));
+    assert.ok(passing.paths.includes("/assets/preloaded.js"));
+    assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
+    assert.ok(!passing.paths.includes("/stripe.js"));
 
-  assert.equal(code, 0, stderr);
-  assert.match(stdout, /passed smoke checks/u);
-  assert.ok(requestedPaths.includes("/assets/relative.js"));
-  assert.ok(requestedPaths.includes("/assets/root.js"));
-  assert.ok(requestedPaths.includes("/assets/preloaded.js"));
-  assert.ok(!requestedPaths.includes("/assets/assets/preloaded.js"));
+    assetContentType = "text/html";
+    const fallback = await runSmoke();
+    assert.notEqual(fallback.code, 0);
+    assert.match(fallback.stderr, /non-JavaScript content type text\/html/u);
+    assetContentType = "application/javascript";
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'export const bad = "https://' +
+        expectedProjectRef +
+        '.supabase.co.attacker.example";',
+    );
+    const suffixAttack = await runSmoke();
+    assert.notEqual(suffixAttack.code, 0);
+    assert.match(suffixAttack.stderr, /non-canonical Supabase URL/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'export const bad = "https://' +
+        expectedProjectRef +
+        '.supabase.co@attacker.example";',
+    );
+    const userinfoAttack = await runSmoke();
+    assert.notEqual(userinfoAttack.code, 0);
+    assert.match(userinfoAttack.stderr, /non-canonical Supabase URL/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
+      'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+    );
+    scripts.set(
+      "/assets/index.js",
+      'const deps = ["assets/preloaded.js", "assets/oversized.js"];',
+    );
+    scripts.set("/assets/oversized.js", "x".repeat(8192));
+    const oversized = await runSmoke({ KOVA_SMOKE_MAX_JAVASCRIPT_BYTES: "4096" });
+    assert.notEqual(oversized.code, 0);
+    assert.match(oversized.stderr, /Deployed JavaScript scan exceeded 4096 bytes/u);
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+  }
 });
 
 test("production planning documentation records the apply blockers without claiming deployment", () => {
