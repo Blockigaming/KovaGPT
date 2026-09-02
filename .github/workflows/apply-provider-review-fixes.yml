@@ -5,6 +5,7 @@ on:
     types: [synchronize]
     paths:
       - ".github/workflows/apply-provider-review-fixes.yml"
+      - ".github/tmp/provider-review-*.patch"
 
 permissions:
   contents: write
