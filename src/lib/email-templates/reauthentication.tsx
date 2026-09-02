@@ -9,7 +9,7 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
-    <Preview>Your Kova verification code</Preview>
+    <Preview>Your KovaGPT verification code</Preview>
     <Body className="kova-email-body" style={styles.main}>
       <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
@@ -17,7 +17,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
           Confirm it’s you
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          Enter this verification code in Kova to continue. It expires shortly.
+          Enter this verification code in KovaGPT to continue. It expires shortly.
         </Text>
         <Text className="kova-code kova-text" style={styles.code}>
           {token}
