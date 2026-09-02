@@ -29,9 +29,9 @@ async function createDatabase() {
     RETURNS uuid
     LANGUAGE sql
     STABLE
-    AS $
+    AS $$
       SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid
-    $;
+    $$;
 
     CREATE FUNCTION storage.foldername(input text)
     RETURNS text[]
