@@ -4,20 +4,13 @@ import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
 
-const migrationsDirectory = new URL(
-  "../../supabase/migrations/",
-  import.meta.url,
-);
+const migrationsDirectory = new URL("../../supabase/migrations/", import.meta.url);
 
 async function loadMigration() {
   const names = (await readdir(migrationsDirectory)).filter((name) =>
     name.endsWith("_storage_bucket_and_default_privilege_reconciliation.sql"),
   );
-  assert.equal(
-    names.length,
-    1,
-    "expected exactly one storage/default-privilege migration",
-  );
+  assert.equal(names.length, 1, "expected exactly one storage/default-privilege migration");
   return readFile(new URL(names[0], migrationsDirectory), "utf8");
 }
 
@@ -92,24 +85,13 @@ test("bucket reconciliation is exact and idempotent", async () => {
         id: "agent-evidence",
         public: false,
         file_size_limit: 10485760,
-        allowed_mime_types: [
-          "image/png",
-          "image/jpeg",
-          "text/plain",
-          "application/json",
-        ],
+        allowed_mime_types: ["image/png", "image/jpeg", "text/plain", "application/json"],
       },
       {
         id: "library-images",
         public: false,
         file_size_limit: 8388608,
-        allowed_mime_types: [
-          "image/png",
-          "image/jpeg",
-          "image/jpg",
-          "image/webp",
-          "image/gif",
-        ],
+        allowed_mime_types: ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"],
       },
     ]);
 
@@ -185,10 +167,7 @@ test("migration remains deliberately narrower than the unbounded project-file pa
   assert.doesNotMatch(migration, /project-files/iu);
   assert.match(migration, /FOR ROLE postgres IN SCHEMA public/iu);
   assert.doesNotMatch(migration, /ON FUNCTIONS/iu);
-  assert.doesNotMatch(
-    migration,
-    /ALTER DEFAULT PRIVILEGES FOR ROLE (?!postgres\b)/iu,
-  );
+  assert.doesNotMatch(migration, /ALTER DEFAULT PRIVILEGES FOR ROLE (?!postgres\b)/iu);
   assert.doesNotMatch(migration, /REVOKE[\s\S]*FROM[^;]*service_role/iu);
   assert.doesNotMatch(migration, /\b(?:DROP|TRUNCATE)\s+TABLE\b/iu);
   assert.doesNotMatch(migration, /\bDELETE\s+FROM\b/iu);
