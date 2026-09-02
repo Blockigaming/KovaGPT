@@ -47,6 +47,24 @@ test("reads SDK raw fields and bounds output", () => {
   assert.equal(result.requestId, "req_raw");
 });
 
+test("sanitizes PostgREST subscription lookup failures", () => {
+  const result = stripeErrorDiagnostic(
+    {
+      code: "PGRST123",
+      message: "contains customer@example.com and a private query",
+      details: "private details",
+      hint: "private hint",
+    },
+    "subscription_lookup",
+  );
+  assert.deepEqual(result, {
+    stage: "subscription_lookup",
+    errorType: "unknown_error",
+    errorCode: "PGRST123",
+  });
+  assert.doesNotMatch(JSON.stringify(result), /customer@example|private|message|details|hint/i);
+});
+
 test("normalizes unknown failures", () => {
   assert.deepEqual(stripeErrorDiagnostic("failure", "configuration"), {
     stage: "configuration",
