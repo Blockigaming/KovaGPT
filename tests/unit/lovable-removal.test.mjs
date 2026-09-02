@@ -58,10 +58,7 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   );
   assert.ok(
     gate.indexOf("if (hasLovableBundlePath(bundlePath))") <
-      gate.indexOf(
-        "if (!hasReadableBundleContent(path)) continue;",
-        gate.indexOf("filesUnder"),
-      ),
+      gate.indexOf("if (!hasReadableBundleContent(path)) continue;", gate.indexOf("filesUnder")),
   );
 });
 
@@ -94,7 +91,9 @@ test("every deployable build requires the strict built-output audit after Vite",
   const dockerfile = read("Dockerfile");
   assert.match(dockerfile, /npm run build/u);
   assert.match(
-    read(".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml"),
+    read(
+      ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
+    ),
     /docker buildx build/u,
   );
 });
