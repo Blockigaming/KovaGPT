@@ -59,6 +59,22 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
   );
 });
 
+test("full browser gates stay opt-in for pull requests", () => {
+  assert.match(
+    workflow,
+    /types: \[opened, reopened, synchronize, ready_for_review, labeled\]/,
+  );
+
+  for (const job of [browserJob, releaseJob]) {
+    assert.match(job, /github\.event_name == 'push'/);
+    assert.match(job, /github\.event_name == 'workflow_dispatch'/);
+    assert.match(
+      job,
+      /contains\(github\.event\.pull_request\.labels\.\*\.name, 'run-full-e2e'\)/,
+    );
+  }
+});
+
 test("third-party CI actions are pinned to immutable revisions", () => {
   for (const line of workflow.split("\n").filter((line) => line.includes("uses: actions/"))) {
     assert.match(line, /actions\/[a-z-]+@[a-f0-9]{40}(?:\s+# v\d+)?$/);

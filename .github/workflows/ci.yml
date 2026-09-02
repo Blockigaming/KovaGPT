@@ -2,7 +2,7 @@ name: KovaGPT CI
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
   push:
     branches:
       - main
@@ -159,7 +159,10 @@ jobs:
           if-no-files-found: ignore
 
   browser:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-full-e2e')
     name: Browser (${{ matrix.id }})
     needs: verify
     runs-on: ubuntu-latest
@@ -225,7 +228,10 @@ jobs:
           if-no-files-found: ignore
 
   release-e2e:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-full-e2e')
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
