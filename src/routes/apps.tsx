@@ -335,7 +335,10 @@ function GitHubManager() {
       });
   }, [load]);
   const [revokeOpen, setRevokeOpen] = useState(false);
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [disconnectAccount, setDisconnectAccount] = useState<{
+    id: string;
+    login: string;
+  } | null>(null);
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -359,7 +362,21 @@ function GitHubManager() {
         aria-label="Loading GitHub"
       />
     );
-  const repos = data.repositories.filter((repo) => repo.full_name.includes(search.toLowerCase()));
+  const activeAccounts = data.accounts.filter((account) =>
+    ["connected", "degraded"].includes(account.status),
+  );
+  const activeAccountIds = new Set(activeAccounts.map((account) => account.id));
+  const activeInstallations = data.installations.filter(
+    (installation) => activeAccountIds.has(installation.account_id) && !installation.suspended_at,
+  );
+  const activeInstallationIds = new Set(
+    activeInstallations.map((installation) => String(installation.id)),
+  );
+  const repos = data.repositories.filter(
+    (repo) =>
+      activeInstallationIds.has(String(repo.installation_id)) &&
+      repo.full_name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   async function connect() {
     const response = await authFetch("/api/github/auth");
     const result = await response.json();
@@ -409,7 +426,7 @@ function GitHubManager() {
           <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">
             Operator setup required
           </span>
-        ) : !data.accounts.length ? (
+        ) : !activeAccounts.length ? (
           <button
             className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background"
             onClick={() => void connect()}
@@ -417,49 +434,63 @@ function GitHubManager() {
             Connect GitHub
           </button>
         ) : (
-          <div className="flex gap-2">
-            <button
-              className="min-h-11 rounded-full border px-3 text-sm"
-              onClick={() => void refresh().then(reload)}
-            >
-              Refresh installations
-            </button>
-            <button
-              className="min-h-11 rounded-full border px-3 text-sm text-destructive"
-              onClick={() => setDisconnectOpen(true)}
-            >
-              Disconnect
-            </button>
-          </div>
+          <button
+            className="min-h-11 rounded-full border px-3 text-sm"
+            onClick={() => void refresh().then(reload)}
+          >
+            Refresh installations
+          </button>
         )}
       </div>
-      {data.accounts.map((account) => (
-        <div
-          key={account.id}
-          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-muted/40 p-3"
-        >
-          {account.avatar_url && (
-            <img src={account.avatar_url} alt="" className="h-10 w-10 rounded-full" />
-          )}
-          <div>
-            <p className="font-medium">@{account.login}</p>
-            <p className="text-xs text-muted-foreground">
-              {account.auth_type} · {account.status} · ID {account.github_user_id}
-            </p>
+      {data.accounts.map((account) => {
+        const isActive = activeAccountIds.has(account.id);
+        return (
+          <div
+            key={account.id}
+            className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-muted/40 p-3"
+          >
+            {account.avatar_url && (
+              <img src={account.avatar_url} alt="" className="h-10 w-10 rounded-full" />
+            )}
+            <div>
+              <p className="font-medium">@{account.login}</p>
+              <p className="text-xs text-muted-foreground">
+                {account.auth_type} · {account.status} · ID {account.github_user_id}
+              </p>
+            </div>
+            <div className="ml-auto text-right text-xs text-muted-foreground">
+              <p>
+                Rate limit {account.rate_remaining ?? "—"} / {account.rate_limit ?? "—"}
+              </p>
+              <p>
+                Health{" "}
+                {account.last_health_at
+                  ? new Date(account.last_health_at).toLocaleString()
+                  : "not checked"}
+              </p>
+            </div>
+            {isActive ? (
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+                onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
+                aria-label={`Disconnect GitHub account @${account.login}`}
+              >
+                Disconnect
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="min-h-11 rounded-full border px-3 text-sm"
+                onClick={() => void connect()}
+                aria-label={`Reconnect GitHub account @${account.login}`}
+              >
+                Connect again
+              </button>
+            )}
           </div>
-          <div className="ml-auto text-right text-xs text-muted-foreground">
-            <p>
-              Rate limit {account.rate_remaining ?? "—"} / {account.rate_limit ?? "—"}
-            </p>
-            <p>
-              Health{" "}
-              {account.last_health_at
-                ? new Date(account.last_health_at).toLocaleString()
-                : "not checked"}
-            </p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ConfirmActionDialog
         open={revokeOpen}
         onOpenChange={setRevokeOpen}
@@ -472,49 +503,47 @@ function GitHubManager() {
           void applyGrantUpdate(false);
         }}
       />
-      <Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+      <Dialog
+        open={disconnectAccount !== null}
+        onOpenChange={(open) => {
+          if (!open) setDisconnectAccount(null);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Disconnect GitHub?</DialogTitle>
+            <DialogTitle>Disconnect @{disconnectAccount?.login ?? "GitHub account"}?</DialogTitle>
             <DialogDescription>
-              Repository access will be revoked. Choose whether synchronized metadata should also be
-              removed.
+              This disconnects only the selected account. Existing synchronized metadata is kept
+              because account-scoped data removal is not available yet.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setDisconnectOpen(false)}>
+            <Button variant="outline" onClick={() => setDisconnectAccount(null)}>
               Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDisconnectOpen(false);
-                void disconnect({
-                  data: { accountId: data.accounts[0].id, removeData: false },
-                }).then(reload);
-              }}
-            >
-              Disconnect only
             </Button>
             <Button
               variant="destructive"
               onClick={() => {
-                setDisconnectOpen(false);
+                if (!disconnectAccount) return;
+                const accountId = disconnectAccount.id;
+                setDisconnectAccount(null);
                 void disconnect({
-                  data: { accountId: data.accounts[0].id, removeData: true },
-                }).then(reload);
+                  data: { accountId, removeData: false },
+                })
+                  .then(reload)
+                  .catch(() => toast.error("GitHub account could not be disconnected"));
               }}
             >
-              Disconnect and remove data
+              Disconnect account
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {data.installations.length > 0 && (
+      {activeInstallations.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium">Installations</h3>
           <div className="mt-2 flex flex-wrap gap-2">
-            {data.installations.map((item) => (
+            {activeInstallations.map((item) => (
               <span key={item.id} className="rounded-full border px-3 py-1 text-xs">
                 {item.organization_login ?? "Personal"} · {item.repository_selection}
                 {item.suspended_at ? " · suspended" : ""}
@@ -523,7 +552,7 @@ function GitHubManager() {
           </div>
         </div>
       )}
-      {data.repositories.length > 0 && (
+      {activeInstallations.length > 0 && (
         <div className="mt-4">
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
