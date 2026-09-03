@@ -33,14 +33,30 @@ function stringId(value) {
   return null;
 }
 
-function subscriptionRow(subscription, eventType, environment, resolvePriceId, now) {
+function unixTimestamp(value, field) {
+  if (value === undefined || value === null) return null;
+  if (!Number.isSafeInteger(value) || value < 0) fail(`invalid_${field}`, 422);
+  return new Date(value * 1000).toISOString();
+}
+
+function subscriptionRow(subscription, eventType, environment, resolvePriceId) {
   const userId = subscription?.metadata?.userId;
   const item = subscription?.items?.data?.[0];
   const priceId = resolvePriceId(item);
   const customerId = stringId(subscription?.customer);
   const productId = stringId(item?.price?.product);
+  const status = eventType === "customer.subscription.deleted" ? "canceled" : subscription?.status;
 
-  if (!subscription?.id || !userId || !item || !priceId || !customerId || !productId) {
+  if (
+    !subscription?.id ||
+    !userId ||
+    !item ||
+    !priceId ||
+    !customerId ||
+    !productId ||
+    typeof status !== "string" ||
+    !status
+  ) {
     fail("subscription_metadata_incomplete", 422);
   }
 
@@ -53,30 +69,71 @@ function subscriptionRow(subscription, eventType, environment, resolvePriceId, n
     stripe_customer_id: customerId,
     product_id: productId,
     price_id: priceId,
-    status: eventType === "customer.subscription.deleted" ? "canceled" : subscription.status,
-    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    status,
+    current_period_start: unixTimestamp(periodStart, "subscription_period_start"),
+    current_period_end: unixTimestamp(periodEnd, "subscription_period_end"),
     cancel_at_period_end:
       eventType === "customer.subscription.deleted" || Boolean(subscription.cancel_at_period_end),
     environment,
-    updated_at: now(),
   };
 }
 
-const subscriptionEvents = new Set([
+const subscriptionReconciliationEvents = new Set([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
+  "checkout.session.completed",
+  "invoice.paid",
+  "invoice.payment_failed",
+  "invoice.payment_action_required",
+  "invoice.voided",
+  "invoice.marked_uncollectible",
 ]);
+
+export function billingOutcome(type) {
+  if (type === "checkout.session.completed") return "verification_pending";
+  if (type === "checkout.session.expired") return "checkout_expired";
+  if (type === "invoice.paid") return "payment_confirmed";
+  if (type === "invoice.payment_failed") return "payment_failed";
+  if (type === "invoice.payment_action_required") return "payment_action_required";
+  if (["invoice.voided", "invoice.marked_uncollectible"].includes(type)) {
+    return "payment_uncollectible";
+  }
+  if (type === "customer.subscription.deleted") return "subscription_ended";
+  if (type.startsWith("customer.subscription.")) return "subscription_updated";
+  return "observed";
+}
+
+export function stripeSubscriptionId(event) {
+  if (!subscriptionReconciliationEvents.has(event?.type)) return null;
+  const object = event?.data?.object;
+  if (!object || typeof object !== "object" || Array.isArray(object)) return null;
+  if (event.type.startsWith("customer.subscription.")) return stringId(object);
+
+  const direct = stringId(object.subscription);
+  if (direct) return direct;
+  return stringId(object.parent?.subscription_details?.subscription);
+}
 
 export async function processStripeEvent({
   supabase,
   event,
   environment,
   resolvePriceId,
-  now = () => new Date().toISOString(),
+  retrieveSubscription,
+  correlationId = null,
 }) {
-  if (!event?.id || !event?.type) fail("stripe_event_incomplete", 400);
+  if (
+    !event?.id ||
+    !event?.type ||
+    !Number.isSafeInteger(event.created) ||
+    event.created < 1 ||
+    (environment !== "live" && environment !== "sandbox")
+  ) {
+    fail("stripe_event_incomplete", 400);
+  }
 
   const existing = await supabase
     .from("processed_stripe_events")
@@ -84,33 +141,51 @@ export async function processStripeEvent({
     .eq("event_id", event.id)
     .maybeSingle();
   if (requireResult(existing, "stripe_event_lookup_failed")) {
-    return { duplicate: true };
+    return { duplicate: true, applied: false };
   }
 
-  if (subscriptionEvents.has(event.type)) {
-    const row = subscriptionRow(event.data?.object, event.type, environment, resolvePriceId, now);
-    const mutated = await supabase
-      .from("subscriptions")
-      .upsert(row, { onConflict: "stripe_subscription_id" })
-      .select("stripe_subscription_id")
-      .maybeSingle();
-    requireResult(mutated, "subscription_upsert_failed", { requireData: true });
+  const eventObject = event.data?.object;
+  if (!eventObject || typeof eventObject !== "object" || Array.isArray(eventObject)) {
+    fail("stripe_event_object_invalid", 400);
   }
 
-  const recorded = await supabase
-    .from("processed_stripe_events")
-    .insert({
-      event_id: event.id,
-      type: event.type,
-      environment,
-    })
-    .select("event_id")
-    .maybeSingle();
-  if (recorded?.error?.code === POSTGRES_UNIQUE_VIOLATION) {
-    return { duplicate: true };
+  const subscriptionId = stripeSubscriptionId(event);
+  let subscription = null;
+  if (subscriptionId) {
+    if (typeof retrieveSubscription !== "function") {
+      fail("stripe_subscription_retriever_missing", 500);
+    }
+    let canonical;
+    try {
+      canonical = await retrieveSubscription(subscriptionId);
+    } catch (error) {
+      fail("stripe_subscription_retrieval_failed", 503, error);
+    }
+    subscription = subscriptionRow(canonical, event.type, environment, resolvePriceId);
   }
-  requireResult(recorded, "stripe_event_record_failed", { requireData: true });
-  return { duplicate: false };
+
+  const result = await supabase.rpc("process_stripe_webhook_event", {
+    p_event_id: event.id,
+    p_type: event.type,
+    p_environment: environment,
+    p_event_created_at: new Date(event.created * 1000).toISOString(),
+    p_correlation_id: correlationId,
+    p_object_id: stringId(eventObject),
+    p_customer_id: stringId(eventObject.customer) ?? subscription?.stripe_customer_id ?? null,
+    p_subscription_id: subscriptionId,
+    p_invoice_id: event.type.startsWith("invoice.") ? stringId(eventObject) : null,
+    p_checkout_session_id: event.type.startsWith("checkout.session.")
+      ? stringId(eventObject)
+      : null,
+    p_outcome: billingOutcome(event.type),
+    p_subscription: subscription,
+  });
+  const rows = requireResult(result, "stripe_event_transaction_failed");
+  const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+  if (!row || typeof row.duplicate !== "boolean" || typeof row.applied !== "boolean") {
+    fail("stripe_event_transaction_invalid", 500);
+  }
+  return { duplicate: row.duplicate, applied: row.applied };
 }
 
 async function deliveryStatus(supabase, delivery) {

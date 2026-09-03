@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 84,
-  "latest": "20260903145843_remediate_security_advisor_warnings.sql",
+  "count": 85,
+  "latest": "20260903193000_atomic_stripe_webhook_processing.sql",
   "migrations": [
     {
       "order": 1,
@@ -1694,6 +1694,20 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 85,
+      "filename": "20260903193000_atomic_stripe_webhook_processing.sql",
+      "timestamp": "20260903193000",
+      "sha256": "bb0a262d2bcf708b8e0a5f386678a395115e7fa6c354523d8563ec9c4f7f3f85",
+      "tables": [],
+      "functions": ["process_stripe_webhook_event"],
+      "destructive": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

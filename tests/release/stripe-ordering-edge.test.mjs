@@ -4,12 +4,19 @@ import { readFile } from "node:fs/promises";
 const read = (p) => readFile(new URL(`../../${p}`, import.meta.url), "utf8");
 test("Stripe ordering metadata prevents stale entitlement updates", async () => {
   const route = await read("src/routes/api/public/payments/webhook.ts"),
-    sql = await read("supabase/migrations/20260803121000_stripe_event_ordering.sql");
-  assert.match(route, /last_stripe_event_created_at\.lte/);
-  assert.match(route, /event_created_at/);
-  assert.match(route, /23505/);
+    sql = await read("supabase/migrations/20260803121000_stripe_event_ordering.sql"),
+    atomic = await read("supabase/migrations/20260903193000_atomic_stripe_webhook_processing.sql");
+  assert.match(route, /processStripeEvent/);
+  assert.match(route, /subscriptions\.retrieve/);
   assert.match(sql, /last_stripe_event_created_at/);
   assert.match(sql, /processed_stripe_events_order_idx/);
+  assert.match(atomic, /on conflict \(event_id\) do nothing/);
+  assert.match(
+    atomic,
+    /excluded\.last_stripe_event_created_at > public\.subscriptions\.last_stripe_event_created_at/,
+  );
+  assert.match(atomic, /last_stripe_event_id/);
+  assert.match(atomic, /grant execute[\s\S]*to service_role/);
 });
 test("edge contract enforces security headers CSRF and request size", async () => {
   const edge = await read("scripts/release/edge-contract.mjs"),

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 84,
+  "migrationCount": 85,
   "tables": [
     "account_audit_entries",
     "agent_approvals",
@@ -197,6 +197,7 @@
     "move_to_dlq",
     "next_scheduled_task_occurrence",
     "prevent_financial_entry_mutation",
+    "process_stripe_webhook_event",
     "project_role_of",
     "projects_add_owner_member",
     "promote_agent_deliverable",
@@ -916,6 +917,7 @@
     "execute on function public.lease_agent_job(text, integer) to service_role",
     "execute on function public.lease_agent_job(text,integer) to service_role",
     "execute on function public.match_project_chunks(uuid, vector, int) to authenticated",
+    "execute on function public.process_stripe_webhook_event(\n  text,\n  text,\n  text,\n  timestamptz,\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  text,\n  text,\n  jsonb\n) to service_role",
     "execute on function public.promote_agent_deliverable(\n  uuid, text, uuid, text, text, boolean\n) to service_role",
     "execute on function public.promote_agent_deliverable(uuid,text,uuid,text,text,boolean) to authenticated",
     "execute on function public.ready_agent_specialist_tasks(uuid) to service_role",
@@ -1087,6 +1089,7 @@
     "all on function public.kova_update_chat_branch_messages(uuid, text[], text) from public",
     "all on function public.lease_agent_job(text, integer)\n  from public, anon, authenticated",
     "all on function public.lease_agent_job(text,integer) from public, anon, authenticated",
+    "all on function public.process_stripe_webhook_event(\n  text,\n  text,\n  text,\n  timestamptz,\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  text,\n  text,\n  jsonb\n) from public, anon, authenticated",
     "all on function public.promote_agent_deliverable(\n  uuid, text, uuid, text, text, boolean\n) from public, anon, authenticated",
     "all on function public.ready_agent_specialist_tasks(uuid) from public,anon,authenticated",
     "all on function public.recover_expired_agent_leases()\n  from public, anon, authenticated",
@@ -1131,5 +1134,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "05fa2f0924e9cf2c742ecee4c169917fb9bce0c736721dfd2b173114c6c57a60"
+  "sha256": "fb4b9531896d48ccfdea2370181b73c1cbf136485a4840cf2159e21befd73d91"
 }
