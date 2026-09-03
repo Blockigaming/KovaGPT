@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 85,
+  "migrationCount": 86,
   "tables": [
     "account_audit_entries",
     "agent_approvals",
@@ -184,6 +184,7 @@
     "kova_chat_branch_lineage_guard",
     "kova_create_chat_branch",
     "kova_create_chat_branch",
+    "kova_private",
     "kova_record_message_version",
     "kova_record_message_version",
     "kova_set_updated_at",
@@ -214,6 +215,7 @@
     "save_writing_document",
     "set_deep_research_updated_at",
     "set_feedback_submission_updated_at",
+    "set_lockdown_mode",
     "settle_interrupted_agent_job",
     "settle_interrupted_agent_job",
     "settle_scheduled_task_failure",
@@ -575,6 +577,7 @@
     "users can create their own projects"
   ],
   "triggers": [
+    "audit_user_lockdown_mode_change",
     "chat_branches_lineage_guard",
     "chat_branches_set_updated_at",
     "chat_custom_rules_set_updated_at",
@@ -852,6 +855,7 @@
     "all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_credit_ledger,public.developer_api_requests,public.credit_purchases to service_role",
     "delete on public.google_oauth_tokens to authenticated",
     "execute on function kova_private.accept_project_invite(uuid) to authenticated, service_role",
+    "execute on function kova_private.audit_lockdown_mode_change() to service_role",
     "execute on function kova_private.can_edit_project(uuid, uuid) to authenticated, service_role",
     "execute on function kova_private.control_agent_job(uuid, text) to authenticated, service_role",
     "execute on function kova_private.decide_agent_approval(uuid, text, jsonb) to authenticated, service_role",
@@ -928,6 +932,8 @@
     "execute on function public.release_agent_lease(uuid,text) to service_role",
     "execute on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) to service_role",
     "execute on function public.save_writing_document(uuid,text,text,integer,text) to authenticated",
+    "execute on function public.set_lockdown_mode(boolean) to authenticated",
+    "execute on function public.set_lockdown_mode(boolean) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid, text) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid,text) to service_role",
     "execute on function public.settle_scheduled_task_failure(\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  boolean\n) to service_role",
@@ -942,6 +948,7 @@
     "select on public.kova_schema_contract to service_role",
     "select on public.project_file_chunks to authenticated",
     "select on public.subscriptions to authenticated",
+    "select, insert, update on table public.user_preferences to authenticated",
     "select, insert, update, delete on public.chat_branches to authenticated",
     "select, insert, update, delete on public.chat_branches to service_role",
     "select, insert, update, delete on public.chat_custom_rules to authenticated",
@@ -1022,6 +1029,7 @@
     "SELECT ON public.feature_flags FROM anon'",
     "SELECT ON public.google_oauth_tokens FROM authenticated",
     "all on function kova_private.accept_project_invite(uuid) from public, anon",
+    "all on function kova_private.audit_lockdown_mode_change() from public, anon, authenticated",
     "all on function kova_private.can_edit_project(uuid, uuid) from public, anon",
     "all on function kova_private.control_agent_job(uuid, text) from public, anon",
     "all on function kova_private.decide_agent_approval(uuid, text, jsonb) from public, anon",
@@ -1098,6 +1106,7 @@
     "all on function public.release_agent_lease(uuid, text)\n  from public, anon, authenticated",
     "all on function public.release_agent_lease(uuid,text) from public, anon, authenticated",
     "all on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) from public,anon,authenticated",
+    "all on function public.set_lockdown_mode(boolean) from public, anon",
     "all on function public.settle_interrupted_agent_job(uuid, text)\n  from public, anon, authenticated",
     "all on function public.settle_interrupted_agent_job(uuid,text) from public, anon, authenticated",
     "all on function public.settle_scheduled_task_failure(\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  boolean\n) from public, anon, authenticated",
@@ -1134,5 +1143,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "fb4b9531896d48ccfdea2370181b73c1cbf136485a4840cf2159e21befd73d91"
+  "sha256": "dab2fc3fbd7e9f0b9240832bd711a46ae8f3adcfaf8eb8e0b1df9b898bd33cb1"
 }

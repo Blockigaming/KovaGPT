@@ -1,5 +1,6 @@
 import { decryptCredential, encryptCredential } from "@/integrations/credential-vault.server";
 import type { AuthedCaller } from "@/lib/api-auth.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { createClient } from "@supabase/supabase-js";
 const base = () =>
   process.env.PLAID_ENV === "production"
@@ -25,6 +26,7 @@ async function call<T>(path: string, body: Record<string, unknown>): Promise<T> 
   return response.json() as Promise<T>;
 }
 export async function createFinanceLinkToken(caller: AuthedCaller, country: string) {
+  await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "connector_write");
   if (!configured()) throw new Error("plaid_not_configured");
   const allowed = (process.env.KOVA_FINANCE_REGIONS ?? "US")
     .split(",")
@@ -45,6 +47,7 @@ export async function exchangeFinanceToken(
   publicToken: string,
   country: string,
 ) {
+  await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "connector_write");
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
   const result = await call<{ access_token: string; item_id: string }>(
     "/item/public_token/exchange",

@@ -18,6 +18,7 @@ import {
 } from "@/lib/google-oauth.server";
 import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";
+import { LockdownPolicyError, assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 // OpenAI-compatible function tool schema.
 export type ToolDef = {
@@ -240,6 +241,7 @@ export const ALL_TOOLS: ToolDef[] = [
 ];
 
 export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]> {
+  await assertLockdownAllows(admin(), userId, "connector_read");
   const health = await getGoogleConnectionHealth(userId);
   if (!health.connected) return [];
   return ALL_TOOLS.filter((tool) => {
@@ -327,6 +329,20 @@ export async function runGoogleTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
+  try {
+    await assertLockdownAllows(admin(), userId, "connector_read");
+  } catch (error) {
+    if (error instanceof LockdownPolicyError) {
+      return {
+        error: error.status === 403 ? "lockdown_mode" : "lockdown_state_unavailable",
+        message:
+          error.status === 403
+            ? "Google access is unavailable while Lockdown Mode is on."
+            : "KovaGPT could not verify Lockdown Mode, so Google was not accessed.",
+      };
+    }
+    throw error;
+  }
   if (WRITE_TOOL_NAMES.has(name)) {
     return {
       error: "requires_confirmation",
@@ -677,6 +693,7 @@ export async function stagePendingAction(
   tool: string,
   args: WriteArgs,
 ): Promise<PendingAction> {
+  await assertLockdownAllows(admin(), userId, "connector_write");
   const validated = validateSupportedWrite(tool, args);
   const { summary, preview } = summarizeWriteTool(tool, validated);
   const { data, error } = await admin()
@@ -740,6 +757,20 @@ export async function executePendingAction(
   if (pendingRow.status === "processing")
     return { ok: false, error: "Action is already being processed." };
   if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
+  try {
+    await assertLockdownAllows(db, userId, "connector_write");
+  } catch (error) {
+    if (error instanceof LockdownPolicyError) {
+      return {
+        ok: false,
+        error:
+          error.status === 403
+            ? "This action is unavailable while Lockdown Mode is on."
+            : "KovaGPT could not verify Lockdown Mode, so Google was not accessed.",
+      };
+    }
+    throw error;
+  }
   if (new Date(pendingRow.expires_at).getTime() < Date.now()) {
     const { data: expired, error: expirationError } = await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")

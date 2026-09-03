@@ -44,6 +44,7 @@ import {
   principalScopedStorageKey,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+import { authFetch } from "@/lib/auth-fetch";
 
 export const Route = createFileRoute("/summary")({
   head: () => ({
@@ -147,17 +148,19 @@ function useWeather(enabled: boolean, scope: string | null) {
       async (pos) => {
         try {
           const { latitude: lat, longitude: lon } = pos.coords;
-          const r = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`,
-          );
+          const r = await authFetch("/api/weather", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude: lat, longitude: lon }),
+          });
           if (!r.ok) throw new Error("weather");
-          const j = await r.json();
+          const j = (await r.json()) as { temperature?: unknown; code?: unknown };
           if (!current) return;
-          const code = j.current?.weather_code ?? 0;
+          const code = typeof j.code === "number" ? j.code : 0;
           setState({
             status: "ok",
             data: {
-              temp: Math.round(j.current?.temperature_2m ?? 0),
+              temp: typeof j.temperature === "number" ? j.temperature : 0,
               code,
               label: WMO[code] ?? "-",
               city: null,

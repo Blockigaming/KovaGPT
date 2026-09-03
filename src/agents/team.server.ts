@@ -1,4 +1,5 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { AGENT_LIMITS, getAgentEntitlement } from "./execution.server";
 import { validateTaskGraph, type AgentTaskInput } from "./team";
 
@@ -16,6 +17,7 @@ export async function createAgentTeamRun(
     context: string[];
   },
 ) {
+  await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "agent");
   const entitlement = await getAgentEntitlement(caller);
   if (!entitlement) throw new Error("agent_plan_required");
   const errors = validateTaskGraph(input.tasks);
@@ -159,6 +161,9 @@ export async function controlAgentTeamRun(
   command: "pause" | "resume" | "cancel" | "retry" | "approve" | "deny",
   taskId?: string,
 ) {
+  if (["resume", "retry", "approve"].includes(command)) {
+    await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "agent");
+  }
   const db = raw(caller);
   const { data: run } = await db
     .from("agent_runs")

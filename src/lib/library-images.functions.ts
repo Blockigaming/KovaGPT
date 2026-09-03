@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { z } from "zod";
 
 const BUCKET = "library-images";
@@ -129,9 +130,13 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
-    const payload = data.imageUrl.startsWith("data:")
-      ? decodeDataUrl(data.imageUrl)
-      : await fetchRemoteImage(data.imageUrl);
+    let payload: ReturnType<typeof decodeDataUrl>;
+    if (data.imageUrl.startsWith("data:")) {
+      payload = decodeDataUrl(data.imageUrl);
+    } else {
+      await assertLockdownAllows(context.supabase, context.userId, "remote_download");
+      payload = await fetchRemoteImage(data.imageUrl);
+    }
     if (!payload) throw new Error("Unsupported or invalid image");
     if (payload.bytes.byteLength > MAX_BYTES) throw new Error("Image too large");
 

@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/api-auth.server";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { cancelPendingAction, executePendingAction } from "@/lib/google-tools.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 type Body = { action_id?: string; decision?: "confirm" | "cancel" };
 
@@ -41,6 +42,12 @@ export const Route = createFileRoute("/api/chat/confirm")({
             result_text: ok ? "Cancelled." : "Nothing to cancel.",
           });
         }
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          "connector_write",
+        );
+        if (lockdown) return lockdown;
         const result = await executePendingAction(auth.userId, id);
         if (result.ok) return Response.json({ ok: true, result_text: result.result_text });
         return Response.json({ ok: false, error: result.error }, { status: 400 });

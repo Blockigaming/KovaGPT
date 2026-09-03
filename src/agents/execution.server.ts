@@ -1,6 +1,7 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
 import { createClient } from "@supabase/supabase-js";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 import { resolveAgentEntitlement } from "./entitlement-policy.mjs";
 import type { BrowserAction } from "./policy";
@@ -54,6 +55,7 @@ export async function createAgentRun(
     priorRunId?: string;
   },
 ) {
+  await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "agent");
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
   const entitlement = await getAgentEntitlement(caller);
   if (!entitlement) throw new Error("agent_entitlement_required");
@@ -109,6 +111,9 @@ export async function controlAgentRun(
   command: "pause" | "resume" | "cancel" | "delete" | "deny",
   approvalId?: string,
 ) {
+  if (command === "resume") {
+    await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "agent");
+  }
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
   const { data: run, error: runError } = await db
     .from("agent_runs")
