@@ -93,4 +93,6 @@ test("the direct export allowlist contains no credential-state tables", () => {
   assert.equal(names.includes("github_oauth_states"), false);
   assert.equal(names.includes("integration_oauth_states"), false);
   assert.equal(names.includes("email_unsubscribe_tokens"), false);
+  assert.equal(names.includes("library_folders"), true);
+  assert.equal(names.includes("library_folder_locks"), false);
 });

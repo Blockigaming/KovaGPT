@@ -1,21 +1,22 @@
 # Remaining ChatGPT gaps
 
-Last audited: 2026-07-27. This is a product-truth ledger, not a parity marketing claim. The audit covers desktop, tablet, mobile, Chat, Projects, Memory, Library, Search, Canvas/Artifacts, Writing, Images, Files, Apps, Scheduled Tasks, Research, Work, Prompt Studio, Knowledge Graph, Workspace Intelligence, Settings, sharing, streaming, branching, and model selection.
+Last audited: 2026-09-03. This is a product-truth ledger, not a parity marketing claim. The audit covers desktop, tablet, mobile, Chat, Projects, Memory, Library, Search, Canvas/Artifacts, Writing, Images, Files, Apps, Scheduled Tasks, Research, Work, Prompt Studio, Knowledge Graph, Workspace Intelligence, Settings, sharing, streaming, branching, and model selection.
 
 ## A — Fully implementable now
 
 **Empty after this checkpoint.** The implementable gaps found during the audit were completed:
 
-| Closed gap                                                             | Implementation                                                                                                                                                                |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No factual cross-product activity replay on Home                       | Workspace Timeline provides 7/30/90-day activity replay and transparent counts from authorized workspace signals.                                                             |
-| Library required repetitive one-item operations                        | Grid and list views now support multi-select, bulk favorite, bulk delete, and bulk Context Pack creation.                                                                     |
-| Files required repetitive one-item context selection                   | Files now support multi-select and one-action Context Pack creation.                                                                                                          |
-| Context Pack handoff accepted one queued resource                      | Handoffs now deduplicate and transfer up to the server-validated 30-item pack limit.                                                                                          |
-| Some saved resources required navigating through multiple destinations | Files, Library items, memories, artifacts, and packs have truthful direct Work, Research, and Context Pack handoffs.                                                          |
-| Recents and Home used different activity inventories                   | Both consume the same authenticated workspace intelligence index; local-only chats and Work sessions are labeled and merged once.                                             |
-| Project/Work/Research/Automation context was siloed                    | Existing workspaces now show explicitly related or type-filtered authorized resources.                                                                                        |
-| Lockdown Mode lacked a server-enforced account policy                  | Audited persistence and fail-closed guards cover web/research, local weather, agents, connectors, OAuth callbacks and remote downloads; Canvas previews are network-isolated. |
+| Closed gap                                                             | Implementation                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No factual cross-product activity replay on Home                       | Workspace Timeline provides 7/30/90-day activity replay and transparent counts from authorized workspace signals.                                                                                                                |
+| Library required repetitive one-item operations                        | Grid and list views now support multi-select, bulk favorite, bulk delete, and bulk Context Pack creation.                                                                                                                        |
+| Files required repetitive one-item context selection                   | Files now support multi-select and one-action Context Pack creation.                                                                                                                                                             |
+| Context Pack handoff accepted one queued resource                      | Handoffs now deduplicate and transfer up to the server-validated 30-item pack limit.                                                                                                                                             |
+| Some saved resources required navigating through multiple destinations | Files, Library items, memories, artifacts, and packs have truthful direct Work, Research, and Context Pack handoffs.                                                                                                             |
+| Recents and Home used different activity inventories                   | Both consume the same authenticated workspace intelligence index; local-only chats and Work sessions are labeled and merged once.                                                                                                |
+| Project/Work/Research/Automation context was siloed                    | Existing workspaces now show explicitly related or type-filtered authorized resources.                                                                                                                                           |
+| Lockdown Mode lacked a server-enforced account policy                  | Audited persistence and fail-closed guards cover web/research, local weather, agents, connectors, OAuth callbacks and remote downloads; Canvas previews are network-isolated.                                                    |
+| Library lacked durable folders and atomic bulk organization            | Owner-scoped nested folders, cycle/depth guards, data-preserving deletion, service-only transactional bulk move, rate-limited APIs, RLS, and audit events are source-complete; production migration and browser evidence remain. |
 
 ## B — Requires backend work
 
@@ -24,7 +25,6 @@ Last audited: 2026-07-27. This is a product-truth ledger, not a parity marketing
 | Cross-device Work sessions, Work templates, branch metadata, and Recents pins | Owner-scoped persistence, conflict handling, migration, and sync APIs.                                    |
 | Realtime collaborative Canvas and Project presence                            | Realtime subscriptions, presence protocol, revision conflict resolution, and durable comment anchors.     |
 | Server-ranked semantic workspace search                                       | Embedding/index pipeline, authorization-filtered retrieval, ranking evaluation, and deletion propagation. |
-| Durable folders and bulk move across Library resources                        | Folder schema, membership/ownership rules, migration, and transactional bulk endpoints.                   |
 | Per-response memory source inspection                                         | Durable source-attribution records from prompt assembly through response persistence.                     |
 | Project and workspace templates shared across teams                           | Versioned template schema, permissions, copying semantics, and audit events.                              |
 | Full organization administration                                              | Organization schema, SSO/domain controls, retention policies, admin roles, and enterprise audit export.   |
