@@ -207,16 +207,26 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
     if (data.status === "scheduled" && !scheduledExecutionAvailable) {
       throw new Error("Scheduled execution is not available, so this task cannot be resumed.");
     }
-    const { data: row, error } = await (context.supabase as unknown as SupabaseQueryLike)
+    let updateQuery = (context.supabase as unknown as SupabaseQueryLike)
       .from("scheduled_tasks")
       .update(patch)
       .eq("id", data.id)
-      .eq("user_id", context.userId)
-      .select("*")
-      .single();
+      .eq("user_id", context.userId);
+    if (data.status !== undefined) {
+      // Keep the state check in the same statement as the write. A worker may
+      // complete a task between browser intent and this request reaching the
+      // database, and a separate read would allow that terminal state to be
+      // overwritten by a late pause/resume.
+      updateQuery = updateQuery.in("status", ["scheduled", "running", "paused"]);
+    }
+    const { data: row, error } = await updateQuery.select("*").maybeSingle();
     if (error || !row) {
       console.error("[serverfn]", error?.message);
-      throw new Error("Failed to update task");
+      throw new Error(
+        data.status === undefined
+          ? "The scheduled task could not be updated."
+          : "Completed or failed tasks cannot be paused or resumed.",
+      );
     }
     return row as ScheduledTask;
   });
