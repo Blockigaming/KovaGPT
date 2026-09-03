@@ -1689,7 +1689,7 @@
       "order": 84,
       "filename": "20260903145843_remediate_security_advisor_warnings.sql",
       "timestamp": "20260903145843",
-      "sha256": "62e8077bb603096963d1c6752316c1fe8f8794c6bf8583b728eede648ac91047",
+      "sha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d",
       "tables": [],
       "functions": [],
       "destructive": false,
