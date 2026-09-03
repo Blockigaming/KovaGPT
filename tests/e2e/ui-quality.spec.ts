@@ -199,7 +199,12 @@ for (const theme of ["light", "dark"] as const) {
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await page.evaluate(() => document.fonts.ready);
+    const usesInter = await page.evaluate(async () => {
+      await document.fonts.ready;
+      return Array.from(document.fonts).some(
+        (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
+      );
+    });
 
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -249,12 +254,15 @@ for (const theme of ["light", "dark"] as const) {
     }
     expect(rasterLogoRequests).toBe(0);
     expect(hydrationErrors).toEqual([]);
-    await expect(page).toHaveScreenshot(`guest-core-shell-${theme}.png`, {
-      animations: "disabled",
-      caret: "hide",
-      maxDiffPixelRatio: 0.005,
-      scale: "css",
-    });
+    await expect(page).toHaveScreenshot(
+      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}.png`,
+      {
+        animations: "disabled",
+        caret: "hide",
+        maxDiffPixelRatio: 0.005,
+        scale: "css",
+      },
+    );
   });
 }
 
