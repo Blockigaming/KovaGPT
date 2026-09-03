@@ -67,12 +67,14 @@ following in one release record:
    the second phase may enforce `clientCertificateMode: require` and the exact certificate hash
    only after proxied DNS/AOP has been proven for at least the prior DNS TTL. A one-phase
    require-and-proxy sequence is an engineering blocker, not a manual workaround.
-10. Before PR #227 or any equivalent compatibility-route removal is merged, a read-only caller
-    inventory for `/.lovable/oauth/consent` and `/lovable/email/*`: Supabase Auth authorization
-    and redirect configuration, Azure and Cloudflare routing/access logs, provider webhook/email
-    configuration and logs, and known external clients. Migrate every legitimate caller to the
-    Kova-owned routes, attach redacted evidence to issue #208, and keep the issue open through
-    post-deploy exact-SHA route/asset/network/log proof. Repository-only search is insufficient.
+10. PR #227 is merged and the former compatibility routes are absent from current source. Before
+    declaring production zero-Lovable, complete a read-only control-plane and log inventory for
+    the retired compatibility URLs: Supabase Auth authorization and redirect configuration, Azure
+    and Cloudflare routing/access logs, provider webhook/email configuration and logs, and known
+    external clients. Migrate any legitimate external caller to Kova-owned routes through a
+    separately reviewed change, attach redacted evidence to issue #208, and keep that issue open
+    through post-deploy exact-SHA route/asset/network/log proof. Repository-only search is
+    insufficient production evidence.
 
 From an exact detached checkout, the repository-side check begins with:
 

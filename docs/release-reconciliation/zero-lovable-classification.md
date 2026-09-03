@@ -4,14 +4,14 @@
 
 Production may not contain a Lovable package, credential, hosted runtime, route, generated chunk, email or webhook dependency, build dependency, outbound request, or credit requirement. Historical references may remain only in documentation, tests, and negative security scanners; they must not affect runtime behavior.
 
-## Runtime removal candidate
+## Current source status
 
-The repository inventory at base SHA `dc8c9c5dadee2e5e989b96c25fa1537aa84c9c3e` found seven active compatibility route modules:
+PR #227 merged as `8fed5521d0cfa7d7cb753bff22acc14c99d8a081`. The latest-main audit that started at `0cdefc4590a17ad2bd3884df9bf2477d741b131d` confirms that the seven former compatibility route modules remain absent:
 
 - the historical OAuth redirect at `/.lovable/oauth/consent`;
 - six inert email tombstones under `/lovable/email/*`.
 
-No production source caller referenced any of those URLs. Their only repository callers were the route declarations, generated route tree, release scanner exceptions, and tests. This candidate removes all seven route modules, their shared 410 helper, generated route-tree entries, canonical-manifest records, and the resulting chunk-name inputs.
+No production source caller references those URLs. Their former route modules, shared 410 helper, generated route-tree entries, canonical-manifest records, and chunk-name inputs are removed. The only remaining references are negative regression fixtures, negative security rules, explicitly classified documentation, and immutable Git history.
 
 ## Kova-owned flows retained
 
@@ -25,8 +25,10 @@ No production source caller referenced any of those URLs. Their only repository 
 - Package declarations and npm lock root: no Lovable dependency.
 - Environment example and production runtime source: no Lovable variable or credential.
 - AI, Stripe, email, and webhook providers: no Lovable runtime endpoint or caller.
-- Active route source and generated route tree: removed in this candidate.
-- Browser and server bundle names/content: enforced by the strict build scanner.
+- Active route source and generated route tree: absent from current `main`.
+- Browser, server, and other deployable `dist/` names/content: enforced by the strict build scanner, including readable source maps when generated.
+- CI workflows, Azure Bicep, Docker/container inputs, redirects/proxies, public assets, Supabase inputs, shell scripts, and release configuration: covered by the active source/control-plane scan.
+- npm lockfile: every package path and metadata object is scanned, not only root dependencies.
 - Tests and security scanners: retained only as negative assertions.
 - Documentation: historical references retained where they explain removal evidence.
 
@@ -41,24 +43,13 @@ No production source caller referenced any of those URLs. Their only repository 
 
 ## Executable gates
 
-- `npm run release:zero-lovable` rejects Lovable-named runtime source paths/content, active dependencies, prohibited project artifacts, hosted endpoints, credentials, billing metadata, and generated browser/server asset names/content. It reports stale npm lock metadata as a warning.
+- `npm run release:zero-lovable` rejects Lovable-named runtime and control-plane paths/content, active dependencies, prohibited project artifacts, hosted endpoints, credentials, billing metadata, any npm-lock occurrence, unclassified historical documentation, and generated artifact names/content across the complete `dist/` tree.
 - `npm run release:zero-lovable:strict` additionally rejects stale Lovable entries in the npm lockfile. This is mandatory for the final candidate.
-- `npm run release:zero-lovable:built` runs automatically after every `build` and `build:dev`, requires both built-output roots, and scans readable JavaScript, source-map, text, and SVG content after path-name rejection.
+- `npm run release:zero-lovable:built` runs automatically after every `build` and `build:dev`, requires built output, and scans readable JavaScript, source-map, configuration, text, and SVG content after path-name rejection.
 - `npm run security:ai-runtime` separately rejects provider secrets and managed-gateway paths.
 - `tests/unit/lovable-removal.test.mjs` proves the retired files and generated manifest entries are absent while the Kova-owned OAuth, suppression, and auth-template paths remain.
 - `tests/api/help-submit-security.test.mjs` proves support delivery continues through the fixed-recipient Kova queue.
 
-## Merge and deployment blocker
+## Production proof boundary
 
-Repository caller proof does not establish that legitimate external callers are absent. Azure, Cloudflare, Supabase/provider configuration, authorization paths, access/request logs, and external-client inventory were unavailable. PR #227 must remain unmerged and undeployed, and issue #208 must remain open, until an owner:
-
-1. inventories those control planes, configurations, and logs;
-2. identifies and migrates every legitimate caller of the compatibility URLs;
-3. attaches pre-deploy evidence to the issue;
-4. reruns exact-head hosted CI and review after the final current-main synchronization.
-
-Closing the unmerged PR is the reversible fallback when caller migration cannot be proven. Green repository checks alone do not clear this blocker.
-
-## Runtime proof still required
-
-Source and build scans do not prove the public deployment changed. Only after the external-caller blocker is cleared may this exact commit be deployed. Then verify the public compatibility URLs return 404, no Lovable-named asset is served, the deployed SHA matches the reviewed SHA, and browser/server/network/log evidence contains no Lovable runtime request. Azure, Cloudflare, Supabase, and provider evidence requires operator access and is not claimed by this repository-only change.
+This repository establishes zero active Lovable dependency in source and locally built artifacts. It does not by itself prove the state of the currently deployed revision or external control planes. Issue #208 remains the production-evidence tracker until an authorized operator verifies the deployed SHA, confirms the retired compatibility URLs return 404, confirms no Lovable-named asset is served, and inspects Azure, Cloudflare, Supabase/provider configuration and sanitized request logs for Lovable runtime traffic. Those checks are read-only unless separately authorized; this source-only change does not perform or claim a deployment.

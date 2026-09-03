@@ -1,5 +1,7 @@
 # KovaGPT Final Completion Matrix
 
+> **Historical and superseded (2026-09-03):** This matrix preserves an earlier workstream snapshot. Its Lovable, repository-access, provider, and completion claims are not current release evidence. Use `docs/release-reconciliation/zero-lovable-classification.md` and the current exact-SHA CI results instead.
+
 Status legend: NOT STARTED, IN PROGRESS, PASS, BLOCKED — EXTERNAL CREDENTIAL, BLOCKED — EXTERNAL SERVICE.
 
 | System | Frontend | Backend | Persistence | Authorization | Loading state | Empty state | Success state | Failure/retry state | Desktop | Mobile | Accessibility | Automated tests | Browser verified | Screenshot evidence | Relevant files | Status | Remaining work |
