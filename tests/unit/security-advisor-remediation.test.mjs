@@ -101,7 +101,7 @@ async function createMigrationFixture() {
       text, text, uuid, text, text, integer, text[], text, boolean, integer
     ) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$ SELECT true $$;
     CREATE FUNCTION public.kova_record_message_version(
-      text, text, text, text, uuid, text, text, boolean, integer, integer, integer
+      text, text, text, text, uuid, text, text, integer, integer, boolean, integer
     ) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$ SELECT true $$;
     CREATE FUNCTION public.kova_update_chat_branch_messages(uuid, text[], text) RETURNS boolean
       LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$ SELECT true $$;
@@ -141,6 +141,11 @@ test("all 18 authenticated-callable definers have an explicit disposition", asyn
   for (const name of rlsInvokerFunctions) {
     assert.match(migration, new RegExp(`alter function public\\.${name}[\\s\\S]*security invoker`));
   }
+  assert.match(
+    migration,
+    /kova_record_message_version\(text,text,text,text,uuid,text,text,boolean,integer,integer,integer\)/,
+    "production overload must remain covered",
+  );
   assert.match(
     migration,
     /revoke all on function public\.promote_agent_deliverable[\s\S]*from public, anon, authenticated/,
