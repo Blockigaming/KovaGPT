@@ -23,13 +23,14 @@ const SnapshotMessage = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().max(50_000),
 });
+const SnapshotSchema = z.object({
+  messages: z.array(SnapshotMessage).min(1).max(500),
+});
 const ShareSchema = z.object({
   recipient_email: z.string().trim().email().max(255),
   title: z.string().trim().min(1).max(200),
   local_chat_reference: z.string().max(100).optional().nullable(),
-  snapshot: z.object({
-    messages: z.array(SnapshotMessage).min(1).max(500),
-  }),
+  snapshot: SnapshotSchema,
 });
 
 export const shareChat = createServerFn({ method: "POST" })
@@ -83,7 +84,7 @@ export const listSharedWithMe = createServerFn({ method: "GET" })
     // RLS already restricts to shares addressed to this user.
     const { data, error } = await context.supabase
       .from("shared_chats")
-      .select("id, title, owner_user_id, snapshot, created_at, status, owner_user_id")
+      .select("id, title, owner_user_id, snapshot, created_at, status")
       .neq("status", "revoked")
       .order("created_at", { ascending: false })
       .limit(200);
@@ -92,29 +93,40 @@ export const listSharedWithMe = createServerFn({ method: "GET" })
       throw new Error("Chats shared with you could not be loaded. Please try again.");
     }
     // Exclude shares I created myself (owner sees them via My shares).
-    return (data ?? [])
-      .filter((r) => r.owner_user_id !== context.userId)
-      .map((r) => ({
-        id: r.id,
-        title: r.title,
-        owner_user_id: r.owner_user_id,
-        snapshot: (r.snapshot as { messages: SnapshotMessageDto[] }) ?? { messages: [] },
-        created_at: r.created_at,
-      }));
+    return (data ?? []).flatMap((row) => {
+      if (row.owner_user_id === context.userId) return [];
+      const snapshot = SnapshotSchema.safeParse(row.snapshot);
+      if (!snapshot.success) {
+        console.warn("[listSharedWithMe] skipped malformed snapshot", row.id);
+        return [];
+      }
+      return [
+        {
+          id: row.id,
+          title: row.title,
+          owner_user_id: row.owner_user_id,
+          snapshot: snapshot.data,
+          created_at: row.created_at,
+        },
+      ];
+    });
   });
 
 export const revokeSharedChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
+    const { data: revoked, error } = await context.supabase
       .from("shared_chats")
       .update({ status: "revoked" })
       .eq("id", data.id)
-      .eq("owner_user_id", context.userId);
+      .eq("owner_user_id", context.userId)
+      .select("id")
+      .maybeSingle();
     if (error) {
       console.error("[serverfn]", error.message);
       throw new Error("Request failed. Please try again.");
     }
+    if (!revoked) throw new Error("That shared snapshot was not found or is no longer yours.");
     return { ok: true };
   });

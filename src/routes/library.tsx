@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import type { SharedChatInbox, SharedChatSummary } from "@/lib/shared-chats.functions";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -77,6 +78,8 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
+const EMPTY_RECEIVED_SHARES: SharedChatInbox[] = [];
+const EMPTY_SENT_SHARES: SharedChatSummary[] = [];
 
 function readFavorites(key: string | null): Set<string> {
   if (!key) return new Set();
@@ -254,6 +257,70 @@ function LibraryPage() {
   const visiblePreviewItem = principalReady ? previewItem : null;
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const shareLoadGenerationRef = useRef(0);
+  const [shareState, setShareState] = useState<{
+    principal: string | null;
+    received: SharedChatInbox[];
+    sent: SharedChatSummary[];
+    loading: boolean;
+    error: string | null;
+  }>({ principal: null, received: [], sent: [], loading: false, error: null });
+  const sharesReady = principal !== null && shareState.principal === principal;
+  const receivedShares = sharesReady ? shareState.received : EMPTY_RECEIVED_SHARES;
+  const sentShares = sharesReady ? shareState.sent : EMPTY_SENT_SHARES;
+  const sharesLoading = Boolean(isSignedIn) && (!sharesReady || shareState.loading);
+  const sharesError = sharesReady ? shareState.error : null;
+  const [sharedPreview, setSharedPreview] = useState<SharedChatInbox | null>(null);
+  const visibleSharedPreview = sharesReady ? sharedPreview : null;
+  const sharedPreviewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const [pendingRevokeShare, setPendingRevokeShare] = useState<SharedChatSummary | null>(null);
+  const [revokingShareId, setRevokingShareId] = useState<string | null>(null);
+
+  const loadShares = useCallback(async () => {
+    const generation = ++shareLoadGenerationRef.current;
+    if (!isLoaded || principal === null || !isSignedIn) {
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
+      return;
+    }
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      shareLoadGenerationRef.current === generation && principalRef.current === requestPrincipal;
+    setSharedPreview(null);
+    setShareState({
+      principal: requestPrincipal,
+      received: [],
+      sent: [],
+      loading: true,
+      error: null,
+    });
+    try {
+      const { listMySharedChats, listSharedWithMe } = await import("@/lib/shared-chats.functions");
+      const [received, sent] = await Promise.all([listSharedWithMe(), listMySharedChats()]);
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received,
+        sent,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: error instanceof Error ? error.message : "Shared chats could not be loaded.",
+      });
+    }
+  }, [isLoaded, isSignedIn, principal]);
 
   const load = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -340,6 +407,17 @@ function LibraryPage() {
     setPreviewItem(null);
     setSelected([]);
     setLoadError(null);
+    setSharedPreview(null);
+    setPendingRevokeShare(null);
+    setRevokingShareId(null);
+    shareLoadGenerationRef.current += 1;
+    setShareState({
+      principal,
+      received: [],
+      sent: [],
+      loading: false,
+      error: null,
+    });
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
       setFavoritesPrincipal(null);
@@ -359,6 +437,17 @@ function LibraryPage() {
       setFavorites(new Set());
       setFavoritesPrincipal(principal);
       setPreviewItem(null);
+      setSharedPreview(null);
+      setPendingRevokeShare(null);
+      setRevokingShareId(null);
+      shareLoadGenerationRef.current += 1;
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setSelected([]);
       setQuery("");
       setFilter("all");
@@ -373,13 +462,22 @@ function LibraryPage() {
   useEffect(() => {
     if (!isLoaded || principal === null) {
       loadGenerationRef.current += 1;
+      shareLoadGenerationRef.current += 1;
       setItemState({ principal: null, items: [] });
+      setShareState({
+        principal: null,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setLoading(false);
       setLoadError(null);
       return;
     }
     void load();
-  }, [isLoaded, load, principal]);
+    void loadShares();
+  }, [isLoaded, load, loadShares, principal]);
 
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
@@ -442,6 +540,35 @@ function LibraryPage() {
       writeFavorites(favoritesKey, next);
       return next;
     });
+  };
+
+  const revokeShare = async (id: string) => {
+    if (!sharesReady || !principal) return;
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
+    setRevokingShareId(id);
+    try {
+      const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
+      await revokeSharedChat({ data: { id } });
+      if (!isCurrent()) return;
+      setShareState((previous) =>
+        previous.principal === requestPrincipal
+          ? {
+              ...previous,
+              sent: previous.sent.map((share) =>
+                share.id === id ? { ...share, status: "revoked" } : share,
+              ),
+            }
+          : previous,
+      );
+      toast.success("Share revoked.");
+    } catch {
+      if (isCurrent()) toast.error("Could not revoke this shared snapshot. Please try again.");
+    } finally {
+      if (isCurrent()) setRevokingShareId(null);
+    }
   };
 
   const deleteSelected = async (confirmed = false) => {
@@ -740,12 +867,15 @@ function LibraryPage() {
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                onClick={load}
-                disabled={loading}
+                onClick={() => {
+                  void load();
+                  void loadShares();
+                }}
+                disabled={loading || sharesLoading}
               >
                 <RefreshCw
                   aria-hidden="true"
-                  className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
+                  className={`mr-1.5 h-3.5 w-3.5 ${loading || sharesLoading ? "animate-spin motion-reduce:animate-none" : ""}`}
                 />{" "}
                 Refresh
               </Button>
@@ -771,6 +901,107 @@ function LibraryPage() {
                 Sign in
               </Button>
             </SignInButton>
+          </section>
+        ) : null}
+
+        {isSignedIn && isLoaded ? (
+          <section className="kova-card space-y-4 p-4 sm:p-5" aria-labelledby="shared-chats-title">
+            <div>
+              <h2 id="shared-chats-title" className="font-medium">
+                Shared chats
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Open read-only snapshots shared with you, or revoke snapshots you sent.
+              </p>
+            </div>
+            {sharesError ? (
+              <div role="alert" className="rounded-xl border border-destructive/30 p-4">
+                <p className="text-sm font-medium text-destructive">Could not load shared chats</p>
+                <p className="mt-1 text-xs text-muted-foreground">{sharesError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 min-h-11"
+                  onClick={() => void loadShares()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : sharesLoading ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading shared chats…
+              </p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared with me</h3>
+                  {receivedShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      No chats have been shared with you.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {receivedShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {share.snapshot.messages.length} messages ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="min-h-11 shrink-0"
+                            onClick={(event) => {
+                              sharedPreviewReturnFocusRef.current = event.currentTarget;
+                              setSharedPreview(share);
+                            }}
+                          >
+                            Open snapshot
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared by me</h3>
+                  {sentShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      You have not shared a chat. Use Share chat from a conversation to send a
+                      read-only snapshot.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {sentShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              To {share.recipient_email} · {share.status} ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {share.status !== "revoked" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="min-h-11 shrink-0"
+                              disabled={revokingShareId === share.id}
+                              onClick={() => setPendingRevokeShare(share)}
+                            >
+                              Revoke
+                            </Button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         ) : null}
 
@@ -1000,6 +1231,46 @@ function LibraryPage() {
             </DialogContent>
           ) : null}
         </Dialog>
+        <Dialog
+          open={Boolean(visibleSharedPreview)}
+          onOpenChange={(open) => {
+            if (!open) setSharedPreview(null);
+          }}
+        >
+          {visibleSharedPreview ? (
+            <DialogContent
+              className="gap-0 overflow-hidden p-0 sm:w-[min(92vw,768px)] sm:max-w-3xl sm:p-0"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const trigger = sharedPreviewReturnFocusRef.current;
+                if (trigger?.isConnected) trigger.focus();
+                sharedPreviewReturnFocusRef.current = null;
+              }}
+            >
+              <header className="border-b border-border p-4 pr-16">
+                <DialogTitle className="truncate text-base">
+                  {visibleSharedPreview.title}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Read-only snapshot · {visibleSharedPreview.snapshot.messages.length} messages ·{" "}
+                  shared {new Date(visibleSharedPreview.created_at).toLocaleDateString()}
+                </DialogDescription>
+              </header>
+              <ol className="max-h-[70dvh] space-y-4 overflow-auto p-4 sm:p-6">
+                {visibleSharedPreview.snapshot.messages.map((message, index) => (
+                  <li key={`${visibleSharedPreview.id}:${index}`} className="space-y-1">
+                    <p className="text-xs font-medium capitalize text-muted-foreground">
+                      {message.role}
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                      {message.content}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </DialogContent>
+          ) : null}
+        </Dialog>
         <ConfirmActionDialog
           open={pendingDelete !== null}
           onOpenChange={(open) => !open && setPendingDelete(null)}
@@ -1012,6 +1283,23 @@ function LibraryPage() {
             setPendingDelete(null);
             if (pending?.kind === "one") void remove(pending.id, true);
             else if (pending?.kind === "many") void deleteSelected(true);
+          }}
+        />
+        <ConfirmActionDialog
+          open={pendingRevokeShare !== null}
+          onOpenChange={(open) => !open && setPendingRevokeShare(null)}
+          title="Revoke this shared snapshot?"
+          description={
+            pendingRevokeShare
+              ? `${pendingRevokeShare.recipient_email} will no longer be able to open “${pendingRevokeShare.title}”.`
+              : "The recipient will no longer be able to open this snapshot."
+          }
+          confirmLabel="Revoke"
+          destructive
+          onConfirm={() => {
+            const share = pendingRevokeShare;
+            setPendingRevokeShare(null);
+            if (share) void revokeShare(share.id);
           }}
         />
       </main>
