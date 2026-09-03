@@ -248,7 +248,7 @@ const FAQS: Faq[] = [
     category: "Billing",
     question: "Where do I manage my subscription?",
     answer:
-      "Open Settings → Billing to view plan, invoices, and payment method. You can also open the Stripe customer portal from there.",
+      "Open Settings → Subscription to view plan, invoices, and payment method. You can also open the Stripe customer portal from there.",
     keywords: ["invoice", "payment", "receipt", "stripe"],
   },
   {
@@ -286,7 +286,7 @@ const FAQS: Faq[] = [
     category: "Cancellations",
     question: "How do I cancel my subscription?",
     answer:
-      "Settings → Billing → Manage subscription → Cancel. You keep access until the end of the current period.",
+      "Settings → Subscription → Manage subscription → Cancel. You keep access until the end of the current period.",
     keywords: ["cancel", "stop", "end plan"],
   },
   {
@@ -294,7 +294,7 @@ const FAQS: Faq[] = [
     category: "Refunds",
     question: "Do you offer refunds?",
     answer:
-      "Review the current Refund Policy for eligibility and contact help@kovagpt.com with the account email and purchase details.",
+      "Review the current Refund Policy for eligibility and contact support@kovagpt.com with the account email and purchase details.",
     keywords: ["money back", "refund policy"],
   },
   {
@@ -494,10 +494,10 @@ function HelpPage() {
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
           <a
-            href="mailto:help@kovagpt.com"
+            href="mailto:support@kovagpt.com"
             className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
           >
-            <Mail className="w-4 h-4" /> help@kovagpt.com
+            <Mail className="w-4 h-4" /> support@kovagpt.com
           </a>
         </div>
 
