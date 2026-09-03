@@ -32,7 +32,7 @@ test("signed-out workspace routes keep one main target and only truthful control
 }) => {
   const routes = [
     { path: "/projects", gate: "Sign in to use Projects" },
-    { path: "/projects/unavailable-project", gate: "Sign in to use Projects" },
+    { path: "/projects/unavailable-project", gate: "Sign in required" },
     { path: "/files", gate: "Sign in to use Files" },
     { path: "/memory", gate: "Sign in to manage memory" },
     { path: "/research-planner", gate: "Sign in to plan research" },
