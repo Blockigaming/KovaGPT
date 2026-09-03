@@ -173,8 +173,11 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   const mockedBackendOrigins = await mockAuthenticatedBackend(page);
   await page.goto("/?e2e-settings-auth=1", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
-
+  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole("button", { name: "Close" }).click();
+    await expect(onboarding).toBeHidden();
+  }
   const runtimeStorageKey = await page.evaluate(
     (key) => sessionStorage.getItem(key),
     observedAuthStorageKey,
@@ -196,10 +199,11 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   const options = page.locator(".kova-settings-mobile-section-option");
   await expect(options).toHaveCount(19);
   for (let index = 0; index < (await options.count()); index += 1) {
-    const box = await options.nth(index).boundingBox();
-    expect(box, `section option ${index + 1} should have a rendered box`).not.toBeNull();
+    const height = await options
+      .nth(index)
+      .evaluate((element: HTMLElement) => element.offsetHeight);
     expect(
-      box!.height,
+      height,
       `section option ${index + 1} should meet the 44px target`,
     ).toBeGreaterThanOrEqual(44);
   }

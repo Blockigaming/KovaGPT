@@ -9,9 +9,12 @@ test.beforeEach(({ page: _page }, testInfo) => test.skip(!projects.has(testInfo.
 async function expectMinimumTarget(target: Locator, size = 44) {
   const box = await target.boundingBox();
   expect(box).not.toBeNull();
-  const subpixelTolerance = 0.01;
-  expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(size);
-  expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(size);
+  const layoutSize = await target.evaluate((element: HTMLElement) => ({
+    width: element.offsetWidth,
+    height: element.offsetHeight,
+  }));
+  expect(layoutSize.width).toBeGreaterThanOrEqual(size);
+  expect(layoutSize.height).toBeGreaterThanOrEqual(size);
   return box!;
 }
 

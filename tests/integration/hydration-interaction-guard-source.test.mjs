@@ -147,9 +147,10 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/ui-quality.spec.ts", 6, 6],
   ];
   const paths = contracts.map(([path]) => path);
-  const [helper, guardSpec, ...specs] = await Promise.all([
+  const [helper, guardSpec, home, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
     read("tests/e2e/hydration-interaction-guard.spec.ts"),
+    read("src/routes/index.tsx"),
     ...paths.map(read),
   ]);
 
@@ -160,6 +161,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   assert.match(guardSpec, /toBeDisabled\(\)/);
   assert.match(guardSpec, /toBeEnabled\(\)/);
   assert.match(guardSpec, /toEqual\(\["k", "o"\]\)/);
+  assert.equal((home.match(/disabled=\{!principalReady\}/g) ?? []).length, 2);
   const specsByPath = new Map();
   for (let index = 0; index < specs.length; index += 1) {
     const [path, expectedGotos, expectedWaits, expectedAdjacentWaits = expectedWaits] =

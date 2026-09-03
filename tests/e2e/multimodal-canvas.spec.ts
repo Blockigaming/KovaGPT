@@ -9,11 +9,13 @@ test("multimodal surfaces fit the configured viewport", async ({ page }) => {
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });
 
-test("chat exposes file, image, and analysis entry points", async ({ page }) => {
+test("signed-out chat exposes uploads without advertising unavailable tools", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
-  for (const name of ["Photos", "Files", "Create an image", "Analyze data", "Analyze files"]) {
+  for (const name of ["Photos", "Files"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
+  await expect(page.locator('[aria-disabled="true"]', { hasText: "Create image" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /analyze (data|files)/i })).toHaveCount(0);
 });
