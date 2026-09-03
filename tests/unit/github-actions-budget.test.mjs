@@ -19,11 +19,11 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   );
   assert.match(
     workflow,
-    /browser:\s+if: github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'/u,
+    /browser:\s+if: needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
   );
   assert.match(
     workflow,
-    /release-e2e:\s+if: github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'/u,
+    /release-e2e:\s+if: needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
   );
   assert.match(
     workflow,

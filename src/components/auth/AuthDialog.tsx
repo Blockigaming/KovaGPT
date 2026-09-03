@@ -204,7 +204,16 @@ export function AuthDialog({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     maxLength={320}
-                    onBlur={() => setEmailTouched(true)}
+                    onBlur={(event) => {
+                      const nextTarget = event.relatedTarget;
+                      if (
+                        nextTarget instanceof HTMLElement &&
+                        nextTarget.closest("[data-kova-dialog-close]")
+                      ) {
+                        return;
+                      }
+                      setEmailTouched(true);
+                    }}
                     aria-invalid={emailTouched && !emailValid}
                     aria-describedby={
                       emailTouched && !emailValid ? "kova-auth-email-error" : undefined

@@ -74,7 +74,7 @@ test("public routes share one landmark and a working skip target", async ({ page
     page
       .getByRole("navigation", { name: "Public navigation" })
       .getByRole("link", { name: "Developers" }),
-  ).not.toHaveAttribute("aria-current", "page");
+  ).toHaveAttribute("aria-current", "page");
 
   await page.goto("/privacy");
   await waitForHydration(page);

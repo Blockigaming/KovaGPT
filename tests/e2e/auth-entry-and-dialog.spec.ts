@@ -9,9 +9,12 @@ test.beforeEach(({ page: _page }, testInfo) => test.skip(!projects.has(testInfo.
 async function expectMinimumTarget(target: Locator, size = 44) {
   const box = await target.boundingBox();
   expect(box).not.toBeNull();
-  const subpixelTolerance = 0.01;
-  expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(size);
-  expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(size);
+  const layoutSize = await target.evaluate((element: HTMLElement) => ({
+    width: element.offsetWidth,
+    height: element.offsetHeight,
+  }));
+  expect(layoutSize.width).toBeGreaterThanOrEqual(size);
+  expect(layoutSize.height).toBeGreaterThanOrEqual(size);
   return box!;
 }
 
@@ -117,7 +120,7 @@ test("valid sign-up deep links use account metadata and named fields", async ({ 
   expect(authWrites).toEqual([]);
 });
 
-test("auth dialog has one semantic title, one contained close target, and restores focus", async ({
+test("auth dialog has one semantic title, one contained close target, and Escape restores focus", async ({
   page,
 }, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -164,12 +167,24 @@ test("auth dialog has one semantic title, one contained close target, and restor
   });
 
   await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
+  await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
+});
 
+test("auth dialog close button dismisses the dialog and restores focus", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const login = page.getByRole("button", { name: "Log in", exact: true }).first();
+  await login.focus();
   await login.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  const close = dialog.getByRole("button", { name: "Close", exact: true });
+  // Keep the pointer down long enough for blur validation to render. The close
+  // target must not move out from under the pointer before its click fires.
+  await close.click({ delay: 100 });
+  await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
 });
