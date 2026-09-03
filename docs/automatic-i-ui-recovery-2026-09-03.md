@@ -9,10 +9,10 @@
 - Repository: `Blockigaming/KovaGPT`
 - Recovery branch: `codex/automatic-i-ui-finalization`
 - Starting `origin/main`: `f94497b6919174d8b6f8027f5f2588ddf72d41a2`
-- Final refreshed `origin/main`: `5513891ccf0472d7f9e3eb9803404a4a46d97371`
-  (the merge commit for PR #262, following PR #254, PR #256, PR #258, PR #259,
-  PR #260, and PR #261); this recovery branch was rebased onto that exact commit
-  before final validation.
+- Final refreshed `origin/main`: `7280b20fbc1c8ebb9b0a1bc09c79b6c94cd6f678`
+  (the merge commit for PR #263, following PR #254, PR #256, PR #258, PR #259,
+  PR #260, PR #261, and PR #262); this recovery branch was rebased onto that
+  exact commit before final validation.
 - Workspace at recovery: clean fresh clone; no local stash, secondary worktree,
   untracked source, or unreachable local commit existed.
 - PR #248 is merged through `260eb1e3adfa4b693c3b52e85a5f5a00bc34370d`
@@ -43,12 +43,24 @@
   durable Library-folder schema, atomic bulk-move APIs, export allowlist, and
   generated route/database contracts are incorporated only through the final
   rebase onto `main`.
-- Source checkpoint `8a5235c3` follows that rebase with a forward-only account
-  deletion fence, compare-and-set cancellation, verified private-object
+- PR #263 merged as `7280b20fbc1c8ebb9b0a1bc09c79b6c94cd6f678` from feature
+  commit `126df6b0`; its durable cross-device Work schema, conflict clock,
+  idempotent mutations, and API route are incorporated only through the final
+  rebase onto `main`.
+- Rebased source checkpoint `900b2ec1` follows the PR #262 integration with a
+  forward-only account deletion fence, compare-and-set cancellation, verified private-object
   cleanup, and fail-closed auth deletion. The inherited cross-generation
   late-upload edge still requires a claim-token and durable artifact-outbox
   design plus real worker verification, so it remains an explicit release
   blocker rather than a completion claim.
+- Post-PR #263 checkpoints repair two inherited request paths that violated the
+  shared distributed-limiter contract, require verified identity for mutations
+  and export creation, add a durable 12-hour export cooldown, and bound Work
+  receipts, payload bytes, nesting, row counts, and deleted content. Mutation
+  receipts are request-fingerprinted, compact, operation-bound, and pruned after
+  seven days; new Work mutations no longer amplify account audit rows. Account
+  export JSON is compact so valid nested Work payloads cannot expand through
+  pretty-print whitespace beyond the artifact budget.
 
 No production deployment or Azure, Cloudflare, DNS, Supabase, Stripe, OAuth,
 secret, identity, RBAC, or billing mutation occurred during recovery.
@@ -94,6 +106,32 @@ performance audit, not a claimed product failure or a waived gate.
 ## Resume rule
 
 The first final refresh found PR #256 merged into `main`; later refreshes found
-PR #254, PR #258, PR #259, PR #260, and PR #261 merged as well. This branch was
-rebased onto the resulting exact `main` after each refresh. None of those owned
-PRs was merged from this workstream.
+PR #254, PR #258, PR #259, PR #260, PR #261, PR #262, and PR #263 merged as
+well. This branch was rebased onto the resulting exact `main` after each
+refresh. None of those owned PRs was merged from this workstream.
+
+## Latest application-source verification
+
+The complete browser corpus below ran on application-source checkpoint
+`d70529d7`, after the PR #263 rebase, Work/export hardening, generated-contract
+refresh, and generated-type formatting repair. The final documentation-only
+checkpoint does not change runtime or test source.
+
+| Check                                                           | Result                                                                                                                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Locked Prettier, ESLint, TypeScript, diff check                 | PASS                                                                                                                                                  |
+| Unit                                                            | PASS — 548/548                                                                                                                                        |
+| Integration, excluding the separately blocked production worker | PASS — 402/402 broad plus 3/3 stream                                                                                                                  |
+| API, accessibility, release, and Node visual contracts          | PASS — 9/9, 1/1, 21/21, and 1/1                                                                                                                       |
+| Browser runtime                                                 | PASS — 5/5 Chromium, 5/5 Firefox, 5/5 WebKit                                                                                                          |
+| Complete release E2E, 11 responsive projects, retries disabled  | PASS — 637 passed, 496 intentional skips, 0 failed, 0 retries                                                                                         |
+| Cloudflare-default and Node-preview production builds           | PASS — 537 audited files each, 0 source maps, 0 zero-Lovable warnings                                                                                 |
+| Release validation                                              | PASS with explicit environment and migration-history readiness blockers retained                                                                      |
+| Offline dependency audit                                        | PASS — 0 vulnerabilities across 807 dependencies                                                                                                      |
+| Generated database contract                                     | PASS — 91 migrations; 132 tables, 124 function declarations, 225 policies; SHA-256 `429c3053339c0521f42050c2e2b07789b532af970d999655330658eb6a7deb50` |
+
+The production-worker artifact suite remains unexecuted because its two tests
+require a local worker/network permission not granted in this workspace. The
+source-only migration preflight also remains not ready because
+`20260623194741_email_infra.sql` and `20260623195646_email_infra.sql` have
+historically duplicated content. Neither boundary was bypassed or rewritten.
