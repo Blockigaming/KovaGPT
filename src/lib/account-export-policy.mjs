@@ -59,6 +59,7 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["integration_linked_accounts", "owner_id"],
   ["integration_sync_jobs", "owner_id"],
   ["knowledge_relationships", "owner_id"],
+  ["library_folders", "user_id"],
   ["notification_deliveries", "user_id"],
   ["notification_preferences", "user_id"],
   ["onboarding_progress", "user_id"],

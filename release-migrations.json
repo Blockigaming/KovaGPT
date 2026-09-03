@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 87,
-  "latest": "20260903203000_account_data_exports.sql",
+  "count": 88,
+  "latest": "20260903210000_library_folders_and_bulk_move.sql",
   "migrations": [
     {
       "order": 1,
@@ -1747,6 +1747,25 @@
         "account_export_jobs_user_requested_idx",
         "account_export_jobs_claim_idx",
         "account_export_jobs_one_active_per_user"
+      ]
+    },
+    {
+      "order": 88,
+      "filename": "20260903210000_library_folders_and_bulk_move.sql",
+      "timestamp": "20260903210000",
+      "sha256": "4eb47d962711a82cc1dff199a42d222a50cc3b51a73e939b801e6f3c3ec7923e",
+      "tables": ["library_folders", "library_folder_locks"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["library_folders", "library_folder_locks"],
+      "policies": ["library folders owner read"],
+      "indexes": [
+        "library_folders_unique_root_name",
+        "library_folders_unique_child_name",
+        "library_folders_tree_order",
+        "user_library_items_folder_order"
       ]
     }
   ]

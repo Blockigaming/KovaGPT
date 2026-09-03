@@ -108,6 +108,8 @@ import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
+import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
+import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
@@ -618,6 +620,16 @@ const ApiInternalScheduledExecutionRoute =
     path: '/api/internal/scheduled-execution',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiLibraryBulkMoveRoute = ApiLibraryBulkMoveRouteImport.update({
+  id: '/api/library/bulk-move',
+  path: '/api/library/bulk-move',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
+  id: '/api/library/folders',
+  path: '/api/library/folders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
@@ -759,6 +771,8 @@ export interface FileRoutesByFullPath {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -867,6 +881,8 @@ export interface FileRoutesByTo {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -976,6 +992,8 @@ export interface FileRoutesById {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -1086,6 +1104,8 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
@@ -1194,6 +1214,8 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
@@ -1302,6 +1324,8 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
@@ -1407,6 +1431,8 @@ export interface RootRouteChildren {
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
+  ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
+  ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
@@ -2110,6 +2136,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/library/bulk-move': {
+      id: '/api/library/bulk-move'
+      path: '/api/library/bulk-move'
+      fullPath: '/api/library/bulk-move'
+      preLoaderRoute: typeof ApiLibraryBulkMoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/library/folders': {
+      id: '/api/library/folders'
+      path: '/api/library/folders'
+      fullPath: '/api/library/folders'
+      preLoaderRoute: typeof ApiLibraryFoldersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/help-submit': {
       id: '/api/public/help-submit'
       path: '/api/public/help-submit'
@@ -2317,6 +2357,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
+  ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
+  ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
