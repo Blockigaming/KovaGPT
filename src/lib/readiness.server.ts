@@ -63,6 +63,7 @@ export function structuralReadiness(): ReadinessReport {
       present("GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_CLIENT_SECRET", "CONNECTOR_ENCRYPTION_KEY"),
     ),
     scheduledTasks: capability(any("CRON_SECRET", "SCHEDULED_TASK_SECRET")),
+    accountExports: capability(any("ACCOUNT_EXPORT_WORKER_SECRET", "CRON_SECRET")),
     images: capability(aiProviderConfigured()),
     research: capability(any("FIRECRAWL_API_KEY")),
     storage: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),

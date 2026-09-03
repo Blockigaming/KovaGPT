@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 86,
-  "latest": "20260903200000_account_lockdown_mode.sql",
+  "count": 87,
+  "latest": "20260903203000_account_data_exports.sql",
   "migrations": [
     {
       "order": 1,
@@ -1726,6 +1726,28 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 87,
+      "filename": "20260903203000_account_data_exports.sql",
+      "timestamp": "20260903203000",
+      "sha256": "acbdfd3daf731406d5e5715ec8424e0461249d0bbd265063d4f158d880a08ed6",
+      "tables": ["account_export_jobs"],
+      "functions": [
+        "claim_account_export_jobs",
+        "settle_account_export_success",
+        "settle_account_export_failure"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["account_export_jobs"],
+      "policies": ["Users read own account exports"],
+      "indexes": [
+        "account_export_jobs_user_requested_idx",
+        "account_export_jobs_claim_idx",
+        "account_export_jobs_one_active_per_user"
+      ]
     }
   ]
 }

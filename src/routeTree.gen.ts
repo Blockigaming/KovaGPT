@@ -85,6 +85,7 @@ import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
@@ -105,6 +106,7 @@ import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
@@ -499,6 +501,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAccountExportRoute = ApiAccountExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ApiAccountRoute,
+} as any)
 const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
   id: '/api/admin/ai-usage',
   path: '/api/admin/ai-usage',
@@ -599,6 +606,12 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAccountExportsRoute =
+  ApiInternalAccountExportsRouteImport.update({
+    id: '/api/internal/account-exports',
+    path: '/api/internal/account-exports',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
@@ -699,7 +712,7 @@ export interface FileRoutesByFullPath {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
@@ -723,6 +736,7 @@ export interface FileRoutesByFullPath {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -743,6 +757,7 @@ export interface FileRoutesByFullPath {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
@@ -805,7 +820,7 @@ export interface FileRoutesByTo {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
@@ -829,6 +844,7 @@ export interface FileRoutesByTo {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -849,6 +865,7 @@ export interface FileRoutesByTo {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
@@ -912,7 +929,7 @@ export interface FileRoutesById {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
@@ -936,6 +953,7 @@ export interface FileRoutesById {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -956,6 +974,7 @@ export interface FileRoutesById {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
@@ -1044,6 +1063,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/developers/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1064,6 +1084,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
@@ -1150,6 +1171,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/developers'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1170,6 +1192,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
@@ -1256,6 +1279,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/developers/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1276,6 +1300,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
@@ -1339,7 +1364,7 @@ export interface RootRouteChildren {
   SectionArticleSlugRoute: typeof SectionArticleSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  ApiAccountRoute: typeof ApiAccountRoute
+  ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -1380,6 +1405,7 @@ export interface RootRouteChildren {
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
@@ -1923,6 +1949,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/account/export': {
+      id: '/api/account/export'
+      path: '/export'
+      fullPath: '/api/account/export'
+      preLoaderRoute: typeof ApiAccountExportRouteImport
+      parentRoute: typeof ApiAccountRoute
+    }
     '/api/admin/ai-usage': {
       id: '/api/admin/ai-usage'
       path: '/api/admin/ai-usage'
@@ -2063,6 +2096,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/account-exports': {
+      id: '/api/internal/account-exports'
+      path: '/api/internal/account-exports'
+      fullPath: '/api/internal/account-exports'
+      preLoaderRoute: typeof ApiInternalAccountExportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/scheduled-execution': {
       id: '/api/internal/scheduled-execution'
       path: '/api/internal/scheduled-execution'
@@ -2157,6 +2197,18 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
   ProjectsRouteChildren,
 )
 
+interface ApiAccountRouteChildren {
+  ApiAccountExportRoute: typeof ApiAccountExportRoute
+}
+
+const ApiAccountRouteChildren: ApiAccountRouteChildren = {
+  ApiAccountExportRoute: ApiAccountExportRoute,
+}
+
+const ApiAccountRouteWithChildren = ApiAccountRoute._addFileChildren(
+  ApiAccountRouteChildren,
+)
+
 interface ApiChatRouteChildren {
   ApiChatConfirmRoute: typeof ApiChatConfirmRoute
 }
@@ -2222,7 +2274,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  ApiAccountRoute: ApiAccountRoute,
+  ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
@@ -2263,6 +2315,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
