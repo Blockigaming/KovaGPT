@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
 import { cn } from "@/lib/utils";
 
 type AuthSearch = { email?: string; mode?: "sign-in" | "sign-up" };
@@ -122,12 +123,17 @@ function AuthPage() {
       if (isSignUp) {
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/`, data: metadata },
+          options: { emailRedirectTo: getEmailAuthRedirectUri(), data: metadata },
         });
         if (error) throw error;
+        if (data.session) {
+          toast.success("Welcome to KovaGPT.");
+          window.location.replace(getSafePostAuthRedirect());
+          return;
+        }
         toast.success("If this address can be registered, check your inbox to continue.");
         void navigate({ to: "/" });
         return;
@@ -144,7 +150,7 @@ function AuthPage() {
         return;
       }
       toast.success("Welcome back.");
-      void navigate({ to: "/" });
+      window.location.replace(getSafePostAuthRedirect());
     } catch (err) {
       console.error("[KovaAuth] Email authentication failed", {
         error: err instanceof Error ? err.name : "unknown_error",
@@ -165,7 +171,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: getEmailAuthRedirectUri() },
       });
       if (error) throw error;
       setMagicSent(true);
