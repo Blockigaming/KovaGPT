@@ -8,7 +8,7 @@ const notification = await readFile(
   "utf8",
 );
 test("public support submission can enqueue only a fixed internal recipient", () => {
-  assert.match(notification, /to:\s*"help@kovagpt\.com"/);
+  assert.match(notification, /to:\s*"support@kovagpt\.com"/);
   assert.match(route, /if \(!entry\.to\)/);
   assert.match(route, /const recipient = entry\.to\.trim\(\)\.toLowerCase\(\)/);
   assert.match(route, /templateName:\s*"help-contact-notification"/);
