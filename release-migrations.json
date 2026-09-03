@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 90,
-  "latest": "20260903213000_work_cross_device_sync.sql",
+  "count": 91,
+  "latest": "20260903214500_work_sync_protection_hardening.sql",
   "migrations": [
     {
       "order": 1,
@@ -1818,6 +1818,28 @@
         "work_recent_items_owner_active_idx",
         "work_sync_mutations_created_idx"
       ]
+    },
+    {
+      "order": 91,
+      "filename": "20260903214500_work_sync_protection_hardening.sql",
+      "timestamp": "20260903214500",
+      "sha256": "53969de4ad43c24b5c51417e36821debdc20fab26a1adfc233d1ea02dde197ae",
+      "tables": [],
+      "functions": [
+        "work_sync_request_fingerprint",
+        "work_sync_payload_depth_allowed",
+        "enforce_work_sync_receipt_capacity",
+        "enforce_work_saved_payload_capacity",
+        "upsert_work_saved_record",
+        "delete_work_saved_record",
+        "mutate_work_recent_item"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["work_sync_mutations_owner_created_idx"]
     }
   ]
 }
