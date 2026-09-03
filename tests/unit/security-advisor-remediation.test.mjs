@@ -114,7 +114,9 @@ async function createMigrationFixture() {
   `);
 
   const migration = await loadMigration();
-  const vectorSection = migration.indexOf("-- project_file_chunks already has member-only SELECT RLS");
+  const vectorSection = migration.indexOf(
+    "-- project_file_chunks already has member-only SELECT RLS",
+  );
   assert.ok(vectorSection > 0, "expected vector section marker");
   await database.exec(migration.slice(0, vectorSection));
   return database;
@@ -127,8 +129,14 @@ test("all 18 authenticated-callable definers have an explicit disposition", asyn
   assert.equal(new Set(inventory).size, 18);
 
   for (const name of privilegedFacades) {
-    assert.match(migration, new RegExp(`alter function public\\.${name}[\\s\\S]*set schema kova_private`));
-    assert.match(migration, new RegExp(`create function public\\.${name}[\\s\\S]*security invoker`));
+    assert.match(
+      migration,
+      new RegExp(`alter function public\\.${name}[\\s\\S]*set schema kova_private`),
+    );
+    assert.match(
+      migration,
+      new RegExp(`create function public\\.${name}[\\s\\S]*security invoker`),
+    );
   }
   for (const name of rlsInvokerFunctions) {
     assert.match(migration, new RegExp(`alter function public\\.${name}[\\s\\S]*security invoker`));
@@ -146,10 +154,10 @@ test("migration removes authenticated SECURITY DEFINER entry points and preserve
   const account = "33333333-3333-4333-8333-333333333333";
 
   try {
-    await database.query(
-      "INSERT INTO public.github_accounts(id, owner_id) VALUES ($1, $2)",
-      [account, owner],
-    );
+    await database.query("INSERT INTO public.github_accounts(id, owner_id) VALUES ($1, $2)", [
+      account,
+      owner,
+    ]);
 
     const catalog = await database.query(`
       SELECT
@@ -203,10 +211,9 @@ test("migration removes authenticated SECURITY DEFINER entry points and preserve
     await database.query("SELECT public.disconnect_github_account($1, false)", [account]);
     await database.exec("RESET ROLE");
 
-    const row = await database.query(
-      "SELECT status FROM public.github_accounts WHERE id = $1",
-      [account],
-    );
+    const row = await database.query("SELECT status FROM public.github_accounts WHERE id = $1", [
+      account,
+    ]);
     assert.deepEqual(row.rows, [{ status: "disconnected" }]);
   } finally {
     await database.close();
