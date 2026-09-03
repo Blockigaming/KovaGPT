@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/google/status")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "status", 30);
+        const limited = await enforceGoogleRateLimit(auth.userId, "status", 30);
         if (limited) return limited;
         try {
           return Response.json(await getGoogleConnectionHealth(auth.userId));
