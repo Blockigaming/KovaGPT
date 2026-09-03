@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 83,
-  "latest": "20260902013000_storage_bucket_and_default_privilege_reconciliation.sql",
+  "count": 84,
+  "latest": "20260903145843_remediate_security_advisor_warnings.sql",
   "migrations": [
     {
       "order": 1,
@@ -1683,6 +1683,20 @@
       "reversible": false,
       "rls": [],
       "policies": ["Owners read agent evidence"],
+      "indexes": []
+    },
+    {
+      "order": 84,
+      "filename": "20260903145843_remediate_security_advisor_warnings.sql",
+      "timestamp": "20260903145843",
+      "sha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
       "indexes": []
     }
   ]
