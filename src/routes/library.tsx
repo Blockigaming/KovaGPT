@@ -57,6 +57,8 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
+import { isPrivateLibraryImagePath, resolveLibraryImageUrl } from "@/lib/library-image-url";
+import { safeImageUrl } from "@/lib/safe-image-url";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   addManyToContextPack,
@@ -107,6 +109,101 @@ function humanBytes(n: number | null | undefined): string | null {
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
   if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
   return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
+type LibraryImageSourceState = {
+  itemId: string | null;
+  url: string | null;
+  status: "idle" | "loading" | "error" | "ready";
+};
+
+function useLibraryImageSource(item: LibItem | null) {
+  const itemId = item?.id ?? null;
+  const fileUrl = item?.file_url ?? null;
+  const directUrl = safeImageUrl(fileUrl);
+  const privatePath = isPrivateLibraryImagePath(fileUrl);
+  const [state, setState] = useState<LibraryImageSourceState>({
+    itemId: null,
+    url: null,
+    status: "idle",
+  });
+
+  useEffect(() => {
+    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    let cancelled = false;
+    setState({ itemId, url: null, status: "loading" });
+
+    void (async () => {
+      try {
+        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+        const url = await resolveLibraryImageUrl({ id: itemId, file_url: fileUrl }, (id) =>
+          getLibraryImageUrl({ data: { id } }),
+        );
+        if (!url) throw new Error("Invalid signed image URL");
+        if (!cancelled) setState({ itemId, url, status: "ready" });
+      } catch {
+        if (!cancelled) setState({ itemId, url: null, status: "error" });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [directUrl, fileUrl, itemId, privatePath]);
+
+  if (directUrl) return { url: directUrl, loading: false, error: false };
+  if (!privatePath) return { url: null, loading: false, error: Boolean(fileUrl) };
+  if (state.itemId !== itemId) return { url: null, loading: true, error: false };
+  return {
+    url: state.url,
+    loading: state.status === "loading",
+    error: state.status === "error",
+  };
+}
+
+function LibraryImageMedia({
+  item,
+  className,
+  fallbackClassName = "",
+}: {
+  item: LibItem;
+  className: string;
+  fallbackClassName?: string;
+}) {
+  const image = useLibraryImageSource(item);
+  if (image.url) {
+    return <img src={image.url} alt={item.title} loading="lazy" className={className} />;
+  }
+  return (
+    <div
+      className={`flex h-full min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground ${fallbackClassName}`}
+      role="status"
+    >
+      <ImageIcon className="h-6 w-6" aria-hidden="true" />
+      <span className="text-xs">
+        {image.loading ? "Loading image…" : "Image preview unavailable"}
+      </span>
+    </div>
+  );
+}
+
+function LibraryImageDownloadAction({ item }: { item: LibItem }) {
+  const image = useLibraryImageSource(item);
+  if (image.url) {
+    return (
+      <DropdownMenuItem asChild>
+        <a href={image.url} target="_blank" rel="noopener noreferrer">
+          <Download className="mr-2 h-4 w-4" /> Open or download
+        </a>
+      </DropdownMenuItem>
+    );
+  }
+  return (
+    <DropdownMenuItem disabled>
+      <Download className="mr-2 h-4 w-4" />
+      {image.loading ? "Preparing image…" : "Image unavailable"}
+    </DropdownMenuItem>
+  );
 }
 
 function LibraryPage() {
@@ -488,7 +585,9 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item), userKey)}>
           Add to Context Pack
         </DropdownMenuItem>
-        {safeNavigationUrl(item.file_url) ? (
+        {isImageItem(item) ? (
+          <LibraryImageDownloadAction item={item} />
+        ) : safeNavigationUrl(item.file_url) ? (
           <DropdownMenuItem asChild>
             <a href={safeNavigationUrl(item.file_url)!} target="_blank" rel="noopener noreferrer">
               <Download className="mr-2 h-4 w-4" /> Open or download
@@ -594,12 +693,7 @@ function LibraryPage() {
         ) : null}
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
-            <img
-              src={item.file_url!}
-              alt={item.title}
-              loading="lazy"
-              className="h-full w-full object-cover "
-            />
+            <LibraryImageMedia item={item} className="h-full w-full object-cover" />
           </div>
         ) : (
           <div className="aspect-[4/3] bg-[var(--surface-secondary)] p-4 text-xs text-muted-foreground">
@@ -890,10 +984,10 @@ function LibraryPage() {
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
                 {isImageItem(visiblePreviewItem) ? (
-                  <img
-                    src={visiblePreviewItem.file_url!}
-                    alt={visiblePreviewItem.title}
+                  <LibraryImageMedia
+                    item={visiblePreviewItem}
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
+                    fallbackClassName="min-h-64 rounded-xl bg-[var(--surface-secondary)]"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
 
 const BUCKET = "library-images";
@@ -121,7 +122,7 @@ async function fetchRemoteImage(
 }
 
 const SaveImageSchema = z.object({
-  imageUrl: z.string().min(1).max(2_500_000), // allow inline base64
+  imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
 });
