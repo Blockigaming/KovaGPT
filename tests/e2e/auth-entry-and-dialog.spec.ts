@@ -181,7 +181,10 @@ test("auth dialog close button dismisses the dialog and restores focus", async (
 
   const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  const close = dialog.getByRole("button", { name: "Close", exact: true });
+  // Keep the pointer down long enough for blur validation to render. The close
+  // target must not move out from under the pointer before its click fires.
+  await close.click({ delay: 100 });
   await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
 });
