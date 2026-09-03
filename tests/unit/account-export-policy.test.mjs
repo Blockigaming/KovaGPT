@@ -84,6 +84,15 @@ test("public job state never exposes storage paths or expired downloads", () => 
   );
   assert.equal(expired.status, "expired");
   assert.equal(expired.downloadable, false);
+
+  const cleanupPending = publicAccountExportJob({
+    ...ready,
+    id: jobId,
+    status: "canceled",
+    storage_path: `${userId}/${jobId}/33333333-3333-4333-8333-333333333333.json`,
+  });
+  assert.equal(cleanupPending.cleanupPending, true);
+  assert.equal("storagePath" in cleanupPending, false);
 });
 
 test("the direct export allowlist contains no credential-state tables", () => {

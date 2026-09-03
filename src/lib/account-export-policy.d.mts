@@ -22,4 +22,5 @@ export function publicAccountExportJob(
   sizeBytes: number | null;
   failureCode: string | null;
   downloadable: boolean;
+  cleanupPending: boolean;
 };

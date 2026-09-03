@@ -19,6 +19,24 @@ test("account export ingress is authenticated, bounded, rate-limited, and no-sto
       route.indexOf("await clearAccountExportArtifacts(auth.userId, body.id)"),
     "cancellation must revoke database access before deleting every attempt artifact",
   );
+  const cancellationUpdate = route.slice(
+    route.indexOf('.update({\n            status: "canceled"'),
+    route.indexOf("if (updated.error)"),
+  );
+  assert.doesNotMatch(cancellationUpdate, /storage_path:\s*null/u);
+  assert.doesNotMatch(cancellationUpdate, /worker_id:\s*null/u);
+  assert.ok(
+    route.indexOf("await clearAccountExportArtifacts(auth.userId, body.id)") <
+      route.indexOf("await finalizeAccountExportArtifactCleanup(auth.userId, body.id)"),
+    "object removal must succeed before cancellation clears retry metadata",
+  );
+  assert.match(route, /account_export_delete_failed[\s\S]*cleanupPending: true/u);
+  assert.match(
+    route,
+    /selected\.data\.status === "processing"[\s\S]*account_export_processing[\s\S]*retryRequired: true[\s\S]*409/u,
+  );
+  assert.match(route, /\.eq\("status", selected\.data\.status\)/u);
+  assert.doesNotMatch(route, /selected\.data\.status[^\n]*(?:canceled|cancelled)/u);
 });
 
 test("the worker uses leases, private storage, redaction, and truthful settlement", async () => {
@@ -33,6 +51,35 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /settled\.data === "queued"/u);
   assert.match(worker, /createHash\("sha256"\)/u);
   assert.match(worker, /OAuth credentials, access tokens/u);
+  assert.match(worker, /assertClaimStillOwnsUpload/u);
+  assert.doesNotMatch(
+    worker.slice(worker.indexOf("async function processClaimed"), worker.indexOf("const path =")),
+    /clearAccountExportArtifacts/u,
+  );
+  assert.match(worker, /storage[\s\S]*\.remove\(\[uploadedPath\]\)/u);
+});
+
+test("account deletion is fenced and export cleanup completes before auth cascade", async () => {
+  const accountRoute = await read("src/routes/api/account.ts");
+  const cleanup = await read("src/lib/account-export.server.ts");
+  const migration = await read(
+    "supabase/migrations/20260903204500_account_export_deletion_fence.sql",
+  );
+
+  assert.ok(
+    accountRoute.indexOf("cleanupAccountExportsBeforeAccountDeletion(auth.userId)") <
+      accountRoute.indexOf("auth.supabaseAdmin.auth.admin.deleteUser(auth.userId)"),
+    "auth deletion must not cascade export metadata before cleanup",
+  );
+  assert.match(accountRoute, /account_export_cleanup_pending/u);
+  assert.match(accountRoute, /account_export_cleanup_failed/u);
+  assert.match(cleanup, /begin_account_export_account_deletion/u);
+  assert.match(cleanup, /discoverAccountExportJobIds/u);
+  assert.match(cleanup, /job\.status === "processing"/u);
+  assert.match(migration, /account_deletion_fences/u);
+  assert.match(migration, /before insert on public\.account_export_jobs/u);
+  assert.match(migration, /set status = 'canceled', updated_at = now\(\)/u);
+  assert.doesNotMatch(migration, /set status = 'canceled',[\s\S]{0,180}storage_path\s*=\s*null/u);
 });
 
 test("the internal export runner fails closed behind a dedicated or cron secret", async () => {

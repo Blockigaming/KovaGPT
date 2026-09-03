@@ -156,6 +156,7 @@ export function publicAccountExportJob(value, now = new Date()) {
     expiresAt !== null &&
     Number.isFinite(Date.parse(expiresAt)) &&
     Date.parse(expiresAt) > now.getTime();
+  const cleanupPending = value.status === "canceled" && typeof value.storage_path === "string";
   return {
     id: value.id,
     status: downloadable || value.status !== "complete" ? value.status : "expired",
@@ -171,5 +172,6 @@ export function publicAccountExportJob(value, now = new Date()) {
         ? value.failure_code
         : null,
     downloadable,
+    cleanupPending,
   };
 }

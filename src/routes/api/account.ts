@@ -7,6 +7,7 @@ import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 import { disconnectAllFinance } from "@/finances/plaid.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
+import { cleanupAccountExportsBeforeAccountDeletion } from "@/lib/account-export.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
@@ -134,6 +135,38 @@ export const Route = createFileRoute("/api/account")({
           return jsonError(
             "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
             503,
+          );
+        }
+
+        try {
+          const exportCleanup = await cleanupAccountExportsBeforeAccountDeletion(auth.userId);
+          if (!exportCleanup.ready) {
+            return Response.json(
+              {
+                error:
+                  "Account export cleanup is still in progress. Your account was not deleted; retry shortly.",
+                code: "account_export_cleanup_pending",
+              },
+              {
+                status: 409,
+                headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+              },
+            );
+          }
+        } catch (error) {
+          console.error("[account-delete] account export cleanup failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
+          return Response.json(
+            {
+              error:
+                "Private export data could not be removed, so your account was not deleted. Retry shortly.",
+              code: "account_export_cleanup_failed",
+            },
+            {
+              status: 503,
+              headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+            },
           );
         }
 

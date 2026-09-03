@@ -4,7 +4,10 @@ import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { isUuid, publicAccountExportJob } from "@/lib/account-export-policy.mjs";
-import { clearAccountExportArtifacts } from "@/lib/account-export.server";
+import {
+  clearAccountExportArtifacts,
+  finalizeAccountExportArtifactCleanup,
+} from "@/lib/account-export.server";
 
 const BUCKET = "account-exports";
 const JOB_COLUMNS =
@@ -216,32 +219,72 @@ export const Route = createFileRoute("/api/account/export")({
           .maybeSingle();
         if (selected.error) return json({ error: "account_export_status_unavailable" }, 503);
         if (!selected.data) return json({ error: "account_export_not_found" }, 404);
+        if (selected.data.status === "processing") {
+          return json(
+            {
+              error: "account_export_processing",
+              job: publicAccountExportJob(selected.data),
+              retryRequired: true,
+            },
+            409,
+            { "Retry-After": "5" },
+          );
+        }
         const updated = await adminFor(auth)
           .from("account_export_jobs")
           .update({
             status: "canceled",
-            storage_path: null,
-            content_sha256: null,
-            size_bytes: null,
-            worker_id: null,
-            lease_expires_at: null,
-            expires_at: null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", body.id)
           .eq("user_id", auth.userId)
+          .eq("status", selected.data.status)
           .select(JOB_COLUMNS)
           .maybeSingle();
-        if (updated.error || !updated.data) {
+        if (updated.error) {
           return json({ error: "account_export_cancel_failed" }, 503);
+        }
+        if (!updated.data) {
+          return json({ error: "account_export_processing", retryRequired: true }, 409, {
+            "Retry-After": "5",
+          });
         }
         try {
           await clearAccountExportArtifacts(auth.userId, body.id);
         } catch {
-          return json({ error: "account_export_delete_failed" }, 503);
+          return json(
+            {
+              error: "account_export_delete_failed",
+              job: publicAccountExportJob(updated.data),
+              cleanupPending: true,
+            },
+            503,
+            { "Retry-After": "5" },
+          );
+        }
+        try {
+          await finalizeAccountExportArtifactCleanup(auth.userId, body.id);
+        } catch {
+          return json(
+            {
+              error: "account_export_cleanup_finalize_failed",
+              job: publicAccountExportJob(updated.data),
+              cleanupPending: true,
+            },
+            503,
+            { "Retry-After": "5" },
+          );
         }
         await writeAudit(auth, body.id, "Account data export canceled").catch(() => undefined);
-        return json({ job: publicAccountExportJob(updated.data) });
+        return json({
+          job: publicAccountExportJob({
+            ...updated.data,
+            storage_path: null,
+            worker_id: null,
+            lease_expires_at: null,
+          }),
+          cleanupPending: false,
+        });
       },
     },
   },
