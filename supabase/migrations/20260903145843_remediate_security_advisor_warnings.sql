@@ -159,9 +159,24 @@ alter function public.kova_activate_chat_branch(text, uuid) security invoker;
 alter function public.kova_create_chat_branch(
   text, text, uuid, text, text, integer, text[], text, boolean, integer
 ) security invoker;
-alter function public.kova_record_message_version(
-  text, text, text, text, uuid, text, text, boolean, integer, integer, integer
-) security invoker;
+-- Production and the replayed source history currently differ in the order of
+-- the final selection/acceptance arguments. Harden whichever known overload is
+-- present so this migration is safe in both environments.
+do $migration$
+begin
+  if to_regprocedure(
+    'public.kova_record_message_version(text,text,text,text,uuid,text,text,boolean,integer,integer,integer)'
+  ) is not null then
+    execute 'alter function public.kova_record_message_version(text,text,text,text,uuid,text,text,boolean,integer,integer,integer) security invoker';
+  end if;
+
+  if to_regprocedure(
+    'public.kova_record_message_version(text,text,text,text,uuid,text,text,integer,integer,boolean,integer)'
+  ) is not null then
+    execute 'alter function public.kova_record_message_version(text,text,text,text,uuid,text,text,integer,integer,boolean,integer) security invoker';
+  end if;
+end
+$migration$;
 alter function public.kova_update_chat_branch_messages(uuid, text[], text) security invoker;
 alter function public.save_writing_document(uuid, text, text, integer, text) security invoker;
 alter function public.user_plan_tier(uuid) security invoker;
