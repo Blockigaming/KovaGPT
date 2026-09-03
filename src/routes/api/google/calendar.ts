@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/google/calendar")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "calendar", 60);
+        const limited = await enforceGoogleRateLimit(auth.userId, "calendar", 60);
         if (limited) return limited;
         let body: JsonRecord;
         try {

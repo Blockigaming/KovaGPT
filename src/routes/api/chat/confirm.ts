@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/chat/confirm")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "confirmation", 20);
+        const limited = await enforceGoogleRateLimit(auth.userId, "confirmation", 20);
         if (limited) return limited;
         let body: Body;
         try {

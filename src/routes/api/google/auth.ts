@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/google/auth")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "oauth", 10);
+        const limited = await enforceGoogleRateLimit(auth.userId, "oauth", 10);
         if (limited) return limited;
         if (
           !process.env.GOOGLE_OAUTH_CLIENT_ID ||

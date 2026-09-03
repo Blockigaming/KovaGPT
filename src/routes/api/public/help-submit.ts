@@ -6,6 +6,8 @@ import { z } from "zod";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 import type { Database } from "@/integrations/supabase/types";
 import { resolveBackendUrl } from "@/lib/backend-url";
+import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
@@ -105,41 +107,6 @@ async function enqueueFixedRecipient(args: {
   if (error) throw new Error(error.message);
 }
 
-// Simple in-memory IP rate limiter: max 5 submissions per hour per IP.
-// In-memory state is per-worker-instance, so this is a best-effort guard
-// rather than a global hard limit, but defeats trivial scripted abuse.
-const RATE_WINDOW_MS = 60 * 60 * 1000;
-const RATE_LIMIT = 5;
-const ipHits = new Map<string, number[]>();
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  if (arr.length >= RATE_LIMIT) {
-    ipHits.set(ip, arr);
-    return true;
-  }
-  arr.push(now);
-  ipHits.set(ip, arr);
-  // Opportunistic cleanup so the map doesn't grow unbounded.
-  if (ipHits.size > 5000) {
-    for (const [k, v] of ipHits) {
-      const fresh = v.filter((t) => now - t < RATE_WINDOW_MS);
-      if (fresh.length === 0) ipHits.delete(k);
-      else ipHits.set(k, fresh);
-    }
-  }
-  return false;
-}
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
 export const Route = createFileRoute("/api/public/help-submit")({
   server: {
     handlers: {
@@ -150,11 +117,27 @@ export const Route = createFileRoute("/api/public/help-submit")({
           return Response.json({ error: "Server not configured" }, { status: 500 });
         }
 
-        const ip = clientIp(request);
-        if (rateLimited(ip)) {
+        const rateLimit = await consumeApplicationRateLimit({
+          identity: resolveAnonymousClientKey(request.headers),
+          action: "support_submission",
+          limit: 5,
+          windowSeconds: 3600,
+        });
+        if (!rateLimit.allowed) {
           return Response.json(
-            { error: "Too many requests. Please try again later." },
-            { status: 429 },
+            {
+              error:
+                rateLimit.status === "limited"
+                  ? "Too many requests. Please try again later."
+                  : "Request protection is temporarily unavailable.",
+            },
+            {
+              status: rateLimit.status === "limited" ? 429 : 503,
+              headers: {
+                "Cache-Control": "no-store",
+                "Retry-After": String(rateLimit.retryAfter),
+              },
+            },
           );
         }
 

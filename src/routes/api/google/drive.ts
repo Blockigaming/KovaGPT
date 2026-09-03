@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/google/drive")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "drive", 60);
+        const limited = await enforceGoogleRateLimit(auth.userId, "drive", 60);
         if (limited) return limited;
         if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
           return Response.json({ error: "request_too_large" }, { status: 413 });

@@ -67,6 +67,7 @@ import {
   readProviderJsonObject,
   readProviderText,
 } from "@/lib/provider-response.server.mjs";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -504,6 +505,33 @@ export const Route = createFileRoute("/api/chat")({
                   {
                     status: 429,
                     headers: { "Content-Type": "application/json" },
+                  },
+                );
+              }
+              // Keep the bounded in-process bucket as a first-line flood
+              // guard, then consume an atomic Supabase bucket before any
+              // optional search or provider work can begin. Generation has a
+              // second authoritative reservation later in the request.
+              const distributedLimit = await consumeApplicationRateLimit({
+                identity: clientKey,
+                action: "guest_chat_preflight",
+                limit: 60,
+                windowSeconds: 3600,
+              });
+              if (!distributedLimit.allowed) {
+                return Response.json(
+                  {
+                    error:
+                      distributedLimit.status === "limited"
+                        ? "Too many requests. Sign in to continue."
+                        : "Request protection is temporarily unavailable.",
+                  },
+                  {
+                    status: distributedLimit.status === "limited" ? 429 : 503,
+                    headers: {
+                      "Cache-Control": "no-store",
+                      "Retry-After": String(distributedLimit.retryAfter),
+                    },
                   },
                 );
               }

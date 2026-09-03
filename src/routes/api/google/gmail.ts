@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "gmail", 60);
+        const limited = await enforceGoogleRateLimit(auth.userId, "gmail", 60);
         if (limited) return limited;
         let body: JsonRecord;
         try {
