@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -95,11 +95,20 @@ import {
 } from "@/lib/project-workspace.functions";
 
 export const Route = createFileRoute("/projects/$projectId")({
-  component: ProjectDetailPage,
+  component: ProjectDetailRoute,
   head: () => ({
     meta: [{ title: "KovaGPT Project" }, { name: "robots", content: "noindex" }],
   }),
 });
+
+function ProjectDetailRoute() {
+  const chatMatch = useMatch({
+    from: "/projects/$projectId/chat/$chatId",
+    shouldThrow: false,
+  });
+
+  return chatMatch ? <Outlet /> : <ProjectDetailPage />;
+}
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
