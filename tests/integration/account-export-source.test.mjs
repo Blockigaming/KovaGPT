@@ -6,14 +6,20 @@ const read = (path) => readFile(path, "utf8");
 
 test("account export ingress is authenticated, bounded, rate-limited, and no-store", async () => {
   const route = await read("src/routes/api/account/export.ts");
-  assert.match(route, /requireUser\(request\)/u);
+  assert.match(route, /requireVerifiedUser\(request\)/u);
   assert.match(route, /isCrossSiteMutation\(request\)/u);
   assert.match(route, /readBoundedJsonObject\(request, 512\)/u);
-  assert.match(route, /account_data_export/u);
-  assert.match(route, /windowSeconds: 86_400/u);
+  assert.match(route, /ACCOUNT_EXPORT_RATE_LIMIT/u);
+  assert.match(route, /accountExportCooldownRetryAfter/u);
+  assert.doesNotMatch(route, /windowSeconds:\s*86_400/u);
   assert.match(route, /"Cache-Control": "no-store"/u);
   assert.match(route, /createSignedUrl\(result\.data\.storage_path, 300\)/u);
   assert.doesNotMatch(route, /getPublicUrl/u);
+  assert.ok(
+    route.indexOf("accountExportCooldownRetryAfter") <
+      route.indexOf('.from("account_export_jobs")\n          .insert'),
+    "the durable cooldown must run before a new export job is inserted",
+  );
   assert.ok(
     route.indexOf('.update({\n            status: "canceled"') <
       route.indexOf("await clearAccountExportArtifacts(auth.userId, body.id)"),

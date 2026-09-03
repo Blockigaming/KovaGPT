@@ -2,6 +2,12 @@ export const ACCOUNT_EXPORT_FORMAT = "kovagpt-account-export";
 export const ACCOUNT_EXPORT_VERSION = 1;
 export const ACCOUNT_EXPORT_MAX_BYTES = 50 * 1024 * 1024;
 export const ACCOUNT_EXPORT_PAGE_SIZE = 500;
+export const ACCOUNT_EXPORT_RATE_LIMIT = Object.freeze({
+  action: "account_data_export",
+  limit: 2,
+  windowSeconds: 3_600,
+});
+export const ACCOUNT_EXPORT_COOLDOWN_SECONDS = 12 * 60 * 60;
 
 export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["ai_generation_events", "user_id"],
@@ -109,6 +115,16 @@ export function isUuid(value) {
     typeof value === "string" &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value)
   );
+}
+
+export function accountExportCooldownRetryAfter(requestedAt, now = Date.now()) {
+  if (typeof requestedAt !== "string" || !Number.isFinite(now)) {
+    throw new Error("account_export_job_invalid");
+  }
+  const requestedAtMs = Date.parse(requestedAt);
+  if (!Number.isFinite(requestedAtMs)) throw new Error("account_export_job_invalid");
+  const remainingMs = ACCOUNT_EXPORT_COOLDOWN_SECONDS * 1_000 - (now - requestedAtMs);
+  return Math.max(0, Math.ceil(remainingMs / 1_000));
 }
 
 export function sanitizeAccountExportValue(value, depth = 0) {
