@@ -13,7 +13,7 @@ KovaGPT's cloud-account export is a private, asynchronous portability path. It i
 
 ## Data boundaries
 
-The export covers the authenticated Supabase user record and the owner's supported KovaGPT records, including Projects, Library metadata and supported file bodies, memories, tasks, shares, connected-account metadata, connector audit events, Work/agent records, billing state, preferences, notifications, support records, and generated content metadata.
+The export covers the authenticated Supabase user record and the owner's supported KovaGPT records, including Projects, Library metadata and supported file bodies, memories, tasks, shares, connected-account metadata, connector audit events, Work/agent records, cross-device Work drafts and Recent state, billing state, preferences, notifications, support records, and generated content metadata. Operational Work sync counters and idempotency receipts are excluded.
 
 OAuth state, access and refresh tokens, encrypted credentials, passwords, authorization headers, link/processor tokens, private keys, client secrets, state hashes, and private moderation notes are excluded recursively. Device-local chat history remains in the separately labeled device export because it is not present in Supabase.
 

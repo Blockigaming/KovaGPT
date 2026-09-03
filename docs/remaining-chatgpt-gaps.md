@@ -17,18 +17,19 @@ Last audited: 2026-09-03. This is a product-truth ledger, not a parity marketing
 | Project/Work/Research/Automation context was siloed                    | Existing workspaces now show explicitly related or type-filtered authorized resources.                                                                                                                                           |
 | Lockdown Mode lacked a server-enforced account policy                  | Audited persistence and fail-closed guards cover web/research, local weather, agents, connectors, OAuth callbacks and remote downloads; Canvas previews are network-isolated.                                                    |
 | Library lacked durable folders and atomic bulk organization            | Owner-scoped nested folders, cycle/depth guards, data-preserving deletion, service-only transactional bulk move, rate-limited APIs, RLS, and audit events are source-complete; production migration and browser evidence remain. |
+| Work tasks, templates, agent drafts, and Recents had no sync contract  | One owner-scoped monotonic clock, optimistic revisions, idempotent mutations, tombstones, bounded APIs, RLS, and account-export coverage are source-complete; client adoption and production evidence remain.                    |
 
 ## B — Requires backend work
 
-| Gap                                                                           | Required work                                                                                             |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Cross-device Work sessions, Work templates, branch metadata, and Recents pins | Owner-scoped persistence, conflict handling, migration, and sync APIs.                                    |
-| Realtime collaborative Canvas and Project presence                            | Realtime subscriptions, presence protocol, revision conflict resolution, and durable comment anchors.     |
-| Server-ranked semantic workspace search                                       | Embedding/index pipeline, authorization-filtered retrieval, ranking evaluation, and deletion propagation. |
-| Per-response memory source inspection                                         | Durable source-attribution records from prompt assembly through response persistence.                     |
-| Project and workspace templates shared across teams                           | Versioned template schema, permissions, copying semantics, and audit events.                              |
-| Full organization administration                                              | Organization schema, SSO/domain controls, retention policies, admin roles, and enterprise audit export.   |
-| Trusted contacts and safety escalation                                        | Verified contact model, consent, notification delivery, revocation, and abuse protections.                |
+| Gap                                                 | Required work                                                                                                                |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Cross-device Work sessions and branch metadata      | Extend the sync foundation to active session plans/events/branches, migrate local clients, and verify multi-device recovery. |
+| Realtime collaborative Canvas and Project presence  | Realtime subscriptions, presence protocol, revision conflict resolution, and durable comment anchors.                        |
+| Server-ranked semantic workspace search             | Embedding/index pipeline, authorization-filtered retrieval, ranking evaluation, and deletion propagation.                    |
+| Per-response memory source inspection               | Durable source-attribution records from prompt assembly through response persistence.                                        |
+| Project and workspace templates shared across teams | Versioned template schema, permissions, copying semantics, and audit events.                                                 |
+| Full organization administration                    | Organization schema, SSO/domain controls, retention policies, admin roles, and enterprise audit export.                      |
+| Trusted contacts and safety escalation              | Verified contact model, consent, notification delivery, revocation, and abuse protections.                                   |
 
 ## C — Requires provider support
 

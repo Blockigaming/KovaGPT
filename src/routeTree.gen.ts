@@ -112,6 +112,7 @@ import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bul
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
+import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -640,6 +641,11 @@ const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
   path: '/api/security/lockdown',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkSyncRoute = ApiWorkSyncRouteImport.update({
+  id: '/api/work/sync',
+  path: '/api/work/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIntegrationsOauthDisconnectRoute =
   ApiIntegrationsOauthDisconnectRouteImport.update({
     id: '/api/integrations/oauth/disconnect',
@@ -775,6 +781,7 @@ export interface FileRoutesByFullPath {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -885,6 +892,7 @@ export interface FileRoutesByTo {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -996,6 +1004,7 @@ export interface FileRoutesById {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1108,6 +1117,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1218,6 +1228,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1328,6 +1339,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1435,6 +1447,7 @@ export interface RootRouteChildren {
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
+  ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -2164,6 +2177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSecurityLockdownRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/work/sync': {
+      id: '/api/work/sync'
+      path: '/api/work/sync'
+      fullPath: '/api/work/sync'
+      preLoaderRoute: typeof ApiWorkSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/oauth/disconnect': {
       id: '/api/integrations/oauth/disconnect'
       path: '/api/integrations/oauth/disconnect'
@@ -2361,6 +2381,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
+  ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
