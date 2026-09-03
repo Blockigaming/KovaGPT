@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-const RATE_LIMIT_MAX = 30;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 type TitleMessage = { role: "user" | "assistant"; content: string };
 
@@ -28,34 +26,11 @@ function parseMessages(raw: string): TitleMessage[] | null {
   return valid ? (messages as TitleMessage[]) : null;
 }
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const bucket = rateLimitBuckets.get(ip);
-  if (!bucket || bucket.resetAt < now) {
-    rateLimitBuckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (bucket.count >= RATE_LIMIT_MAX) return false;
-  bucket.count += 1;
-  return true;
-}
-
 export const Route = createFileRoute("/api/title")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const ip =
-            request.headers.get("cf-connecting-ip") ??
-            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-            "unknown";
-          if (!checkRateLimit(ip)) {
-            return new Response(JSON.stringify({ title: "New chat" }), {
-              status: 429,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");
           if (contentLength > MAX_BODY) {
@@ -77,6 +52,31 @@ export const Route = createFileRoute("/api/title")({
               status: 400,
               headers: { "Content-Type": "application/json" },
             });
+          }
+
+          const rateLimit = await consumeApplicationRateLimit({
+            identity: resolveAnonymousClientKey(request.headers),
+            action: "title_generation",
+            limit: 30,
+            windowSeconds: 3600,
+          });
+          if (!rateLimit.allowed) {
+            return Response.json(
+              {
+                title: "New chat",
+                error:
+                  rateLimit.status === "limited"
+                    ? "Too many title requests. Try again later."
+                    : "Title protection is temporarily unavailable.",
+              },
+              {
+                status: rateLimit.status === "limited" ? 429 : 503,
+                headers: {
+                  "Cache-Control": "no-store",
+                  "Retry-After": String(rateLimit.retryAfter),
+                },
+              },
+            );
           }
 
           const provider = await import("@/lib/ai/provider.server");
