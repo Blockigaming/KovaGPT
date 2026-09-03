@@ -8,6 +8,7 @@ import {
   parseAgentRunQuery,
   readAgentJsonRequest,
 } from "@/agents/agent-ingress.server.mjs";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 const RUN_CONTROL_ERRORS = new Set([
   "browser_agent_unavailable",
@@ -79,6 +80,8 @@ export const Route = createFileRoute("/api/agents/runs")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const lockdown = await enforceLockdownCapability(auth.supabaseAdmin, auth.userId, "agent");
+        if (lockdown) return lockdown;
         // Run creation remains disabled until the worker is enabled. The versioned ingress
         // contract is nevertheless explicit so enabling it cannot bypass definition CAS.
         const expectedDefinitionVersion = request.headers.get("x-agent-definition-version");
@@ -102,6 +105,14 @@ export const Route = createFileRoute("/api/agents/runs")({
           );
         } catch (error) {
           return agentRequestError(error, "invalid_control_request");
+        }
+        if (body.command === "resume") {
+          const lockdown = await enforceLockdownCapability(
+            auth.supabaseAdmin,
+            auth.userId,
+            "agent",
+          );
+          if (lockdown) return lockdown;
         }
         try {
           return Response.json(

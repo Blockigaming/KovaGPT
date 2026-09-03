@@ -1,5 +1,6 @@
 import { createHash, randomBytes, createPrivateKey, sign } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- GitHub tables are available after the Mercury migrations regenerate Supabase types. */
 
@@ -30,6 +31,7 @@ export async function decryptSecret(value: string) {
   return new TextDecoder().decode(plain);
 }
 export async function startGitHubOAuth(ownerId: string, origin: string) {
+  await assertLockdownAllows(supabaseAdmin, ownerId, "connector_write");
   const clientId = process.env.GITHUB_OAUTH_CLIENT_ID,
     redirect = process.env.GITHUB_REDIRECT_URI || `${origin}/api/github/callback`;
   if (!clientId) throw new Error("GitHub OAuth is not configured");
@@ -66,6 +68,9 @@ export async function completeGitHubOAuth(code: string, state: string, browserSt
     .gt("expires_at", new Date().toISOString())
     .single();
   if (error || !data) throw new Error("Invalid or expired OAuth state");
+  // Re-check after resolving the state owner. A user can enable Lockdown Mode
+  // after starting OAuth but before the provider redirects back.
+  await assertLockdownAllows(supabaseAdmin, data.owner_id, "connector_write");
   const claimed = await (supabaseAdmin as any)
     .from("github_oauth_states")
     .update({ used_at: new Date().toISOString() })

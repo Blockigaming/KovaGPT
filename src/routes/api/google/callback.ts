@@ -2,6 +2,8 @@
 // stores per-user tokens, then bounces back into the app.
 import { createFileRoute } from "@tanstack/react-router";
 import { exchangeCodeForTokens, storeGoogleTokens, logAudit } from "@/lib/google-oauth.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 async function verifyState(state: string): Promise<string | null> {
   const parts = state.split(".");
@@ -85,6 +87,9 @@ export const Route = createFileRoute("/api/google/callback")({
         const userId = await verifyState(state);
         if (!userId) return bounce(request, { google_error: "invalid_state" }, true);
         try {
+          // Re-check after authenticating the callback owner. Lockdown Mode can
+          // be enabled while the Google consent page is still open.
+          await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
           const tokens = await exchangeCodeForTokens(code, request, oauthCookie.verifier);
           await storeGoogleTokens(userId, tokens);
           await logAudit({

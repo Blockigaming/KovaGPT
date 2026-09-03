@@ -67,6 +67,11 @@ import {
   readProviderJsonObject,
   readProviderText,
 } from "@/lib/provider-response.server.mjs";
+import {
+  LockdownPolicyError,
+  lockdownErrorResponse,
+  readLockdownMode,
+} from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 type ChatContentPart =
@@ -548,6 +553,41 @@ export const Route = createFileRoute("/api/chat")({
               temporary,
               clientTool,
             } = ingress;
+            // Lockdown Mode is a server-enforced account boundary. Explicit
+            // network tools fail with a truthful policy response; implicit web
+            // enrichment fails closed while ordinary local/model chat remains
+            // available. Guests have no account setting to enforce.
+            const explicitLockdownCapability =
+              clientTool === "deep_research"
+                ? "deep_research"
+                : clientTool === "web_search"
+                  ? "live_web"
+                  : null;
+            let lockdownBlocksNetwork = false;
+            if (auth) {
+              try {
+                lockdownBlocksNetwork = await readLockdownMode(auth.supabaseAdmin, auth.userId);
+              } catch (error) {
+                lockdownBlocksNetwork = true;
+                if (explicitLockdownCapability) {
+                  return (
+                    lockdownErrorResponse(error) ??
+                    Response.json(
+                      { error: "Lockdown Mode could not be verified. Try again shortly." },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    )
+                  );
+                }
+              }
+              if (lockdownBlocksNetwork && explicitLockdownCapability) {
+                return lockdownErrorResponse(
+                  new LockdownPolicyError(`lockdown_blocked_${explicitLockdownCapability}`, 403),
+                )!;
+              }
+            }
             // Temporary Chat is a clean-room request: even a custom client
             // cannot combine `temporary: true` with profile or personality
             // fields and have those values reach the model prompt.
@@ -874,6 +914,7 @@ export const Route = createFileRoute("/api/chat")({
             // Fast mode skips web search entirely to stay instant.
             let webBlock = "";
             if (
+              !lockdownBlocksNetwork &&
               lastText &&
               !hasImages &&
               (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")

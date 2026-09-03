@@ -71,6 +71,7 @@ import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-sugg
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
+import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
@@ -106,6 +107,7 @@ import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
+import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -424,6 +426,11 @@ const ApiVersionRoute = ApiVersionRouteImport.update({
   path: '/api/version',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWeatherRoute = ApiWeatherRouteImport.update({
+  id: '/api/weather',
+  path: '/api/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWriteRoute = ApiWriteRouteImport.update({
   id: '/api/write',
   path: '/api/write',
@@ -603,6 +610,11 @@ const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   path: '/api/public/help-submit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
+  id: '/api/security/lockdown',
+  path: '/api/security/lockdown',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIntegrationsOauthDisconnectRoute =
   ApiIntegrationsOauthDisconnectRouteImport.update({
     id: '/api/integrations/oauth/disconnect',
@@ -697,6 +709,7 @@ export interface FileRoutesByFullPath {
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -732,6 +745,7 @@ export interface FileRoutesByFullPath {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -801,6 +815,7 @@ export interface FileRoutesByTo {
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -836,6 +851,7 @@ export interface FileRoutesByTo {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -906,6 +922,7 @@ export interface FileRoutesById {
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -941,6 +958,7 @@ export interface FileRoutesById {
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1012,6 +1030,7 @@ export interface FileRouteTypes {
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1047,6 +1066,7 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
+    | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1116,6 +1136,7 @@ export interface FileRouteTypes {
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1151,6 +1172,7 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
+    | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1220,6 +1242,7 @@ export interface FileRouteTypes {
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1255,6 +1278,7 @@ export interface FileRouteTypes {
     | '/api/integrations/accounts'
     | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
+    | '/api/security/lockdown'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1325,6 +1349,7 @@ export interface RootRouteChildren {
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiVersionRoute: typeof ApiVersionRoute
+  ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
@@ -1357,6 +1382,7 @@ export interface RootRouteChildren {
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
+  ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1799,6 +1825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/weather': {
+      id: '/api/weather'
+      path: '/api/weather'
+      fullPath: '/api/weather'
+      preLoaderRoute: typeof ApiWeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/write': {
       id: '/api/write'
       path: '/api/write'
@@ -2044,6 +2077,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHelpSubmitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/security/lockdown': {
+      id: '/api/security/lockdown'
+      path: '/api/security/lockdown'
+      fullPath: '/api/security/lockdown'
+      preLoaderRoute: typeof ApiSecurityLockdownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/oauth/disconnect': {
       id: '/api/integrations/oauth/disconnect'
       path: '/api/integrations/oauth/disconnect'
@@ -2192,6 +2232,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiReadyzRoute: ApiReadyzRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiVersionRoute: ApiVersionRoute,
+  ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
@@ -2224,6 +2265,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
+  ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
