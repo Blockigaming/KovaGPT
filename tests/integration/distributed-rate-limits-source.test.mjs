@@ -45,6 +45,15 @@ test("distributed limiter is fail-closed and never persists a raw identity", asy
   assert.match(server, /runtimeEnv\("KOVA_IP_HASH_SECRET"\)/);
 });
 
+test("title requests validate bounded input before consuming a distributed bucket", async () => {
+  const title = await read("src/routes/api/title.ts");
+  assert.ok(
+    title.indexOf("const messages = parseMessages(raw)") <
+      title.indexOf("const rateLimit = await consumeApplicationRateLimit"),
+    "malformed title requests must fail deterministically before rate-limit infrastructure",
+  );
+});
+
 test("Google integration actions share the atomic limiter", async () => {
   const source = await read("src/lib/google-rate-limit.server.ts");
   assert.match(source, /consumeApplicationRateLimit/);

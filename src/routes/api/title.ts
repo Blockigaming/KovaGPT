@@ -31,6 +31,29 @@ export const Route = createFileRoute("/api/title")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const MAX_BODY = 1 * 1024 * 1024;
+          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          if (contentLength > MAX_BODY) {
+            return new Response(JSON.stringify({ error: "Request too large." }), {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          const raw = await request.text();
+          if (raw.length > MAX_BODY) {
+            return new Response(JSON.stringify({ error: "Request too large." }), {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          const messages = parseMessages(raw);
+          if (!messages) {
+            return new Response(JSON.stringify({ error: "Invalid messages." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
           const rateLimit = await consumeApplicationRateLimit({
             identity: resolveAnonymousClientKey(request.headers),
             action: "title_generation",
@@ -54,29 +77,6 @@ export const Route = createFileRoute("/api/title")({
                 },
               },
             );
-          }
-
-          const MAX_BODY = 1 * 1024 * 1024;
-          const contentLength = Number(request.headers.get("content-length") ?? "0");
-          if (contentLength > MAX_BODY) {
-            return new Response(JSON.stringify({ error: "Request too large." }), {
-              status: 413,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-          const raw = await request.text();
-          if (raw.length > MAX_BODY) {
-            return new Response(JSON.stringify({ error: "Request too large." }), {
-              status: 413,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-          const messages = parseMessages(raw);
-          if (!messages) {
-            return new Response(JSON.stringify({ error: "Invalid messages." }), {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            });
           }
 
           const provider = await import("@/lib/ai/provider.server");
