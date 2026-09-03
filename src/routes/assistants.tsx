@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PUBLIC_ASSISTANTS } from "@/lib/public-assistants";
 import { PublicPageView } from "@/components/public/PublicSite";
 export const Route = createFileRoute("/assistants")({
-  component: Directory,
+  component: AssistantsRoute,
   head: () => ({
     meta: [
       { title: "KovaGPT Assistants" },
@@ -17,7 +17,17 @@ export const Route = createFileRoute("/assistants")({
     links: [{ rel: "canonical", href: "https://kovagpt.com/assistants" }],
   }),
 });
-function Directory() {
+
+function AssistantsRoute() {
+  const assistantMatch = useMatch({
+    from: "/assistants/$assistantSlug",
+    shouldThrow: false,
+  });
+
+  return assistantMatch ? <Outlet /> : <DirectoryPage />;
+}
+
+function DirectoryPage() {
   const [query, setQuery] = useState("");
   const items = useMemo(
     () =>
