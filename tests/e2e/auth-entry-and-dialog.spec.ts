@@ -120,7 +120,7 @@ test("valid sign-up deep links use account metadata and named fields", async ({ 
   expect(authWrites).toEqual([]);
 });
 
-test("auth dialog has one semantic title, one contained close target, and restores focus", async ({
+test("auth dialog has one semantic title, one contained close target, and Escape restores focus", async ({
   page,
 }, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -169,8 +169,17 @@ test("auth dialog has one semantic title, one contained close target, and restor
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
+});
 
+test("auth dialog close button dismisses the dialog and restores focus", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const login = page.getByRole("button", { name: "Log in", exact: true }).first();
+  await login.focus();
   await login.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toHaveCount(0);
