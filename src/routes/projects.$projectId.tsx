@@ -108,9 +108,7 @@ function ProjectDetailPage() {
   const requestKey = userKey ? `${userKey}:${projectId}` : null;
   const navigate = useNavigate();
 
-  const [project, setProject] = useState<(ProjectDetail & { archived_at?: string | null }) | null>(
-    null,
-  );
+  const [project, setProject] = useState<ProjectDetail | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [chats, setChats] = useState<ProjectChatSummary[]>([]);
@@ -119,6 +117,7 @@ function ProjectDetailPage() {
   const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const currentRequestKeyRef = useRef(requestKey);
   const requestSequenceRef = useRef(0);
   currentRequestKeyRef.current = requestKey;
@@ -149,7 +148,7 @@ function ProjectDetailPage() {
         currentRequestKeyRef.current !== loadRequestKey
       )
         return;
-      setProject(p as never);
+      setProject(p);
       setMembers(m);
       setInvites(i);
       setChats(c);
@@ -186,6 +185,7 @@ function ProjectDetailPage() {
     setLoadError(null);
     setTab("overview");
     setSearchOpen(false);
+    setArchiveBusy(false);
 
     if (!isSignedIn || !requestKey) {
       setResolvedRequestKey(null);
@@ -268,11 +268,22 @@ function ProjectDetailPage() {
   const archived = !!project.archived_at;
 
   async function toggleArchive() {
+    if (archiveBusy) return;
     const operationRequestKey = requestKey;
-    await fnArchive({ data: { id: projectId, archived: !archived } });
-    if (currentRequestKeyRef.current !== operationRequestKey) return;
-    toast.success(archived ? "Project restored" : "Project archived");
-    await refresh();
+    setArchiveBusy(true);
+    try {
+      await fnArchive({ data: { id: projectId, archived: !archived } });
+      if (currentRequestKeyRef.current !== operationRequestKey) return;
+      toast.success(archived ? "Project restored" : "Project archived");
+      await refresh();
+    } catch (error) {
+      if (currentRequestKeyRef.current !== operationRequestKey) return;
+      toast.error(
+        error instanceof Error ? error.message : "The project archive state could not be updated.",
+      );
+    } finally {
+      if (currentRequestKeyRef.current === operationRequestKey) setArchiveBusy(false);
+    }
   }
 
   return (
@@ -292,16 +303,30 @@ function ProjectDetailPage() {
               Search
             </Button>
             {isOwner && (
-              <Button variant="outline" size="sm" onClick={toggleArchive}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleArchive}
+                disabled={archiveBusy}
+                aria-busy={archiveBusy}
+              >
                 {archived ? (
                   <>
-                    <ArchiveRestore className="w-4 h-4 mr-1.5" />
-                    Restore
+                    {archiveBusy ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <ArchiveRestore className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                    )}
+                    {archiveBusy ? "Restoring…" : "Restore"}
                   </>
                 ) : (
                   <>
-                    <Archive className="w-4 h-4 mr-1.5" />
-                    Archive
+                    {archiveBusy ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Archive className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                    )}
+                    {archiveBusy ? "Archiving…" : "Archive"}
                   </>
                 )}
               </Button>

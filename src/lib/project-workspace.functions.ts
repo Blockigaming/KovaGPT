@@ -505,11 +505,20 @@ export const setProjectArchived = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
+    const { data: updated, error } = await context.supabase
       .from("projects")
       .update({ archived_at: data.archived ? new Date().toISOString() : null })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+      .eq("id", data.id)
+      .eq("owner_id", context.userId)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("The project archive state could not be updated.");
+    }
+    if (!updated) {
+      throw new Error("The project was not found, or you no longer have permission to update it.");
+    }
     await logActivity(
       context.supabase,
       data.id,
