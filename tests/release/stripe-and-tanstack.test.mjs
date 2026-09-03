@@ -35,8 +35,10 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
   );
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
-  assert.match(hook, /code.*23505/);
-  assert.match(hook, /processed_stripe_events"\)\.delete/);
+  assert.match(hook, /processStripeEvent/);
+  assert.match(hook, /createStripeClient\(env\)\.subscriptions\.retrieve/);
+  assert.match(hook, /status: verificationFailure \? 400 : 503/);
+  assert.match(hook, /"Retry-After": "5"/);
   assert.match(hook, /correlationId/);
   assert.doesNotMatch(hook, /console\.(log|error)/);
 });

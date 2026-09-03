@@ -77,6 +77,14 @@ class FakeSupabase {
     return new FakeQuery(this, table);
   }
 
+  async rpc(name, args) {
+    const step = this.steps.shift();
+    assert.ok(step, `unexpected rpc ${name}`);
+    assert.equal(step.rpc, name);
+    this.calls.push({ rpc: name, args });
+    return step.result;
+  }
+
   done() {
     assert.deepEqual(this.steps, []);
   }
@@ -85,12 +93,13 @@ class FakeSupabase {
 const stripeEvent = (type = "customer.subscription.updated") => ({
   id: "evt_123",
   type,
+  created: 1_700_000_100,
   data: {
     object: {
       id: "sub_123",
       customer: "cus_123",
       status: "active",
-      metadata: { userId: "user_123" },
+      metadata: { userId: "11111111-1111-4111-8111-111111111111" },
       items: {
         data: [
           {
@@ -104,16 +113,17 @@ const stripeEvent = (type = "customer.subscription.updated") => ({
   },
 });
 
-const processStripe = (supabase, event = stripeEvent()) =>
+const processStripe = (supabase, event = stripeEvent(), retrieveSubscription) =>
   processStripeEvent({
     supabase,
     event,
     environment: "live",
     resolvePriceId: (item) => item?.price?.lookup_key,
-    now: () => "2026-08-01T00:00:00.000Z",
+    retrieveSubscription: retrieveSubscription ?? (async () => event.data.object),
+    correlationId: "22222222-2222-4222-8222-222222222222",
   });
 
-test("Stripe retries a failed mutation and records the event only after success", async () => {
+test("Stripe database failures are retryable and cannot acknowledge or claim an event", async () => {
   const database = new FakeSupabase([
     {
       table: "processed_stripe_events",
@@ -121,48 +131,23 @@ test("Stripe retries a failed mutation and records the event only after success"
       result: { data: null, error: null },
     },
     {
-      table: "subscriptions",
-      operation: "upsert",
+      rpc: "process_stripe_webhook_event",
       result: { data: null, error: { code: "08006", message: "connection failed" } },
-    },
-    {
-      table: "processed_stripe_events",
-      operation: "select",
-      result: { data: null, error: null },
-    },
-    {
-      table: "subscriptions",
-      operation: "upsert",
-      result: { data: { stripe_subscription_id: "sub_123" }, error: null },
-    },
-    {
-      table: "processed_stripe_events",
-      operation: "insert",
-      result: { data: { event_id: "evt_123" }, error: null },
     },
   ]);
 
-  await assert.rejects(() => processStripe(database), /subscription_upsert_failed/);
-  assert.equal(
-    database.calls.some((call) => call.operation === "insert"),
-    false,
+  await assert.rejects(
+    () => processStripe(database),
+    (error) => error.code === "stripe_event_transaction_failed" && error.status === 500,
   );
-
-  assert.deepEqual(await processStripe(database), { duplicate: false });
   assert.deepEqual(
-    database.calls.map((call) => `${call.table}.${call.operation}`),
-    [
-      "processed_stripe_events.select",
-      "subscriptions.upsert",
-      "processed_stripe_events.select",
-      "subscriptions.upsert",
-      "processed_stripe_events.insert",
-    ],
+    database.calls.map((call) => call.rpc ?? `${call.table}.${call.operation}`),
+    ["processed_stripe_events.select", "process_stripe_webhook_event"],
   );
   database.done();
 });
 
-test("a subscription update received before create idempotently upserts the complete row", async () => {
+test("a subscription update received before create passes a complete canonical snapshot atomically", async () => {
   const database = new FakeSupabase([
     {
       table: "processed_stripe_events",
@@ -170,24 +155,19 @@ test("a subscription update received before create idempotently upserts the comp
       result: { data: null, error: null },
     },
     {
-      table: "subscriptions",
-      operation: "upsert",
-      result: { data: { stripe_subscription_id: "sub_123" }, error: null },
-    },
-    {
-      table: "processed_stripe_events",
-      operation: "insert",
-      result: { data: { event_id: "evt_123" }, error: null },
+      rpc: "process_stripe_webhook_event",
+      result: { data: [{ duplicate: false, applied: true }], error: null },
     },
   ]);
 
-  await processStripe(database);
-  const mutation = database.calls.find((call) => call.table === "subscriptions");
-  assert.equal(mutation.operation, "upsert");
-  assert.deepEqual(mutation.options, { onConflict: "stripe_subscription_id" });
-  assert.equal(mutation.value.user_id, "user_123");
-  assert.equal(mutation.value.price_id, "plus_monthly");
-  assert.equal(mutation.value.environment, "live");
+  assert.deepEqual(await processStripe(database), { duplicate: false, applied: true });
+  const mutation = database.calls.find((call) => call.rpc === "process_stripe_webhook_event");
+  assert.equal(mutation.args.p_subscription.user_id, "11111111-1111-4111-8111-111111111111");
+  assert.equal(mutation.args.p_subscription.price_id, "plus_monthly");
+  assert.equal(mutation.args.p_subscription.environment, "live");
+  assert.equal(mutation.args.p_event_id, "evt_123");
+  assert.equal(mutation.args.p_subscription_id, "sub_123");
+  assert.equal(mutation.args.p_correlation_id, "22222222-2222-4222-8222-222222222222");
   database.done();
 });
 
@@ -209,6 +189,87 @@ test("missing Stripe subscription metadata is retryable and never marks the even
   assert.equal(
     database.calls.some((call) => call.operation === "insert"),
     false,
+  );
+  database.done();
+});
+
+test("a duplicate Stripe event short-circuits before retrieval or mutation", async () => {
+  const database = new FakeSupabase([
+    {
+      table: "processed_stripe_events",
+      operation: "select",
+      result: { data: { event_id: "evt_123" }, error: null },
+    },
+  ]);
+  let retrievals = 0;
+
+  assert.deepEqual(
+    await processStripe(database, stripeEvent(), async () => {
+      retrievals += 1;
+      throw new Error("must not retrieve");
+    }),
+    { duplicate: true, applied: false },
+  );
+  assert.equal(retrievals, 0);
+  assert.equal(
+    database.calls.some((call) => call.rpc),
+    false,
+  );
+  database.done();
+});
+
+test("invoice events resolve new Stripe parent subscription references and reconcile canonical state", async () => {
+  const event = stripeEvent("invoice.paid");
+  event.data.object = {
+    id: "in_123",
+    customer: "cus_123",
+    parent: { subscription_details: { subscription: "sub_123" } },
+  };
+  const canonical = stripeEvent().data.object;
+  const database = new FakeSupabase([
+    {
+      table: "processed_stripe_events",
+      operation: "select",
+      result: { data: null, error: null },
+    },
+    {
+      rpc: "process_stripe_webhook_event",
+      result: { data: [{ duplicate: false, applied: true }], error: null },
+    },
+  ]);
+  let retrievedId;
+
+  assert.deepEqual(
+    await processStripe(database, event, async (subscriptionId) => {
+      retrievedId = subscriptionId;
+      return canonical;
+    }),
+    { duplicate: false, applied: true },
+  );
+  assert.equal(retrievedId, "sub_123");
+  const rpc = database.calls.find((call) => call.rpc === "process_stripe_webhook_event");
+  assert.equal(rpc.args.p_subscription_id, "sub_123");
+  assert.equal(rpc.args.p_invoice_id, "in_123");
+  assert.equal(rpc.args.p_outcome, "payment_confirmed");
+  database.done();
+});
+
+test("malformed Stripe transaction responses fail closed", async () => {
+  const database = new FakeSupabase([
+    {
+      table: "processed_stripe_events",
+      operation: "select",
+      result: { data: null, error: null },
+    },
+    {
+      rpc: "process_stripe_webhook_event",
+      result: { data: [], error: null },
+    },
+  ]);
+
+  await assert.rejects(
+    () => processStripe(database),
+    (error) => error.code === "stripe_event_transaction_invalid" && error.status === 500,
   );
   database.done();
 });

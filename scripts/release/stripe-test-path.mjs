@@ -54,8 +54,13 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
     failures.push("webhook environment parser missing");
   if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource))
     failures.push("sandbox/live allowlist missing");
-  if (!/processed_stripe_events/u.test(webhookSource) || !/23505/u.test(webhookSource))
-    failures.push("webhook idempotency missing");
+  if (!/processStripeEvent/u.test(webhookSource) || !/createStripeClient/u.test(webhookSource))
+    failures.push("canonical atomic webhook processing missing");
+  if (
+    !/webhook_processing_failed/u.test(webhookSource) ||
+    !/status: verificationFailure \? 400 : 503/u.test(webhookSource)
+  )
+    failures.push("webhook retry response missing");
   if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource))
     failures.push("sandbox webhook secret missing");
   if (!/PAYMENTS_LIVE_WEBHOOK_SECRET/u.test(stripeSource))
