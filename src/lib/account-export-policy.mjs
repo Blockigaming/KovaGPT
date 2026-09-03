@@ -79,6 +79,8 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["user_onboarding", "user_id"],
   ["user_preferences", "user_id"],
   ["user_storage", "user_id"],
+  ["work_recent_items", "owner_id"],
+  ["work_saved_records", "owner_id"],
   ["writing_document_versions", "owner_id"],
   ["writing_documents", "owner_id"],
 ]);

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 88,
-  "latest": "20260903210000_library_folders_and_bulk_move.sql",
+  "count": 89,
+  "latest": "20260903213000_work_cross_device_sync.sql",
   "migrations": [
     {
       "order": 1,
@@ -1766,6 +1766,43 @@
         "library_folders_unique_child_name",
         "library_folders_tree_order",
         "user_library_items_folder_order"
+      ]
+    },
+    {
+      "order": 89,
+      "filename": "20260903213000_work_cross_device_sync.sql",
+      "timestamp": "20260903213000",
+      "sha256": "87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b",
+      "tables": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations"
+      ],
+      "functions": [
+        "next_work_sync_version",
+        "upsert_work_saved_record",
+        "delete_work_saved_record",
+        "mutate_work_recent_item",
+        "purge_work_sync_receipts",
+        "get_work_sync_changes"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations"
+      ],
+      "policies": ["work_saved_records_owner_read", "work_recent_items_owner_read"],
+      "indexes": [
+        "work_saved_records_owner_sync_idx",
+        "work_saved_records_owner_active_idx",
+        "work_recent_items_owner_sync_idx",
+        "work_recent_items_owner_active_idx",
+        "work_sync_mutations_created_idx"
       ]
     }
   ]
