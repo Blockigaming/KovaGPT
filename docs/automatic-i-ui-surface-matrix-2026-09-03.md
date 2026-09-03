@@ -1,5 +1,10 @@
 # Automatic I UI surface matrix — 2026-09-03
 
+> **Historical and superseded (2026-09-03):** Any Lovable references in this
+> evidence matrix identify the repository's current removal guard or inactive
+> platform history; none identifies an active runtime, dependency, credential,
+> production input, or control-plane integration.
+
 This is the current-source evidence matrix for `codex/automatic-i-ui-finalization`. It is a workstream control document, not a release certificate. It inventories the source-feasible product surfaces required by the Automatic I mandate and separates what is present in the working tree from what has actually been exercised in a browser or verified in production.
 
 ## Evidence boundary
