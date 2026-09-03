@@ -99,7 +99,10 @@ export const ELEMENT_MAP = {
   emptyGreeting: { chatgpt: "main h1", kova: "main h1" },
   composer: { chatgpt: "form", kova: ".kova-composer" },
   composerInput: { chatgpt: "#prompt-textarea", kova: "textarea" },
-  sendControl: { chatgpt: "[data-testid='send-button']", kova: "[aria-label='Send message']" },
+  sendControl: {
+    chatgpt: "[data-testid='send-button']",
+    kova: "[data-testid='send-button']",
+  },
   transcript: { chatgpt: "main [role='presentation']", kova: "[data-chat-transcript]" },
 } as const;
 

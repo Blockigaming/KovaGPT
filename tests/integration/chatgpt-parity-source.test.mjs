@@ -53,7 +53,9 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map/);
+  assert.match(chatInput, /COMPOSER_TOOLS\.filter/);
+  assert.match(chatInput, /tool\.id !== "deep_research" \|\| userTier !== "free"/);
+  assert.match(chatInput, /\.map\(\s*toolRow,\s*\)/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);
