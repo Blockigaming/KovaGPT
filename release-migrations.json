@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 89,
-  "latest": "20260903213000_work_cross_device_sync.sql",
+  "count": 90,
+  "latest": "20260903220000_project_templates.sql",
   "migrations": [
     {
       "order": 1,
@@ -1803,6 +1803,57 @@
         "work_recent_items_owner_sync_idx",
         "work_recent_items_owner_active_idx",
         "work_sync_mutations_created_idx"
+      ]
+    },
+    {
+      "order": 90,
+      "filename": "20260903220000_project_templates.sql",
+      "timestamp": "20260903220000",
+      "sha256": "f803e1e3d692d64e56cab79e7145e9b35de61cf06aa5ac36ce1523f5291eca76",
+      "tables": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "functions": [
+        "project_template_snapshot_valid",
+        "create_project_template",
+        "publish_project_template_version",
+        "share_project_template",
+        "revoke_project_template_grant",
+        "archive_project_template",
+        "copy_project_template",
+        "list_project_templates",
+        "get_project_template_version",
+        "purge_project_template_mutation_receipts"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "policies": [
+        "project_templates_authorized_read",
+        "project_template_versions_authorized_read",
+        "project_template_grants_participant_read",
+        "project_template_audit_participant_read"
+      ],
+      "indexes": [
+        "project_templates_owner_updated_idx",
+        "project_templates_owner_active_idx",
+        "project_template_versions_owner_idx",
+        "project_template_grants_grantee_active_idx",
+        "project_template_grants_owner_idx",
+        "project_template_audit_owner_created_idx",
+        "project_template_audit_actor_created_idx",
+        "project_template_mutations_created_idx"
       ]
     }
   ]

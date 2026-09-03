@@ -2,6 +2,11 @@
 
 KovaGPT's cloud-account export is a private, asynchronous portability path. It is separate from the device-data export used for browser-local chats and preferences.
 
+Project-template exports include templates owned by the account, their immutable versions,
+explicit grants, and safe audit events. A recipient's incoming grant is included because it is
+part of that recipient's account state; another user's template snapshot is not copied into the
+recipient's export. Idempotency receipts remain operational records and are excluded.
+
 ## Request lifecycle
 
 1. An authenticated same-site `POST /api/account/export` request creates at most one queued job for the account and records the request in `account_audit_entries`.
