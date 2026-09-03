@@ -26,7 +26,7 @@ test("folder and bulk endpoints authenticate, reject cross-site writes, and boun
     assert.match(source, /consumeApplicationRateLimit/u);
     assert.match(source, /Cache-Control/u);
   }
-  assert.match(bulkRoute, /data\.movedCount !== input\.itemIds\.length/u);
+  assert.match(bulkRoute, /result\.movedCount !== input\.itemIds\.length/u);
 });
 
 test("all mutations are atomic service-only RPCs with safe audit metadata", () => {
