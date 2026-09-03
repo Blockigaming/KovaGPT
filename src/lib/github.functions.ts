@@ -222,10 +222,11 @@ export const disconnectGitHub = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId)
       .single();
     if (account.error) throw new Error("GitHub account not found");
-    await (supabaseAdmin as any).rpc("disconnect_github_account", {
+    const disconnect = await (context.supabase as any).rpc("disconnect_github_account", {
       p_account_id: data.accountId,
       p_remove_data: data.removeData,
     });
+    if (disconnect.error) throw new Error("Unable to disconnect GitHub account");
     if (data.removeData)
       await (supabaseAdmin as any)
         .from("github_sync_records")
