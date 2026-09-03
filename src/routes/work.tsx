@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
@@ -39,6 +40,12 @@ import {
 } from "@/lib/work.functions";
 import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
 import { parseWorkRunList } from "@/lib/work-response.mjs";
+import {
+  browserStoragePrincipal,
+  consumePrincipalHandoff,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/work")({
   component: WorkRoute,
@@ -57,6 +64,25 @@ const statusTone: Record<string, string> = {
   approval_required: "bg-violet-500",
   retrying: "bg-orange-500",
 };
+
+type PreparedWorkDraft = {
+  objective: string;
+  context: string;
+  plan: string[];
+};
+
+function isPreparedWorkDraft(value: unknown): value is PreparedWorkDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Partial<PreparedWorkDraft>;
+  return (
+    typeof draft.objective === "string" &&
+    draft.objective.trim().length > 0 &&
+    typeof draft.context === "string" &&
+    Array.isArray(draft.plan) &&
+    draft.plan.length > 0 &&
+    draft.plan.every((step) => typeof step === "string" && step.trim().length > 0)
+  );
+}
 function factualStatus(run: WorkRun) {
   if (!terminal.has(run.status))
     return `Execution unavailable · stored status: ${run.status.replaceAll("_", " ")}`;
@@ -64,6 +90,9 @@ function factualStatus(run: WorkRun) {
 }
 
 function WorkRoute() {
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = browserStoragePrincipal(isLoaded ? userKey : undefined);
   const fetchRuns = useServerFn(listWorkRuns),
     fetchDetail = useServerFn(getWorkRun),
     control = useServerFn(controlWorkRun);
@@ -75,6 +104,10 @@ function WorkRoute() {
     [tab, setTab] = useState<"graph" | "timeline" | "evidence" | "deliverables" | "approvals">(
       "graph",
     );
+  const [draftState, setDraftState] = useState<{
+    principal: string | null;
+    draft: PreparedWorkDraft | null;
+  }>({ principal: null, draft: null });
   const runRequestId = useRef(0),
     detailRequestId = useRef(0),
     selectedRef = useRef<string | null>(null);
@@ -98,6 +131,51 @@ function WorkRoute() {
     },
     [fetchDetail],
   );
+
+  useEffect(() => {
+    if (!isLoaded || !principal) {
+      setDraftState({ principal: null, draft: null });
+      return;
+    }
+    const result = consumePrincipalHandoff<PreparedWorkDraft>(
+      safeBrowserStorage("sessionStorage"),
+      "kova-work-draft",
+      userKey,
+    );
+    if (result.ok && isPreparedWorkDraft(result.value)) {
+      setDraftState({ principal, draft: result.value });
+      return;
+    }
+    setDraftState({ principal, draft: null });
+    if (!result.ok && result.reason !== "missing") {
+      toast.error("Prepared Work context could not be loaded.");
+    } else if (result.ok) {
+      toast.error("Prepared Work context was invalid and was not opened.");
+    }
+  }, [isLoaded, principal, userKey]);
+
+  const preparedDraft = draftState.principal === principal ? draftState.draft : null;
+
+  function continuePreparedDraftInChat() {
+    if (!preparedDraft || !isLoaded) return;
+    const prompt = [
+      "Continue this prepared work in chat without claiming background execution.",
+      `Objective: ${preparedDraft.objective}`,
+      `Context: ${preparedDraft.context || "None provided"}`,
+      `Plan:\n${preparedDraft.plan.map((step) => `- ${step}`).join("\n")}`,
+    ].join("\n\n");
+    const result = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-app-chat-context",
+      userKey,
+      prompt,
+    );
+    if (!result.ok) {
+      toast.error("The prepared draft could not be moved to chat. Reload and try again.");
+      return;
+    }
+    window.location.assign("/");
+  }
   const selectRun = useCallback(
     (id: string) => {
       if (selectedRef.current === id) return;
@@ -187,7 +265,50 @@ function WorkRoute() {
           ))}
         </aside>
         <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
-          {loading ? (
+          {preparedDraft ? (
+            <div className="h-full overflow-y-auto p-5 sm:p-8">
+              <div className="mx-auto max-w-3xl">
+                <p className="text-sm font-medium text-muted-foreground">Prepared Work draft</p>
+                <h1 className="mt-2 text-2xl font-semibold">{preparedDraft.objective}</h1>
+                <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  This draft was recovered, but no background run has started. Work execution is
+                  unavailable; continue in chat to work through the plan now.
+                </p>
+                <section className="mt-6" aria-labelledby="prepared-plan-title">
+                  <h2 id="prepared-plan-title" className="font-semibold">
+                    Prepared plan
+                  </h2>
+                  <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                    {preparedDraft.plan.map((step, index) => (
+                      <li key={`${index}-${step}`}>{step}</li>
+                    ))}
+                  </ol>
+                </section>
+                <details className="mt-6 rounded-xl border border-border p-4">
+                  <summary className="cursor-pointer font-medium">Attached context</summary>
+                  <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">
+                    {preparedDraft.context || "No additional context was provided."}
+                  </pre>
+                </details>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={continuePreparedDraftInChat}
+                    className="min-h-11 rounded-xl bg-foreground px-4 text-sm font-medium text-background"
+                  >
+                    Continue in chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDraftState({ principal, draft: null })}
+                    className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium"
+                  >
+                    View historical runs
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="grid h-full place-items-center" role="status">
               <Loader2 className="animate-spin" />
               <span className="sr-only">Loading Work</span>
