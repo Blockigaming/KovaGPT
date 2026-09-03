@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser, type AuthedCaller } from "@/lib/api-auth.server";
+import { requireUser, requireVerifiedUser, type AuthedCaller } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
@@ -7,6 +7,8 @@ import {
   parseWorkSyncMutation,
   parseWorkSyncQuery,
   WORK_SYNC_MAX_BODY_BYTES,
+  WORK_SYNC_MUTATION_RATE_POLICY,
+  WORK_SYNC_READ_RATE_POLICY,
   WorkSyncInputError,
   workSyncErrorStatus,
 } from "@/lib/work-sync-policy.mjs";
@@ -68,14 +70,11 @@ function validSnapshot(value: unknown): value is Record<string, unknown> {
 
 async function protect(
   auth: AuthedCaller,
-  action: "work_sync_read" | "work_sync_mutation",
-  limit: number,
+  policy: typeof WORK_SYNC_READ_RATE_POLICY | typeof WORK_SYNC_MUTATION_RATE_POLICY,
 ): Promise<Response | null> {
   const rateLimit = await consumeApplicationRateLimit({
     identity: `user:${auth.userId}`,
-    action,
-    limit,
-    windowSeconds: 60,
+    ...policy,
   });
   if (rateLimit.allowed) return null;
   return json(
@@ -96,7 +95,7 @@ export const Route = createFileRoute("/api/work/sync")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const blocked = await protect(auth, "work_sync_read", 240);
+        const blocked = await protect(auth, WORK_SYNC_READ_RATE_POLICY);
         if (blocked) return blocked;
         let query;
         try {
@@ -118,9 +117,9 @@ export const Route = createFileRoute("/api/work/sync")({
         if (isCrossSiteMutation(request)) {
           return json({ error: "cross_site_request_blocked" }, 403);
         }
-        const auth = await requireUser(request);
+        const auth = await requireVerifiedUser(request);
         if (auth instanceof Response) return auth;
-        const blocked = await protect(auth, "work_sync_mutation", 120);
+        const blocked = await protect(auth, WORK_SYNC_MUTATION_RATE_POLICY);
         if (blocked) return blocked;
         if (
           request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !==

@@ -1,14 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 import {
   parseWorkSyncMutation,
   parseWorkSyncQuery,
+  WORK_SYNC_MUTATION_RATE_POLICY,
+  WORK_SYNC_READ_RATE_POLICY,
   workSyncErrorStatus,
 } from "../../src/lib/work-sync-policy.mjs";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const mutationId = "22222222-2222-4222-8222-222222222222";
+
+test("Work sync rate policies satisfy the shared limiter contract", async () => {
+  for (const policy of [WORK_SYNC_READ_RATE_POLICY, WORK_SYNC_MUTATION_RATE_POLICY]) {
+    assert.equal(Object.isFrozen(policy), true);
+    const result = await consumeDistributedRateLimit({
+      identity: `user:${id}`,
+      ...policy,
+      backendUrl: "",
+      serviceRoleKey: "",
+      hashSecret: "",
+    });
+    assert.equal(result.status, "unavailable");
+    assert.equal(result.allowed, false);
+  }
+  assert.equal(WORK_SYNC_READ_RATE_POLICY.limit, 60);
+  assert.equal(WORK_SYNC_MUTATION_RATE_POLICY.limit, 12);
+});
 
 test("saved Work records require exact conflict and idempotency fields", () => {
   assert.deepEqual(

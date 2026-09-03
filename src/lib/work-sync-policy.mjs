@@ -1,6 +1,16 @@
 export const WORK_SYNC_MAX_BODY_BYTES = 128 * 1024;
 export const WORK_SYNC_MAX_PAYLOAD_BYTES = 96 * 1024;
 export const WORK_SYNC_MAX_CHANGES = 500;
+export const WORK_SYNC_READ_RATE_POLICY = Object.freeze({
+  action: "work_sync_read",
+  limit: 60,
+  windowSeconds: 60,
+});
+export const WORK_SYNC_MUTATION_RATE_POLICY = Object.freeze({
+  action: "work_sync_mutation",
+  limit: 12,
+  windowSeconds: 60,
+});
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SAVED_KINDS = new Set(["task", "template", "agent_draft"]);
