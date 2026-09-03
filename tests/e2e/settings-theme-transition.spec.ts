@@ -176,7 +176,7 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
   if (await onboarding.isVisible().catch(() => false)) {
     await onboarding.getByRole("button", { name: "Close" }).click();
-    await expect(onboarding).toBeHidden();
+    await expect(onboarding).toHaveCount(0);
   }
   const runtimeStorageKey = await page.evaluate(
     (key) => sessionStorage.getItem(key),

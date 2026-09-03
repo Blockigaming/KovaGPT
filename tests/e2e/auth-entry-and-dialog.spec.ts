@@ -167,12 +167,12 @@ test("auth dialog has one semantic title, one contained close target, and restor
   });
 
   await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
+  await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
 
   await login.press("Enter");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
 });
