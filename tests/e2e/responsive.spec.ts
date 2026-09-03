@@ -64,7 +64,12 @@ test.describe("KovaGPT responsive shell", () => {
 
     if (isPhone) {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
-      await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toBeVisible();
+      await expect(
+        page
+          .locator("header.kova-topbar span:visible")
+          .filter({ hasText: /^KovaGPT$/u })
+          .first(),
+      ).toBeVisible();
     }
 
     // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+

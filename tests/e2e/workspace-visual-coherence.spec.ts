@@ -31,7 +31,9 @@ test("signed-out workspace discovery keeps focused hierarchy and truthful contro
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
-  await expect(page.getByRole("heading", { name: "Saved in this browser" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Saved in this browser", exact: true }),
+  ).toBeVisible();
   await expect(page.getByPlaceholder("Search Library")).toHaveCount(0);
 
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
@@ -54,7 +56,9 @@ test("signed-out workspace discovery keeps focused hierarchy and truthful contro
 test("Library preview traps focus, closes with Escape, and restores its trigger", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
+  await page.goto("/library", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.evaluate(() => {
     window.localStorage.setItem(
       "kova-guest-library",
       JSON.stringify([
@@ -73,9 +77,7 @@ test("Library preview traps focus, closes with Escape, and restores its trigger"
       ]),
     );
   });
-
-  await page.goto("/library", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "Refresh" }).click();
 
   const trigger = page.getByRole("button", { name: "Actions for Focus restoration sample" });
   await trigger.focus();

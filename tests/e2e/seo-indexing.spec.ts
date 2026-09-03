@@ -47,7 +47,7 @@ test("not-found responses remain noindex across SSR and hydration", async ({ pag
     "content",
     /noindex,\s*nofollow/u,
   );
-  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
   await expect(page.getByText(/Reference kova-/u)).toHaveCount(0);
   expect(hydrationErrors).toEqual([]);
 });

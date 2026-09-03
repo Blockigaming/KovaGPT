@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     outputs:
+      run_ci: ${{ steps.scope.outputs.run_ci }}
       run_database: ${{ steps.scope.outputs.run_database }}
     steps:
       - name: Checkout
@@ -159,7 +160,7 @@ jobs:
           if-no-files-found: ignore
 
   browser:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     name: Browser (${{ matrix.id }})
     needs: verify
     runs-on: ubuntu-latest
@@ -212,7 +213,7 @@ jobs:
       - name: Browser tests
         env:
           PLAYWRIGHT_PREBUILT: "1"
-        run: npm run test:e2e -- ${{ matrix.projects }} --shard=${{ matrix.shard }}
+        run: npm run test:e2e -- ${{ matrix.projects }} --shard=${{ matrix.shard }} --workers=2
 
       - name: Upload Playwright report
         if: failure()
@@ -225,10 +226,12 @@ jobs:
           if-no-files-found: ignore
 
   release-e2e:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      KOVA_BROWSER_PREVIEW: "node"
     strategy:
       fail-fast: false
       matrix:
@@ -239,7 +242,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob
+      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob --workers=2
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

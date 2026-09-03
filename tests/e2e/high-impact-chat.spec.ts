@@ -3,42 +3,25 @@ import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "editable-chat",
-          title: "Editable conversation",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            {
-              id: "original-user",
-              role: "user",
-              content: "Original prompt",
-              attachments: [
-                {
-                  kind: "library_file",
-                  libraryItemId: "library-1",
-                  name: "brief.txt",
-                  fileType: "text/plain",
-                  size: 42,
-                },
-              ],
-            },
-            { id: "original-assistant", role: "assistant", content: "Original response" },
-          ],
-        },
-      ]),
-    );
-    localStorage.setItem("nova-gpt-pending-active", "editable-chat");
-  });
 });
+
+async function startAttachedConversation(
+  page: import("@playwright/test").Page,
+  expectedResponse: string,
+) {
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
+    name: "brief.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("topic,status\nlaunch,ready"),
+  });
+  await page.keyboard.press("Escape");
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Original prompt");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.locator(".kova-assistant-message")).toContainText(expectedResponse);
+}
 
 test("editing a prompt replaces its turn and keeps attachments", async ({ page }) => {
   let requestBody: Record<string, unknown> | undefined;
@@ -52,6 +35,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await startAttachedConversation(page, "Updated response");
   await page.getByRole("button", { name: "Edit message" }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
@@ -70,7 +54,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   expect(messages).toHaveLength(1);
   expect(messages[0].content).toBe("Updated prompt");
   expect(messages[0].attachments).toEqual([
-    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
+    expect.objectContaining({ kind: "text_file", name: "brief.csv" }),
   ]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
@@ -91,6 +75,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await startAttachedConversation(page, "Regenerated response");
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Retry" }).click();
 
@@ -99,15 +84,17 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   const messages = requestBody?.messages as Array<Record<string, unknown>>;
   expect(messages).toHaveLength(1);
   expect(messages[0].attachments).toEqual([
-    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
+    expect.objectContaining({ kind: "text_file", name: "brief.csv" }),
   ]);
 });
 
 test("archived chats can be removed from Settings data controls", async ({ page }) => {
-  await page.addInitScript(() => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.evaluate(() => {
     const now = Date.now();
     localStorage.setItem(
-      "kovagpt:archived",
+      "kovagpt:archived:v2:guest",
       JSON.stringify([
         {
           id: "archived-1",
@@ -120,23 +107,20 @@ test("archived chats can be removed from Settings data controls", async ({ page 
       ]),
     );
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   await page.getByRole("button", { name: "Settings" }).click();
-  const dataControl = page.getByRole("tab", { name: "Data control" });
-  if ((await dataControl.count()) > 0) {
-    await dataControl.click();
-  }
+  await page.getByRole("button", { name: "Data controls" }).click();
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
+  page.once("dialog", async (dialog) => {
+    expect(dialog.type()).toBe("confirm");
+    expect(dialog.message()).toBe('Permanently delete "Archived chat"?');
+    await dialog.accept();
+  });
   await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
-  const confirmation = page.getByRole("alertdialog", { name: "Permanently delete this chat?" });
-  await expect(confirmation).toBeVisible();
-  await confirmation.getByRole("button", { name: "Delete permanently" }).click();
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(() => ({
@@ -145,19 +129,24 @@ test("archived chats can be removed from Settings data controls", async ({ page 
     })),
   ).toEqual({ legacy: null, guest: "[]" });
 });
-test("deleting a chat offers a working undo", async ({ page }) => {
+test("signed-out chat history stays session-only", async ({ page }) => {
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Session response"}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Session-only prompt");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.locator(".kova-assistant-message")).toContainText("Session response");
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  const row = page.locator(".kova-chat-row", { hasText: "Editable conversation" });
-  await expect(row).toBeVisible();
-  await row.getByRole("button", { name: "Chat options" }).click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
-  await expect(row).toHaveCount(0);
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.locator(".kova-chat-row", { hasText: "Editable conversation" })).toBeVisible();
+  await expect(page.locator(".kova-chat-row")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Chat options" })).toHaveCount(0);
 });
 
 test("text files are attached as real request context and remain visible in history", async ({

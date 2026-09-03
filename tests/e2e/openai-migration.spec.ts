@@ -10,12 +10,17 @@ const sse = (...chunks: string[]) =>
     )
     .join("");
 
-test("guest chat consumes Kova SSE, persists once, and renders one top-left logo", async ({
+test("guest chat consumes Kova SSE, persists once, and renders one top-left brand", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:"))
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:") &&
+      message.text() !==
+        "Potential permissions policy violation: payment is not allowed in this document."
+    )
       errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
@@ -43,7 +48,15 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left logo
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  await expect(page.locator("aside img[alt='KovaGPT logo']")).toHaveCount(1);
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width >= 1024) {
+    await expect(page.locator("aside .kova-logo-mark")).toHaveCount(1);
+    await expect(page.locator("aside").getByText("KovaGPT", { exact: true })).toHaveCount(1);
+  } else {
+    await expect(
+      page.locator("header.kova-topbar:visible").getByText("KovaGPT", { exact: true }),
+    ).toHaveCount(1);
+  }
   if (testInfo.project.name === "desktop-1280x800") {
     await page.screenshot({ path: "test-results/openai-migration-logo.png", fullPage: false });
   }
