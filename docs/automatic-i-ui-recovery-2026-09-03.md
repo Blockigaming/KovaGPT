@@ -1,5 +1,9 @@
 # Automatic I UI recovery checkpoint — 2026-09-03
 
+> **Historical and superseded (2026-09-03):** Any Lovable references in this
+> current recovery record describe inactive history only, never a runtime,
+> dependency, provider, deployment, or release path.
+
 ## Recovery boundary
 
 - Repository: `Blockigaming/KovaGPT`
