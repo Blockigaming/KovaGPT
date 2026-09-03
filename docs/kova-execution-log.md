@@ -1,5 +1,7 @@
 # KovaGPT Execution Log
 
+> **Historical and superseded (2026-09-03):** This append-only log records earlier repository states and blocked environments. It is not current runtime, dependency, deployment, or release guidance. Use `docs/release-reconciliation/zero-lovable-classification.md` for the current zero-Lovable source status.
+
 ## 2026-07-21 — Resume from current HEAD
 
 - Commit at start: `39b893c` (`Switch off Lovable gateway; add direct Supabase/OpenAI adapters, composer tools, command palette, and UI polish`).

@@ -6,12 +6,17 @@ import test from "node:test";
 import {
   auditZeroLovable,
   decodeReadableText,
+  hasLovableActiveControl,
   hasLovableBundlePath,
   hasLovableProductionInput,
   hasLovableRuntimeSource,
+  hasUnclassifiedLovableDocumentation,
   hasReadableBundleContent,
   hasReadableRuntimeContent,
   isDockerfilePath,
+  inspectLockfile,
+  inspectPackageMetadata,
+  inspectPackageScripts,
 } from "../../scripts/release/zero-lovable.mjs";
 
 const root = process.cwd();
@@ -81,6 +86,34 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
     true,
   );
   assert.equal(hasLovableProductionInput("docs/history.md", "Lovable was retired"), false);
+  for (const path of [
+    ".github/workflows/deploy.yml",
+    "infra/azure/main.bicep",
+    "public/_redirects",
+    "scripts/deploy.sh",
+    "docker-compose.agent.yml",
+    "wrangler.jsonc",
+  ]) {
+    assert.equal(hasLovableActiveControl(path, "proxy to lovable.example"), true, path);
+  }
+  assert.equal(
+    hasLovableActiveControl("scripts/release/zero-lovable.mjs", "const forbidden = /lovable/u;"),
+    false,
+  );
+  assert.equal(
+    hasLovableActiveControl(
+      "scripts/release/finalize-local-candidate.sh",
+      "npm run release:zero-lovable:strict",
+    ),
+    false,
+  );
+  assert.equal(
+    hasLovableActiveControl(
+      "scripts/release/finalize-local-candidate.sh",
+      "npm run release:zero-lovable:strict && lovable deploy",
+    ),
+    true,
+  );
 
   const lovableText = "https://lovable.app/runtime";
   const utf16le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(lovableText, "utf16le")]);
@@ -184,6 +217,49 @@ test("active package declarations and package-manager policy contain no Lovable 
   assert.equal(existsSync(join(root, "bunfig.toml")), false);
   assert.match(pkg.scripts["release:zero-lovable"], /zero-lovable\.mjs/u);
   assert.match(pkg.scripts["release:zero-lovable:strict"], /--strict-lock/u);
+  assert.deepEqual(
+    inspectLockfile({
+      packages: {
+        "": {},
+        "node_modules/example": { resolved: "https://registry.example/lovable-cache/example.tgz" },
+      },
+    }),
+    ["node_modules/example"],
+  );
+  assert.deepEqual(inspectPackageScripts(pkg), []);
+  assert.deepEqual(inspectPackageScripts({ scripts: { deploy: "lovable deploy" } }), ["deploy"]);
+  assert.deepEqual(
+    inspectPackageScripts({ scripts: { "release:zero-lovable-deploy": "node safe.mjs" } }),
+    ["release:zero-lovable-deploy"],
+  );
+  assert.deepEqual(inspectPackageMetadata(pkg), []);
+  assert.deepEqual(inspectPackageMetadata({ homepage: "https://project.lovable.app" }), [
+    "package metadata",
+  ]);
+});
+
+test("Lovable documentation is current guidance or explicitly historical", () => {
+  assert.equal(
+    hasUnclassifiedLovableDocumentation(
+      "docs/old-plan.md",
+      "# Old plan\n\nLovable remains the deployment target.",
+    ),
+    true,
+  );
+  assert.equal(
+    hasUnclassifiedLovableDocumentation(
+      "docs/old-plan.md",
+      "# Old plan\n\n> **Historical and superseded (2026-09-03):** Do not use.\n\nLovable was used.",
+    ),
+    false,
+  );
+  assert.equal(
+    hasUnclassifiedLovableDocumentation(
+      "docs/release-reconciliation/zero-lovable-classification.md",
+      "# Zero-Lovable classification",
+    ),
+    false,
+  );
 });
 
 test("AI integration has no Lovable gateway or configurable endpoint escape hatch", () => {
