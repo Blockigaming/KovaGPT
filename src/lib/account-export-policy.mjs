@@ -154,7 +154,7 @@ export function accountExportStoragePath(userId, jobId, artifactId) {
 }
 
 export function serializeAccountExport(value) {
-  const text = `${JSON.stringify(sanitizeAccountExportValue(value), null, 2)}\n`;
+  const text = `${JSON.stringify(sanitizeAccountExportValue(value))}\n`;
   const bytes = new TextEncoder().encode(text);
   if (bytes.byteLength > ACCOUNT_EXPORT_MAX_BYTES) {
     throw new Error("account_export_too_large");

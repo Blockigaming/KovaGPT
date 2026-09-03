@@ -37,17 +37,22 @@ function inputFailure(error: unknown): Response {
 }
 
 function databaseFailure(error: QueryError | null): Response {
-  const status = workSyncErrorStatus(error?.code);
+  const code = error?.code;
+  const status = workSyncErrorStatus(code);
   return json(
     {
       error:
-        status === 409
-          ? "work_sync_conflict"
-          : status === 404
-            ? "work_sync_record_not_found"
-            : status === 400
-              ? "work_sync_operation_invalid"
-              : "work_sync_unavailable",
+        code === "P0003"
+          ? "work_sync_rate_limited"
+          : code === "54000"
+            ? "work_sync_storage_quota_exceeded"
+            : status === 409
+              ? "work_sync_conflict"
+              : status === 404
+                ? "work_sync_record_not_found"
+                : status === 400
+                  ? "work_sync_operation_invalid"
+                  : "work_sync_unavailable",
     },
     status,
   );

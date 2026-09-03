@@ -64,9 +64,9 @@ test("account exports recursively remove credentials and private moderation note
   assert.doesNotMatch(JSON.stringify(sanitized), /never-export/u);
 });
 
-test("account export artifacts are deterministic JSON with a final newline", () => {
+test("account export artifacts are deterministic compact JSON with a final newline", () => {
   const result = serializeAccountExport({ format: "kovagpt-account-export", rows: [{ ok: true }] });
-  assert.equal(result.text.endsWith("\n"), true);
+  assert.equal(result.text, '{"format":"kovagpt-account-export","rows":[{"ok":true}]}\n');
   assert.deepEqual(JSON.parse(result.text), {
     format: "kovagpt-account-export",
     rows: [{ ok: true }],

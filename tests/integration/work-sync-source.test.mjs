@@ -18,6 +18,8 @@ test("Work sync API is authenticated, bounded, origin-protected, and fail-closed
   assert.match(route, /protect\(auth, WORK_SYNC_MUTATION_RATE_POLICY\)/u);
   assert.doesNotMatch(route, /protect\(auth, ["']work_sync_(?:read|mutation)["'], \d+\)/u);
   assert.match(route, /work_sync_protection_unavailable/u);
+  assert.match(route, /code === "P0003"[\s\S]*work_sync_rate_limited/u);
+  assert.match(route, /code === "54000"[\s\S]*work_sync_storage_quota_exceeded/u);
   assert.match(route, /Cache-Control": "no-store"/u);
   assert.doesNotMatch(route, /error\.message|String\(error\)/u);
 });

@@ -1,5 +1,6 @@
 export const WORK_SYNC_MAX_BODY_BYTES: number;
 export const WORK_SYNC_MAX_PAYLOAD_BYTES: number;
+export const WORK_SYNC_MAX_PAYLOAD_DEPTH: 16;
 export const WORK_SYNC_MAX_CHANGES: number;
 export const WORK_SYNC_READ_RATE_POLICY: Readonly<{
   action: "work_sync_read";
