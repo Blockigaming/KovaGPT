@@ -18,10 +18,30 @@ const readable = new Set([
 const secretPatterns = [
   /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}/,
   /\b(?:sk|fc)-[A-Za-z0-9_-]{24,}/,
+];
+const publicSecretNamePatterns = [
   /VITE_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
   /NEXT_PUBLIC_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
 ];
 const lovableRuntime = /ai\.gateway\.lovable\.dev|LOVABLE_(?:API_KEY|AI_BASE_URL)|Lovable-API-Key/;
+const documentedFakeCredentialFixtures = new Map([
+  [
+    "scripts/security/scan-ai-runtime.mjs",
+    ["sk-proj-abcdefghijklmnopqrstuvwxyz123456", "sk-proj_abcdefghijklmnopqrstuvwxyz0123456789"],
+  ],
+  ["tests/unit/artifact-secret-scan.test.mjs", ["sk-proj-abcdefghijklmnopqrstuvwxyz123456"]],
+  [
+    "tests/unit/azure-browser-config-provenance.test.mjs",
+    ["sk-proj_abcdefghijklmnopqrstuvwxyz0123456789"],
+  ],
+]);
+const negativeLovableRuleFiles = new Set([
+  "scripts/azure/validate-staging-template.mjs",
+  "scripts/release/ai-provider-contract.mjs",
+  "scripts/release/artifact-secret-scan.mjs",
+  "scripts/release/zero-lovable.mjs",
+  "scripts/security/scan-ai-runtime.mjs",
+]);
 const browserProvider =
   /https:\/\/(?:api\.openai\.com|[^/]+\.(?:openai\.azure\.com|services\.ai\.azure\.com))\/[^\s"']*(?:responses|chat\/completions|images|embeddings)/;
 const unsafeLogging =
@@ -33,9 +53,22 @@ function inspect(file, scope) {
   if (rel.includes("node_modules/") || rel.startsWith(".git/")) return;
   if (!readable.has(extname(file)) && !/\.(?:env\.example|wrangler\.jsonc)$/.test(file)) return;
   const source = readFileSync(file, "utf8");
+  const sourceWithoutFakeFixtures = (documentedFakeCredentialFixtures.get(rel) ?? []).reduce(
+    (text, fixture) => text.replaceAll(fixture, "<documented-fake-credential>"),
+    source,
+  );
   for (const rule of secretPatterns)
-    if (rule.test(source)) violations.push(`${rel}: credential pattern`);
-  if (lovableRuntime.test(source) && !/^(?:docs|tests|scripts\/security)\//.test(rel))
+    if (rule.test(sourceWithoutFakeFixtures)) violations.push(`${rel}: credential pattern`);
+  if (!rel.startsWith("tests/") && !negativeLovableRuleFiles.has(rel)) {
+    for (const rule of publicSecretNamePatterns)
+      if (rule.test(source)) violations.push(`${rel}: browser credential variable`);
+  }
+  if (
+    lovableRuntime.test(source) &&
+    !rel.startsWith("docs/") &&
+    !rel.startsWith("tests/") &&
+    !negativeLovableRuleFiles.has(rel)
+  )
     violations.push(`${rel}: Lovable AI production path`);
   if (scope === "browser" && browserProvider.test(source))
     violations.push(`${rel}: direct browser provider request`);

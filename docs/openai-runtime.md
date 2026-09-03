@@ -1,6 +1,6 @@
 # KovaGPT direct OpenAI runtime
 
-> **Zero-Lovable status (supersedes historical compatibility language):** The direct OpenAI runtime remains current, but the former Lovable compatibility routes are only a removal candidate in PR #227. That PR must not merge or deploy until an owner checks Azure, Cloudflare, Supabase, provider configuration, and logs for legitimate external callers and migrates any caller found. The current removal authority is `docs/release-reconciliation/zero-lovable-classification.md`.
+> **Current zero-Lovable status:** PR #227 is merged and its former compatibility routes are absent from source, route metadata, and locally built artifacts. The direct Azure OpenAI/OpenAI runtime is current. Production control-plane and deployed-network proof remains tracked separately in issue #208; see `docs/release-reconciliation/zero-lovable-classification.md`.
 
 ## Active request flow and inventory
 
@@ -17,7 +17,7 @@ The only active text-generation flow is browser chat -> `POST /api/chat` -> boun
 | Images                          | chat/images UI            | `/api/chat`, `/api/generate-image`   | OpenAI Images                | verified user, daily image quota                     |
 | Project RAG                     | project ingestion/query   | `project-rag.server.ts`              | OpenAI Embeddings            | authenticated project boundary                       |
 
-Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. On the historical base for this document, unrelated Lovable-named compatibility surfaces still remained; PR #227 proposes their removal subject to the external-caller evidence gate above. Lovable AI is neither active nor a fallback.
+Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. The former Lovable-named compatibility surfaces were removed by merged PR #227. Lovable AI is neither active nor a fallback.
 
 ## Versioned model catalog
 

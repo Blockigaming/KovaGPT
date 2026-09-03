@@ -2138,6 +2138,10 @@ body {
     min-height: 44px;
   }
 
+  .kova-settings-mobile-section-option {
+    min-height: 44px;
+  }
+
   .kova-pricing-page {
     padding-top: 2.5rem;
   }

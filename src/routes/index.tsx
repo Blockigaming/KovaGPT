@@ -1742,6 +1742,7 @@ function KovaGPT() {
                   onSubmit={() => send(input, attachments)}
                   onStop={stop}
                   isStreaming={isStreaming}
+                  disabled={!principalReady}
                   attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
@@ -2082,6 +2083,7 @@ function KovaGPT() {
                 onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
+                disabled={!principalReady}
                 attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}

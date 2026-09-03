@@ -1,5 +1,7 @@
 # Supported package-manager lock evidence
 
+> **Historical and superseded (2026-09-03):** This record describes PR #180. KovaGPT now supports only the npm lockfile; the Bun lock and configuration discussed below were removed and must not be restored.
+
 ## Scope
 
 This record documents the lockfile reconciliation performed for PR #180. It does not constitute final zero-Lovable verification or replace required CI on the release SHA.

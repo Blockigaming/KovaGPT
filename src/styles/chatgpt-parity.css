@@ -25,6 +25,9 @@
   background: var(--sidebar) !important;
   box-shadow: none;
 }
+.kova-sidebar[aria-hidden="true"] {
+  border-right-width: 0 !important;
+}
 /* No banded header/footer tints inside the sidebar: one flat surface. */
 .kova-sidebar > * {
   background-color: transparent !important;

@@ -724,6 +724,9 @@ function ChatMessageInner({
                   >
                     <History className="mr-2 h-4 w-4" /> Version history
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRetry} disabled={!onRetry}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Retry
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>

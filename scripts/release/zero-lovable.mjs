@@ -7,14 +7,18 @@ const root = process.cwd();
 const strictLock = process.argv.includes("--strict-lock");
 const requireBuild = process.argv.includes("--require-build");
 const readable = new Set([
+  ".bicep",
   ".cjs",
+  ".conf",
   ".css",
   ".html",
   ".js",
   ".json",
+  ".jsonc",
   ".jsx",
   ".mjs",
   ".mts",
+  ".sh",
   ".map",
   ".sql",
   ".svg",
@@ -29,11 +33,42 @@ const readableBundleBasenames = new Set(["_headers", "_redirects"]);
 const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
 const runtimeSourcePrefixes = ["src/", "worker/", "workers/"];
 const productionInputPrefixes = ["supabase/"];
+const activeControlPrefixes = [".github/", "infra/", "public/", "scripts/"];
+const activeRootInputs = new Set([
+  ".dockerignore",
+  ".env.example",
+  "Dockerfile",
+  "docker-compose.agent.yml",
+  "vite.config.ts",
+  "wrangler.jsonc",
+]);
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
   "scripts/security/scan-ai-runtime.mjs",
+  "scripts/azure/validate-staging-template.mjs",
+  "scripts/release/artifact-secret-scan.mjs",
 ]);
+const guardReferenceFiles = new Set([
+  "scripts/release/final-evidence.mjs",
+  "scripts/release/finalize-local-candidate.sh",
+  "scripts/release/local-non-actions-gate.mjs",
+]);
+const allowedGateScriptNames = new Set([
+  "release:zero-lovable",
+  "release:zero-lovable:strict",
+  "release:zero-lovable:built",
+]);
+const allowedGateReference =
+  /release:zero-lovable(?::(?:strict|built))?|scripts\/release\/zero-lovable\.mjs|zero-lovable(?:-(?:strict|built))?|zeroLovable(?:Source|Image|Network)/giu;
+const currentZeroLovableDocs = new Set([
+  "docs/azure-staging-validation-status.md",
+  "docs/azure/DEPLOYMENT_CHECKLIST.md",
+  "docs/openai-runtime.md",
+  "docs/release/KOVAGPT_MANUAL_HANDOFF.md",
+  "docs/release-reconciliation/zero-lovable-classification.md",
+]);
+const historicalDocMarker = /> \*\*Historical and superseded \(\d{4}-\d{2}-\d{2}\):\*\*/u;
 const forbiddenPatterns = [
   { label: "Lovable SDK import", pattern: /@lovable\.dev\//iu },
   {
@@ -157,10 +192,55 @@ export function inspectPackageManifest(pkg) {
   );
 }
 
+export function inspectPackageScripts(pkg) {
+  return Object.entries(pkg.scripts ?? {}).flatMap(([name, command]) => {
+    const hasUnexpectedName = /lovable/iu.test(name) && !allowedGateScriptNames.has(name);
+    const remainingCommand = String(command).replace(allowedGateReference, "");
+    return hasUnexpectedName || /lovable/iu.test(remainingCommand) ? [name] : [];
+  });
+}
+
+export function inspectPackageMetadata(pkg) {
+  const metadata = { ...pkg };
+  delete metadata.scripts;
+  delete metadata.dependencies;
+  delete metadata.devDependencies;
+  delete metadata.optionalDependencies;
+  delete metadata.peerDependencies;
+  return /lovable/iu.test(JSON.stringify(metadata)) ? ["package metadata"] : [];
+}
+
 export function inspectLockRoot(lock) {
   return Object.keys(lock.packages?.[""]?.dependencies ?? {}).filter((name) =>
     /lovable/iu.test(name),
   );
+}
+
+export function inspectLockfile(lock) {
+  return Object.entries(lock.packages ?? {})
+    .filter(
+      ([path, metadata]) => /lovable/iu.test(path) || /lovable/iu.test(JSON.stringify(metadata)),
+    )
+    .map(([path]) => path || "<root>");
+}
+
+export function hasLovableActiveControl(path, source = "") {
+  const active =
+    runtimeSourcePrefixes.some((prefix) => path.startsWith(prefix)) ||
+    productionInputPrefixes.some((prefix) => path.startsWith(prefix)) ||
+    activeControlPrefixes.some((prefix) => path.startsWith(prefix)) ||
+    activeRootInputs.has(path) ||
+    isDockerfilePath(path);
+  if (!active || scannerDefinitionFiles.has(path)) return false;
+  const auditedSource = guardReferenceFiles.has(path)
+    ? source.replace(allowedGateReference, "")
+    : source;
+  return /lovable/iu.test(path) || /lovable/iu.test(auditedSource);
+}
+
+export function hasUnclassifiedLovableDocumentation(path, source = "") {
+  if (!path.startsWith("docs/") || !path.endsWith(".md") || !/lovable/iu.test(source)) return false;
+  return !currentZeroLovableDocs.has(path) && !historicalDocMarker.test(source.slice(0, 1_000));
 }
 
 export function auditZeroLovable({ files = trackedFiles() } = {}) {
@@ -171,6 +251,10 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   if (activeDependencies.length) {
     errors.push(`active package dependencies: ${activeDependencies.join(", ")}`);
   }
+  const activeScripts = inspectPackageScripts(pkg);
+  if (activeScripts.length) errors.push(`active package scripts: ${activeScripts.join(", ")}`);
+  const activeMetadata = inspectPackageMetadata(pkg);
+  if (activeMetadata.length) errors.push(`active package metadata: ${activeMetadata.join(", ")}`);
 
   for (const prohibited of [".lovable", "bun.lock", "bunfig.toml"]) {
     const tracked = files.some((path) => path === prohibited || path.startsWith(`${prohibited}/`));
@@ -182,15 +266,26 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   }
 
   if (existsSync(join(root, "package-lock.json"))) {
-    const stale = inspectLockRoot(JSON.parse(read("package-lock.json")));
+    const lock = JSON.parse(read("package-lock.json"));
+    const stale = inspectLockRoot(lock);
     if (stale.length) {
       const message = `package-lock root still references removed Lovable packages: ${stale.join(", ")}`;
       if (strictLock) errors.push(message);
       else warnings.push(`${message}; regenerate package-lock.json with npm before final release`);
     }
+    const lockHits = inspectLockfile(lock);
+    if (lockHits.length) {
+      errors.push(`package-lock contains Lovable package or metadata: ${lockHits.join(", ")}`);
+    }
   }
 
   for (const path of files) {
+    if (path.startsWith("docs/") && path.endsWith(".md") && existsSync(join(root, path))) {
+      const source = readIfPresent(path, errors);
+      if (source !== null && hasUnclassifiedLovableDocumentation(path, source)) {
+        errors.push(`${path}: Lovable history is not explicitly classified`);
+      }
+    }
     if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
     if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
     if (!existsSync(join(root, path))) continue;
@@ -199,6 +294,9 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     }
     if (hasLovableProductionInput(path)) {
       errors.push(`${path}: Lovable-named production input`);
+    }
+    if (hasLovableActiveControl(path)) {
+      errors.push(`${path}: Lovable reference in active source or control plane`);
     }
     if (!hasReadableRuntimeContent(path)) continue;
     const source = readIfPresent(path, errors);
@@ -210,6 +308,9 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     if (hasLovableProductionInput(path, source)) {
       errors.push(`${path}: Lovable-named production input`);
     }
+    if (hasLovableActiveControl(path, source)) {
+      errors.push(`${path}: Lovable reference in active source or control plane`);
+    }
 
     for (const rule of forbiddenPatterns) {
       if (rule.pattern.test(source)) errors.push(`${path}: ${rule.label}`);
@@ -219,12 +320,15 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   const installedLovable = join(root, "node_modules", "@lovable.dev");
   if (existsSync(installedLovable)) errors.push("node_modules/@lovable.dev is installed");
 
-  for (const bundleRoot of ["dist/client", "dist/server"]) {
-    if (!existsSync(join(root, bundleRoot))) {
-      if (requireBuild) errors.push(`${bundleRoot}: built output is required`);
-      continue;
-    }
+  const bundleRoot = "dist";
+  let bundleFiles = 0;
+  let sourceMaps = 0;
+  if (!existsSync(join(root, bundleRoot))) {
+    if (requireBuild) errors.push(`${bundleRoot}: built output is required`);
+  } else {
     for (const path of filesUnder(join(root, bundleRoot))) {
+      bundleFiles += 1;
+      if (extname(path).toLowerCase() === ".map") sourceMaps += 1;
       const bundlePath = relative(root, path).replaceAll("\\", "/");
       if (hasLovableBundlePath(bundlePath)) {
         errors.push(`${bundlePath}: Lovable-named bundle asset`);
@@ -237,7 +341,7 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
       }
       for (const rule of forbiddenPatterns) {
         if (rule.pattern.test(source)) {
-          errors.push(`${relative(root, path).replaceAll("\\", "/")}: ${rule.label}`);
+          errors.push(`${bundlePath}: ${rule.label}`);
         }
       }
     }
@@ -246,6 +350,7 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   return {
     errors: [...new Set(errors)].sort(),
     warnings: [...new Set(warnings)].sort(),
+    evidence: { bundleFiles, sourceMaps },
   };
 }
 
@@ -267,6 +372,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(
-    `ZERO_LOVABLE_SOURCE_BUILD_AUDIT=PASS strictLock=${strictLock} requireBuild=${requireBuild} warnings=${result.warnings.length}`,
+    `ZERO_LOVABLE_SOURCE_BUILD_AUDIT=PASS strictLock=${strictLock} requireBuild=${requireBuild} bundleFiles=${result.evidence.bundleFiles} sourceMaps=${result.evidence.sourceMaps} warnings=${result.warnings.length}`,
   );
 }
