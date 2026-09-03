@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, Check, CheckCheck, Loader2, Search, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
@@ -23,36 +23,68 @@ export const Route = createFileRoute("/notifications")({
 type Filter = "all" | "unread" | "agent" | "connector" | "scheduled";
 
 function NotificationsRoute() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const principalId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   const list = useServerFn(listNotifications);
   const markRead = useServerFn(markNotificationsRead);
   const remove = useServerFn(deleteNotifications);
   const [items, setItems] = useState<CenterNotification[]>([]);
+  const [itemsOwner, setItemsOwner] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const generationRef = useRef(0);
+  const activePrincipalRef = useRef(principalId);
+  activePrincipalRef.current = principalId;
+
   const reload = useCallback(async () => {
-    if (!isSignedIn) return;
+    const expectedPrincipal = principalId;
+    if (!isLoaded || !isSignedIn || !expectedPrincipal) return;
+    const generation = ++generationRef.current;
+    setItems([]);
+    setItemsOwner(expectedPrincipal);
     setLoading(true);
     setError(null);
     try {
-      setItems(await list());
+      const nextItems = await list();
+      if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
+        return;
+      setItems(nextItems);
     } catch {
+      if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
+        return;
       setError("Notifications could not be loaded.");
     } finally {
-      setLoading(false);
+      if (generation === generationRef.current && activePrincipalRef.current === expectedPrincipal)
+        setLoading(false);
     }
-  }, [isSignedIn, list]);
+  }, [isLoaded, isSignedIn, list, principalId]);
+
   useEffect(() => {
-    if (isLoaded && isSignedIn) void reload();
-    else if (isLoaded) setLoading(false);
-  }, [isLoaded, isSignedIn, reload]);
-  const unread = items.filter((item) => !item.readAt).length;
+    if (!isLoaded || !principalId) {
+      generationRef.current += 1;
+      setItems([]);
+      setItemsOwner(null);
+      setError(null);
+      setBusy(null);
+      setLoading(!isLoaded);
+      return;
+    }
+    void reload();
+  }, [isLoaded, principalId, reload]);
+
+  const visibleItems = useMemo(
+    () => (isLoaded && isSignedIn && itemsOwner === principalId ? items : []),
+    [isLoaded, isSignedIn, items, itemsOwner, principalId],
+  );
+  const principalPending =
+    !isLoaded || (isSignedIn && (!principalId || itemsOwner !== principalId));
+  const unread = visibleItems.filter((item) => !item.readAt).length;
   const visible = useMemo(
     () =>
-      items.filter((item) => {
+      visibleItems.filter((item) => {
         const text = `${item.title} ${item.preview} ${item.type}`.toLowerCase();
         if (search && !text.includes(search.toLowerCase())) return false;
         if (filter === "unread") return !item.readAt;
@@ -63,12 +95,15 @@ function NotificationsRoute() {
           return item.type.includes("scheduled") || item.type.includes("task");
         return true;
       }),
-    [items, filter, search],
+    [visibleItems, filter, search],
   );
   async function read(item?: CenterNotification) {
+    const expectedPrincipal = principalId;
+    if (!expectedPrincipal) return;
     setBusy(item?.id ?? "all");
     try {
       await markRead({ data: item ? { ids: [item.id], source: item.source } : { source: "all" } });
+      if (activePrincipalRef.current !== expectedPrincipal) return;
       const now = new Date().toISOString();
       setItems((current) =>
         current.map((candidate) =>
@@ -78,20 +113,25 @@ function NotificationsRoute() {
         ),
       );
     } catch {
-      toast.error("Could not mark notifications as read.");
+      if (activePrincipalRef.current === expectedPrincipal)
+        toast.error("Could not mark notifications as read.");
     } finally {
-      setBusy(null);
+      if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
     }
   }
   async function discard(item: CenterNotification) {
+    const expectedPrincipal = principalId;
+    if (!expectedPrincipal) return;
     setBusy(item.id);
     try {
       await remove({ data: { ids: [item.id], source: item.source } });
+      if (activePrincipalRef.current !== expectedPrincipal) return;
       setItems((current) => current.filter((candidate) => candidate.id !== item.id));
     } catch {
-      toast.error("Could not delete the notification.");
+      if (activePrincipalRef.current === expectedPrincipal)
+        toast.error("Could not delete the notification.");
     } finally {
-      setBusy(null);
+      if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
     }
   }
   return (
@@ -147,17 +187,17 @@ function NotificationsRoute() {
             </select>
           </div>
         </section>
-        {!isSignedIn && isLoaded ? (
+        {principalPending || loading ? (
+          <div className="flex min-h-40 items-center justify-center" role="status">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="sr-only">Loading notifications</span>
+          </div>
+        ) : !isSignedIn ? (
           <EmptyState
             icon={Bell}
             title="Sign in to view notifications"
             description="Notifications are private to your account."
           />
-        ) : loading ? (
-          <div className="flex min-h-40 items-center justify-center" role="status">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="sr-only">Loading notifications</span>
-          </div>
         ) : error ? (
           <ErrorState
             title="Notifications unavailable"
@@ -167,9 +207,9 @@ function NotificationsRoute() {
         ) : visible.length === 0 ? (
           <EmptyState
             icon={Bell}
-            title={items.length ? "No matching notifications" : "No notifications"}
+            title={visibleItems.length ? "No matching notifications" : "No notifications"}
             description={
-              items.length
+              visibleItems.length
                 ? "Try another search or filter."
                 : "Agent runs, connectors, and historical task notifications will appear here."
             }
