@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
+import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
   getMode,
   DAILY_IMAGE_LIMIT_BY_TIER,
