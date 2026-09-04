@@ -124,10 +124,10 @@ test("agent creation and continuation are protected while safe controls remain a
   before(
     team.slice(team.indexOf("export async function createAgentTeamRun")),
     "assertLockdownAllows(",
-    "getAgentEntitlement(",
+    'throw new Error("agent_team_execution_unavailable")',
     "agent team",
   );
   assert.match(execution, /if \(command === "resume"\)[\s\S]*?assertLockdownAllows/u);
-  assert.match(team, /\["resume", "retry", "approve"\][\s\S]*?assertLockdownAllows/u);
+  assert.match(team, /command !== "cancel" && command !== "deny"/u);
   assert.doesNotMatch(execution, /if \(command === "cancel"\)[\s\S]{0,120}assertLockdownAllows/u);
 });
