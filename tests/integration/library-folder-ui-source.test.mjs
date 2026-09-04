@@ -95,7 +95,10 @@ test("page refresh cannot invalidate an active folder mutation", () => {
   assert.match(library, /onBusyChange=\{setFolderBusy\}/);
   assert.match(library, /if \(folderBusy\) return/);
   assert.match(library, /disabled=\{loading \|\| folderBusy\}/);
-  assert.match(folders, /const folderStateUnavailable = loading \|\| Boolean\(error\) \|\| !foldersLoaded/);
+  assert.match(
+    folders,
+    /const folderStateUnavailable = loading \|\| Boolean\(error\) \|\| !foldersLoaded/,
+  );
   assert.match(folders, /onClick=\{onRefresh\}/);
   assert.match(library, /onRefresh=\{refreshLibrary\}/);
 });
