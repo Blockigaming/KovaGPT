@@ -97,10 +97,6 @@ export function ArtifactEditor({
   const autosaveQueueRef = useRef(createSerializedSnapshotQueue(initialContent));
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
-  const authPrincipalRef = useRef({ principalResolved: isLoaded, userKey });
-  useEffect(() => {
-    authPrincipalRef.current = { principalResolved: isLoaded, userKey };
-  }, [isLoaded, userKey]);
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
   const listVersionsFn = useServerFn(listMessageVersions);
@@ -125,21 +121,8 @@ export function ArtifactEditor({
       setValue(initialContent);
       setCopied(false);
       setSaved(false);
-      let preferred: string | undefined;
-
-      try {
-        const principal = authPrincipalRef.current;
-        if (principal.principalResolved) {
-          const stored = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, principal.userKey, {
-            migrateLegacyGuest: principal.userKey === null,
-          });
-          preferred = typeof stored?.artifact === "string" ? stored.artifact : "";
-        }
-      } catch {
-        /* Unavailable local preferences fall back to the requested initial mode. */
-      }
-      setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
-      setSplitView(preferred === "Split view" && kind === "website");
+      setMode(initialMode);
+      setSplitView(false);
       setOutlineOpen(false);
       setHistoryOpen(false);
       setSaveState("saved");
@@ -149,6 +132,23 @@ export function ArtifactEditor({
       setHistoryError(null);
     }
   }, [open, initialContent, initialMode, kind]);
+
+  // Authentication may resolve after an already-open Canvas. Apply only the
+  // resolved principal's view preference; never reset editor text or history.
+  useEffect(() => {
+    if (!open || !isLoaded) return;
+    let preferred: string | undefined;
+    try {
+      const stored = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
+        migrateLegacyGuest: userKey === null,
+      });
+      preferred = typeof stored?.artifact === "string" ? stored.artifact : "";
+    } catch {
+      /* Unavailable local preferences fall back to the requested initial mode. */
+    }
+    setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
+    setSplitView(preferred === "Split view" && kind === "website");
+  }, [open, isLoaded, userKey, kind, initialMode]);
 
   // Load durable versions for this message so history survives closing Canvas.
   useEffect(() => {
