@@ -102,6 +102,7 @@ export async function clearStoragePrefix(
   const completedPrefixes = new Set<string>();
   let removalBatches = 0;
   let removed = 0;
+  let lastRemovalFingerprint: string | null = null;
 
   while (pendingPrefixes.length > 0) {
     const prefix = pendingPrefixes[pendingPrefixes.length - 1]!;
@@ -133,11 +134,16 @@ export async function clearStoragePrefix(
     }
 
     if (objectPaths.length > 0) {
+      const fingerprint = `${prefix}\u0000${objectPaths.join("\u0000")}`;
+      if (fingerprint === lastRemovalFingerprint) {
+        throw cleanupError("account_storage_cleanup_unverified");
+      }
       if (removalBatches >= maxRemoveBatches) return { complete: false, removed };
       const result = await bucket.remove(objectPaths);
       if (result.error) throw cleanupError("account_storage_remove_failed");
       removalBatches += 1;
       removed += objectPaths.length;
+      lastRemovalFingerprint = fingerprint;
       continue;
     }
 
