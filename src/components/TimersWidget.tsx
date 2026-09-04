@@ -1,7 +1,7 @@
 // Floating widget in the bottom-right that shows active timers/alarms,
 // counts down live, plays a beep + notification when a timer fires, and
 // exposes a quick "add timer" affordance.
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   addTimer,
   formatRemaining,
@@ -41,6 +41,16 @@ function beep() {
   }
 }
 
+const sessionNotifiedIdsByPrincipal = new Map<string, Set<string>>();
+
+function sessionNotifiedIds(principal: string): Set<string> {
+  const current = sessionNotifiedIdsByPrincipal.get(principal);
+  if (current) return current;
+  const created = new Set<string>();
+  sessionNotifiedIdsByPrincipal.set(principal, created);
+  return created;
+}
+
 function notify(label: string) {
   try {
     if ("Notification" in window && Notification.permission === "granted") {
@@ -54,9 +64,11 @@ function notify(label: string) {
 export function TimersWidget({
   userKey,
   principalResolved,
+  mobileSidebarOpen = false,
 }: {
   userKey: string | null;
   principalResolved: boolean;
+  mobileSidebarOpen?: boolean;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const [items, setItems] = useState<TimerItem[]>([]);
@@ -66,7 +78,10 @@ export function TimersWidget({
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(5);
-  const notifiedIdsRef = useRef<Set<string>>(new Set());
+  const notifiedIds = useMemo(
+    () => (principal ? sessionNotifiedIds(principal) : new Set<string>()),
+    [principal],
+  );
 
   const refresh = useCallback(() => {
     if (!principalResolved || !principal) {
@@ -79,7 +94,6 @@ export function TimersWidget({
   }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
-    notifiedIdsRef.current.clear();
     refresh();
     const unsub = subscribeTimers(principalResolved ? userKey : undefined, refresh);
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -101,16 +115,16 @@ export function TimersWidget({
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
   }, [principal, principalResolved, userKey]);
 
-  // Fire each due timer at most once during this mounted browser session, even when
+  // Fire each due timer at most once in this browser tab, even across route remounts and when
   // browser storage is unavailable and the durable fired flag cannot be written.
   useEffect(() => {
     if (!ready) return;
     const due = visibleItems.filter(
-      (timer) => !timer.fired && timer.fireAt <= now && !notifiedIdsRef.current.has(timer.id),
+      (timer) => !timer.fired && timer.fireAt <= now && !notifiedIds.has(timer.id),
     );
     if (due.length === 0) return;
     const dueIds = new Set(due.map((timer) => timer.id));
-    due.forEach((timer) => notifiedIdsRef.current.add(timer.id));
+    due.forEach((timer) => notifiedIds.add(timer.id));
     setItems((current) =>
       current.map((timer) => (dueIds.has(timer.id) ? { ...timer, fired: true } : timer)),
     );
@@ -120,10 +134,10 @@ export function TimersWidget({
       notify(timer.label);
       toast.success(`${timer.label} - done`, { duration: 6000 });
     }
-  }, [now, ready, userKey, visibleItems]);
+  }, [notifiedIds, now, ready, userKey, visibleItems]);
 
   const active = visibleItems
-    .filter((timer) => !timer.fired && !notifiedIdsRef.current.has(timer.id))
+    .filter((timer) => !timer.fired && !notifiedIds.has(timer.id))
     .sort((a, b) => a.fireAt - b.fireAt);
   const nextItem = active[0];
 
@@ -134,7 +148,9 @@ export function TimersWidget({
   };
 
   return (
-    <div className="fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col">
+    <div
+      className={`fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col ${mobileSidebarOpen ? "max-lg:hidden" : ""}`}
+    >
       {open && (
         <div className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:w-72">
           <div className="flex items-center justify-between">
