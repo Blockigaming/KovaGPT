@@ -96,7 +96,6 @@ test("saved image history remains a recoverable Library source", () => {
   assert.match(imageRoute, /Save again/);
 });
 
-
 test("removing current history also removes its otherwise unsaveable result", () => {
   assert.match(
     imageRoute,
