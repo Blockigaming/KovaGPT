@@ -111,7 +111,8 @@ END
 $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS project_files_project_storage_unique
-  ON public.project_files(project_id, storage_path);
+  ON public.project_files(project_id, storage_path)
+  WHERE content_sha256 IS NOT NULL AND kind IN ('file', 'image');
 CREATE UNIQUE INDEX IF NOT EXISTS project_files_upload_idempotency_unique
   ON public.project_files(project_id, uploaded_by, idempotency_key)
   WHERE uploaded_by IS NOT NULL AND idempotency_key IS NOT NULL;
