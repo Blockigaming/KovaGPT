@@ -228,7 +228,7 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
     finished = true;
     await reader.cancel("provider_sse_rejected").catch(() => undefined);
     controller.error(
-      error instanceof ProviderResponseError
+      error instanceof ProviderResponseError || isTransportInterruption(error)
         ? error
         : new ProviderResponseError("invalid_provider_sse"),
     );
