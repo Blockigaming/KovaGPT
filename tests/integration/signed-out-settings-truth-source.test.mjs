@@ -3,10 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
-const settings = readFileSync(
-  join(process.cwd(), "src/components/SettingsDialog.tsx"),
-  "utf8",
-);
+const settings = readFileSync(join(process.cwd(), "src/components/SettingsDialog.tsx"), "utf8");
 
 test("signed-out Settings exposes only preferences with implemented behavior", () => {
   assert.doesNotMatch(settings, /GuestLanguageSelect/);
