@@ -104,4 +104,9 @@ test("page refresh cannot invalidate an active folder mutation", () => {
   assert.match(library, /setLoadError[\s\S]*setSelected\(\[\]\)[\s\S]*toast\.error/);
   assert.match(library, /!principalReady \|\| !principal \|\| folderBusy/);
   assert.match(library, /disabled=\{folderBusy\}[\s\S]*deleteSelected/);
+  assert.match(library, /itemStateUnavailable=\{loading \|\| Boolean\(loadError\)\}/);
+  assert.match(
+    folders,
+    /folderStateUnavailable \|\|[\s\S]*itemStateUnavailable \|\|[\s\S]*selectedItemIds\.length/,
+  );
 });
