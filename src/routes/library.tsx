@@ -30,6 +30,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  LibraryFolderOrganizer,
+  type LibraryFolderScope,
+} from "@/components/LibraryFolderOrganizer";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -75,6 +79,8 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function readFavorites(key: string | null): Set<string> {
   if (!key) return new Set();
@@ -157,6 +163,11 @@ function LibraryPage() {
   const visiblePreviewItem = principalReady ? previewItem : null;
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [folderScope, setFolderScope] = useState<LibraryFolderScope>("all");
+  const selectedDurableIds = useMemo(
+    () => selected.filter((id) => UUID_PATTERN.test(id)),
+    [selected],
+  );
 
   const load = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -242,6 +253,7 @@ function LibraryPage() {
     setSort("newest");
     setPreviewItem(null);
     setSelected([]);
+    setFolderScope("all");
     setLoadError(null);
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
@@ -263,6 +275,7 @@ function LibraryPage() {
       setFavoritesPrincipal(principal);
       setPreviewItem(null);
       setSelected([]);
+      setFolderScope("all");
       setQuery("");
       setFilter("all");
       setSort("newest");
@@ -287,6 +300,10 @@ function LibraryPage() {
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
   }, [view]);
+
+  useEffect(() => {
+    setSelected([]);
+  }, [folderScope]);
 
   const [pendingDelete, setPendingDelete] = useState<
     { kind: "one"; id: string } | { kind: "many" } | null
@@ -414,6 +431,14 @@ function LibraryPage() {
     const q = query.trim().toLowerCase();
     return items
       .filter((item) => {
+        if (folderScope === "unfiled" && item.folder_id) return false;
+        if (
+          folderScope !== "all" &&
+          folderScope !== "unfiled" &&
+          item.folder_id !== folderScope
+        ) {
+          return false;
+        }
         if (filter === "favorites" && !visibleFavorites.has(item.id)) return false;
         if (filter === "chats" && !item.id.startsWith("chat:")) return false;
         if (filter === "work" && !item.id.startsWith("work:")) return false;
@@ -438,7 +463,7 @@ function LibraryPage() {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return sort === "oldest" ? -delta : delta;
       });
-  }, [filter, items, query, sort, visibleFavorites]);
+  }, [filter, folderScope, items, query, sort, visibleFavorites]);
 
   const storageKnown = items.some((item) => typeof item.file_size === "number");
   const storageTotal = storageKnown
@@ -680,6 +705,37 @@ function LibraryPage() {
           </section>
         ) : null}
 
+        {isSignedIn && isLoaded && principal ? (
+          <LibraryFolderOrganizer
+            key={principal}
+            enabled
+            principalKey={principal}
+            scope={folderScope}
+            selectedItemIds={selectedDurableIds}
+            onScopeChange={setFolderScope}
+            onMoved={(itemIds, folderId) => {
+              const moved = new Set(itemIds);
+              setItems((current) =>
+                current.map((item) =>
+                  moved.has(item.id) ? { ...item, folder_id: folderId } : item,
+                ),
+              );
+              setSelected([]);
+            }}
+            onFoldersDeleted={(folderIds) => {
+              const removed = new Set(folderIds);
+              setItems((current) =>
+                current.map((item) =>
+                  item.folder_id && removed.has(item.folder_id)
+                    ? { ...item, folder_id: null }
+                    : item,
+                ),
+              );
+              setSelected([]);
+            }}
+          />
+        ) : null}
+
         {items.length > 0 && !loadError ? (
           <>
             <section className="kova-toolbar" aria-label="Library toolbar">
@@ -840,12 +896,20 @@ function LibraryPage() {
                 ? isSignedIn
                   ? "Your Library is empty"
                   : "Nothing saved in this browser"
-                : "No matches"}
+                : query
+                  ? "No matches"
+                  : folderScope !== "all"
+                    ? "This folder is empty"
+                    : "No items match this filter"}
             </h2>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
               {items.length === 0
-                ? "Save a response, generated image, research report, or upload to find it here."
-                : `Nothing matches “${query}”.`}
+                ? "Saved uploads and generated files outside Temporary Chat appear here automatically."
+                : query
+                  ? `Nothing matches “${query}”.`
+                  : folderScope !== "all"
+                    ? "Move selected durable items here from All items or another folder."
+                    : "Try a different file-type filter."}
             </p>
           </section>
         ) : (
