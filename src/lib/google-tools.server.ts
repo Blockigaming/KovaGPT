@@ -1146,15 +1146,16 @@ export async function getPendingActionStatus(
   | { ok: true; status: PendingActionStatus; result_text?: string }
   | { ok: false; error: string }
 > {
-  const { data, error } = await (admin() as unknown as SupabaseQueryLike)
+  const db = admin();
+  const { data, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .select("status, result")
+    .select("status, result, created_at")
     .eq("id", actionId)
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) return { ok: false, error: "Pending action not found." };
 
-  const row = data as { status?: unknown; result?: unknown };
+  const row = data as { status?: unknown; result?: unknown; created_at?: unknown };
   const validStatuses = new Set<PendingActionStatus>([
     "pending",
     "processing",
@@ -1163,10 +1164,31 @@ export async function getPendingActionStatus(
     "failed",
     "expired",
   ]);
-  const status =
+  let status =
     typeof row.status === "string" && validStatuses.has(row.status as PendingActionStatus)
       ? (row.status as PendingActionStatus)
       : "failed";
+  if (status === "processing") {
+    const processingResult = row.result as { processing_started_at?: unknown } | null;
+    const startedAt =
+      processingResult && typeof processingResult.processing_started_at === "string"
+        ? processingResult.processing_started_at
+        : typeof row.created_at === "string"
+          ? row.created_at
+          : "";
+    const startedAtMs = new Date(startedAt).getTime();
+    if (Number.isFinite(startedAtMs) && Date.now() - startedAtMs > STALE_PROCESSING_MS) {
+      const { data: recovered } = await (db as unknown as SupabaseQueryLike)
+        .from("pending_tool_actions")
+        .update({ status: "failed", result: { error: "abandoned_processing" } })
+        .eq("id", actionId)
+        .eq("user_id", userId)
+        .eq("status", "processing")
+        .select("id")
+        .maybeSingle();
+      if (recovered) status = "failed";
+    }
+  }
   const storedResult = row.result as { text?: unknown } | null;
   const resultText =
     storedResult && typeof storedResult.text === "string" ? storedResult.text : undefined;
