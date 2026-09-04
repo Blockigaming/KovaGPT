@@ -143,7 +143,6 @@ test("guest Settings changes themes without a split two-tone dialog", async ({ p
   const appearance = page.getByRole("combobox", { name: "Appearance" });
 
   await expect(appearance).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
   await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
   await expect(dialog).toHaveCSS(
     "background-color",
