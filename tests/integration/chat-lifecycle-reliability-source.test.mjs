@@ -6,6 +6,8 @@ const chatRoute = readFileSync("src/routes/api/chat.ts", "utf8");
 const homeChat = readFileSync("src/routes/index.tsx", "utf8");
 const projectChat = readFileSync("src/routes/projects.$projectId.chat.$chatId.tsx", "utf8");
 const responsesCompat = readFileSync("src/lib/ai/responses-compat.server.mjs", "utf8");
+const accounting = readFileSync("src/lib/ai/accounting.server.ts", "utf8");
+const providerBounds = readFileSync("src/lib/provider-response.server.mjs", "utf8");
 
 test("chat route bounds mandatory authorization and usage stages", () => {
   assert.match(chatRoute, /createChatPreflightRunner\(\{/u);
@@ -72,4 +74,14 @@ test("Responses translation rejects malformed provider JSON", () => {
   assert.match(responsesCompat, /invalid_provider_sse_json/u);
   assert.match(responsesCompat, /reader\.cancel\("invalid_provider_sse_json"\)/u);
   assert.doesNotMatch(responsesCompat, /catch \{\s*continue;\s*\}/u);
+});
+
+test("usage authorization receives cancellation and provider errors retain typed metadata", () => {
+  assert.match(accounting, /input\.signal/u);
+  assert.match(accounting, /periodQuery\.abortSignal\(signal\)/u);
+  assert.match(accounting, /acquisitionQuery\.abortSignal\(input\.signal\)/u);
+  assert.match(chatRoute, /providerError\.toSafeResponse\(\)/u);
+  assert.match(chatRoute, /kind: "error"/u);
+  assert.match(chatRoute, /retryable: providerError\.retryable/u);
+  assert.match(providerBounds, /isTransportInterruption\(error\)/u);
 });
