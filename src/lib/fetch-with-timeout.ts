@@ -24,9 +24,7 @@ export async function fetchWithTimeout(
   init: RequestInit = {},
   timeoutMs = 15_000,
 ): Promise<Response> {
-  return runWithFetchTimeout(init, timeoutMs, (signal) =>
-    fetch(input, { ...init, signal }),
-  );
+  return runWithFetchTimeout(init, timeoutMs, (signal) => fetch(input, { ...init, signal }));
 }
 
 export async function fetchJsonWithTimeout<T>(
