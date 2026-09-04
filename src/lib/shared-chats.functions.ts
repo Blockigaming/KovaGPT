@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { buildTransactionalEmail } from "@/lib/email-queue.server";
+import {
+  buildTransactionalEmail,
+  emailOperationFingerprint,
+} from "@/lib/email-queue.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 export type SharedChatSummary = {
@@ -59,6 +62,14 @@ export const shareChat = createServerFn({ method: "POST" })
       );
     }
 
+    const requestFingerprint = await emailOperationFingerprint([
+      "shared-chat",
+      context.userId,
+      recipientEmail,
+      data.title,
+      data.local_chat_reference ?? null,
+      data.snapshot,
+    ]);
     const payload = await buildTransactionalEmail({
       templateName: "shared-chat",
       recipientEmail,
@@ -76,6 +87,7 @@ export const shareChat = createServerFn({ method: "POST" })
       {
         p_actor_id: context.userId,
         p_operation_id: data.operation_id,
+        p_request_fingerprint: requestFingerprint,
         p_recipient_email: recipientEmail,
         p_title: data.title,
         p_local_chat_reference: data.local_chat_reference ?? null,
