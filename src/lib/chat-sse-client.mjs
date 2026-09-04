@@ -2,7 +2,9 @@
 // above the server's 16 MiB image-provider response contract so valid images
 // are accepted while every unterminated event remains strictly bounded.
 const DEFAULT_MAX_BUFFER_CHARS = 16 * 1024 * 1024 + 64 * 1024;
-const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
+// Azure generation permits a 120-second provider deadline. The browser idle
+// watchdog must not reject a valid request before that server-side bound.
+const DEFAULT_IDLE_TIMEOUT_MS = 130_000;
 const MAX_ERROR_BODY_BYTES = 64 * 1024;
 
 function defaultRetryable(status) {
