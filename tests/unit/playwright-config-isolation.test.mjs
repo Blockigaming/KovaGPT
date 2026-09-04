@@ -54,7 +54,7 @@ test("deployed baseline evidence classifies observations truthfully", async () =
   assert.doesNotMatch(source, /observed-failed-production-baseline/u);
 });
 
-test("dependency audit retries transient registry failures without weakening the gate", async () => {
+test("dependency audit retries registry errors without weakening the gate", async () => {
   const workflow = await readRootFile(".github/workflows/ci.yml");
 
   assert.match(workflow, /for attempt in 1 2 3/u);
