@@ -37,7 +37,8 @@ export type ProjectFile = {
   mime_type: string | null;
   size_bytes: number;
   kind: "file" | "image";
-  uploaded_by: string;
+  uploaded_by: string | null;
+  status: "pending" | "ready" | "upload_failed" | "cleanup_failed";
   created_at: string;
   signed_url?: string | null;
 };
@@ -269,6 +270,7 @@ export const listFiles = createServerFn({ method: "GET" })
       .from("project_files")
       .select("*")
       .eq("project_id", data.project_id)
+      .eq("status", "ready")
       .order("created_at", { ascending: false });
     if (data.kind !== "all") q = q.eq("kind", data.kind);
     const { data: rows, error } = await q;
@@ -278,91 +280,10 @@ export const listFiles = createServerFn({ method: "GET" })
     for (const it of items) {
       const { data: signed } = await context.supabase.storage
         .from("project-files")
-        .createSignedUrl(it.storage_path, 60 * 60);
+        .createSignedUrl(it.storage_path, 60);
       it.signed_url = signed?.signedUrl ?? null;
     }
     return items;
-  });
-
-export const registerUploadedFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((i: unknown) =>
-    z
-      .object({
-        project_id: z.string().uuid(),
-        name: z.string().min(1).max(500),
-        storage_path: z.string().min(1).max(1000),
-        mime_type: z.string().max(200).nullable().optional(),
-        size_bytes: z.number().int().nonnegative(),
-        kind: z.enum(["file", "image"]).default("file"),
-      })
-      .parse(i),
-  )
-  .handler(async ({ data, context }): Promise<{ id: string }> => {
-    // Enforce per-plan file cap per project
-    const { PROJECT_LIMITS } = await import("./projects.functions");
-    const s = context.supabase as unknown as {
-      rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }>;
-    };
-    let tier: "free" | "plus" | "pro" = "free";
-    try {
-      const { data: t } = await s.rpc("user_plan_tier", { _user_id: context.userId });
-      const v = String(t ?? "free");
-      if (v === "pro" || v === "plus") tier = v;
-    } catch {
-      /* ignore */
-    }
-    const cap = PROJECT_LIMITS[tier].filesPerProject;
-    const { count } = await context.supabase
-      .from("project_files")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", data.project_id);
-    if ((count ?? 0) >= cap) {
-      throw new Error(
-        `Your plan allows up to ${cap} files per project. Remove one or upgrade to add more.`,
-      );
-    }
-    const { data: row, error } = await context.supabase
-      .from("project_files")
-      .insert({
-        project_id: data.project_id,
-        name: data.name,
-        storage_path: data.storage_path,
-        mime_type: data.mime_type ?? null,
-        size_bytes: data.size_bytes,
-        kind: data.kind,
-        uploaded_by: context.userId,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    await logActivity(
-      context.supabase,
-      data.project_id,
-      context.userId,
-      data.kind === "image" ? "image_added" : "file_added",
-      `Uploaded ${data.kind === "image" ? "image" : "file"} “${data.name}”`,
-    );
-    // Extract + embed text for RAG (best-effort; supported text types only).
-    try {
-      const { indexProjectFile, isTextIndexable } = await import("./project-rag.server");
-      if (data.kind === "file" && isTextIndexable(data.mime_type ?? null, data.name)) {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await indexProjectFile({
-          supabaseAdmin: supabaseAdmin as unknown as Parameters<
-            typeof indexProjectFile
-          >[0]["supabaseAdmin"],
-          project_id: data.project_id,
-          file_id: row.id,
-          storage_path: data.storage_path,
-          name: data.name,
-          mime_type: data.mime_type ?? null,
-        });
-      }
-    } catch (e) {
-      console.warn("[registerUploadedFile] index", (e as Error)?.message);
-    }
-    return { id: row.id };
   });
 
 export const reindexProjectFile = createServerFn({ method: "POST" })
@@ -372,11 +293,13 @@ export const reindexProjectFile = createServerFn({ method: "POST" })
     async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
       const { data: row, error } = await context.supabase
         .from("project_files")
-        .select("id, project_id, name, storage_path, mime_type, kind")
+        .select("id, project_id, name, storage_path, mime_type, kind, status")
         .eq("id", data.id)
         .maybeSingle();
       if (error || !row) throw new Error("File not found");
-      if (row.kind !== "file") return { indexed: false, chunks: 0, reason: "not_a_document" };
+      if (row.kind !== "file" || row.status !== "ready") {
+        return { indexed: false, chunks: 0, reason: "not_a_ready_document" };
+      }
       const { indexProjectFile } = await import("./project-rag.server");
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       return indexProjectFile({
@@ -391,29 +314,6 @@ export const reindexProjectFile = createServerFn({ method: "POST" })
       });
     },
   );
-
-export const deleteProjectFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { data: row } = await context.supabase
-      .from("project_files")
-      .select("project_id, storage_path, name, kind")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (!row) return { ok: true };
-    await context.supabase.storage.from("project-files").remove([row.storage_path]);
-    const { error } = await context.supabase.from("project_files").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    await logActivity(
-      context.supabase,
-      row.project_id,
-      context.userId,
-      "file_deleted",
-      `Removed “${row.name}”`,
-    );
-    return { ok: true };
-  });
 
 // ============= MEMORY =============
 export const listMemory = createServerFn({ method: "GET" })
