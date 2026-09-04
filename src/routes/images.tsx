@@ -256,7 +256,13 @@ const PRESETS: Preset[] = [
   },
 ];
 
-type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
+type HistoryItem = {
+  id: string;
+  prompt: string;
+  imageUrl: string;
+  createdAt: number;
+  libraryStatus?: "saving" | "saved" | "error";
+};
 const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
 const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
@@ -324,7 +330,7 @@ function ImagesPage() {
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
-  const [savingImage, setSavingImage] = useState(false);
+  const [resultHistoryId, setResultHistoryId] = useState<string | null>(null);
   const saveImage = useServerFn(saveImageToLibrary);
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
@@ -351,7 +357,7 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setLightbox(null);
-    setSavingImage(false);
+    setResultHistoryId(null);
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
@@ -359,16 +365,31 @@ function ImagesPage() {
     return () => generationControllerRef.current?.abort();
   }, [isLoaded, isSignedIn, userKey]);
 
-  function addToHistory(p: string, imageUrl: string) {
-    if (!isSignedIn || !userKey) return;
+  function addToHistory(p: string, imageUrl: string): HistoryItem | null {
+    if (!isSignedIn || !userKey) return null;
     const item: HistoryItem = {
       id: crypto.randomUUID(),
       prompt: p,
       imageUrl,
       createdAt: Date.now(),
+      libraryStatus: "saving",
     };
     setHistory((prev) => {
       const next = [item, ...prev].slice(0, HISTORY_LIMIT);
+      saveHistory(userKey, next);
+      return next;
+    });
+    return item;
+  }
+
+  function updateHistoryLibraryStatus(
+    id: string,
+    libraryStatus: HistoryItem["libraryStatus"],
+  ) {
+    setHistory((previous) => {
+      const next = previous.map((item) =>
+        item.id === id ? { ...item, libraryStatus } : item,
+      );
       saveHistory(userKey, next);
       return next;
     });
@@ -381,25 +402,35 @@ function ImagesPage() {
     });
   }
 
-  async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
+  async function saveGeneratedImage(
+    item: HistoryItem,
+    options: { automatic?: boolean } = {},
+  ) {
     if (!isSignedIn) {
       setLoginOpen(true);
       return;
     }
-    setSavingImage(true);
+    updateHistoryLibraryStatus(item.id, "saving");
     try {
       await saveImage({
         data: {
           title: item.prompt.slice(0, 100) || "Generated image",
           prompt: item.prompt,
           imageUrl: item.imageUrl,
+          source: "images",
+          idempotencyKey: item.id,
         },
       });
-      toast.success("Saved to Library");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save image");
-    } finally {
-      setSavingImage(false);
+      updateHistoryLibraryStatus(item.id, "saved");
+      if (!options.automatic) toast.success("Saved to Library");
+    } catch {
+      updateHistoryLibraryStatus(item.id, "error");
+      toast.error("This generated image was not saved to your Library.", {
+        action: {
+          label: "Retry",
+          onClick: () => void saveGeneratedImage(item),
+        },
+      });
     }
   }
 
@@ -483,7 +514,9 @@ function ImagesPage() {
       }
       setResult(imageUrl);
       setResultPrompt(trimmed);
-      addToHistory(trimmed, imageUrl);
+      const historyItem = addToHistory(trimmed, imageUrl);
+      setResultHistoryId(historyItem?.id ?? null);
+      if (historyItem) void saveGeneratedImage(historyItem, { automatic: true });
       setPrompt("");
     } catch (e) {
       if (controller.signal.aborted || generation !== generationRef.current) return;
@@ -501,6 +534,13 @@ function ImagesPage() {
     setPrompt(p.prompt);
     inputRef.current?.focus();
   };
+
+  const resultHistoryItem = resultHistoryId
+    ? (history.find((item) => item.id === resultHistoryId) ?? null)
+    : null;
+  const lightboxLibraryStatus = lightbox
+    ? history.find((item) => item.id === lightbox.id)?.libraryStatus
+    : undefined;
 
   return (
     <div className="flex h-dvh w-full bg-background text-foreground">
