@@ -27,6 +27,7 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
   let generation = 0;
   let lastEnqueued = initialSnapshot;
   let lastCompleted = initialSnapshot;
+  let lastAcknowledged = initialSnapshot;
   let latestOperation: { generation: number; snapshot: T; promise: Promise<unknown> } | undefined;
 
   return {
@@ -34,14 +35,25 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
       generation += 1;
       lastEnqueued = snapshot;
       lastCompleted = snapshot;
+      lastAcknowledged = snapshot;
       latestOperation = undefined;
     },
     needsEnqueue(snapshot: T): boolean {
       return !Object.is(snapshot, lastEnqueued) || !Object.is(snapshot, lastCompleted);
     },
+    needsSync(snapshot: T): boolean {
+      return (
+        !Object.is(snapshot, lastEnqueued) ||
+        !Object.is(snapshot, lastCompleted) ||
+        !Object.is(snapshot, lastAcknowledged)
+      );
+    },
     mark(snapshot: T): void {
       lastEnqueued = snapshot;
       lastCompleted = snapshot;
+    },
+    acknowledge(snapshot: T): void {
+      if (Object.is(snapshot, lastCompleted)) lastAcknowledged = snapshot;
     },
     enqueue<R>(snapshot: T, write: (value: T) => Promise<R>): Promise<R> {
       const pending = latestOperation;
