@@ -821,20 +821,25 @@ function FilesTab({
     if (!response.ok || typeof payload?.url !== "string" || !payload.url) {
       throw new Error("A fresh file link could not be created. Please retry.");
     }
-    return payload.url;
+    const url = new URL(payload.url, window.location.origin);
+    const localHttp =
+      url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localHttp) {
+      throw new Error("The file service returned an unsafe link.");
+    }
+    return url.toString();
   }
 
   async function openFile(file: ProjectFile) {
     setDownloadingId(file.id);
+    const target = window.open("about:blank", "_blank");
+    if (target) target.opener = null;
     try {
       const url = await getFreshFileUrl(file.id);
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.download = file.name;
-      link.click();
+      if (target) target.location.replace(url);
+      else window.location.assign(url);
     } catch (error) {
+      target?.close();
       toast.error(error instanceof Error ? error.message : "The file could not be opened.");
     } finally {
       setDownloadingId((current) => (current === file.id ? null : current));
