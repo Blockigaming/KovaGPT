@@ -722,6 +722,7 @@ function LibraryPage() {
             enabled
             principalKey={principal}
             refreshKey={folderRefreshKey}
+            itemStateUnavailable={loading || Boolean(loadError)}
             scope={folderScope}
             selectedItemIds={selectedDurableIds}
             onScopeChange={setFolderScope}
