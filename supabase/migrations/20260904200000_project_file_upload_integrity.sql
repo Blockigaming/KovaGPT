@@ -99,9 +99,18 @@ BEGIN
       CHECK (
         (
           kind IN ('file', 'image')
+          AND content_sha256 IS NOT NULL
           AND storage_path ~ (
             '^' || project_id::text || '/' || id::text || E'\\.[a-z0-9]{1,12}$'
           )
+        )
+        OR (
+          kind IN ('file', 'image')
+          AND content_sha256 IS NULL
+          AND char_length(storage_path) BETWEEN 1 AND 1024
+          AND storage_path ~ ('^' || project_id::text || '/')
+          AND storage_path !~ '(^|/)\.\.?(/|$)'
+          AND storage_path !~ '[[:cntrl:]]'
         )
         OR (
           kind = 'agent-deliverable'
@@ -262,7 +271,7 @@ BEGIN
   FROM public.project_files
   WHERE project_id = p_project_id
     AND (
-      status = 'ready'
+      status IN ('ready', 'deleting')
       OR (status = 'pending' AND upload_lease_until > now())
     );
 
