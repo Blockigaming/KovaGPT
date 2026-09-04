@@ -23,6 +23,9 @@ test("email execution is a distinct fail-closed worker artifact", () => {
   assert.match(dispatcher, /sender_domain_not_allowed/);
   assert.match(dispatcher, /email_log_missing/);
   assert.match(dispatcher, /dead_letter_tracked_email/);
+  assert.match(dispatcher, /defer_email_retry/);
+  assert.match(dispatcher, /retryCooldownMs/);
+  assert.match(dispatcher, /minimumVisibilitySeconds/);
   assert.match(dispatcher, /recipient_suppressed/);
   assert.match(dispatcher, /MAX_HTML_BYTES/);
   assert.doesNotMatch(
@@ -40,6 +43,7 @@ test("email producers and documented environment use the verified sender domain"
   const producer = read("src/routes/api/public/help-submit.ts");
   const environment = read(".env.example");
   const docs = read("docs/email-worker.md");
+  const readiness = read("src/lib/readiness.server.ts");
 
   assert.match(producer, /notify\.kovagpt\.com/);
   assert.match(producer, /process\.env\.KOVA_EMAIL_FROM/);
@@ -57,6 +61,12 @@ test("email producers and documented environment use the verified sender domain"
     assert.match(environment, new RegExp(`^${key}=`, "m"));
     assert.ok(docs.includes(`\`${key}\``) || docs.includes(`\`${key}=`));
   }
+  assert.doesNotMatch(environment, /^EMAIL_API_KEY=/m);
+  assert.match(
+    readiness,
+    /email:\s*capability\([\s\S]*KOVA_EMAIL_QUEUE_ENABLED[\s\S]*RESEND_API_KEY[\s\S]*RESEND_WEBHOOK_SECRET/,
+  );
+  assert.doesNotMatch(readiness, /EMAIL_API_KEY/);
 });
 
 test("Resend delivery reconciliation is signed, replay-safe, and suppression-first", () => {
@@ -85,6 +95,12 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.email_webhook_events/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.enqueue_tracked_email/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.dead_letter_tracked_email/);
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.defer_email_retry/);
+  assert.match(migration, /pgmq\.set_vt\(p_queue_name, p_message_id, p_lease_seconds\)/);
+  assert.match(migration, /retry_after_until = greatest/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /cron\.unschedule\(target_job_id\)/);
+  assert.doesNotMatch(migration, /\^email\\\\\./);
   assert.match(
     migration,
     /pgmq\.send\(p_dlq_name, p_payload\)[\s\S]*pgmq\.delete\(p_source_queue, p_message_id\)[\s\S]*UPDATE public\.email_send_log/,
