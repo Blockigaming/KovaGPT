@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, KeyRound, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +23,26 @@ export function PasskeyPanel() {
   const providers = useAuthProviders(true);
   const supported = browserSupportsPasskeys();
   const enabled = providers.resolved && providers.passkeys;
-  const canLoad = enabled && supported;
+  const canLoad = enabled;
   const [passkeys, setPasskeys] = useState<PasskeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const mutationInFlight = useRef(false);
+
+  const beginMutation = (operation: string) => {
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
+    setBusy(operation);
+    return true;
+  };
+
+  const endMutation = () => {
+    mutationInFlight.current = false;
+    setBusy(null);
+  };
 
   const load = useCallback(async () => {
     if (!canLoad) return;
@@ -57,7 +70,7 @@ export function PasskeyPanel() {
   if (!providers.resolved || !enabled) return null;
 
   async function register() {
-    setBusy("register");
+    if (!supported || !beginMutation("register")) return;
     try {
       const { error } = await supabase.auth.registerPasskey();
       if (error) throw error;
@@ -69,7 +82,7 @@ export function PasskeyPanel() {
       });
       toast.error("Passkey setup was cancelled or could not be completed.");
     } finally {
-      setBusy(null);
+      endMutation();
     }
   }
 
@@ -80,7 +93,7 @@ export function PasskeyPanel() {
       toast.error("Enter a name between 1 and 120 characters.");
       return;
     }
-    setBusy(editing.id);
+    if (!beginMutation(editing.id)) return;
     try {
       const { error } = await supabase.auth.passkey.update({
         passkeyId: editing.id,
@@ -96,12 +109,12 @@ export function PasskeyPanel() {
       });
       toast.error("The passkey could not be renamed. Please try again.");
     } finally {
-      setBusy(null);
+      endMutation();
     }
   }
 
   async function remove(id: string) {
-    setBusy(id);
+    if (!beginMutation(id)) return;
     try {
       const { error } = await supabase.auth.passkey.delete({ passkeyId: id });
       if (error) throw error;
@@ -114,7 +127,7 @@ export function PasskeyPanel() {
       });
       toast.error("The passkey could not be removed. Please try again.");
     } finally {
-      setBusy(null);
+      endMutation();
     }
   }
 
@@ -130,10 +143,13 @@ export function PasskeyPanel() {
       </p>
 
       {!supported ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          This browser does not support passkeys. Try a current browser on a supported device.
+        <p role="status" className="mb-3 text-sm text-muted-foreground">
+          This browser cannot add a passkey, but you can still review, rename, or remove registered
+          passkeys.
         </p>
-      ) : loading ? (
+      ) : null}
+
+      {loading ? (
         <Loader2
           className="h-4 w-4 animate-spin text-muted-foreground"
           aria-label="Loading passkeys"
@@ -179,7 +195,7 @@ export function PasskeyPanel() {
                             setEditing({ id: passkey.id, name: event.target.value })
                           }
                           onKeyDown={(event) => {
-                            if (event.key === "Enter") void rename();
+                            if (event.key === "Enter" && !busy) void rename();
                             if (event.key === "Escape") setEditing(null);
                           }}
                         />
@@ -187,11 +203,16 @@ export function PasskeyPanel() {
                           <Button
                             size="sm"
                             onClick={() => void rename()}
-                            disabled={itemBusy || !editing.name.trim()}
+                            disabled={Boolean(busy) || !editing.name.trim()}
                           >
                             {itemBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditing(null)}
+                            disabled={Boolean(busy)}
+                          >
                             Cancel
                           </Button>
                         </div>
@@ -246,7 +267,7 @@ export function PasskeyPanel() {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => void remove(passkey.id)}
-                                disabled={itemBusy}
+                                disabled={Boolean(busy)}
                               >
                                 {itemBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
                               </Button>
@@ -254,7 +275,7 @@ export function PasskeyPanel() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setConfirmDelete(null)}
-                                disabled={itemBusy}
+                                disabled={Boolean(busy)}
                               >
                                 Cancel
                               </Button>
@@ -271,7 +292,11 @@ export function PasskeyPanel() {
             <p className="text-sm text-muted-foreground">No passkeys are registered yet.</p>
           )}
 
-          <Button size="sm" onClick={() => void register()} disabled={Boolean(busy)}>
+          <Button
+            size="sm"
+            onClick={() => void register()}
+            disabled={Boolean(busy) || !supported}
+          >
             {busy === "register" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
