@@ -69,3 +69,17 @@ jobs:
           git add             .env.example             package.json             worker/package.json             worker/src/email-dispatcher.mjs             worker/src/email-worker.mjs             worker/scripts/email-health-check.mjs             src/lib/resend-webhook.mjs             src/lib/resend-webhook.d.ts             src/lib/readiness.server.ts             src/routes/api/public/help-submit.ts             src/routes/api/public/email/webhook.ts             src/routeTree.gen.ts             tests/unit/email-worker.test.mjs             tests/unit/resend-webhook.test.mjs             tests/unit/review-findings.test.mjs             tests/api/help-submit-security.test.mjs             tests/integration/email-worker-source.test.mjs             docs/email-worker.md             release-migrations.json             database-contract.json
           git commit -m "chore(email): format and refresh generated contracts"
           git push origin HEAD:codex/email-dispatch-worker-20260904
+
+  isolated-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: codex/email-dispatch-worker-20260904
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run release:db:isolated
