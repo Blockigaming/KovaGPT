@@ -724,6 +724,7 @@ function LibraryPage() {
             selectedItemIds={selectedDurableIds}
             onScopeChange={setFolderScope}
             onBusyChange={setFolderBusy}
+            onRefresh={refreshLibrary}
             onMoved={(itemIds, folderId) => {
               loadGenerationRef.current += 1;
               setLoading(false);
