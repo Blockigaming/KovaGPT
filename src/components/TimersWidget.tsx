@@ -134,9 +134,9 @@ export function TimersWidget({
   };
 
   return (
-    <div className="fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none lg:bottom-[max(1rem,var(--safe-bottom))] lg:left-auto lg:top-auto lg:flex-col">
+    <div className="fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col">
       {open && (
-        <div className="pointer-events-auto w-full rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:w-72">
+        <div className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:w-72">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <TimerIcon className="w-3.5 h-3.5" /> Timers
