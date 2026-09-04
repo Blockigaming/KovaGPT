@@ -29,6 +29,11 @@ test("sniffs supported image bytes instead of trusting names or MIME headers", (
     },
   );
   assert.throws(
+    () => inspectProjectFile({ bytes: png, fileName: "payload.png", requestedKind: "file" }),
+    (error) =>
+      error instanceof ProjectFileInputError && error.code === "file_kind_does_not_match_content",
+  );
+  assert.throws(
     () =>
       inspectProjectFile({
         bytes: new TextEncoder().encode("<svg onload=alert(1)>"),
