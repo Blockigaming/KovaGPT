@@ -3056,8 +3056,8 @@ function LocationPanel({
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, the coarse coordinates are used only for
-        location cards shown in this browser; they are not added to chat requests.
+        Location is never required. When enabled, the coarse coordinates are used only for location
+        cards shown in this browser; they are not added to chat requests.
       </p>
     </div>
   );
