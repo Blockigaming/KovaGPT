@@ -32,6 +32,17 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     assert.ok(route.includes(contract), `missing route contract: ${contract}`);
   }
   assert.doesNotMatch(route, /try_add_storage_bytes/);
+  const uploadHandler = route.slice(
+    route.indexOf("async function upload"),
+    route.indexOf("function missingObject"),
+  );
+  const deleteHandler = route.slice(
+    route.indexOf("async function remove"),
+    route.indexOf("async function sign"),
+  );
+  assert.match(uploadHandler, /requireVerifiedUser\(request\)/);
+  assert.match(deleteHandler, /requireUser\(request\)/);
+  assert.doesNotMatch(deleteHandler, /requireVerifiedUser\(request\)/);
   assert.match(route, /storage_charged: row\.storage_charged/);
   assert.match(route, /file\.kind !== "agent-deliverable"/);
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
@@ -79,6 +90,11 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(migration, /storage_charged/);
   assert.match(migration, /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/);
   assert.match(migration, /kind = 'agent-deliverable'/);
+  assert.match(
+    migration,
+    /kind IN \('file', 'image'\)[\s\S]*content_sha256 IS NULL[\s\S]*storage_path ~ \('\^' \|\| project_id::text \|\| '\/'\)/,
+  );
+  assert.match(migration, /status IN \('ready', 'deleting'\)/);
   assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
