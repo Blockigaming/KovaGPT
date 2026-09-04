@@ -248,9 +248,7 @@ test("chat failures complete with a user-visible error and SSE terminator", () =
     /kind: "error"[\s\S]{0,160}error: providerFailureMessage\.trim\(\)[\s\S]{0,600}sseDone\(\)/u,
   );
   assert.match(chat, /request\.signal\.aborted[\s\S]{0,220}status: 499/u);
-  assert.match(
-    chat,
-    /final provider request failed[\s\S]{0,700}AI service is temporarily unavailable/u,
-  );
+  assert.match(chat, /final provider request failed/u);
+  assert.match(chat, /\.\.\.providerError\.toSafeResponse\(\)/u);
   assert.match(client, /if \(!resp\.ok \|\| !resp\.body\)[\s\S]{0,500}errJson\.error/u);
 });
