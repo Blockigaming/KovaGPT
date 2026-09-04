@@ -25,6 +25,7 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  providerErrorFromResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
@@ -1661,7 +1662,7 @@ export const Route = createFileRoute("/api/chat")({
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
-            } catch {
+            } catch (error) {
               await finalizeGeneration({
                 eventId: usageEventId,
                 status: request.signal.aborted ? "client_disconnected" : "provider_failed",
@@ -1672,30 +1673,30 @@ export const Route = createFileRoute("/api/chat")({
                 error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
+              const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
-                status: 502,
+                status: providerError.status,
                 category: "provider",
-                code: "final_provider_network_error",
+                code: providerError.code,
               });
-              return new Response(
-                JSON.stringify({
-                  error: "AI service is temporarily unavailable. Please try again.",
-                }),
+              return Response.json(
                 {
-                  status: 502,
-                  headers: { "Content-Type": "application/json" },
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, providerError.status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: providerError.status,
+                  headers: { "Cache-Control": "no-store" },
                 },
               );
             }
 
             if (!upstream.ok) {
-              const errMsg =
-                upstream.status === 429
-                  ? "Rate limit exceeded. Please wait a moment."
-                  : upstream.status === 402
-                    ? "Image provider quota exhausted."
-                    : "AI service is temporarily unavailable. Please try again.";
-              const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+              const providerError = mapProviderError(await providerErrorFromResponse(upstream));
+              const errMsg = providerError.message;
+              const status = providerError.status;
               await finalizeGeneration({
                 eventId: usageEventId,
                 status: "provider_rejected",
@@ -1705,7 +1706,6 @@ export const Route = createFileRoute("/api/chat")({
                 toolCalls: activityEvents.length,
                 error: `provider_http_${upstream.status}`,
               }).catch(() => undefined);
-              void upstream.body?.cancel().catch(() => undefined);
               logSafeFailure("error", "[chat] final provider rejected request", logContext, {
                 status: upstream.status,
                 category: "provider",
@@ -1754,7 +1754,19 @@ export const Route = createFileRoute("/api/chat")({
                         ),
                       );
                     }
-                    controller.enqueue(enc.encode(sseChunk(`\n\n_${errMsg}_`)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: errMsg,
+                          code: providerError.code,
+                          category: categorizeError(providerError, status),
+                          retryable: providerError.retryable,
+                          status,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                     controller.close();
                   },
@@ -1766,10 +1778,15 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 });
               }
-              return new Response(JSON.stringify({ error: errMsg }), {
-                status,
-                headers: { "Content-Type": "application/json" },
-              });
+              return Response.json(
+                {
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                { status, headers: { "Cache-Control": "no-store" } },
+              );
             }
 
             let boundedUpstreamBody: ReadableStream<Uint8Array>;
@@ -1917,7 +1934,21 @@ export const Route = createFileRoute("/api/chat")({
                       category: "provider",
                       code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
                     });
-                    controller.enqueue(enc.encode(sseChunk(providerFailureMessage)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: providerFailureMessage.trim(),
+                          code: providerFailureCode,
+                          category: providerTimedOut
+                            ? "model_timeout"
+                            : "streaming_interruption",
+                          retryable: true,
+                          status: providerTimedOut ? 504 : 502,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                   }
                 }
@@ -1970,7 +2001,12 @@ export const Route = createFileRoute("/api/chat")({
             }
             const providerError = mapProviderError(e);
             const status = providerError.status;
-            const envelope = buildErrorEnvelope(providerError, requestId, status);
+            const envelope = {
+              ...providerError.toSafeResponse(),
+              category: categorizeError(providerError, status),
+              requestId,
+              timestamp: new Date().toISOString(),
+            };
             logSafeFailure("error", "[chat] handler failed", logContext, {
               status,
               category: "server",
