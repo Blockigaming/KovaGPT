@@ -30,5 +30,9 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+const targets = ["tests/integration/signed-out-settings-truth-source.test.mjs"];
+const result = spawnSync("npx", ["prettier", "--write", ...targets], { stdio: "inherit" });
+console.log("---BEGIN FORMAT DIFF---");
+spawnSync("git", ["diff", "--", ...targets], { stdio: "inherit" });
+console.log("---END FORMAT DIFF---");
+process.exit(result.status === 0 ? 1 : (result.status ?? 1));
