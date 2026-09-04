@@ -625,9 +625,7 @@ function KovaGPT() {
     [conversations, activeId],
   );
   const activeTemporary = active ? Boolean(active.temporary) : null;
-  const activeTemporaryContext = active?.temporary
-    ? (active.temporaryContext ?? "clean")
-    : null;
+  const activeTemporaryContext = active?.temporary ? (active.temporaryContext ?? "clean") : null;
   const historyConversations = useMemo(
     () => conversations.filter((conversation) => !conversation.temporary),
     [conversations],
