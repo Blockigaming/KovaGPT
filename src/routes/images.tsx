@@ -302,6 +302,8 @@ function ImagesPage() {
   const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
+  const userKeyRef = useRef(userKey);
+  userKeyRef.current = userKey;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -406,10 +408,12 @@ function ImagesPage() {
     item: HistoryItem,
     options: { automatic?: boolean } = {},
   ) {
-    if (!isSignedIn) {
+    if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
+    const operationUserKey = userKey;
+    const isCurrent = () => userKeyRef.current === operationUserKey;
     updateHistoryLibraryStatus(item.id, "saving");
     try {
       await saveImage({
@@ -421,9 +425,11 @@ function ImagesPage() {
           idempotencyKey: item.id,
         },
       });
+      if (!isCurrent()) return;
       updateHistoryLibraryStatus(item.id, "saved");
       if (!options.automatic) toast.success("Saved to Library");
     } catch {
+      if (!isCurrent()) return;
       updateHistoryLibraryStatus(item.id, "error");
       toast.error("This generated image was not saved to your Library.", {
         action: {
