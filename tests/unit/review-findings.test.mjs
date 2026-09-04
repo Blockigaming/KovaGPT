@@ -41,7 +41,7 @@ test("retired compatibility email routes are absent and support delivery remains
   }
   assert.match(support, /KOVA_EMAIL_QUEUE_ENABLED/u);
   assert.match(support, /Email delivery is not configured/u);
-  assert.match(support, /rpc\("enqueue_email"/u);
+  assert.match(support, /rpc\(\s*"enqueue_tracked_email"/u);
   assert.doesNotMatch(support, /\/lovable|legacyLovable/iu);
 });
 
