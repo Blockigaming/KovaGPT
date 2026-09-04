@@ -52,6 +52,9 @@ test("auth visual preview uses tracked candidate edits without copying local sec
   assert.match(source, /await copyFile\(source, destination\)/u);
   assert.match(source, /baseName\.startsWith\("\.env"\)/u);
   assert.match(source, /excludedTreePrefixes/u);
+  assert.match(source, /inheritedChildEnvironmentNames/u);
+  assert.match(source, /env: childEnvironment/u);
+  assert.doesNotMatch(source, /env: process\.env/u);
   assert.doesNotMatch(source, /git", \["archive"/u);
   assert.doesNotMatch(source, /"--others"/u);
 });
