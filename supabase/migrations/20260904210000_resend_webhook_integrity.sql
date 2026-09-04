@@ -271,6 +271,316 @@ GRANT EXECUTE ON FUNCTION public.process_resend_webhook_event(
   text, text, text, timestamptz, text
 ) TO service_role;
 
+-- A delivery event can race the sender's provider-id write. The webhook keeps
+-- that event durably as retryable; this trigger completes reconciliation even
+-- if the provider exhausts its HTTP retry window before the write commits.
+CREATE OR REPLACE FUNCTION public.reconcile_resend_webhook_events_for_send()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+DECLARE
+  provider_message_id text;
+  pending_event public.email_webhook_events;
+BEGIN
+  provider_message_id := NEW.metadata ->> 'provider_id';
+  IF provider_message_id IS NULL
+    OR provider_message_id !~ '^[A-Za-z0-9_.:-]{1,200}(
+  p_queue_name text,
+  p_payload jsonb,
+  p_template_name text,
+  p_recipient_email text
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  tracked_message_id text;
+  normalized_recipient text;
+  queued_message_id bigint;
+  existing_log public.email_send_log;
+BEGIN
+  tracked_message_id := p_payload ->> 'message_id';
+  normalized_recipient := lower(trim(p_recipient_email));
+
+  IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR tracked_message_id IS NULL
+    OR tracked_message_id !~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'
+    OR p_template_name IS NULL
+    OR p_template_name !~ '^[a-z0-9][a-z0-9_-]{0,99}$'
+    OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
+    OR position('@' IN normalized_recipient) <= 1
+    OR p_payload ->> 'to' IS NULL
+    OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
+    OR (
+      p_queue_name = 'auth_emails'
+      AND coalesce(p_payload ->> 'purpose', '') <> 'auth'
+    )
+    OR (
+      p_queue_name = 'transactional_emails'
+      AND coalesce(p_payload ->> 'purpose', '') <> 'transactional'
+    )
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email';
+  END IF;
+
+  -- Serialize a retried producer by its durable message id. The queue send
+  -- and log insert remain in this transaction, so an existing log proves the
+  -- original queue write committed as well.
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(tracked_message_id, 0)
+  );
+
+  SELECT *
+  INTO existing_log
+  FROM public.email_send_log
+  WHERE message_id = tracked_message_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF FOUND THEN
+    IF existing_log.template_name <> p_template_name
+      OR lower(trim(existing_log.recipient_email)) <> normalized_recipient
+      OR coalesce(existing_log.metadata ->> 'queue_name', '') <> p_queue_name
+    THEN
+      RAISE EXCEPTION USING ERRCODE = '23505', MESSAGE = 'tracked_email_message_id_conflict';
+    END IF;
+    RETURN 0;
+  END IF;
+
+  INSERT INTO public.email_send_log (
+    message_id,
+    template_name,
+    recipient_email,
+    status,
+    metadata
+  )
+  VALUES (
+    tracked_message_id,
+    p_template_name,
+    normalized_recipient,
+    'pending',
+    jsonb_build_object('queue_name', p_queue_name)
+  );
+
+  BEGIN
+    queued_message_id := pgmq.send(p_queue_name, p_payload);
+  EXCEPTION WHEN undefined_table THEN
+    PERFORM pgmq.create(p_queue_name);
+    queued_message_id := pgmq.send(p_queue_name, p_payload);
+  END;
+
+  RETURN queued_message_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.enqueue_tracked_email(
+  text, jsonb, text, text
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enqueue_tracked_email(
+  text, jsonb, text, text
+) TO service_role;
+
+
+CREATE OR REPLACE FUNCTION public.dead_letter_tracked_email(
+  p_source_queue text,
+  p_dlq_name text,
+  p_message_id bigint,
+  p_payload jsonb,
+  p_log_id uuid,
+  p_reason text,
+  p_attempts integer
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  dlq_message_id bigint;
+  updated_count integer;
+BEGIN
+  IF (p_source_queue, p_dlq_name) NOT IN (
+      ('auth_emails', 'auth_emails_dlq'),
+      ('transactional_emails', 'transactional_emails_dlq')
+    )
+    OR p_message_id IS NULL
+    OR p_message_id < 1
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR p_reason IS NULL
+    OR p_reason !~ '^[a-z0-9_]{1,100}$'
+    OR p_attempts IS NULL
+    OR p_attempts NOT BETWEEN 1 AND 1000
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email_dead_letter';
+  END IF;
+
+  BEGIN
+    dlq_message_id := pgmq.send(p_dlq_name, p_payload);
+  EXCEPTION WHEN undefined_table THEN
+    PERFORM pgmq.create(p_dlq_name);
+    dlq_message_id := pgmq.send(p_dlq_name, p_payload);
+  END;
+
+  IF NOT pgmq.delete(p_source_queue, p_message_id) THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'tracked_email_source_delete_failed';
+  END IF;
+
+  IF p_log_id IS NOT NULL THEN
+    UPDATE public.email_send_log
+    SET status = 'dlq',
+        error_message = p_reason,
+        metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
+          'terminal_reason', p_reason,
+          'attempts', p_attempts,
+          'dead_lettered_at', now()
+        )
+    WHERE id = p_log_id;
+    GET DIAGNOSTICS updated_count = ROW_COUNT;
+    IF updated_count <> 1 THEN
+      RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'tracked_email_log_update_failed';
+    END IF;
+  END IF;
+
+  RETURN dlq_message_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.dead_letter_tracked_email(
+  text, text, bigint, jsonb, uuid, text, integer
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
+  text, text, bigint, jsonb, uuid, text, integer
+) TO service_role;
+
+-- A provider Retry-After must be shared across every worker replica and must
+-- extend the message lease. Otherwise another replica can reclaim the row and
+-- retry before the provider permits it.
+CREATE OR REPLACE FUNCTION public.defer_email_retry(
+  p_queue_name text,
+  p_message_id bigint,
+  p_retry_after_seconds integer,
+  p_lease_seconds integer
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  deferred boolean;
+  retry_until timestamptz;
+BEGIN
+  IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
+    OR p_message_id IS NULL
+    OR p_message_id < 1
+    OR p_retry_after_seconds IS NULL
+    OR p_retry_after_seconds NOT BETWEEN 1 AND 900
+    OR p_lease_seconds IS NULL
+    OR p_lease_seconds NOT BETWEEN 30 AND 900
+    OR p_lease_seconds < p_retry_after_seconds
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_email_retry_deferral';
+  END IF;
+
+  PERFORM 1
+  FROM pgmq.set_vt(p_queue_name, p_message_id, p_lease_seconds);
+  deferred := FOUND;
+  IF NOT deferred THEN
+    RETURN false;
+  END IF;
+
+  retry_until := now() + pg_catalog.make_interval(secs => p_retry_after_seconds);
+  INSERT INTO public.email_send_state (id, retry_after_until, updated_at)
+  VALUES (1, retry_until, now())
+  ON CONFLICT (id) DO UPDATE
+  SET retry_after_until = greatest(
+        coalesce(public.email_send_state.retry_after_until, '-infinity'::timestamptz),
+        EXCLUDED.retry_after_until
+      ),
+      updated_at = now();
+
+  RETURN true;
+EXCEPTION WHEN undefined_table THEN
+  RETURN false;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.defer_email_retry(
+  text, bigint, integer, integer
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.defer_email_retry(
+  text, bigint, integer, integer
+) TO service_role;
+
+-- The dedicated worker supersedes the historical five-second Edge Function
+-- wake-up job. Remove every same-named cron entry so two dispatchers cannot
+-- race the same queues after this migration is applied.
+DO $remove_legacy_email_cron$
+DECLARE
+  target_job_id bigint;
+BEGIN
+  IF to_regclass('cron.job') IS NULL
+    OR to_regprocedure('cron.unschedule(bigint)') IS NULL
+  THEN
+    RETURN;
+  END IF;
+
+  FOR target_job_id IN
+    SELECT jobid FROM cron.job WHERE jobname = 'process-email-queue'
+  LOOP
+    PERFORM cron.unschedule(target_job_id);
+  END LOOP;
+END
+$remove_legacy_email_cron$;
+
+    OR (
+      TG_OP = 'UPDATE'
+      AND (OLD.metadata ->> 'provider_id') IS NOT DISTINCT FROM provider_message_id
+    )
+  THEN
+    RETURN NEW;
+  END IF;
+
+  FOR pending_event IN
+    SELECT *
+    FROM public.email_webhook_events
+    WHERE email_webhook_events.provider_message_id = provider_message_id
+      AND status = 'failed'
+      AND last_error_code = 'email_send_log_not_found'
+    ORDER BY occurred_at
+  LOOP
+    PERFORM public.process_resend_webhook_event(
+      pending_event.event_id,
+      pending_event.event_type,
+      pending_event.provider_message_id,
+      pending_event.occurred_at,
+      pending_event.payload_sha256
+    );
+  END LOOP;
+
+  RETURN NEW;
+END
+$;
+
+REVOKE ALL ON FUNCTION public.reconcile_resend_webhook_events_for_send()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reconcile_resend_webhook_events_for_send()
+  TO service_role;
+
+DROP TRIGGER IF EXISTS reconcile_resend_webhook_events_after_send
+  ON public.email_send_log;
+CREATE TRIGGER reconcile_resend_webhook_events_after_send
+AFTER INSERT OR UPDATE OF metadata ON public.email_send_log
+FOR EACH ROW
+EXECUTE FUNCTION public.reconcile_resend_webhook_events_for_send();
+
 
 CREATE OR REPLACE FUNCTION public.enqueue_tracked_email(
   p_queue_name text,
