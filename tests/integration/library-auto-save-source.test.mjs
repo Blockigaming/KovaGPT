@@ -79,6 +79,10 @@ test("every image download uses a bounded Blob action with real failure state", 
   assert.match(imageRoute, /response\.body\.getReader\(\)/);
   assert.match(imageRoute, /total > MAX_IMAGE_DOWNLOAD_BYTES/);
   assert.match(imageRoute, /reader\.cancel\(\)/);
+  assert.match(
+    imageRoute,
+    /declaredLength[\s\S]*response\.body\?\.cancel\(\)[\s\S]*Image download response was invalid/,
+  );
   assert.doesNotMatch(imageRoute, /response\.blob\(\)/);
   assert.match(imageRoute, /URL\.createObjectURL\(blob\)/);
   assert.match(imageRoute, /setDownloadingImageId/);
@@ -90,4 +94,16 @@ test("saved image history remains a recoverable Library source", () => {
   assert.match(imageRoute, /Save to Library again/);
   assert.match(imageRoute, /disabled=\{lightboxLibraryStatus === "saving"\}/);
   assert.match(imageRoute, /Save again/);
+});
+
+
+test("removing current history also removes its otherwise unsaveable result", () => {
+  assert.match(
+    imageRoute,
+    /if \(resultHistoryId === id\)[\s\S]*setResult\(null\)[\s\S]*setResultHistoryId\(null\)/,
+  );
+  assert.match(
+    imageRoute,
+    /onClearAll[\s\S]*historyRef\.current = \[\][\s\S]*setResult\(null\)[\s\S]*setResultHistoryId\(null\)/,
+  );
 });
