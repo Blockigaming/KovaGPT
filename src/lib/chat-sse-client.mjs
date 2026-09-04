@@ -189,7 +189,7 @@ async function readErrorPayload(response) {
   let total = 0;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readWithSignal(reader, undefined, 10_000);
       if (done) break;
       if (!(value instanceof Uint8Array) || value.byteLength > MAX_ERROR_BODY_BYTES - total) {
         cancelReaderWithoutWaiting(reader, "chat_error_body_rejected");
