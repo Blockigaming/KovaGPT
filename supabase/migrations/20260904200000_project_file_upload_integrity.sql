@@ -312,7 +312,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   target public.project_files;
 BEGIN
@@ -337,7 +337,7 @@ BEGIN
   DELETE FROM public.project_files WHERE id = target.id;
   RETURN jsonb_build_object('aborted', true);
 END
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.abort_project_file_upload(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
@@ -353,7 +353,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   target public.project_files;
 BEGIN
@@ -385,7 +385,7 @@ BEGIN
 
   RETURN to_jsonb(target) || jsonb_build_object('claimed', true);
 END
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.claim_project_file_delete(uuid, uuid, uuid)
   FROM PUBLIC, anon, authenticated;
@@ -400,7 +400,7 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
   UPDATE public.project_files
   SET status = 'ready',
       delete_attempt_id = NULL,
@@ -409,7 +409,7 @@ AS $
     AND delete_attempt_id = p_attempt_id
     AND status = 'deleting'
   RETURNING true
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.restore_project_file_delete(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
@@ -424,7 +424,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   target public.project_files;
 BEGIN
@@ -456,7 +456,7 @@ BEGIN
     'projectId', target.project_id
   );
 END
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
