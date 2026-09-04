@@ -42,6 +42,7 @@ export class ChatStreamError extends Error {
     this.code = code;
     this.status = status;
     this.retryable = retryable;
+    this.category = "streaming_interruption";
   }
 }
 
