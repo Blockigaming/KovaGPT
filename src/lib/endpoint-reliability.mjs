@@ -60,10 +60,6 @@ export async function readUtf8BodyBounded(request, maxBytes) {
     reader.releaseLock();
   }
 
-  if (verifyDeclaredLength && totalBytes !== declaredBytes) {
-    throw new BodyReadError(502, "content_length_mismatch");
-  }
-
   const bytes = new Uint8Array(totalBytes);
   let offset = 0;
   for (const chunk of chunks) {
@@ -145,6 +141,10 @@ export async function readResponseBytesBounded(response, maxBytes) {
     }
   } finally {
     reader.releaseLock();
+  }
+
+  if (verifyDeclaredLength && totalBytes !== declaredBytes) {
+    throw new BodyReadError(502, "content_length_mismatch");
   }
 
   const bytes = new Uint8Array(totalBytes);
