@@ -121,7 +121,10 @@ test("confirmed writes stay bound to the staged Google account and use a recover
   assert.match(executor, /result: \{ staged_google_sub: stagedGoogleSub \}/);
   assert.match(executor, /processing_started_at: new Date\(\)\.toISOString\(\)/);
   assert.match(executor, /getValidGoogleAccessToken\(userId, stagedGoogleSub\)/);
-  assert.match(executor, /Date\.now\(\) - new Date\(startedAt\)\.getTime\(\) > STALE_PROCESSING_MS/);
+  assert.match(
+    executor,
+    /Date\.now\(\) - new Date\(startedAt\)\.getTime\(\) > STALE_PROCESSING_MS/,
+  );
   assert.match(executor, /abandoned_processing/);
   assert.match(oauth, /expectedGoogleSub && data\.google_sub !== expectedGoogleSub/);
   assert.match(oauth, /refreshAccessToken\(userId, expectedGoogleSub\)/);
