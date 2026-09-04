@@ -1,7 +1,7 @@
 // Floating widget in the bottom-right that shows active timers/alarms,
 // counts down live, plays a beep + notification when a timer fires, and
 // exposes a quick "add timer" affordance.
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   addTimer,
   formatRemaining,
@@ -66,6 +66,7 @@ export function TimersWidget({
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(5);
+  const notifiedIdsRef = useRef<Set<string>>(new Set());
 
   const refresh = useCallback(() => {
     if (!principalResolved || !principal) {
@@ -78,6 +79,7 @@ export function TimersWidget({
   }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
+    notifiedIdsRef.current.clear();
     refresh();
     const unsub = subscribeTimers(principalResolved ? userKey : undefined, refresh);
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -99,20 +101,31 @@ export function TimersWidget({
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
   }, [principal, principalResolved, userKey]);
 
-  // Fire any timers that have hit their fireAt (guard against re-firing).
+  // Fire each due timer at most once during this mounted browser session, even when
+  // browser storage is unavailable and the durable fired flag cannot be written.
   useEffect(() => {
     if (!ready) return;
-    for (const t of visibleItems) {
-      if (!t.fired && t.fireAt <= now) {
-        markFired(userKey, t.id);
-        beep();
-        notify(t.label);
-        toast.success(`${t.label} - done`, { duration: 6000 });
-      }
+    const due = visibleItems.filter(
+      (timer) =>
+        !timer.fired && timer.fireAt <= now && !notifiedIdsRef.current.has(timer.id),
+    );
+    if (due.length === 0) return;
+    const dueIds = new Set(due.map((timer) => timer.id));
+    due.forEach((timer) => notifiedIdsRef.current.add(timer.id));
+    setItems((current) =>
+      current.map((timer) => (dueIds.has(timer.id) ? { ...timer, fired: true } : timer)),
+    );
+    for (const timer of due) {
+      markFired(userKey, timer.id);
+      beep();
+      notify(timer.label);
+      toast.success(`${timer.label} - done`, { duration: 6000 });
     }
   }, [now, ready, userKey, visibleItems]);
 
-  const active = visibleItems.filter((t) => !t.fired);
+  const active = visibleItems
+    .filter((timer) => !timer.fired)
+    .sort((a, b) => a.fireAt - b.fireAt);
   const nextItem = active[0];
 
   const requestNotifPerm = () => {
@@ -121,21 +134,18 @@ export function TimersWidget({
     }
   };
 
-  if (visibleItems.length === 0 && !open) {
-    return null;
-  }
-
   return (
-    <div className="fixed bottom-4 right-4 z-40 pointer-events-none flex flex-col items-end gap-2">
+    <div className="fixed bottom-[max(1rem,var(--safe-bottom))] left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] z-40 pointer-events-none flex flex-col items-end gap-2 sm:left-auto">
       {open && (
-        <div className="pointer-events-auto w-72 rounded-2xl border border-border bg-card/95 backdrop-blur shadow-lg p-3 space-y-2">
+        <div className="pointer-events-auto w-full rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:w-72">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <TimerIcon className="w-3.5 h-3.5" /> Timers
             </div>
             <button
+              type="button"
               onClick={() => setOpen(false)}
-              className="p-1 rounded hover:bg-accent"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-accent"
               aria-label="Close timers"
             >
               <X className="w-3.5 h-3.5" />
@@ -162,9 +172,15 @@ export function TimersWidget({
                     </div>
                   </div>
                   <button
-                    onClick={() => ready && removeTimer(userKey, t.id)}
-                    className="p-1 rounded hover:bg-background/60"
-                    aria-label="Cancel"
+                    type="button"
+                    onClick={() => {
+                      if (!ready) return;
+                      if (!removeTimer(userKey, t.id)) {
+                        toast.error("The timer could not be removed from this browser.");
+                      }
+                    }}
+                    className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-background/60"
+                    aria-label={`${done ? "Remove" : "Cancel"} ${t.label}`}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -179,17 +195,23 @@ export function TimersWidget({
               max={600}
               value={minutes}
               onChange={(e) => setMinutes(Math.max(1, Math.min(600, Number(e.target.value) || 1)))}
-              className="w-14 px-2 py-1 text-xs rounded-md border border-border bg-background"
+              step={1}
+              className="h-11 w-16 rounded-md border border-border bg-background px-2 text-xs"
               aria-label="Minutes"
             />
             <span className="text-xs text-muted-foreground">min</span>
             <button
+              type="button"
               onClick={() => {
                 if (!ready) return;
-                addTimer(userKey, minutes * 60 * 1000, `${minutes} min timer`);
+                const timer = addTimer(userKey, minutes * 60 * 1000, `${minutes} min timer`);
+                if (!timer) {
+                  toast.error("The timer could not be saved in this browser.");
+                  return;
+                }
                 requestNotifPerm();
               }}
-              className="ml-auto text-xs px-3 py-1 rounded-full bg-foreground text-background hover:opacity-90 inline-flex items-center gap-1"
+              className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full bg-foreground px-4 text-xs text-background hover:opacity-90"
             >
               <Plus className="w-3 h-3" /> Start
             </button>
@@ -197,8 +219,9 @@ export function TimersWidget({
         </div>
       )}
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/95 backdrop-blur shadow-lg px-3 py-2 text-xs font-medium hover:bg-accent transition"
+        className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-lg backdrop-blur transition hover:bg-accent"
         aria-label="Timers"
       >
         {nextItem ? (
