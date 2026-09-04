@@ -267,8 +267,7 @@ const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
 const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
 const MAX_HISTORY_STORAGE_CHARS = 4_000_000;
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function parseHistory(raw: string | null): HistoryItem[] {
   if (!raw || raw.length > MAX_HISTORY_STORAGE_CHARS) return [];
@@ -543,10 +542,7 @@ function ImagesPage() {
     }
   }
 
-  async function downloadGeneratedImage(item: {
-    id: string;
-    imageUrl: string;
-  }) {
+  async function downloadGeneratedImage(item: { id: string; imageUrl: string }) {
     if (downloadingImageId) return;
     const imageUrl = safeImageUrl(item.imageUrl);
     if (!imageUrl) {
