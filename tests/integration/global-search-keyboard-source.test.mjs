@@ -48,7 +48,7 @@ test("workspace search exposes truthful loading, error, retry, and empty states"
   assert.match(source, /Searching workspace…/);
   assert.match(source, /workspaceStatus === "error"/);
   assert.match(source, /Workspace results are unavailable\./);
-  assert.match(source, /onKeyDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+  assert.match(source, /event\.key === "Enter"[\s\S]*event\.stopPropagation\(\)/);
   assert.match(source, /onClick=\{retryWorkspaceSearch\}/);
   assert.match(source, /No workspace results/);
   assert.match(indexSource, /setWorkspaceStatus\("loading"\)/);
