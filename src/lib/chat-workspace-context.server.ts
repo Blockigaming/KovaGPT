@@ -241,6 +241,7 @@ export async function loadPinnedContext(
         .from("project_files")
         .select("id, name")
         .eq("project_id", projectId)
+        .eq("status", "ready")
         .eq("id", base.sourceId)
         .limit(1),
     );
