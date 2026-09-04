@@ -197,7 +197,9 @@ test("automatic memory summarization never consumes the foreground chat quota", 
   );
   assert.match(clientSource, /active\.messages\.slice\(memoryStartIndex\)/);
   assert.match(clientSource, /memoryMessages\s*\.slice\(-30\)/);
-  assert.match(clientSource, /active\.title\.slice\(0, 120\)/);
+  assert.match(clientSource, /const memoryTitle = deriveTitle\(/);
+  assert.match(clientSource, /title: memoryTitle\.slice\(0, 120\)/);
+  assert.doesNotMatch(clientSource, /title: active\.title\.slice\(0, 120\)/);
   assert.match(clientSource, /message\.content\.slice\(0, 2000\)/);
 });
 
