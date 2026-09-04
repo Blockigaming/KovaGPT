@@ -26,6 +26,7 @@ queue/message identifiers and stable error codes.
 - `SUPABASE_URL`: production project origin (HTTPS).
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only queue/table access.
 - `RESEND_API_KEY`: server-only Resend sending key.
+- `RESEND_WEBHOOK_SECRET`: server-only signing secret for the Resend webhook.
 - `KOVA_EMAIL_QUEUE_ENABLED=true`: explicit execution gate.
 - `EMAIL_SENDER_DOMAINS=notify.kovagpt.com`: verified sender-domain allowlist.
 - `KOVA_PUBLIC_ORIGIN=https://kovagpt.com`: unsubscribe-link origin.
@@ -41,6 +42,18 @@ Optional bounded tuning:
 - `EMAIL_WORKER_MAX_ATTEMPTS` (default `5`, range 1–20)
 - `EMAIL_WORKER_AUTH_TTL_MINUTES` (default `15`)
 - `EMAIL_WORKER_TRANSACTIONAL_TTL_MINUTES` (default `60`)
+
+## Delivery reconciliation
+
+Configure Resend to send webhooks to `https://kovagpt.com/api/public/email/webhook`. Subscribe to
+`email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`,
+`email.complained`, and `email.suppressed`. The endpoint verifies the exact raw body with the
+Svix delivery id, timestamp, and signature, rejects signatures older than five minutes, and stores the
+delivery id as a durable replay key. It matches the signed provider message id to the worker's
+authoritative send log; event-supplied recipients and subjects are never trusted. Bounce, complaint,
+and provider-suppression events update the send log and suppression list atomically. A webhook that
+arrives before the worker records its provider id returns a retryable response instead of losing the
+event.
 
 ## Health, readiness, and metrics
 
