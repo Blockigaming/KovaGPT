@@ -173,7 +173,7 @@ export function TimersWidget({
           onKeyDown={(event) => {
             if (event.key === "Escape") setOpen(false);
           }}
-          className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-72"
+          className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full sm:max-h-[calc(100dvh-12rem-var(--safe-top)-var(--safe-bottom))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-72"
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
