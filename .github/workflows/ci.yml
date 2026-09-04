@@ -70,9 +70,8 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run format:check:changed
 
-      - name: Legacy repository formatting audit
+      - name: Repository formatting audit
         if: steps.scope.outputs.run_ci == 'true'
-        continue-on-error: true
         run: npm run format:check
 
       - name: Lint
