@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
 import {
   getMode,
-  STORAGE_LIMITS_BYTES,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
@@ -11,7 +10,6 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
-  enforceStorage,
   getCallerTier,
   optionalUser,
 } from "@/lib/api-auth.server";
@@ -73,6 +71,10 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import {
+  ChatPreflightError,
+  createChatPreflightRunner,
+} from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -484,10 +486,26 @@ export const Route = createFileRoute("/api/chat")({
           }
         };
         const run = async (): Promise<Response> => {
+          const preflight = createChatPreflightRunner({
+            signal: request.signal,
+            onMilestone: (event) => {
+              console.info("[chat] preflight stage", {
+                requestId,
+                stage: event.stage,
+                state: event.state,
+                required: event.required,
+                durationMs: event.durationMs,
+                code: event.code,
+                status: event.status,
+              });
+            },
+          });
           try {
             let ingress;
             try {
-              ingress = await readChatRequest(request, CHAT_BODY_LIMIT_BYTES);
+              ingress = await preflight.run("request_body", () =>
+                readChatRequest(request, CHAT_BODY_LIMIT_BYTES),
+              );
             } catch (error) {
               if (error instanceof ChatIngressError) {
                 return Response.json(toChatIngressErrorEnvelope(error, requestId), {
@@ -497,7 +515,7 @@ export const Route = createFileRoute("/api/chat")({
               throw error;
             }
 
-            const auth = await optionalUser(request);
+            const auth = await preflight.run("session", () => optionalUser(request));
             if (auth instanceof Response) return auth;
 
             const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
@@ -517,12 +535,14 @@ export const Route = createFileRoute("/api/chat")({
               // guard, then consume an atomic Supabase bucket before any
               // optional search or provider work can begin. Generation has a
               // second authoritative reservation later in the request.
-              const distributedLimit = await consumeApplicationRateLimit({
-                identity: clientKey,
-                action: "guest_chat_preflight",
-                limit: 60,
-                windowSeconds: 3600,
-              });
+              const distributedLimit = await preflight.run("guest_rate_limit", () =>
+                consumeApplicationRateLimit({
+                  identity: clientKey,
+                  action: "guest_chat_preflight",
+                  limit: 60,
+                  windowSeconds: 3600,
+                }),
+              );
               if (!distributedLimit.allowed) {
                 return Response.json(
                   {
@@ -566,7 +586,12 @@ export const Route = createFileRoute("/api/chat")({
             let lockdownBlocksNetwork = false;
             if (auth) {
               try {
-                lockdownBlocksNetwork = await readLockdownMode(auth.supabaseAdmin, auth.userId);
+                lockdownBlocksNetwork =
+                  (await preflight.run(
+                    "lockdown",
+                    () => readLockdownMode(auth.supabaseAdmin, auth.userId),
+                    { required: false },
+                  )) ?? true;
               } catch (error) {
                 lockdownBlocksNetwork = true;
                 if (explicitLockdownCapability) {
@@ -612,7 +637,12 @@ export const Route = createFileRoute("/api/chat")({
             let isOwner = false;
             if (auth) {
               try {
-                const { data } = await auth.supabaseAdmin.auth.admin.getUserById(auth.userId);
+                const ownerLookup = await preflight.run(
+                  "owner_lookup",
+                  () => auth.supabaseAdmin.auth.admin.getUserById(auth.userId),
+                  { required: false },
+                );
+                const data = ownerLookup?.data;
                 const email = data?.user?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
               } catch {
@@ -623,9 +653,11 @@ export const Route = createFileRoute("/api/chat")({
             // Banned-user + maintenance + tier checks for signed-in callers.
             let callerTier: "free" | "plus" | "pro" = "free";
             if (auth) {
-              const banned = await assertNotBanned(auth);
+              const banned = await preflight.run("ban_check", () => assertNotBanned(auth));
               if (banned) return banned;
-              callerTier = isOwner ? "pro" : await getCallerTier(auth);
+              callerTier = isOwner
+                ? "pro"
+                : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -651,11 +683,14 @@ export const Route = createFileRoute("/api/chat")({
             let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
             if (clientTool === "deep_research" && auth) {
               try {
-                authorizedResearchReferences = await authorizeResearchPersistence({
+                authorizedResearchReferences = await preflight.run(
+                  "research_authorization",
+                  () => authorizeResearchPersistence({
                   supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
                   chatId,
                   projectId,
-                });
+                  }),
+                );
               } catch (error) {
                 if (error instanceof ResearchPersistenceAuthorizationError) {
                   if (error.status === 503) {
@@ -711,10 +746,14 @@ export const Route = createFileRoute("/api/chat")({
                     },
                   );
                 }
-                const maint = await assertFeatureEnabled(auth, "images");
+                const maint = await preflight.run("image_feature", () =>
+                  assertFeatureEnabled(auth, "images"),
+                );
                 if (maint) return maint;
                 const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
-                const quota = await enforceQuota(auth, "images", imgLimit);
+                const quota = await preflight.run("image_quota", () =>
+                  enforceQuota(auth, "images", imgLimit),
+                );
                 if (quota) return quota;
               }
               return handleImageRequest(lastText, logContext);
@@ -722,9 +761,13 @@ export const Route = createFileRoute("/api/chat")({
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
             if (auth && !isOwner) {
-              const maint = await assertFeatureEnabled(auth, "chat");
+              const maint = await preflight.run("chat_feature", () =>
+                assertFeatureEnabled(auth, "chat"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
+              const quota = await preflight.run("chat_quota", () =>
+                enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]),
+              );
               if (quota) return quota;
             }
 
@@ -774,35 +817,19 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 );
               }
-              const maint = await assertFeatureEnabled(auth, "uploads");
+              const maint = await preflight.run("upload_feature", () =>
+                assertFeatureEnabled(auth, "uploads"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(
-                auth,
-                "uploads",
-                DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
-                totalAttachments,
+              const quota = await preflight.run("upload_quota", () =>
+                enforceQuota(
+                  auth,
+                  "uploads",
+                  DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
+                  totalAttachments,
+                ),
               );
               if (quota) return quota;
-              // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
-              let totalBytes = 0;
-              for (const att of currentAttachments) {
-                if (att.kind === "text_file") {
-                  totalBytes += new TextEncoder().encode(att.content).byteLength;
-                  continue;
-                }
-                if (att.kind !== "image") continue;
-                const url = att.dataUrl ?? "";
-                const commaIdx = url.indexOf(",");
-                if (commaIdx > -1) {
-                  // base64 length * 3/4 approx. raw byte size
-                  totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
-                } else {
-                  totalBytes += url.length;
-                }
-              }
-              const tier = await getCallerTier(auth);
-              const storage = await enforceStorage(auth, totalBytes, STORAGE_LIMITS_BYTES[tier]);
-              if (storage) return storage;
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
