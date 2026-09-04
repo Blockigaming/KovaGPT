@@ -2750,22 +2750,30 @@ function ShortcutsEditor({
       if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
-      // Ignore lone modifiers.
+      // Ignore lone modifiers until the user presses a complete binding.
       if (["Shift", "Control", "Meta", "Alt"].includes(e.key)) return;
-      const parts: string[] = [];
-      if (e.metaKey || e.ctrlKey) parts.push("Mod");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      parts.push(key);
-      const combo = parts.join("+");
+      setRecordingId(null);
       const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
       if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const combo = mod.shortcutComboFromKeyboardEvent(e);
+      if (!combo) {
+        toast.error("That key can't be used for a shortcut.");
+        return;
+      }
+      const conflict = visibleList.find(
+        (shortcut) => shortcut.id !== recordingId && shortcut.combo === combo,
+      );
+      if (conflict) {
+        toast.error(`That shortcut is already assigned to ${conflict.label}.`);
+        return;
+      }
       const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      if (!mod.saveShortcuts(userKey, next)) {
+        toast.error("Shortcut couldn't be saved in this browser.");
+        return;
+      }
       setList(next);
-      mod.saveShortcuts(userKey, next);
-      setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
@@ -2777,34 +2785,44 @@ function ShortcutsEditor({
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");
     if (!ready) return;
-    mod.resetShortcuts(userKey);
+    if (!mod.resetShortcuts(userKey)) {
+      toast.error("Shortcuts couldn't be reset in this browser.");
+      return;
+    }
     setList(mod.DEFAULT_SHORTCUTS);
     toast.success("Shortcuts reset");
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" aria-busy={!ready}>
       <div className="rounded-lg border border-border divide-y divide-border">
-        {visibleList.map((s) => (
-          <ShortcutRow
-            key={s.id}
-            id={s.id}
-            label={s.label}
-            description={s.description}
-            combo={s.combo}
-            recording={recordingId === s.id}
-            onRecord={() => setRecordingId(s.id)}
-            onCancel={() => setRecordingId(null)}
-          />
-        ))}
+        {ready ? (
+          visibleList.map((s) => (
+            <ShortcutRow
+              key={s.id}
+              id={s.id}
+              label={s.label}
+              description={s.description}
+              combo={s.combo}
+              recording={recordingId === s.id}
+              onRecord={() => setRecordingId(s.id)}
+              onCancel={() => setRecordingId(null)}
+            />
+          ))
+        ) : (
+          <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+            Loading shortcuts…
+          </p>
+        )}
       </div>
       <div>
-        <Button size="sm" variant="outline" onClick={reset}>
+        <Button size="sm" variant="outline" className="min-h-11" disabled={!ready} onClick={reset}>
           Reset to defaults
         </Button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl elsewhere.
+        Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl
+        elsewhere.
       </p>
     </div>
   );
@@ -2844,8 +2862,11 @@ function ShortcutRow({
         <div className="text-xs text-muted-foreground">{description}</div>
       </div>
       <button
+        type="button"
+        aria-label={`${recording ? "Stop recording" : "Change"} shortcut for ${label}`}
+        aria-pressed={recording}
         onClick={recording ? onCancel : onRecord}
-        className={`text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
+        className={`min-h-11 text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
           recording
             ? "border-primary bg-primary/10 text-primary animate-pulse"
             : "border-border hover:bg-accent"
