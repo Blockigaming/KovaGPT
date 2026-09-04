@@ -530,9 +530,12 @@ BEGIN
     AND email_confirmed_at IS NOT NULL;
 
   IF actor_email IS NULL
+    OR p_project_id IS NULL
+    OR p_recipient_email IS NULL
     OR actor_email = normalized_recipient
     OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
     OR position('@' IN normalized_recipient) <= 1
+    OR p_role IS NULL
     OR p_role NOT IN ('editor'::public.project_role, 'viewer'::public.project_role)
     OR p_payload IS NULL
     OR jsonb_typeof(p_payload) <> 'object'
@@ -647,6 +650,7 @@ BEGIN
     AND email_confirmed_at IS NOT NULL;
 
   IF actor_email IS NULL
+    OR p_recipient_email IS NULL
     OR actor_email = normalized_recipient
     OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
     OR position('@' IN normalized_recipient) <= 1
