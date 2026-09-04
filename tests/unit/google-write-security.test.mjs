@@ -166,7 +166,6 @@ test("draft validation caps total recipients and relevant field lengths", () => 
   );
 });
 
-
 test("confirmed send validation uses the same strict MIME envelope as drafts", () => {
   const result = validateSupportedGoogleWrite("gmail_send", {
     to: "recipient@example.com",
