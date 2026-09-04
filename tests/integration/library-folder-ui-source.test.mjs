@@ -61,3 +61,28 @@ test("bulk moves and folder deletion preserve truthful limits and data copy", ()
   assert.match(library, /moved\.has\(item\.id\).*folder_id: folderId/s);
   assert.match(library, /removed\.has\(item\.folder_id\).*folder_id: null/s);
 });
+
+
+test("folder UI keeps async loads, principals, and mutation state consistent", () => {
+  assert.match(folders, /refreshKey: number/);
+  assert.match(folders, /\[enabled, load, principalKey, refreshKey\]/);
+  assert.match(folders, /const generation = \+\+generationRef\.current/);
+  assert.match(folders, /if \(!isCurrent\(\)\) return/);
+  assert.match(folders, /if \(isCurrent\(\)\) setBusy\(null\)/);
+  assert.match(folders, /setEditorError\(errorMessage\(mutationError\)\)/);
+  assert.match(folders, /role="alert"[\s\S]*\{editorError\}/);
+  assert.match(folders, /folderPath\(folder, folders\)/);
+  assert.match(folders, /moveTarget !== "root"[\s\S]*setMoveTarget\("root"\)/);
+  assert.match(library, /refreshKey=\{folderRefreshKey\}/);
+  assert.match(library, /setFolderRefreshKey\(\(current\) => current \+ 1\)/);
+});
+
+test("Library invalidates stale item loads and distinguishes filter emptiness", () => {
+  assert.match(
+    library,
+    /onMoved=[\s\S]*loadGenerationRef\.current \+= 1;[\s\S]*folder_id: folderId/,
+  );
+  assert.match(library, /const folderItems = useMemo/);
+  assert.match(library, /folderScope !== "all" && folderItems\.length === 0/);
+  assert.match(library, /return folderItems[\s\S]*filter === "favorites"/);
+});
