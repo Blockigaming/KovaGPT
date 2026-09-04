@@ -46,7 +46,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.project_files
       ADD CONSTRAINT project_files_name_length_check
-      CHECK (char_length(name) BETWEEN 1 AND 180) NOT VALID;
+      CHECK (content_sha256 IS NULL OR char_length(name) BETWEEN 1 AND 180) NOT VALID;
   END IF;
 
   IF NOT EXISTS (
@@ -56,7 +56,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.project_files
       ADD CONSTRAINT project_files_size_check
-      CHECK (size_bytes BETWEEN 0 AND 10485760) NOT VALID;
+      CHECK (content_sha256 IS NULL OR size_bytes BETWEEN 0 AND 10485760) NOT VALID;
   END IF;
 
   IF NOT EXISTS (
