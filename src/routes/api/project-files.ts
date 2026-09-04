@@ -200,9 +200,7 @@ async function storedProjectFileMatches(
     .download(storagePath);
   if (error || !data || data.size !== expectedBytes) return false;
   try {
-    return sha256Hex(new Uint8Array(await data.arrayBuffer())).then(
-      (digest) => digest === expectedSha256,
-    );
+    return (await sha256Hex(new Uint8Array(await data.arrayBuffer()))) === expectedSha256;
   } catch {
     return false;
   }
@@ -464,7 +462,7 @@ async function upload(request: Request): Promise<Response> {
     kind: inspected.kind === "image" ? "image_added" : "file_added",
     summary: `Uploaded ${inspected.kind === "image" ? "image" : "file"} “${inspected.name}”`,
   });
-  return json({ file: { ...row, status: "ready", storage_charged: storageCharged } }, 201);
+  return json({ file: { ...row, status: "ready", storage_charged: row.storage_charged } }, 201);
 }
 
 function missingObject(error: unknown): boolean {
