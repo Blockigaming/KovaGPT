@@ -6,7 +6,7 @@ const read = (path) => readFile(path, "utf8");
 const [library, folders, client, functions, supabaseTypes] = await Promise.all([
   read("src/routes/library.tsx"),
   read("src/components/LibraryFolderOrganizer.tsx"),
-  read("src/lib/library-folders.client.ts"),
+  read("src/lib/library-folders.ts"),
   read("src/lib/library.functions.ts"),
   read("src/integrations/supabase/types.ts"),
 ]);
