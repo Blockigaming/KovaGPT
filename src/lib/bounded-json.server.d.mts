@@ -6,9 +6,14 @@ export class BoundedJsonError extends Error {
   constructor(code: string, status: number);
 }
 
-export function readBoundedUtf8(request: Request, maxBytes?: number): Promise<string>;
+export function readBoundedUtf8(
+  request: Request,
+  maxBytes?: number,
+  signal?: AbortSignal,
+): Promise<string>;
 
 export function readBoundedJsonObject(
   request: Request,
   maxBytes?: number,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>>;
