@@ -266,35 +266,81 @@ type HistoryItem = {
 const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
 const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
+const MAX_HISTORY_STORAGE_CHARS = 4_000_000;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-function loadHistory(userKey: string | null): HistoryItem[] {
-  if (!userKey || typeof window === "undefined") return [];
+function parseHistory(raw: string | null): HistoryItem[] {
+  if (!raw || raw.length > MAX_HISTORY_STORAGE_CHARS) return [];
   try {
-    let raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
-    if (!raw) {
-      const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
-      raw = localStorage.getItem(legacyKey);
-      if (raw) {
-        localStorage.setItem(HISTORY_KEY_PREFIX + userKey, raw);
-        localStorage.removeItem(legacyKey);
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const now = Date.now();
+    return parsed.slice(0, HISTORY_LIMIT).flatMap((value): HistoryItem[] => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const row = value as Record<string, unknown>;
+      const imageUrl = safeImageUrl(row.imageUrl);
+      if (
+        typeof row.id !== "string" ||
+        !UUID_PATTERN.test(row.id) ||
+        typeof row.prompt !== "string" ||
+        row.prompt.length === 0 ||
+        row.prompt.length > 2_000 ||
+        !imageUrl ||
+        typeof row.createdAt !== "number" ||
+        !Number.isFinite(row.createdAt) ||
+        row.createdAt < 0 ||
+        row.createdAt > now + 5 * 60_000
+      ) {
+        return [];
       }
-    }
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+      const libraryStatus =
+        row.libraryStatus === "saved"
+          ? "saved"
+          : row.libraryStatus === "saving" || row.libraryStatus === "error"
+            ? "error"
+            : undefined;
+      return [
+        {
+          id: row.id,
+          prompt: row.prompt,
+          imageUrl,
+          createdAt: row.createdAt,
+          libraryStatus,
+        },
+      ];
+    });
   } catch {
     return [];
   }
 }
-function saveHistory(userKey: string | null, items: HistoryItem[]) {
-  if (!userKey || typeof window === "undefined") return;
+
+function loadHistory(userKey: string | null): HistoryItem[] {
+  if (!userKey || typeof window === "undefined") return [];
   try {
-    localStorage.setItem(
-      HISTORY_KEY_PREFIX + userKey,
-      JSON.stringify(items.slice(0, HISTORY_LIMIT)),
-    );
+    const currentKey = HISTORY_KEY_PREFIX + userKey;
+    const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
+    const currentRaw = localStorage.getItem(currentKey);
+    const legacyRaw = currentRaw ? null : localStorage.getItem(legacyKey);
+    const parsed = parseHistory(currentRaw ?? legacyRaw);
+    if (legacyRaw && saveHistory(userKey, parsed)) {
+      localStorage.removeItem(legacyKey);
+    }
+    return parsed;
   } catch {
-    /*ignore*/
+    return [];
+  }
+}
+
+function saveHistory(userKey: string | null, items: HistoryItem[]): boolean {
+  if (!userKey || typeof window === "undefined") return false;
+  try {
+    const serialized = JSON.stringify(items.slice(0, HISTORY_LIMIT));
+    if (serialized.length > MAX_HISTORY_STORAGE_CHARS) return false;
+    localStorage.setItem(HISTORY_KEY_PREFIX + userKey, serialized);
+    return true;
+  } catch {
+    return false;
   }
 }
 
