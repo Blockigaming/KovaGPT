@@ -17,11 +17,18 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     "inspectProjectFile",
     "sha256Hex",
     "reserve_project_file_upload",
+    "acquire_project_file_upload_quota",
+    "set_project_file_upload_state",
     "abort_project_file_upload",
+    "claim_stale_project_file_cleanup",
+    "renew_stale_project_file_cleanup",
+    "fail_stale_project_file_cleanup",
+    "finalize_stale_project_file_cleanup",
     "claim_project_file_delete",
     "restore_project_file_delete",
     "finalize_project_file_delete",
-    "enforceQuota",
+    "acquire_project_file_upload_quota",
+    "reconcileProjectFileLifecycle",
     "storage_owner_id",
     "authorization.ownerId",
     "unsupported_media_type",
@@ -30,7 +37,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     ".move(temporaryPath, row.storage_path)",
     "project_file_delete_in_progress",
     "cleanupStaleProjectUploadObjects",
-    ".list(folder, {",
+    "ProjectFileMaintenanceClient",
     "projectFileObjectPresence",
     'presence === "unknown"',
     'presence === "present"',
@@ -38,6 +45,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     assert.ok(route.includes(contract), `missing route contract: ${contract}`);
   }
   assert.doesNotMatch(route, /try_add_storage_bytes/);
+  assert.doesNotMatch(route, /enforceQuota/);
   assert.doesNotMatch(route, /user_plan_tier/);
   assert.match(route, /getUserTier\(auth, project\.owner_id\)/);
   assert.match(auth, /\.eq\("environment", BILLING_ENV\)/);
@@ -55,6 +63,8 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(deleteHandler, /requireUser\(request\)/);
   assert.doesNotMatch(deleteHandler, /requireVerifiedUser\(request\)/);
   assert.match(route, /storage_charged: row\.storage_charged/);
+  assert.match(route, /owner_id,deletion_requested_at/);
+  assert.match(route, /project\.deletion_requested_at[\s\S]*project_deletion_pending/);
   assert.match(route, /file\.kind !== "agent-deliverable"/);
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
@@ -93,12 +103,27 @@ test("all Project file readers explicitly hide unsettled rows", () => {
 
 test("Project file migration serializes caps, accounting, and crash recovery", () => {
   const migration = read("supabase/migrations/20260904200000_project_file_upload_integrity.sql");
+  const maintenance = read("src/lib/project-file-maintenance.server.ts");
+  const ui = read("src/routes/projects.$projectId.tsx");
 
   assert.match(migration, /FOR UPDATE OF p/);
   assert.match(migration, /project_files_upload_idempotency_unique/);
   assert.match(migration, /upload_lease_until/);
   assert.match(migration, /delete_lease_until/);
   assert.match(migration, /storage_charged/);
+  assert.match(migration, /upload_quota_acquired/);
+  assert.match(
+    migration,
+    /legacy_to_charge[\s\S]*storage_owner_id = legacy\.owner_id[\s\S]*user_storage/,
+  );
+  assert.match(
+    migration,
+    /existing\.status = 'deleting'[\s\S]*project_file_delete_pending/,
+  );
+  assert.match(
+    migration,
+    /id <> existing\.id[\s\S]*current_count >= p_file_cap/,
+  );
   assert.match(migration, /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/);
   assert.match(migration, /kind = 'agent-deliverable'/);
   assert.match(
@@ -119,7 +144,23 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
     migration,
     /abort_project_file_upload[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/,
   );
+  assert.match(
+    migration,
+    /acquire_project_file_upload_quota[\s\S]*try_increment_daily_usage[\s\S]*upload_quota_acquired = true/,
+  );
+  assert.match(
+    migration,
+    /Uploads completed by the immediately preceding implementation[\s\S]*SET upload_quota_acquired = true[\s\S]*VALIDATE CONSTRAINT project_files_upload_quota_check/,
+  );
   assert.match(migration, /claim_project_file_delete[\s\S]*'inProgress', true/);
+  assert.match(
+    migration,
+    /claim_stale_project_file_cleanup[\s\S]*FOR UPDATE SKIP LOCKED/,
+  );
+  assert.match(
+    migration,
+    /finalize_stale_project_file_cleanup[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/,
+  );
   assert.match(migration, /restore_project_file_delete[\s\S]*delete_lease_until = NULL/);
   assert.match(migration, /finalize_project_file_delete[\s\S]*'idempotent', true/);
   assert.doesNotMatch(migration, /\nAS \$\n|\n\$;\n/);
@@ -146,4 +187,41 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   for (const policy of ["project_files_write", "project_files_update", "project_files_delete"]) {
     assert.match(migration, new RegExp(`DROP POLICY IF EXISTS "${policy}"`));
   }
+
+  assert.match(maintenance, /purgeProjectUploadAttemptFolder/);
+  assert.match(maintenance, /claim_stale_project_file_cleanup/);
+  assert.match(maintenance, /renew_stale_project_file_cleanup/);
+  assert.match(maintenance, /finalize_stale_project_file_cleanup/);
+  assert.match(maintenance, /item\.kind === "agent-deliverable"/);
+  assert.match(maintenance, /assertProjectStoragePath\(item\.projectId, item\.storagePath\)/);
+  assert.match(ui, /Files could not be loaded because earlier storage cleanup is incomplete/);
+  assert.match(ui, /role="alert"/);
+  assert.match(ui, /className="mt-3 min-h-11"/);
+});
+
+
+test("recovered reservations cannot bypass quota and stale rows remain recoverable", () => {
+  const route = read("src/routes/api/project-files.ts");
+  const migration = read("supabase/migrations/20260904200000_project_file_upload_integrity.sql");
+  const upload = route.slice(route.indexOf("async function upload"), route.indexOf("function missingObject"));
+
+  assert.match(upload, /let uploadQuotaAcquired = row\.upload_quota_acquired/);
+  assert.match(upload, /if \(!uploadQuotaAcquired\)[\s\S]*acquireUploadQuota/);
+  assert.doesNotMatch(upload, /if \(row\.reservationCreated\)[\s\S]*getCallerTier/);
+  assert.ok(
+    upload.indexOf("reconcileProjectFileLifecycle") < upload.indexOf("reserve_project_file_upload"),
+    "stale charges must be reconciled before a new reservation checks caps",
+  );
+  assert.match(
+    migration,
+    /status IN \('pending', 'upload_failed', 'cleanup_failed'\)[\s\S]*upload_lease_until > now\(\)/,
+  );
+  assert.match(
+    migration,
+    /claim_stale_project_file_cleanup[\s\S]*status = 'deleting'[\s\S]*delete_lease_until <= now\(\)/,
+  );
+  assert.match(
+    migration,
+    /set_project_file_upload_state[\s\S]*lock_project_for_file_operation/,
+  );
 });

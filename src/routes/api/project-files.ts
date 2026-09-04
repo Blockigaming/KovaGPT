@@ -3,7 +3,6 @@ import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import {
   assertFeatureEnabled,
   assertNotBanned,
-  enforceQuota,
   getCallerTier,
   getUserTier,
   requireUser,
@@ -19,6 +18,11 @@ import {
   readProjectFileBody,
   sha256Hex,
 } from "@/lib/project-files-policy.mjs";
+import {
+  cleanupStaleProjectUploadObjects,
+  reconcileProjectFileLifecycle,
+  type ProjectFileMaintenanceClient,
+} from "@/lib/project-file-maintenance.server";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -35,6 +39,7 @@ type ProjectFileRow = {
   status: string;
   storage_charged: boolean;
   storage_owner_id: string | null;
+  upload_quota_acquired: boolean;
   reservationCreated?: boolean;
   inProgress?: boolean;
 };
@@ -100,11 +105,14 @@ async function projectUploadAuthorization(
 
   const { data: project, error: projectError } = await auth.supabaseAdmin
     .from("projects")
-    .select("owner_id")
+    .select("owner_id,deletion_requested_at")
     .eq("id", projectId)
     .maybeSingle();
   if (projectError) return json({ error: "project_authorization_unavailable" }, 503);
   if (!project) return json({ error: "project_not_found" }, 404);
+  if (project.deletion_requested_at) {
+    return json({ error: "project_deletion_pending" }, 409, { "Retry-After": "5" });
+  }
 
   const tier = await getUserTier(auth, project.owner_id);
   return {
@@ -146,6 +154,7 @@ function reservationRow(value: unknown): ProjectFileRow | null {
     status: row.status,
     storage_charged: row.storage_charged === true,
     storage_owner_id: typeof row.storage_owner_id === "string" ? row.storage_owner_id : null,
+    upload_quota_acquired: row.upload_quota_acquired === true,
     reservationCreated: row.reservationCreated === true,
     inProgress: row.inProgress === true,
   };
@@ -156,22 +165,16 @@ async function setUploadState(
   fileId: string,
   attemptId: string,
   status: "pending" | "ready" | "upload_failed" | "cleanup_failed",
-  storageCharged: boolean,
 ): Promise<boolean> {
-  const { data, error } = await auth.supabaseAdmin
-    .from("project_files")
-    .update({
-      status,
-      storage_charged: storageCharged,
-      upload_lease_until:
-        status === "pending" ? new Date(Date.now() + 120_000).toISOString() : null,
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", fileId)
-    .eq("upload_attempt_id", attemptId)
-    .select("id")
-    .maybeSingle();
-  return !error && Boolean(data);
+  const { data, error } = await auth.supabaseAdmin.rpc(
+    "set_project_file_upload_state" as never,
+    {
+      p_file_id: fileId,
+      p_attempt_id: attemptId,
+      p_status: status,
+    } as never,
+  );
+  return !error && data === true;
 }
 
 async function abortProjectFileUpload(
@@ -201,49 +204,6 @@ async function storedProjectFileMatches(
   } catch {
     return false;
   }
-}
-
-function isSafeStorageChildName(value: unknown): value is string {
-  if (typeof value !== "string" || !value || value.includes("/") || value.includes("\\")) {
-    return false;
-  }
-  return !Array.from(value).some((character) => {
-    const code = character.codePointAt(0) ?? 0;
-    return code <= 31 || code === 127;
-  });
-}
-
-async function cleanupStaleProjectUploadObjects(
-  auth: AuthedCaller,
-  projectId: string,
-  fileId: string,
-): Promise<boolean> {
-  const folder = `${projectId}/.uploads/${fileId}`;
-  const paths: string[] = [];
-  const pageSize = 100;
-  const maxObjects = 10_000;
-  for (let offset = 0; offset < maxObjects; offset += pageSize) {
-    const { data, error } = await auth.supabaseAdmin.storage.from("project-files").list(folder, {
-      limit: pageSize,
-      offset,
-      sortBy: { column: "name", order: "asc" },
-    });
-    if (error || !data) return false;
-    for (const item of data) {
-      if (!isSafeStorageChildName(item.name)) return false;
-      paths.push(`${folder}/${item.name}`);
-    }
-    if (data.length < pageSize) break;
-    if (offset + pageSize >= maxObjects) return false;
-  }
-
-  for (let offset = 0; offset < paths.length; offset += pageSize) {
-    const { error } = await auth.supabaseAdmin.storage
-      .from("project-files")
-      .remove(paths.slice(offset, offset + pageSize));
-    if (error && !missingObject(error)) return false;
-  }
-  return true;
 }
 
 async function projectFileObjectPresence(
@@ -304,6 +264,51 @@ async function restoreProjectFileDelete(
   return !error && data === true;
 }
 
+async function acquireUploadQuota(
+  auth: AuthedCaller,
+  row: ProjectFileRow,
+  attemptId: string,
+  dailyLimit: number,
+): Promise<{ acquired: boolean; limitReached: boolean; lost: boolean } | null> {
+  const { data, error } = await auth.supabaseAdmin.rpc(
+    "acquire_project_file_upload_quota" as never,
+    {
+      p_user_id: auth.userId,
+      p_file_id: row.id,
+      p_attempt_id: attemptId,
+      p_daily_limit: dailyLimit,
+    } as never,
+  );
+  if (!error) {
+    const result = record(data);
+    if (result && typeof result.acquired === "boolean") {
+      return {
+        acquired: result.acquired,
+        limitReached: result.limitReached === true,
+        lost: result.lost === true,
+      };
+    }
+    return null;
+  }
+
+  // The RPC response may be lost after its transaction commits. Reconcile the
+  // durable marker before deciding whether a retry would double-charge quota.
+  const current = await auth.supabaseAdmin
+    .from("project_files")
+    .select("status,upload_attempt_id,upload_quota_acquired")
+    .eq("id", row.id)
+    .maybeSingle();
+  if (
+    !current.error &&
+    current.data?.status === "pending" &&
+    current.data.upload_attempt_id === attemptId &&
+    current.data.upload_quota_acquired === true
+  ) {
+    return { acquired: true, limitReached: false, lost: false };
+  }
+  return null;
+}
+
 function reservationFailure(error: { code?: string; message?: string } | null): Response {
   const code = error?.code ?? "";
   const message = error?.message ?? "";
@@ -318,6 +323,12 @@ function reservationFailure(error: { code?: string; message?: string } | null): 
   }
   if (message.includes("project_storage_limit_reached")) {
     return json({ error: "project_storage_limit_reached" }, 413);
+  }
+  if (message.includes("project_file_delete_pending")) {
+    return json({ error: "project_file_delete_in_progress" }, 409, { "Retry-After": "2" });
+  }
+  if (message.includes("project_deletion_pending")) {
+    return json({ error: "project_deletion_pending" }, 409, { "Retry-After": "5" });
   }
   if (code === "22023") return json({ error: "invalid_project_file_request" }, 400);
   return json({ error: "project_file_reservation_unavailable" }, 503);
@@ -375,6 +386,19 @@ async function upload(request: Request): Promise<Response> {
   const authorization = await projectUploadAuthorization(auth, metadata.projectId);
   if (authorization instanceof Response) return authorization;
 
+  try {
+    const maintenance = await reconcileProjectFileLifecycle({
+      client: auth.supabaseAdmin as unknown as ProjectFileMaintenanceClient,
+      userId: auth.userId,
+      projectId: metadata.projectId,
+    });
+    if (!maintenance.complete) {
+      return json({ error: "project_file_cleanup_incomplete" }, 503, { "Retry-After": "5" });
+    }
+  } catch {
+    return json({ error: "project_file_cleanup_incomplete" }, 503, { "Retry-After": "5" });
+  }
+
   const digest = await sha256Hex(bytes);
   const attemptId = crypto.randomUUID();
   const { data: reservation, error: reservationError } = await auth.supabaseAdmin.rpc(
@@ -415,25 +439,60 @@ async function upload(request: Request): Promise<Response> {
 
   if (
     !row.reservationCreated &&
-    !(await cleanupStaleProjectUploadObjects(auth, metadata.projectId, row.id))
+    !(await cleanupStaleProjectUploadObjects({
+      client: auth.supabaseAdmin as unknown as ProjectFileMaintenanceClient,
+      projectId: metadata.projectId,
+      fileId: row.id,
+    })
+      .then(() => true)
+      .catch(() => false))
   ) {
-    await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+    await setUploadState(auth, row.id, attemptId, "cleanup_failed");
     return json({ error: "project_file_stale_upload_cleanup_failed" }, 503, {
       "Retry-After": "30",
     });
   }
 
-  if (row.reservationCreated) {
+  let uploadQuotaAcquired = row.upload_quota_acquired;
+  if (!uploadQuotaAcquired) {
     const callerTier = await getCallerTier(auth);
-    const quota = await enforceQuota(auth, "uploads", DAILY_UPLOAD_LIMIT_BY_TIER[callerTier]);
-    if (quota) {
+    const quota = await acquireUploadQuota(
+      auth,
+      row,
+      attemptId,
+      DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
+    );
+    if (!quota) {
       if (!(await abortProjectFileUpload(auth, row.id, attemptId))) {
         return json({ error: "project_file_quota_recovery_failed" }, 503, {
           "Retry-After": "5",
         });
       }
-      return quota;
+      return json({ error: "project_file_quota_unavailable" }, 503, {
+        "Retry-After": "5",
+      });
     }
+    if (quota.lost) {
+      return json({ error: "project_file_reservation_lost" }, 409, {
+        "Retry-After": "2",
+      });
+    }
+    if (quota.limitReached) {
+      if (!(await abortProjectFileUpload(auth, row.id, attemptId))) {
+        return json({ error: "project_file_quota_recovery_failed" }, 503, {
+          "Retry-After": "5",
+        });
+      }
+      return json({ error: "project_file_daily_limit_reached" }, 429, {
+        "Retry-After": "3600",
+      });
+    }
+    if (!quota.acquired) {
+      return json({ error: "project_file_quota_unavailable" }, 503, {
+        "Retry-After": "5",
+      });
+    }
+    uploadQuotaAcquired = true;
   }
 
   const temporaryPath = `${metadata.projectId}/.uploads/${row.id}/${attemptId}.${inspected.extension}`;
@@ -453,13 +512,13 @@ async function upload(request: Request): Promise<Response> {
         });
       }
     }
-    await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+    await setUploadState(auth, row.id, attemptId, "cleanup_failed");
     return json({ error: "project_file_storage_unavailable" }, 503, {
       "Retry-After": "30",
     });
   }
 
-  if (!(await setUploadState(auth, row.id, attemptId, "pending", row.storage_charged))) {
+  if (!(await setUploadState(auth, row.id, attemptId, "pending"))) {
     await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
     return json({ error: "project_file_reservation_lost" }, 409);
   }
@@ -475,21 +534,21 @@ async function upload(request: Request): Promise<Response> {
       digest,
     );
     if (!canonicalMatches) {
-      await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+      await setUploadState(auth, row.id, attemptId, "cleanup_failed");
       return json({ error: "project_file_storage_finalize_failed" }, 503, {
         "Retry-After": "30",
       });
     }
     const removed = await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
     if (removed.error && !missingObject(removed.error)) {
-      await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+      await setUploadState(auth, row.id, attemptId, "cleanup_failed");
       return json({ error: "project_file_temp_cleanup_failed" }, 503, {
         "Retry-After": "30",
       });
     }
   }
 
-  if (!(await setUploadState(auth, row.id, attemptId, "ready", row.storage_charged))) {
+  if (!(await setUploadState(auth, row.id, attemptId, "ready"))) {
     const { data: current } = await auth.supabaseAdmin
       .from("project_files")
       .select("status,content_sha256,storage_path")
@@ -530,7 +589,17 @@ async function upload(request: Request): Promise<Response> {
     kind: inspected.kind === "image" ? "image_added" : "file_added",
     summary: `Uploaded ${inspected.kind === "image" ? "image" : "file"} “${inspected.name}”`,
   });
-  return json({ file: { ...row, status: "ready", storage_charged: row.storage_charged } }, 201);
+  return json(
+    {
+      file: {
+        ...row,
+        status: "ready",
+        storage_charged: row.storage_charged,
+        upload_quota_acquired: uploadQuotaAcquired,
+      },
+    },
+    201,
+  );
 }
 
 function missingObject(error: unknown): boolean {
@@ -593,7 +662,12 @@ async function remove(request: Request): Promise<Response> {
       p_attempt_id: attemptId,
     } as never,
   );
-  if (claimError) return json({ error: "project_file_delete_unavailable" }, 503);
+  if (claimError) {
+    if (claimError.message.includes("project_deletion_pending")) {
+      return json({ error: "project_deletion_pending" }, 409, { "Retry-After": "5" });
+    }
+    return json({ error: "project_file_delete_unavailable" }, 503);
+  }
   const file = projectFileDeleteClaim(claimed);
   if (!file) return json({ error: "project_file_delete_unavailable" }, 503);
   if (!file.claimed) {

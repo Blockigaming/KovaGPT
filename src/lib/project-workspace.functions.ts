@@ -267,6 +267,24 @@ export const listFiles = createServerFn({ method: "GET" })
       .parse(i),
   )
   .handler(async ({ data, context }): Promise<ProjectFile[]> => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { reconcileProjectFileLifecycle } = await import("./project-file-maintenance.server");
+      const maintenance = await reconcileProjectFileLifecycle({
+        client: supabaseAdmin as unknown as Parameters<
+          typeof reconcileProjectFileLifecycle
+        >[0]["client"],
+        userId: context.userId,
+        projectId: data.project_id,
+      });
+      if (!maintenance.complete) {
+        throw new Error("project_file_cleanup_incomplete");
+      }
+    } catch (error) {
+      console.error("[listFiles] lifecycle reconciliation failed");
+      throw new Error("Project file cleanup is incomplete. Retry shortly.", { cause: error });
+    }
+
     let q = context.supabase
       .from("project_files")
       .select("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at")
