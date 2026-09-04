@@ -122,11 +122,7 @@ async function copyTrackedWorkingTree() {
     .sort((left, right) => left.localeCompare(right));
 
   for (const path of paths) {
-    if (
-      isAbsolute(path) ||
-      normalize(path) === ".." ||
-      normalize(path).startsWith(`..${sep}`)
-    ) {
+    if (isAbsolute(path) || normalize(path) === ".." || normalize(path).startsWith(`..${sep}`)) {
       throw new Error(`Unsafe tracked fixture path: ${path}`);
     }
     if (isExcludedTrackedPath(path)) continue;
@@ -175,9 +171,7 @@ async function listFiles(directory, prefix = "") {
     } else if (entry.isFile()) {
       files.push({ absolutePath, relativePath });
     } else {
-      throw new Error(
-        `Unexpected entry in candidate dist: ${relative(directory, absolutePath)}`,
-      );
+      throw new Error(`Unexpected entry in candidate dist: ${relative(directory, absolutePath)}`);
     }
   }
   return files;
