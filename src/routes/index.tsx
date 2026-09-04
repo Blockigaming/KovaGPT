@@ -892,6 +892,13 @@ function KovaGPT() {
 
   const saveTemporaryChat = useCallback(() => {
     if (!active?.temporary || isStreaming) return;
+    // A scheduled retry still carries the immutable temporary-context closure.
+    // Cancel it before conversion so no old temporary turn can land past the
+    // new memory boundary and later be persisted as regular-chat memory.
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     const convertedAt = active.messages.length;
     const converted: Conversation = {
       ...active,
