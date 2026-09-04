@@ -15,10 +15,7 @@ test("the timer launcher is reachable, responsive, and exposes usable touch targ
   assert.match(widget, /right-\[max\(1rem,var\(--safe-right\)\)\]/);
   assert.match(widget, /sm:w-72/);
   assert.ok((widget.match(/min-h-11/g) ?? []).length >= 4);
-  assert.match(
-    widget,
-    /aria-label=\{\`\$\{done \? "Remove" : "Cancel"\} \$\{t\.label\}\`\}/,
-  );
+  assert.match(widget, /aria-label=\{\`\$\{done \? "Remove" : "Cancel"\} \$\{t\.label\}\`\}/);
 });
 
 test("due timers are ordered and cannot repeatedly fire when storage is unavailable", () => {
