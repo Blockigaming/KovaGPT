@@ -1319,7 +1319,7 @@ export const Route = createFileRoute("/api/chat")({
               const guestIpHash = clientKey
                 ? await preflight.run("guest_identity", () => hashGuestIp(clientKey))
                 : null;
-              const acquisition = await preflight.run("usage_authorization", () =>
+              const acquisition = await preflight.run("usage_authorization", (signal) =>
                 acquireGeneration({
                   requestId,
                   idempotencyKey,
@@ -1334,6 +1334,7 @@ export const Route = createFileRoute("/api/chat")({
                   reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
                   estimatedCostUsd: estimatedCost,
                   contextTrimmed: messages.length > HISTORY_TURNS,
+                  signal,
                 }),
               );
               if ("rejection" in acquisition) {
