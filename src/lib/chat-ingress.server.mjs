@@ -340,11 +340,7 @@ function fromBoundedJsonError(error) {
   return new ChatIngressError(error.code, 400, "Invalid request body.");
 }
 
-export async function readChatRequest(
-  request,
-  maxBytes = CHAT_BODY_LIMIT_BYTES,
-  signal,
-) {
+export async function readChatRequest(request, maxBytes = CHAT_BODY_LIMIT_BYTES, signal) {
   const mediaType = (request.headers.get("content-type") ?? "")
     .split(";", 1)[0]
     .trim()
