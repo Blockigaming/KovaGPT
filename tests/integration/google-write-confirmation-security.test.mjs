@@ -92,6 +92,12 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(executor, /sending \? `\$\{GMAIL\}\/users\/me\/messages\/send`/);
   assert.match(executor, /method: "POST"/);
   assert.match(executor, /JSON\.stringify\(sending \? \{ raw \} : \{ message: \{ raw \} \}\)/);
+  assert.match(executor, /foldEmailAddressHeader\("To", to\)/);
+  assert.match(executor, /gmail\.send/);
+  assert.match(
+    executor,
+    /name === "gmail_create_draft" \? health\.has\.gmailWrite : health\.has\.gmail/,
+  );
 
   const summarizeStart = executor.indexOf("export function summarizeWriteTool");
   const summarizeEnd = executor.indexOf("export async function stagePendingAction", summarizeStart);
