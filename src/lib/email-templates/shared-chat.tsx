@@ -26,7 +26,9 @@ const SharedChatEmail = ({
 }: Props) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
-    <Preview>{senderName} shared “{chatTitle}” with you</Preview>
+    <Preview>
+      {senderName} shared “{chatTitle}” with you
+    </Preview>
     <Body className="kova-email-body" style={styles.main}>
       <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />

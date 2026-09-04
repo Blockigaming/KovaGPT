@@ -28,7 +28,9 @@ const ProjectInviteEmail = ({
 }: Props) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
-    <Preview>{inviterName} invited you to {projectName}</Preview>
+    <Preview>
+      {inviterName} invited you to {projectName}
+    </Preview>
     <Body className="kova-email-body" style={styles.main}>
       <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
@@ -36,7 +38,8 @@ const ProjectInviteEmail = ({
           You’re invited to a project
         </Heading>
         <Text className="kova-text" style={styles.text}>
-          {inviterName} invited you to “{projectName}” as {role === "viewer" ? "a viewer" : "an editor"}.
+          {inviterName} invited you to “{projectName}” as{" "}
+          {role === "viewer" ? "a viewer" : "an editor"}.
         </Text>
         <Text className="kova-text" style={styles.text}>
           Sign in with this email address to review and accept the invitation.

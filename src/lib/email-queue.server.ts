@@ -45,12 +45,8 @@ export async function buildTransactionalEmail(args: {
     throw new Error("Unsupported recipient email template.");
   }
   const element = React.createElement(entry.component, args.data);
-  const [html, text] = await Promise.all([
-    render(element),
-    render(element, { plainText: true }),
-  ]);
-  const subject =
-    typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
   const messageId = crypto.randomUUID();
   return {
     message_id: messageId,
