@@ -343,6 +343,37 @@ function saveHistory(userKey: string | null, items: HistoryItem[]): boolean {
   }
 }
 
+const MAX_IMAGE_DOWNLOAD_BYTES = 8 * 1024 * 1024;
+
+async function readImageDownloadBlob(response: Response, contentType: string): Promise<Blob> {
+  if (!response.body) throw new Error("Image download response was invalid");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_IMAGE_DOWNLOAD_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error("Image download was too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new Blob([joined.buffer], { type: contentType });
+}
+
 function ImagesPage() {
   const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
@@ -566,12 +597,11 @@ function ImagesPage() {
       const declaredLength = Number(response.headers.get("content-length") ?? 0);
       if (
         !contentType.toLowerCase().startsWith("image/") ||
-        (Number.isFinite(declaredLength) && declaredLength > 8 * 1024 * 1024)
+        (Number.isFinite(declaredLength) && declaredLength > MAX_IMAGE_DOWNLOAD_BYTES)
       ) {
         throw new Error("Image download response was invalid");
       }
-      const blob = await response.blob();
-      if (blob.size > 8 * 1024 * 1024) throw new Error("Image download was too large");
+      const blob = await readImageDownloadBlob(response, contentType);
       if (controller.signal.aborted) return;
 
       const extension =
@@ -899,8 +929,7 @@ function ImagesPage() {
                         }}
                         disabled={
                           !resultHistoryItem ||
-                          resultHistoryItem.libraryStatus === "saving" ||
-                          resultHistoryItem.libraryStatus === "saved"
+                          resultHistoryItem.libraryStatus === "saving"
                         }
                         className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
@@ -908,7 +937,7 @@ function ImagesPage() {
                         {resultHistoryItem?.libraryStatus === "saving"
                           ? "Saving…"
                           : resultHistoryItem?.libraryStatus === "saved"
-                            ? "Saved to Library"
+                            ? "Save to Library again"
                             : resultHistoryItem?.libraryStatus === "error"
                               ? "Retry Library save"
                               : "Save to Library"}
@@ -1161,14 +1190,14 @@ function ImagesPage() {
                 </button>
                 <button
                   onClick={() => void saveGeneratedImage(lightbox)}
-                  disabled={lightboxLibraryStatus === "saving" || lightboxLibraryStatus === "saved"}
+                  disabled={lightboxLibraryStatus === "saving"}
                   className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   <Bookmark className="h-4 w-4" />{" "}
                   {lightboxLibraryStatus === "saving"
                     ? "Saving…"
                     : lightboxLibraryStatus === "saved"
-                      ? "Saved"
+                      ? "Save again"
                       : lightboxLibraryStatus === "error"
                         ? "Retry save"
                         : "Save"}
