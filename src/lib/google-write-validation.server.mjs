@@ -204,5 +204,7 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  return tool === "calendar_create_event" ? validateCalendarEvent(args) : validateEmailEnvelope(args);
+  return tool === "calendar_create_event"
+    ? validateCalendarEvent(args)
+    : validateEmailEnvelope(args);
 }
