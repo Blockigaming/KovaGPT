@@ -203,6 +203,60 @@ async function storedProjectFileMatches(
   }
 }
 
+async function cleanupStaleProjectUploadObjects(
+  auth: AuthedCaller,
+  projectId: string,
+  fileId: string,
+): Promise<boolean> {
+  const folder = `${projectId}/.uploads/${fileId}`;
+  const paths: string[] = [];
+  const pageSize = 100;
+  const maxObjects = 10_000;
+  for (let offset = 0; offset < maxObjects; offset += pageSize) {
+    const { data, error } = await auth.supabaseAdmin.storage
+      .from("project-files")
+      .list(folder, {
+        limit: pageSize,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      });
+    if (error || !data) return false;
+    for (const item of data) {
+      if (
+        typeof item.name !== "string" ||
+        !item.name ||
+        item.name.includes("/") ||
+        /[\\\u0000-\u001f\u007f]/u.test(item.name)
+      ) {
+        return false;
+      }
+      paths.push(`${folder}/${item.name}`);
+    }
+    if (data.length < pageSize) break;
+    if (offset + pageSize >= maxObjects) return false;
+  }
+
+  for (let offset = 0; offset < paths.length; offset += pageSize) {
+    const { error } = await auth.supabaseAdmin.storage
+      .from("project-files")
+      .remove(paths.slice(offset, offset + pageSize));
+    if (error && !missingObject(error)) return false;
+  }
+  return true;
+}
+
+async function projectFileObjectPresence(
+  auth: AuthedCaller,
+  storagePath: string,
+): Promise<"present" | "missing" | "unknown"> {
+  const { data, error } = await auth.supabaseAdmin.storage
+    .from("project-files")
+    .download(storagePath);
+  if (!error && data) return "present";
+  if (missingObject(error)) return "missing";
+  return "unknown";
+}
+
 function projectFileDeleteClaim(value: unknown): {
   claimed: boolean;
   inProgress: boolean;
@@ -356,6 +410,16 @@ async function upload(request: Request): Promise<Response> {
   if (row.status === "ready") return json({ file: row, idempotent: true });
   if (row.inProgress) {
     return json({ error: "project_file_upload_in_progress" }, 409, { "Retry-After": "2" });
+  }
+
+  if (
+    !row.reservationCreated &&
+    !(await cleanupStaleProjectUploadObjects(auth, metadata.projectId, row.id))
+  ) {
+    await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+    return json({ error: "project_file_stale_upload_cleanup_failed" }, 503, {
+      "Retry-After": "30",
+    });
   }
 
   if (row.reservationCreated) {
@@ -554,16 +618,24 @@ async function remove(request: Request): Promise<Response> {
       .from("project-files")
       .remove([file.storagePath]);
     if (removed.error && !missingObject(removed.error)) {
-      const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
-      return json(
-        {
-          error: restored
-            ? "project_file_storage_delete_failed"
-            : "project_file_delete_recovery_failed",
-        },
-        503,
-        { "Retry-After": "30" },
-      );
+      const presence = await projectFileObjectPresence(auth, file.storagePath);
+      if (presence === "unknown") {
+        return json({ error: "project_file_delete_reconciliation_failed" }, 503, {
+          "Retry-After": "30",
+        });
+      }
+      if (presence === "present") {
+        const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
+        return json(
+          {
+            error: restored
+              ? "project_file_storage_delete_failed"
+              : "project_file_delete_recovery_failed",
+          },
+          503,
+          { "Retry-After": "30" },
+        );
+      }
     }
   }
 
