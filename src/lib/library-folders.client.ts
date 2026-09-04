@@ -11,8 +11,7 @@ export type LibraryFolder = {
 
 type JsonObject = Record<string, unknown>;
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export class LibraryFolderRequestError extends Error {
   readonly code: string;
@@ -50,9 +49,7 @@ function libraryFolderErrorMessage(code: string, status: number): string {
 }
 
 function objectValue(value: unknown): JsonObject | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonObject)
-    : null;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : null;
 }
 
 function folderValue(value: unknown): LibraryFolder | null {
@@ -61,10 +58,7 @@ function folderValue(value: unknown): LibraryFolder | null {
     return null;
   }
   const parent = row.parentId ?? row.parent_id ?? null;
-  if (
-    parent !== null &&
-    (typeof parent !== "string" || !UUID_PATTERN.test(parent))
-  ) {
+  if (parent !== null && (typeof parent !== "string" || !UUID_PATTERN.test(parent))) {
     return null;
   }
   if (typeof row.name !== "string" || !row.name.trim()) return null;
@@ -85,10 +79,7 @@ function folderValue(value: unknown): LibraryFolder | null {
 async function responseObject(response: Response): Promise<JsonObject> {
   const payload = objectValue(await response.json().catch(() => null));
   if (!response.ok) {
-    const code =
-      typeof payload?.error === "string"
-        ? payload.error
-        : "library_request_failed";
+    const code = typeof payload?.error === "string" ? payload.error : "library_request_failed";
     throw new LibraryFolderRequestError(code, response.status);
   }
   if (!payload) {
@@ -174,10 +165,7 @@ export async function moveLibraryItems(input: {
   folderId: string | null;
 }): Promise<{ movedCount: number; folderId: string | null }> {
   const payload = await libraryRequest("POST", "/api/library/bulk-move", input);
-  if (
-    typeof payload.movedCount !== "number" ||
-    payload.movedCount !== input.itemIds.length
-  ) {
+  if (typeof payload.movedCount !== "number" || payload.movedCount !== input.itemIds.length) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
   }
   return { movedCount: payload.movedCount, folderId: input.folderId };
