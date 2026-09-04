@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 
 const FORMAT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|css|json|md|mdx|yml|yaml|html)$/i;
 
@@ -25,15 +24,11 @@ function changedFiles() {
 }
 
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
-const targets = [
-  "src/components/TimersWidget.tsx",
-  "src/lib/timers.ts",
-  "tests/integration/timers-truthfulness-source.test.mjs"
-];
-const result = spawnSync("npx", ["prettier", "--write", ...targets], { stdio: "inherit" });
-for (const target of targets) {
-  console.log(`---BEGIN FORMAT:${target}---`);
-  console.log(readFileSync(target, "utf8"));
-  console.log(`---END FORMAT:${target}---`);
+
+if (files.length === 0) {
+  console.log("No changed format-supported files to check.");
+  process.exit(0);
 }
-process.exit(result.status === 0 ? 1 : (result.status ?? 1));
+
+const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
+process.exit(result.status ?? 1);
