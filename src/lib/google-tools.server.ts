@@ -947,9 +947,7 @@ export async function executePendingAction(
       if (!response.ok) {
         throw new Error(sending ? "gmail_send_failed" : "gmail_draft_failed");
       }
-      resultText = sending
-        ? `Email sent to ${to}.`
-        : `Draft saved to Gmail for ${to}.`;
+      resultText = sending ? `Email sent to ${to}.` : `Draft saved to Gmail for ${to}.`;
       await logAudit({
         userId,
         provider: "gmail",
