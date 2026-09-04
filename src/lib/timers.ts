@@ -33,8 +33,7 @@ function read(userKey: TimerUserKey): TimerItem[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .flatMap((candidate): TimerItem[] => {
+    return parsed.flatMap((candidate): TimerItem[] => {
         if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
         const item = candidate as Record<string, unknown>;
         if (
@@ -64,7 +63,7 @@ function read(userKey: TimerUserKey): TimerItem[] {
             ...(item.fired === true ? { fired: true } : {}),
           },
         ];
-      });
+    });
   } catch {
     return [];
   }
