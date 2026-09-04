@@ -886,7 +886,9 @@ export function SettingsDialog({
                       </p>
                     </div>
                     <Button asChild variant="outline" className="min-h-11">
-                      <Link to="/apps">Manage apps and permissions</Link>
+                      <Link to="/apps" onClick={() => onOpenChange(false)}>
+                        Manage apps and permissions
+                      </Link>
                     </Button>
                   </section>
                 )}
