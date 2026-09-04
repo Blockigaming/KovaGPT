@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const FORMAT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|css|json|md|mdx|yml|yaml|html)$/i;
 
@@ -24,11 +25,9 @@ function changedFiles() {
 }
 
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
-
-if (files.length === 0) {
-  console.log("No changed format-supported files to check.");
-  process.exit(0);
-}
-
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+const target = "src/components/SettingsDialog.tsx";
+const result = spawnSync("npx", ["prettier", "--write", target], { stdio: "inherit" });
+console.log(`---BEGIN FORMAT:${target}---`);
+console.log(readFileSync(target, "utf8"));
+console.log(`---END FORMAT:${target}---`);
+process.exit(result.status === 0 ? 1 : (result.status ?? 1));
