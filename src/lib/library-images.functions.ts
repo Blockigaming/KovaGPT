@@ -126,12 +126,34 @@ const SaveImageSchema = z.object({
   imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
+  idempotencyKey: z.string().uuid().optional(),
 });
 
 export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const findOwnedImage = async () => {
+      if (!data.idempotencyKey) return null;
+      const { data: existing, error: lookupError } = await context.supabase
+        .from("user_library_items")
+        .select("id, item_type")
+        .eq("id", data.idempotencyKey)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (lookupError) {
+        console.error("[saveImageToLibrary:lookup]", lookupError.message);
+        throw new Error("Failed to save");
+      }
+      if (existing && existing.item_type !== "image") {
+        throw new Error("Library save identity conflict");
+      }
+      return existing;
+    };
+
+    const existing = await findOwnedImage();
+    if (existing) return { id: existing.id };
+
     let payload: ReturnType<typeof decodeDataUrl>;
     if (data.imageUrl.startsWith("data:")) {
       payload = decodeDataUrl(data.imageUrl);
@@ -150,17 +172,23 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
           : payload.contentType === "image/gif"
             ? "gif"
             : "jpg";
-    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const fileName = `${data.idempotencyKey ?? crypto.randomUUID()}.${ext}`;
     const path = `${context.userId}/${fileName}`;
 
-    const { error: upErr } = await context.supabase.storage
-      .from(BUCKET)
-      .upload(path, payload.bytes, { contentType: payload.contentType, upsert: false });
+    const { error: upErr } = await context.supabase.storage.from(BUCKET).upload(
+      path,
+      payload.bytes,
+      {
+        contentType: payload.contentType,
+        upsert: Boolean(data.idempotencyKey),
+      },
+    );
     if (upErr) throw new Error(upErr.message);
 
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({
+        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
         user_id: context.userId,
         title: data.title.slice(0, 200),
         item_type: "image",
@@ -175,12 +203,14 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
       .single();
 
     if (error || !row) {
-      // best-effort cleanup of orphan upload
+      const concurrent = await findOwnedImage();
+      if (concurrent) return { id: concurrent.id };
+
+      // Best-effort cleanup only after proving this user has no durable row
+      // for the idempotency key. Never delete a successful concurrent save.
       await context.supabase.storage.from(BUCKET).remove([path]);
-      {
-        console.error("[serverfn]", error?.message);
-        throw new Error("Failed to save");
-      }
+      console.error("[saveImageToLibrary:insert]", error?.message);
+      throw new Error("Failed to save");
     }
     return { id: row.id };
   });
