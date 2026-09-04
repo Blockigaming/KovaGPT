@@ -292,11 +292,7 @@ export function PasskeyPanel() {
             <p className="text-sm text-muted-foreground">No passkeys are registered yet.</p>
           )}
 
-          <Button
-            size="sm"
-            onClick={() => void register()}
-            disabled={Boolean(busy) || !supported}
-          >
+          <Button size="sm" onClick={() => void register()} disabled={Boolean(busy) || !supported}>
             {busy === "register" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
