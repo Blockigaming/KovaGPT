@@ -87,9 +87,8 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(accountRoute, /cleanupOwnedStorageBeforeAccountDeletion/u);
   assert.match(accountRoute, /releaseAccountExportDeletionFence\(auth\.userId\)/u);
   assert.ok(
-    accountRoute.indexOf(
-      "await cleanupOwnedStorageBeforeAccountDeletion(",
-    ) < accountRoute.indexOf(".auth.admin.deleteUser("),
+    accountRoute.indexOf("await cleanupOwnedStorageBeforeAccountDeletion(") <
+      accountRoute.indexOf(".auth.admin.deleteUser("),
     "all owned Storage objects must be removed before Auth deletion",
   );
   assert.match(storageCleanup, /account_storage_cleanup_unverified/u);
