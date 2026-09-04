@@ -58,6 +58,11 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /createHash\("sha256"\)/u);
   assert.match(worker, /OAuth credentials, access tokens/u);
   assert.match(worker, /assertClaimStillOwnsUpload/u);
+  assert.match(worker, /resolveProjectFileStorage/u);
+  assert.match(worker, /parseAgentStorageReference\(row\.storage_reference\)/u);
+  assert.match(worker, /records\.agent_deliverables/u);
+  assert.match(worker, /"agent_resource_promotions",\s*"destination_id"/u);
+  assert.match(worker, /agent-evidence\|project-files/u);
   const process = worker.slice(worker.indexOf("async function processClaimed"));
   assert.ok(
     process.indexOf("assertClaimStillOwnsUpload(job, workerId)") <

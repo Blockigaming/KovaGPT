@@ -49,8 +49,9 @@ test("reopening Canvas applies the accepted durable edit without racing a new lo
   assert.match(editor, /const accepted = rows\.find\(\(row\) => row\.accepted\)/);
   assert.match(
     editor,
-    /if \(current !== initialContent\) return current;[\s\S]{0,100}lastRecordedValueRef\.current = accepted\.content/,
+    /canApplyLoadedArtifactHistory\([\s\S]{0,160}localEditRevisionRef\.current[\s\S]{0,160}lastRecordedValueRef\.current = accepted\.content/,
   );
+  assert.match(editor, /localEditRevisionRef\.current \+= 1/u);
 });
 
 test("Canvas debounce survives its saving-state render and records the exact edit snapshot", () => {
@@ -95,10 +96,8 @@ test("Canvas queues a revert behind an in-flight edit", () => {
     editor.slice(autosaveStart, debounceStart),
     /value === lastRecordedValueRef\.current/u,
   );
-  assert.match(
-    editor,
-    /catch \(error\)[\s\S]{0,300}lastScheduledValueRef\.current = lastRecordedValueRef\.current/u,
-  );
+  assert.match(editor, /catch \(error\)[\s\S]{0,500}recoverFailedArtifactSnapshot/u);
+  assert.match(editor, /setAutosaveRetryNonce\(\(nonce\) => nonce \+ 1\)/u);
   assert.match(editor, /const autosaveGenerationRef = useRef\(0\)/u);
   assert.match(
     editor,

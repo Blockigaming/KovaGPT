@@ -16,6 +16,13 @@ import {
   cleanupAccountExportJobs,
   selectAccountExportCleanupIds,
 } from "@/lib/account-export-cleanup-policy.mjs";
+import {
+  parseAgentStorageReference,
+  resolveProjectFileStorage,
+  validateStorageObjectPath,
+  type StorageReferenceAssociation,
+  type StorageReferenceRow,
+} from "@/lib/project-file-storage-policy.mjs";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
@@ -415,22 +422,78 @@ async function embedFile(
 
 async function collectFiles(records: Record<string, ExportRow[]>): Promise<EmbeddedFile[]> {
   const candidates = new Map<string, { bucket: string; path: string; type: string | null }>();
-  for (const row of records.project_files ?? []) {
-    if (typeof row.storage_path === "string") {
-      candidates.set(`project-files:${row.storage_path}`, {
-        bucket: "project-files",
-        path: row.storage_path,
+  const projectFileRows = records.project_files ?? [];
+  const projectFileIds = ids(projectFileRows);
+  const promotionRows = (
+    await readAllIn("agent_resource_promotions", "destination_id", projectFileIds)
+  ).filter(
+    (row) =>
+      row.destination_type === "project_file" &&
+      projectFileIds.includes(String(row.destination_id)),
+  );
+  const deliverableRows = await readAllIn(
+    "agent_deliverables",
+    "id",
+    ids(promotionRows, "deliverable_id"),
+  );
+  const deliverables = new Map(deliverableRows.map((row) => [row.id, row]));
+  const associations = new Map<string, StorageReferenceAssociation>();
+  for (const promotion of promotionRows) {
+    const destinationId = promotion.destination_id;
+    const deliverable = deliverables.get(promotion.deliverable_id);
+    if (typeof destinationId !== "string" || associations.has(destinationId) || !deliverable) {
+      throw exportError("account_export_file_reference_invalid");
+    }
+    associations.set(destinationId, {
+      promotion: promotion as StorageReferenceAssociation["promotion"],
+      deliverable: deliverable as StorageReferenceAssociation["deliverable"],
+    });
+  }
+  for (const row of projectFileRows) {
+    try {
+      const resolved = resolveProjectFileStorage(
+        row as StorageReferenceRow,
+        typeof row.id === "string" ? associations.get(row.id) : undefined,
+      );
+      candidates.set(`${resolved.bucket}:${resolved.path}`, {
+        bucket: resolved.bucket,
+        path: resolved.path,
         type: typeof row.mime_type === "string" ? row.mime_type : null,
       });
+    } catch {
+      throw exportError("account_export_file_reference_invalid");
+    }
+  }
+  // Work deliverables are first-class account data even when they have never
+  // been promoted into a Project or Library item.
+  for (const row of records.agent_deliverables ?? []) {
+    try {
+      const source = parseAgentStorageReference(row.storage_reference);
+      candidates.set(`${source.bucket}:${source.path}`, {
+        bucket: source.bucket,
+        path: source.path,
+        type: typeof row.mime_type === "string" ? row.mime_type : null,
+      });
+    } catch {
+      throw exportError("account_export_file_reference_invalid");
     }
   }
   for (const row of records.user_library_items ?? []) {
-    if (typeof row.file_url === "string" && row.file_url && !/^https?:/iu.test(row.file_url)) {
-      candidates.set(`library-images:${row.file_url}`, {
-        bucket: "library-images",
-        path: row.file_url,
+    if (typeof row.file_url !== "string" || !row.file_url) continue;
+    try {
+      const source = /^(?:agent-evidence|project-files):/u.test(row.file_url)
+        ? parseAgentStorageReference(row.file_url)
+        : /^[a-z][a-z0-9+.-]*:/iu.test(row.file_url)
+          ? null
+          : { bucket: "library-images", ...validateStorageObjectPath(row.file_url) };
+      if (!source) continue;
+      candidates.set(`${source.bucket}:${source.path}`, {
+        bucket: source.bucket,
+        path: source.path,
         type: typeof row.file_type === "string" ? row.file_type : null,
       });
+    } catch {
+      throw exportError("account_export_file_reference_invalid");
     }
   }
 

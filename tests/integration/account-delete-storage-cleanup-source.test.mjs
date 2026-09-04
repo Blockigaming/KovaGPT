@@ -30,5 +30,7 @@ test("account Storage cleanup keeps Library last and releases metadata after byt
   assert.match(cleanup, /offset: 0/u);
   assert.match(cleanup, /projects!inner\(owner_id\)/u);
   assert.match(cleanup, /\.eq\("projects\.owner_id", userId\)/u);
-  assert.match(cleanup, /parts\[0\] === row\.uploaded_by/u);
+  assert.match(cleanup, /loadProjectFileAssociations/u);
+  assert.match(cleanup, /externallyReferencedProjectObjects/u);
+  assert.match(cleanup, /entry\.source !== "canonical"/u);
 });

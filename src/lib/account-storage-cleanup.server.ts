@@ -1,9 +1,18 @@
-const AGENT_EVIDENCE_BUCKET = "agent-evidence";
+import {
+  AGENT_EVIDENCE_BUCKET,
+  PROJECT_FILE_BUCKET,
+  parseAgentStorageReference,
+  resolveProjectFileStorage,
+  type StorageReferenceAssociation,
+  type StorageReferenceRow,
+} from "./project-file-storage-policy.mjs";
+
 const LIBRARY_IMAGE_BUCKET = "library-images";
-const PROJECT_FILE_BUCKET = "project-files";
 const STORAGE_BATCH_SIZE = 1_000;
 const MAX_REMOVE_BATCHES_PER_REQUEST = 10;
 const MAX_PREFIX_DEPTH = 32;
+const ASSOCIATION_QUERY_BATCH_SIZE = 100;
+const MAX_ASSOCIATED_ROWS_PER_BATCH = 10_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 type StorageError = { message?: string | null };
@@ -24,6 +33,7 @@ type ProjectFileRow = {
   project_id?: unknown;
   storage_path?: unknown;
   uploaded_by?: unknown;
+  kind?: unknown;
 };
 type ProjectFileQueryResult = {
   data: ProjectFileRow[] | null;
@@ -41,11 +51,151 @@ type ProjectFileQuery = {
 };
 type AccountStorageClient = {
   storage: { from(bucket: string): StorageBucket };
-  from(table: "project_files"): unknown;
+  from(table: string): unknown;
+};
+
+type AssociationQuery = {
+  select(columns: string): AssociationQuery;
+  in(column: string, values: unknown[]): AssociationQuery;
+  range(
+    from: number,
+    to: number,
+  ): PromiseLike<{
+    data: Record<string, unknown>[] | null;
+    error: StorageError | null;
+  }>;
 };
 
 function projectFiles(client: AccountStorageClient): ProjectFileQuery {
   return client.from("project_files") as ProjectFileQuery;
+}
+
+async function readAssociatedRows(
+  client: AccountStorageClient,
+  table: string,
+  column: string,
+  values: unknown[],
+  columns = "*",
+): Promise<Record<string, unknown>[]> {
+  const uniqueValues = [...new Set(values)];
+  if (uniqueValues.length === 0) return [];
+  const rows: Record<string, unknown>[] = [];
+  for (let start = 0; start < uniqueValues.length; start += ASSOCIATION_QUERY_BATCH_SIZE) {
+    const batch = uniqueValues.slice(start, start + ASSOCIATION_QUERY_BATCH_SIZE);
+    let exhausted = false;
+    for (let offset = 0; offset < MAX_ASSOCIATED_ROWS_PER_BATCH; offset += STORAGE_BATCH_SIZE) {
+      const query = client.from(table) as AssociationQuery;
+      const result = await query
+        .select(columns)
+        .in(column, batch)
+        .range(offset, offset + STORAGE_BATCH_SIZE - 1);
+      if (result.error || !Array.isArray(result.data)) {
+        throw cleanupError("account_project_storage_reference_lookup_failed");
+      }
+      rows.push(...result.data);
+      if (result.data.length < STORAGE_BATCH_SIZE) {
+        exhausted = true;
+        break;
+      }
+    }
+    if (!exhausted) throw cleanupError("account_project_storage_reference_limit_exceeded");
+  }
+  return rows;
+}
+
+async function loadProjectFileAssociations(
+  client: AccountStorageClient,
+  rows: ProjectFileRow[],
+): Promise<Map<string, StorageReferenceAssociation>> {
+  const rowIds = rows.flatMap((row) => (typeof row.id === "string" ? [row.id] : []));
+  const rowIdSet = new Set(rowIds);
+  const promotions = (
+    await readAssociatedRows(
+      client,
+      "agent_resource_promotions",
+      "destination_id",
+      rowIds,
+      "id,destination_id,destination_type,status,project_id,owner_id,deliverable_id",
+    )
+  ).filter(
+    (row) => row.destination_type === "project_file" && rowIdSet.has(String(row.destination_id)),
+  );
+  const deliverables = await readAssociatedRows(
+    client,
+    "agent_deliverables",
+    "id",
+    promotions.map((row) => row.deliverable_id),
+    "id,owner_id,storage_reference",
+  );
+  const deliverableById = new Map(deliverables.map((row) => [row.id, row]));
+  const result = new Map<string, StorageReferenceAssociation>();
+  for (const promotion of promotions) {
+    const destinationId = promotion.destination_id;
+    const deliverable = deliverableById.get(promotion.deliverable_id);
+    if (typeof destinationId !== "string" || result.has(destinationId) || !deliverable) {
+      throw cleanupError("account_project_storage_reference_invalid");
+    }
+    result.set(destinationId, {
+      promotion: promotion as StorageReferenceAssociation["promotion"],
+      deliverable: deliverable as StorageReferenceAssociation["deliverable"],
+    });
+  }
+  return result;
+}
+
+async function externallyReferencedProjectObjects(
+  client: AccountStorageClient,
+  entries: Array<ReturnType<typeof resolveProjectFileStorage>>,
+  deletingIds: Set<string>,
+): Promise<Set<string>> {
+  const storageReferences = entries
+    .filter((entry) => entry.source === "canonical" && entry.bucket === PROJECT_FILE_BUCKET)
+    .map((entry) => `${PROJECT_FILE_BUCKET}:${entry.path}`);
+  const deliverables = await readAssociatedRows(
+    client,
+    "agent_deliverables",
+    "storage_reference",
+    storageReferences,
+    "id,owner_id,storage_reference",
+  );
+  const deliverableById = new Map(deliverables.map((row) => [row.id, row]));
+  const promotions = (
+    await readAssociatedRows(
+      client,
+      "agent_resource_promotions",
+      "deliverable_id",
+      [...deliverableById.keys()],
+      "id,destination_id,destination_type,status,project_id,owner_id,deliverable_id",
+    )
+  ).filter(
+    (row) =>
+      row.destination_type === "project_file" &&
+      row.status === "completed" &&
+      typeof row.destination_id === "string" &&
+      !deletingIds.has(row.destination_id),
+  );
+  const existingDestinations = await readAssociatedRows(
+    client,
+    "project_files",
+    "id",
+    promotions.map((row) => row.destination_id),
+    "id",
+  );
+  const existingIds = new Set(existingDestinations.map((row) => row.id));
+  const referenced = new Set<string>();
+  for (const promotion of promotions) {
+    if (!existingIds.has(promotion.destination_id)) continue;
+    const deliverable = deliverableById.get(promotion.deliverable_id);
+    try {
+      const source = parseAgentStorageReference(deliverable?.storage_reference);
+      if (source.bucket === PROJECT_FILE_BUCKET) {
+        referenced.add(`${source.bucket}:${source.path}`);
+      }
+    } catch {
+      throw cleanupError("account_project_storage_reference_invalid");
+    }
+  }
+  return referenced;
 }
 
 export type StorageCleanupProgress = Readonly<{
@@ -159,54 +309,6 @@ export async function clearStoragePrefix(
   return { complete: true, removed };
 }
 
-function validatedProjectFile(row: ProjectFileRow): {
-  id: string;
-  bucket: string;
-  path: string;
-  removeObject: boolean;
-} {
-  if (
-    typeof row.id !== "string" ||
-    !UUID.test(row.id) ||
-    typeof row.project_id !== "string" ||
-    !UUID.test(row.project_id) ||
-    typeof row.uploaded_by !== "string" ||
-    !UUID.test(row.uploaded_by) ||
-    typeof row.storage_path !== "string" ||
-    row.storage_path.length === 0 ||
-    row.storage_path.length > 1_024 ||
-    row.storage_path.includes("\u0000") ||
-    row.storage_path.includes("\\")
-  ) {
-    throw cleanupError("account_project_storage_entry_invalid");
-  }
-  const parts = row.storage_path.split("/");
-  if (parts.some((part) => !part || part === "." || part === "..")) {
-    throw cleanupError("account_project_storage_entry_invalid");
-  }
-
-  if (parts[0] === row.project_id) {
-    return {
-      id: row.id,
-      bucket: PROJECT_FILE_BUCKET,
-      path: row.storage_path,
-      removeObject: true,
-    };
-  }
-  // Agent deliverables promoted into a Project historically kept their source
-  // object path. The bucket name was dropped, but owner-rooted evidence paths
-  // remain distinguishable from canonical Project paths.
-  if (parts[0] === row.uploaded_by) {
-    return {
-      id: row.id,
-      bucket: AGENT_EVIDENCE_BUCKET,
-      path: row.storage_path,
-      removeObject: false,
-    };
-  }
-  throw cleanupError("account_project_storage_entry_invalid");
-}
-
 async function cleanupOwnedProjectFiles(
   client: AccountStorageClient,
   userId: string,
@@ -217,7 +319,7 @@ async function cleanupOwnedProjectFiles(
 
   for (let batch = 0; batch < maxRemoveBatches; batch += 1) {
     let listed = await projectFiles(client)
-      .select("id,project_id,storage_path,uploaded_by")
+      .select("id,project_id,storage_path,uploaded_by,kind")
       .eq("uploaded_by", userId)
       .order("id", { ascending: true })
       .limit(STORAGE_BATCH_SIZE);
@@ -230,7 +332,7 @@ async function cleanupOwnedProjectFiles(
     // Storage paths that identify them.
     if (listed.data.length === 0) {
       listed = await projectFiles(client)
-        .select("id,project_id,storage_path,uploaded_by,projects!inner(owner_id)")
+        .select("id,project_id,storage_path,uploaded_by,kind,projects!inner(owner_id)")
         .eq("projects.owner_id", userId)
         .order("id", { ascending: true })
         .limit(STORAGE_BATCH_SIZE);
@@ -240,19 +342,35 @@ async function cleanupOwnedProjectFiles(
     }
     if (listed.data.length === 0) return { complete: true, removed };
 
-    const entries = listed.data.map((row) => {
-      const entry = validatedProjectFile(row);
-      // Promoted evidence is a reference to the uploader's source object, not
-      // a Project-owned copy. Delete it only when that uploader is the account
-      // being deleted; deleting somebody else's Project removes metadata only.
-      return {
-        ...entry,
-        removeObject: entry.removeObject || row.uploaded_by === userId,
-      };
-    });
+    const associations = await loadProjectFileAssociations(client, listed.data);
+    let entries: Array<ReturnType<typeof resolveProjectFileStorage>>;
+    try {
+      entries = listed.data.map((row) =>
+        resolveProjectFileStorage(
+          row as StorageReferenceRow,
+          typeof row.id === "string" ? associations.get(row.id) : undefined,
+        ),
+      );
+    } catch {
+      throw cleanupError("account_project_storage_entry_invalid");
+    }
+    const deletingIds = new Set(entries.map((entry) => entry.id));
+    const externallyReferenced = await externallyReferencedProjectObjects(
+      client,
+      entries,
+      deletingIds,
+    );
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {
-      if (!entry.removeObject) continue;
+      // Promoted rows are references, never ownership claims. Canonical Project
+      // bytes are removed only when no live promotion in another Project still
+      // references the same source object.
+      if (
+        entry.source !== "canonical" ||
+        externallyReferenced.has(`${entry.bucket}:${entry.path}`)
+      ) {
+        continue;
+      }
       const paths = byBucket.get(entry.bucket) ?? [];
       paths.push(entry.path);
       byBucket.set(entry.bucket, paths);
@@ -275,7 +393,7 @@ async function cleanupOwnedProjectFiles(
   }
 
   const remaining = await projectFiles(client)
-    .select("id,project_id,storage_path,uploaded_by")
+    .select("id,project_id,storage_path,uploaded_by,kind")
     .eq("uploaded_by", userId)
     .order("id", { ascending: true })
     .limit(1);
@@ -284,7 +402,7 @@ async function cleanupOwnedProjectFiles(
   }
   if (remaining.data.length > 0) return { complete: false, removed };
   const ownedProjectRemaining = await projectFiles(client)
-    .select("id,project_id,storage_path,uploaded_by,projects!inner(owner_id)")
+    .select("id,project_id,storage_path,uploaded_by,kind,projects!inner(owner_id)")
     .eq("projects.owner_id", userId)
     .order("id", { ascending: true })
     .limit(1);

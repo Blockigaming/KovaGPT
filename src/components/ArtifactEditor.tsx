@@ -26,6 +26,10 @@ import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspac
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
+import {
+  canApplyLoadedArtifactHistory,
+  recoverFailedArtifactSnapshot,
+} from "@/lib/canvas-autosave-policy.mjs";
 
 type SessionVersion = {
   id: number;
@@ -96,7 +100,9 @@ export function ArtifactEditor({
   const lastRecordedValueRef = useRef(initialContent);
   const lastScheduledValueRef = useRef(initialContent);
   const autosaveGenerationRef = useRef(0);
+  const localEditRevisionRef = useRef(0);
   const autosaveQueueRef = useRef(createSerializedWriteQueue());
+  const [autosaveRetryNonce, setAutosaveRetryNonce] = useState(0);
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
@@ -118,8 +124,11 @@ export function ArtifactEditor({
   );
 
   useEffect(() => {
+    // Opening, closing, or replacing an artifact invalidates all asynchronous
+    // work captured by the previous Canvas session.
+    autosaveGenerationRef.current += 1;
     if (open) {
-      autosaveGenerationRef.current += 1;
+      localEditRevisionRef.current = 0;
       lastRecordedValueRef.current = initialContent;
       lastScheduledValueRef.current = initialContent;
       setValue(initialContent);
@@ -149,6 +158,7 @@ export function ArtifactEditor({
   useEffect(() => {
     if (!open || !canPersistVersions || !chatId || !messageId) return;
     let cancelled = false;
+    const loadEditRevision = localEditRevisionRef.current;
     void (async () => {
       try {
         const rows = await listVersionsFn({ data: { chatId, messageId } });
@@ -170,7 +180,9 @@ export function ArtifactEditor({
             // Reopen the server-accepted edit, but never replace text the user
             // already changed while version history was loading.
             setValue((current) => {
-              if (current !== initialContent) return current;
+              if (!canApplyLoadedArtifactHistory(loadEditRevision, localEditRevisionRef.current)) {
+                return current;
+              }
               lastRecordedValueRef.current = accepted.content;
               lastScheduledValueRef.current = accepted.content;
               return accepted.content;
@@ -215,6 +227,7 @@ export function ArtifactEditor({
   }, [value]);
 
   const updateValue = (next: string) => {
+    localEditRevisionRef.current += 1;
     setValue(next);
     setSaveState("unsaved");
   };
@@ -272,15 +285,28 @@ export function ArtifactEditor({
             durable = true;
             if (!cancelled) setHistoryError(null);
           } catch (error) {
-            if (!cancelled) {
-              // The failed snapshot is no longer queued. Restore the durable
-              // comparison point so a later edit-and-revert can retry it.
-              lastScheduledValueRef.current = lastRecordedValueRef.current;
+            const recovery = recoverFailedArtifactSnapshot({
+              failedSnapshot: snapshot,
+              scheduledSnapshot: lastScheduledValueRef.current,
+              durableSnapshot: lastRecordedValueRef.current,
+              generation,
+              currentGeneration: autosaveGenerationRef.current,
+              effectCancelled: cancelled,
+            });
+            if (recovery.scheduledSnapshot !== lastScheduledValueRef.current) {
+              // Invalidate only this failed latest snapshot. A genuinely newer
+              // scheduled edit must retain its comparison point.
+              lastScheduledValueRef.current = recovery.scheduledSnapshot;
               setHistoryError(
                 error instanceof Error
                   ? error.message
                   : "This edit is only kept for the current session.",
               );
+              if (recovery.retryCurrentValue) {
+                // The effect that owned the failed write was cancelled, so its
+                // visible value otherwise has no effect left to retry it.
+                setAutosaveRetryNonce((nonce) => nonce + 1);
+              }
             }
           }
         }
@@ -307,7 +333,16 @@ export function ArtifactEditor({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, value, canPersistVersions, chatId, messageId, initialContent, saveVersionFn]);
+  }, [
+    open,
+    value,
+    canPersistVersions,
+    chatId,
+    messageId,
+    initialContent,
+    saveVersionFn,
+    autosaveRetryNonce,
+  ]);
 
   if (!open) return null;
 
