@@ -180,7 +180,9 @@ export function createChatPreflightRunner({
         }
         stageController.signal.addEventListener("abort", onAbort, { once: true });
       });
-      const task = Promise.resolve().then(() => operation(stageController.signal));
+      const task = stageController.signal.aborted
+        ? new Promise(() => {})
+        : Promise.resolve().then(() => operation(stageController.signal));
 
       try {
         const value = await Promise.race([task, aborted]);
