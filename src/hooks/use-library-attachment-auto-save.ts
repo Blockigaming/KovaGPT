@@ -11,8 +11,7 @@ type AcceptedAttachment = PendingAttachment & {
   source?: "file_upload" | "long_paste" | "library";
 };
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function eligibleAttachment(
   attachment: PendingAttachment,
@@ -20,10 +19,10 @@ function eligibleAttachment(
   const candidate = attachment as AcceptedAttachment;
   return Boolean(
     candidate.status === "complete" &&
-      candidate.clientId &&
-      UUID_PATTERN.test(candidate.clientId) &&
-      (candidate.source === "file_upload" || candidate.source === "long_paste") &&
-      (candidate.kind === "image" || candidate.kind === "text_file"),
+    candidate.clientId &&
+    UUID_PATTERN.test(candidate.clientId) &&
+    (candidate.source === "file_upload" || candidate.source === "long_paste") &&
+    (candidate.kind === "image" || candidate.kind === "text_file"),
   );
 }
 
@@ -54,10 +53,7 @@ export function useLibraryAttachmentAutoSave({
       if (!enabled || !principalKey || !eligibleAttachment(attachment)) return;
 
       const operationKey = `${principalKey}:${attachment.clientId}`;
-      if (
-        completedRef.current.has(operationKey) ||
-        inFlightRef.current.has(operationKey)
-      ) {
+      if (completedRef.current.has(operationKey) || inFlightRef.current.has(operationKey)) {
         return;
       }
 
