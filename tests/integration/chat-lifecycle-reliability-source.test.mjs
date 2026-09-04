@@ -77,9 +77,11 @@ test("Responses translation rejects malformed provider JSON", () => {
 });
 
 test("usage authorization receives cancellation and provider errors retain typed metadata", () => {
-  assert.match(accounting, /input\.signal/u);
   assert.match(accounting, /periodQuery\.abortSignal\(signal\)/u);
   assert.match(accounting, /acquisitionQuery\.abortSignal\(input\.signal\)/u);
+  assert.match(chatRoute, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES, signal\)/u);
+  assert.match(chatRoute, /enforceQuota\([\s\S]{0,160}signal/u);
+  assert.match(accounting, /input\.signal/u);
   assert.match(chatRoute, /providerError\.toSafeResponse\(\)/u);
   assert.match(chatRoute, /kind: "error"/u);
   assert.match(chatRoute, /retryable: providerError\.retryable/u);
