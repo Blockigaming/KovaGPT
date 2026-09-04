@@ -33,14 +33,15 @@ export type ProjectFile = {
   id: string;
   project_id: string;
   name: string;
-  storage_path: string;
   mime_type: string | null;
   size_bytes: number;
-  kind: "file" | "image";
-  uploaded_by: string | null;
-  status: "pending" | "ready" | "upload_failed" | "cleanup_failed";
+  kind: "file" | "image" | "agent-deliverable";
   created_at: string;
   signed_url?: string | null;
+};
+
+type ProjectFileStorageRow = ProjectFile & {
+  storage_path: string;
 };
 export type ProjectMemoryItem = {
   id: string;
@@ -268,20 +269,30 @@ export const listFiles = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ProjectFile[]> => {
     let q = context.supabase
       .from("project_files")
-      .select("*")
+      .select("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at")
       .eq("project_id", data.project_id)
       .eq("status", "ready")
       .order("created_at", { ascending: false });
     if (data.kind !== "all") q = q.eq("kind", data.kind);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    const items = (rows ?? []) as ProjectFile[];
+    const items = (rows ?? []) as ProjectFileStorageRow[];
     return Promise.all(
-      items.map(async (item) => {
+      items.map(async (item): Promise<ProjectFile> => {
+        const base = {
+          id: item.id,
+          project_id: item.project_id,
+          name: item.name,
+          mime_type: item.mime_type,
+          size_bytes: item.size_bytes,
+          kind: item.kind,
+          created_at: item.created_at,
+        };
+        if (item.kind === "agent-deliverable") return { ...base, signed_url: null };
         const { data: signed } = await context.supabase.storage
           .from("project-files")
           .createSignedUrl(item.storage_path, 60);
-        return { ...item, signed_url: signed?.signedUrl ?? null };
+        return { ...base, signed_url: signed?.signedUrl ?? null };
       }),
     );
   });
