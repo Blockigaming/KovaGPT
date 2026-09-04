@@ -300,23 +300,15 @@ export function createEmailDispatcher(config, dependencies = {}) {
   }
 
   async function deadLetter(queueName, row, logId, reason) {
-    await rpc("move_to_dlq", {
-      source_queue: queueName,
-      dlq_name: `${queueName}_dlq`,
-      message_id: row.msg_id,
-      payload: row.message,
+    await rpc("dead_letter_tracked_email", {
+      p_source_queue: queueName,
+      p_dlq_name: `${queueName}_dlq`,
+      p_message_id: row.msg_id,
+      p_payload: row.message,
+      p_log_id: logId,
+      p_reason: reason,
+      p_attempts: row.read_ct,
     });
-    if (logId) {
-      await updateLog(logId, {
-        status: "dlq",
-        error_message: reason,
-        metadata: {
-          terminal_reason: reason,
-          attempts: row.read_ct,
-          dead_lettered_at: new Date(now()).toISOString(),
-        },
-      });
-    }
     log("warn", "email_dead_lettered", {
       queue: queueName,
       message_id: String(row.msg_id),
