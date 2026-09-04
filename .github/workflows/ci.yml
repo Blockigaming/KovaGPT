@@ -140,7 +140,7 @@ jobs:
         run: echo "::warning::The observational deployed-baseline audit could not produce accepted evidence; strict candidate gates will continue."
 
       - name: Upload deployed baseline evidence
-        if: always() && steps.scope.outputs.run_ci == 'true' && steps.deployed_baseline.outcome != 'skipped'
+        if: always() && steps.deployed_baseline.outcome != 'skipped'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: deployed-baseline-${{ github.sha }}
