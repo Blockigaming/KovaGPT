@@ -38,10 +38,7 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
     workflow,
     /path: artifacts\/ui-audit\/deployed-baseline[\s\S]{0,120}if-no-files-found: error/u,
   );
-  assert.match(
-    workflow,
-    /if: always\(\) && steps\.deployed_baseline\.outcome != 'skipped'/u,
-  );
+  assert.match(workflow, /if: always\(\) && steps\.deployed_baseline\.outcome != 'skipped'/u);
   assert.match(helper, /await page\.screenshot\(/u);
   assert.match(helper, /KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR/u);
   assert.match(shellSpec, /await captureCandidateVisual\(/u);
