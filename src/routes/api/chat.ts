@@ -507,9 +507,10 @@ export const Route = createFileRoute("/api/chat")({
                 readChatRequest(request, CHAT_BODY_LIMIT_BYTES),
               );
             } catch (error) {
-              if (error instanceof ChatIngressError) {
-                return Response.json(toChatIngressErrorEnvelope(error, requestId), {
-                  status: error.status,
+              const ingressError = error instanceof ChatPreflightError ? error.cause : error;
+              if (ingressError instanceof ChatIngressError) {
+                return Response.json(toChatIngressErrorEnvelope(ingressError, requestId), {
+                  status: ingressError.status,
                 });
               }
               throw error;
