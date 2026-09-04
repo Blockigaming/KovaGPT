@@ -28,6 +28,7 @@ jobs:
           npx prettier --write \
             docs/supabase-storage-contract.md \
             src/integrations/supabase/types.ts \
+            src/lib/account-export.server.ts \
             src/lib/project-deletion-policy.d.mts \
             src/lib/project-deletion-policy.mjs \
             src/lib/project-deletion.server.ts \
@@ -38,6 +39,7 @@ jobs:
             src/routes/api/project-files.ts \
             'src/routes/projects.$projectId.tsx' \
             src/routes/projects.tsx \
+            tests/integration/account-export-source.test.mjs \
             tests/integration/project-deletion-security-source.test.mjs \
             tests/integration/project-file-security-source.test.mjs \
             tests/unit/project-deletion-policy.test.mjs
@@ -53,6 +55,7 @@ jobs:
           git add \
             database-contract.json \
             docs/supabase-storage-contract.md \
+            src/lib/account-export.server.ts \
             release-migrations.json \
             src/integrations/supabase/types.ts \
             src/lib/project-deletion-policy.d.mts \
@@ -77,6 +80,7 @@ jobs:
           node --test
           tests/unit/project-files-policy.test.mjs
           tests/unit/project-deletion-policy.test.mjs
+          tests/integration/account-export-source.test.mjs
           tests/integration/project-file-security-source.test.mjs
           tests/integration/project-deletion-security-source.test.mjs
       - run: npm run typecheck
