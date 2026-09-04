@@ -75,10 +75,7 @@ test("every workflow uses the reviewed immutable Node 24 action inventory", asyn
       );
       const [, action, ref, documentedMajor] = match;
       const approved = approvedActions.get(action);
-      assert.ok(
-        approved,
-        `${workflowFile}:${index + 1} uses unaudited external action ${action}`,
-      );
+      assert.ok(approved, `${workflowFile}:${index + 1} uses unaudited external action ${action}`);
       assert.equal(
         ref,
         approved.sha,
