@@ -38,10 +38,12 @@ export function useLibraryAttachmentAutoSave({
   const saveItem = useServerFn(saveToLibrary);
   const saveImage = useServerFn(saveImageToLibrary);
   const principalRef = useRef(principalKey);
+  const enabledRef = useRef(enabled);
   const completedRef = useRef(new Set<string>());
   const inFlightRef = useRef(new Set<string>());
 
   principalRef.current = principalKey;
+  enabledRef.current = enabled;
 
   useEffect(() => {
     completedRef.current.clear();
@@ -52,6 +54,7 @@ export function useLibraryAttachmentAutoSave({
     async (attachment: PendingAttachment) => {
       if (
         !enabled ||
+        !enabledRef.current ||
         !principalKey ||
         principalRef.current !== principalKey ||
         !eligibleAttachment(attachment)
