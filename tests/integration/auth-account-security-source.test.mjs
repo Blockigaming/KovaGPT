@@ -55,6 +55,27 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
 });
 
+test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {
+  const [client, providers, dialog, panel] = await Promise.all([
+    read("src/integrations/supabase/client.ts"),
+    read("src/lib/auth-providers.ts"),
+    read("src/components/auth/AuthDialog.tsx"),
+    read("src/components/PasskeyPanel.tsx"),
+  ]);
+  assert.match(client, /experimental: \{ passkey: true \}/);
+  assert.match(providers, /passkeys_enabled/);
+  assert.match(providers, /passkeys: bool\(data\.passkeys_enabled\)/);
+  assert.match(dialog, /providers\.resolved[\s\S]*providers\.passkeys/);
+  assert.match(dialog, /auth\.signInWithPasskey\(\)/);
+  assert.match(dialog, /"PublicKeyCredential" in window/);
+  assert.match(panel, /auth\.registerPasskey\(\)/);
+  assert.match(panel, /auth\.passkey\.list\(\)/);
+  assert.match(panel, /auth\.passkey\.update\(/);
+  assert.match(panel, /auth\.passkey\.delete\(/);
+  assert.match(panel, /providers\.resolved && providers\.passkeys/);
+  assert.doesNotMatch(panel, /toast\.error\([^\n]*error\.message/);
+});
+
 test("recovery and OAuth flows avoid open redirects, query-token consumption, and ordinary-session password changes", async () => {
   const [oauth, reset, callback] = await Promise.all([
     read("src/lib/oauth-session.ts"),
