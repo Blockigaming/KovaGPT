@@ -48,7 +48,7 @@ function folderPath(folder: LibraryFolder, folders: LibraryFolder[]): string {
   while (current && !seen.has(current.id)) {
     seen.add(current.id);
     names.unshift(current.name);
-    const parentId = current.parentId;
+    const parentId: LibraryFolder["parentId"] = current.parentId;
     current = parentId ? folders.find((candidate) => candidate.id === parentId) : undefined;
   }
   return names.join(" / ");
