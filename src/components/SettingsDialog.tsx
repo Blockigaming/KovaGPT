@@ -1286,9 +1286,9 @@ export function SettingsDialog({
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    KovaGPT can use your approximate location to answer questions about local time,
-                    weather, nearby places, and recommendations. Location is optional and never
-                    required.
+                    Your approximate coordinates can be stored in this browser and used to show an
+                    OpenStreetMap map in location cards. They are optional and are not included in
+                    chat requests.
                   </p>
                 </div>
                 <LocationPanel userKey={userKey} principalResolved={isLoaded} />
@@ -3056,8 +3056,8 @@ function LocationPanel({
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, the coarse coordinates are used only for location
-        cards shown in this browser; they are not added to chat requests.
+        Location is never required. When enabled, the coarse coordinates are used only to render an
+        OpenStreetMap location card in this browser; they are not added to chat requests.
       </p>
     </div>
   );
