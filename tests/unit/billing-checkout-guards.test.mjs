@@ -187,6 +187,11 @@ test("subscription summary prefers an older active row over a newer expired row"
     false,
     "ambiguous periods must block Checkout without granting paid access",
   );
+  assert.equal(
+    hasVerifiedAccess({ status: "active", current_period_end: null }, now),
+    false,
+    "missing periods must block Checkout without granting paid access",
+  );
   assert.equal(hasVerifiedAccess(activeOlder, now), true);
 
   const summary = payments.slice(payments.indexOf("export const getSubscriptionSummary"));

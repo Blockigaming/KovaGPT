@@ -25,9 +25,7 @@ function subscriptionWindowState(
     subscription.status,
   );
   if (!isPotentiallyCurrent) return "closed";
-  if (!subscription.current_period_end) {
-    return subscription.status === "canceled" ? "closed" : "open";
-  }
+  if (!subscription.current_period_end) return "ambiguous";
   const periodEnd = new Date(subscription.current_period_end).getTime();
   if (!Number.isFinite(periodEnd)) return "ambiguous";
   return periodEnd > now ? "open" : "closed";
