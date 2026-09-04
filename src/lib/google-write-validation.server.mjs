@@ -199,6 +199,35 @@ function validateCalendarEvent(args) {
   };
 }
 
+export function foldEmailAddressHeader(name, value, maxLineLength = 78) {
+  if (!["To", "Cc", "Bcc"].includes(name) || typeof value !== "string" || HEADER_BREAK.test(value)) {
+    throw new GoogleWriteValidationError("Invalid email header.");
+  }
+  if (!Number.isSafeInteger(maxLineLength) || maxLineLength < 20 || maxLineLength > 998) {
+    throw new TypeError("Invalid MIME line length.");
+  }
+  const addresses = value.split(", ").filter(Boolean);
+  if (addresses.length === 0) {
+    throw new GoogleWriteValidationError("Invalid email header.");
+  }
+  let current = `${name}: ${addresses[0]}`;
+  const lines = [];
+  for (const address of addresses.slice(1)) {
+    const addition = `, ${address}`;
+    if (current.length + addition.length <= maxLineLength) {
+      current += addition;
+    } else {
+      lines.push(`${current},`);
+      current = ` ${address}`;
+    }
+  }
+  lines.push(current);
+  if (lines.some((line) => line.length > 998)) {
+    throw new GoogleWriteValidationError("Email header is too long.");
+  }
+  return lines.join("\r\n");
+}
+
 export function validateSupportedGoogleWrite(tool, input) {
   if (!SUPPORTED_WRITE_TOOLS.has(tool)) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
