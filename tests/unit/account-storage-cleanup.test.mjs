@@ -9,6 +9,9 @@ import {
 const USER_ID = "123e4567-e89b-42d3-a456-426614174000";
 const PROJECT_ID = "223e4567-e89b-42d3-a456-426614174000";
 const FILE_ID = "323e4567-e89b-42d3-a456-426614174000";
+const OTHER_USER_ID = "423e4567-e89b-42d3-a456-426614174000";
+const OTHER_PROJECT_ID = "523e4567-e89b-42d3-a456-426614174000";
+const OTHER_FILE_ID = "623e4567-e89b-42d3-a456-426614174000";
 
 function mockBucket(initialPaths, { removeError = false, sticky = false, onRemove } = {}) {
   const objects = new Set(initialPaths);
@@ -186,6 +189,26 @@ test("account deletion exhausts Project and agent Storage before touching Librar
   assert.ok(events.indexOf("project-files") < events.indexOf("library-images"));
   assert.ok(events.indexOf("agent-evidence") < events.indexOf("library-images"));
   assert.ok(events.indexOf("project-files") < events.indexOf("project-metadata"));
+});
+
+test("account deletion never removes another user's Project objects", async () => {
+  const otherPath = `${OTHER_PROJECT_ID}/private.txt`;
+  const client = accountClient({
+    projectRows: [
+      {
+        id: OTHER_FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: otherPath,
+        uploaded_by: OTHER_USER_ID,
+      },
+    ],
+  });
+
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: true,
+    removed: 2,
+  });
+  assert.deepEqual([...client.buckets["project-files"].objects], [otherPath]);
 });
 
 test("a Project Storage failure leaves Library objects untouched", async () => {
