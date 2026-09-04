@@ -8,6 +8,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   const route = read("src/routes/api/project-files.ts");
   const ui = read("src/routes/projects.$projectId.tsx");
   const workspace = read("src/lib/project-workspace.functions.ts");
+  const auth = read("src/lib/api-auth.server.ts");
 
   for (const contract of [
     "requireVerifiedUser",
@@ -28,10 +29,20 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     "temporaryPath",
     ".move(temporaryPath, row.storage_path)",
     "project_file_delete_in_progress",
+    "cleanupStaleProjectUploadObjects",
+    '.list(folder, {',
+    "projectFileObjectPresence",
+    'presence === "unknown"',
+    'presence === "present"',
   ]) {
     assert.ok(route.includes(contract), `missing route contract: ${contract}`);
   }
   assert.doesNotMatch(route, /try_add_storage_bytes/);
+  assert.doesNotMatch(route, /user_plan_tier/);
+  assert.match(route, /getUserTier\(auth, project\.owner_id\)/);
+  assert.match(auth, /\.eq\("environment", BILLING_ENV\)/);
+  assert.match(auth, /export async function getUserTier/);
+  assert.match(auth, /family_owner_of/);
   const uploadHandler = route.slice(
     route.indexOf("async function upload"),
     route.indexOf("function missingObject"),
@@ -95,6 +106,14 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
     /kind IN \('file', 'image'\)[\s\S]*content_sha256 IS NULL[\s\S]*storage_path ~ \('\^' \|\| project_id::text \|\| '\/'\)/,
   );
   assert.match(migration, /status IN \('ready', 'deleting'\)/);
+  assert.match(
+    migration,
+    /project_files_name_length_check[\s\S]*content_sha256 IS NULL OR char_length\(name\)/,
+  );
+  assert.match(
+    migration,
+    /project_files_size_check[\s\S]*content_sha256 IS NULL OR size_bytes/,
+  );
   assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
