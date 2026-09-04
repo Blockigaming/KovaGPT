@@ -60,10 +60,20 @@ export function parseDocumentBlocks(markdown: string): Block[] {
   return blocks;
 }
 export function downloadBytes(bytes: Uint8Array, type: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  let url: string | null = null;
+  let anchor: HTMLAnchorElement | null = null;
+  try {
+    url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
+    anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    const completedUrl = url;
+    url = null;
+    window.setTimeout(() => URL.revokeObjectURL(completedUrl), 1_000);
+  } finally {
+    anchor?.remove();
+    if (url) URL.revokeObjectURL(url);
+  }
 }
