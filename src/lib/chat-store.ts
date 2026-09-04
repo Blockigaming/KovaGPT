@@ -1,6 +1,7 @@
 import type { ModeId } from "./modes";
 
 export type Role = "user" | "assistant";
+export type TemporaryChatContext = "clean" | "personalized";
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
@@ -46,6 +47,10 @@ export type Conversation = {
   pinned?: boolean;
   pinnedAt?: number;
   temporary?: boolean;
+  /** Immutable context policy selected when a temporary conversation starts. */
+  temporaryContext?: TemporaryChatContext;
+  /** Earliest message eligible for memory after a temporary chat is converted. */
+  memoryStartIndex?: number;
   /**
    * Stable root chat id shared by a conversation and every branch taken from it.
    * Durable branch rows are keyed by this, so switching branches can resolve a
@@ -82,6 +87,8 @@ function isConversation(value: unknown): value is Conversation {
     typeof candidate.createdAt === "number" &&
     typeof candidate.updatedAt === "number" &&
     typeof candidate.mode === "string" &&
+    (candidate.memoryStartIndex === undefined ||
+      (Number.isInteger(candidate.memoryStartIndex) && candidate.memoryStartIndex >= 0)) &&
     Array.isArray(candidate.messages) &&
     candidate.messages.every(
       (message) =>
@@ -103,10 +110,23 @@ function boundConversations(value: unknown[]): Conversation[] {
       return true;
     })
     .slice(0, MAX_STORED_CONVERSATIONS)
-    .map((conversation) => ({
-      ...conversation,
-      messages: dedupeMessages(conversation.messages).slice(-MAX_MESSAGES_PER_CONVERSATION),
-    }));
+    .map((conversation) => {
+      const messages = dedupeMessages(conversation.messages);
+      const removedCount = Math.max(0, messages.length - MAX_MESSAGES_PER_CONVERSATION);
+      const boundedMessages = messages.slice(-MAX_MESSAGES_PER_CONVERSATION);
+      return {
+        ...conversation,
+        messages: boundedMessages,
+        ...(typeof conversation.memoryStartIndex === "number"
+          ? {
+              memoryStartIndex: Math.min(
+                boundedMessages.length,
+                Math.max(0, conversation.memoryStartIndex - removedCount),
+              ),
+            }
+          : {}),
+      };
+    });
 }
 
 export function dedupeMessages(messages: Message[]): Message[] {
@@ -230,17 +250,20 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   }
 }
 
-export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]) {
-  if (typeof window === "undefined") return;
+export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]): boolean {
+  if (typeof window === "undefined") return false;
   try {
     localStorage.setItem(
       conversationStorageKey(userKey),
       JSON.stringify(boundConversations(convs)),
     );
+    if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
+    return true;
   } catch {
-    // Storage can be unavailable or full; the in-memory conversation remains usable.
+    // Storage can be unavailable or full; callers that require durable
+    // acknowledgement can report the failure instead of claiming success.
+    return false;
   }
-  if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
 export function clearConversations(userKey: ChatStorageUserKey) {
@@ -414,6 +437,10 @@ export function branchConversation(source: Conversation, throughMessageId: strin
     updatedAt: timestamp,
     pinned: false,
     pinnedAt: undefined,
+    memoryStartIndex:
+      typeof source.memoryStartIndex === "number"
+        ? Math.min(Math.max(0, source.memoryStartIndex), index + 1)
+        : undefined,
     branchOrigin: {
       conversationId: source.id,
       messageId: throughMessageId,

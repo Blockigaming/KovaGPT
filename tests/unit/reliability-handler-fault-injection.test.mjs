@@ -191,8 +191,15 @@ test("automatic memory summarization never consumes the foreground chat quota", 
     new URL("../../src/routes/index.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(clientSource, /active\.messages\s*\.slice\(-30\)/);
-  assert.match(clientSource, /active\.title\.slice\(0, 120\)/);
+  assert.match(
+    clientSource,
+    /const memoryStartIndex = Math\.max\(0, active\.memoryStartIndex \?\? 0\)/,
+  );
+  assert.match(clientSource, /active\.messages\.slice\(memoryStartIndex\)/);
+  assert.match(clientSource, /memoryMessages\s*\.slice\(-30\)/);
+  assert.match(clientSource, /const memoryTitle = deriveTitle\(/);
+  assert.match(clientSource, /title: memoryTitle\.slice\(0, 120\)/);
+  assert.doesNotMatch(clientSource, /title: active\.title\.slice\(0, 120\)/);
   assert.match(clientSource, /message\.content\.slice\(0, 2000\)/);
 });
 

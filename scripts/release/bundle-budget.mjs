@@ -23,7 +23,7 @@ export const BUNDLE_BASELINE = Object.freeze({
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 60_000, gzip: 20_000 }),
+  initial: Object.freeze({ raw: 62_500, gzip: 20_000 }),
   main: Object.freeze({ raw: 625_000, gzip: 181_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

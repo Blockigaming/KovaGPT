@@ -66,6 +66,7 @@ export type NormalizedChatPayload = {
   personality?: string;
   projectId?: string;
   temporary?: boolean;
+  temporaryContext?: "clean" | "personalized";
   clientTool?: ChatClientTool;
 };
 

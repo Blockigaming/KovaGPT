@@ -57,6 +57,11 @@ const ShareChatDialog = lazy(() =>
 const ChatWorkspaceDialog = lazy(() =>
   import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
 );
+const TemporaryChatStartDialog = lazy(() =>
+  import("@/components/TemporaryChatStartDialog").then((m) => ({
+    default: m.TemporaryChatStartDialog,
+  })),
+);
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import {
@@ -81,6 +86,7 @@ import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
   type Message,
+  type TemporaryChatContext,
   deriveTitle,
   branchConversation,
   chatStoragePrincipal,
@@ -211,6 +217,8 @@ function KovaGPT() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamAnnouncement, setStreamAnnouncement] = useState("");
   const [tempChat, setTempChat] = useState(false);
+  const [tempChatContext, setTempChatContext] = useState<TemporaryChatContext>("clean");
+  const [tempChatStartOpen, setTempChatStartOpen] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const commandReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -403,6 +411,10 @@ function KovaGPT() {
       storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsPrincipal(null);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       return;
     }
     storageGenerationRef.current += 1;
@@ -414,6 +426,10 @@ function KovaGPT() {
       retryTimerRef.current = null;
     }
     setIsStreaming(false);
+    setTempChat(false);
+    setTempChatContext("clean");
+    setTempChatStartOpen(false);
+    setTempChatConfirmed(false);
     setActiveId(null);
     setInput("");
     setAttachments([]);
@@ -506,6 +522,10 @@ function KovaGPT() {
       setCommandOpen(false);
       setCommandQuery("");
       setIsStreaming(false);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       setRecentLibraryFiles([]);
       setRecentLibraryLoading(false);
       setRecentLibraryError(null);
@@ -622,6 +642,7 @@ function KovaGPT() {
     [conversations, activeId],
   );
   const activeTemporary = active ? Boolean(active.temporary) : null;
+  const activeTemporaryContext = active?.temporary ? (active.temporaryContext ?? "clean") : null;
   const historyConversations = useMemo(
     () => conversations.filter((conversation) => !conversation.temporary),
     [conversations],
@@ -631,7 +652,8 @@ function KovaGPT() {
 
   useEffect(() => {
     if (activeTemporary !== null) setTempChat(activeTemporary);
-  }, [activeTemporary]);
+    if (activeTemporaryContext !== null) setTempChatContext(activeTemporaryContext);
+  }, [activeTemporary, activeTemporaryContext]);
 
   // Branch rows are keyed by the family's root conversation, so a branched chat
   // and its original share one durable branch tree.
@@ -758,15 +780,21 @@ function KovaGPT() {
       tier === "free"
     )
       return;
-    if (!active || active.temporary || active.messages.length < 4) return;
+    if (!active || active.temporary) return;
+    const memoryStartIndex = Math.max(0, active.memoryStartIndex ?? 0);
+    const memoryMessages = active.messages.slice(memoryStartIndex);
+    if (memoryMessages.length < 4) return;
+    const memoryTitle = deriveTitle(
+      memoryMessages.find((message) => message.role === "user")?.content ?? "Saved chat",
+    );
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
-        title: active.title.slice(0, 120),
+        title: memoryTitle.slice(0, 120),
         memoryEnabled: true,
         temporary: false,
-        // The memory endpoint intentionally accepts only the latest bounded window.
-        messages: active.messages
+        // The memory endpoint accepts only the bounded post-privacy window.
+        messages: memoryMessages
           .slice(-30)
           .map((message) => ({ role: message.role, content: message.content.slice(0, 2000) })),
       };
@@ -792,6 +820,7 @@ function KovaGPT() {
   }, [
     active?.id,
     active?.messages.length,
+    active?.memoryStartIndex,
     isStreaming,
     isSignedIn,
     settings.rememberAcross,
@@ -821,39 +850,85 @@ function KovaGPT() {
     setEditingMessage(null);
   }, [setConversations]);
 
+  const startTemporaryChat = useCallback(
+    (context: TemporaryChatContext) => {
+      try {
+        clearDraft(userKey, activeId);
+      } catch {
+        /* Storage may be unavailable; temporary input still stays in memory only. */
+      }
+      // Persisted and temporary turns must never share one conversation.
+      newChat();
+      setTempChatContext(context);
+      setTempChat(true);
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(true);
+      window.setTimeout(() => setTempChatConfirmed(false), 1400);
+      toast.success("Temporary chat enabled", {
+        description:
+          context === "personalized"
+            ? "This chat won't appear in history or create new saved memories. Existing enabled personalization and connected apps may be used."
+            : "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings. Connected apps are off too.",
+      });
+    },
+    [activeId, newChat, userKey],
+  );
+
   const setTemporaryChatEnabled = useCallback(
     (enabled: boolean) => {
       if (enabled === tempChat) return;
-
       if (enabled) {
-        try {
-          clearDraft(userKey, activeId);
-        } catch {
-          /* Storage may be unavailable; temporary input still stays in memory only. */
-        }
+        setTempChatStartOpen(true);
+        return;
       }
 
       // Persisted and temporary turns must never share one conversation.
       newChat();
       setTempChat(enabled);
-
-      if (enabled) {
-        setTempChatConfirmed(true);
-        window.setTimeout(() => setTempChatConfirmed(false), 1400);
-        toast.success("Temporary chat enabled", {
-          description:
-            "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings.",
-        });
-      } else {
-        toast.message("Temporary chat disabled", {
-          description: settings.rememberAcross
-            ? "New chats will be saved on this device and may use saved memory."
-            : "New chats will be saved on this device. Saved memory remains off.",
-        });
-      }
+      setTempChatContext("clean");
+      toast.message("Temporary chat disabled", {
+        description: settings.rememberAcross
+          ? "New chats will be saved on this device and may use saved memory."
+          : "New chats will be saved on this device. Saved memory remains off.",
+      });
     },
-    [activeId, newChat, settings.rememberAcross, tempChat, userKey],
+    [newChat, settings.rememberAcross, tempChat],
   );
+
+  const saveTemporaryChat = useCallback(() => {
+    if (!active?.temporary || isStreaming) return;
+    // A scheduled retry still carries the immutable temporary-context closure.
+    // Cancel it before conversion so no old temporary turn can land past the
+    // new memory boundary and later be persisted as regular-chat memory.
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    const convertedAt = active.messages.length;
+    const converted: Conversation = {
+      ...active,
+      temporary: false,
+      temporaryContext: undefined,
+      memoryStartIndex: convertedAt,
+      updatedAt: Date.now(),
+    };
+    const nextConversations = conversations
+      .map((conversation) => (conversation.id === active.id ? converted : conversation))
+      .filter((conversation) => !conversation.temporary);
+    if (!saveConversations(userKey, nextConversations)) {
+      toast.error("This chat could not be saved", {
+        description: "Browser storage is unavailable or full. Free space and try again.",
+      });
+      return;
+    }
+    setConversations(nextConversations);
+    setTempChat(false);
+    setTempChatContext("clean");
+    toast.success("Chat saved to history", {
+      description:
+        "Future messages continue as a regular chat. Earlier temporary turns stay out of saved memory.",
+    });
+  }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback(() => {
     commandReturnFocusRef.current =
@@ -1038,6 +1113,7 @@ function KovaGPT() {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
+            temporaryContext: tempChat ? tempChatContext : undefined,
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
@@ -1047,6 +1123,10 @@ function KovaGPT() {
             ? {
                 ...c,
                 messages: [...priorMessages, userMsg, assistantMsg],
+                memoryStartIndex:
+                  typeof c.memoryStartIndex === "number"
+                    ? Math.min(Math.max(0, c.memoryStartIndex), priorMessages.length)
+                    : undefined,
                 updatedAt: Date.now(),
               }
             : c,
@@ -1130,39 +1210,42 @@ function KovaGPT() {
             // service-role Deep Research write.
             chatId: activeTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
-            user: tempChat
-              ? undefined
-              : {
-                  name: settings.displayName,
-                  pronouns: settings.preferredPronouns,
-                  email: settings.email,
-                  phone: settings.phone,
-                  address: [
-                    settings.addressLine1,
-                    settings.addressLine2,
-                    settings.city,
-                    settings.region,
-                    settings.postalCode,
-                    settings.country,
-                  ]
-                    .filter(Boolean)
-                    .join(", "),
-                  extraFacts: settings.extraFacts,
-                  customInstructions: settings.customInstructions,
-                  mood: settings.mood,
-                  responseLength: settings.responseLength,
-                  language: settings.language,
-                  rememberAcross: settings.rememberAcross,
-                  webSearch: settings.webSearch,
-                },
+            temporaryContext: tempChat ? tempChatContext : undefined,
+            user:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : {
+                    name: settings.displayName,
+                    pronouns: settings.preferredPronouns,
+                    email: settings.email,
+                    phone: settings.phone,
+                    address: [
+                      settings.addressLine1,
+                      settings.addressLine2,
+                      settings.city,
+                      settings.region,
+                      settings.postalCode,
+                      settings.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", "),
+                    extraFacts: settings.extraFacts,
+                    customInstructions: settings.customInstructions,
+                    mood: settings.mood,
+                    responseLength: settings.responseLength,
+                    language: settings.language,
+                    rememberAcross: settings.rememberAcross,
+                    webSearch: settings.webSearch,
+                  },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality: tempChat
-              ? undefined
-              : personalityToInstruction(
-                  loadPersonality(isLoaded ? userKey : undefined),
-                  isLoaded ? userKey : undefined,
-                ) || undefined,
+            personality:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : personalityToInstruction(
+                    loadPersonality(isLoaded ? userKey : undefined),
+                    isLoaded ? userKey : undefined,
+                  ) || undefined,
           }),
           signal: controller.signal,
         });
@@ -1414,6 +1497,7 @@ function KovaGPT() {
       settings,
       selectedTool,
       tempChat,
+      tempChatContext,
       editingMessage,
       principalReady,
       setConversations,
@@ -1711,17 +1795,30 @@ function KovaGPT() {
             <div className="flex min-w-0 items-center gap-2">
               <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span>
-                Temporary chat is on. It is not saved to history and does not use or update saved
-                memory, profile details, custom instructions, or personality settings.
+                {tempChatContext === "personalized"
+                  ? "Temporary chat is on with existing context. It is not saved to history and will not create new saved memories."
+                  : "Temporary chat is on. It is not saved to history and does not use or update saved memory, profile details, custom instructions, personality settings, or connected apps."}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setTemporaryChatEnabled(false)}
-              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
-            >
-              Turn off
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              {active?.temporary && active.messages.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={saveTemporaryChat}
+                  disabled={isStreaming}
+                  className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Save to history
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setTemporaryChatEnabled(false)}
+                className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
+              >
+                Turn off
+              </button>
+            </div>
           </div>
         )}
 
@@ -2154,6 +2251,14 @@ function KovaGPT() {
         )}
 
         <OnboardingDialog />
+
+        {tempChatStartOpen && (
+          <TemporaryChatStartDialog
+            open={tempChatStartOpen}
+            onOpenChange={setTempChatStartOpen}
+            onStart={startTemporaryChat}
+          />
+        )}
 
         {workspaceOpen && (
           <ChatWorkspaceDialog

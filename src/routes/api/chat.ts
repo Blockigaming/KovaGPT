@@ -551,6 +551,7 @@ export const Route = createFileRoute("/api/chat")({
               personality,
               projectId,
               temporary,
+              temporaryContext,
               clientTool,
             } = ingress;
             // Lockdown Mode is a server-enforced account boundary. Explicit
@@ -588,12 +589,15 @@ export const Route = createFileRoute("/api/chat")({
                 )!;
               }
             }
-            // Temporary Chat is a clean-room request: even a custom client
-            // cannot combine `temporary: true` with profile or personality
-            // fields and have those values reach the model prompt.
-            const personalContext = temporary ? undefined : user;
+            // Temporary chats never write history or memory. At creation, the
+            // user may explicitly opt into existing personalization; omission
+            // remains clean-room behavior for older and custom clients.
+            const temporaryUsesExistingContext =
+              temporary === true && temporaryContext === "personalized";
+            const usesExistingContext = !temporary || temporaryUsesExistingContext;
+            const personalContext = usesExistingContext ? user : undefined;
             const personalityBlock =
-              !temporary && personality
+              usesExistingContext && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
                 : "";
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
@@ -942,14 +946,14 @@ export const Route = createFileRoute("/api/chat")({
 
             // Cross-chat memory: for Plus+ signed-in users, inject short
             // summaries of their recent past chats so KovaGPT can recall
-            // context across conversations. Consent is opt-in and Temporary
-            // Chat never reaches the memory table.
+            // context across conversations. Consent is opt-in. A personalized
+            // Temporary Chat may read existing memory but never writes it.
             let memoryBlock = "";
             if (
               auth &&
               (callerTier === "plus" || callerTier === "pro") &&
               personalContext?.rememberAcross === true &&
-              !temporary
+              usesExistingContext
             ) {
               try {
                 const { data: memRows } = await (
@@ -974,7 +978,7 @@ export const Route = createFileRoute("/api/chat")({
                   memoryBlock = formatMemoryBlock(
                     selectRelevantMemories(memories, lastText, {
                       enabled: personalContext.rememberAcross === true,
-                      temporary: Boolean(temporary),
+                      temporary: !usesExistingContext,
                       maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
                     }),
                   );
@@ -1171,7 +1175,7 @@ export const Route = createFileRoute("/api/chat")({
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
             const availableTools =
-              auth && !hasImages && m.id !== "instant" && lastText.length > 0
+              auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
                 ? await getAvailableGoogleTools(auth.userId).catch(() => [])
                 : [];
             const enableTools = availableTools.length > 0;
