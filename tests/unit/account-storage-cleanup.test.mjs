@@ -100,11 +100,7 @@ test("account cleanup rejects prefixes outside the authenticated user namespace"
   await assert.rejects(() => clearStoragePrefix(bucket, "../another-user"), /prefix_invalid/u);
 });
 
-function accountClient({
-  projectRows = [],
-  projectRemoveError = false,
-  events = [],
-} = {}) {
+function accountClient({ projectRows = [], projectRemoveError = false, events = [] } = {}) {
   let rows = [...projectRows];
   const buckets = {
     "project-files": mockBucket(
