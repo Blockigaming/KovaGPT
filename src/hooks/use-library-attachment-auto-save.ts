@@ -50,7 +50,14 @@ export function useLibraryAttachmentAutoSave({
 
   const persist = useCallback(
     async (attachment: PendingAttachment) => {
-      if (!enabled || !principalKey || !eligibleAttachment(attachment)) return;
+      if (
+        !enabled ||
+        !principalKey ||
+        principalRef.current !== principalKey ||
+        !eligibleAttachment(attachment)
+      ) {
+        return;
+      }
 
       const operationKey = `${principalKey}:${attachment.clientId}`;
       if (completedRef.current.has(operationKey) || inFlightRef.current.has(operationKey)) {
