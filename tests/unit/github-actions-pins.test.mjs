@@ -51,8 +51,7 @@ const approvedActions = new Map([
   ],
 ]);
 
-const actionReference =
-  /^\s*(?:-\s*)?uses:\s+([^@\s]+)@([^\s#]+)(?:\s+#\s+(v\d+))?\s*$/u;
+const actionReference = /^\s*(?:-\s*)?uses:\s+([^@\s]+)@([^\s#]+)(?:\s+#\s+(v\d+))?\s*$/u;
 
 test("every workflow uses the reviewed immutable Node 24 action inventory", async () => {
   const entries = await readdir(workflowsDirectory, { withFileTypes: true });
