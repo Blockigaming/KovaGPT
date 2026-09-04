@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 /**
@@ -7,9 +8,8 @@ import { waitForKovaHydration } from "./hydration";
  * On touch/phone/tablet layouts the selector opens a bottom sheet; on
  * desktop pointer layouts it opens the popover.
  */
-test("model selector opens (bottom sheet on touch, popover on desktop)", async ({
-  page,
-}, testInfo) => {
+test("model selector opens (bottom sheet on touch, popover on desktop)", async ({ page }) => {
+  await installAuthenticatedFixture(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
@@ -18,7 +18,7 @@ test("model selector opens (bottom sheet on touch, popover on desktop)", async (
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(
     trigger,
-    "the primary chat composer must expose its truthful model selector",
+    "the authenticated primary chat composer must expose its truthful model selector",
   ).toBeVisible();
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
