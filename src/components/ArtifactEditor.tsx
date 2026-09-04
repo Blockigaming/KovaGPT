@@ -94,6 +94,7 @@ export function ArtifactEditor({
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastRecordedValueRef = useRef(initialContent);
+  const lastScheduledValueRef = useRef(initialContent);
   const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -118,6 +119,7 @@ export function ArtifactEditor({
   useEffect(() => {
     if (open) {
       lastRecordedValueRef.current = initialContent;
+      lastScheduledValueRef.current = initialContent;
       setValue(initialContent);
       setCopied(false);
       setSaved(false);
@@ -168,6 +170,7 @@ export function ArtifactEditor({
             setValue((current) => {
               if (current !== initialContent) return current;
               lastRecordedValueRef.current = accepted.content;
+              lastScheduledValueRef.current = accepted.content;
               return accepted.content;
             });
           }
@@ -226,11 +229,15 @@ export function ArtifactEditor({
   };
 
   useEffect(() => {
-    if (!open || value === lastRecordedValueRef.current) return;
+    // Compare with the latest scheduled snapshot, not only the last completed
+    // write. If edit A is in flight and the user reverts to the prior value,
+    // that revert still needs to queue behind A.
+    if (!open || value === lastScheduledValueRef.current) return;
     let cancelled = false;
     const snapshot = value;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
+      lastScheduledValueRef.current = snapshot;
       setSaveState("saving");
       void (async () => {
         // Persist first, then label the entry honestly: only a resolved server
@@ -257,6 +264,9 @@ export function ArtifactEditor({
             if (!cancelled) setHistoryError(null);
           } catch (error) {
             if (!cancelled) {
+              // The failed snapshot is no longer queued. Restore the durable
+              // comparison point so a later edit-and-revert can retry it.
+              lastScheduledValueRef.current = lastRecordedValueRef.current;
               setHistoryError(
                 error instanceof Error
                   ? error.message

@@ -79,6 +79,25 @@ test("Canvas serializes accepted autosaves so an older request cannot win", () =
   );
 });
 
+test("Canvas queues a revert behind an in-flight edit", () => {
+  assert.match(editor, /const lastScheduledValueRef = useRef\(initialContent\)/u);
+  assert.match(editor, /value === lastScheduledValueRef\.current/u);
+  const scheduledAt = editor.indexOf("lastScheduledValueRef.current = snapshot;");
+  const queuedAt = editor.indexOf("autosaveQueueRef.current.enqueue", scheduledAt);
+  assert.ok(scheduledAt >= 0);
+  assert.ok(queuedAt > scheduledAt);
+  const autosaveStart = editor.indexOf("useEffect(() => {", editor.indexOf("exportDocument"));
+  const debounceStart = editor.indexOf("const timer =", autosaveStart);
+  assert.doesNotMatch(
+    editor.slice(autosaveStart, debounceStart),
+    /value === lastRecordedValueRef\.current/u,
+  );
+  assert.match(
+    editor,
+    /catch \(error\)[\s\S]{0,300}lastScheduledValueRef\.current = lastRecordedValueRef\.current/u,
+  );
+});
+
 test("Canvas Improve uses a real text selection and refuses an empty request", () => {
   assert.match(editor, /textareaRef\.current\?\.selectionStart/);
   assert.match(editor, /textareaRef\.current\?\.selectionEnd/);

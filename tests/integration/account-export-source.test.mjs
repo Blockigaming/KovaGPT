@@ -95,8 +95,11 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(accountRoute, /account_export_cleanup_pending/u);
   assert.match(accountRoute, /account_export_cleanup_failed/u);
   assert.match(cleanup, /begin_account_export_account_deletion/u);
-  assert.match(cleanup, /discoverAccountExportJobIds/u);
-  assert.match(cleanup, /job\.status === "processing"/u);
+  assert.match(cleanup, /discoverAccountExportJobIds\(userId, remaining\)/u);
+  assert.match(cleanup, /MAX_DELETION_CLEANUPS_PER_REQUEST = 25/u);
+  assert.match(cleanup, /\.not\("storage_path", "is", null\)/u);
+  assert.match(cleanup, /hasProcessingAccountExportJob/u);
+  assert.doesNotMatch(cleanup, /\.range\(0, 999\)/u);
   assert.match(cleanup, /cancel_account_export_account_deletion/u);
   assert.match(accountRoute, /cleanupOwnedStorageBeforeAccountDeletion/u);
   assert.match(accountRoute, /releaseAccountExportDeletionFence\(auth\.userId\)/u);

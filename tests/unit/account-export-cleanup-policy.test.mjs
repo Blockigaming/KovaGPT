@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { cleanupAccountExportJobs } from "../../src/lib/account-export-cleanup-policy.mjs";
+import {
+  cleanupAccountExportJobs,
+  selectAccountExportCleanupIds,
+} from "../../src/lib/account-export-cleanup-policy.mjs";
 
 test("cleanup never finalizes retry metadata before object removal succeeds", async () => {
   const calls = [];
@@ -56,4 +59,13 @@ test("cleanup deduplicates discovered database and storage job identifiers", asy
   );
   assert.deepEqual(cleared, ["job-1", "job-2"]);
   assert.deepEqual(finalized, ["job-1", "job-2"]);
+});
+
+test("cleanup selection stays bounded when historical jobs exceed a thousand", () => {
+  const databaseIds = Array.from({ length: 1_005 }, (_, index) => `db-${index}`);
+  const selected = selectAccountExportCleanupIds(databaseIds, ["db-0", "storage-orphan"], 25);
+
+  assert.equal(selected.length, 25);
+  assert.deepEqual(selected, databaseIds.slice(0, 25));
+  assert.deepEqual(selectAccountExportCleanupIds([], ["storage-orphan"], 25), ["storage-orphan"]);
 });

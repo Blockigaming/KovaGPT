@@ -12,11 +12,15 @@ import {
   sanitizeAccountExportValue,
   serializeAccountExport,
 } from "@/lib/account-export-policy.mjs";
-import { cleanupAccountExportJobs } from "@/lib/account-export-cleanup-policy.mjs";
+import {
+  cleanupAccountExportJobs,
+  selectAccountExportCleanupIds,
+} from "@/lib/account-export-cleanup-policy.mjs";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
 const MAX_EMBEDDED_FILE_BYTES = 32 * 1024 * 1024;
+const MAX_DELETION_CLEANUPS_PER_REQUEST = 25;
 
 type ExportRow = Record<string, unknown>;
 type QueryError = { message: string; code?: string | null };
@@ -25,6 +29,7 @@ type SingleResult = { data: ExportRow | null; error: QueryError | null };
 type ExportQuery = {
   select(columns?: string): ExportQuery;
   eq(column: string, value: unknown): ExportQuery;
+  not(column: string, operator: string, value: unknown): ExportQuery;
   in(column: string, values: unknown[]): ExportQuery;
   lt(column: string, value: unknown): ExportQuery;
   order(column: string, options?: { ascending?: boolean }): ExportQuery;
@@ -103,49 +108,64 @@ export async function clearAccountExportArtifacts(userId: string, jobId: string)
   }
 }
 
-async function discoverAccountExportJobIds(userId: string): Promise<string[]> {
+async function discoverAccountExportJobIds(userId: string, limit: number): Promise<string[]> {
   const discovered: string[] = [];
-  for (let offset = 0; offset < 1_000; offset += 100) {
-    const listed = await admin.storage.from(EXPORT_BUCKET).list(userId, { limit: 100, offset });
-    if (listed.error || !listed.data) throw exportError("account_export_storage_unavailable");
-    for (const entry of listed.data) {
-      if (
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-          entry.name,
-        )
-      ) {
-        throw exportError("account_export_artifact_name_invalid");
-      }
-      discovered.push(entry.name);
+  if (limit < 1) return discovered;
+  const listed = await admin.storage.from(EXPORT_BUCKET).list(userId, { limit, offset: 0 });
+  if (listed.error || !listed.data) throw exportError("account_export_storage_unavailable");
+  for (const entry of listed.data) {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        entry.name,
+      )
+    ) {
+      throw exportError("account_export_artifact_name_invalid");
     }
-    if (listed.data.length < 100) return discovered;
+    discovered.push(entry.name);
   }
-  throw exportError("account_export_artifact_limit_exceeded");
+  return discovered;
 }
 
 type CleanupJob = {
   id: string;
-  status: string;
 };
 
 async function listAccountExportCleanupJobs(userId: string): Promise<CleanupJob[]> {
   const result = await admin
     .from("account_export_jobs")
-    .select("id,status")
+    .select("id")
     .eq("user_id", userId)
-    .range(0, 999);
+    .not("storage_path", "is", null)
+    .order("id", { ascending: true })
+    .range(0, MAX_DELETION_CLEANUPS_PER_REQUEST - 1);
   if (result.error || !result.data) throw exportError("account_export_cleanup_unavailable");
-  if (result.data.length >= 1_000) throw exportError("account_export_artifact_limit_exceeded");
-  return result.data.flatMap((row) =>
-    typeof row.id === "string"
-      ? [
-          {
-            id: row.id,
-            status: typeof row.status === "string" ? row.status : "invalid",
-          },
-        ]
-      : [],
-  );
+  return result.data.flatMap((row) => (typeof row.id === "string" ? [{ id: row.id }] : []));
+}
+
+async function hasProcessingAccountExportJob(userId: string): Promise<boolean> {
+  const result = await admin
+    .from("account_export_jobs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "processing")
+    .range(0, 0);
+  if (result.error || !result.data) throw exportError("account_export_cleanup_unavailable");
+  return result.data.length > 0;
+}
+
+async function hasAccountExportCleanupWork(userId: string): Promise<boolean> {
+  const database = await admin
+    .from("account_export_jobs")
+    .select("id")
+    .eq("user_id", userId)
+    .not("storage_path", "is", null)
+    .range(0, 0);
+  if (database.error || !database.data) throw exportError("account_export_cleanup_unavailable");
+  if (database.data.length > 0) return true;
+
+  const storage = await admin.storage.from(EXPORT_BUCKET).list(userId, { limit: 1, offset: 0 });
+  if (storage.error || !storage.data) throw exportError("account_export_storage_unavailable");
+  return storage.data.length > 0;
 }
 
 export async function finalizeAccountExportArtifactCleanup(
@@ -179,21 +199,27 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
   });
   if (fenced.error) throw exportError("account_export_cleanup_unavailable");
 
-  const jobs = await listAccountExportCleanupJobs(userId);
-  if (jobs.some((job) => job.status === "processing")) return { ready: false };
+  if (await hasProcessingAccountExportJob(userId)) return { ready: false };
 
-  const jobIds = [
-    ...new Set([...jobs.map((job) => job.id), ...(await discoverAccountExportJobIds(userId))]),
-  ];
+  // Clean a bounded page on each retry. Historical rows whose artifacts were
+  // already finalized do not block deletion, and rows with artifacts advance
+  // naturally once finalize clears storage_path.
+  const jobs = await listAccountExportCleanupJobs(userId);
+  const remaining = MAX_DELETION_CLEANUPS_PER_REQUEST - jobs.length;
+  const discovered = await discoverAccountExportJobIds(userId, remaining);
+  const jobIds = selectAccountExportCleanupIds(
+    jobs.map((job) => job.id),
+    discovered,
+    MAX_DELETION_CLEANUPS_PER_REQUEST,
+  );
   const complete = await cleanupAccountExportJobs(jobIds, {
     clear: (jobId) => clearAccountExportArtifacts(userId, jobId),
     finalize: (jobId) => finalizeAccountExportArtifactCleanup(userId, jobId),
   });
   if (!complete) return { ready: false };
 
-  const after = await listAccountExportCleanupJobs(userId);
-  if (after.some((job) => job.status === "processing")) return { ready: false };
-  return { ready: (await discoverAccountExportJobIds(userId)).length === 0 };
+  if (await hasProcessingAccountExportJob(userId)) return { ready: false };
+  return { ready: !(await hasAccountExportCleanupWork(userId)) };
 }
 
 /** Releases the export fence when account deletion leaves the Auth user active. */

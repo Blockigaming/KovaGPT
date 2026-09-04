@@ -5,3 +5,9 @@ export function cleanupAccountExportJobs(
     finalize(jobId: string): Promise<boolean>;
   },
 ): Promise<boolean>;
+
+export function selectAccountExportCleanupIds(
+  databaseIds: string[],
+  storageIds: string[],
+  limit: number,
+): string[];
