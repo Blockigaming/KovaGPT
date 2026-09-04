@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 90,
-  "latest": "20260903220000_project_templates.sql",
+  "count": 91,
+  "latest": "20260904100000_agent_team_atomic_terminal_controls.sql",
   "migrations": [
     {
       "order": 1,
@@ -1855,6 +1855,20 @@
         "project_template_audit_actor_created_idx",
         "project_template_mutations_created_idx"
       ]
+    },
+    {
+      "order": 91,
+      "filename": "20260904100000_agent_team_atomic_terminal_controls.sql",
+      "timestamp": "20260904100000",
+      "sha256": "238d285165ced92aa45f44b0bc1e5b75ba630b94b0c82cdba85e9310b1475b98",
+      "tables": [],
+      "functions": ["control_disabled_agent_team_run"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }
