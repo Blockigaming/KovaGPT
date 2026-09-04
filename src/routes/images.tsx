@@ -496,6 +496,11 @@ function ImagesPage() {
     }
     historyRef.current = nextHistory;
     setHistory(nextHistory);
+    if (resultHistoryId === id) {
+      setResult(null);
+      setResultPrompt("");
+      setResultHistoryId(null);
+    }
   }
 
   async function saveGeneratedImage(item: HistoryItem, options: { automatic?: boolean } = {}) {
@@ -543,6 +548,7 @@ function ImagesPage() {
       if (!response.ok) throw new Error("Could not read the generated image");
       const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
       if (!contentType.toLowerCase().startsWith("image/")) {
+        await response.body?.cancel().catch(() => undefined);
         throw new Error("Image copy response was invalid");
       }
       const source = await readImageDownloadBlob(response, contentType);
@@ -603,6 +609,7 @@ function ImagesPage() {
         !contentType.toLowerCase().startsWith("image/") ||
         (Number.isFinite(declaredLength) && declaredLength > MAX_IMAGE_DOWNLOAD_BYTES)
       ) {
+        await response.body?.cancel().catch(() => undefined);
         throw new Error("Image download response was invalid");
       }
       const blob = await readImageDownloadBlob(response, contentType);
@@ -1111,7 +1118,11 @@ function ImagesPage() {
           } catch {
             /* ignore */
           }
+          historyRef.current = [];
           setHistory([]);
+          setResult(null);
+          setResultPrompt("");
+          setResultHistoryId(null);
         }}
       />
 
