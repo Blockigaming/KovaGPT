@@ -47,6 +47,7 @@ test("email producers and documented environment use the verified sender domain"
   for (const key of [
     "KOVA_EMAIL_QUEUE_ENABLED",
     "RESEND_API_KEY",
+    "RESEND_WEBHOOK_SECRET",
     "EMAIL_SENDER_DOMAINS",
     "EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS",
     "EMAIL_WORKER_MAX_ATTEMPTS",
@@ -54,4 +55,50 @@ test("email producers and documented environment use the verified sender domain"
     assert.match(environment, new RegExp(`^${key}=`, "m"));
     assert.ok(docs.includes(`\`${key}\``) || docs.includes(`\`${key}=`));
   }
+});
+
+test("Resend delivery reconciliation is signed, replay-safe, and suppression-first", () => {
+  const route = read("src/routes/api/public/email/webhook.ts");
+  const verifier = read("src/lib/resend-webhook.mjs");
+  const migration = read(
+    "supabase/migrations/20260904210000_resend_webhook_integrity.sql",
+  );
+  const docs = read("docs/email-worker.md");
+
+  for (const contract of [
+    "readUtf8BodyBounded",
+    "svix-id",
+    "svix-timestamp",
+    "svix-signature",
+    "RESEND_WEBHOOK_SECRET",
+    "verifyResendWebhookSignature",
+    "process_resend_webhook_event",
+    "p_payload_sha256",
+    "resend_webhook_replay_conflict",
+    "Retry-After",
+  ]) {
+    assert.ok(route.includes(contract), `missing webhook route contract: ${contract}`);
+  }
+  assert.doesNotMatch(route, /event\.to|data\.to|recipient_email/);
+  assert.match(verifier, /crypto\.subtle\.verify\("HMAC"/);
+  assert.match(verifier, /Math\.abs\([\s\S]*timestampSeconds\)[\s\S]*toleranceSeconds/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.email_webhook_events/);
+  assert.match(migration, /payload_sha256 text NOT NULL/);
+  assert.match(migration, /ON CONFLICT \(event_id\) DO NOTHING/);
+  assert.match(
+    migration,
+    /metadata ->> 'provider_id' = p_provider_message_id/,
+  );
+  assert.match(migration, /ON CONFLICT \(email\) DO NOTHING/);
+  assert.match(migration, /'provider_suppression'/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.process_resend_webhook_event[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.process_resend_webhook_event[\s\S]*TO service_role/,
+  );
+  assert.match(docs, /\/api\/public\/email\/webhook/);
+  assert.match(docs, /event-supplied recipients and subjects are never trusted/);
 });
