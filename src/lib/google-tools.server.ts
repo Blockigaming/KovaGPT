@@ -17,6 +17,7 @@ import {
   logAudit,
 } from "@/lib/google-oauth.server";
 import {
+  encodeMimeTextBody,
   foldEmailAddressHeader,
   validateSupportedGoogleWrite,
 } from "@/lib/google-write-validation.server.mjs";
@@ -306,6 +307,8 @@ export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]
 const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const CAL = "https://www.googleapis.com/calendar/v3";
 const DRIVE = "https://www.googleapis.com/drive/v3";
+const GOOGLE_WRITE_TIMEOUT_MS = 25_000;
+const STALE_PROCESSING_MS = GOOGLE_WRITE_TIMEOUT_MS + 10_000;
 
 function headerValue(headers: Array<{ name: string; value: string }> | undefined, name: string) {
   if (!headers) return "";
@@ -745,6 +748,12 @@ export async function stagePendingAction(
 ): Promise<PendingAction> {
   await assertLockdownAllows(admin(), userId, "connector_write");
   const validated = validateSupportedWrite(tool, args);
+  const connection = await getGoogleConnection(userId);
+  const stagedGoogleSub =
+    connection && typeof connection.google_sub === "string" ? connection.google_sub : "";
+  if (!stagedGoogleSub) {
+    throw new Error("Reconnect Google before preparing this action.");
+  }
   const { summary, preview } = summarizeWriteTool(tool, validated);
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
@@ -753,6 +762,7 @@ export async function stagePendingAction(
       tool,
       args: validated as never,
       summary,
+      result: { staged_google_sub: stagedGoogleSub },
     } as never)
     .select("id")
     .single();
@@ -782,7 +792,7 @@ export async function executePendingAction(
   const db = admin();
   const { data: row, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .select("id, user_id, tool, args, status, expires_at, result")
+    .select("id, user_id, tool, args, status, expires_at, created_at, result")
     .eq("id", actionId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -791,6 +801,7 @@ export async function executePendingAction(
     user_id: string;
     status: string;
     expires_at: string;
+    created_at: string;
     args?: unknown;
     tool: string;
     result?: unknown;
@@ -804,8 +815,36 @@ export async function executePendingAction(
       storedResult && typeof storedResult.text === "string" ? storedResult.text : "";
     return { ok: true, result_text: storedText || "Action already completed." };
   }
-  if (pendingRow.status === "processing")
-    return { ok: false, error: "Action is already being processed." };
+  if (pendingRow.status === "processing") {
+    const processingResult = pendingRow.result as { processing_started_at?: unknown } | null;
+    const startedAt =
+      processingResult && typeof processingResult.processing_started_at === "string"
+        ? processingResult.processing_started_at
+        : pendingRow.created_at;
+    const stale =
+      Number.isFinite(new Date(startedAt).getTime()) &&
+      Date.now() - new Date(startedAt).getTime() > STALE_PROCESSING_MS;
+    if (!stale) return { ok: false, error: "Action is already being processed." };
+
+    const { data: recovered, error: recoveryError } = await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "failed", result: { error: "abandoned_processing" } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    if (recoveryError || !recovered) {
+      return {
+        ok: false,
+        error: "KovaGPT could not safely recover this action. Check Google before retrying.",
+      };
+    }
+    return {
+      ok: false,
+      error: "KovaGPT could not confirm whether the action completed. Check Google before retrying.",
+    };
+  }
   if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
   try {
     await assertLockdownAllows(db, userId, "connector_write");
@@ -854,11 +893,17 @@ export async function executePendingAction(
   // same event twice. Only the request whose UPDATE affects a row proceeds.
   const { data: claimed, error: claimError } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .update({ status: "processing" })
+    .update({
+      status: "processing",
+      result: {
+        ...((pendingRow.result as Record<string, unknown> | null) ?? {}),
+        processing_started_at: new Date().toISOString(),
+      },
+    })
     .eq("id", actionId)
     .eq("user_id", userId)
     .eq("status", "pending")
-    .select("id, tool, args")
+    .select("id, tool, args, result")
     .maybeSingle();
   if (claimError) {
     return {
@@ -868,7 +913,7 @@ export async function executePendingAction(
   }
   if (!claimed) return { ok: false, error: "Action is already being processed." };
 
-  const claimedAction = claimed as { tool?: unknown; args?: unknown };
+  const claimedAction = claimed as { tool?: unknown; args?: unknown; result?: unknown };
   const claimedTool = typeof claimedAction.tool === "string" ? claimedAction.tool : "";
   let a: WriteArgs;
   try {
@@ -896,13 +941,40 @@ export async function executePendingAction(
     };
   }
 
+  const claimResult = claimedAction.result as { staged_google_sub?: unknown } | null;
+  const stagedGoogleSub =
+    claimResult && typeof claimResult.staged_google_sub === "string"
+      ? claimResult.staged_google_sub
+      : "";
+  if (!stagedGoogleSub) {
+    await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "cancelled", result: { error: "missing_staged_google_identity" } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    return {
+      ok: false,
+      error: "This action predates account binding. Prepare it again.",
+    };
+  }
+
   let token: string;
   try {
-    token = await getValidGoogleAccessToken(userId);
-  } catch {
+    token = await getValidGoogleAccessToken(userId, stagedGoogleSub);
+  } catch (error) {
+    const connectionChanged =
+      error instanceof Error && error.message === "google_connection_changed";
     const { data: released, error: releaseError } = await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
-      .update({ status: "pending" })
+      .update({
+        status: connectionChanged ? "cancelled" : "pending",
+        result: connectionChanged
+          ? { error: "google_connection_changed" }
+          : { staged_google_sub: stagedGoogleSub },
+      })
       .eq("id", actionId)
       .eq("user_id", userId)
       .eq("status", "processing")
@@ -917,7 +989,9 @@ export async function executePendingAction(
     }
     return {
       ok: false,
-      error: "Google needs to be reconnected before this action can run.",
+      error: connectionChanged
+        ? "The connected Google account changed. Prepare this action again."
+        : "Google needs to be reconnected before this action can run.",
     };
   }
   const H: HeadersInit = {
@@ -939,11 +1013,12 @@ export async function executePendingAction(
         bcc ? foldEmailAddressHeader("Bcc", bcc) : "",
         `Subject: ${subject}`,
         "Content-Type: text/plain; charset=UTF-8",
+        "Content-Transfer-Encoding: base64",
         "MIME-Version: 1.0",
       ]
         .filter(Boolean)
         .join("\r\n");
-      const raw = encodeBase64Url(`${headers}\r\n\r\n${body}`);
+      const raw = encodeBase64Url(`${headers}\r\n\r\n${encodeMimeTextBody(body)}`);
       const sending = claimedTool === "gmail_send";
       const response = await fetch(
         sending ? `${GMAIL}/users/me/messages/send` : `${GMAIL}/users/me/drafts`,
@@ -951,6 +1026,7 @@ export async function executePendingAction(
           method: "POST",
           headers: H,
           body: JSON.stringify(sending ? { raw } : { message: { raw } }),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
         },
       );
       if (!response.ok) {
@@ -979,6 +1055,7 @@ export async function executePendingAction(
         method: "POST",
         headers: H,
         body: JSON.stringify(eventBody),
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error("calendar_create_failed");
       const created = (await response.json().catch(() => ({}))) as {
