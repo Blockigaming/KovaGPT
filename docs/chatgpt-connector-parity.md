@@ -1,13 +1,13 @@
 # ChatGPT connector parity — Project Nexus
 
-Audit date: **2026-07-27**. Gmail direct-send behavior reverified **2026-09-04**. ChatGPT now presents integrations as Apps; availability varies by plan, region, administrator policy, and the live app directory. This report therefore separates a connector family from the entitlement that makes it visible.
+Audit date: **2026-07-27**. ChatGPT now presents integrations as Apps; availability varies by plan, region, administrator policy, and the live app directory. This report therefore separates a connector family from the entitlement that makes it visible.
 
 ## Production status
 
 | ChatGPT app / connector family  | KovaGPT status                                | What is real today                                                                         | Remaining dependency                                                                |
 | ------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | Google Drive                    | **Already implemented**                       | Google OAuth, scope consent, token status, reconnect, revoke, and Drive-backed use in chat | None beyond deployment OAuth credentials                                            |
-| Gmail                           | **Already implemented**                       | Search/read plus draft creation and send; each write is validated, staged, shown in full, and executed only after explicit confirmation | None beyond deployment OAuth credentials                                            |
+| Gmail                           | **Already implemented**                       | Same linked Google account with Gmail-specific consent and chat handoff                    | None beyond deployment OAuth credentials                                            |
 | Google Calendar                 | **Already implemented**                       | Same linked Google account with Calendar-specific consent and chat handoff                 | None beyond deployment OAuth credentials                                            |
 | Microsoft SharePoint / OneDrive | **OAuth + backend needed**                    | No connector is exposed                                                                    | Microsoft Entra app, tenant consent, encrypted token vault, Graph sync/indexing     |
 | Outlook Mail / Calendar         | **OAuth + backend needed**                    | No connector is exposed                                                                    | Microsoft Entra app, Graph scopes, encrypted token vault                            |
