@@ -758,14 +758,24 @@ function ImagesPage() {
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <button
                         type="button"
-                        onClick={() =>
-                          saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
+                        onClick={() => {
+                          if (resultHistoryItem) void saveGeneratedImage(resultHistoryItem);
+                        }}
+                        disabled={
+                          !resultHistoryItem ||
+                          resultHistoryItem.libraryStatus === "saving" ||
+                          resultHistoryItem.libraryStatus === "saved"
                         }
-                        disabled={savingImage}
                         className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <Bookmark className="h-4 w-4" />{" "}
-                        {savingImage ? "Saving…" : "Save to Library"}
+                        {resultHistoryItem?.libraryStatus === "saving"
+                          ? "Saving…"
+                          : resultHistoryItem?.libraryStatus === "saved"
+                            ? "Saved to Library"
+                            : resultHistoryItem?.libraryStatus === "error"
+                              ? "Retry Library save"
+                              : "Save to Library"}
                       </button>
                       <button
                         type="button"
@@ -992,11 +1002,21 @@ function ImagesPage() {
                   <RefreshCw className="h-4 w-4" /> Generate again
                 </button>
                 <button
-                  onClick={() => saveGeneratedImage(lightbox)}
-                  disabled={savingImage}
+                  onClick={() => void saveGeneratedImage(lightbox)}
+                  disabled={
+                    lightboxLibraryStatus === "saving" ||
+                    lightboxLibraryStatus === "saved"
+                  }
                   className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
-                  <Bookmark className="h-4 w-4" /> Save
+                  <Bookmark className="h-4 w-4" />{" "}
+                  {lightboxLibraryStatus === "saving"
+                    ? "Saving…"
+                    : lightboxLibraryStatus === "saved"
+                      ? "Saved"
+                      : lightboxLibraryStatus === "error"
+                        ? "Retry save"
+                        : "Save"}
                 </button>
                 <a
                   href={lightbox.imageUrl}
