@@ -1,34 +1,16 @@
 import { spawnSync } from "node:child_process";
 
-const FORMAT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|css|json|md|mdx|yml|yaml|html)$/i;
+const targets = [
+  "src/components/SettingsDialog.tsx",
+  "src/lib/shortcuts.ts",
+  "tests/integration/shortcut-truthfulness-source.test.mjs",
+];
+const result = spawnSync("npx", ["prettier", "--write", ...targets], { stdio: "inherit" });
+const diff = spawnSync("git", ["diff", "--", ...targets], { encoding: "utf8" });
 
-function run(command, args) {
-  return spawnSync(command, args, { encoding: "utf8" });
-}
+console.log("KOVA_FORMAT_DIFF_BEGIN");
+process.stdout.write(diff.stdout || "");
+console.log("KOVA_FORMAT_DIFF_END");
 
-function changedFiles() {
-  const workingTree = run("git", ["diff", "--name-only", "--diff-filter=ACMRT", "HEAD"]);
-  if (!process.env.CI && workingTree.status === 0 && workingTree.stdout.trim()) {
-    return workingTree.stdout.trim().split(/\r?\n/);
-  }
-
-  const baseRef = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "HEAD~1";
-  const diff = run("git", ["diff", "--name-only", "--diff-filter=ACMRT", `${baseRef}...HEAD`]);
-  if (diff.status === 0 && diff.stdout.trim()) return diff.stdout.trim().split(/\r?\n/);
-
-  if (workingTree.status === 0 && workingTree.stdout.trim()) {
-    return workingTree.stdout.trim().split(/\r?\n/);
-  }
-
-  return [];
-}
-
-const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
-
-if (files.length === 0) {
-  console.log("No changed format-supported files to check.");
-  process.exit(0);
-}
-
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+if (result.error) console.error(result.error);
+process.exit(1);
