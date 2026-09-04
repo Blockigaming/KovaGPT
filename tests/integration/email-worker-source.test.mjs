@@ -43,6 +43,8 @@ test("email producers and documented environment use the verified sender domain"
 
   assert.match(producer, /notify\.kovagpt\.com/);
   assert.match(producer, /process\.env\.KOVA_EMAIL_FROM/);
+  assert.match(producer, /enqueue_tracked_email/);
+  assert.doesNotMatch(producer, /\.from\("email_send_log"\)\.insert/);
   assert.doesNotMatch(producer, /noreply@\$\{FROM_DOMAIN\}/);
   for (const key of [
     "KOVA_EMAIL_QUEUE_ENABLED",
@@ -83,6 +85,19 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   assert.match(verifier, /crypto\.subtle\.verify\("HMAC"/);
   assert.match(verifier, /Math\.abs\([\s\S]*timestampSeconds\)[\s\S]*toleranceSeconds/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.email_webhook_events/);
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.enqueue_tracked_email/);
+  assert.match(
+    migration,
+    /INSERT INTO public\.email_send_log[\s\S]*pgmq\.send\(p_queue_name, p_payload\)/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.enqueue_tracked_email[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.enqueue_tracked_email[\s\S]*TO service_role/,
+  );
   assert.match(migration, /payload_sha256 text NOT NULL/);
   assert.match(migration, /ON CONFLICT \(event_id\) DO NOTHING/);
   assert.match(
