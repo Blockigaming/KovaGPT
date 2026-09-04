@@ -64,9 +64,10 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
         return value;
       });
       latestPending = { generation: writeGeneration, snapshot, promise: result };
-      void result.finally(() => {
+      const clearPending = () => {
         if (latestPending?.promise === result) latestPending = undefined;
-      });
+      };
+      void result.then(clearPending, clearPending);
       return result;
     },
   };
