@@ -77,6 +77,15 @@ test("passkey sign-in and credential management stay deployment-gated and WebAut
   assert.match(panel, /auth\.passkey\.update\(/);
   assert.match(panel, /auth\.passkey\.delete\(/);
   assert.match(panel, /providers\.resolved && providers\.passkeys/);
+  assert.match(panel, /const canLoad = enabled;/);
+  assert.doesNotMatch(panel, /const canLoad = enabled && supported/);
+  assert.match(panel, /you can still review, rename, or remove registered/);
+  assert.match(panel, /disabled=\{Boolean\(busy\) \|\| !supported\}/);
+  assert.match(panel, /const mutationInFlight = useRef\(false\)/);
+  assert.match(panel, /if \(mutationInFlight\.current\) return false/);
+  assert.match(panel, /if \(!beginMutation\(editing\.id\)\) return/);
+  assert.match(panel, /if \(!beginMutation\(id\)\) return/);
+  assert.doesNotMatch(panel, /disabled=\{itemBusy \|\| !editing\.name\.trim\(\)\}/);
   assert.doesNotMatch(panel, /toast\.error\([^\n]*error\.message/);
 });
 
