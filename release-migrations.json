@@ -1753,7 +1753,7 @@
       "order": 88,
       "filename": "20260903204500_account_export_deletion_fence.sql",
       "timestamp": "20260903204500",
-      "sha256": "3733d68b8c60a5aa51bc67e05e0436610d139d920b9cbe9fa5476ed4d8cbe08a",
+      "sha256": "02ce679bddf85327bcdce0d3a0055de1e66d2b80f848e24872ddda3fae15cf6c",
       "tables": ["account_deletion_fences"],
       "functions": [
         "kova_private",
