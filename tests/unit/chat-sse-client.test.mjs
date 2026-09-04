@@ -42,10 +42,9 @@ test("chat SSE accepts a generated-image frame above the legacy 2 MiB cap", asyn
     choices: [{ index: 0, delta: { kind: "image", content: image } }],
   };
   let received;
-  await consumeChatSse(
-    chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`]),
-    { onEvent: (value) => (received = value) },
-  );
+  await consumeChatSse(chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`]), {
+    onEvent: (value) => (received = value),
+  });
   assert.equal(received.choices[0].delta.content.length, image.length);
 });
 
@@ -67,9 +66,7 @@ test("chat SSE preserves typed provider error events", async () => {
     ],
   };
   await assert.rejects(
-    consumeChatSse(
-      chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`]),
-    ),
+    consumeChatSse(chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`])),
     (error) => {
       assert.ok(error instanceof ChatStreamError);
       assert.equal(error.message, "KovaGPT took too long to respond.");
@@ -94,16 +91,13 @@ test("chat SSE rejects malformed JSON instead of reinserting it forever", async 
     },
   });
 
-  await assert.rejects(
-    consumeChatSse(stream),
-    (error) => {
-      assert.ok(error instanceof ChatStreamError);
-      assert.equal(error.code, "chat_stream_malformed_json");
-      assert.equal(error.retryable, true);
-      assert.equal(error.category, "streaming_interruption");
-      return true;
-    },
-  );
+  await assert.rejects(consumeChatSse(stream), (error) => {
+    assert.ok(error instanceof ChatStreamError);
+    assert.equal(error.code, "chat_stream_malformed_json");
+    assert.equal(error.retryable, true);
+    assert.equal(error.category, "streaming_interruption");
+    return true;
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(cancelled, true);
 });
@@ -111,9 +105,7 @@ test("chat SSE rejects malformed JSON instead of reinserting it forever", async 
 test("chat SSE rejects a clean EOF without DONE", async () => {
   await assert.rejects(
     consumeChatSse(
-      chunkedStream([
-        'data: {"choices":[{"index":0,"delta":{"content":"partial"}}]}\n\n',
-      ]),
+      chunkedStream(['data: {"choices":[{"index":0,"delta":{"content":"partial"}}]}\n\n']),
     ),
     (error) => {
       assert.equal(error.code, "chat_stream_missing_done");
@@ -135,16 +127,13 @@ test("chat SSE times out when a transport never produces its next chunk", async 
     },
   });
 
-  await assert.rejects(
-    consumeChatSse(stream, { idleTimeoutMs: 20 }),
-    (error) => {
-      assert.equal(error.code, "chat_stream_timeout");
-      assert.equal(error.status, 504);
-      assert.equal(error.category, "streaming_interruption");
-      assert.equal(error.retryable, true);
-      return true;
-    },
-  );
+  await assert.rejects(consumeChatSse(stream, { idleTimeoutMs: 20 }), (error) => {
+    assert.equal(error.code, "chat_stream_timeout");
+    assert.equal(error.status, 504);
+    assert.equal(error.category, "streaming_interruption");
+    assert.equal(error.retryable, true);
+    return true;
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(cancelled, true);
 });
