@@ -16,7 +16,10 @@ the local suppression table, and requires a pre-existing `email_send_log` record
 carry the queue payload's stable Resend `Idempotency-Key`. A provider success is recorded before
 the PGMQ row is deleted; if deletion fails, the next lease reconciles the terminal log without
 sending again. Retryable failures remain under PGMQ visibility timeout and move to the matching DLQ
-after the bounded attempt count. Expired messages are never sent.
+after the bounded attempt count. Provider Retry-After windows are persisted in `email_send_state`
+for every replica and also extend the claimed row lease. Startup rejects any batch/concurrency/
+request-timeout combination whose worst-case sequential waves exceed the configured lease.
+Expired messages are never sent.
 
 No recipient, subject, HTML, text, API key, or service-role key is written to process logs. Logs use
 queue/message identifiers and stable error codes.
@@ -26,10 +29,13 @@ queue/message identifiers and stable error codes.
 - `SUPABASE_URL`: production project origin (HTTPS).
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only queue/table access.
 - `RESEND_API_KEY`: server-only Resend sending key.
-- `RESEND_WEBHOOK_SECRET`: server-only signing secret for the Resend webhook.
-- `KOVA_EMAIL_QUEUE_ENABLED=true`: explicit execution gate.
+- `KOVA_EMAIL_QUEUE_ENABLED=true`: explicit queue producer and worker execution gate.
 - `EMAIL_SENDER_DOMAINS=notify.kovagpt.com`: verified sender-domain allowlist.
 - `KOVA_PUBLIC_ORIGIN=https://kovagpt.com`: unsubscribe-link origin.
+
+The web application separately requires `RESEND_WEBHOOK_SECRET` to verify delivery events. Do
+not copy `RESEND_API_KEY` into the web container; the sender key belongs only to the dedicated
+worker.
 
 Optional bounded tuning:
 
@@ -37,7 +43,7 @@ Optional bounded tuning:
 - `EMAIL_WORKER_POLL_MS` (default `2000`, range 250–60000)
 - `EMAIL_WORKER_BATCH_SIZE` (default `10`, range 1–100)
 - `EMAIL_WORKER_CONCURRENCY` (default `2`, range 1–10)
-- `EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS` (default `120`, range 30–900)
+- `EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS` (default `300`, range 30–900; must cover the validated batch execution budget)
 - `EMAIL_WORKER_REQUEST_TIMEOUT_MS` (default `10000`, range 1000–30000)
 - `EMAIL_WORKER_MAX_ATTEMPTS` (default `5`, range 1–20)
 - `EMAIL_WORKER_AUTH_TTL_MINUTES` (default `15`)
@@ -71,10 +77,14 @@ Build `worker/Dockerfile.email` into an immutable image tied to the reviewed sou
 as a distinct Azure Container App with one minimum replica and the readiness path above. Inject
 secrets through the approved Azure secret store; never bake them into the image or parameters.
 
-Before enabling queue production, apply the reviewed email migrations and verify the four PGMQ RPCs
-are executable only by `service_role`. Then send Resend's safe delivered, bounced, complained, and
-suppressed test addresses and verify send-log/DLQ/suppression behavior. Configuring the Resend API key,
-verified domain, webhook, and deploying the exact image are owner/provider actions.
+Before enabling queue production, apply the reviewed email migrations and verify the queue RPCs are
+executable only by `service_role`. The migration unschedules every historical
+`process-email-queue` cron entry so the retired Edge Function dispatcher cannot race the dedicated
+worker. Deploy the immutable worker revision, wait for its `/readyz` to return 200, configure the
+signed webhook, and only then enable the web application's queue producer. Send Resend's safe
+delivered, bounced, complained, and suppressed test addresses and verify send-log/DLQ/suppression
+behavior. Configuring the Resend API key, verified domain, webhook, and deploying the exact image are
+owner/provider actions.
 
 Rollback by setting `KOVA_EMAIL_QUEUE_ENABLED=false` on the worker revision or scaling the dedicated
 worker to zero. Queued messages remain durable and invisible leases expire; do not delete queues.
