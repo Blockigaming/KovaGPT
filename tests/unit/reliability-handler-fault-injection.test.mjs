@@ -138,7 +138,7 @@ test("bounded response reader cancels streamed overflow at the byte limit", asyn
 
   const acceptedChunks = [new Uint8Array([1, 2]), new Uint8Array([3, 4, 5, 6])];
   const accepted = {
-    headers: new Headers({ "content-length": "6" }),
+    headers: new Headers({ "content-length": "0006" }),
     body: {
       getReader: () => ({
         read: async () =>
@@ -151,6 +151,58 @@ test("bounded response reader cancels streamed overflow at the byte limit", asyn
     },
   };
   assert.deepEqual(Array.from(await readResponseBytesBounded(accepted, 6)), [1, 2, 3, 4, 5, 6]);
+});
+
+test("bounded response reader rejects truncated identity bodies", async () => {
+  let released = false;
+  const chunks = [new Uint8Array([1, 2, 3, 4])];
+  const response = {
+    headers: new Headers({ "content-length": "6" }),
+    body: {
+      getReader: () => ({
+        read: async () =>
+          chunks.length > 0 ? { done: false, value: chunks.shift() } : { done: true },
+        cancel: async () => undefined,
+        releaseLock: () => {
+          released = true;
+        },
+      }),
+    },
+  };
+
+  await assert.rejects(
+    readResponseBytesBounded(response, 6),
+    (error) =>
+      error instanceof BodyReadError &&
+      error.status === 502 &&
+      error.code === "content_length_mismatch",
+  );
+  assert.equal(released, true);
+
+  await assert.rejects(
+    readResponseBytesBounded(
+      { headers: new Headers({ "content-length": "1" }), body: null },
+      6,
+    ),
+    (error) => error instanceof BodyReadError && error.code === "content_length_mismatch",
+  );
+});
+
+test("bounded response reader allows decoded length to differ from encoded wire length", async () => {
+  const chunks = [new Uint8Array([1, 2, 3, 4, 5, 6])];
+  const response = {
+    headers: new Headers({ "content-encoding": "gzip", "content-length": "4" }),
+    body: {
+      getReader: () => ({
+        read: async () =>
+          chunks.length > 0 ? { done: false, value: chunks.shift() } : { done: true },
+        cancel: async () => undefined,
+        releaseLock: () => undefined,
+      }),
+    },
+  };
+
+  assert.deepEqual(Array.from(await readResponseBytesBounded(response, 6)), [1, 2, 3, 4, 5, 6]);
 });
 
 test("bounded UTF-8 reader counts bytes, validates length, and decodes valid text", async () => {
