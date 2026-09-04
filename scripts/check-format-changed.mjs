@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 
 const FORMAT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|css|json|md|mdx|yml|yaml|html)$/i;
 
@@ -27,7 +26,7 @@ function changedFiles() {
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
 const target = "src/components/SettingsDialog.tsx";
 const result = spawnSync("npx", ["prettier", "--write", target], { stdio: "inherit" });
-console.log(`---BEGIN FORMAT:${target}---`);
-console.log(readFileSync(target, "utf8"));
-console.log(`---END FORMAT:${target}---`);
+console.log(`---BEGIN FORMAT-DIFF:${target}---`);
+spawnSync("git", ["diff", "--", target], { stdio: "inherit" });
+console.log(`---END FORMAT-DIFF:${target}---`);
 process.exit(result.status === 0 ? 1 : (result.status ?? 1));
