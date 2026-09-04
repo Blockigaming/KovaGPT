@@ -328,7 +328,28 @@ function GitHubManager() {
   const reload = useCallback(() => {
     setLoadError(false);
     return load()
-      .then(setData)
+      .then((next) => {
+        const activeAccountIds = new Set(
+          next.accounts
+            .filter((account) => ["connected", "degraded"].includes(account.status))
+            .map((account) => account.id),
+        );
+        const activeInstallationIds = new Set(
+          next.installations
+            .filter(
+              (installation) =>
+                activeAccountIds.has(installation.account_id) && !installation.suspended_at,
+            )
+            .map((installation) => String(installation.id)),
+        );
+        const activeRepositoryIds = new Set(
+          next.repositories
+            .filter((repository) => activeInstallationIds.has(String(repository.installation_id)))
+            .map((repository) => repository.id),
+        );
+        setSelected((current) => current.filter((id) => activeRepositoryIds.has(id)));
+        setData(next);
+      })
       .catch(() => {
         setLoadError(true);
         toast.error("GitHub status unavailable");
@@ -527,11 +548,14 @@ function GitHubManager() {
                 if (!disconnectAccount) return;
                 const accountId = disconnectAccount.id;
                 setDisconnectAccount(null);
+                setSelected([]);
+                setBusy(true);
                 void disconnect({
                   data: { accountId, removeData: false },
                 })
                   .then(reload)
-                  .catch(() => toast.error("GitHub account could not be disconnected"));
+                  .catch(() => toast.error("GitHub account could not be disconnected"))
+                  .finally(() => setBusy(false));
               }}
             >
               Disconnect account

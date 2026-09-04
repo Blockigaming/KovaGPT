@@ -58,9 +58,23 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /createHash\("sha256"\)/u);
   assert.match(worker, /OAuth credentials, access tokens/u);
   assert.match(worker, /assertClaimStillOwnsUpload/u);
-  assert.doesNotMatch(
-    worker.slice(worker.indexOf("async function processClaimed"), worker.indexOf("const path =")),
-    /clearAccountExportArtifacts/u,
+  const process = worker.slice(worker.indexOf("async function processClaimed"));
+  assert.ok(
+    process.indexOf("assertClaimStillOwnsUpload(job, workerId)") <
+      process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)"),
+    "the current lease must be verified before clearing stale retry artifacts",
+  );
+  assert.ok(
+    process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)") <
+      process.indexOf("const path = accountExportStoragePath"),
+    "stale artifacts must be cleared before a retry creates a new path",
+  );
+  assert.ok(
+    process.lastIndexOf(
+      "assertClaimStillOwnsUpload(job, workerId)",
+      process.indexOf("const path = accountExportStoragePath"),
+    ) > process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)"),
+    "cleanup latency must be followed by another lease check at the upload boundary",
   );
   assert.match(worker, /storage[\s\S]*\.remove\(\[uploadedPath\]\)/u);
 });
@@ -95,7 +109,8 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(migration, /account_deletion_fences/u);
   assert.match(migration, /cancel_account_export_account_deletion/u);
   assert.match(migration, /before insert on public\.account_export_jobs/u);
-  assert.match(migration, /set status = 'canceled', updated_at = now\(\)/u);
+  assert.match(migration, /set status = 'canceled',[\s\S]*updated_at = now\(\)/u);
+  assert.match(migration, /lease_expires_at is null or lease_expires_at <= now\(\)/u);
   assert.doesNotMatch(migration, /set status = 'canceled',[\s\S]{0,180}storage_path\s*=\s*null/u);
 });
 

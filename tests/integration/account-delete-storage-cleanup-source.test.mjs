@@ -28,4 +28,7 @@ test("account Storage cleanup keeps Library last and releases metadata after byt
   assert.ok(metadataDeleteAt > storageRemoveAt);
   assert.doesNotMatch(cleanup, /MAX_STORAGE_ENTRIES|entry_limit_exceeded/u);
   assert.match(cleanup, /offset: 0/u);
+  assert.match(cleanup, /projects!inner\(owner_id\)/u);
+  assert.match(cleanup, /\.eq\("projects\.owner_id", userId\)/u);
+  assert.match(cleanup, /parts\[0\] === row\.uploaded_by/u);
 });

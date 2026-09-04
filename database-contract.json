@@ -1345,9 +1345,9 @@
     "execute on function public.has_active_subscription(uuid, text) from public, anon, authenticated",
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated",
     "invites, but only a verified recipient can accept or decline.\n\ncreate or replace function public.accept_project_invite(_invite_id uuid)\nreturns uuid\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog\nas $$\ndeclare\n  caller_id uuid := auth.uid()",
-    "queued/terminal job downloads, but do not steal a processing lease.\n  -- The deletion route waits for that worker to settle or for the existing\n  -- lease reaper to recover it before storage cleanup and auth deletion.\n  update public.account_export_jobs\n  set status = 'canceled', updated_at = now()\n  where user_id = p_user_id and status not in ('processing', 'expired')",
+    "queued/terminal job downloads and recover processing jobs whose\n  -- leases have already expired. A genuinely live worker keeps its lease so\n  -- deletion cannot race an upload",
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "f7f598b171907833b6fd85d5a560aa8aefbdf272b7676425f93c1513474d1550"
+  "sha256": "49f0423e7fd2b332a6403df97dced8834e7e4c1aa914a80f2bad19ab17388ae5"
 }

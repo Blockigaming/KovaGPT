@@ -460,6 +460,15 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
     // deletion/cancellation leaves worker_id in place as a barrier until this
     // worker acknowledges that it can no longer upload.
     await assertClaimStillOwnsUpload(job, workerId);
+    // A previous attempt may have uploaded successfully before settlement and
+    // then failed to remove that unreferenced object. Clear the job prefix
+    // while this lease is still verified so retries cannot accumulate private
+    // account snapshots.
+    await clearAccountExportArtifacts(job.user_id, job.id);
+    // Prefix cleanup can involve multiple Storage round trips. Recheck the
+    // lease at the final write boundary so cleanup latency cannot let an
+    // expired or canceled worker upload a new artifact.
+    await assertClaimStillOwnsUpload(job, workerId);
     const path = accountExportStoragePath(job.user_id, job.id, randomUUID());
     const upload = await admin.storage.from(EXPORT_BUCKET).upload(path, artifact.bytes, {
       contentType: "application/json",

@@ -23,6 +23,7 @@ type ProjectFileRow = {
   id?: unknown;
   project_id?: unknown;
   storage_path?: unknown;
+  uploaded_by?: unknown;
 };
 type ProjectFileQueryResult = {
   data: ProjectFileRow[] | null;
@@ -33,7 +34,7 @@ type ProjectFileDeleteQuery = {
 };
 type ProjectFileQuery = {
   select(columns: string): ProjectFileQuery;
-  eq(column: "uploaded_by", value: string): ProjectFileQuery;
+  eq(column: "uploaded_by" | "projects.owner_id", value: string): ProjectFileQuery;
   order(column: "id", options: { ascending: true }): ProjectFileQuery;
   limit(count: number): PromiseLike<ProjectFileQueryResult>;
   delete(): ProjectFileDeleteQuery;
@@ -158,10 +159,7 @@ export async function clearStoragePrefix(
   return { complete: true, removed };
 }
 
-function validatedProjectFile(
-  row: ProjectFileRow,
-  userId: string,
-): {
+function validatedProjectFile(row: ProjectFileRow): {
   id: string;
   bucket: string;
   path: string;
@@ -171,6 +169,8 @@ function validatedProjectFile(
     !UUID.test(row.id) ||
     typeof row.project_id !== "string" ||
     !UUID.test(row.project_id) ||
+    typeof row.uploaded_by !== "string" ||
+    !UUID.test(row.uploaded_by) ||
     typeof row.storage_path !== "string" ||
     row.storage_path.length === 0 ||
     row.storage_path.length > 1_024 ||
@@ -190,7 +190,7 @@ function validatedProjectFile(
   // Agent deliverables promoted into a Project historically kept their source
   // object path. The bucket name was dropped, but owner-rooted evidence paths
   // remain distinguishable from canonical Project paths.
-  if (parts[0] === userId) {
+  if (parts[0] === row.uploaded_by) {
     return { id: row.id, bucket: AGENT_EVIDENCE_BUCKET, path: row.storage_path };
   }
   throw cleanupError("account_project_storage_entry_invalid");
@@ -205,17 +205,31 @@ async function cleanupOwnedProjectFiles(
   let removed = 0;
 
   for (let batch = 0; batch < maxRemoveBatches; batch += 1) {
-    const listed = await projectFiles(client)
-      .select("id,project_id,storage_path")
+    let listed = await projectFiles(client)
+      .select("id,project_id,storage_path,uploaded_by")
       .eq("uploaded_by", userId)
       .order("id", { ascending: true })
       .limit(STORAGE_BATCH_SIZE);
     if (listed.error || !Array.isArray(listed.data)) {
       throw cleanupError("account_project_storage_list_failed");
     }
+    // Deleting an owner cascades every Project row, including metadata for
+    // objects uploaded by collaborators. Fetch those rows through an inner
+    // owner join so their bytes are removed before the cascade erases the only
+    // Storage paths that identify them.
+    if (listed.data.length === 0) {
+      listed = await projectFiles(client)
+        .select("id,project_id,storage_path,uploaded_by,projects!inner(owner_id)")
+        .eq("projects.owner_id", userId)
+        .order("id", { ascending: true })
+        .limit(STORAGE_BATCH_SIZE);
+      if (listed.error || !Array.isArray(listed.data)) {
+        throw cleanupError("account_project_storage_list_failed");
+      }
+    }
     if (listed.data.length === 0) return { complete: true, removed };
 
-    const entries = listed.data.map((row) => validatedProjectFile(row, userId));
+    const entries = listed.data.map((row) => validatedProjectFile(row));
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {
       const paths = byBucket.get(entry.bucket) ?? [];
@@ -240,14 +254,23 @@ async function cleanupOwnedProjectFiles(
   }
 
   const remaining = await projectFiles(client)
-    .select("id,project_id,storage_path")
+    .select("id,project_id,storage_path,uploaded_by")
     .eq("uploaded_by", userId)
     .order("id", { ascending: true })
     .limit(1);
   if (remaining.error || !Array.isArray(remaining.data)) {
     throw cleanupError("account_project_storage_list_failed");
   }
-  return { complete: remaining.data.length === 0, removed };
+  if (remaining.data.length > 0) return { complete: false, removed };
+  const ownedProjectRemaining = await projectFiles(client)
+    .select("id,project_id,storage_path,uploaded_by,projects!inner(owner_id)")
+    .eq("projects.owner_id", userId)
+    .order("id", { ascending: true })
+    .limit(1);
+  if (ownedProjectRemaining.error || !Array.isArray(ownedProjectRemaining.data)) {
+    throw cleanupError("account_project_storage_list_failed");
+  }
+  return { complete: ownedProjectRemaining.data.length === 0, removed };
 }
 
 /**

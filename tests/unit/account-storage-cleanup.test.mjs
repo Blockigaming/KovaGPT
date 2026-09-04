@@ -117,7 +117,7 @@ function accountClient({ projectRows = [], projectRemoveError = false, events = 
     ),
     "agent-evidence": mockBucket(
       rows
-        .filter((row) => row.storage_path.startsWith(`${USER_ID}/`))
+        .filter((row) => row.storage_path.startsWith(`${row.uploaded_by}/`))
         .map((row) => row.storage_path)
         .concat([`${USER_ID}/unpromoted.json`]),
       { onRemove: () => events.push("agent-evidence") },
@@ -140,7 +140,8 @@ function accountClient({ projectRows = [], projectRemoveError = false, events = 
         select() {
           return query;
         },
-        eq(_column, value) {
+        eq(column, value) {
+          query.column = column;
           query.userId = value;
           return query;
         },
@@ -149,7 +150,13 @@ function accountClient({ projectRows = [], projectRemoveError = false, events = 
         },
         async limit(count) {
           return {
-            data: rows.filter((row) => row.uploaded_by === query.userId).slice(0, count),
+            data: rows
+              .filter((row) =>
+                query.column === "projects.owner_id"
+                  ? row.project_owner_id === query.userId
+                  : row.uploaded_by === query.userId,
+              )
+              .slice(0, count),
             error: null,
           };
         },
@@ -178,6 +185,7 @@ test("account deletion exhausts Project and agent Storage before touching Librar
         project_id: PROJECT_ID,
         storage_path: `${PROJECT_ID}/notes.txt`,
         uploaded_by: USER_ID,
+        project_owner_id: USER_ID,
       },
     ],
   });
@@ -200,6 +208,7 @@ test("account deletion never removes another user's Project objects", async () =
         project_id: OTHER_PROJECT_ID,
         storage_path: otherPath,
         uploaded_by: OTHER_USER_ID,
+        project_owner_id: OTHER_USER_ID,
       },
     ],
   });
@@ -209,6 +218,36 @@ test("account deletion never removes another user's Project objects", async () =
     removed: 2,
   });
   assert.deepEqual([...client.buckets["project-files"].objects], [otherPath]);
+});
+
+test("account deletion removes collaborator files from projects owned by the deleting user", async () => {
+  const canonicalPath = `${PROJECT_ID}/collaborator.txt`;
+  const promotedPath = `${OTHER_USER_ID}/promoted.json`;
+  const client = accountClient({
+    projectRows: [
+      {
+        id: OTHER_FILE_ID,
+        project_id: PROJECT_ID,
+        storage_path: canonicalPath,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: USER_ID,
+      },
+      {
+        id: "723e4567-e89b-42d3-a456-426614174000",
+        project_id: PROJECT_ID,
+        storage_path: promotedPath,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: USER_ID,
+      },
+    ],
+  });
+
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: true,
+    removed: 4,
+  });
+  assert.equal(client.buckets["project-files"].objects.has(canonicalPath), false);
+  assert.equal(client.buckets["agent-evidence"].objects.has(promotedPath), false);
 });
 
 test("a Project Storage failure leaves Library objects untouched", async () => {
@@ -222,6 +261,7 @@ test("a Project Storage failure leaves Library objects untouched", async () => {
         project_id: PROJECT_ID,
         storage_path: `${PROJECT_ID}/notes.txt`,
         uploaded_by: USER_ID,
+        project_owner_id: USER_ID,
       },
     ],
   });

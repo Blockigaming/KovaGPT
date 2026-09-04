@@ -236,3 +236,34 @@ test("account deletion fences new exports without stealing an active worker leas
     await database.close();
   }
 });
+
+test("account deletion recovers an expired worker lease without waiting for the scheduler", async () => {
+  const database = await createDatabase();
+  try {
+    const inserted = await database.query(
+      "INSERT INTO public.account_export_jobs(user_id) VALUES ($1) RETURNING id",
+      [userId],
+    );
+    const jobId = inserted.rows[0].id;
+    await database.query("SELECT * FROM public.claim_account_export_jobs($1,1,180)", [workerId]);
+    await database.query(
+      "UPDATE public.account_export_jobs SET lease_expires_at=now()-interval '1 second' WHERE id=$1",
+      [jobId],
+    );
+
+    const fenced = await database.query(
+      "SELECT public.begin_account_export_account_deletion($1) AS canceled",
+      [userId],
+    );
+    assert.deepEqual(fenced.rows, [{ canceled: 1 }]);
+    const recovered = await database.query(
+      "SELECT status,worker_id,lease_expires_at FROM public.account_export_jobs WHERE id=$1",
+      [jobId],
+    );
+    assert.deepEqual(recovered.rows, [
+      { status: "canceled", worker_id: null, lease_expires_at: null },
+    ]);
+  } finally {
+    await database.close();
+  }
+});

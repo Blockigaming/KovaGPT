@@ -56,12 +56,18 @@ begin
   values (p_user_id, now(), now())
   on conflict (user_id) do update set updated_at = now();
 
-  -- Revoke queued/terminal job downloads, but do not steal a processing lease.
-  -- The deletion route waits for that worker to settle or for the existing
-  -- lease reaper to recover it before storage cleanup and auth deletion.
+  -- Revoke queued/terminal job downloads and recover processing jobs whose
+  -- leases have already expired. A genuinely live worker keeps its lease so
+  -- deletion cannot race an upload; a crashed worker cannot block deletion
+  -- forever merely because the separate export scheduler is unavailable.
   update public.account_export_jobs
-  set status = 'canceled', updated_at = now()
-  where user_id = p_user_id and status not in ('processing', 'expired');
+  set status = 'canceled',
+      worker_id = case when status = 'processing' then null else worker_id end,
+      lease_expires_at = case when status = 'processing' then null else lease_expires_at end,
+      updated_at = now()
+  where user_id = p_user_id
+    and status <> 'expired'
+    and (status <> 'processing' or lease_expires_at is null or lease_expires_at <= now());
   get diagnostics v_count = row_count;
   return v_count;
 end;
