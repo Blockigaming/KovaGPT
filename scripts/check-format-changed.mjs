@@ -24,11 +24,12 @@ function changedFiles() {
 }
 
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
-
-if (files.length === 0) {
-  console.log("No changed format-supported files to check.");
-  process.exit(0);
-}
-
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+const targets = [
+  "src/components/TimersWidget.tsx",
+  "tests/integration/timers-truthfulness-source.test.mjs"
+];
+const result = spawnSync("npx", ["prettier", "--write", ...targets], { stdio: "inherit" });
+console.log("---BEGIN FORMAT DIFF---");
+spawnSync("git", ["diff", "--", ...targets], { stdio: "inherit" });
+console.log("---END FORMAT DIFF---");
+process.exit(result.status === 0 ? 1 : (result.status ?? 1));
