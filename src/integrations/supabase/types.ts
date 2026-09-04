@@ -907,6 +907,7 @@ export type Database = {
         Row: {
           content_sha256: string | null;
           created_at: string;
+          delete_attempt_id: string | null;
           id: string;
           idempotency_key: string | null;
           kind: string;
@@ -926,6 +927,7 @@ export type Database = {
         Insert: {
           content_sha256?: string | null;
           created_at?: string;
+          delete_attempt_id?: string | null;
           id?: string;
           idempotency_key?: string | null;
           kind?: string;
@@ -945,6 +947,7 @@ export type Database = {
         Update: {
           content_sha256?: string | null;
           created_at?: string;
+          delete_attempt_id?: string | null;
           id?: string;
           idempotency_key?: string | null;
           kind?: string;
