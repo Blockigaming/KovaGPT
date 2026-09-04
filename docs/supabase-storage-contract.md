@@ -14,17 +14,22 @@ to a remote project is a separate, operator-controlled release step.
 The migration also replaces the two historical `agent-evidence` read policies with one
 authenticated, owner-folder-scoped policy. It does not add browser upload privileges.
 
-## Deliberate `project-files` hold
+## `project-files` rollout contract
 
-The migration does **not** create `project-files`. The current project workspace uploads any
-browser-selected file, falls back to `application/octet-stream`, and enforces no per-file size
-limit. Choosing a bucket limit or MIME allowlist without first adding and approving an equivalent
-runtime contract would be guesswork. Before enabling this bucket:
+`20260904200000_project_file_upload_integrity.sql` creates or reconciles the private
+`project-files` bucket at a 10 MiB per-object limit. The application accepts signature-verified
+PNG, JPEG, WebP, GIF and PDF files plus bounded UTF-8 text/code, Markdown, CSV/TSV, and valid JSON.
+HTML and source code are stored as inert `text/plain`, not active browser content.
 
-1. choose a product-level per-file limit and supported MIME set;
-2. enforce them before upload and again at the trusted server boundary;
-3. add matching bucket configuration and cross-user RLS tests; and
-4. verify upload, signed read, update, and delete with two authenticated users.
+Browser roles can read only objects whose first path segment belongs to a Project they can access.
+They cannot insert, update, or delete bucket objects or Project file metadata. A verified,
+rate-limited server endpoint performs type inspection, quota reservation, an idempotent
+project-row-locked count reservation, canonical-path upload, and durable finalization. Deletion
+removes Storage first and then atomically removes metadata and returns charged bytes.
+
+Applying the migration remains an operator-controlled release action. Before enabling the product
+surface in production, apply the migration before the matching application revision, run the
+isolated database contract, and verify signed read/upload/delete with two authenticated test users.
 
 ## Future-object default privileges
 
