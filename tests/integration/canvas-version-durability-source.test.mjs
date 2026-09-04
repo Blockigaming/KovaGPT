@@ -90,11 +90,17 @@ test("Canvas Improve uses a real text selection and refuses an empty request", (
   assert.match(editor, /if \(!trimmed\)/);
 });
 
-test("Canvas reads only the resolved principal's supported workspace default", () => {
+test("Canvas applies only the resolved principal's supported workspace default", () => {
   assert.match(editor, /loadPrincipalStoredRecord\(/u);
   assert.match(editor, /WORKSPACE_DEFAULTS_KEY_BASE/u);
-  assert.match(editor, /principal\.userKey/u);
-  assert.match(editor, /migrateLegacyGuest: principal\.userKey === null/u);
+  assert.match(editor, /if \(!open \|\| !isLoaded\) return/u);
+  assert.match(editor, /migrateLegacyGuest: userKey === null/u);
+  assert.match(editor, /\}, \[open, isLoaded, userKey, kind, initialMode\]\)/u);
+  const preferenceEffect = editor.slice(
+    editor.indexOf("// Authentication may resolve"),
+    editor.indexOf("// Load durable versions"),
+  );
+  assert.doesNotMatch(preferenceEffect, /setValue|autosaveQueueRef\.current\.reset/u);
   assert.doesNotMatch(editor, /localStorage\.getItem\("kova-workspace-defaults-v1"\)/u);
 });
 
