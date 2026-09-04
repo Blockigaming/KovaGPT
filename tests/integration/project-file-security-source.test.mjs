@@ -9,6 +9,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   const ui = read("src/routes/projects.$projectId.tsx");
   const workspace = read("src/lib/project-workspace.functions.ts");
   const auth = read("src/lib/api-auth.server.ts");
+  const lifecycle = route + read("src/lib/project-file-maintenance.server.ts");
 
   for (const contract of [
     "requireVerifiedUser",
@@ -42,7 +43,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     'presence === "unknown"',
     'presence === "present"',
   ]) {
-    assert.ok(route.includes(contract), `missing route contract: ${contract}`);
+    assert.ok(lifecycle.includes(contract), `missing lifecycle contract: ${contract}`);
   }
   assert.doesNotMatch(route, /try_add_storage_bytes/);
   assert.doesNotMatch(route, /enforceQuota/);
