@@ -71,7 +71,25 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
 ];
 
 const KEY_BASE = "kova-shortcuts";
+const MAX_STORED_COMBO_LENGTH = 80;
+const KNOWN_SHORTCUT_IDS = new Set<ShortcutId>(
+  DEFAULT_SHORTCUTS.map((shortcut) => shortcut.id),
+);
 type ShortcutUserKey = string | null | undefined;
+type StoredShortcut = Pick<Shortcut, "id" | "combo">;
+
+function isStoredShortcut(value: unknown): value is StoredShortcut {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { id?: unknown; combo?: unknown };
+  return (
+    typeof candidate.id === "string" &&
+    KNOWN_SHORTCUT_IDS.has(candidate.id as ShortcutId) &&
+    typeof candidate.combo === "string" &&
+    candidate.combo.length > 0 &&
+    candidate.combo.length <= MAX_STORED_COMBO_LENGTH &&
+    candidate.combo === candidate.combo.trim()
+  );
+}
 
 export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
@@ -79,40 +97,53 @@ export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
   try {
     const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return DEFAULT_SHORTCUTS;
-    const saved = JSON.parse(raw) as Partial<Shortcut>[];
-    return DEFAULT_SHORTCUTS.map((d) => {
-      const found = saved.find((s) => s.id === d.id);
-      return found?.combo ? { ...d, combo: found.combo } : d;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_SHORTCUTS;
+    const saved = parsed.filter(isStoredShortcut);
+    return DEFAULT_SHORTCUTS.map((shortcut) => {
+      const found = saved.find((candidate) => candidate.id === shortcut.id);
+      return found ? { ...shortcut, combo: found.combo } : shortcut;
     });
   } catch {
     return DEFAULT_SHORTCUTS;
   }
 }
 
-export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]) {
+export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]): boolean {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
   const principal = browserStoragePrincipal(userKey);
-  if (!key || !principal) return;
+  const storage = safeBrowserStorage("localStorage");
+  if (!key || !principal || !storage) return false;
+
+  const saved: StoredShortcut[] = list.map(({ id, combo }) => ({ id, combo }));
+  if (
+    saved.length !== DEFAULT_SHORTCUTS.length ||
+    !saved.every(isStoredShortcut) ||
+    new Set(saved.map(({ id }) => id)).size !== saved.length
+  ) {
+    return false;
+  }
+
   try {
-    safeBrowserStorage("localStorage")?.setItem(
-      key,
-      JSON.stringify(list.map((s) => ({ id: s.id, combo: s.combo }))),
-    );
+    storage.setItem(key, JSON.stringify(saved));
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
-export function resetShortcuts(userKey: ShortcutUserKey) {
+export function resetShortcuts(userKey: ShortcutUserKey): boolean {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
   const principal = browserStoragePrincipal(userKey);
-  if (!key || !principal) return;
+  const storage = safeBrowserStorage("localStorage");
+  if (!key || !principal || !storage) return false;
   try {
-    safeBrowserStorage("localStorage")?.removeItem(key);
+    storage.removeItem(key);
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
