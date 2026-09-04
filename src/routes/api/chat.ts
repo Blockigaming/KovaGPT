@@ -586,12 +586,29 @@ export const Route = createFileRoute("/api/chat")({
             let lockdownBlocksNetwork = false;
             if (auth) {
               try {
-                lockdownBlocksNetwork =
-                  (await preflight.run(
-                    "lockdown",
-                    () => readLockdownMode(auth.supabaseAdmin, auth.userId),
-                    { required: false },
-                  )) ?? true;
+                const lockdownResult = await preflight.run(
+                  "lockdown",
+                  () => readLockdownMode(auth.supabaseAdmin, auth.userId),
+                  { required: false },
+                );
+                if (typeof lockdownResult !== "boolean") {
+                  lockdownBlocksNetwork = true;
+                  if (explicitLockdownCapability) {
+                    return Response.json(
+                      {
+                        error: "Lockdown Mode could not be verified. Try again shortly.",
+                        code: "lockdown_status_unavailable",
+                        retryable: true,
+                      },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    );
+                  }
+                } else {
+                  lockdownBlocksNetwork = lockdownResult;
+                }
               } catch (error) {
                 lockdownBlocksNetwork = true;
                 if (explicitLockdownCapability) {
@@ -693,27 +710,30 @@ export const Route = createFileRoute("/api/chat")({
                     }),
                 );
               } catch (error) {
-                if (error instanceof ResearchPersistenceAuthorizationError) {
-                  if (error.status === 503) {
+                const authorizationError =
+                  error instanceof ChatPreflightError ? error.cause : error;
+                if (authorizationError instanceof ResearchPersistenceAuthorizationError) {
+                  if (authorizationError.status === 503) {
                     logSafeFailure(
                       "warn",
                       "[chat] research authorization unavailable",
                       logContext,
                       {
-                        status: error.status,
+                        status: authorizationError.status,
                         category: "server",
-                        code: error.code,
+                        code: authorizationError.code,
                       },
                     );
                   }
                   return Response.json(
-                    { error: error.publicMessage },
+                    { error: authorizationError.publicMessage },
                     {
-                      status: error.status,
+                      status: authorizationError.status,
                       headers: { "Cache-Control": "no-store" },
                     },
                   );
                 }
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("error", "[chat] research authorization failed", logContext, {
                   status: 503,
                   category: "server",
@@ -1328,10 +1348,15 @@ export const Route = createFileRoute("/api/chat")({
                 );
               }
               usageEventId = acquisition.eventId;
-            } catch {
+            } catch (error) {
+              if (error instanceof ChatPreflightError) throw error;
               return Response.json(
-                { error: "Usage authorization is temporarily unavailable." },
-                { status: 503 },
+                {
+                  error: "Usage authorization is temporarily unavailable.",
+                  code: "usage_authorization_unavailable",
+                  retryable: true,
+                },
+                { status: 503, headers: { "Retry-After": "5" } },
               );
             }
 
