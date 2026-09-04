@@ -205,9 +205,12 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
       const concurrent = await findOwnedImage();
       if (concurrent) return { id: concurrent.id };
 
-      // Best-effort cleanup only after proving this user has no durable row
-      // for the idempotency key. Never delete a successful concurrent save.
-      await context.supabase.storage.from(BUCKET).remove([path]);
+      // Random paths are owned exclusively by this request and can be cleaned up.
+      // A deterministic idempotency path may already have been overwritten by a
+      // successful concurrent request after our lookup, so never delete it here.
+      if (!data.idempotencyKey) {
+        await context.supabase.storage.from(BUCKET).remove([path]);
+      }
       console.error("[saveImageToLibrary:insert]", error?.message);
       throw new Error("Failed to save");
     }
