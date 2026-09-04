@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { BoundedJsonError, readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 import {
+  foldEmailAddressHeader,
   GoogleWriteValidationError,
   validateSupportedGoogleWrite,
 } from "../../src/lib/google-write-validation.server.mjs";
@@ -187,6 +188,23 @@ test("confirmed send validation uses the same strict MIME envelope as drafts", (
         subject: "Release update",
         body: "Unsafe",
       }),
+    GoogleWriteValidationError,
+  );
+});
+
+test("recipient headers fold at address boundaries below the MIME hard limit", () => {
+  const recipients = Array.from(
+    { length: 20 },
+    (_, index) => `person-${String(index + 1).padStart(2, "0")}@example.com`,
+  ).join(", ");
+  const folded = foldEmailAddressHeader("To", recipients);
+  const lines = folded.split("\r\n");
+  assert.ok(lines.length > 1);
+  assert.ok(lines.every((line) => line.length <= 78));
+  assert.ok(lines.slice(1).every((line) => line.startsWith(" ")));
+  assert.equal(folded.replace(/\r\n /g, " "), `To: ${recipients}`);
+  assert.throws(
+    () => foldEmailAddressHeader("To", "recipient@example.com\r\nBcc: attacker@example.com"),
     GoogleWriteValidationError,
   );
 });
