@@ -39,13 +39,14 @@ export async function hashGuestIp(ip: string): Promise<string> {
 async function billingPeriod(
   db: AccountingClient,
   userId: string | null,
+  signal?: AbortSignal,
 ): Promise<[string, string]> {
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   if (!userId) return [monthStart.toISOString(), monthEnd.toISOString()];
   const nowIso = now.toISOString();
-  const { data, error } = await db
+  let periodQuery = db
     .from("subscriptions")
     .select("environment,status,current_period_start,current_period_end")
     .eq("user_id", userId)
@@ -55,6 +56,8 @@ async function billingPeriod(
     .gt("current_period_end", nowIso)
     .order("current_period_end", { ascending: false })
     .limit(5);
+  if (signal) periodQuery = periodQuery.abortSignal(signal);
+  const { data, error } = await periodQuery;
   if (error) throw new Error("billing_period_lookup_failed");
   return (
     resolveCurrentBillingPeriod(data, {
@@ -80,14 +83,15 @@ export async function acquireGeneration(input: {
   reservedTokens: number;
   estimatedCostUsd: number;
   contextTrimmed: boolean;
+  signal?: AbortSignal;
 }): Promise<Acquisition> {
   const config = getAiRuntimeConfig();
   const db = client();
-  const [periodStart, periodEnd] = await billingPeriod(db, input.userId);
+  const [periodStart, periodEnd] = await billingPeriod(db, input.userId, input.signal);
   const principalConcurrency = input.userId
     ? config.maxConcurrentPerUser
     : config.maxConcurrentPerGuest;
-  const { data, error } = await db.rpc("acquire_ai_generation", {
+  let acquisitionQuery = db.rpc("acquire_ai_generation", {
     p_request_id: input.requestId,
     p_idempotency_key: input.idempotencyKey,
     p_user_id: input.userId,
@@ -111,6 +115,8 @@ export async function acquireGeneration(input: {
     p_period_start: periodStart,
     p_period_end: periodEnd,
   });
+  if (input.signal) acquisitionQuery = acquisitionQuery.abortSignal(input.signal);
+  const { data, error } = await acquisitionQuery;
   if (error || !Array.isArray(data) || !data[0]) {
     console.error("[ai-accounting] acquire failed", {
       code: error?.code ?? null,

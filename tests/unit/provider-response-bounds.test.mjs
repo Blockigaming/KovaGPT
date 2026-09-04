@@ -161,6 +161,28 @@ test("bounded provider SSE preserves complete lines across chunk and UTF-8 bound
   assert.equal(await new Response(bounded).text(), new TextDecoder().decode(bytes));
 });
 
+test("bounded provider SSE preserves a typed provider timeout", async () => {
+  const timeout = Object.assign(new Error("provider_timeout"), {
+    name: "AbortError",
+    code: "provider_timeout",
+  });
+  const source = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"ok":true}\n\n'));
+        controller.error(timeout);
+      },
+    }),
+    { headers: SSE_HEADERS },
+  );
+  const bounded = await createBoundedProviderSseStream(source, 64);
+  await assert.rejects(new Response(bounded).text(), (error) => {
+    assert.equal(error, timeout);
+    assert.equal(error.code, "provider_timeout");
+    return true;
+  });
+});
+
 test("bounded provider SSE rejects content type, missing terminator, and overflow at a clean line", async () => {
   let invalidTypeCancelled = false;
   const invalidType = new Response(

@@ -11,7 +11,7 @@ const githubWebhook = await readFile("src/routes/api/github/webhook.ts", "utf8")
 const home = await readFile("src/routes/index.tsx", "utf8");
 
 test("AI routes reject untrusted message and attachment shapes", () => {
-  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES\)/);
+  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES, signal\)/);
   assert.match(chatIngress, /valid user or assistant role/);
   assert.match(
     chatIngress,

@@ -35,6 +35,32 @@ async function expectIngressError(request, code, status, maxBytes) {
   );
 }
 
+test("chat ingress cancels a stalled request body when its stage is aborted", async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    pull() {
+      return new Promise(() => {});
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const request = new Request("https://kovagpt.com/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+    duplex: "half",
+  });
+  const controller = new AbortController();
+  const pending = readChatRequest(request, 64, controller.signal);
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.abort(new DOMException("Request body timed out", "AbortError"));
+
+  await assert.rejects(pending, (error) => error?.name === "AbortError");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(cancelled, true);
+});
+
 test("chat ingress enforces streamed byte limits without trusting content-length", async () => {
   const encoder = new TextEncoder();
   const oversized = streamedRequest([
