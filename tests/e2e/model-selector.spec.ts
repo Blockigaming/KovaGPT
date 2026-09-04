@@ -15,23 +15,18 @@ test("model selector opens (bottom sheet on touch, popover on desktop)", async (
 
   const viewport = page.viewportSize();
   const width = viewport?.width ?? 0;
-
-  // The selector lives inside the ChatInput. On the empty-state landing it may
-  // not be present; if so, we skip.
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
-  if ((await trigger.count()) === 0) {
-    testInfo.skip(true, "Model selector not present on this route/state");
-    return;
-  }
+  await expect(
+    trigger,
+    "the primary chat composer must expose its truthful model selector",
+  ).toBeVisible();
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
   if (width < 1200) {
-    // Expect the bottom sheet to appear
     const sheet = page.locator('[data-testid="mobile-bottom-sheet"]');
     await expect(sheet).toBeVisible({ timeout: 3000 });
 
-    // Escape dismisses
     await page.keyboard.press("Escape");
     await expect(sheet).toHaveCount(0);
   } else {
