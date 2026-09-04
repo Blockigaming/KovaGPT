@@ -101,7 +101,7 @@ test("production Azure workflow is protected, OIDC-based, digest-bound, and plan
   );
   assert.match(workflow, /environment:\n      name: production/u);
   assert.match(workflow, /permissions:\n  contents: read\n  id-token: write/u);
-  assert.match(workflow, /azure\/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca/u);
+  assert.match(workflow, /azure\/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3/u);
   assert.match(workflow, /persist-credentials: false/u);
   assert.match(
     workflow,
