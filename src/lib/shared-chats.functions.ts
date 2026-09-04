@@ -33,6 +33,8 @@ const ShareSchema = z.object({
   snapshot: SnapshotSchema,
 });
 
+const SHARED_CHAT_PAGE_SIZE = 200;
+
 export const shareChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => ShareSchema.parse(input))
@@ -65,17 +67,26 @@ export const shareChat = createServerFn({ method: "POST" })
 export const listMySharedChats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SharedChatSummary[]> => {
-    const { data, error } = await context.supabase
-      .from("shared_chats")
-      .select("id, title, recipient_email, status, created_at")
-      .eq("owner_user_id", context.userId)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (error) {
-      console.error("[listMySharedChats]", error.message);
-      throw new Error("Shared chats could not be loaded. Please try again.");
+    const sharedChats: SharedChatSummary[] = [];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("shared_chats")
+        .select("id, title, recipient_email, status, created_at")
+        .eq("owner_user_id", context.userId)
+        .neq("status", "revoked")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + SHARED_CHAT_PAGE_SIZE - 1);
+      if (error) {
+        console.error("[listMySharedChats]", error.message);
+        throw new Error("Shared chats could not be loaded. Please try again.");
+      }
+      const page = (data ?? []) as SharedChatSummary[];
+      sharedChats.push(...page);
+      if (page.length < SHARED_CHAT_PAGE_SIZE) break;
+      offset += SHARED_CHAT_PAGE_SIZE;
     }
-    return (data ?? []) as SharedChatSummary[];
+    return sharedChats;
   });
 
 export const listSharedWithMe = createServerFn({ method: "GET" })

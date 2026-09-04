@@ -157,3 +157,19 @@ test("image lightbox delegates modal lifecycle and restores intentional focus", 
   assert.match(styles, /\.image-lightbox > button:last-child/);
   assert.match(styles, /width: 2\.75rem;\s+height: 2\.75rem;/);
 });
+
+test("image history stores image blobs outside localStorage and exposes persistence limits", () => {
+  const images = read("src/routes/images.tsx");
+  const history = read("src/lib/image-history.ts");
+
+  assert.match(images, /persistImageHistoryItem\(userKey, item, HISTORY_LIMIT\)/);
+  assert.match(images, /loadImageHistory\(userKey, HISTORY_LIMIT\)/);
+  assert.match(images, /available for this session only\. Save it to Library/);
+  assert.match(images, /Save an image to Library\s+to\s+use it on other devices/);
+  assert.doesNotMatch(images, /localStorage\.setItem\(\s*HISTORY_KEY_PREFIX/);
+  assert.match(history, /indexedDB\.open\(DATABASE_NAME, DATABASE_VERSION\)/);
+  assert.match(history, /image: Blob/);
+  assert.match(history, /URL\.createObjectURL\(item\.image\)/);
+  assert.match(history, /store\.delete\(\[userKey, stale\.id\]\)/);
+  assert.match(history, /enqueueImageHistoryMutation\(userKey/);
+});

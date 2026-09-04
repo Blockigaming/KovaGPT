@@ -184,24 +184,24 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 type PortalResult = { url: string } | { error: string };
 
 // Opens the Stripe Billing Portal so users can update payment methods,
-// cancel, or view invoices. The customer id is resolved from the most
-// recent subscription row for this user + env (RLS-scoped via `context.supabase`).
+// cancel, or view invoices. The customer id is resolved from the same
+// current-subscription row used by the customer-facing billing summary
+// (RLS-scoped via `context.supabase`).
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
-    const { data: sub, error: subscriptionError } = await supabase
+    const { data: rows, error: subscriptionError } = await supabase
       .from("subscriptions")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
       .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     if (subscriptionError) {
       return { error: "Billing account couldn't be verified. Try again." };
     }
+    const sub = selectSubscriptionSummaryRow(rows ?? []);
     if (!sub?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
     }

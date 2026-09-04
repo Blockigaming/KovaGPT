@@ -3,6 +3,13 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
+import {
+  clearImageHistory,
+  deleteImageHistoryItem,
+  loadImageHistory,
+  persistImageHistoryItem,
+  type ImageHistoryItem,
+} from "@/lib/image-history";
 import { safeImageUrl } from "@/lib/safe-image-url";
 import {
   PanelLeft,
@@ -256,40 +263,92 @@ const PRESETS: Preset[] = [
   },
 ];
 
-type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
 const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
 const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
 
-function loadHistory(userKey: string | null): HistoryItem[] {
-  if (!userKey || typeof window === "undefined") return [];
+function takeLegacyHistory(userKey: string): ImageHistoryItem[] {
+  if (typeof window === "undefined") return [];
   try {
     let raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
     if (!raw) {
-      const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
-      raw = localStorage.getItem(legacyKey);
-      if (raw) {
-        localStorage.setItem(HISTORY_KEY_PREFIX + userKey, raw);
-        localStorage.removeItem(legacyKey);
-      }
+      raw = localStorage.getItem(LEGACY_HISTORY_KEY_PREFIX + userKey);
     }
+    // Image bytes now live in IndexedDB. Remove both old payloads before
+    // attempting migration so a quota failure cannot leave base64 in localStorage.
+    localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
+    localStorage.removeItem(LEGACY_HISTORY_KEY_PREFIX + userKey);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, HISTORY_LIMIT).flatMap((value): ImageHistoryItem[] => {
+      if (!value || typeof value !== "object") return [];
+      const candidate = value as Partial<ImageHistoryItem>;
+      const imageUrl = safeImageUrl(candidate.imageUrl);
+      if (!imageUrl || typeof candidate.prompt !== "string") return [];
+      return [
+        {
+          id:
+            typeof candidate.id === "string" && candidate.id.length <= 200
+              ? candidate.id
+              : crypto.randomUUID(),
+          prompt: candidate.prompt.slice(0, 2000),
+          imageUrl,
+          createdAt:
+            typeof candidate.createdAt === "number" && Number.isFinite(candidate.createdAt)
+              ? candidate.createdAt
+              : Date.now(),
+        },
+      ];
+    });
   } catch {
     return [];
   }
 }
-function saveHistory(userKey: string | null, items: HistoryItem[]) {
+
+function clearLegacyHistory(userKey: string | null) {
   if (!userKey || typeof window === "undefined") return;
   try {
-    localStorage.setItem(
-      HISTORY_KEY_PREFIX + userKey,
-      JSON.stringify(items.slice(0, HISTORY_LIMIT)),
-    );
+    if (userKey) localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
+    localStorage.removeItem(LEGACY_HISTORY_KEY_PREFIX + userKey);
   } catch {
     /*ignore*/
   }
+}
+
+async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
+  const legacy = takeLegacyHistory(userKey);
+  const migrationResults = await Promise.allSettled(
+    legacy.map((item) => persistImageHistoryItem(userKey, item, HISTORY_LIMIT)),
+  );
+  try {
+    const persisted = await loadImageHistory(userKey, HISTORY_LIMIT);
+    const persistedIds = new Set(persisted.map((item) => item.id));
+    const transientLegacy = legacy.filter(
+      (item, index) => migrationResults[index]?.status === "rejected" && !persistedIds.has(item.id),
+    );
+    return [...persisted, ...transientLegacy]
+      .sort((left, right) => right.createdAt - left.createdAt)
+      .slice(0, HISTORY_LIMIT);
+  } catch {
+    return legacy;
+  }
+}
+
+async function imageUrlForLibrary(imageUrl: string): Promise<string> {
+  if (!imageUrl.startsWith("blob:")) return imageUrl;
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error("Could not read this image from browser history");
+  const image = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("Could not prepare this image for the Library"));
+    reader.onerror = () => reject(new Error("Could not prepare this image for the Library"));
+    reader.readAsDataURL(image);
+  });
 }
 
 function ImagesPage() {
@@ -322,8 +381,8 @@ function ImagesPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
+  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+  const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
   const saveImage = useServerFn(saveImageToLibrary);
   const submittingRef = useRef(false);
@@ -339,8 +398,13 @@ function ImagesPage() {
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
   const lightboxReturnToPromptRef = useRef(false);
+  const historyObjectUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
+    let cancelled = false;
+    const historyObjectUrls = historyObjectUrlsRef.current;
+    for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
+    historyObjectUrls.clear();
     generationRef.current += 1;
     generationControllerRef.current?.abort();
     generationControllerRef.current = null;
@@ -355,30 +419,58 @@ function ImagesPage() {
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
-    setHistory(isLoaded && isSignedIn && userKey ? loadHistory(userKey) : []);
-    return () => generationControllerRef.current?.abort();
+    setHistory([]);
+    if (isLoaded && isSignedIn && userKey) {
+      void loadHistory(userKey).then((items) => {
+        const objectUrls = items.filter((item) => item.objectUrl).map((item) => item.imageUrl);
+        if (cancelled) {
+          for (const objectUrl of objectUrls) URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        for (const objectUrl of objectUrls) historyObjectUrls.add(objectUrl);
+        setHistory(items);
+      });
+    }
+    return () => {
+      cancelled = true;
+      generationControllerRef.current?.abort();
+      for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
+      historyObjectUrls.clear();
+    };
   }, [isLoaded, isSignedIn, userKey]);
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
-    const item: HistoryItem = {
+    const item: ImageHistoryItem = {
       id: crypto.randomUUID(),
       prompt: p,
       imageUrl,
       createdAt: Date.now(),
     };
+    for (const stale of history.slice(HISTORY_LIMIT - 1)) {
+      if (!stale.objectUrl) continue;
+      URL.revokeObjectURL(stale.imageUrl);
+      historyObjectUrlsRef.current.delete(stale.imageUrl);
+    }
     setHistory((prev) => {
-      const next = [item, ...prev].slice(0, HISTORY_LIMIT);
-      saveHistory(userKey, next);
-      return next;
+      return [item, ...prev].slice(0, HISTORY_LIMIT);
+    });
+    void persistImageHistoryItem(userKey, item, HISTORY_LIMIT).catch(() => {
+      toast.error("This image is available for this session only. Save it to Library to keep it.");
     });
   }
   function removeFromHistory(id: string) {
-    setHistory((prev) => {
-      const next = prev.filter((h) => h.id !== id);
-      saveHistory(userKey, next);
-      return next;
-    });
+    const removed = history.find((item) => item.id === id);
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+    if (removed?.objectUrl) {
+      URL.revokeObjectURL(removed.imageUrl);
+      historyObjectUrlsRef.current.delete(removed.imageUrl);
+    }
+    if (userKey) {
+      void deleteImageHistoryItem(userKey, id).catch(() => {
+        toast.error("This image could not be removed from browser history.");
+      });
+    }
   }
 
   async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
@@ -388,11 +480,12 @@ function ImagesPage() {
     }
     setSavingImage(true);
     try {
+      const imageUrl = await imageUrlForLibrary(item.imageUrl);
       await saveImage({
         data: {
           title: item.prompt.slice(0, 100) || "Generated image",
           prompt: item.prompt,
-          imageUrl: item.imageUrl,
+          imageUrl,
         },
       });
       toast.success("Saved to Library");
@@ -768,6 +861,12 @@ function ImagesPage() {
               >
                 Image history
               </h2>
+              {isLoaded && isSignedIn && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  This browser keeps your image history across sessions. Save an image to Library to
+                  use it on other devices.
+                </p>
+              )}
               {!isLoaded ? (
                 <div
                   role="status"
@@ -779,8 +878,8 @@ function ImagesPage() {
                 <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10">
                   <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
                   <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-                    Sign in to generate images and keep your image history available across
-                    sessions.
+                    Sign in to generate images and keep your image history in this browser across
+                    sessions. Save images to Library to use them on other devices.
                   </p>
                   <SignInButton mode="modal">
                     <Button className="mt-5 min-h-11">Sign in</Button>
@@ -870,11 +969,14 @@ function ImagesPage() {
         initialTab={settingsTab}
         returnFocusTarget={settingsReturnFocusRef.current}
         onClearAll={() => {
-          try {
-            if (userKey) localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
-          } catch {
-            /* ignore */
+          if (userKey) {
+            clearLegacyHistory(userKey);
+            void clearImageHistory(userKey).catch(() => {
+              toast.error("Browser image history could not be cleared.");
+            });
           }
+          for (const objectUrl of historyObjectUrlsRef.current) URL.revokeObjectURL(objectUrl);
+          historyObjectUrlsRef.current.clear();
           setHistory([]);
         }}
       />

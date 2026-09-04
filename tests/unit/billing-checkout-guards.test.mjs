@@ -166,13 +166,19 @@ test("subscription summary prefers an older active row over a newer expired row"
     status: "canceled",
     current_period_end: "2026-08-03T12:00:00.000Z",
     price_id: "plus_monthly",
+    stripe_customer_id: "cus_expired",
   };
   const activeOlder = {
     status: "active",
     current_period_end: "2026-10-03T12:00:00.000Z",
     price_id: "pro_monthly",
+    stripe_customer_id: "cus_active",
   };
   assert.equal(selectSummaryRow([expiredNewest, activeOlder], now).price_id, "pro_monthly");
+  assert.equal(
+    selectSummaryRow([expiredNewest, activeOlder], now).stripe_customer_id,
+    "cus_active",
+  );
   assert.equal(selectSummaryRow([expiredNewest], now), expiredNewest);
   assert.equal(selectSummaryRow([], now), null);
 
@@ -198,4 +204,12 @@ test("subscription summary prefers an older active row over a newer expired row"
   assert.doesNotMatch(summary, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
   assert.match(summary, /selectSubscriptionSummaryRow\(subscriptions, now\)/u);
   assert.match(summary, /hasVerifiedSubscriptionAccess\(row, now\)/u);
+
+  const portal = payments.slice(
+    payments.indexOf("export const createPortalSession"),
+    payments.indexOf("export type SubscriptionSummary"),
+  );
+  assert.match(portal, /selectSubscriptionSummaryRow\(rows \?\? \[\]\)/u);
+  assert.match(portal, /customer: sub\.stripe_customer_id/u);
+  assert.doesNotMatch(portal, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
 });

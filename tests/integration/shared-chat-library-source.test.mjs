@@ -51,3 +51,17 @@ test("shared-chat reads validate snapshots and revocation cannot report a zero-r
   assert.match(source, /\.eq\("owner_user_id", context\.userId\)[\s\S]{0,80}\.select\("id"\)/u);
   assert.match(source, /if \(!revoked\)/u);
 });
+
+test("owner share management paginates every non-revoked snapshot", () => {
+  const source = read("src/lib/shared-chats.functions.ts");
+  const ownerList = source.slice(
+    source.indexOf("export const listMySharedChats"),
+    source.indexOf("export const listSharedWithMe"),
+  );
+
+  assert.match(ownerList, /\.neq\("status", "revoked"\)/u);
+  assert.match(ownerList, /\.range\(offset, offset \+ SHARED_CHAT_PAGE_SIZE - 1\)/u);
+  assert.match(ownerList, /sharedChats\.push\(\.\.\.page\)/u);
+  assert.match(ownerList, /if \(page\.length < SHARED_CHAT_PAGE_SIZE\) break/u);
+  assert.doesNotMatch(ownerList, /\.limit\(200\)/u);
+});
