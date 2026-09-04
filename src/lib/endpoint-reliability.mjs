@@ -60,6 +60,10 @@ export async function readUtf8BodyBounded(request, maxBytes) {
     reader.releaseLock();
   }
 
+  if (verifyDeclaredLength && totalBytes !== declaredBytes) {
+    throw new BodyReadError(502, "content_length_mismatch");
+  }
+
   const bytes = new Uint8Array(totalBytes);
   let offset = 0;
   for (const chunk of chunks) {
@@ -93,12 +97,13 @@ export async function readResponseBytesBounded(response, maxBytes) {
   }
 
   const contentLength = response.headers.get("content-length");
+  let declaredBytes = null;
   if (contentLength !== null) {
-    if (!/^(0|[1-9]\d*)$/.test(contentLength)) {
+    if (!/^\d+$/.test(contentLength)) {
       await cancelUnlockedBody(response.body, "invalid_content_length");
       throw new BodyReadError(502, "invalid_content_length");
     }
-    const declaredBytes = Number(contentLength);
+    declaredBytes = Number(contentLength);
     if (!Number.isSafeInteger(declaredBytes)) {
       await cancelUnlockedBody(response.body, "invalid_content_length");
       throw new BodyReadError(502, "invalid_content_length");
@@ -109,7 +114,17 @@ export async function readResponseBytesBounded(response, maxBytes) {
     }
   }
 
-  if (!response.body) return new Uint8Array();
+  const contentEncoding = response.headers.get("content-encoding");
+  const verifyDeclaredLength =
+    declaredBytes !== null &&
+    (!contentEncoding || contentEncoding.trim().toLowerCase() === "identity");
+
+  if (!response.body) {
+    if (verifyDeclaredLength && declaredBytes !== 0) {
+      throw new BodyReadError(502, "content_length_mismatch");
+    }
+    return new Uint8Array();
+  }
   const reader = response.body.getReader();
   const chunks = [];
   let totalBytes = 0;
