@@ -775,12 +775,15 @@ function FilesTab({
   const [items, setItems] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const refreshedImageUrlsRef = useRef<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    refreshedImageUrlsRef.current.clear();
     try {
       setItems(await fnList({ data: { project_id: projectId, kind } }));
     } catch {
@@ -793,17 +796,73 @@ function FilesTab({
     refresh();
   }, [refresh]);
 
-  async function projectFileRequest(input: RequestInit): Promise<Response> {
+  async function projectFileRequest(
+    input: RequestInit,
+    search = "",
+  ): Promise<Response> {
     const { data, error } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (error || !token) throw new Error("Your session expired. Sign in again and retry.");
-    return fetch("/api/project-files", {
+    const headers = new Headers(input.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    return fetch(`/api/project-files${search}`, {
       ...input,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...input.headers,
-      },
+      headers,
     });
+  }
+
+  async function getFreshFileUrl(fileId: string): Promise<string> {
+    const response = await projectFileRequest(
+      {
+        method: "GET",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+      `?id=${encodeURIComponent(fileId)}`,
+    );
+    const payload = (await response.json().catch(() => null)) as { url?: unknown } | null;
+    if (!response.ok || typeof payload?.url !== "string" || !payload.url) {
+      throw new Error("A fresh file link could not be created. Please retry.");
+    }
+    return payload.url;
+  }
+
+  async function openFile(file: ProjectFile) {
+    setDownloadingId(file.id);
+    try {
+      const url = await getFreshFileUrl(file.id);
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.download = file.name;
+      link.click();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The file could not be opened.");
+    } finally {
+      setDownloadingId((current) => (current === file.id ? null : current));
+    }
+  }
+
+  async function refreshImageUrl(file: ProjectFile) {
+    if (refreshedImageUrlsRef.current.has(file.id)) {
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: null } : item)),
+      );
+      return;
+    }
+    refreshedImageUrlsRef.current.add(file.id);
+    try {
+      const url = await getFreshFileUrl(file.id);
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: url } : item)),
+      );
+    } catch {
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: null } : item)),
+      );
+      toast.error(`${file.name} could not be previewed. Retry shortly.`);
+    }
   }
 
   async function responseError(response: Response): Promise<string> {
@@ -959,6 +1018,7 @@ function FilesTab({
                   alt={f.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={() => void refreshImageUrl(f)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -970,11 +1030,12 @@ function FilesTab({
               </div>
               {canEdit && (
                 <button
+                  type="button"
                   onClick={() => setConfirmId(f.id)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-background/90 rounded p-1 transition"
+                  className="absolute right-2 top-2 flex min-h-11 min-w-11 items-center justify-center rounded bg-background/90 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                   aria-label="Delete image"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -991,25 +1052,30 @@ function FilesTab({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {f.signed_url && (
-                  <a
-                    href={f.signed_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded hover:bg-accent"
-                    aria-label="Download"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-11 min-w-11"
+                  onClick={() => void openFile(f)}
+                  disabled={downloadingId === f.id}
+                  aria-label={`Open ${f.name}`}
+                >
+                  {downloadingId === f.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
                 {canEdit && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setConfirmId(f.id)}
-                    aria-label="Delete"
+                    className="min-h-11 min-w-11"
+                    aria-label={`Delete ${f.name}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
