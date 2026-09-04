@@ -176,14 +176,12 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     const fileName = `${data.idempotencyKey ?? crypto.randomUUID()}.${ext}`;
     const path = `${context.userId}/${fileName}`;
 
-    const { error: upErr } = await context.supabase.storage.from(BUCKET).upload(
-      path,
-      payload.bytes,
-      {
+    const { error: upErr } = await context.supabase.storage
+      .from(BUCKET)
+      .upload(path, payload.bytes, {
         contentType: payload.contentType,
         upsert: Boolean(data.idempotencyKey),
-      },
-    );
+      });
     if (upErr) throw new Error(upErr.message);
 
     const { data: row, error } = await context.supabase
