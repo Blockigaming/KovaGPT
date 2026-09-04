@@ -10,8 +10,8 @@ export class ProviderResponseError extends Error {
 function isTransportInterruption(error) {
   return Boolean(
     error &&
-      typeof error === "object" &&
-      (error.code === "provider_timeout" || error.name === "AbortError"),
+    typeof error === "object" &&
+    (error.code === "provider_timeout" || error.name === "AbortError"),
   );
 }
 
