@@ -27,7 +27,7 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
   let generation = 0;
   let lastEnqueued = initialSnapshot;
   let lastCompleted = initialSnapshot;
-  let latestPending:
+  let latestOperation:
     | { generation: number; snapshot: T; promise: Promise<unknown> }
     | undefined;
 
@@ -36,7 +36,7 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
       generation += 1;
       lastEnqueued = snapshot;
       lastCompleted = snapshot;
-      latestPending = undefined;
+      latestOperation = undefined;
     },
     needsEnqueue(snapshot: T): boolean {
       return !Object.is(snapshot, lastEnqueued) || !Object.is(snapshot, lastCompleted);
@@ -46,7 +46,7 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
       lastCompleted = snapshot;
     },
     enqueue<R>(snapshot: T, write: (value: T) => Promise<R>): Promise<R> {
-      const pending = latestPending;
+      const pending = latestOperation;
       if (
         pending &&
         pending.generation === generation &&
@@ -63,11 +63,10 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
         if (generation === writeGeneration) lastCompleted = snapshot;
         return value;
       });
-      latestPending = { generation: writeGeneration, snapshot, promise: result };
-      const clearPending = () => {
-        if (latestPending?.promise === result) latestPending = undefined;
-      };
-      void result.then(clearPending, clearPending);
+      latestOperation = { generation: writeGeneration, snapshot, promise: result };
+      void result.catch(() => {
+        if (latestOperation?.promise === result) latestOperation = undefined;
+      });
       return result;
     },
   };
