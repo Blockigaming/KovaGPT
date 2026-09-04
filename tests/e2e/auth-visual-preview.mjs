@@ -1,6 +1,15 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmod, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import {
+  chmod,
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 
@@ -113,14 +122,21 @@ async function copyTrackedWorkingTree() {
     .sort((left, right) => left.localeCompare(right));
 
   for (const path of paths) {
-    if (isAbsolute(path) || normalize(path) === ".." || normalize(path).startsWith(`..${sep}`)) {
+    if (
+      isAbsolute(path) ||
+      normalize(path) === ".." ||
+      normalize(path).startsWith(`..${sep}`)
+    ) {
       throw new Error(`Unsafe tracked fixture path: ${path}`);
     }
     if (isExcludedTrackedPath(path)) continue;
 
     const source = resolve(sourceRoot, path);
     const destination = resolve(fixtureRoot, path);
-    if (!source.startsWith(`${sourceRoot}${sep}`) || !destination.startsWith(`${fixtureRoot}${sep}`)) {
+    if (
+      !source.startsWith(`${sourceRoot}${sep}`) ||
+      !destination.startsWith(`${fixtureRoot}${sep}`)
+    ) {
       throw new Error(`Tracked fixture path escaped its workspace: ${path}`);
     }
 
@@ -159,7 +175,9 @@ async function listFiles(directory, prefix = "") {
     } else if (entry.isFile()) {
       files.push({ absolutePath, relativePath });
     } else {
-      throw new Error(`Unexpected entry in candidate dist: ${relative(directory, absolutePath)}`);
+      throw new Error(
+        `Unexpected entry in candidate dist: ${relative(directory, absolutePath)}`,
+      );
     }
   }
   return files;
@@ -186,9 +204,13 @@ try {
   // files, credentials, dependencies, build output, and prior test evidence.
   await copyTrackedWorkingTree();
 
-  await run(npmCommand, ["ci", "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline"], {
-    cwd: fixtureRoot,
-  });
+  await run(
+    npmCommand,
+    ["ci", "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline"],
+    {
+      cwd: fixtureRoot,
+    },
+  );
   await run(npmCommand, ["run", "build"], { cwd: fixtureRoot });
 
   const fingerprintAfterBuild = await fingerprint(candidateDist);
