@@ -34,7 +34,7 @@ jobs:
           worker/src/email-worker.mjs
           worker/scripts/email-health-check.mjs
           src/components/ShareChatDialog.tsx
-          src/routes/projects.$projectId.tsx
+          'src/routes/projects.$projectId.tsx'
           src/lib/email-queue.server.ts
           src/lib/email-templates/registry.ts
           src/lib/email-templates/project-invite.tsx
