@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { fetchWithTimeout } from "./fetch-with-timeout.ts";
 import { useCallback, useEffect, useState } from "react";
 
 export type ClientCapabilityState =
