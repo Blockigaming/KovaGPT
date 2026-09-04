@@ -34,35 +34,35 @@ function read(userKey: TimerUserKey): TimerItem[] {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.flatMap((candidate): TimerItem[] => {
-        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
-        const item = candidate as Record<string, unknown>;
-        if (
-          typeof item.id !== "string" ||
-          item.id.length === 0 ||
-          item.id.length > 120 ||
-          (item.kind !== "timer" && item.kind !== "alarm") ||
-          typeof item.label !== "string" ||
-          typeof item.fireAt !== "number" ||
-          !Number.isFinite(item.fireAt)
-        ) {
-          return [];
-        }
-        const durationMs =
-          typeof item.durationMs === "number" &&
-          Number.isFinite(item.durationMs) &&
-          item.durationMs > 0
-            ? item.durationMs
-            : undefined;
-        return [
-          {
-            id: item.id,
-            kind: item.kind,
-            label: item.label.slice(0, 120) || (item.kind === "timer" ? "Timer" : "Alarm"),
-            fireAt: item.fireAt,
-            ...(durationMs === undefined ? {} : { durationMs }),
-            ...(item.fired === true ? { fired: true } : {}),
-          },
-        ];
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
+      const item = candidate as Record<string, unknown>;
+      if (
+        typeof item.id !== "string" ||
+        item.id.length === 0 ||
+        item.id.length > 120 ||
+        (item.kind !== "timer" && item.kind !== "alarm") ||
+        typeof item.label !== "string" ||
+        typeof item.fireAt !== "number" ||
+        !Number.isFinite(item.fireAt)
+      ) {
+        return [];
+      }
+      const durationMs =
+        typeof item.durationMs === "number" &&
+        Number.isFinite(item.durationMs) &&
+        item.durationMs > 0
+          ? item.durationMs
+          : undefined;
+      return [
+        {
+          id: item.id,
+          kind: item.kind,
+          label: item.label.slice(0, 120) || (item.kind === "timer" ? "Timer" : "Alarm"),
+          fireAt: item.fireAt,
+          ...(durationMs === undefined ? {} : { durationMs }),
+          ...(item.fired === true ? { fired: true } : {}),
+        },
+      ];
     });
   } catch {
     return [];
