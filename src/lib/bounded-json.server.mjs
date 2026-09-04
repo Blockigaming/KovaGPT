@@ -68,11 +68,7 @@ async function readChunk(reader, signal) {
   }
 }
 
-export async function readBoundedUtf8(
-  request,
-  maxBytes = DEFAULT_JSON_BODY_LIMIT,
-  signal,
-) {
+export async function readBoundedUtf8(request, maxBytes = DEFAULT_JSON_BODY_LIMIT, signal) {
   validateLimit(maxBytes);
   validateContentLength(request, maxBytes);
 
@@ -110,11 +106,7 @@ export async function readBoundedUtf8(
   }
 }
 
-export async function readBoundedJsonObject(
-  request,
-  maxBytes = DEFAULT_JSON_BODY_LIMIT,
-  signal,
-) {
+export async function readBoundedJsonObject(request, maxBytes = DEFAULT_JSON_BODY_LIMIT, signal) {
   const text = await readBoundedUtf8(request, maxBytes, signal);
   let value;
   try {
