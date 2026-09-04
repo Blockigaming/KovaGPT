@@ -2812,13 +2812,7 @@ function ShortcutsEditor({
         )}
       </div>
       <div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="min-h-11"
-          disabled={!ready}
-          onClick={reset}
-        >
+        <Button size="sm" variant="outline" className="min-h-11" disabled={!ready} onClick={reset}>
           Reset to defaults
         </Button>
       </div>
