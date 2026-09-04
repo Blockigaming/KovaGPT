@@ -6,6 +6,7 @@ import type { AgentTaskInput } from "./team";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UntypedClient = any;
 const raw = (caller: AuthedCaller) => caller.supabaseAdmin as unknown as UntypedClient;
+const rawUser = (caller: AuthedCaller) => caller.supabaseUser as unknown as UntypedClient;
 /**
  * The legacy agent-team queue has no compatible deployed worker. Keep this
  * internal boundary fail-closed even if a future route accidentally calls it.
@@ -95,68 +96,24 @@ export async function controlAgentTeamRun(
   if (command !== "cancel" && command !== "deny") {
     throw new Error("agent_team_execution_unavailable");
   }
-  const db = raw(caller);
-  const { data: run, error: runError } = await db
-    .from("agent_runs")
-    .select("id,status")
-    .eq("id", runId)
-    .eq("owner_id", caller.userId)
-    .maybeSingle();
-  if (runError) throw new Error("agent_control_unavailable");
-  if (!run) throw new Error("agent_run_not_found");
-  const safeRun = run as unknown as { status: string };
-  if (command === "cancel" && safeRun.status === "cancelled") {
-    return { accepted: true, command, status: "cancelled" };
+  // The user-scoped client supplies auth.uid() to the SECURITY DEFINER RPC.
+  // Task closure, run transition, and the audit event commit in one transaction.
+  const { data, error } = await rawUser(caller).rpc("control_disabled_agent_team_run", {
+    p_run_id: runId,
+    p_command: command,
+    p_task_id: taskId ?? null,
+  });
+  if (error) {
+    const publicErrors = new Set([
+      "agent_run_not_found",
+      "task_id_required",
+      "approval_not_pending",
+      "invalid_agent_state_transition",
+      "agent_run_state_changed",
+    ]);
+    const message = typeof error.message === "string" ? error.message : "";
+    throw new Error(publicErrors.has(message) ? message : "agent_control_unavailable");
   }
-  if (["completed", "failed", "cancelled"].includes(safeRun.status)) {
-    throw new Error("invalid_agent_state_transition");
-  }
-
-  if (command === "deny") {
-    if (!taskId) throw new Error("task_id_required");
-    const { data: task, error: taskError } = await db
-      .from("agent_run_tasks")
-      .update({
-        status: "cancelled",
-        progress: 90,
-        completed_at: new Date().toISOString(),
-        lease_owner: null,
-        lease_expires_at: null,
-      })
-      .eq("id", taskId)
-      .eq("run_id", runId)
-      .eq("owner_id", caller.userId)
-      .eq("status", "approval_needed")
-      .select("id")
-      .maybeSingle();
-    if (taskError || !task) throw new Error("approval_not_pending");
-  }
-
-  const { error: taskCancelError } = await db
-    .from("agent_run_tasks")
-    .update({ status: "cancelled", lease_owner: null, lease_expires_at: null })
-    .eq("run_id", runId)
-    .eq("owner_id", caller.userId)
-    .not("status", "in", "(completed,cancelled)");
-  if (taskCancelError) throw new Error("agent_control_unavailable");
-
-  const now = new Date().toISOString();
-  const { data: transitioned, error: transitionError } = await db
-    .from("agent_runs")
-    .update({ status: "cancelled", cancelled_at: now, updated_at: now })
-    .eq("id", runId)
-    .eq("owner_id", caller.userId)
-    .eq("status", safeRun.status)
-    .select("id")
-    .maybeSingle();
-  if (transitionError || !transitioned) throw new Error("agent_run_state_changed");
-
-  const { error: eventError } = await db.from("agent_run_events").insert({
-    run_id: runId,
-    owner_id: caller.userId,
-    kind: command === "deny" ? "approval" : "log",
-    safe_payload: { command, result: "cancelled", execution_enabled: false },
-  } as never);
-  if (eventError) throw new Error("agent_event_write_failed");
-  return { accepted: true, command, status: "cancelled" };
+  if (!data) throw new Error("agent_control_unavailable");
+  return data;
 }
