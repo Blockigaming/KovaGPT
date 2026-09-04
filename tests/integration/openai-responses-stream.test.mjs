@@ -20,10 +20,9 @@ async function mockResponses(events) {
   return { response: responsesStreamToChatStream(upstream), close: () => server.close() };
 }
 
-test("mock Responses API text, function arguments, unknown/malformed events and usage translate to Kova SSE", async () => {
+test("mock Responses API text, function arguments, unknown events and usage translate to Kova SSE", async () => {
   const mock = await mockResponses([
     { type: "response.output_text.delta", delta: "Hel" },
-    "{malformed",
     { type: "future.unknown.event", value: "ignored" },
     { type: "response.output_text.delta", delta: "lo" },
     { type: "response.function_call_arguments.delta", output_index: 0, delta: '{"q":"x"}' },
@@ -39,7 +38,17 @@ test("mock Responses API text, function arguments, unknown/malformed events and 
   assert.match(text, /"arguments":"\{\\"q\\":\\"x\\"\}"/);
   assert.match(text, /"prompt_tokens":12/);
   assert.match(text, /data: \[DONE\]/);
-  assert.doesNotMatch(text, /malformed|future\.unknown/);
+  assert.doesNotMatch(text, /future\.unknown/);
+});
+
+test("malformed provider JSON rejects and cancels the translated stream", async () => {
+  const mock = await mockResponses([
+    { type: "response.output_text.delta", delta: "partial" },
+    "{malformed",
+    { type: "response.completed", response: { usage: {} } },
+  ]);
+  await assert.rejects(mock.response.text(), /invalid_provider_sse_json/);
+  mock.close();
 });
 
 test("abrupt or usage-less provider streams fail instead of inventing successful completion", async () => {

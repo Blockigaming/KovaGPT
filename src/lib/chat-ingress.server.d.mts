@@ -80,6 +80,7 @@ export function normalizeChatPayload(value: unknown): NormalizedChatPayload;
 export function readChatRequest(
   request: Request,
   maxBytes?: number,
+  signal?: AbortSignal,
 ): Promise<NormalizedChatPayload>;
 export function toChatIngressErrorEnvelope(
   error: ChatIngressError,
