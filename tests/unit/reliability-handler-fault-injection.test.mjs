@@ -71,7 +71,7 @@ test("bounded UTF-8 reader rejects declared and streamed byte overflows", async 
   assert.equal(cancelReason, "request_too_large");
 });
 
-test("bounded response reader rejects declared overflow before reading and cancels the body", async () => {
+test("bounded response reader rejects declared overflow without reading", async () => {
   let readerRequested = false;
   let cancelReason;
   const response = {
@@ -108,7 +108,7 @@ test("bounded response reader rejects declared overflow before reading and cance
   assert.equal(cancelReason, "invalid_content_length");
 });
 
-test("bounded response reader cancels streamed overflow and accepts the exact boundary", async () => {
+test("bounded response reader cancels streamed overflow at the byte limit", async () => {
   let cancelReason;
   let released = false;
   const overflowChunks = [new Uint8Array([1, 2, 3, 4]), new Uint8Array([5, 6, 7, 8])];
