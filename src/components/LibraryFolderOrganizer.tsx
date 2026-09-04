@@ -8,7 +8,14 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
@@ -40,8 +47,9 @@ function folderDepth(folderId: string, folders: LibraryFolder[]): number {
   while (current && !seen.has(current.id) && depth < MAX_FOLDER_DEPTH + 1) {
     seen.add(current.id);
     depth += 1;
-    current = current.parentId
-      ? folders.find((folder) => folder.id === current?.parentId)
+    const parentId = current.parentId;
+    current = parentId
+      ? folders.find((folder) => folder.id === parentId)
       : undefined;
   }
   return depth;
@@ -89,7 +97,9 @@ export function LibraryFolderOrganizer({
   const [folders, setFolders] = useState<LibraryFolder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState<"create" | "rename" | "delete" | "move" | null>(null);
+  const [busy, setBusy] = useState<
+    "create" | "rename" | "delete" | "move" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<"create" | "rename" | null>(null);
   const [folderName, setFolderName] = useState("");
@@ -195,12 +205,16 @@ export function LibraryFolderOrganizer({
     setError(null);
     try {
       const result = await deleteLibraryFolder(activeFolder.id);
-      setFolders((current) => current.filter((folder) => !removedIds.includes(folder.id)));
+      setFolders((current) =>
+        current.filter((folder) => !removedIds.includes(folder.id)),
+      );
       onFoldersDeleted(removedIds);
       onScopeChange("all");
       toast.success(
         result.movedToRootCount
-          ? `Folder removed. ${result.movedToRootCount} item${result.movedToRootCount === 1 ? "" : "s"} moved to Unfiled.`
+          ? `Folder removed. ${result.movedToRootCount} item${
+              result.movedToRootCount === 1 ? "" : "s"
+            } moved to Unfiled.`
           : "Folder removed.",
       );
     } catch (mutationError) {
@@ -247,7 +261,9 @@ export function LibraryFolderOrganizer({
             className={`flex min-h-11 w-full items-center gap-2 rounded-lg pr-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
               scope === folder.id ? "bg-[var(--surface-selected)] font-medium" : ""
             }`}
-            style={{ paddingLeft: `${Math.min(depth, MAX_FOLDER_DEPTH - 1) * 16 + 12}px` }}
+            style={{
+              paddingLeft: `${Math.min(depth, MAX_FOLDER_DEPTH - 1) * 16 + 12}px`,
+            }}
           >
             <Folder className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{folder.name}</span>
@@ -259,7 +275,10 @@ export function LibraryFolderOrganizer({
   if (!enabled) return null;
 
   return (
-    <section className="kova-card space-y-3 p-3 sm:p-4" aria-labelledby="library-folders-title">
+    <section
+      className="kova-card space-y-3 p-3 sm:p-4"
+      aria-labelledby="library-folders-title"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="library-folders-title" className="text-sm font-medium">
@@ -314,16 +333,27 @@ export function LibraryFolderOrganizer({
       </div>
 
       {error ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3"
+        >
           <p className="text-sm text-destructive">{error}</p>
-          <Button size="sm" variant="outline" className="min-h-11" onClick={() => void load()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-h-11"
+            onClick={() => void load()}
+          >
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
         </div>
       ) : null}
 
-      <nav aria-label="Library folders" className="max-h-64 overflow-y-auto rounded-xl border p-1">
+      <nav
+        aria-label="Library folders"
+        className="max-h-64 overflow-y-auto rounded-xl border p-1"
+      >
         <button
           type="button"
           aria-current={scope === "all" ? "page" : undefined}
@@ -347,8 +377,14 @@ export function LibraryFolderOrganizer({
           Unfiled
         </button>
         {loading && folders.length === 0 ? (
-          <p role="status" className="flex min-h-11 items-center gap-2 px-3 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          <p
+            role="status"
+            className="flex min-h-11 items-center gap-2 px-3 text-sm text-muted-foreground"
+          >
+            <Loader2
+              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
             Loading folders…
           </p>
         ) : (
@@ -404,7 +440,9 @@ export function LibraryFolderOrganizer({
       >
         {editor ? (
           <DialogContent>
-            <DialogTitle>{editor === "create" ? "Create Library folder" : "Rename folder"}</DialogTitle>
+            <DialogTitle>
+              {editor === "create" ? "Create Library folder" : "Rename folder"}
+            </DialogTitle>
             <DialogDescription>
               {editor === "create" && activeFolder
                 ? `Create a folder inside ${activeFolder.name}.`
@@ -437,7 +475,11 @@ export function LibraryFolderOrganizer({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="min-h-11" disabled={!folderName.trim() || Boolean(busy)}>
+                <Button
+                  type="submit"
+                  className="min-h-11"
+                  disabled={!folderName.trim() || Boolean(busy)}
+                >
                   {busy ? "Saving…" : editor === "create" ? "Create" : "Save"}
                 </Button>
               </div>
