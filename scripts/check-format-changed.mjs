@@ -30,5 +30,10 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+const result = spawnSync("npx", ["prettier", "--write", ...files], { stdio: "inherit" });
+if (result.status !== 0) process.exit(result.status ?? 1);
+const diff = spawnSync("git", ["diff", "--", ...files], { encoding: "utf8" });
+console.log("\nBEGIN_FORMAT_DIFF\n");
+console.log(diff.stdout);
+console.log("\nEND_FORMAT_DIFF\n");
+process.exit(1);
