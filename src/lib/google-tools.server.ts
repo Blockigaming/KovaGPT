@@ -16,7 +16,10 @@ import {
   getGoogleConnectionHealth,
   logAudit,
 } from "@/lib/google-oauth.server";
-import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
+import {
+  foldEmailAddressHeader,
+  validateSupportedGoogleWrite,
+} from "@/lib/google-write-validation.server.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { LockdownPolicyError, assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -284,7 +287,13 @@ export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]
   return ALL_TOOLS.filter((tool) => {
     const name = tool.function.name;
     if (name.startsWith("gmail_")) {
-      return WRITE_TOOL_NAMES.has(name) ? health.has.gmailWrite : health.has.gmail;
+      if (name === "gmail_send") {
+        return (
+          health.has.gmailWrite ||
+          health.scopes.includes("https://www.googleapis.com/auth/gmail.send")
+        );
+      }
+      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
     }
     if (name.startsWith("calendar_")) {
       return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
@@ -925,9 +934,9 @@ export async function executePendingAction(
       const cc = a.cc ? String(a.cc) : "";
       const bcc = a.bcc ? String(a.bcc) : "";
       const headers = [
-        `To: ${to}`,
-        cc ? `Cc: ${cc}` : "",
-        bcc ? `Bcc: ${bcc}` : "",
+        foldEmailAddressHeader("To", to),
+        cc ? foldEmailAddressHeader("Cc", cc) : "",
+        bcc ? foldEmailAddressHeader("Bcc", bcc) : "",
         `Subject: ${subject}`,
         "Content-Type: text/plain; charset=UTF-8",
         "MIME-Version: 1.0",
