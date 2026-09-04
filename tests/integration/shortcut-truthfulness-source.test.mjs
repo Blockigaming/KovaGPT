@@ -39,10 +39,7 @@ test("shortcut bindings are executable and collision-free", () => {
     shortcutsSource,
     /new Set\(saved\.map\(\(\{ combo \}\) => combo\)\)\.size !== saved\.length/,
   );
-  assert.match(
-    shortcutsSource,
-    /return normalizedShortcutKey\(e\.key\)\.toLowerCase\(\) === key;/,
-  );
+  assert.match(shortcutsSource, /return normalizedShortcutKey\(e\.key\)\.toLowerCase\(\) === key;/);
   assert.match(
     shortcutPanel,
     /const conflict = visibleList\.find\([\s\S]*?shortcut\.combo === combo[\s\S]*?That shortcut is already assigned to/,
