@@ -25,6 +25,53 @@ export function ToolConfirmCard({
   const reconnectRetry = confirm.status === "failed" && /reconnect/i.test(confirm.resultText ?? "");
   const isTerminal = confirm.status !== "pending" && !reconnectRetry;
 
+  const reconcileAmbiguousSend = async () => {
+    try {
+      const statusResponse = await authFetch(
+        `/api/chat/confirm?action_id=${encodeURIComponent(confirm.actionId)}`,
+      );
+      const statusJson = (await statusResponse.json().catch(() => ({}))) as {
+        ok?: boolean;
+        status?: "pending" | "processing" | "confirmed" | "cancelled" | "failed" | "expired";
+        result_text?: string;
+      };
+      if (statusResponse.ok && statusJson.ok) {
+        if (statusJson.status === "confirmed") {
+          onUpdate({
+            ...confirm,
+            status: "confirmed",
+            resultText: statusJson.result_text || "Email sent.",
+          });
+          toast.success("Email sent");
+          return;
+        }
+        if (statusJson.status === "pending") {
+          onUpdate({ ...confirm, status: "pending", resultText: undefined });
+          toast.error("The send request did not complete. Review the email before trying again.");
+          return;
+        }
+        if (statusJson.status === "cancelled" || statusJson.status === "expired") {
+          onUpdate({
+            ...confirm,
+            status: statusJson.status === "cancelled" ? "cancelled" : "failed",
+            resultText:
+              statusJson.status === "cancelled"
+                ? "Cancelled."
+                : "This send request expired. Prepare the email again.",
+          });
+          return;
+        }
+      }
+    } catch {
+      // The status check is best-effort. Fall through to a truthful ambiguous state.
+    }
+
+    const message =
+      "KovaGPT could not verify whether Gmail sent this email. Check Sent mail before sending again.";
+    onUpdate({ ...confirm, status: "uncertain", resultText: message });
+    toast.warning("Send result could not be verified", { description: message });
+  };
+
   const decide = async (decision: "confirm" | "cancel") => {
     if (busy || isTerminal) return;
     setBusy(decision);
@@ -41,6 +88,14 @@ export function ToolConfirmCard({
       };
       if (!res.ok || !json.ok) {
         const err = json.error || `Failed (${res.status})`;
+        if (
+          decision === "confirm" &&
+          confirm.tool === "gmail_send" &&
+          /could not (?:confirm|verify).*completed/i.test(err)
+        ) {
+          await reconcileAmbiguousSend();
+          return;
+        }
         onUpdate({ ...confirm, status: "failed", resultText: err });
         toast.error(err);
         return;
@@ -52,9 +107,13 @@ export function ToolConfirmCard({
       });
       toast.success(decision === "confirm" ? "Done" : "Cancelled");
     } catch (e) {
-      const err = e instanceof Error ? e.message : "Network error";
-      onUpdate({ ...confirm, status: "failed", resultText: err });
-      toast.error(err);
+      if (decision === "confirm" && confirm.tool === "gmail_send") {
+        await reconcileAmbiguousSend();
+      } else {
+        const err = e instanceof Error ? e.message : "Network error";
+        onUpdate({ ...confirm, status: "failed", resultText: err });
+        toast.error(err);
+      }
     } finally {
       setBusy(null);
     }
@@ -127,7 +186,9 @@ export function ToolConfirmCard({
               ? "bg-primary/10 text-primary"
               : confirm.status === "cancelled"
                 ? "bg-muted text-muted-foreground"
-                : "bg-destructive/10 text-destructive"
+                : confirm.status === "uncertain"
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                  : "bg-destructive/10 text-destructive"
           }`}
         >
           {confirm.status === "confirmed" ? (
