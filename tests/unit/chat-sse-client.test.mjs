@@ -77,6 +77,31 @@ test("chat SSE rejects a clean EOF without DONE", async () => {
   );
 });
 
+test("chat SSE times out when a transport never produces its next chunk", async () => {
+  let cancelled = false;
+  const stream = new ReadableStream({
+    pull() {
+      return new Promise(() => {});
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+
+  await assert.rejects(
+    consumeChatSse(stream, { idleTimeoutMs: 20 }),
+    (error) => {
+      assert.equal(error.code, "chat_stream_timeout");
+      assert.equal(error.status, 504);
+      assert.equal(error.category, "streaming_interruption");
+      assert.equal(error.retryable, true);
+      return true;
+    },
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(cancelled, true);
+});
+
 test("chat SSE aborts a transport whose next read never settles", async () => {
   const controller = new AbortController();
   let cancelled = false;
