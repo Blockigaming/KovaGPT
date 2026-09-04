@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 91,
-  "latest": "20260904200000_project_file_upload_integrity.sql",
+  "count": 92,
+  "latest": "20260904210000_project_deletion_storage_integrity.sql",
   "migrations": [
     {
       "order": 1,
@@ -1880,6 +1880,29 @@
         "project_files_upload_idempotency_unique",
         "project_files_status_idx"
       ]
+    },
+    {
+      "order": 92,
+      "filename": "20260904210000_project_deletion_storage_integrity.sql",
+      "timestamp": "20260904210000",
+      "sha256": "bf0a4598a139d065a1a01f7cc2144adfa97a42bf972d7c99baa63e59e004cd65",
+      "tables": ["project_deletion_jobs"],
+      "functions": [
+        "project_deletion_project_write_fence",
+        "project_deletion_child_write_fence",
+        "project_file_deletion_fence",
+        "claim_project_deletion",
+        "renew_project_deletion",
+        "fail_project_deletion",
+        "project_storage_first_delete_guard",
+        "finalize_project_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_deletion_jobs"],
+      "policies": [],
+      "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
     }
   ]
 }

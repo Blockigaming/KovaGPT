@@ -710,9 +710,7 @@ function ProjectsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDuplicate(p)}
-                        disabled={
-                          Boolean(p.deletion_requested_at) || deletingProjectIds.has(p.id)
-                        }
+                        disabled={Boolean(p.deletion_requested_at) || deletingProjectIds.has(p.id)}
                       >
                         <CopyIcon className="w-4 h-4 mr-2" />
                         Duplicate
