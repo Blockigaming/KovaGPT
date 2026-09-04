@@ -8,12 +8,14 @@ import {
   parseAgentTeamControlPayload,
   readAgentJsonRequest,
 } from "@/agents/agent-ingress.server.mjs";
-import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
-
- const TEAM_CONTROL_ERRORS = new Set([
+const TEAM_CONTROL_ERRORS = new Set([
   "agent_run_not_found",
   "task_id_required",
   "approval_not_pending",
+]);
+const TEAM_CONTROL_CONFLICTS = new Set([
+  "invalid_agent_state_transition",
+  "agent_run_state_changed",
 ]);
 
 function agentRequestError(error: unknown, fallback: string, fallbackStatus = 400) {
@@ -52,10 +54,10 @@ export const Route = createFileRoute("/api/agents/teams")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const lockdown = await enforceLockdownCapability(auth.supabaseAdmin, auth.userId, "agent");
-        if (lockdown) return lockdown;
         // Team execution shares the disabled runtime. Drain without parsing so
-        // no request can create an indefinitely queued legacy run.
+        // no request can create an indefinitely queued legacy run. This response
+        // is independent of Lockdown Mode: turning that setting off cannot make
+        // an unavailable runtime executable.
         await request.body?.cancel().catch(() => undefined);
         return Response.json(
           { error: "agent_team_execution_unavailable" },
@@ -92,12 +94,14 @@ export const Route = createFileRoute("/api/agents/teams")({
           );
         } catch (error) {
           const message = error instanceof Error ? error.message : "agent_control_failed";
+          const clientError = TEAM_CONTROL_ERRORS.has(message);
+          const conflict = TEAM_CONTROL_CONFLICTS.has(message);
           return Response.json(
             {
-              error: TEAM_CONTROL_ERRORS.has(message) ? message : "agent_control_failed",
+              error: clientError || conflict ? message : "agent_control_failed",
             },
             {
-              status: TEAM_CONTROL_ERRORS.has(message) ? 400 : 500,
+              status: conflict ? 409 : clientError ? 400 : 500,
               headers: { "Cache-Control": "no-store" },
             },
           );
