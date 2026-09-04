@@ -18,8 +18,11 @@ test("Library loads folder membership and scopes visible items", () => {
   assert.match(supabaseTypes, /folder_id: string \| null/);
   assert.match(supabaseTypes, /user_library_items_folder_id_fkey/);
   assert.match(library, /LibraryFolderOrganizer/);
-  assert.match(library, /folderScope === "unfiled" && item\.folder_id/);
-  assert.match(library, /item\.folder_id !== folderScope/);
+  assert.match(
+    library,
+    /folderScope === "unfiled"\) return UUID_PATTERN\.test\(item\.id\) && !item\.folder_id/,
+  );
+  assert.match(library, /folderScope !== "all"\) return item\.folder_id === folderScope/);
 });
 
 test("signed-in users can navigate and mutate real Library folders", () => {
@@ -59,7 +62,7 @@ test("bulk moves and folder deletion preserve truthful limits and data copy", ()
   assert.match(folders, /selectedItemIds\.length > MAX_BULK_MOVE_ITEMS/);
   assert.match(folders, /Their Library items will be kept and moved to Unfiled/);
   assert.match(library, /moved\.has\(item\.id\).*folder_id: folderId/s);
-  assert.match(library, /removed\.has\(item\.folder_id\).*folder_id: null/s);
+  assert.match(library, /onFoldersDeleted=\{\(\) => \{[\s\S]*void load\(\)/);
 });
 
 test("folder UI keeps async loads, principals, and mutation state consistent", () => {
