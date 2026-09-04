@@ -49,6 +49,6 @@ test("email producers and documented environment use the verified sender domain"
     "EMAIL_WORKER_MAX_ATTEMPTS",
   ]) {
     assert.match(environment, new RegExp(`^${key}=`, "m"));
-    assert.match(docs, new RegExp(`\\`${key}`\\`));
+    assert.ok(docs.includes(`\`${key}\``));
   }
 });
