@@ -685,11 +685,12 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 authorizedResearchReferences = await preflight.run(
                   "research_authorization",
-                  () => authorizeResearchPersistence({
-                  supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
-                  chatId,
-                  projectId,
-                  }),
+                  () =>
+                    authorizeResearchPersistence({
+                      supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
+                      chatId,
+                      projectId,
+                    }),
                 );
               } catch (error) {
                 if (error instanceof ResearchPersistenceAuthorizationError) {
@@ -886,12 +887,18 @@ export const Route = createFileRoute("/api/chat")({
                     } else if (att.kind === "library_file") {
                       let libraryContent = "";
                       if (auth && msg === lastUser) {
-                        const { data } = await auth.supabaseAdmin
-                          .from("user_library_items")
-                          .select("content_text")
-                          .eq("id", att.libraryItemId)
-                          .eq("user_id", auth.userId)
-                          .maybeSingle();
+                        const libraryResult = await preflight.run(
+                          "library_attachment",
+                          () =>
+                            auth.supabaseAdmin
+                              .from("user_library_items")
+                              .select("content_text")
+                              .eq("id", att.libraryItemId)
+                              .eq("user_id", auth.userId)
+                              .maybeSingle(),
+                          { required: false },
+                        );
+                        const data = libraryResult?.data;
                         const row = data as { content_text?: unknown } | null;
                         if (typeof row?.content_text === "string") {
                           libraryContent = row.content_text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
@@ -956,9 +963,14 @@ export const Route = createFileRoute("/api/chat")({
                   "Searching the web",
                   "running",
                 );
-                const result = await runWebSearch(
-                  lastText,
-                  clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                const result = await preflight.run(
+                  "web_search",
+                  () =>
+                    runWebSearch(
+                      lastText,
+                      clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                    ),
+                  { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
                   webBlock = result;
@@ -979,16 +991,22 @@ export const Route = createFileRoute("/api/chat")({
               !temporary
             ) {
               try {
-                const { data: memRows } = await (
-                  auth.supabaseAdmin as unknown as {
-                    from: (t: string) => ChainableQueryLike;
-                  }
-                )
-                  .from("chat_memories")
-                  .select("title, summary, updated_at")
-                  .eq("user_id", auth.userId)
-                  .order("updated_at", { ascending: false })
-                  .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0);
+                const memoryResult = await preflight.run(
+                  "memory_context",
+                  () =>
+                    (
+                      auth.supabaseAdmin as unknown as {
+                        from: (t: string) => ChainableQueryLike;
+                      }
+                    )
+                      .from("chat_memories")
+                      .select("title, summary, updated_at")
+                      .eq("user_id", auth.userId)
+                      .order("updated_at", { ascending: false })
+                      .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
+                  { required: false },
+                );
+                const memRows = memoryResult?.data;
                 if (Array.isArray(memRows) && memRows.length > 0) {
                   const memories = (memRows as { title?: string | null; summary: string }[]).map(
                     (r, i): KovaMemory => ({
@@ -1023,16 +1041,27 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
-                const { data: isMember } = await admin.rpc("is_project_member", {
-                  _user_id: auth.userId,
-                  _project_id: projectId,
-                });
+                const membershipResult = await preflight.run(
+                  "project_membership",
+                  () =>
+                    admin.rpc("is_project_member", {
+                      _user_id: auth.userId,
+                      _project_id: projectId,
+                    }),
+                  { required: false },
+                );
+                const isMember = membershipResult?.data;
                 if (isMember === true) {
-                  const projRes = await admin
-                    .from("projects")
-                    .select("id, name, system_prompt")
-                    .eq("id", projectId)
-                    .maybeSingle();
+                  const projRes = await preflight.run(
+                    "project_context",
+                    () =>
+                      admin
+                        .from("projects")
+                        .select("id, name, system_prompt")
+                        .eq("id", projectId)
+                        .maybeSingle(),
+                    { required: false },
+                  );
                   const proj = projRes?.data as {
                     id: string;
                     name: string;
@@ -1048,12 +1077,17 @@ export const Route = createFileRoute("/api/chat")({
                         `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
                       );
                     }
-                    const memRes = await admin
-                      .from("project_memory")
-                      .select("content")
-                      .eq("project_id", projectId)
-                      .order("created_at", { ascending: false })
-                      .limit(20);
+                    const memRes = await preflight.run(
+                      "project_memory",
+                      () =>
+                        admin
+                          .from("project_memory")
+                          .select("content")
+                          .eq("project_id", projectId)
+                          .order("created_at", { ascending: false })
+                          .limit(20),
+                      { required: false },
+                    );
                     const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
                     if (memRows.length > 0) {
                       parts.push(
@@ -1078,12 +1112,18 @@ export const Route = createFileRoute("/api/chat")({
                     }
                     if (q.trim()) {
                       const { retrieveProjectContext } = await import("@/lib/project-rag.server");
-                      const chunks = await retrieveProjectContext({
-                        supabase: admin,
-                        project_id: projectId,
-                        query: q,
-                        k: 6,
-                      });
+                      const chunks =
+                        (await preflight.run(
+                          "project_retrieval",
+                          () =>
+                            retrieveProjectContext({
+                              supabase: admin,
+                              project_id: projectId,
+                              query: q,
+                              k: 6,
+                            }),
+                          { required: false, timeoutMs: 5_000 },
+                        )) ?? [];
                       const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
                       if (rel.length > 0) {
                         parts.push(
@@ -1115,12 +1155,17 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && typeof chatId === "string" && chatId && !temporary) {
               const { buildChatWorkspaceBlock } =
                 await import("@/lib/chat-workspace-context.server");
-              const workspace = await buildChatWorkspaceBlock(auth.supabaseAdmin, {
-                userId: auth.userId,
-                chatId,
-                temporary: Boolean(temporary),
-              });
-              chatWorkspaceBlock = workspace.block;
+              const workspace = await preflight.run(
+                "chat_workspace",
+                () =>
+                  buildChatWorkspaceBlock(auth.supabaseAdmin, {
+                    userId: auth.userId,
+                    chatId,
+                    temporary: Boolean(temporary),
+                  }),
+                { required: false },
+              );
+              chatWorkspaceBlock = workspace?.block ?? "";
             }
 
             const toolInstruction =
@@ -1199,7 +1244,11 @@ export const Route = createFileRoute("/api/chat")({
             // through to the original streaming behavior with zero change.
             const availableTools =
               auth && !hasImages && m.id !== "instant" && lastText.length > 0
-                ? await getAvailableGoogleTools(auth.userId).catch(() => [])
+                ? ((await preflight.run(
+                    "connector_tools",
+                    () => getAvailableGoogleTools(auth.userId),
+                    { required: false },
+                  )) ?? [])
                 : [];
             const enableTools = availableTools.length > 0;
 
@@ -1246,21 +1295,26 @@ export const Route = createFileRoute("/api/chat")({
             }
             let usageEventId: string;
             try {
-              const acquisition = await acquireGeneration({
-                requestId,
-                idempotencyKey,
-                userId: auth?.userId ?? null,
-                guestIpHash: clientKey ? await hashGuestIp(clientKey) : null,
-                conversationId: chatId,
-                mode: m.id,
-                plan: auth ? callerTier : "guest",
-                premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
-                model: catalogModel,
-                estimatedInputTokens: inputEstimate.tokens,
-                reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
-                estimatedCostUsd: estimatedCost,
-                contextTrimmed: messages.length > HISTORY_TURNS,
-              });
+              const guestIpHash = clientKey
+                ? await preflight.run("guest_identity", () => hashGuestIp(clientKey))
+                : null;
+              const acquisition = await preflight.run("usage_authorization", () =>
+                acquireGeneration({
+                  requestId,
+                  idempotencyKey,
+                  userId: auth?.userId ?? null,
+                  guestIpHash,
+                  conversationId: chatId,
+                  mode: m.id,
+                  plan: auth ? callerTier : "guest",
+                  premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                  model: catalogModel,
+                  estimatedInputTokens: inputEstimate.tokens,
+                  reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                  estimatedCostUsd: estimatedCost,
+                  contextTrimmed: messages.length > HISTORY_TURNS,
+                }),
+              );
               if ("rejection" in acquisition) {
                 const duplicate = acquisition.rejection === "duplicate";
                 return Response.json(
@@ -1856,6 +1910,27 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (e instanceof ChatPreflightError) {
+              logSafeFailure("error", "[chat] preflight failed", logContext, {
+                status: e.status,
+                category: "server",
+                code: e.code,
+              });
+              return Response.json(
+                {
+                  ...e.toEnvelope(),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: e.status,
+                  headers: {
+                    "Cache-Control": "no-store",
+                    ...(e.retryable ? { "Retry-After": "5" } : {}),
+                  },
+                },
+              );
+            }
             if (request.signal.aborted) {
               return new Response(null, {
                 status: 499,
@@ -1874,6 +1949,8 @@ export const Route = createFileRoute("/api/chat")({
               status,
               headers: { "Content-Type": "application/json" },
             });
+          } finally {
+            preflight.close();
           }
         };
         return await withRequestId(await run());
