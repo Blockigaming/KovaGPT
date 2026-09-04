@@ -7,6 +7,7 @@ ALTER TABLE public.project_files
   ADD COLUMN IF NOT EXISTS content_sha256 text,
   ADD COLUMN IF NOT EXISTS idempotency_key uuid,
   ADD COLUMN IF NOT EXISTS storage_owner_id uuid,
+  ADD COLUMN IF NOT EXISTS storage_charged boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS upload_attempt_id uuid,
   ADD COLUMN IF NOT EXISTS upload_lease_until timestamptz,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
@@ -285,7 +286,7 @@ BEGIN
   END IF;
 
   DELETE FROM public.project_files WHERE id = target.id;
-  IF target.storage_owner_id IS NOT NULL AND target.size_bytes > 0 THEN
+  IF target.storage_charged AND target.storage_owner_id IS NOT NULL AND target.size_bytes > 0 THEN
     UPDATE public.user_storage
     SET bytes_used = greatest(0, bytes_used - target.size_bytes), updated_at = now()
     WHERE user_id = target.storage_owner_id;
