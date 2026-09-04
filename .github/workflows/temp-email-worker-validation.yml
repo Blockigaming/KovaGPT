@@ -39,6 +39,8 @@ jobs:
           src/routes/api/public/email/webhook.ts
           tests/unit/email-worker.test.mjs
           tests/unit/resend-webhook.test.mjs
+          tests/unit/review-findings.test.mjs
+          tests/api/help-submit-security.test.mjs
           tests/integration/email-worker-source.test.mjs
           docs/email-worker.md
       - run: node --check worker/src/email-dispatcher.mjs
@@ -48,6 +50,8 @@ jobs:
           node --test
           tests/unit/email-worker.test.mjs
           tests/unit/resend-webhook.test.mjs
+          tests/unit/review-findings.test.mjs
+          tests/api/help-submit-security.test.mjs
           tests/integration/email-worker-source.test.mjs
       - run: npm run release:manifest
       - run: npm run release:schema
