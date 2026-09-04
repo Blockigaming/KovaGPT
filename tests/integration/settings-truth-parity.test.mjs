@@ -96,7 +96,7 @@ test("Settings delegates connector lifecycle to the server-backed Apps surface",
   const settings = read("src/components/SettingsDialog.tsx");
 
   assert.match(settings, /to="\/apps"/);
-  assert.match(settings, /onClick=\\{\\(\\) => onOpenChange\\(false\\)\\}/);
+  assert.match(settings, /onClick=\{\(\) => onOpenChange\(false\)\}/);
   assert.match(settings, /Manage apps and permissions/);
   assert.match(settings, /verified from the server-backed Apps page/);
   for (const obsolete of [
