@@ -157,7 +157,8 @@ CREATE OR REPLACE FUNCTION public.reserve_project_file_upload(
   p_content_sha256 text,
   p_idempotency_key uuid,
   p_attempt_id uuid,
-  p_file_cap integer
+  p_file_cap integer,
+  p_storage_limit bigint
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -185,6 +186,7 @@ BEGIN
     OR p_extension !~ '^[a-z0-9]{1,12}$'
     OR p_content_sha256 !~ '^[0-9a-f]{64}$'
     OR p_file_cap NOT BETWEEN 1 AND 200
+    OR p_storage_limit < 1
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_project_file_reservation';
   END IF;
@@ -231,8 +233,17 @@ BEGIN
         'inProgress', true
       );
     END IF;
+    IF NOT existing.storage_charged
+      AND p_size_bytes > 0
+      AND NOT public.try_add_storage_bytes(project_owner, p_size_bytes, p_storage_limit)
+    THEN
+      RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'project_storage_limit_reached';
+    END IF;
+
     UPDATE public.project_files
     SET status = 'pending',
+        storage_owner_id = project_owner,
+        storage_charged = existing.storage_charged OR p_size_bytes > 0,
         upload_attempt_id = p_attempt_id,
         upload_lease_until = now() + interval '2 minutes',
         updated_at = now()
@@ -257,18 +268,24 @@ BEGIN
     RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'project_file_limit_reached';
   END IF;
 
+  IF p_size_bytes > 0
+    AND NOT public.try_add_storage_bytes(project_owner, p_size_bytes, p_storage_limit)
+  THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'project_storage_limit_reached';
+  END IF;
+
   file_id := gen_random_uuid();
   canonical_path := p_project_id::text || '/' || file_id::text || '.' || p_extension;
 
   INSERT INTO public.project_files (
     id, project_id, name, storage_path, mime_type, size_bytes, kind,
     uploaded_by, storage_owner_id, status, content_sha256, idempotency_key,
-    upload_attempt_id, upload_lease_until
+    upload_attempt_id, upload_lease_until, storage_charged
   )
   VALUES (
     file_id, p_project_id, p_name, canonical_path, p_mime_type, p_size_bytes, p_kind,
     p_user_id, project_owner, 'pending', p_content_sha256, p_idempotency_key,
-    p_attempt_id, now() + interval '2 minutes'
+    p_attempt_id, now() + interval '2 minutes', p_size_bytes > 0
   )
   RETURNING * INTO existing;
 
@@ -280,10 +297,10 @@ END
 $$;
 
 REVOKE ALL ON FUNCTION public.reserve_project_file_upload(
-  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
+  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer, bigint
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reserve_project_file_upload(
-  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
+  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer, bigint
 ) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.abort_project_file_upload(
