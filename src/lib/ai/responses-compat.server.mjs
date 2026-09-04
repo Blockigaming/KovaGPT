@@ -28,7 +28,14 @@ export function responsesStreamToChatStream(response) {
           try {
             event = JSON.parse(data);
           } catch {
-            continue;
+            await reader.cancel("invalid_provider_sse_json").catch(() => undefined);
+            controller.error(new Error("invalid_provider_sse_json"));
+            return;
+          }
+          if (!event || typeof event !== "object" || Array.isArray(event)) {
+            await reader.cancel("invalid_provider_sse_event").catch(() => undefined);
+            controller.error(new Error("invalid_provider_sse_event"));
+            return;
           }
           if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
             controller.enqueue(
