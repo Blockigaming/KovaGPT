@@ -26,6 +26,7 @@ test("attachment auto-save supports text, Markdown, and images without blocking 
   assert.match(hook, /file_type: attachment\.fileType/);
   assert.match(hook, /void persist\(attachment\)/);
   assert.match(hook, /principalRef\.current !== principalKey/);
+  assert.match(hook, /!enabledRef\.current/);
   assert.match(hook, /not saved to your Library/);
   assert.match(hook, /label: "Retry"/);
 });
@@ -75,8 +76,18 @@ test("image history rejects malformed storage and reports persistence failures",
 test("every image download uses a bounded Blob action with real failure state", () => {
   assert.match(imageRoute, /async function downloadGeneratedImage/);
   assert.match(imageRoute, /window\.setTimeout[\s\S]*15_000/);
-  assert.match(imageRoute, /blob\.size > 8 \* 1024 \* 1024/);
+  assert.match(imageRoute, /response\.body\.getReader\(\)/);
+  assert.match(imageRoute, /total > MAX_IMAGE_DOWNLOAD_BYTES/);
+  assert.match(imageRoute, /reader\.cancel\(\)/);
   assert.match(imageRoute, /URL\.createObjectURL\(blob\)/);
   assert.match(imageRoute, /setDownloadingImageId/);
   assert.doesNotMatch(imageRoute, /<a[\s\S]{0,160}download=/);
+});
+
+
+test("saved image history remains a recoverable Library source", () => {
+  assert.match(imageRoute, /resultHistoryItem\.libraryStatus === "saving"\s*\}/);
+  assert.match(imageRoute, /Save to Library again/);
+  assert.match(imageRoute, /disabled=\{lightboxLibraryStatus === "saving"\}/);
+  assert.match(imageRoute, /Save again/);
 });
