@@ -313,10 +313,7 @@ export async function disconnectGoogle(userId: string) {
   if (error) throw new Error("google_token_purge_failed");
 }
 
-async function refreshAccessToken(
-  userId: string,
-  expectedGoogleSub?: string,
-): Promise<string> {
+async function refreshAccessToken(userId: string, expectedGoogleSub?: string): Promise<string> {
   const db = admin();
   const { data, error } = await db
     .from("google_oauth_tokens")
