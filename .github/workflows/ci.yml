@@ -66,6 +66,13 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Diagnose action-pin formatting
+        if: steps.scope.outputs.run_ci == 'true'
+        shell: bash
+        run: |
+          npx prettier tests/unit/github-actions-pins.test.mjs > /tmp/github-actions-pins.test.mjs
+          diff -u tests/unit/github-actions-pins.test.mjs /tmp/github-actions-pins.test.mjs || true
+
       - name: Formatting changed files
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run format:check:changed
