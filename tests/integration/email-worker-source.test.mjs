@@ -145,24 +145,34 @@ test("collaboration emails are server-built, rate-limited, and transactionally p
   const projectInvites = read("src/lib/project-invites.functions.ts");
   const sharedChats = read("src/lib/shared-chats.functions.ts");
   const registry = read("src/lib/email-templates/registry.ts");
+  const projectRoute = read("src/routes/projects.$projectId.tsx");
   const shareDialog = read("src/components/ShareChatDialog.tsx");
   const migration = read("supabase/migrations/20260904210000_resend_webhook_integrity.sql");
 
   assert.match(builder, /KOVA_EMAIL_QUEUE_ENABLED !== "true"/);
   assert.match(builder, /TEMPLATES\[args\.templateName\]/);
   assert.match(builder, /crypto\.randomUUID\(\)/);
+  assert.match(builder, /emailOperationFingerprint/);
+  assert.match(builder, /args\.messageId\?\.trim\(\)/);
+  assert.match(builder, /DELIVERY_KEY\.test\(idempotencyKey\)/);
   assert.match(registry, /"project-invite": projectInvite/);
   assert.match(registry, /"shared-chat": sharedChat/);
 
   assert.match(projectInvites, /action: "project_invite_email"/);
   assert.match(projectInvites, /buildTransactionalEmail/);
   assert.match(projectInvites, /"create_project_invite_and_enqueue"/);
+  assert.match(projectInvites, /messageId: data\.operation_id/);
+  assert.match(projectInvites, /p_request_fingerprint: requestFingerprint/);
+  assert.match(projectRoute, /operation_id: crypto\.randomUUID\(\)/);
   assert.doesNotMatch(projectInvites, /\.from\("project_invites"\)[\s\S]*\.upsert/);
 
   assert.match(sharedChats, /action: "shared_chat_email"/);
   assert.match(sharedChats, /buildTransactionalEmail/);
   assert.match(sharedChats, /"create_shared_chat_and_enqueue"/);
+  assert.match(sharedChats, /messageId: data\.operation_id/);
+  assert.match(sharedChats, /p_request_fingerprint: requestFingerprint/);
   assert.doesNotMatch(sharedChats, /\.from\("shared_chats"\)[\s\S]*\.insert/);
+  assert.match(shareDialog, /operation_id: crypto\.randomUUID\(\)/);
   assert.match(shareDialog, /Chat shared and invitation emailed\./);
 
   assert.match(
@@ -173,6 +183,20 @@ test("collaboration emails are server-built, rate-limited, and transactionally p
     migration,
     /CREATE OR REPLACE FUNCTION public\.create_shared_chat_and_enqueue[\s\S]*INSERT INTO public\.shared_chats[\s\S]*public\.enqueue_tracked_email/,
   );
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.email_delivery_operations/);
+  assert.match(migration, /request_fingerprint ~ '\^\[0-9a-f\]\{64\}\$'/);
+  assert.match(migration, /MESSAGE = 'email_delivery_operation_conflict'/);
+  assert.match(
+    migration,
+    /public\.enqueue_tracked_email\([\s\S]*INSERT INTO public\.email_delivery_operations/,
+  );
+  assert.equal(
+    migration.match(/CREATE OR REPLACE FUNCTION public\.enqueue_tracked_email/g)?.length,
+    1,
+  );
+  assert.equal(migration.match(/\$remove_legacy_email_cron\$;/g)?.length, 1);
+  assert.doesNotMatch(migration, /END\s*\n\$;/);
+
   for (const functionName of [
     "create_project_invite_and_enqueue",
     "create_shared_chat_and_enqueue",
