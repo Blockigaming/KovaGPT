@@ -86,6 +86,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
     chatStore,
     /memoryStartIndex:[\s\S]*?Math\.min\(Math\.max\(0, source\.memoryStartIndex\), index \+ 1\)/,
   );
+  assert.match(chatStore, /Number\.isInteger\(candidate\.memoryStartIndex\)/);
   assert.match(chatStore, /const removedCount = Math\.max\(0, messages\.length - MAX_MESSAGES_PER_CONVERSATION\)/);
   assert.match(
     chatStore,
