@@ -118,3 +118,21 @@ test("caller abort terminates a never-settling stage without waiting for its tim
     runner.close();
   }
 });
+
+test("a pre-aborted request never starts preflight work", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let started = false;
+  const runner = createChatPreflightRunner({ signal: controller.signal });
+  try {
+    await assert.rejects(
+      runner.run("session", () => {
+        started = true;
+      }),
+      (error) => error?.code === "chat_request_aborted",
+    );
+  } finally {
+    runner.close();
+  }
+  assert.equal(started, false);
+});
