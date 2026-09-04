@@ -22,7 +22,7 @@ test("browser and server live credentials must target the approved Stripe accoun
   assert.match(envExample, /STRIPE_LIVE_ACCOUNT_ID=/);
   assert.match(envExample, /acct_1UAeDgAEZlsb6DBY/);
   assert.match(rollout, /browser publishable key and server key must be verified/);
-  assert.match(rollout, /Azure Key Vault/);
+  assert.match(rollout, /Azure Key\s+Vault/);
   assert.match(rollout, /Payment Method Domain/);
   assert.match(rollout, /stripe\.com\/files\/ips\/ips_webhooks\.json/);
   assert.match(rollout, /Cloudflare[\s\S]*webhook source IPs/i);

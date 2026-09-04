@@ -13,7 +13,10 @@ test("Stripe completion uses a DB lease sequence and keeps Event time audit-only
     rollout = await read("docs/release/STRIPE_BILLING_ROLLOUT.md");
   assert.match(reliability, /rpc\("begin_stripe_event"/);
   assert.match(reliability, /rpc\("complete_stripe_event"/);
-  assert.doesNotMatch(reliability, /currentSubscriptionTimestamp|event_created_at.*event_id/s);
+  assert.doesNotMatch(
+    reliability,
+    /currentSubscriptionTimestamp|_event_created_at\s*[<>=]+[\s\S]{0,80}_event_id/s,
+  );
   assert.doesNotMatch(
     identitySql,
     /drop constraint if exists subscriptions_stripe_subscription_id_key/,

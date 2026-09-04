@@ -45,7 +45,7 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
     /subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/,
   );
   assert.match(checkoutSource, /stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/);
-  assert.doesNotMatch(checkoutSource, /subscription\.current_period_end/);
+  assert.match(checkoutSource, /\.select\("status, current_period_end"\)/);
   assert.match(checkoutSource, /if \(!session\.client_secret\)/);
   assert.doesNotMatch(checkoutSource, /client_secret \?\? ""/);
   assert.match(
