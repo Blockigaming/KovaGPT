@@ -451,7 +451,8 @@ GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
 CREATE OR REPLACE FUNCTION public.defer_email_retry(
   p_queue_name text,
   p_message_id bigint,
-  p_delay_seconds integer
+  p_retry_after_seconds integer,
+  p_lease_seconds integer
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -465,20 +466,23 @@ BEGIN
   IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
     OR p_message_id IS NULL
     OR p_message_id < 1
-    OR p_delay_seconds IS NULL
-    OR p_delay_seconds NOT BETWEEN 1 AND 900
+    OR p_retry_after_seconds IS NULL
+    OR p_retry_after_seconds NOT BETWEEN 1 AND 900
+    OR p_lease_seconds IS NULL
+    OR p_lease_seconds NOT BETWEEN 30 AND 900
+    OR p_lease_seconds < p_retry_after_seconds
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_email_retry_deferral';
   END IF;
 
   PERFORM 1
-  FROM pgmq.set_vt(p_queue_name, p_message_id, p_delay_seconds);
+  FROM pgmq.set_vt(p_queue_name, p_message_id, p_lease_seconds);
   deferred := FOUND;
   IF NOT deferred THEN
     RETURN false;
   END IF;
 
-  retry_until := now() + pg_catalog.make_interval(secs => p_delay_seconds);
+  retry_until := now() + pg_catalog.make_interval(secs => p_retry_after_seconds);
   INSERT INTO public.email_send_state (id, retry_after_until, updated_at)
   VALUES (1, retry_until, now())
   ON CONFLICT (id) DO UPDATE
@@ -495,10 +499,10 @@ END
 $$;
 
 REVOKE ALL ON FUNCTION public.defer_email_retry(
-  text, bigint, integer
+  text, bigint, integer, integer
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.defer_email_retry(
-  text, bigint, integer
+  text, bigint, integer, integer
 ) TO service_role;
 
 -- The dedicated worker supersedes the historical five-second Edge Function
