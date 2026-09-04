@@ -370,20 +370,28 @@ function GitHubManager() {
     refresh = useServerFn(refreshGitHubInstallations),
     grants = useServerFn(updateGitHubRepositoryGrants),
     disconnect = useServerFn(disconnectGitHub);
-  const [data, setData] = useState<GitHubManagement | null>(null),
-    [busy, setBusy] = useState(false),
-    [search, setSearch] = useState(""),
-    [selected, setSelected] = useState<number[]>([]);
+  const [data, setData] = useState<GitHubManagement | null>(null);
+  const [busyAction, setBusyAction] = useState<
+    "connect" | "refresh" | "grant" | "disconnect" | null
+  >(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<number[]>([]);
   const [loadError, setLoadError] = useState(false);
-  const reload = useCallback(() => {
-    setLoadError(false);
-    return load()
-      .then(setData)
-      .catch(() => {
+  const busy = busyAction !== null;
+  const reload = useCallback(
+    async (showError = true): Promise<boolean> => {
+      setLoadError(false);
+      try {
+        setData(await load());
+        return true;
+      } catch {
         setLoadError(true);
-        toast.error("GitHub status unavailable");
-      });
-  }, [load]);
+        if (showError) toast.error("GitHub status unavailable");
+        return false;
+      }
+    },
+    [load],
+  );
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   useEffect(() => {
@@ -396,7 +404,7 @@ function GitHubManager() {
         <p className="mt-1 text-sm text-muted-foreground">
           Your connection was not changed. Try loading its status again.
         </p>
-        <Button variant="outline" className="mt-4" onClick={() => void reload()}>
+        <Button variant="outline" className="mt-4 min-h-11" onClick={() => void reload()}>
           Try again
         </Button>
       </section>
@@ -409,14 +417,47 @@ function GitHubManager() {
         aria-label="Loading GitHub"
       />
     );
-  const repos = data.repositories.filter((repo) => repo.full_name.includes(search.toLowerCase()));
+  const repos = data.repositories.filter((repo) =>
+    repo.full_name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
   async function connect() {
-    const response = await authFetch("/api/github/auth");
-    const result = await response.json();
-    if (result.url) location.assign(result.url);
-    else toast.error(result.error ?? "GitHub is unavailable");
+    if (busy) return;
+    setBusyAction("connect");
+    try {
+      const response = await authFetch("/api/github/auth");
+      const result = (await response.json().catch(() => null)) as {
+        url?: unknown;
+      } | null;
+      const authorizationUrl = parseGitHubAuthorizationUrl(result?.url);
+      if (!response.ok || !authorizationUrl) throw new Error("github_authorization_unavailable");
+      location.assign(authorizationUrl);
+    } catch {
+      toast.error("GitHub authorization could not be started. Try again.");
+    } finally {
+      setBusyAction(null);
+    }
   }
+
+  async function refreshInstallations() {
+    if (busy) return;
+    setBusyAction("refresh");
+    try {
+      await refresh();
+      if (await reload(false)) {
+        toast.success("GitHub installations refreshed.");
+      } else {
+        toast.warning("Installations refreshed, but their current status could not be loaded.");
+      }
+    } catch {
+      toast.error("GitHub installations could not be refreshed. Try again.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function update(granted: boolean) {
+    if (busy) return;
     if (!granted) {
       setRevokeOpen(true);
       return;
@@ -424,7 +465,8 @@ function GitHubManager() {
     await applyGrantUpdate(true);
   }
   async function applyGrantUpdate(granted: boolean) {
-    setBusy(true);
+    if (busy) return;
+    setBusyAction("grant");
     try {
       await grants({
         data: {
@@ -434,15 +476,39 @@ function GitHubManager() {
         },
       });
       setSelected([]);
-      await reload();
+      if (!(await reload(false))) {
+        toast.warning("Repository access changed, but its current status could not be loaded.");
+      }
     } catch {
       toast.error("Repository access could not be updated");
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
+
+  async function disconnectAccount(removeData: boolean) {
+    const accountId = data.accounts[0]?.id;
+    if (!accountId || busy) return;
+    setBusyAction("disconnect");
+    try {
+      await disconnect({ data: { accountId, removeData } });
+      setDisconnectOpen(false);
+      if (await reload(false)) {
+        toast.success(
+          removeData ? "GitHub disconnected and synced data removed." : "GitHub disconnected.",
+        );
+      } else {
+        toast.warning("GitHub disconnected, but its current status could not be loaded.");
+      }
+    } catch {
+      toast.error("GitHub could not be disconnected. Your connection was not changed.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   return (
-    <section className="kova-card p-5" aria-labelledby="github-manager">
+    <section className="kova-card p-5" aria-labelledby="github-manager" aria-busy={busy}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <Github className="h-9 w-9" />
@@ -461,21 +527,24 @@ function GitHubManager() {
           </span>
         ) : !data.accounts.length ? (
           <button
-            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background"
+            disabled={busy}
+            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void connect()}
           >
-            Connect GitHub
+            {busyAction === "connect" ? "Connecting…" : "Connect GitHub"}
           </button>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
-              className="min-h-11 rounded-full border px-3 text-sm"
-              onClick={() => void refresh().then(reload)}
+              disabled={busy}
+              className="min-h-11 rounded-full border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => void refreshInstallations()}
             >
-              Refresh installations
+              {busyAction === "refresh" ? "Refreshing…" : "Refresh installations"}
             </button>
             <button
-              className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+              disabled={busy}
+              className="min-h-11 rounded-full border px-3 text-sm text-destructive disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => setDisconnectOpen(true)}
             >
               Disconnect
@@ -522,7 +591,12 @@ function GitHubManager() {
           void applyGrantUpdate(false);
         }}
       />
-      <Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+      <Dialog
+        open={disconnectOpen}
+        onOpenChange={(nextOpen) => {
+          if (!busy) setDisconnectOpen(nextOpen);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Disconnect GitHub?</DialogTitle>
@@ -532,30 +606,26 @@ function GitHubManager() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setDisconnectOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => setDisconnectOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                setDisconnectOpen(false);
-                void disconnect({
-                  data: { accountId: data.accounts[0].id, removeData: false },
-                }).then(reload);
-              }}
+              disabled={busy}
+              onClick={() => void disconnectAccount(false)}
             >
-              Disconnect only
+              {busyAction === "disconnect" ? "Disconnecting…" : "Disconnect only"}
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setDisconnectOpen(false);
-                void disconnect({
-                  data: { accountId: data.accounts[0].id, removeData: true },
-                }).then(reload);
-              }}
+              disabled={busy}
+              onClick={() => void disconnectAccount(true)}
             >
-              Disconnect and remove data
+              {busyAction === "disconnect" ? "Disconnecting…" : "Disconnect and remove data"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -602,6 +672,7 @@ function GitHubManager() {
               <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
                 <input
                   type="checkbox"
+                  disabled={busy}
                   aria-label={`Select ${repo.full_name}`}
                   checked={selected.includes(repo.id)}
                   onChange={() =>
