@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { supabase } from "@/integrations/supabase/client";
+import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { toast } from "sonner";
 
 type PasskeyRecord = {
@@ -12,10 +13,6 @@ type PasskeyRecord = {
   created_at: string;
   last_used_at?: string | null;
 };
-
-function browserSupportsPasskeys() {
-  return typeof window !== "undefined" && "PublicKeyCredential" in window;
-}
 
 /**
  * WebAuthn passkey and hardware-security-key management. The deployment
