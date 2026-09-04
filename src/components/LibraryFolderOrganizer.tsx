@@ -83,6 +83,7 @@ export function LibraryFolderOrganizer({
   selectedItemIds,
   onScopeChange,
   onBusyChange,
+  onRefresh,
   onMoved,
   onFoldersDeleted,
 }: {
@@ -93,6 +94,7 @@ export function LibraryFolderOrganizer({
   selectedItemIds: string[];
   onScopeChange: (scope: LibraryFolderScope) => void;
   onBusyChange: (busy: boolean) => void;
+  onRefresh: () => void;
   onMoved: (itemIds: string[], folderId: string | null) => void;
   onFoldersDeleted: (folderIds: string[]) => void;
 }) {
@@ -170,6 +172,7 @@ export function LibraryFolderOrganizer({
     }
   }, [folders, foldersLoaded, moveTarget]);
 
+  const folderStateUnavailable = loading || Boolean(error) || !foldersLoaded;
   const activeFolder =
     scope === "all" || scope === "unfiled"
       ? null
@@ -187,7 +190,7 @@ export function LibraryFolderOrganizer({
 
   const submitEditor = async () => {
     const name = folderName.trim();
-    if (!name || busy || loading) return;
+    if (!name || busy || folderStateUnavailable) return;
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
     setLoading(false);
@@ -222,7 +225,7 @@ export function LibraryFolderOrganizer({
   };
 
   const removeFolder = async () => {
-    if (!activeFolder || busy || loading) return;
+    if (!activeFolder || busy || folderStateUnavailable) return;
     const removedIds = descendantIds(activeFolder.id, folders);
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
@@ -255,7 +258,7 @@ export function LibraryFolderOrganizer({
   const moveSelected = async () => {
     if (
       busy ||
-      loading ||
+      folderStateUnavailable ||
       selectedItemIds.length === 0 ||
       selectedItemIds.length > MAX_BULK_MOVE_ITEMS
     ) {
@@ -322,7 +325,7 @@ export function LibraryFolderOrganizer({
             size="sm"
             variant="outline"
             className="min-h-11"
-            disabled={Boolean(busy) || loading || !canCreateChild}
+            disabled={Boolean(busy) || folderStateUnavailable || !canCreateChild}
             onClick={() => {
               setFolderName("");
               setEditorError(null);
@@ -338,7 +341,7 @@ export function LibraryFolderOrganizer({
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                disabled={Boolean(busy) || loading}
+                disabled={Boolean(busy) || folderStateUnavailable}
                 onClick={() => {
                   setFolderName(activeFolder.name);
                   setEditorError(null);
@@ -352,7 +355,7 @@ export function LibraryFolderOrganizer({
                 size="sm"
                 variant="outline"
                 className="min-h-11 text-destructive"
-                disabled={Boolean(busy) || loading}
+                disabled={Boolean(busy) || folderStateUnavailable}
                 onClick={() => setDeletePending(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -369,7 +372,7 @@ export function LibraryFolderOrganizer({
           className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3"
         >
           <p className="text-sm text-destructive">{error}</p>
-          <Button size="sm" variant="outline" className="min-h-11" onClick={() => void load()}>
+          <Button size="sm" variant="outline" className="min-h-11" onClick={onRefresh}>
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
@@ -424,7 +427,7 @@ export function LibraryFolderOrganizer({
               className="kova-select mt-1 min-h-11 w-full"
               value={moveTarget}
               onChange={(event) => setMoveTarget(event.target.value)}
-              disabled={Boolean(busy) || loading}
+              disabled={Boolean(busy) || folderStateUnavailable}
             >
               <option value="root">Unfiled</option>
               {sortedFolders.map((folder) => (
@@ -437,7 +440,11 @@ export function LibraryFolderOrganizer({
           <Button
             className="min-h-11"
             size="sm"
-            disabled={Boolean(busy) || loading || selectedItemIds.length > MAX_BULK_MOVE_ITEMS}
+            disabled={
+              Boolean(busy) ||
+              folderStateUnavailable ||
+              selectedItemIds.length > MAX_BULK_MOVE_ITEMS
+            }
             onClick={() => void moveSelected()}
           >
             {busy === "move" ? (
