@@ -34,6 +34,7 @@ type ProjectFileRow = {
   status: string;
   storage_charged: boolean;
   storage_owner_id: string | null;
+  reservationCreated?: boolean;
   inProgress?: boolean;
 };
 
@@ -148,6 +149,7 @@ function reservationRow(value: unknown): ProjectFileRow | null {
     status: row.status,
     storage_charged: row.storage_charged === true,
     storage_owner_id: typeof row.storage_owner_id === "string" ? row.storage_owner_id : null,
+    reservationCreated: row.reservationCreated === true,
     inProgress: row.inProgress === true,
   };
 }
@@ -175,33 +177,35 @@ async function setUploadState(
   return !error && Boolean(data);
 }
 
-async function chargeProjectStorage(
+async function abortProjectFileUpload(
   auth: AuthedCaller,
-  ownerId: string,
-  bytes: number,
-  limitBytes: number,
-): Promise<Response | null> {
-  if (bytes <= 0) return null;
+  fileId: string,
+  attemptId: string,
+): Promise<boolean> {
   const { data, error } = await auth.supabaseAdmin.rpc(
-    "try_add_storage_bytes" as never,
-    { _user_id: ownerId, _bytes: bytes, _limit: limitBytes } as never,
+    "abort_project_file_upload" as never,
+    { p_file_id: fileId, p_attempt_id: attemptId } as never,
   );
-  if (error) return json({ error: "project_storage_quota_unavailable" }, 503);
-  if (data === false) return json({ error: "project_storage_limit_reached" }, 413);
-  return null;
+  return !error && record(data)?.aborted === true;
 }
 
-async function releaseStorage(
+async function storedProjectFileMatches(
   auth: AuthedCaller,
-  ownerId: string,
-  bytes: number,
+  storagePath: string,
+  expectedBytes: number,
+  expectedSha256: string,
 ): Promise<boolean> {
-  if (bytes <= 0) return true;
-  const { error } = await auth.supabaseAdmin.rpc(
-    "release_project_storage_bytes" as never,
-    { p_user_id: ownerId, p_bytes: bytes } as never,
-  );
-  return !error;
+  const { data, error } = await auth.supabaseAdmin.storage
+    .from("project-files")
+    .download(storagePath);
+  if (error || !data || data.size !== expectedBytes) return false;
+  try {
+    return sha256Hex(new Uint8Array(await data.arrayBuffer())).then(
+      (digest) => digest === expectedSha256,
+    );
+  } catch {
+    return false;
+  }
 }
 
 function projectFileDeleteClaim(value: unknown): {
