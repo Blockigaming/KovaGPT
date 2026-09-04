@@ -59,7 +59,7 @@ export function ShareChatDialog({
           snapshot: { messages },
         },
       });
-      toast.success("Chat shared.");
+      toast.success("Chat shared and invitation emailed.");
       setEmail("");
       onOpenChange(false);
     } catch (e) {
