@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { buildTransactionalEmail } from "@/lib/email-queue.server";
+import {
+  buildTransactionalEmail,
+  emailOperationFingerprint,
+} from "@/lib/email-queue.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 import type { PendingInvite, ProjectInvite, ProjectRole } from "./projects.functions";
@@ -74,6 +77,13 @@ export const inviteMember = createServerFn({ method: "POST" })
       throw new Error("Only the project owner can invite members.");
     }
 
+    const requestFingerprint = await emailOperationFingerprint([
+      "project-invite",
+      context.userId,
+      data.project_id,
+      email,
+      data.role,
+    ]);
     const payload = await buildTransactionalEmail({
       templateName: "project-invite",
       recipientEmail: email,
@@ -95,6 +105,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         p_recipient_email: email,
         p_role: data.role,
         p_operation_id: data.operation_id,
+        p_request_fingerprint: requestFingerprint,
         p_payload: payload,
       } as never,
     );
