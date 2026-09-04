@@ -5,6 +5,7 @@ import { TEMPLATES } from "@/lib/email-templates/registry";
 const SENDER_DOMAIN = "notify.kovagpt.com";
 const DEFAULT_FROM = `KovaGPT <noreply@${SENDER_DOMAIN}>`;
 const EMAIL_ADDRESS = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const DELIVERY_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 
 export type QueuedEmailPayload = {
   message_id: string;
@@ -24,6 +25,7 @@ export async function buildTransactionalEmail(args: {
   templateName: string;
   recipientEmail: string;
   data: Record<string, unknown>;
+  messageId?: string;
   idempotencyKey?: string;
 }): Promise<QueuedEmailPayload> {
   if (process.env.KOVA_EMAIL_QUEUE_ENABLED !== "true") {
@@ -44,10 +46,14 @@ export async function buildTransactionalEmail(args: {
   if (!entry || entry.to) {
     throw new Error("Unsupported recipient email template.");
   }
+  const messageId = args.messageId?.trim() || crypto.randomUUID();
+  const idempotencyKey = args.idempotencyKey?.trim() || messageId;
+  if (!DELIVERY_KEY.test(messageId) || !DELIVERY_KEY.test(idempotencyKey)) {
+    throw new Error("A valid email delivery key is required.");
+  }
   const element = React.createElement(entry.component, args.data);
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
-  const messageId = crypto.randomUUID();
   return {
     message_id: messageId,
     to: recipient,
@@ -58,7 +64,7 @@ export async function buildTransactionalEmail(args: {
     text,
     purpose: "transactional",
     label: args.templateName,
-    idempotency_key: args.idempotencyKey?.trim() || messageId,
+    idempotency_key: idempotencyKey,
     queued_at: new Date().toISOString(),
   };
 }
