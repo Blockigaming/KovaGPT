@@ -239,9 +239,7 @@ async function cleanupOwnedProjectFiles(
     removed += entries.length;
   }
 
-  const remaining = await client
-    .from("project_files")
-    .select("id,project_id,storage_path")
+  const remaining = await projectFiles(client).select("id,project_id,storage_path")
     .eq("uploaded_by", userId)
     .order("id", { ascending: true })
     .limit(1);
