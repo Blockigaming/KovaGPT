@@ -117,6 +117,7 @@ function ProjectDetailPage() {
   const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [deletionBusy, setDeletionBusy] = useState(false);
   const currentRequestKeyRef = useRef(requestKey);
   const requestSequenceRef = useRef(0);
   currentRequestKeyRef.current = requestKey;
@@ -184,6 +185,7 @@ function ProjectDetailPage() {
     setLoadError(null);
     setTab("overview");
     setSearchOpen(false);
+    setDeletionBusy(false);
 
     if (!isSignedIn || !requestKey) {
       setResolvedRequestKey(null);
@@ -264,6 +266,88 @@ function ProjectDetailPage() {
   const canEdit = project.role === "owner" || project.role === "editor";
   const isOwner = project.role === "owner";
   const archived = !!project.archived_at;
+
+  if (project.deletion_requested_at) {
+    return (
+      <AppShell>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          aria-busy={deletionBusy || undefined}
+          className="mx-auto w-full max-w-2xl p-4 md:p-8"
+        >
+          <Link
+            to="/projects"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            All projects
+          </Link>
+          <section
+            role="alert"
+            className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5 sm:p-8"
+          >
+            <h1 className="text-xl font-semibold">Project deletion is incomplete</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              “{project.name}” is read-only while its stored-file cleanup is pending. No new
+              workspace changes are accepted.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isOwner
+                ? "Retrying resumes the bounded cleanup and never deletes outside this Project."
+                : "The Project owner must retry deletion. You can return to your Projects list."}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {isOwner ? (
+                <Button
+                  variant="destructive"
+                  className="min-h-11"
+                  disabled={deletionBusy}
+                  onClick={async () => {
+                    const operationRequestKey = requestKey;
+                    setDeletionBusy(true);
+                    try {
+                      await fnDelete({ data: { id: projectId } });
+                      if (currentRequestKeyRef.current !== operationRequestKey) return;
+                      toast.success("Project deleted");
+                      await navigate({ to: "/projects" });
+                    } catch (error) {
+                      if (currentRequestKeyRef.current !== operationRequestKey) return;
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Deletion is incomplete. Retry when the service is available.",
+                      );
+                      await refresh();
+                    } finally {
+                      if (currentRequestKeyRef.current === operationRequestKey) {
+                        setDeletionBusy(false);
+                      }
+                    }
+                  }}
+                >
+                  {deletionBusy ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Retrying deletion…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      Retry deletion
+                    </>
+                  )}
+                </Button>
+              ) : null}
+              <Button variant="outline" className="min-h-11" asChild>
+                <Link to="/projects">Back to projects</Link>
+              </Button>
+            </div>
+          </section>
+        </main>
+      </AppShell>
+    );
+  }
 
   async function toggleArchive() {
     const operationRequestKey = requestKey;
@@ -468,9 +552,15 @@ function ProjectDetailPage() {
                   toast.success("Saved");
                 }}
                 onDelete={async () => {
-                  await fnDelete({ data: { id: projectId } });
-                  toast.success("Project deleted");
-                  navigate({ to: "/projects" });
+                  try {
+                    await fnDelete({ data: { id: projectId } });
+                    toast.success("Project deleted");
+                    await navigate({ to: "/projects" });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Deletion is incomplete. Try again.",
+                    );
+                  }
                 }}
               />
             </TabsContent>
@@ -1923,8 +2013,8 @@ function SettingsTab({
       <div className="border border-destructive/40 rounded-xl p-4">
         <div className="text-sm font-medium text-destructive mb-1">Danger zone</div>
         <p className="text-xs text-muted-foreground mb-3">
-          Deleting a project removes it for every member and permanently deletes all its chats,
-          files, tasks, and notes.
+          Deleting a project removes it for every member and permanently deletes its stored file
+          copies, chats, tasks, notes, and memberships. Interrupted cleanup stays retryable.
         </p>
         <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}>
           <Trash2 className="w-4 h-4 mr-1.5" />
@@ -1936,7 +2026,7 @@ function SettingsTab({
         open={confirming}
         onOpenChange={setConfirming}
         title={`Delete “${project.name}”?`}
-        message="This can't be undone. All project chats, files, tasks, notes, and memberships will be removed."
+        message="This can't be undone. Stored file copies, chats, tasks, notes, and memberships will be removed. If cleanup is interrupted, this dialog stays available so you can retry."
         confirmLabel="Delete forever"
         destructive
         onConfirm={onDelete}
@@ -1996,8 +2086,16 @@ function ConfirmDialog({
                 setBusy(false);
               }
             }}
+            aria-busy={busy || undefined}
           >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : confirmLabel}
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>{confirmLabel}…</span>
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

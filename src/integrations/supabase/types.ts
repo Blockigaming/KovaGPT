@@ -903,6 +903,48 @@ export type Database = {
           },
         ];
       };
+      project_deletion_jobs: {
+        Row: {
+          attempt_count: number;
+          attempt_id: string | null;
+          completed_at: string | null;
+          last_error_code: string | null;
+          lease_until: string | null;
+          owner_id: string;
+          project_id: string;
+          requested_at: string;
+          started_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_id?: string | null;
+          completed_at?: string | null;
+          last_error_code?: string | null;
+          lease_until?: string | null;
+          owner_id: string;
+          project_id: string;
+          requested_at?: string;
+          started_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_id?: string | null;
+          completed_at?: string | null;
+          last_error_code?: string | null;
+          lease_until?: string | null;
+          owner_id?: string;
+          project_id?: string;
+          requested_at?: string;
+          started_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       project_files: {
         Row: {
           content_sha256: string | null;
@@ -1166,6 +1208,7 @@ export type Database = {
           archived_at: string | null;
           color: string | null;
           created_at: string;
+          deletion_requested_at: string | null;
           description: string | null;
           id: string;
           name: string;
@@ -1178,6 +1221,7 @@ export type Database = {
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;
+          deletion_requested_at?: string | null;
           description?: string | null;
           id?: string;
           name: string;
@@ -1190,6 +1234,7 @@ export type Database = {
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;
+          deletion_requested_at?: string | null;
           description?: string | null;
           id?: string;
           name?: string;
@@ -1557,6 +1602,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      abort_project_file_upload: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: Json;
+      };
       acquire_ai_generation: {
         Args: {
           p_context_trimmed: boolean;
@@ -1591,6 +1640,14 @@ export type Database = {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
       };
+      claim_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      claim_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string; p_user_id: string };
+        Returns: Json;
+      };
       delete_email: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -1599,6 +1656,15 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string };
         Returns: number;
+      };
+      fail_project_deletion: {
+        Args: {
+          p_attempt_id: string;
+          p_error_code: string;
+          p_project_id: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
       };
       family_owner_of: { Args: { _user_id: string }; Returns: string };
       finalize_ai_generation: {
@@ -1615,6 +1681,14 @@ export type Database = {
           p_tools: Json;
         };
         Returns: boolean;
+      };
+      finalize_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      finalize_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: Json;
       };
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string };
@@ -1804,6 +1878,35 @@ export type Database = {
           msg_id: number;
           read_ct: number;
         }[];
+      };
+      release_project_storage_bytes: {
+        Args: { p_bytes: number; p_user_id: string };
+        Returns: number;
+      };
+      renew_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      reserve_project_file_upload: {
+        Args: {
+          p_attempt_id: string;
+          p_content_sha256: string;
+          p_extension: string;
+          p_file_cap: number;
+          p_idempotency_key: string;
+          p_kind: string;
+          p_mime_type: string;
+          p_name: string;
+          p_project_id: string;
+          p_size_bytes: number;
+          p_storage_limit: number;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      restore_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: boolean;
       };
       save_writing_document: {
         Args: {

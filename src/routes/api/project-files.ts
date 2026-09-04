@@ -267,6 +267,9 @@ function reservationFailure(error: { code?: string; message?: string } | null): 
   if (message.includes("project_storage_limit_reached")) {
     return json({ error: "project_storage_limit_reached" }, 413);
   }
+  if (message.includes("project_deletion_pending")) {
+    return json({ error: "project_deletion_pending" }, 409, { "Retry-After": "5" });
+  }
   if (code === "22023") return json({ error: "invalid_project_file_request" }, 400);
   return json({ error: "project_file_reservation_unavailable" }, 503);
 }
@@ -531,7 +534,12 @@ async function remove(request: Request): Promise<Response> {
       p_attempt_id: attemptId,
     } as never,
   );
-  if (claimError) return json({ error: "project_file_delete_unavailable" }, 503);
+  if (claimError) {
+    if (claimError.message.includes("project_deletion_pending")) {
+      return json({ error: "project_deletion_pending" }, 409, { "Retry-After": "5" });
+    }
+    return json({ error: "project_file_delete_unavailable" }, 503);
+  }
   const file = projectFileDeleteClaim(claimed);
   if (!file) return json({ error: "project_file_delete_unavailable" }, 503);
   if (!file.claimed) {

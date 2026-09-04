@@ -41,6 +41,39 @@ nor the new client is compatible with only half of this contract. Then run the i
 contract and verify signed read/upload/delete, collaborator uploads charged to the owner, duplicate
 idempotency keys, concurrent deletion, and crash recovery with two authenticated test users.
 
+## Project and account deletion
+
+`20260904210000_project_deletion_storage_integrity.sql` removes direct authenticated Project
+deletion and replaces it with a durable, service-role-only coordinator. The coordinator:
+
+1. locks the owned Project and fences new upload or file-delete attempts;
+2. waits for live file-operation leases, validates owned file/image paths against the exact Project
+   folder, preserves promoted agent-deliverable references, and deletes only the Project folder
+   through the Storage API in bounded batches;
+3. confirms the folder is empty, releases charged bytes, and deletes relational metadata in one
+   database finalization transaction; and
+4. leaves the Project plus a retryable job when listing, removal, lease renewal, or finalization
+   fails.
+
+A repeated delete is idempotent. Account deletion runs the same coordinator for every owned
+Project before deleting the auth user. Collaborations merely joined by the departing user are not
+deleted. A failed account attempt keeps the auth user active and may already have permanently
+deleted earlier owned Projects; retrying resumes from the durable job state.
+
+After a deletion request is recorded, Project summaries and details expose that durable state.
+The workspace becomes read-only at the database boundary; the owner gets a bounded retry action,
+while other members are told that only the owner can resume cleanup. The Project stays visible
+until both Storage cleanup and relational finalization succeed.
+
+Production rollout must apply `20260904200000` before `20260904210000`. In staging, interrupt one
+multi-object Project cleanup, confirm the Project remains visible, retry it, and verify that:
+
+- the exact `<project UUID>/` Storage prefix is empty while a prefix-collision Project is untouched;
+- `project_files`, Project metadata, and charged bytes finalize only after Storage removal;
+- an editor cannot delete a Project and file operations cannot start after deletion is claimed;
+- deleting an account with owned Projects leaves no owned Project prefix; and
+- the source revision and migration manifest match the deployed release.
+
 ## Future-object default privileges
 
 Future tables and sequences created by the proven migration owner `postgres` in `public` no longer

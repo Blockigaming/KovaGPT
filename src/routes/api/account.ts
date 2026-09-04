@@ -137,6 +137,25 @@ export const Route = createFileRoute("/api/account")({
           );
         }
 
+        const deletion = await import("@/lib/project-deletion.server");
+        try {
+          await deletion.deleteOwnedProjectsBeforeAccountDeletion({
+            admin: auth.supabaseAdmin,
+            userId: auth.userId,
+          });
+        } catch (error) {
+          console.error("[account-delete] project storage cleanup failed", {
+            code:
+              error instanceof deletion.ProjectDeletionError
+                ? error.code
+                : "project_deletion_failed",
+          });
+          return jsonError(
+            "Project cleanup did not finish, so your account remains active. Some projects may already have been deleted; retry to resume safely.",
+            503,
+          );
+        }
+
         const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
         if (deleteError) {
           console.error("[account-delete] auth deletion failed", {
