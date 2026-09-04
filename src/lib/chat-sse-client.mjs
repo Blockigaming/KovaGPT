@@ -58,12 +58,7 @@ export class ChatStreamError extends Error {
   constructor(
     code,
     message,
-    {
-      status = 502,
-      retryable = true,
-      category = "streaming_interruption",
-      requestId,
-    } = {},
+    { status = 502, retryable = true, category = "streaming_interruption", requestId } = {},
   ) {
     super(message);
     this.name = "ChatStreamError";
@@ -150,9 +145,7 @@ export async function consumeChatSse(
               ? delta.category
               : "model_provider_failure",
           requestId:
-            typeof delta.request_id === "string" && delta.request_id
-              ? delta.request_id
-              : undefined,
+            typeof delta.request_id === "string" && delta.request_id ? delta.request_id : undefined,
         },
       );
     }
