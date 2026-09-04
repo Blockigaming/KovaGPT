@@ -189,8 +189,10 @@ export const Route = createFileRoute("/api/public/help-submit")({
             data: body,
             idempotencyKey: `help-notify-${idem}`,
           });
-        } catch (err) {
-          console.error("help-submit enqueue failed", err);
+        } catch {
+          console.error("help-submit enqueue failed", {
+            error_code: "help_submit_enqueue_failed",
+          });
           return Response.json(
             { error: "We couldn't send your message. Please try again in a moment." },
             { status: 500 },
