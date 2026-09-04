@@ -38,3 +38,12 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
   assert.match(shellSpec, /await captureCandidateVisual\(/u);
   assert.match(authSpec, /await captureCandidateVisual\(/u);
 });
+
+test("deployed baseline evidence classifies observations truthfully", async () => {
+  const source = await readRootFile("tests/e2e/deployed-baseline-audit.spec.ts");
+
+  assert.match(source, /classification: "observational-production-baseline"/u);
+  assert.match(source, /navigationError === null && status !== null && status >= 200/u);
+  assert.match(source, /reachability,/u);
+  assert.doesNotMatch(source, /observed-failed-production-baseline/u);
+});
