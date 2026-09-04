@@ -353,7 +353,7 @@ export const deleteProject = createServerFn({ method: "POST" })
         code:
           error instanceof deletion.ProjectDeletionError ? error.code : "project_deletion_failed",
       });
-      throw new Error(deletion.projectDeletionPublicMessage(error));
+      throw new Error(deletion.projectDeletionPublicMessage(error), { cause: error });
     }
     return { ok: true };
   });
