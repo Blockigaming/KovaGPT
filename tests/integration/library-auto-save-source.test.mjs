@@ -79,6 +79,7 @@ test("every image download uses a bounded Blob action with real failure state", 
   assert.match(imageRoute, /response\.body\.getReader\(\)/);
   assert.match(imageRoute, /total > MAX_IMAGE_DOWNLOAD_BYTES/);
   assert.match(imageRoute, /reader\.cancel\(\)/);
+  assert.doesNotMatch(imageRoute, /response\.blob\(\)/);
   assert.match(imageRoute, /URL\.createObjectURL\(blob\)/);
   assert.match(imageRoute, /setDownloadingImageId/);
   assert.doesNotMatch(imageRoute, /<a[\s\S]{0,160}download=/);
