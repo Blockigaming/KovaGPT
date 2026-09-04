@@ -604,7 +604,6 @@ export function SettingsDialog({
         {!loggedIn ? (
           <SignedOutSettings
             settings={settings}
-            onChange={onChange}
             setMode={setMode}
             onSignIn={() => clerk?.openSignIn()}
             onClose={() => onOpenChange(false)}
@@ -2264,23 +2263,20 @@ function LibraryPanel() {
 // FinancesPanel removed - the Finances tab is no longer part of Settings.
 
 // Limited settings panel shown to signed-out visitors. Includes only privacy
-// preferences, appearance, and language. All copy is KovaGPT-branded (not
-// copied from any other provider).
+// preferences and appearance. All copy is KovaGPT-branded (not copied from
+// any other provider).
 function SignedOutSettings({
   settings,
-  onChange,
   setMode,
   onSignIn,
   onClose,
 }: {
   settings: Settings;
-  onChange: (s: Settings) => void;
   setMode: (m: ThemeMode) => void;
   onSignIn: () => void;
   onClose: () => void;
 }) {
   const [section, setSection] = useState<"general" | "data">("general");
-  void onChange;
 
   return (
     <div className="kova-settings-surface flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-modal)] md:flex-row">
@@ -2333,16 +2329,11 @@ function SignedOutSettings({
               </div>
             </div>
             <div className="flex items-center justify-between gap-4 py-4">
-              <span className="text-sm">Language</span>
-              <div className="w-44">
-                <GuestLanguageSelect />
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-4 py-4">
               <div className="min-w-0">
                 <div className="text-sm">Account</div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Sign in to sync chats, memory, and settings across devices.
+                  Sign in to use account-backed chats, memory, and paid features. Browser
+                  preferences stay on this device.
                 </p>
               </div>
               <Button onClick={onSignIn} className="h-9 rounded-full px-5 text-sm">
@@ -2356,9 +2347,9 @@ function SignedOutSettings({
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
               <div className="text-sm font-medium">How signed-out data is stored</div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Signed-out chats stay in this tab until you refresh or close it. Appearance and
-                language preferences remain in this browser, but nothing here is synced to an
-                account. Read the{" "}
+                Signed-out chats stay in this tab until you refresh or close it. Your appearance
+                preference remains in this browser, but nothing here is synced to an account. Read
+                the{" "}
                 <Link
                   to="/privacy"
                   onClick={onClose}
@@ -2443,87 +2434,6 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
         )}
       </div>
     </section>
-  );
-}
-
-const KOVA_LANGUAGES: { value: string; label: string }[] = [
-  { value: "auto", label: "Auto detect" },
-  { value: "en", label: "English" },
-  { value: "en-GB", label: "English (UK)" },
-  { value: "es", label: "Español" },
-  { value: "es-MX", label: "Español (México)" },
-  { value: "fr", label: "Français" },
-  { value: "de", label: "Deutsch" },
-  { value: "it", label: "Italiano" },
-  { value: "pt", label: "Português" },
-  { value: "pt-BR", label: "Português (Brasil)" },
-  { value: "nl", label: "Nederlands" },
-  { value: "sv", label: "Svenska" },
-  { value: "no", label: "Norsk" },
-  { value: "da", label: "Dansk" },
-  { value: "fi", label: "Suomi" },
-  { value: "pl", label: "Polski" },
-  { value: "cs", label: "Čeština" },
-  { value: "ro", label: "Română" },
-  { value: "hu", label: "Magyar" },
-  { value: "el", label: "Ελληνικά" },
-  { value: "tr", label: "Türkçe" },
-  { value: "ru", label: "Русский" },
-  { value: "uk", label: "Українська" },
-  { value: "ar", label: "العربية" },
-  { value: "he", label: "עברית" },
-  { value: "fa", label: "فارسی" },
-  { value: "hi", label: "हिन्दी" },
-  { value: "bn", label: "বাংলা" },
-  { value: "ur", label: "اردو" },
-  { value: "ta", label: "தமிழ்" },
-  { value: "te", label: "తెలుగు" },
-  { value: "th", label: "ไทย" },
-  { value: "vi", label: "Tiếng Việt" },
-  { value: "id", label: "Bahasa Indonesia" },
-  { value: "ms", label: "Bahasa Melayu" },
-  { value: "tl", label: "Tagalog" },
-  { value: "zh-CN", label: "中文 (简体)" },
-  { value: "zh-TW", label: "中文 (繁體)" },
-  { value: "ja", label: "日本語" },
-  { value: "ko", label: "한국어" },
-  { value: "sw", label: "Kiswahili" },
-  { value: "af", label: "Afrikaans" },
-];
-
-function GuestLanguageSelect() {
-  const KEY = "kova-guest-language";
-  const [value, setValue] = useState<string>("auto");
-  useEffect(() => {
-    try {
-      setValue(localStorage.getItem(KEY) || "auto");
-    } catch {
-      /* noop */
-    }
-  }, []);
-  return (
-    <Select
-      value={value}
-      onValueChange={(v) => {
-        setValue(v);
-        try {
-          localStorage.setItem(KEY, v);
-        } catch {
-          /* noop */
-        }
-      }}
-    >
-      <SelectTrigger aria-label="Language">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="max-h-72">
-        {KOVA_LANGUAGES.map((l) => (
-          <SelectItem key={l.value} value={l.value}>
-            {l.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 
