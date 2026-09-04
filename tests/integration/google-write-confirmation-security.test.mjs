@@ -50,12 +50,12 @@ test("confirmation reads and claims only the signed-in owner's row", () => {
   );
   assert.match(claim, /\.eq\("user_id", userId\)/);
   assert.match(claim, /\.eq\("status", "pending"\)/);
-  assert.match(claim, /\.select\("id, tool, args"\)/);
+  assert.match(claim, /\.select\("id, tool, args, result"\)/);
 });
 
 test("claimed legacy arguments are revalidated immediately before Google access", () => {
   const executor = read("src/lib/google-tools.server.ts");
-  const claim = executor.indexOf('.select("id, tool, args")');
+  const claim = executor.indexOf('.select("id, tool, args, result")');
   const revalidate = executor.indexOf("validateSupportedWrite(claimedTool,", claim);
   const token = executor.indexOf("getValidGoogleAccessToken(userId)", revalidate);
 
@@ -93,6 +93,9 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(executor, /method: "POST"/);
   assert.match(executor, /JSON\.stringify\(sending \? \{ raw \} : \{ message: \{ raw \} \}\)/);
   assert.match(executor, /foldEmailAddressHeader\("To", to\)/);
+  assert.match(executor, /Content-Transfer-Encoding: base64/);
+  assert.match(executor, /encodeMimeTextBody\(body\)/);
+  assert.match(executor, /AbortSignal\.timeout\(GOOGLE_WRITE_TIMEOUT_MS\)/);
   assert.match(executor, /gmail\.send/);
   assert.match(
     executor,
@@ -109,6 +112,20 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(card, /preview\.bcc/);
   assert.match(card, />Bcc:<\/span>/);
   assert.match(card, /confirm\.tool === "gmail_send"[\s\S]*\? "Send"/);
+});
+
+test("confirmed writes stay bound to the staged Google account and use a recoverable lease", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const oauth = read("src/lib/google-oauth.server.ts");
+
+  assert.match(executor, /result: \{ staged_google_sub: stagedGoogleSub \}/);
+  assert.match(executor, /processing_started_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(executor, /getValidGoogleAccessToken\(userId, stagedGoogleSub\)/);
+  assert.match(executor, /Date\.now\(\) - new Date\(startedAt\)\.getTime\(\) > STALE_PROCESSING_MS/);
+  assert.match(executor, /abandoned_processing/);
+  assert.match(oauth, /expectedGoogleSub && data\.google_sub !== expectedGoogleSub/);
+  assert.match(oauth, /refreshAccessToken\(userId, expectedGoogleSub\)/);
+  assert.match(oauth, /refreshUpdate\.eq\("google_sub", expectedGoogleSub\)/);
 });
 
 test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {
