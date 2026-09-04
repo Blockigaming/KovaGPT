@@ -482,7 +482,7 @@ BEGIN
   INSERT INTO public.email_send_state (id, retry_after_until, updated_at)
   VALUES (1, retry_until, now())
   ON CONFLICT (id) DO UPDATE
-  SET retry_after_until = pg_catalog.greatest(
+  SET retry_after_until = greatest(
         coalesce(public.email_send_state.retry_after_until, '-infinity'::timestamptz),
         EXCLUDED.retry_after_until
       ),
