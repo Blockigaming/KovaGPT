@@ -12,6 +12,8 @@ test("Apps validates principal-scoped recent activity before rendering it", () =
   assert.match(apps, /Number\.isFinite\(Date\.parse\(entry\.at\)\)/);
   assert.match(apps, /activity\.length >= MAX_APP_ACTIVITY/);
   assert.doesNotMatch(apps, /setActivity\(JSON\.parse/);
+  assert.match(apps, /storedActivity = parseAppActivity\(storage\.getItem\(activityKey\)\)/);
+  assert.match(apps, /catch \{\s+setActivityPersistenceError\(true\)/);
   assert.match(apps, /<GitHubManager key=\{principal \?\? "unresolved"\}/);
 });
 
