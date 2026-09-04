@@ -33,8 +33,10 @@ test("GitHub disconnect distinguishes retained and removed synchronized data", (
   const source = read("src/routes/apps.tsx");
   assert.match(source, /Disconnect only/);
   assert.match(source, /Disconnect and remove data/);
-  assert.match(source, /removeData: false/);
-  assert.match(source, /removeData: true/);
+  assert.match(source, /async function disconnectAccount\(removeData: boolean\)/);
+  assert.match(source, /await disconnect\(\{ data: \{ accountId, removeData \} \}\)/);
+  assert.match(source, /disconnectAccount\(false\)/);
+  assert.match(source, /disconnectAccount\(true\)/);
 });
 
 test("dialog positioning is not overwritten by the shared menu transform animation", () => {
