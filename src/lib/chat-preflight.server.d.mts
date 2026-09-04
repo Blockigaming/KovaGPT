@@ -39,7 +39,12 @@ export function createChatPreflightRunner(options?: {
   run<T>(
     stage: string,
     operation: (signal: AbortSignal) => Promise<T> | T,
-    options?: { required?: boolean; timeoutMs?: number },
+    options?: { required?: true; timeoutMs?: number },
+  ): Promise<T>;
+  run<T>(
+    stage: string,
+    operation: (signal: AbortSignal) => Promise<T> | T,
+    options: { required: false; timeoutMs?: number },
   ): Promise<T | undefined>;
   close(): void;
 };
