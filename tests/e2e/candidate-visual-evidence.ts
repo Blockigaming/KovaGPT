@@ -7,11 +7,7 @@ const evidenceDirectory = process.env.KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR?.trim()
 
 const safeSegment = (value: string) => value.replaceAll(/[^a-z0-9.-]+/giu, "-");
 
-export async function captureCandidateVisual(
-  page: Page,
-  testInfo: TestInfo,
-  evidenceName: string,
-) {
+export async function captureCandidateVisual(page: Page, testInfo: TestInfo, evidenceName: string) {
   if (!evidenceDirectory) return;
 
   await mkdir(evidenceDirectory, { recursive: true });
