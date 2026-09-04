@@ -136,6 +136,9 @@ export function inspectProjectFile({ bytes, fileName, requestedKind }) {
   const name = normalizeProjectFileName(fileName);
   const image = IMAGE_SIGNATURES.find((candidate) => candidate.matches(bytes));
   if (image) {
+    if (requestedKind !== "image") {
+      throw new ProjectFileInputError(415, "file_kind_does_not_match_content");
+    }
     return { name, kind: "image", mimeType: image.mimeType, extension: image.extension };
   }
   if (requestedKind === "image") {
