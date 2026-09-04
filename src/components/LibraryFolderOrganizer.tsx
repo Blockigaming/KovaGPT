@@ -79,6 +79,7 @@ export function LibraryFolderOrganizer({
   enabled,
   principalKey,
   refreshKey,
+  itemStateUnavailable,
   scope,
   selectedItemIds,
   onScopeChange,
@@ -90,6 +91,7 @@ export function LibraryFolderOrganizer({
   enabled: boolean;
   principalKey: string;
   refreshKey: number;
+  itemStateUnavailable: boolean;
   scope: LibraryFolderScope;
   selectedItemIds: string[];
   onScopeChange: (scope: LibraryFolderScope) => void;
@@ -225,7 +227,7 @@ export function LibraryFolderOrganizer({
   };
 
   const removeFolder = async () => {
-    if (!activeFolder || busy || folderStateUnavailable) return;
+    if (!activeFolder || busy || folderStateUnavailable || itemStateUnavailable) return;
     const removedIds = descendantIds(activeFolder.id, folders);
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
@@ -259,6 +261,7 @@ export function LibraryFolderOrganizer({
     if (
       busy ||
       folderStateUnavailable ||
+      itemStateUnavailable ||
       selectedItemIds.length === 0 ||
       selectedItemIds.length > MAX_BULK_MOVE_ITEMS
     ) {
@@ -355,7 +358,7 @@ export function LibraryFolderOrganizer({
                 size="sm"
                 variant="outline"
                 className="min-h-11 text-destructive"
-                disabled={Boolean(busy) || folderStateUnavailable}
+                disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable}
                 onClick={() => setDeletePending(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -427,7 +430,7 @@ export function LibraryFolderOrganizer({
               className="kova-select mt-1 min-h-11 w-full"
               value={moveTarget}
               onChange={(event) => setMoveTarget(event.target.value)}
-              disabled={Boolean(busy) || folderStateUnavailable}
+              disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable}
             >
               <option value="root">Unfiled</option>
               {sortedFolders.map((folder) => (
@@ -443,6 +446,7 @@ export function LibraryFolderOrganizer({
             disabled={
               Boolean(busy) ||
               folderStateUnavailable ||
+              itemStateUnavailable ||
               selectedItemIds.length > MAX_BULK_MOVE_ITEMS
             }
             onClick={() => void moveSelected()}
