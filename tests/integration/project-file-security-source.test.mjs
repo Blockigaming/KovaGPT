@@ -29,6 +29,13 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
   assert.match(ui, /getFreshFileUrl/);
+  assert.match(ui, /url\.protocol !== "https:"/);
+  assert.match(ui, /window\.open\("about:blank", "_blank"\)/);
+  assert.ok(
+    ui.indexOf('window.open("about:blank", "_blank")') <
+      ui.indexOf("await getFreshFileUrl(file.id)"),
+    "the mobile-safe target must open during the user gesture",
+  );
   assert.match(ui, /onError=\{\(\) => void refreshImageUrl\(f\)\}/);
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
