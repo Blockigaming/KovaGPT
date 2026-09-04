@@ -232,10 +232,7 @@ async function resolveSubscriptionTier(caller: AuthedCaller, userId: string): Pr
  * Resolve the server-authoritative plan, including a higher family-owner plan.
  * Client labels and mode choices are never used for authorization.
  */
-export async function getUserTier(
-  caller: AuthedCaller,
-  userId: string,
-): Promise<CallerTier> {
+export async function getUserTier(caller: AuthedCaller, userId: string): Promise<CallerTier> {
   const ownTier = await resolveSubscriptionTier(caller, userId);
   if (ownTier === "pro") return ownTier;
 

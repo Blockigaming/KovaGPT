@@ -223,13 +223,11 @@ async function cleanupStaleProjectUploadObjects(
   const pageSize = 100;
   const maxObjects = 10_000;
   for (let offset = 0; offset < maxObjects; offset += pageSize) {
-    const { data, error } = await auth.supabaseAdmin.storage
-      .from("project-files")
-      .list(folder, {
-        limit: pageSize,
-        offset,
-        sortBy: { column: "name", order: "asc" },
-      });
+    const { data, error } = await auth.supabaseAdmin.storage.from("project-files").list(folder, {
+      limit: pageSize,
+      offset,
+      sortBy: { column: "name", order: "asc" },
+    });
     if (error || !data) return false;
     for (const item of data) {
       if (!isSafeStorageChildName(item.name)) return false;

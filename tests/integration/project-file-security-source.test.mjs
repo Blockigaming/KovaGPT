@@ -30,7 +30,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     ".move(temporaryPath, row.storage_path)",
     "project_file_delete_in_progress",
     "cleanupStaleProjectUploadObjects",
-    '.list(folder, {',
+    ".list(folder, {",
     "projectFileObjectPresence",
     'presence === "unknown"',
     'presence === "present"',
@@ -110,10 +110,7 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
     migration,
     /project_files_name_length_check[\s\S]*content_sha256 IS NULL OR char_length\(name\)/,
   );
-  assert.match(
-    migration,
-    /project_files_size_check[\s\S]*content_sha256 IS NULL OR size_bytes/,
-  );
+  assert.match(migration, /project_files_size_check[\s\S]*content_sha256 IS NULL OR size_bytes/);
   assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
