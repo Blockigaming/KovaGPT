@@ -158,17 +158,16 @@ jobs:
         id: candidate_visual
         if: steps.scope.outputs.run_ci == 'true'
         env:
+          KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: artifacts/ui-audit/candidate-visual
           PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:visual
 
-      - name: Upload candidate visual baselines
+      - name: Upload rendered candidate visual evidence
         if: always() && steps.candidate_visual.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: candidate-visual-baselines-${{ github.sha }}
-          path: |
-            tests/e2e/ui-quality.spec.ts-snapshots/*.png
-            tests/e2e/auth-visual-regression.spec.ts-snapshots/*.png
+          name: candidate-visual-${{ github.sha }}
+          path: artifacts/ui-audit/candidate-visual/*.png
           if-no-files-found: error
           retention-days: 7
 
