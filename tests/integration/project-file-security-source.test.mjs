@@ -16,16 +16,24 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     "inspectProjectFile",
     "sha256Hex",
     "reserve_project_file_upload",
+    "abort_project_file_upload",
+    "claim_project_file_delete",
+    "restore_project_file_delete",
+    "finalize_project_file_delete",
     "enforceQuota",
-    "try_add_storage_bytes",
     "storage_owner_id",
     "authorization.ownerId",
     "unsupported_media_type",
     "upload_attempt_id",
-    "finalize_project_file_delete",
+    "temporaryPath",
+    ".move(temporaryPath, row.storage_path)",
+    "project_file_delete_in_progress",
   ]) {
-    assert.match(route, new RegExp(contract));
+    assert.ok(route.includes(contract), `missing route contract: ${contract}`);
   }
+  assert.doesNotMatch(route, /try_add_storage_bytes/);
+  assert.match(route, /storage_charged: row\.storage_charged/);
+  assert.match(route, /file\.kind !== "agent-deliverable"/);
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
   assert.match(ui, /getFreshFileUrl/);
@@ -39,36 +47,64 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(ui, /onError=\{\(\) => void refreshImageUrl\(f\)\}/);
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
-  assert.match(workspace, /\.eq\("status", "ready"\)/);
   assert.match(workspace, /Promise\.all/);
   assert.match(workspace, /createSignedUrl\(item\.storage_path, 60\)/);
 });
 
-test("Project file migration serializes caps and removes browser mutations", () => {
+test("all Project file readers explicitly hide unsettled rows", () => {
+  for (const path of [
+    "src/lib/projects.functions.ts",
+    "src/lib/project-workspace.functions.ts",
+    "src/lib/chat-workspace-context.server.ts",
+    "src/lib/chat-workspace.functions.ts",
+    "src/routes/api/project-files.ts",
+  ]) {
+    assert.match(read(path), /\.eq\("status", "ready"\)/, path);
+  }
+});
+
+test("Project file migration serializes caps, accounting, and crash recovery", () => {
   const migration = read("supabase/migrations/20260904200000_project_file_upload_integrity.sql");
 
   assert.match(migration, /FOR UPDATE OF p/);
   assert.match(migration, /project_files_upload_idempotency_unique/);
   assert.match(migration, /upload_lease_until/);
+  assert.match(migration, /delete_lease_until/);
   assert.match(migration, /storage_charged/);
-  assert.match(migration, /p_user_id, project_owner, 'pending'/);
+  assert.match(
+    migration,
+    /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/,
+  );
   assert.match(migration, /kind = 'agent-deliverable'/);
   assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
   assert.match(migration, /file_size_limit[\s\S]*10485760/);
+  assert.match(migration, /abort_project_file_upload[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/);
+  assert.match(migration, /claim_project_file_delete[\s\S]*'inProgress', true/);
+  assert.match(migration, /restore_project_file_delete[\s\S]*delete_lease_until = NULL/);
+  assert.match(migration, /finalize_project_file_delete[\s\S]*'idempotent', true/);
+  assert.doesNotMatch(migration, /\nAS \$\n|\n\$;\n/);
   assert.match(
     migration,
     /REVOKE INSERT, UPDATE, DELETE ON public\.project_files FROM authenticated/,
   );
-  assert.match(
-    migration,
-    /REVOKE ALL ON FUNCTION public\.reserve_project_file_upload[\s\S]*FROM PUBLIC, anon, authenticated/,
-  );
-  assert.match(
-    migration,
-    /GRANT EXECUTE ON FUNCTION public\.reserve_project_file_upload[\s\S]*TO service_role/,
-  );
+  for (const rpc of [
+    "reserve_project_file_upload",
+    "abort_project_file_upload",
+    "claim_project_file_delete",
+    "restore_project_file_delete",
+    "finalize_project_file_delete",
+  ]) {
+    assert.match(
+      migration,
+      new RegExp(`REVOKE ALL ON FUNCTION public\\.${rpc}[\\s\\S]*FROM PUBLIC, anon, authenticated`),
+    );
+    assert.match(
+      migration,
+      new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${rpc}[\\s\\S]*TO service_role`),
+    );
+  }
   for (const policy of ["project_files_write", "project_files_update", "project_files_delete"]) {
     assert.match(migration, new RegExp(`DROP POLICY IF EXISTS "${policy}"`));
   }
