@@ -4,8 +4,7 @@ const PROJECT_FILE_BUCKET = "project-files";
 const STORAGE_BATCH_SIZE = 1_000;
 const MAX_REMOVE_BATCHES_PER_REQUEST = 10;
 const MAX_PREFIX_DEPTH = 32;
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 type StorageError = { message?: string | null };
 type StorageEntry = { id?: string | null; name?: string | null };
@@ -59,11 +58,7 @@ function cleanupOptions(options: { maxRemoveBatches?: number } = {}): {
   maxRemoveBatches: number;
 } {
   const maxRemoveBatches = options.maxRemoveBatches ?? MAX_REMOVE_BATCHES_PER_REQUEST;
-  if (
-    !Number.isSafeInteger(maxRemoveBatches) ||
-    maxRemoveBatches < 1 ||
-    maxRemoveBatches > 100
-  ) {
+  if (!Number.isSafeInteger(maxRemoveBatches) || maxRemoveBatches < 1 || maxRemoveBatches > 100) {
     throw new TypeError("maxRemoveBatches must be an integer between 1 and 100");
   }
   return { maxRemoveBatches };
@@ -159,7 +154,10 @@ export async function clearStoragePrefix(
   return { complete: true, removed };
 }
 
-function validatedProjectFile(row: ProjectFileRow, userId: string): {
+function validatedProjectFile(
+  row: ProjectFileRow,
+  userId: string,
+): {
   id: string;
   bucket: string;
   path: string;
