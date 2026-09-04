@@ -406,6 +406,10 @@ function KovaGPT() {
       storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsPrincipal(null);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       return;
     }
     storageGenerationRef.current += 1;
@@ -417,6 +421,10 @@ function KovaGPT() {
       retryTimerRef.current = null;
     }
     setIsStreaming(false);
+    setTempChat(false);
+    setTempChatContext("clean");
+    setTempChatStartOpen(false);
+    setTempChatConfirmed(false);
     setActiveId(null);
     setInput("");
     setAttachments([]);
@@ -509,6 +517,10 @@ function KovaGPT() {
       setCommandOpen(false);
       setCommandQuery("");
       setIsStreaming(false);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       setRecentLibraryFiles([]);
       setRecentLibraryLoading(false);
       setRecentLibraryError(null);
@@ -767,10 +779,13 @@ function KovaGPT() {
     const memoryStartIndex = Math.max(0, active.memoryStartIndex ?? 0);
     const memoryMessages = active.messages.slice(memoryStartIndex);
     if (memoryMessages.length < 4) return;
+    const memoryTitle = deriveTitle(
+      memoryMessages.find((message) => message.role === "user")?.content ?? "Saved chat",
+    );
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
-        title: active.title.slice(0, 120),
+        title: memoryTitle.slice(0, 120),
         memoryEnabled: true,
         temporary: false,
         // The memory endpoint accepts only the bounded post-privacy window.
@@ -876,28 +891,32 @@ function KovaGPT() {
   );
 
   const saveTemporaryChat = useCallback(() => {
-    if (!active?.temporary) return;
+    if (!active?.temporary || isStreaming) return;
     const convertedAt = active.messages.length;
-    setConversations((previous) =>
-      previous.map((conversation) =>
-        conversation.id === active.id
-          ? {
-              ...conversation,
-              temporary: false,
-              temporaryContext: undefined,
-              memoryStartIndex: convertedAt,
-              updatedAt: Date.now(),
-            }
-          : conversation,
-      ),
-    );
+    const converted: Conversation = {
+      ...active,
+      temporary: false,
+      temporaryContext: undefined,
+      memoryStartIndex: convertedAt,
+      updatedAt: Date.now(),
+    };
+    const nextConversations = conversations
+      .map((conversation) => (conversation.id === active.id ? converted : conversation))
+      .filter((conversation) => !conversation.temporary);
+    if (!saveConversations(userKey, nextConversations)) {
+      toast.error("This chat could not be saved", {
+        description: "Browser storage is unavailable or full. Free space and try again.",
+      });
+      return;
+    }
+    setConversations(nextConversations);
     setTempChat(false);
     setTempChatContext("clean");
     toast.success("Chat saved to history", {
       description:
         "Future messages continue as a regular chat. Earlier temporary turns stay out of saved memory.",
     });
-  }, [active, setConversations]);
+  }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback(() => {
     commandReturnFocusRef.current =
@@ -1086,6 +1105,10 @@ function KovaGPT() {
             ? {
                 ...c,
                 messages: [...priorMessages, userMsg, assistantMsg],
+                memoryStartIndex:
+                  typeof c.memoryStartIndex === "number"
+                    ? Math.min(Math.max(0, c.memoryStartIndex), priorMessages.length)
+                    : undefined,
                 updatedAt: Date.now(),
               }
             : c,
@@ -1764,7 +1787,8 @@ function KovaGPT() {
                 <button
                   type="button"
                   onClick={saveTemporaryChat}
-                  className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
+                  disabled={isStreaming}
+                  className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Save to history
                 </button>
