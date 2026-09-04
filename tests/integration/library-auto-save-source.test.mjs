@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(path, "utf8");
-const [hook, library, images, imageRoute] = await Promise.all([
+const [hook, library, images, imageRoute, imageStoragePolicy] = await Promise.all([
   read("src/hooks/use-library-attachment-auto-save.ts"),
   read("src/lib/library.functions.ts"),
   read("src/lib/library-images.functions.ts"),
   read("src/routes/images.tsx"),
+  read("supabase/migrations/20260904190000_library_images_owner_update_policy.sql"),
 ]);
 
 test("accepted uploads auto-save only after complete eligible acceptance", () => {
@@ -24,6 +25,7 @@ test("attachment auto-save supports text, Markdown, and images without blocking 
   assert.match(hook, /saveItem\(\{/);
   assert.match(hook, /file_type: attachment\.fileType/);
   assert.match(hook, /void persist\(attachment\)/);
+  assert.match(hook, /principalRef\.current !== principalKey/);
   assert.match(hook, /not saved to your Library/);
   assert.match(hook, /label: "Retry"/);
 });
@@ -42,7 +44,12 @@ test("image Library saves use a deterministic private path and safe concurrent r
   assert.match(images, /upsert: Boolean\(data\.idempotencyKey\)/);
   assert.match(images, /const concurrent = await findOwnedImage\(\)/);
   assert.match(images, /if \(concurrent\) return \{ id: concurrent\.id \}/);
+  assert.match(images, /if \(!data\.idempotencyKey\)[\s\S]*remove\(\[path\]\)/);
   assert.match(images, /source: data\.source/);
+  assert.match(imageStoragePolicy, /FOR UPDATE/);
+  assert.match(imageStoragePolicy, /TO authenticated/);
+  assert.equal((imageStoragePolicy.match(/auth\.uid\(\)/g) ?? []).length, 2);
+  assert.equal((imageStoragePolicy.match(/bucket_id = 'library-images'/g) ?? []).length, 2);
 });
 
 test("newly generated images auto-save with durable retry and truthful status", () => {
@@ -53,6 +60,7 @@ test("newly generated images auto-save with durable retry and truthful status", 
   assert.match(imageRoute, /Retry Library save/);
   assert.match(imageRoute, /label: "Retry"/);
   assert.match(imageRoute, /userKeyRef\.current === operationUserKey/);
+  assert.match(imageRoute, /if \(!isCurrent\(\)\) return;[\s\S]*updateHistoryLibraryStatus/);
 });
 
 test("image history rejects malformed storage and reports persistence failures", () => {
