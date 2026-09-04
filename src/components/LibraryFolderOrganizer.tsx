@@ -8,23 +8,11 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   createLibraryFolder,
@@ -48,9 +36,7 @@ function folderDepth(folderId: string, folders: LibraryFolder[]): number {
     seen.add(current.id);
     depth += 1;
     const parentId = current.parentId;
-    current = parentId
-      ? folders.find((folder) => folder.id === parentId)
-      : undefined;
+    current = parentId ? folders.find((folder) => folder.id === parentId) : undefined;
   }
   return depth;
 }
@@ -97,9 +83,7 @@ export function LibraryFolderOrganizer({
   const [folders, setFolders] = useState<LibraryFolder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState<
-    "create" | "rename" | "delete" | "move" | null
-  >(null);
+  const [busy, setBusy] = useState<"create" | "rename" | "delete" | "move" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<"create" | "rename" | null>(null);
   const [folderName, setFolderName] = useState("");
@@ -156,8 +140,7 @@ export function LibraryFolderOrganizer({
     scope === "all" || scope === "unfiled"
       ? null
       : (folders.find((folder) => folder.id === scope) ?? null);
-  const canCreateChild =
-    !activeFolder || folderDepth(activeFolder.id, folders) < MAX_FOLDER_DEPTH;
+  const canCreateChild = !activeFolder || folderDepth(activeFolder.id, folders) < MAX_FOLDER_DEPTH;
   const sortedFolders = useMemo(
     () =>
       [...folders].sort(
@@ -205,9 +188,7 @@ export function LibraryFolderOrganizer({
     setError(null);
     try {
       const result = await deleteLibraryFolder(activeFolder.id);
-      setFolders((current) =>
-        current.filter((folder) => !removedIds.includes(folder.id)),
-      );
+      setFolders((current) => current.filter((folder) => !removedIds.includes(folder.id)));
       onFoldersDeleted(removedIds);
       onScopeChange("all");
       toast.success(
@@ -226,11 +207,7 @@ export function LibraryFolderOrganizer({
   };
 
   const moveSelected = async () => {
-    if (
-      busy ||
-      selectedItemIds.length === 0 ||
-      selectedItemIds.length > MAX_BULK_MOVE_ITEMS
-    ) {
+    if (busy || selectedItemIds.length === 0 || selectedItemIds.length > MAX_BULK_MOVE_ITEMS) {
       return;
     }
     const folderId = moveTarget === "root" ? null : moveTarget;
@@ -275,10 +252,7 @@ export function LibraryFolderOrganizer({
   if (!enabled) return null;
 
   return (
-    <section
-      className="kova-card space-y-3 p-3 sm:p-4"
-      aria-labelledby="library-folders-title"
-    >
+    <section className="kova-card space-y-3 p-3 sm:p-4" aria-labelledby="library-folders-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="library-folders-title" className="text-sm font-medium">
@@ -338,22 +312,14 @@ export function LibraryFolderOrganizer({
           className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3"
         >
           <p className="text-sm text-destructive">{error}</p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="min-h-11"
-            onClick={() => void load()}
-          >
+          <Button size="sm" variant="outline" className="min-h-11" onClick={() => void load()}>
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
         </div>
       ) : null}
 
-      <nav
-        aria-label="Library folders"
-        className="max-h-64 overflow-y-auto rounded-xl border p-1"
-      >
+      <nav aria-label="Library folders" className="max-h-64 overflow-y-auto rounded-xl border p-1">
         <button
           type="button"
           aria-current={scope === "all" ? "page" : undefined}
