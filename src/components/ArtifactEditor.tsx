@@ -25,6 +25,7 @@ import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
+import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
 
 type SessionVersion = {
   id: number;
@@ -74,10 +75,7 @@ export function ArtifactEditor({
   chatId?: string | null;
   messageId?: string | null;
 }) {
-  const LONG_THRESHOLD = 50_000;
-  const canTruncate = kind === "writing" && initialContent.length > LONG_THRESHOLD;
   const [value, setValue] = useState(initialContent);
-  const [truncated, setTruncated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -90,9 +88,13 @@ export function ArtifactEditor({
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comments, setComments] = useState<{ id: number; body: string; selection: string }[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved" | "session_only">(
+    "saved",
+  );
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastRecordedValueRef = useRef(initialContent);
+  const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
@@ -115,13 +117,8 @@ export function ArtifactEditor({
 
   useEffect(() => {
     if (open) {
-      if (canTruncate) {
-        setValue(initialContent.slice(0, LONG_THRESHOLD));
-        setTruncated(true);
-      } else {
-        setValue(initialContent);
-        setTruncated(false);
-      }
+      lastRecordedValueRef.current = initialContent;
+      setValue(initialContent);
       setCopied(false);
       setSaved(false);
       let preferred: string | undefined;
@@ -142,7 +139,7 @@ export function ArtifactEditor({
       ]);
       setHistoryError(null);
     }
-  }, [open, initialContent, initialMode, canTruncate, kind]);
+  }, [open, initialContent, initialMode, kind]);
 
   // Load durable versions for this message so history survives closing Canvas.
   useEffect(() => {
@@ -164,6 +161,16 @@ export function ArtifactEditor({
           }));
         if (durable.length > 0) {
           setVersions((current) => [...durable, ...current].slice(0, 30));
+          const accepted = rows.find((row) => row.accepted);
+          if (accepted) {
+            // Reopen the server-accepted edit, but never replace text the user
+            // already changed while version history was loading.
+            setValue((current) => {
+              if (current !== initialContent) return current;
+              lastRecordedValueRef.current = accepted.content;
+              return accepted.content;
+            });
+          }
         }
       } catch (error) {
         if (cancelled) return;
@@ -175,7 +182,7 @@ export function ArtifactEditor({
     return () => {
       cancelled = true;
     };
-  }, [open, canPersistVersions, chatId, messageId, listVersionsFn]);
+  }, [open, canPersistVersions, chatId, messageId, initialContent, listVersionsFn]);
 
   useEffect(() => {
     if (!open) return;
@@ -219,26 +226,33 @@ export function ArtifactEditor({
   };
 
   useEffect(() => {
-    if (!open || saveState !== "unsaved") return;
-    setSaveState("saving");
+    if (!open || value === lastRecordedValueRef.current) return;
     let cancelled = false;
+    const snapshot = value;
     const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      setSaveState("saving");
       void (async () => {
         // Persist first, then label the entry honestly: only a resolved server
         // write may be shown as saved beyond this session.
         let durable = false;
-        if (canPersistVersions && chatId && messageId && value.trim()) {
+        if (canPersistVersions && chatId && messageId && snapshot.trim()) {
           try {
-            await saveVersionFn({
-              data: {
-                chatId,
-                messageId,
-                source: "inline_edit",
-                content: value,
-                originalContent: initialContent,
-                accepted: true,
-              },
-            });
+            // The accepted version is a last-write-wins server value. Queue
+            // requests in edit order so a slow older request can never arrive
+            // after and replace a newer snapshot.
+            await autosaveQueueRef.current.enqueue(() =>
+              saveVersionFn({
+                data: {
+                  chatId,
+                  messageId,
+                  source: "inline_edit",
+                  content: snapshot,
+                  originalContent: initialContent,
+                  accepted: true,
+                },
+              }),
+            );
             durable = true;
             if (!cancelled) setHistoryError(null);
           } catch (error) {
@@ -252,11 +266,12 @@ export function ArtifactEditor({
           }
         }
         if (cancelled) return;
+        lastRecordedValueRef.current = snapshot;
         setVersions((current) =>
           [
             {
               id: Date.now(),
-              content: value,
+              content: snapshot,
               savedAt: Date.now(),
               label: durable ? "Saved to this chat" : "Session only",
               durable,
@@ -264,23 +279,14 @@ export function ArtifactEditor({
             ...current,
           ].slice(0, 30),
         );
-        setSaveState("saved");
+        setSaveState(durable ? "saved" : "session_only");
       })();
     }, 900);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [
-    open,
-    saveState,
-    value,
-    canPersistVersions,
-    chatId,
-    messageId,
-    initialContent,
-    saveVersionFn,
-  ]);
+  }, [open, value, canPersistVersions, chatId, messageId, initialContent, saveVersionFn]);
 
   if (!open) return null;
 
@@ -294,6 +300,12 @@ export function ArtifactEditor({
   const save = async () => {
     if (!isSignedIn) {
       clerk?.openSignIn();
+      return;
+    }
+    if (value.length > 200_000) {
+      toast.error(
+        "This draft is too large for Library. Export it to download the complete file instead.",
+      );
       return;
     }
     setSaving(true);
@@ -311,7 +323,7 @@ export function ArtifactEditor({
           title,
           item_type,
           source: "chat",
-          content_text: value.slice(0, 100_000),
+          content_text: value,
         },
       });
       setSaved(true);
@@ -326,7 +338,18 @@ export function ArtifactEditor({
 
   const improve = () => {
     if (!onImprove) return;
-    const trimmed = value.trim().slice(0, 8000);
+    const start = textareaRef.current?.selectionStart ?? 0;
+    const end = textareaRef.current?.selectionEnd ?? 0;
+    const selected = end > start ? value.slice(start, end) : value;
+    const trimmed = selected.trim();
+    if (!trimmed) {
+      toast.error("Add some content to improve first.");
+      return;
+    }
+    if (trimmed.length > 8000) {
+      toast.error("Improve supports up to 8,000 characters at once. Select a shorter section.");
+      return;
+    }
     const prompt =
       kind === "writing"
         ? `Improve the following text. Keep meaning intact, tighten prose, fix grammar, and return only the improved version.\n\n${trimmed}`
@@ -376,7 +399,13 @@ export function ArtifactEditor({
               aria-live="polite"
               role="status"
             >
-              {saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved" : "Saved"}
+              {saveState === "saving"
+                ? "Saving…"
+                : saveState === "unsaved"
+                  ? "Unsaved"
+                  : saveState === "session_only"
+                    ? "Session only"
+                    : "Saved"}
             </span>
             <span className="hidden text-xs text-muted-foreground lg:inline">
               {statistics.words.toLocaleString()} words · {statistics.readingMinutes} min read ·{" "}
@@ -493,23 +522,6 @@ export function ArtifactEditor({
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0">
-                {truncated && (
-                  <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-yellow-50 text-yellow-900 border-b border-yellow-200">
-                    <span>
-                      Showing the first {LONG_THRESHOLD.toLocaleString()} characters for
-                      performance. Full content is preserved.
-                    </span>
-                    <button
-                      onClick={() => {
-                        setValue(initialContent);
-                        setTruncated(false);
-                      }}
-                      className="px-2 py-1 rounded border border-yellow-300 hover:bg-yellow-100 whitespace-nowrap"
-                    >
-                      Load full content
-                    </button>
-                  </div>
-                )}
                 <textarea
                   ref={textareaRef}
                   value={value}

@@ -10,6 +10,29 @@ type CheckoutSessionResult = { clientSecret: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
 
+type CheckoutSubscriptionRow = {
+  status: string;
+  current_period_end: string | null;
+};
+
+function hasStillActiveSubscription(
+  rows: readonly CheckoutSubscriptionRow[],
+  now = Date.now(),
+): boolean {
+  return rows.some((subscription) => {
+    const isPotentiallyCurrent = ["active", "trialing", "past_due", "canceled"].includes(
+      subscription.status,
+    );
+    if (!isPotentiallyCurrent) return false;
+    if (!subscription.current_period_end) return subscription.status !== "canceled";
+    const periodEnd = new Date(subscription.current_period_end).getTime();
+    // Ambiguous current-subscription data fails closed instead of risking a
+    // second subscription. A successfully parsed period is current only while
+    // its access window remains open.
+    return !Number.isFinite(periodEnd) || periodEnd > now;
+  });
+}
+
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
   options: { email?: string; userId?: string },
@@ -62,32 +85,25 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(BILLING_ENV);
 
-      // Prevent duplicate active subscriptions for the same user in this env.
-      const { data: existing, error: existingError } = await context.supabase
+      // Prevent duplicate current subscriptions for the same user in this env.
+      // A scheduled cancellation does not end access or billing immediately, so
+      // cancel_at_period_end must never make a second Checkout session eligible.
+      const { data: existingRows, error: existingError } = await context.supabase
         .from("subscriptions")
-        .select("status, current_period_end, cancel_at_period_end")
+        .select("status, current_period_end")
         .eq("user_id", userId)
         .eq("environment", BILLING_ENV)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
       if (existingError) {
         return { error: "Billing status couldn't be verified. Try again." };
       }
-      if (existing) {
-        const periodEnd = existing.current_period_end
-          ? new Date(existing.current_period_end).getTime()
-          : 0;
-        const stillActive =
-          (["active", "trialing", "past_due"].includes(existing.status) &&
-            (!existing.current_period_end || periodEnd > Date.now())) ||
-          (existing.status === "canceled" && periodEnd > Date.now());
-        if (stillActive && !existing.cancel_at_period_end) {
-          return {
-            error:
-              "You already have an active subscription. Manage your plan from the billing portal before starting a new one.",
-          };
-        }
+      const subscriptions = existingRows ?? [];
+      const stillActive = hasStillActiveSubscription(subscriptions);
+      if (stillActive) {
+        return {
+          error:
+            "You already have an active subscription. Manage your plan from the billing portal before starting a new one.",
+        };
       }
 
       const prices = await stripe.prices.list({
@@ -114,7 +130,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       //   2) the Stripe Customer we resolved has no subscription history
       //      (so recreating a KovaGPT account with the same email/userId
       //      doesn't grant a second trial).
-      let isPlusTrialEligible = plan.trialPeriodDays > 0 && !existing;
+      let isPlusTrialEligible = plan.trialPeriodDays > 0 && subscriptions.length === 0;
       if (isPlusTrialEligible) {
         const prior = await stripe.subscriptions.list({
           customer: customerId,

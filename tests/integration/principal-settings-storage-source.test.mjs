@@ -92,7 +92,8 @@ test("account, memory, and local-device deletion keep their storage scopes disti
     settings,
     /<WorkspaceDefaults userKey=\{userKey\} principalResolved=\{isLoaded\} \/>/,
   );
-  assert.match(settings, /<LocationPanel userKey=\{userKey\} principalResolved=\{isLoaded\} \/>/);
+  assert.match(settings, /<LocationControlsUnavailable \/>/);
+  assert.doesNotMatch(settings, /LOCATION_KEY_BASE|navigator\.geolocation|getCurrentPosition/);
   assert.doesNotMatch(
     settings,
     /localStorage\.getItem\("kova-(?:workspace-defaults-v1|location)"\)/,

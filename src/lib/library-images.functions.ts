@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
+import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
 
 const BUCKET = "library-images";
@@ -121,7 +123,7 @@ async function fetchRemoteImage(
 }
 
 const SaveImageSchema = z.object({
-  imageUrl: z.string().min(1).max(2_500_000), // allow inline base64
+  imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
 });
@@ -207,14 +209,20 @@ export const deleteLibraryImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { data: row } = await context.supabase
+    const { data: row, error: lookupError } = await context.supabase
       .from("user_library_items")
       .select("file_url, item_type")
       .eq("id", data.id)
       .eq("user_id", context.userId)
-      .single();
+      .maybeSingle();
+    if (lookupError) {
+      console.error("[serverfn]", lookupError.message);
+      throw new Error("Request failed. Please try again.");
+    }
     if (row?.item_type === "image" && row.file_url) {
-      await context.supabase.storage.from(BUCKET).remove([row.file_url]);
+      await removePrivateLibraryImage(row.file_url, (paths) =>
+        context.supabase.storage.from(BUCKET).remove(paths),
+      );
     }
     const { error } = await context.supabase
       .from("user_library_items")

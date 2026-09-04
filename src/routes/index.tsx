@@ -1813,7 +1813,8 @@ function KovaGPT() {
                 <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
                   Privacy Policy
                 </Link>
-                . Chats may be reviewed and used to improve our AI models.{" "}
+                . Chats may be processed by configured AI providers and reviewed when needed for
+                safety, support, or reliability.{" "}
                 <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
                   Learn more.
                 </Link>
@@ -1824,6 +1825,7 @@ function KovaGPT() {
           <>
             <div
               ref={scrollRef}
+              data-chat-transcript="true"
               onScroll={updateNearBottom}
               className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
               aria-label="Conversation"

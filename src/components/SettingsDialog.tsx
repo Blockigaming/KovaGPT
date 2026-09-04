@@ -70,7 +70,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -94,7 +94,6 @@ import {
 import {
   loadPrincipalStoredRecord,
   savePrincipalStoredRecord,
-  LOCATION_KEY_BASE,
   WORKSPACE_DEFAULTS_KEY_BASE,
 } from "@/lib/settings-storage";
 import {
@@ -1232,37 +1231,39 @@ export function SettingsDialog({
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
                 <h3 className="text-sm font-semibold">Notifications</h3>
-                <ToggleRow
-                  title="Account & security emails"
-                  hint="Sign-in alerts, verification, and important account changes. Cannot be turned off for security."
-                  checked={true}
-                  onCheckedChange={() => toast.message("Security emails are always on.")}
-                />
-                <ToggleRow
-                  title="Product updates"
-                  hint="Occasional emails about new features and improvements."
-                  checked={settings.notifyProduct ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyProduct: v })}
-                />
-                <ToggleRow
-                  title="Tips & guides"
-                  hint="Helpful tips on getting more out of KovaGPT."
-                  checked={settings.notifyEmail ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyEmail: v })}
-                />
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">
+                  <div>
+                    <p className="text-sm font-medium">Account &amp; security emails</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sign-in alerts, verification, and important account changes cannot be turned
+                      off for security.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                    Always on
+                  </span>
+                </div>
+                <div className="rounded-lg border border-dashed border-border p-4" role="note">
+                  <p className="text-sm font-medium">Optional email preferences are unavailable</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Product-update and tips controls are not connected to the delivery service yet,
+                    so KovaGPT does not show switches that would have no effect. Use the unsubscribe
+                    link in an optional email or contact support for help.
+                  </p>
+                  <Link
+                    to="/contact-support"
+                    onClick={() => onOpenChange(false)}
+                    className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline"
+                  >
+                    Contact support
+                  </Link>
+                </div>
               </TabsContent>
 
               {/* PARENTAL */}
               <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
                 <h3 className="text-sm font-semibold">Parental controls</h3>
-                <ToggleRow
-                  title="Family-safe mode"
-                  hint="Filters mature content and enforces stricter safety guidelines."
-                  checked={settings.parentalMode ?? false}
-                  onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
-                />
-                <FamilySafeAudience />
-                <FamilyPinPanel />
+                <FamilyControlsUnavailable />
                 <p className="text-xs text-muted-foreground">
                   For full device-level parental controls (screen time, app restrictions), use your
                   device's built-in settings.
@@ -1285,12 +1286,10 @@ export function SettingsDialog({
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    KovaGPT can use your approximate location to answer questions about local time,
-                    weather, nearby places, and recommendations. Location is optional and never
-                    required.
+                    Location-based personalization is not connected to chat or Maps yet.
                   </p>
                 </div>
-                <LocationPanel userKey={userKey} principalResolved={isLoaded} />
+                <LocationControlsUnavailable />
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
@@ -1830,13 +1829,26 @@ function ToggleRow({
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
+  const controlId = useId();
+  const hintId = hint ? `${controlId}-hint` : undefined;
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium">{title}</div>
-        {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
+        <label htmlFor={controlId} className="text-sm font-medium">
+          {title}
+        </label>
+        {hint && (
+          <div id={hintId} className="text-xs text-muted-foreground mt-0.5">
+            {hint}
+          </div>
+        )}
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Switch
+        id={controlId}
+        aria-describedby={hintId}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+      />
     </div>
   );
 }
@@ -1941,8 +1953,10 @@ function LibraryItemViewer({
 }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgErr, setImgErr] = useState<string | null>(null);
+  const [imgRetry, setImgRetry] = useState(0);
   const itemId = item?.id;
   const itemType = item?.item_type;
+  useEffect(() => setImgRetry(0), [itemId]);
   useEffect(() => {
     let cancelled = false;
     setImgUrl(null);
@@ -1960,7 +1974,7 @@ function LibraryItemViewer({
     return () => {
       cancelled = true;
     };
-  }, [itemId, itemType]);
+  }, [imgRetry, itemId, itemType]);
 
   const isImage = item?.item_type === "image";
   return (
@@ -1981,6 +1995,10 @@ function LibraryItemViewer({
                 src={imgUrl}
                 alt={item?.title ?? ""}
                 className="max-h-[55vh] mx-auto rounded-lg"
+                onError={() => {
+                  if (imgRetry < 2) setImgRetry((attempt) => attempt + 1);
+                  else setImgErr("Image preview unavailable. Close and reopen this item to retry.");
+                }}
               />
             ) : (
               <div className="text-sm text-muted-foreground">Loading image…</div>
@@ -2527,259 +2545,16 @@ function GuestLanguageSelect() {
   );
 }
 
-// ---------- Family-safe audience + PIN ----------
+// ---------- Family safety availability ----------
 
-type SafeAudience = "myself" | "child" | "none";
-
-function FamilySafeAudience() {
-  const [aud, setAud] = useState<SafeAudience>(() => {
-    if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
-  });
-  const set = (v: SafeAudience) => {
-    setAud(v);
-    try {
-      localStorage.setItem("kova-safe-audience", v);
-    } catch {
-      /* ignore */
-    }
-  };
-  const opts: { v: SafeAudience; label: string; hint: string }[] = [
-    {
-      v: "myself",
-      label: "Myself",
-      hint: "I'm using Family-safe mode for me.",
-    },
-    {
-      v: "child",
-      label: "My child",
-      hint: "A child uses this device - enable a PIN below to lock changes.",
-    },
-    {
-      v: "none",
-      label: "None of the above",
-      hint: "Don't apply Family-safe defaults.",
-    },
-  ];
+function FamilyControlsUnavailable() {
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Who is this for?</div>
-      <div className="grid gap-2">
-        {opts.map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            onClick={() => set(o.v)}
-            className={`text-left rounded-lg border p-3 transition ${
-              aud === o.v ? "border-foreground bg-accent" : "border-border hover:bg-accent/50"
-            }`}
-          >
-            <div className="text-sm font-medium">{o.label}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{o.hint}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FamilyPinPanel() {
-  const [aud, setAud] = useState<SafeAudience>(() => {
-    if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
-  });
-  const [hasPin, setHasPin] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("kova-family-pin");
-  });
-  const [pin, setPin] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [current, setCurrent] = useState("");
-
-  useEffect(() => {
-    const sync = () => {
-      setAud((localStorage.getItem("kova-safe-audience") as SafeAudience) || "none");
-      setHasPin(!!localStorage.getItem("kova-family-pin"));
-    };
-    window.addEventListener("storage", sync);
-    const id = window.setInterval(sync, 800);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.clearInterval(id);
-    };
-  }, []);
-
-  if (aud === "none") return null;
-
-  const hashPin = async (value: string, salt?: string) => {
-    const actualSalt =
-      salt ??
-      Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join("");
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(value),
-      "PBKDF2",
-      false,
-      ["deriveBits"],
-    );
-    const bits = await crypto.subtle.deriveBits(
-      {
-        name: "PBKDF2",
-        hash: "SHA-256",
-        salt: new TextEncoder().encode(actualSalt),
-        iterations: 120_000,
-      },
-      key,
-      256,
-    );
-    const hash = Array.from(new Uint8Array(bits), (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
-    return `v2$${actualSalt}$${hash}`;
-  };
-
-  const verifyPin = async (value: string, stored: string) => {
-    if (!stored.startsWith("v2$")) return value === stored;
-    const [, salt] = stored.split("$");
-    return (await hashPin(value, salt)) === stored;
-  };
-
-  const savePin = async () => {
-    if (!/^\d{4,8}$/.test(pin)) {
-      toast.error("PIN must be 4-8 digits.");
-      return;
-    }
-    if (pin !== confirm) {
-      toast.error("PINs don't match.");
-      return;
-    }
-    try {
-      localStorage.setItem("kova-family-pin", await hashPin(pin));
-      setHasPin(true);
-      setPin("");
-      setConfirm("");
-      toast.success("Family Center PIN set.");
-    } catch {
-      toast.error("Couldn't save PIN");
-    }
-  };
-
-  const changePin = async () => {
-    const saved = localStorage.getItem("kova-family-pin") || "";
-    if (!(await verifyPin(current, saved))) {
-      toast.error("Current PIN is incorrect.");
-      return;
-    }
-    if (!/^\d{4,8}$/.test(pin)) {
-      toast.error("New PIN must be 4-8 digits.");
-      return;
-    }
-    if (pin !== confirm) {
-      toast.error("PINs don't match.");
-      return;
-    }
-    try {
-      localStorage.setItem("kova-family-pin", await hashPin(pin));
-      setCurrent("");
-      setPin("");
-      setConfirm("");
-      toast.success("PIN updated.");
-    } catch {
-      toast.error("Couldn't update PIN");
-    }
-  };
-
-  const removePin = async () => {
-    const saved = localStorage.getItem("kova-family-pin") || "";
-    if (!(await verifyPin(current, saved))) {
-      toast.error("Current PIN is incorrect.");
-      return;
-    }
-    try {
-      localStorage.removeItem("kova-family-pin");
-      setHasPin(false);
-      setCurrent("");
-      toast.success("PIN removed.");
-    } catch {
-      toast.error("Couldn't remove PIN");
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-border p-4 space-y-3">
-      <div>
-        <div className="text-sm font-medium">Family Center PIN</div>
-        <div className="text-xs text-muted-foreground mt-0.5">
-          A PIN prevents changes to Family-safe mode and parental controls without your permission.
-        </div>
-      </div>
-      {!hasPin ? (
-        <div className="grid sm:grid-cols-2 gap-2">
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="New PIN (4-8 digits)"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Confirm PIN"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
-          />
-          <div className="sm:col-span-2">
-            <Button size="sm" onClick={savePin}>
-              Set PIN
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-3 gap-2">
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Current PIN"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="New PIN"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Confirm new PIN"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
-          />
-          <div className="sm:col-span-3 flex gap-2">
-            <Button size="sm" onClick={changePin}>
-              Update PIN
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-              onClick={removePin}
-            >
-              Remove PIN
-            </Button>
-          </div>
-        </div>
-      )}
+    <div className="rounded-lg border border-dashed border-border p-4" role="note">
+      <p className="text-sm font-medium">Family controls are not available yet</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use
+        your device and network parental controls in the meantime.
+      </p>
     </div>
   );
 }
@@ -2947,111 +2722,21 @@ function ShortcutRow({
   );
 }
 
-// ---------- Location panel ----------
+// ---------- Location availability ----------
 
-type StoredLocation = {
-  enabled: boolean;
-  lat?: number;
-  lon?: number;
-  label?: string;
-  savedAt?: number;
-};
-
-function LocationPanel({
-  userKey,
-  principalResolved,
-}: {
-  userKey: string | null;
-  principalResolved: boolean;
-}) {
-  const [loc, setLoc] = useState<StoredLocation>({ enabled: false });
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!principalResolved) {
-      setLoc({ enabled: false });
-      return;
-    }
-    const stored = loadPrincipalStoredRecord(LOCATION_KEY_BASE, userKey, {
-      migrateLegacyGuest: userKey === null,
-    });
-    setLoc(
-      stored && typeof stored.enabled === "boolean"
-        ? {
-            enabled: stored.enabled,
-            lat: typeof stored.lat === "number" ? stored.lat : undefined,
-            lon: typeof stored.lon === "number" ? stored.lon : undefined,
-            label: typeof stored.label === "string" ? stored.label : undefined,
-            savedAt: typeof stored.savedAt === "number" ? stored.savedAt : undefined,
-          }
-        : { enabled: false },
-    );
-  }, [principalResolved, userKey]);
-
-  const persist = (next: StoredLocation) => {
-    setLoc(next);
-    if (!principalResolved) return;
-    try {
-      savePrincipalStoredRecord(LOCATION_KEY_BASE, userKey, next);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const enable = async () => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("Location not available in this browser.");
-      return;
-    }
-    setBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setBusy(false);
-        persist({
-          enabled: true,
-          lat: Math.round(pos.coords.latitude * 100) / 100,
-          lon: Math.round(pos.coords.longitude * 100) / 100,
-          savedAt: Date.now(),
-        });
-        toast.success("Location saved");
-      },
-      (err) => {
-        setBusy(false);
-        toast.error(
-          err.code === err.PERMISSION_DENIED ? "Permission denied" : "Couldn't get location",
-        );
-      },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
-    );
-  };
-
-  const disable = () => persist({ enabled: false });
-
+function LocationControlsUnavailable() {
   return (
-    <div className="space-y-3">
-      <ToggleRow
-        title="Use my approximate location"
-        hint="KovaGPT stores only a coarse latitude/longitude in this browser. You can turn this off anytime."
-        checked={loc.enabled}
-        onCheckedChange={(v) => (v ? enable() : disable())}
-      />
-      {loc.enabled && loc.lat != null && loc.lon != null && (
-        <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground space-y-1">
-          <div>
-            Saved: {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
-          </div>
-          {loc.savedAt && <div>Updated {new Date(loc.savedAt).toLocaleString()}</div>}
-          <div className="pt-1">
-            <Button size="sm" variant="outline" onClick={enable} disabled={busy}>
-              Refresh
-            </Button>
-          </div>
+    <div className="rounded-lg border border-dashed border-border p-4" role="note">
+      <div className="flex gap-3">
+        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-medium">Device location is not requested</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            KovaGPT will not request, save, or send your device coordinates from Settings. You can
+            still type a city or place into chat when location context is useful.
+          </p>
         </div>
-      )}
-      <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, it improves answers about local time, weather,
-        nearby places, and recommendations.
-      </p>
+      </div>
     </div>
   );
 }

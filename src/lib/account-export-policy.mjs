@@ -2,6 +2,12 @@ export const ACCOUNT_EXPORT_FORMAT = "kovagpt-account-export";
 export const ACCOUNT_EXPORT_VERSION = 1;
 export const ACCOUNT_EXPORT_MAX_BYTES = 50 * 1024 * 1024;
 export const ACCOUNT_EXPORT_PAGE_SIZE = 500;
+export const ACCOUNT_EXPORT_RATE_LIMIT = Object.freeze({
+  action: "account_data_export",
+  limit: 2,
+  windowSeconds: 3_600,
+});
+export const ACCOUNT_EXPORT_COOLDOWN_SECONDS = 12 * 60 * 60;
 
 export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["ai_generation_events", "user_id"],
@@ -115,6 +121,16 @@ export function isUuid(value) {
   );
 }
 
+export function accountExportCooldownRetryAfter(requestedAt, now = Date.now()) {
+  if (typeof requestedAt !== "string" || !Number.isFinite(now)) {
+    throw new Error("account_export_job_invalid");
+  }
+  const requestedAtMs = Date.parse(requestedAt);
+  if (!Number.isFinite(requestedAtMs)) throw new Error("account_export_job_invalid");
+  const remainingMs = ACCOUNT_EXPORT_COOLDOWN_SECONDS * 1_000 - (now - requestedAtMs);
+  return Math.max(0, Math.ceil(remainingMs / 1_000));
+}
+
 export function sanitizeAccountExportValue(value, depth = 0) {
   if (depth > 24) throw new Error("account_export_nesting_exceeded");
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -142,7 +158,7 @@ export function accountExportStoragePath(userId, jobId, artifactId) {
 }
 
 export function serializeAccountExport(value) {
-  const text = `${JSON.stringify(sanitizeAccountExportValue(value), null, 2)}\n`;
+  const text = `${JSON.stringify(sanitizeAccountExportValue(value))}\n`;
   const bytes = new TextEncoder().encode(text);
   if (bytes.byteLength > ACCOUNT_EXPORT_MAX_BYTES) {
     throw new Error("account_export_too_large");
@@ -160,6 +176,7 @@ export function publicAccountExportJob(value, now = new Date()) {
     expiresAt !== null &&
     Number.isFinite(Date.parse(expiresAt)) &&
     Date.parse(expiresAt) > now.getTime();
+  const cleanupPending = value.status === "canceled" && typeof value.storage_path === "string";
   return {
     id: value.id,
     status: downloadable || value.status !== "complete" ? value.status : "expired",
@@ -175,5 +192,6 @@ export function publicAccountExportJob(value, now = new Date()) {
         ? value.failure_code
         : null,
     downloadable,
+    cleanupPending,
   };
 }

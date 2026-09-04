@@ -1,10 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser, type AuthedCaller } from "@/lib/api-auth.server";
+import { requireUser, requireVerifiedUser, type AuthedCaller } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { isUuid, publicAccountExportJob } from "@/lib/account-export-policy.mjs";
-import { clearAccountExportArtifacts } from "@/lib/account-export.server";
+import {
+  ACCOUNT_EXPORT_RATE_LIMIT,
+  accountExportCooldownRetryAfter,
+  isUuid,
+  publicAccountExportJob,
+} from "@/lib/account-export-policy.mjs";
+import {
+  clearAccountExportArtifacts,
+  finalizeAccountExportArtifactCleanup,
+} from "@/lib/account-export.server";
 
 const BUCKET = "account-exports";
 const JOB_COLUMNS =
@@ -129,7 +137,7 @@ export const Route = createFileRoute("/api/account/export")({
         if (isCrossSiteMutation(request)) {
           return json({ error: "cross_site_account_change" }, 403);
         }
-        const auth = await requireUser(request);
+        const auth = await requireVerifiedUser(request);
         if (auth instanceof Response) return auth;
         try {
           const body = await readBoundedJsonObject(request, 512);
@@ -140,9 +148,7 @@ export const Route = createFileRoute("/api/account/export")({
 
         const rateLimit = await consumeApplicationRateLimit({
           identity: `user:${auth.userId}`,
-          action: "account_data_export",
-          limit: 2,
-          windowSeconds: 86_400,
+          ...ACCOUNT_EXPORT_RATE_LIMIT,
         });
         if (!rateLimit.allowed) {
           return json(
@@ -159,8 +165,27 @@ export const Route = createFileRoute("/api/account/export")({
 
         const current = await latestJob(auth);
         if (current.error) return json({ error: "account_export_status_unavailable" }, 503);
-        if (current.data && ["queued", "processing"].includes(String(current.data.status))) {
-          return json({ job: publicAccountExportJob(current.data) }, 202);
+        let currentJob = null;
+        if (current.data) {
+          try {
+            currentJob = publicAccountExportJob(current.data);
+          } catch {
+            return json({ error: "account_export_status_invalid" }, 503);
+          }
+        }
+        if (currentJob && ["queued", "processing"].includes(currentJob.status)) {
+          return json({ job: currentJob }, 202);
+        }
+        let retryAfter: number;
+        try {
+          retryAfter = currentJob ? accountExportCooldownRetryAfter(currentJob.requestedAt) : 0;
+        } catch {
+          return json({ error: "account_export_status_invalid" }, 503);
+        }
+        if (retryAfter > 0) {
+          return json({ error: "account_export_rate_limited" }, 429, {
+            "Retry-After": String(retryAfter),
+          });
         }
 
         const created = await adminFor(auth)
@@ -216,32 +241,72 @@ export const Route = createFileRoute("/api/account/export")({
           .maybeSingle();
         if (selected.error) return json({ error: "account_export_status_unavailable" }, 503);
         if (!selected.data) return json({ error: "account_export_not_found" }, 404);
+        if (selected.data.status === "processing") {
+          return json(
+            {
+              error: "account_export_processing",
+              job: publicAccountExportJob(selected.data),
+              retryRequired: true,
+            },
+            409,
+            { "Retry-After": "5" },
+          );
+        }
         const updated = await adminFor(auth)
           .from("account_export_jobs")
           .update({
             status: "canceled",
-            storage_path: null,
-            content_sha256: null,
-            size_bytes: null,
-            worker_id: null,
-            lease_expires_at: null,
-            expires_at: null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", body.id)
           .eq("user_id", auth.userId)
+          .eq("status", selected.data.status)
           .select(JOB_COLUMNS)
           .maybeSingle();
-        if (updated.error || !updated.data) {
+        if (updated.error) {
           return json({ error: "account_export_cancel_failed" }, 503);
+        }
+        if (!updated.data) {
+          return json({ error: "account_export_processing", retryRequired: true }, 409, {
+            "Retry-After": "5",
+          });
         }
         try {
           await clearAccountExportArtifacts(auth.userId, body.id);
         } catch {
-          return json({ error: "account_export_delete_failed" }, 503);
+          return json(
+            {
+              error: "account_export_delete_failed",
+              job: publicAccountExportJob(updated.data),
+              cleanupPending: true,
+            },
+            503,
+            { "Retry-After": "5" },
+          );
+        }
+        try {
+          await finalizeAccountExportArtifactCleanup(auth.userId, body.id);
+        } catch {
+          return json(
+            {
+              error: "account_export_cleanup_finalize_failed",
+              job: publicAccountExportJob(updated.data),
+              cleanupPending: true,
+            },
+            503,
+            { "Retry-After": "5" },
+          );
         }
         await writeAudit(auth, body.id, "Account data export canceled").catch(() => undefined);
-        return json({ job: publicAccountExportJob(updated.data) });
+        return json({
+          job: publicAccountExportJob({
+            ...updated.data,
+            storage_path: null,
+            worker_id: null,
+            lease_expires_at: null,
+          }),
+          cleanupPending: false,
+        });
       },
     },
   },

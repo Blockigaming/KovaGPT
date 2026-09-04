@@ -114,7 +114,7 @@ test("account and memory mutations are bounded, no-store, and cross-site guarded
   assert.match(account, /mediaType !== "application\/json"/);
   assert.match(account, /isCrossSiteMutation\(request\)/);
   assert.match(account, /\.eq\("user_id", auth\.userId\)/);
-  assert.match(account, /auth\.admin\.deleteUser\(auth\.userId\)/);
+  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
   assert.match(account, /"Cache-Control": "no-store"/);
   assert.doesNotMatch(account, /error instanceof Error \? error\.message/);
   assert.equal(memory.match(/isCrossSiteMutation\(request\)/g)?.length, 2);

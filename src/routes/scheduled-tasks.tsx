@@ -572,8 +572,9 @@ function ScheduledTasksPage() {
                   </div>
                   <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Use the form above to have KovaGPT run a prompt for you at a specific time -
-                    once, or on a repeating schedule.
+                    {executionAvailable
+                      ? "Use the form above to schedule a one-time or repeating prompt."
+                      : "No historical task records are available for this account."}
                   </p>
                 </div>
               ) : visibleTasks.length === 0 ? (
@@ -624,19 +625,21 @@ function ScheduledTasksPage() {
                             <RotateCcw className="h-4 w-4" />
                           </button>
                         ) : null}
-                        <button
-                          onClick={() => togglePause(t)}
-                          disabled={t.status === "paused" && !executionAvailable}
-                          className="p-2 rounded-md hover:bg-accent transition"
-                          aria-label={t.status === "paused" ? "Resume" : "Pause"}
-                          title={t.status === "paused" ? "Resume" : "Pause"}
-                        >
-                          {t.status === "paused" ? (
-                            <Play className="w-4 h-4" />
-                          ) : (
-                            <Pause className="w-4 h-4" />
-                          )}
-                        </button>
+                        {["scheduled", "running", "paused"].includes(t.status) ? (
+                          <button
+                            onClick={() => togglePause(t)}
+                            disabled={t.status === "paused" && !executionAvailable}
+                            className="p-2 rounded-md hover:bg-accent transition"
+                            aria-label={t.status === "paused" ? "Resume" : "Pause"}
+                            title={t.status === "paused" ? "Resume" : "Pause"}
+                          >
+                            {t.status === "paused" ? (
+                              <Play className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )}
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => del(t)}
                           className="p-2 rounded-md hover:bg-destructive/10 text-destructive transition"

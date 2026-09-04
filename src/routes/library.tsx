@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import type { SharedChatInbox, SharedChatSummary } from "@/lib/shared-chats.functions";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -57,6 +58,8 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
+import { isPrivateLibraryImagePath, resolveLibraryImageUrl } from "@/lib/library-image-url";
+import { safeImageUrl } from "@/lib/safe-image-url";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   addManyToContextPack,
@@ -75,6 +78,8 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
+const EMPTY_RECEIVED_SHARES: SharedChatInbox[] = [];
+const EMPTY_SENT_SHARES: SharedChatSummary[] = [];
 
 function readFavorites(key: string | null): Set<string> {
   if (!key) return new Set();
@@ -107,6 +112,132 @@ function humanBytes(n: number | null | undefined): string | null {
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
   if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
   return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
+type LibraryImageSourceState = {
+  itemId: string | null;
+  url: string | null;
+  status: "idle" | "loading" | "error" | "ready";
+};
+
+function useLibraryImageSource(item: LibItem | null) {
+  const itemId = item?.id ?? null;
+  const fileUrl = item?.file_url ?? null;
+  const directUrl = safeImageUrl(fileUrl);
+  const privatePath = isPrivateLibraryImagePath(fileUrl);
+  const [state, setState] = useState<LibraryImageSourceState>({
+    itemId: null,
+    url: null,
+    status: "idle",
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const retryRef = useRef<{ itemId: string | null; count: number }>({ itemId: null, count: 0 });
+
+  const retry = useCallback(() => {
+    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
+    if (retryRef.current.count >= 2) {
+      setState({ itemId, url: null, status: "error" });
+      return;
+    }
+    retryRef.current.count += 1;
+    setState({ itemId, url: null, status: "loading" });
+    setRefreshKey((current) => current + 1);
+  }, [directUrl, fileUrl, itemId, privatePath]);
+
+  const markLoaded = useCallback(() => {
+    retryRef.current = { itemId, count: 0 };
+  }, [itemId]);
+
+  useEffect(() => {
+    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    let cancelled = false;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
+    setState({ itemId, url: null, status: "loading" });
+
+    void (async () => {
+      try {
+        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+        const url = await resolveLibraryImageUrl({ id: itemId, file_url: fileUrl }, (id) =>
+          getLibraryImageUrl({ data: { id } }),
+        );
+        if (!url) throw new Error("Invalid signed image URL");
+        if (!cancelled) setState({ itemId, url, status: "ready" });
+      } catch {
+        if (!cancelled) setState({ itemId, url: null, status: "error" });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [directUrl, fileUrl, itemId, privatePath, refreshKey]);
+
+  if (directUrl) return { url: directUrl, loading: false, error: false, retry, markLoaded };
+  if (!privatePath)
+    return { url: null, loading: false, error: Boolean(fileUrl), retry, markLoaded };
+  if (state.itemId !== itemId) return { url: null, loading: true, error: false, retry, markLoaded };
+  return {
+    url: state.url,
+    loading: state.status === "loading",
+    error: state.status === "error",
+    retry,
+    markLoaded,
+  };
+}
+
+function LibraryImageMedia({
+  item,
+  className,
+  fallbackClassName = "",
+}: {
+  item: LibItem;
+  className: string;
+  fallbackClassName?: string;
+}) {
+  const image = useLibraryImageSource(item);
+  if (image.url) {
+    return (
+      <img
+        src={image.url}
+        alt={item.title}
+        loading="lazy"
+        className={className}
+        onLoad={image.markLoaded}
+        onError={image.retry}
+      />
+    );
+  }
+  return (
+    <div
+      className={`flex h-full min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground ${fallbackClassName}`}
+      role="status"
+    >
+      <ImageIcon className="h-6 w-6" aria-hidden="true" />
+      <span className="text-xs">
+        {image.loading ? "Loading image…" : "Image preview unavailable"}
+      </span>
+    </div>
+  );
+}
+
+function LibraryImageDownloadAction({ item }: { item: LibItem }) {
+  const image = useLibraryImageSource(item);
+  if (image.url) {
+    return (
+      <DropdownMenuItem asChild>
+        <a href={image.url} target="_blank" rel="noopener noreferrer">
+          <Download className="mr-2 h-4 w-4" /> Open or download
+        </a>
+      </DropdownMenuItem>
+    );
+  }
+  return (
+    <DropdownMenuItem disabled>
+      <Download className="mr-2 h-4 w-4" />
+      {image.loading ? "Preparing image…" : "Image unavailable"}
+    </DropdownMenuItem>
+  );
 }
 
 function LibraryPage() {
@@ -157,6 +288,70 @@ function LibraryPage() {
   const visiblePreviewItem = principalReady ? previewItem : null;
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const shareLoadGenerationRef = useRef(0);
+  const [shareState, setShareState] = useState<{
+    principal: string | null;
+    received: SharedChatInbox[];
+    sent: SharedChatSummary[];
+    loading: boolean;
+    error: string | null;
+  }>({ principal: null, received: [], sent: [], loading: false, error: null });
+  const sharesReady = principal !== null && shareState.principal === principal;
+  const receivedShares = sharesReady ? shareState.received : EMPTY_RECEIVED_SHARES;
+  const sentShares = sharesReady ? shareState.sent : EMPTY_SENT_SHARES;
+  const sharesLoading = Boolean(isSignedIn) && (!sharesReady || shareState.loading);
+  const sharesError = sharesReady ? shareState.error : null;
+  const [sharedPreview, setSharedPreview] = useState<SharedChatInbox | null>(null);
+  const visibleSharedPreview = sharesReady ? sharedPreview : null;
+  const sharedPreviewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const [pendingRevokeShare, setPendingRevokeShare] = useState<SharedChatSummary | null>(null);
+  const [revokingShareId, setRevokingShareId] = useState<string | null>(null);
+
+  const loadShares = useCallback(async () => {
+    const generation = ++shareLoadGenerationRef.current;
+    if (!isLoaded || principal === null || !isSignedIn) {
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
+      return;
+    }
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      shareLoadGenerationRef.current === generation && principalRef.current === requestPrincipal;
+    setSharedPreview(null);
+    setShareState({
+      principal: requestPrincipal,
+      received: [],
+      sent: [],
+      loading: true,
+      error: null,
+    });
+    try {
+      const { listMySharedChats, listSharedWithMe } = await import("@/lib/shared-chats.functions");
+      const [received, sent] = await Promise.all([listSharedWithMe(), listMySharedChats()]);
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received,
+        sent,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: error instanceof Error ? error.message : "Shared chats could not be loaded.",
+      });
+    }
+  }, [isLoaded, isSignedIn, principal]);
 
   const load = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -243,6 +438,17 @@ function LibraryPage() {
     setPreviewItem(null);
     setSelected([]);
     setLoadError(null);
+    setSharedPreview(null);
+    setPendingRevokeShare(null);
+    setRevokingShareId(null);
+    shareLoadGenerationRef.current += 1;
+    setShareState({
+      principal,
+      received: [],
+      sent: [],
+      loading: false,
+      error: null,
+    });
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
       setFavoritesPrincipal(null);
@@ -262,6 +468,17 @@ function LibraryPage() {
       setFavorites(new Set());
       setFavoritesPrincipal(principal);
       setPreviewItem(null);
+      setSharedPreview(null);
+      setPendingRevokeShare(null);
+      setRevokingShareId(null);
+      shareLoadGenerationRef.current += 1;
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setSelected([]);
       setQuery("");
       setFilter("all");
@@ -276,13 +493,22 @@ function LibraryPage() {
   useEffect(() => {
     if (!isLoaded || principal === null) {
       loadGenerationRef.current += 1;
+      shareLoadGenerationRef.current += 1;
       setItemState({ principal: null, items: [] });
+      setShareState({
+        principal: null,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setLoading(false);
       setLoadError(null);
       return;
     }
     void load();
-  }, [isLoaded, load, principal]);
+    void loadShares();
+  }, [isLoaded, load, loadShares, principal]);
 
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
@@ -345,6 +571,35 @@ function LibraryPage() {
       writeFavorites(favoritesKey, next);
       return next;
     });
+  };
+
+  const revokeShare = async (id: string) => {
+    if (!sharesReady || !principal) return;
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
+    setRevokingShareId(id);
+    try {
+      const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
+      await revokeSharedChat({ data: { id } });
+      if (!isCurrent()) return;
+      setShareState((previous) =>
+        previous.principal === requestPrincipal
+          ? {
+              ...previous,
+              sent: previous.sent.map((share) =>
+                share.id === id ? { ...share, status: "revoked" } : share,
+              ),
+            }
+          : previous,
+      );
+      toast.success("Share revoked.");
+    } catch {
+      if (isCurrent()) toast.error("Could not revoke this shared snapshot. Please try again.");
+    } finally {
+      if (isCurrent()) setRevokingShareId(null);
+    }
   };
 
   const deleteSelected = async (confirmed = false) => {
@@ -488,7 +743,9 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item), userKey)}>
           Add to Context Pack
         </DropdownMenuItem>
-        {safeNavigationUrl(item.file_url) ? (
+        {isImageItem(item) ? (
+          <LibraryImageDownloadAction item={item} />
+        ) : safeNavigationUrl(item.file_url) ? (
           <DropdownMenuItem asChild>
             <a href={safeNavigationUrl(item.file_url)!} target="_blank" rel="noopener noreferrer">
               <Download className="mr-2 h-4 w-4" /> Open or download
@@ -594,12 +851,7 @@ function LibraryPage() {
         ) : null}
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
-            <img
-              src={item.file_url!}
-              alt={item.title}
-              loading="lazy"
-              className="h-full w-full object-cover "
-            />
+            <LibraryImageMedia item={item} className="h-full w-full object-cover" />
           </div>
         ) : (
           <div className="aspect-[4/3] bg-[var(--surface-secondary)] p-4 text-xs text-muted-foreground">
@@ -646,12 +898,15 @@ function LibraryPage() {
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                onClick={load}
-                disabled={loading}
+                onClick={() => {
+                  void load();
+                  void loadShares();
+                }}
+                disabled={loading || sharesLoading}
               >
                 <RefreshCw
                   aria-hidden="true"
-                  className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
+                  className={`mr-1.5 h-3.5 w-3.5 ${loading || sharesLoading ? "animate-spin motion-reduce:animate-none" : ""}`}
                 />{" "}
                 Refresh
               </Button>
@@ -677,6 +932,107 @@ function LibraryPage() {
                 Sign in
               </Button>
             </SignInButton>
+          </section>
+        ) : null}
+
+        {isSignedIn && isLoaded ? (
+          <section className="kova-card space-y-4 p-4 sm:p-5" aria-labelledby="shared-chats-title">
+            <div>
+              <h2 id="shared-chats-title" className="font-medium">
+                Shared chats
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Open read-only snapshots shared with you, or revoke snapshots you sent.
+              </p>
+            </div>
+            {sharesError ? (
+              <div role="alert" className="rounded-xl border border-destructive/30 p-4">
+                <p className="text-sm font-medium text-destructive">Could not load shared chats</p>
+                <p className="mt-1 text-xs text-muted-foreground">{sharesError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 min-h-11"
+                  onClick={() => void loadShares()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : sharesLoading ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading shared chats…
+              </p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared with me</h3>
+                  {receivedShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      No chats have been shared with you.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {receivedShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {share.snapshot.messages.length} messages ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="min-h-11 shrink-0"
+                            onClick={(event) => {
+                              sharedPreviewReturnFocusRef.current = event.currentTarget;
+                              setSharedPreview(share);
+                            }}
+                          >
+                            Open snapshot
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared by me</h3>
+                  {sentShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      You have not shared a chat. Use Share chat from a conversation to send a
+                      read-only snapshot.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {sentShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              To {share.recipient_email} · {share.status} ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {share.status !== "revoked" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="min-h-11 shrink-0"
+                              disabled={revokingShareId === share.id}
+                              onClick={() => setPendingRevokeShare(share)}
+                            >
+                              Revoke
+                            </Button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         ) : null}
 
@@ -890,10 +1246,10 @@ function LibraryPage() {
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
                 {isImageItem(visiblePreviewItem) ? (
-                  <img
-                    src={visiblePreviewItem.file_url!}
-                    alt={visiblePreviewItem.title}
+                  <LibraryImageMedia
+                    item={visiblePreviewItem}
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
+                    fallbackClassName="min-h-64 rounded-xl bg-[var(--surface-secondary)]"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
@@ -903,6 +1259,46 @@ function LibraryPage() {
                   </pre>
                 )}
               </div>
+            </DialogContent>
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={Boolean(visibleSharedPreview)}
+          onOpenChange={(open) => {
+            if (!open) setSharedPreview(null);
+          }}
+        >
+          {visibleSharedPreview ? (
+            <DialogContent
+              className="gap-0 overflow-hidden p-0 sm:w-[min(92vw,768px)] sm:max-w-3xl sm:p-0"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const trigger = sharedPreviewReturnFocusRef.current;
+                if (trigger?.isConnected) trigger.focus();
+                sharedPreviewReturnFocusRef.current = null;
+              }}
+            >
+              <header className="border-b border-border p-4 pr-16">
+                <DialogTitle className="truncate text-base">
+                  {visibleSharedPreview.title}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Read-only snapshot · {visibleSharedPreview.snapshot.messages.length} messages ·{" "}
+                  shared {new Date(visibleSharedPreview.created_at).toLocaleDateString()}
+                </DialogDescription>
+              </header>
+              <ol className="max-h-[70dvh] space-y-4 overflow-auto p-4 sm:p-6">
+                {visibleSharedPreview.snapshot.messages.map((message, index) => (
+                  <li key={`${visibleSharedPreview.id}:${index}`} className="space-y-1">
+                    <p className="text-xs font-medium capitalize text-muted-foreground">
+                      {message.role}
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                      {message.content}
+                    </p>
+                  </li>
+                ))}
+              </ol>
             </DialogContent>
           ) : null}
         </Dialog>
@@ -918,6 +1314,23 @@ function LibraryPage() {
             setPendingDelete(null);
             if (pending?.kind === "one") void remove(pending.id, true);
             else if (pending?.kind === "many") void deleteSelected(true);
+          }}
+        />
+        <ConfirmActionDialog
+          open={pendingRevokeShare !== null}
+          onOpenChange={(open) => !open && setPendingRevokeShare(null)}
+          title="Revoke this shared snapshot?"
+          description={
+            pendingRevokeShare
+              ? `${pendingRevokeShare.recipient_email} will no longer be able to open “${pendingRevokeShare.title}”.`
+              : "The recipient will no longer be able to open this snapshot."
+          }
+          confirmLabel="Revoke"
+          destructive
+          onConfirm={() => {
+            const share = pendingRevokeShare;
+            setPendingRevokeShare(null);
+            if (share) void revokeShare(share.id);
           }}
         />
       </main>

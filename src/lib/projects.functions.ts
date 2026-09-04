@@ -54,6 +54,7 @@ export type ProjectDetail = {
   role: ProjectRole;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type ProjectMember = {
@@ -280,7 +281,9 @@ export const getProject = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ProjectDetail | null> => {
     const { data: p, error } = await context.supabase
       .from("projects")
-      .select("id, name, description, system_prompt, color, owner_id, created_at, updated_at")
+      .select(
+        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, archived_at",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) {

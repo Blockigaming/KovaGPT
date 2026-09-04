@@ -12,6 +12,7 @@ import {
   sanitizeAccountExportValue,
   serializeAccountExport,
 } from "@/lib/account-export-policy.mjs";
+import { cleanupAccountExportJobs } from "@/lib/account-export-cleanup-policy.mjs";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
@@ -96,6 +97,136 @@ export async function clearAccountExportArtifacts(userId: string, jobId: string)
   if (paths.length === 0) return;
   const removed = await admin.storage.from(EXPORT_BUCKET).remove(paths);
   if (removed.error) throw exportError("account_export_storage_unavailable");
+  const remaining = await admin.storage.from(EXPORT_BUCKET).list(prefix, { limit: 1, offset: 0 });
+  if (remaining.error || !remaining.data || remaining.data.length !== 0) {
+    throw exportError("account_export_cleanup_unverified");
+  }
+}
+
+async function discoverAccountExportJobIds(userId: string): Promise<string[]> {
+  const discovered: string[] = [];
+  for (let offset = 0; offset < 1_000; offset += 100) {
+    const listed = await admin.storage.from(EXPORT_BUCKET).list(userId, { limit: 100, offset });
+    if (listed.error || !listed.data) throw exportError("account_export_storage_unavailable");
+    for (const entry of listed.data) {
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+          entry.name,
+        )
+      ) {
+        throw exportError("account_export_artifact_name_invalid");
+      }
+      discovered.push(entry.name);
+    }
+    if (listed.data.length < 100) return discovered;
+  }
+  throw exportError("account_export_artifact_limit_exceeded");
+}
+
+type CleanupJob = {
+  id: string;
+  status: string;
+};
+
+async function listAccountExportCleanupJobs(userId: string): Promise<CleanupJob[]> {
+  const result = await admin
+    .from("account_export_jobs")
+    .select("id,status")
+    .eq("user_id", userId)
+    .range(0, 999);
+  if (result.error || !result.data) throw exportError("account_export_cleanup_unavailable");
+  if (result.data.length >= 1_000) throw exportError("account_export_artifact_limit_exceeded");
+  return result.data.flatMap((row) =>
+    typeof row.id === "string"
+      ? [
+          {
+            id: row.id,
+            status: typeof row.status === "string" ? row.status : "invalid",
+          },
+        ]
+      : [],
+  );
+}
+
+export async function finalizeAccountExportArtifactCleanup(
+  userId: string,
+  jobId: string,
+): Promise<boolean> {
+  const result = await admin
+    .from("account_export_jobs")
+    .update({
+      storage_path: null,
+      content_sha256: null,
+      size_bytes: null,
+      worker_id: null,
+      lease_expires_at: null,
+      expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  if (result.error) throw exportError("account_export_cleanup_unavailable");
+  return true;
+}
+
+export async function cleanupAccountExportsBeforeAccountDeletion(
+  userId: string,
+): Promise<{ ready: boolean }> {
+  const fenced = await admin.rpc("begin_account_export_account_deletion", {
+    p_user_id: userId,
+  });
+  if (fenced.error) throw exportError("account_export_cleanup_unavailable");
+
+  const jobs = await listAccountExportCleanupJobs(userId);
+  if (jobs.some((job) => job.status === "processing")) return { ready: false };
+
+  const jobIds = [
+    ...new Set([...jobs.map((job) => job.id), ...(await discoverAccountExportJobIds(userId))]),
+  ];
+  const complete = await cleanupAccountExportJobs(jobIds, {
+    clear: (jobId) => clearAccountExportArtifacts(userId, jobId),
+    finalize: (jobId) => finalizeAccountExportArtifactCleanup(userId, jobId),
+  });
+  if (!complete) return { ready: false };
+
+  const after = await listAccountExportCleanupJobs(userId);
+  if (after.some((job) => job.status === "processing")) return { ready: false };
+  return { ready: (await discoverAccountExportJobIds(userId)).length === 0 };
+}
+
+/** Releases the export fence when account deletion leaves the Auth user active. */
+export async function releaseAccountExportDeletionFence(userId: string): Promise<void> {
+  const released = await admin.rpc("cancel_account_export_account_deletion", {
+    p_user_id: userId,
+  });
+  if (released.error) throw exportError("account_export_fence_release_unavailable");
+}
+
+async function assertClaimStillOwnsUpload(
+  job: ClaimedAccountExport,
+  workerId: string,
+): Promise<void> {
+  const state = await admin
+    .from("account_export_jobs")
+    .select("status,worker_id,lease_expires_at")
+    .eq("id", job.id)
+    .eq("user_id", job.user_id)
+    .maybeSingle();
+  if (state.error || !state.data) throw exportError("account_export_lease_lost");
+  const lease =
+    typeof state.data.lease_expires_at === "string"
+      ? Date.parse(state.data.lease_expires_at)
+      : Number.NaN;
+  if (
+    state.data.status !== "processing" ||
+    state.data.worker_id !== workerId ||
+    !Number.isFinite(lease) ||
+    lease <= Date.now()
+  ) {
+    throw exportError("account_export_lease_lost");
+  }
 }
 
 async function readAllWhere(table: string, column: string, value: unknown): Promise<ExportRow[]> {
@@ -325,7 +456,10 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
   let uploadedPath: string | null = null;
   try {
     const artifact = await buildAccountExport(job.user_id, job.id);
-    await clearAccountExportArtifacts(job.user_id, job.id);
+    // The claim is checked immediately before the first write. Account
+    // deletion/cancellation leaves worker_id in place as a barrier until this
+    // worker acknowledges that it can no longer upload.
+    await assertClaimStillOwnsUpload(job, workerId);
     const path = accountExportStoragePath(job.user_id, job.id, randomUUID());
     const upload = await admin.storage.from(EXPORT_BUCKET).upload(path, artifact.bytes, {
       contentType: "application/json",
@@ -341,14 +475,16 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
       p_content_sha256: createHash("sha256").update(artifact.bytes).digest("hex"),
       p_size_bytes: artifact.bytes.byteLength,
     });
-    if (settled.error || settled.data !== true) {
-      await admin.storage.from(EXPORT_BUCKET).remove([path]);
+    if (settled.error || settled.data !== true)
       throw exportError("account_export_settlement_failed");
-    }
     return { id: job.id, status: "complete" as const };
   } catch (error) {
-    if (uploadedPath) await admin.storage.from(EXPORT_BUCKET).remove([uploadedPath]);
-    const code = errorCode(error);
+    let cleanupFailed = false;
+    if (uploadedPath) {
+      const removed = await admin.storage.from(EXPORT_BUCKET).remove([uploadedPath]);
+      cleanupFailed = Boolean(removed.error);
+    }
+    const code = cleanupFailed ? "account_export_storage_unavailable" : errorCode(error);
     const retryable = new Set([
       "account_export_database_unavailable",
       "account_export_storage_unavailable",

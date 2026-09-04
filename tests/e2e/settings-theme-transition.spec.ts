@@ -174,6 +174,10 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   await page.goto("/?e2e-settings-auth=1", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  // The authenticated onboarding lookup settles after hydration. Wait for its
+  // mocked empty-state dialog instead of racing a one-shot visibility check;
+  // otherwise it can mount over Settings between that check and the click.
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
   if (await onboarding.isVisible().catch(() => false)) {
     await onboarding.getByRole("button", { name: "Close" }).click();
     await expect(onboarding).toHaveCount(0);

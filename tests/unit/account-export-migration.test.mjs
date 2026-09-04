@@ -5,6 +5,8 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath = "supabase/migrations/20260903203000_account_data_exports.sql";
+const deletionFenceMigrationPath =
+  "supabase/migrations/20260903204500_account_export_deletion_fence.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const workerId = "export-worker-123";
 const artifactId = "33333333-3333-4333-8333-333333333333";
@@ -16,6 +18,7 @@ async function createDatabase() {
     CREATE ROLE authenticated;
     CREATE ROLE service_role;
     CREATE SCHEMA auth;
+    CREATE SCHEMA kova_private;
     CREATE SCHEMA storage;
     CREATE TABLE auth.users (id uuid PRIMARY KEY);
     CREATE TABLE storage.buckets (
@@ -41,6 +44,7 @@ async function createDatabase() {
     INSERT INTO auth.users(id) VALUES ('${userId}');
   `);
   await database.exec(await readFile(migrationPath, "utf8"));
+  await database.exec(await readFile(deletionFenceMigrationPath, "utf8"));
   return database;
 }
 
@@ -124,6 +128,16 @@ test("only the service role can invoke export worker functions", async () => {
     `);
     assert.equal(definition.rows[0].prosecdef, false);
     assert.deepEqual(definition.rows[0].proconfig, ['search_path=""']);
+
+    const cancellationPrivileges = await database.query(`
+      SELECT
+        has_function_privilege('anon','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS anon_execute,
+        has_function_privilege('authenticated','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS authenticated_execute,
+        has_function_privilege('service_role','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS service_execute
+    `);
+    assert.deepEqual(cancellationPrivileges.rows, [
+      { anon_execute: false, authenticated_execute: false, service_execute: true },
+    ]);
   } finally {
     await database.close();
   }
@@ -140,6 +154,82 @@ test("the export bucket is private and bounded", async () => {
         public: false,
         file_size_limit: 52428800,
         allowed_mime_types: ["application/json"],
+      },
+    ]);
+  } finally {
+    await database.close();
+  }
+});
+
+test("account deletion fences new exports without stealing an active worker lease", async () => {
+  const database = await createDatabase();
+  try {
+    const inserted = await database.query(
+      "INSERT INTO public.account_export_jobs(user_id) VALUES ($1) RETURNING id",
+      [userId],
+    );
+    const jobId = inserted.rows[0].id;
+    await database.query("SELECT * FROM public.claim_account_export_jobs($1,1,180)", [workerId]);
+    await database.query("UPDATE public.account_export_jobs SET storage_path = $1 WHERE id = $2", [
+      `${userId}/${jobId}/${artifactId}.json`,
+      jobId,
+    ]);
+
+    const fenced = await database.query(
+      "SELECT public.begin_account_export_account_deletion($1) AS canceled",
+      [userId],
+    );
+    assert.deepEqual(fenced.rows, [{ canceled: 0 }]);
+    const retained = await database.query(
+      "SELECT status,worker_id,storage_path,lease_expires_at IS NOT NULL AS has_lease FROM public.account_export_jobs WHERE id=$1",
+      [jobId],
+    );
+    assert.deepEqual(retained.rows, [
+      {
+        status: "processing",
+        worker_id: workerId,
+        storage_path: `${userId}/${jobId}/${artifactId}.json`,
+        has_lease: true,
+      },
+    ]);
+
+    await assert.rejects(
+      () => database.query("INSERT INTO public.account_export_jobs(user_id) VALUES ($1)", [userId]),
+      /account_deletion_pending/u,
+    );
+    const activeSettlement = await database.query(
+      "SELECT public.settle_account_export_success($1,$2,$3,$4,$5) AS ok",
+      [jobId, workerId, `${userId}/${jobId}/${artifactId}.json`, "a".repeat(64), 1234],
+    );
+    assert.deepEqual(activeSettlement.rows, [{ ok: true }]);
+
+    const released = await database.query(
+      "SELECT public.cancel_account_export_account_deletion($1) AS released",
+      [userId],
+    );
+    assert.deepEqual(released.rows, [{ released: true }]);
+    const newExport = await database.query(
+      "INSERT INTO public.account_export_jobs(user_id) VALUES ($1) RETURNING status",
+      [userId],
+    );
+    assert.deepEqual(newExport.rows, [{ status: "queued" }]);
+    await database.query("DELETE FROM public.account_export_jobs WHERE status = 'queued'");
+    const alreadyReleased = await database.query(
+      "SELECT public.cancel_account_export_account_deletion($1) AS released",
+      [userId],
+    );
+    assert.deepEqual(alreadyReleased.rows, [{ released: false }]);
+
+    await database.query("SELECT public.begin_account_export_account_deletion($1)", [userId]);
+    const canceled = await database.query(
+      "SELECT status,worker_id,storage_path FROM public.account_export_jobs WHERE id=$1",
+      [jobId],
+    );
+    assert.deepEqual(canceled.rows, [
+      {
+        status: "canceled",
+        worker_id: null,
+        storage_path: `${userId}/${jobId}/${artifactId}.json`,
       },
     ]);
   } finally {

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -62,7 +62,7 @@ import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.f
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 
 export const Route = createFileRoute("/projects")({
-  component: ProjectsPage,
+  component: ProjectsRoute,
   head: () => ({
     meta: [
       { title: "KovaGPT Projects" },
@@ -71,6 +71,15 @@ export const Route = createFileRoute("/projects")({
     ],
   }),
 });
+
+function ProjectsRoute() {
+  const projectMatch = useMatch({
+    from: "/projects/$projectId",
+    shouldThrow: false,
+  });
+
+  return projectMatch ? <Outlet /> : <ProjectsPage />;
+}
 
 function ProjectsPage() {
   const { isSignedIn, isLoaded, user } = useUser();
