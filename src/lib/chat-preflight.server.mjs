@@ -174,6 +174,10 @@ export function createChatPreflightRunner({
       let onAbort;
       const aborted = new Promise((_, reject) => {
         onAbort = () => reject(abortError(stageController.signal));
+        if (stageController.signal.aborted) {
+          onAbort();
+          return;
+        }
         stageController.signal.addEventListener("abort", onAbort, { once: true });
       });
       const task = Promise.resolve().then(() => operation(stageController.signal));
