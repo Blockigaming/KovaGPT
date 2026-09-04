@@ -117,6 +117,8 @@ export function addTimer(
   if (!Number.isFinite(durationMs) || durationMs < 1000 || durationMs > MAX_TIMER_DURATION_MS) {
     return null;
   }
+  const current = read(userKey);
+  if (current.length >= MAX_TIMER_ITEMS) return null;
   const item: TimerItem = {
     id: `t_${crypto.randomUUID()}`,
     kind: "timer",
@@ -124,7 +126,7 @@ export function addTimer(
     durationMs,
     fireAt: Date.now() + durationMs,
   };
-  return write(userKey, [...read(userKey), item]) ? item : null;
+  return write(userKey, [...current, item]) ? item : null;
 }
 
 export function addAlarm(userKey: TimerUserKey, fireAt: number, label = "Alarm"): TimerItem | null {
@@ -135,13 +137,15 @@ export function addAlarm(userKey: TimerUserKey, fireAt: number, label = "Alarm")
   ) {
     return null;
   }
+  const current = read(userKey);
+  if (current.length >= MAX_TIMER_ITEMS) return null;
   const item: TimerItem = {
     id: `a_${crypto.randomUUID()}`,
     kind: "alarm",
     label,
     fireAt,
   };
-  return write(userKey, [...read(userKey), item]) ? item : null;
+  return write(userKey, [...current, item]) ? item : null;
 }
 
 export function removeTimer(userKey: TimerUserKey, id: string): boolean {
