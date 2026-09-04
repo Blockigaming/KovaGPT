@@ -243,7 +243,10 @@ test("chat failures complete with a user-visible error and SSE terminator", () =
   assert.match(chat, /isProviderTimeoutError\(error\)/u);
   assert.match(chat, /KovaGPT took too long to respond/u);
   assert.match(chat, /providerTimedOut \? 504 : 502/u);
-  assert.match(chat, /sseChunk\(providerFailureMessage\)[\s\S]{0,300}sseDone\(\)/u);
+  assert.match(
+    chat,
+    /kind: "error"[\s\S]{0,160}error: providerFailureMessage\.trim\(\)[\s\S]{0,600}sseDone\(\)/u,
+  );
   assert.match(chat, /request\.signal\.aborted[\s\S]{0,220}status: 499/u);
   assert.match(
     chat,
