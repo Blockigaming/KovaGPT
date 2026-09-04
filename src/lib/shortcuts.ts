@@ -85,6 +85,12 @@ function normalizedShortcutKey(key: string): string {
   return key.length === 1 ? key.toUpperCase() : key;
 }
 
+function normalizeShortcutCombo(combo: string): string {
+  const parts = combo.split("+");
+  const key = parts.pop();
+  return key ? [...parts, normalizedShortcutKey(key)].join("+") : combo;
+}
+
 function isValidShortcutCombo(value: unknown): value is string {
   if (
     typeof value !== "string" ||
@@ -98,7 +104,7 @@ function isValidShortcutCombo(value: unknown): value is string {
   const parts = value.split("+");
   if (parts.some((part) => !part)) return false;
   const key = parts.at(-1);
-  if (!key || MODIFIER_KEYS.has(key)) return false;
+  if (!key || MODIFIER_KEYS.has(key) || KEYBOARD_MODIFIER_KEYS.has(key)) return false;
   const modifiers = parts.slice(0, -1);
   return (
     modifiers.every((modifier) => MODIFIER_KEYS.has(modifier)) &&
@@ -145,7 +151,7 @@ export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
     const saved = parsed.filter(isStoredShortcut);
     const resolved = DEFAULT_SHORTCUTS.map((shortcut) => {
       const found = saved.find((candidate) => candidate.id === shortcut.id);
-      return found ? { ...shortcut, combo: found.combo } : shortcut;
+      return found ? { ...shortcut, combo: normalizeShortcutCombo(found.combo) } : shortcut;
     });
     return new Set(resolved.map(({ combo }) => combo)).size === resolved.length
       ? resolved
@@ -161,7 +167,10 @@ export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]): boole
   const storage = safeBrowserStorage("localStorage");
   if (!key || !principal || !storage) return false;
 
-  const saved: StoredShortcut[] = list.map(({ id, combo }) => ({ id, combo }));
+  const saved: StoredShortcut[] = list.map(({ id, combo }) => ({
+    id,
+    combo: normalizeShortcutCombo(combo),
+  }));
   if (
     saved.length !== DEFAULT_SHORTCUTS.length ||
     !saved.every(isStoredShortcut) ||

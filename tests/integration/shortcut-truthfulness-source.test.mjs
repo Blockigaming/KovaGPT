@@ -19,8 +19,8 @@ test("stored shortcuts are validated before reaching the keyboard listener", () 
   assert.match(shortcutsSource, /const parsed: unknown = JSON\.parse\(raw\);/);
   assert.match(shortcutsSource, /if \(!Array\.isArray\(parsed\)\) return DEFAULT_SHORTCUTS;/);
   assert.match(shortcutsSource, /KNOWN_SHORTCUT_IDS\.has\(candidate\.id as ShortcutId\)/);
-  assert.match(shortcutsSource, /typeof candidate\.combo === "string"/);
   assert.match(shortcutsSource, /isValidShortcutCombo\(candidate\.combo\)/);
+  assert.match(shortcutsSource, /normalizeShortcutCombo\(found\.combo\)/);
   assert.match(
     shortcutsSource,
     /new Set\(resolved\.map\(\(\{ combo \}\) => combo\)\)\.size === resolved\.length/,
