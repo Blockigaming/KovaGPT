@@ -23,27 +23,42 @@ test("saved-memory reads and POSTs require explicit browser consent and paid ent
   assert.match(page, /enqueueMemoryWrite\(\{/);
   assert.match(
     chatApi,
-    /\(callerTier === "plus" \|\| callerTier === "pro"\)[\s\S]{0,100}personalContext\?\.rememberAcross === true[\s\S]{0,40}!temporary/,
+    /\(callerTier === "plus" \|\| callerTier === "pro"\)[\s\S]{0,100}personalContext\?\.rememberAcross === true[\s\S]{0,60}usesExistingContext/,
   );
   assert.doesNotMatch(chatApi, /rememberAcross !== false/);
   assert.match(parser, /body\.memoryEnabled !== true/);
   assert.match(parser, /body\.temporary !== false/);
 });
 
-test("Temporary Chat omits and server-discards cross-chat personal context", () => {
+test("Temporary Chat enforces clean or personalized context without new memory", () => {
   const page = read("src/routes/index.tsx");
   const chatApi = read("src/routes/api/chat.ts");
+  const dialog = read("src/components/TemporaryChatStartDialog.tsx");
 
   assert.match(
     page,
     /This chat won't appear in history or be used for cross-chat memory\. It also will not use saved profile details, custom instructions, or personality settings\./,
   );
-  assert.match(page, /user: tempChat[\s\S]{0,40}\? undefined/);
-  assert.match(page, /personality: tempChat[\s\S]{0,40}\? undefined/);
-  assert.match(chatApi, /const personalContext = temporary \? undefined : user/);
-  assert.match(chatApi, /const personalityBlock =\s*!temporary && personality/);
+  assert.match(page, /temporaryContext: tempChat \? tempChatContext : undefined/);
+  assert.match(page, /user: tempChat && tempChatContext === "clean"[\s\S]{0,40}\? undefined/);
+  assert.match(
+    page,
+    /personality: tempChat && tempChatContext === "clean"[\s\S]{0,40}\? undefined/,
+  );
+  assert.match(chatApi, /temporaryContext === "personalized"/);
+  assert.match(chatApi, /const personalContext = usesExistingContext \? user : undefined/);
+  assert.match(chatApi, /usesExistingContext && personality/);
+  assert.match(chatApi, /temporary: !usesExistingContext/);
+  assert.match(
+    chatApi,
+    /auth &&\s*usesExistingContext[\s\S]{0,120}getAvailableGoogleTools/,
+  );
   assert.match(chatApi, /buildUserContextBlock\(personalContext \?\? \{\}\)/);
-  assert.match(page, /does not use or update saved[\s\S]{0,100}custom instructions/);
+  assert.match(page, /if \(!active \|\| active\.temporary\) return/);
+  assert.match(page, /memoryStartIndex: convertedAt/);
+  assert.match(page, /Save to history/);
+  assert.match(dialog, /You cannot change this choice after the chat starts/);
+  assert.match(dialog, /Nothing from this temporary chat will be added to memory/);
 });
 
 test("saved-memory deletion is authenticated, serialized after writes, and truthful on failure", () => {
