@@ -114,7 +114,10 @@ test("agent creation and continuation are protected while safe controls remain a
     source("src/agents/team.server.ts"),
   ]);
   assert.match(runRoute, /enforceLockdownCapability\([\s\S]*?"agent"/u);
-  assert.match(teamRoute, /enforceLockdownCapability\([\s\S]*?"agent"/u);
+  assert.doesNotMatch(
+    teamRoute.slice(teamRoute.indexOf("POST:"), teamRoute.indexOf("PATCH:")),
+    /enforceLockdownCapability/u,
+  );
   before(
     execution.slice(execution.indexOf("export async function createAgentRun")),
     "assertLockdownAllows(",
