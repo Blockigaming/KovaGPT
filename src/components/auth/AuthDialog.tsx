@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   getEmailAuthRedirectUri,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/oauth-session";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
+import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
@@ -40,6 +41,7 @@ export function AuthDialog({
   const [step, setStep] = useState<Step>("identify");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "passkey" | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const submittingRef = useRef(false);
@@ -68,15 +70,17 @@ export function AuthDialog({
   const googleUnavailable = providers.resolved && !providers.google;
   const googleCheckFailed = Boolean(providers.error);
 
-  const guard = () => {
+  const guard = (method: "email" | "google" | "passkey") => {
     if (submittingRef.current) return false;
     submittingRef.current = true;
     setLoading(true);
+    setLoadingMethod(method);
     return true;
   };
   const release = () => {
     submittingRef.current = false;
     setLoading(false);
+    setLoadingMethod(null);
   };
 
   const handleContinueEmail = (e: React.FormEvent) => {
@@ -99,7 +103,7 @@ export function AuthDialog({
       toast.error(GOOGLE_UNCONFIGURED_MESSAGE);
       return;
     }
-    if (!guard()) return;
+    if (!guard("google")) return;
     try {
       rememberPostAuthRedirect();
       const { providerAuth } = await import("@/integrations/provider-auth");
@@ -126,6 +130,27 @@ export function AuthDialog({
     }
   };
 
+  const handlePasskey = async () => {
+    const supported = browserSupportsPasskeys();
+    if (!providers.resolved || !providers.passkeys || !supported) {
+      toast.error("Passkey sign-in is not available on this browser or deployment.");
+      return;
+    }
+    if (!guard("passkey")) return;
+    try {
+      const { error } = await supabase.auth.signInWithPasskey();
+      if (error) throw error;
+      onOpenChange(false);
+    } catch (error) {
+      console.error("[KovaAuth] Passkey authentication failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Passkey sign-in was cancelled or could not be completed.");
+    } finally {
+      release();
+    }
+  };
+
   const requestMagicLink = useCallback(
     async (resend: boolean) => {
       if (!isValidEmail(email)) {
@@ -134,7 +159,7 @@ export function AuthDialog({
         return;
       }
       if (cooldown > 0) return;
-      if (!guard()) return;
+      if (!guard("email")) return;
       try {
         rememberPostAuthRedirect();
         const { error } = await supabase.auth.signInWithOtp({
@@ -257,6 +282,26 @@ export function AuthDialog({
                 </div>
               </div>
 
+              {!isSignUp &&
+              providers.resolved &&
+              providers.passkeys &&
+              browserSupportsPasskeys() ? (
+                <button
+                  type="button"
+                  onClick={() => void handlePasskey()}
+                  disabled={loading}
+                  aria-busy={loadingMethod === "passkey"}
+                  className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
+                >
+                  {loadingMethod === "passkey" ? (
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <KeyRound className="h-5 w-5" aria-hidden="true" />
+                  )}
+                  Continue with a passkey
+                </button>
+              ) : null}
+
               {googleUnavailable || googleCheckFailed ? (
                 <div
                   role="status"
@@ -280,7 +325,7 @@ export function AuthDialog({
                   aria-busy={loading || !providers.resolved}
                   className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                 >
-                  {loading || !providers.resolved ? (
+                  {loadingMethod === "google" || !providers.resolved ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">

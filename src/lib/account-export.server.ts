@@ -333,10 +333,19 @@ async function collectRelatedRecords(
 ): Promise<Record<string, ExportRow[]>> {
   const ownedShares = await readAllWhere("shared_chats", "owner_user_id", userId);
   const receivedShares = await readAllWhere("shared_chats", "recipient_user_id", userId);
+  const receivedTemplateGrants = await readAllWhere(
+    "project_template_grants",
+    "grantee_user_id",
+    userId,
+  );
   const jobIds = ids(direct.agent_jobs ?? []);
   const linkedAccountIds = ids(direct.integration_linked_accounts ?? []);
   return {
     shared_chats: uniqueRows([...ownedShares, ...receivedShares]),
+    project_template_grants: uniqueRows([
+      ...(direct.project_template_grants ?? []),
+      ...receivedTemplateGrants,
+    ]),
     agent_job_events: await readAllIn("agent_job_events", "job_id", jobIds),
     integration_webhook_subscriptions: await readAllIn(
       "integration_webhook_subscriptions",

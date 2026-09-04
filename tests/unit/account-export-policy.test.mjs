@@ -137,4 +137,9 @@ test("the direct export allowlist contains no credential-state tables", () => {
   assert.equal(names.includes("work_sync_mutations"), false);
   assert.equal(names.includes("library_folders"), true);
   assert.equal(names.includes("library_folder_locks"), false);
+  assert.equal(names.includes("project_templates"), true);
+  assert.equal(names.includes("project_template_versions"), true);
+  assert.equal(names.includes("project_template_grants"), true);
+  assert.equal(names.includes("project_template_audit_events"), true);
+  assert.equal(names.includes("project_template_mutations"), false);
 });

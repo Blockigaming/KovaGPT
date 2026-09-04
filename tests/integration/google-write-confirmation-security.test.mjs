@@ -50,23 +50,106 @@ test("confirmation reads and claims only the signed-in owner's row", () => {
   );
   assert.match(claim, /\.eq\("user_id", userId\)/);
   assert.match(claim, /\.eq\("status", "pending"\)/);
-  assert.match(claim, /\.select\("id, tool, args"\)/);
+  assert.match(claim, /\.select\("id, tool, args, result"\)/);
 });
 
 test("claimed legacy arguments are revalidated immediately before Google access", () => {
   const executor = read("src/lib/google-tools.server.ts");
-  const claim = executor.indexOf('.select("id, tool, args")');
+  const claim = executor.indexOf('.select("id, tool, args, result")');
   const revalidate = executor.indexOf("validateSupportedWrite(claimedTool,", claim);
-  const token = executor.indexOf("getValidGoogleAccessToken(userId)", revalidate);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", revalidate);
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
-  assert.match(executor, /"gmail_create_draft",\s*"calendar_create_event"/);
+  assert.match(executor, /"gmail_create_draft",\s*"gmail_send",\s*"calendar_create_event"/);
   assert.match(executor, /This action is no longer valid\. Prepare it again\./);
-  assert.doesNotMatch(
-    executor,
-    /gmail_send|calendar_delete_event|drive_upload_text_file|drive_create_doc/,
+  assert.doesNotMatch(executor, /calendar_delete_event|drive_upload_text_file|drive_create_doc/);
+});
+
+test("Gmail send is confirmation-gated, exact in the approval card, and POST-only", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const card = read("src/components/ToolConfirmCard.tsx");
+
+  const activityStart = executor.indexOf("export const TOOL_ACTIVITY");
+  const activityEnd = executor.indexOf("export const WRITE_TOOL_NAMES", activityStart);
+  const activity = executor.slice(activityStart, activityEnd);
+  assert.match(
+    activity,
+    /gmail_send: \{ running: "Preparing email for review…", done: "Email ready for review" \}/,
   );
+  assert.doesNotMatch(activity, /Sent email/);
+
+  const definitionStart = executor.indexOf('name: "gmail_send"');
+  const definitionEnd = executor.indexOf('name: "calendar_create_event"', definitionStart);
+  const definition = executor.slice(definitionStart, definitionEnd);
+  assert.match(definition, /Only call when the user explicitly asks to send an email/);
+  assert.match(definition, /confirm before anything is sent/);
+
+  const claim = executor.indexOf("const claimedTool");
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", claim);
+  const endpoint = executor.indexOf("${GMAIL}/users/me/messages/send", token);
+  assert.ok(claim > -1 && token > claim && endpoint > token);
+  assert.match(executor, /sending \? `\$\{GMAIL\}\/users\/me\/messages\/send`/);
+  assert.match(executor, /method: "POST"/);
+  assert.match(executor, /JSON\.stringify\(sending \? \{ raw \} : \{ message: \{ raw \} \}\)/);
+  assert.match(executor, /foldEmailAddressHeader\("To", to\)/);
+  assert.match(executor, /Content-Transfer-Encoding: base64/);
+  assert.match(executor, /encodeMimeTextBody\(body\)/);
+  assert.match(executor, /AbortSignal\.timeout\(GOOGLE_WRITE_TIMEOUT_MS\)/);
+  assert.match(executor, /gmail\.send/);
+  assert.match(
+    executor,
+    /name === "gmail_create_draft" \? health\.has\.gmailWrite : health\.has\.gmail/,
+  );
+
+  const summarizeStart = executor.indexOf("export function summarizeWriteTool");
+  const summarizeEnd = executor.indexOf("export async function stagePendingAction", summarizeStart);
+  const summarize = executor.slice(summarizeStart, summarizeEnd);
+  assert.match(summarize, /to: sending \? to : truncate\(to, 120\)/);
+  assert.match(summarize, /bcc: args\.bcc \? \(sending \? String\(args\.bcc\)/);
+  assert.match(summarize, /body_preview: sending \? String\(args\.body \?\? ""\)/);
+
+  assert.match(card, /preview\.bcc/);
+  assert.match(card, />Bcc:<\/span>/);
+  assert.match(card, /confirm\.tool === "gmail_send"[\s\S]*\? "Send"/);
+});
+
+test("confirmed writes stay bound to the staged Google account and use a recoverable lease", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const oauth = read("src/lib/google-oauth.server.ts");
+
+  assert.match(executor, /result: \{ staged_google_sub: stagedGoogleSub \}/);
+  assert.match(executor, /processing_started_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(executor, /getValidGoogleAccessToken\(userId, stagedGoogleSub\)/);
+  assert.match(
+    executor,
+    /Date\.now\(\) - new Date\(startedAt\)\.getTime\(\) > STALE_PROCESSING_MS/,
+  );
+  assert.match(executor, /abandoned_processing/);
+  assert.match(oauth, /expectedGoogleSub && data\.google_sub !== expectedGoogleSub/);
+  assert.match(oauth, /refreshAccessToken\(userId, expectedGoogleSub\)/);
+  assert.match(oauth, /refreshUpdate\.eq\("google_sub", expectedGoogleSub\)/);
+});
+
+test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const route = read("src/routes/api/chat/confirm.ts");
+  const card = read("src/components/ToolConfirmCard.tsx");
+  const store = read("src/lib/chat-store.ts");
+
+  const statusStart = executor.indexOf("export async function getPendingActionStatus");
+  const statusEnd = executor.indexOf("export async function cancelPendingAction", statusStart);
+  const statusLookup = executor.slice(statusStart, statusEnd);
+  assert.match(statusLookup, /\.eq\("id", actionId\)\s*\.eq\("user_id", userId\)/);
+  assert.match(route, /GET: async \(\{ request \}\)/);
+  assert.match(route, /getPendingActionStatus\(auth\.userId, id\)/);
+  assert.match(card, /\/api\/chat\/confirm\?action_id=/);
+  assert.match(card, /statusJson\.status === "confirmed"/);
+  assert.match(card, /json\.error_code === "completion_persistence_ambiguous"/);
+  assert.match(route, /error_code: result\.error_code/);
+  assert.match(card, /status: "uncertain"/);
+  assert.match(card, /Check Sent mail before sending again/);
+  assert.match(store, /"failed" \| "uncertain"/);
 });
 
 test("expiration cannot overwrite a concurrently claimed or completed action", () => {
@@ -88,6 +171,7 @@ test("confirmation results fail safely when final persistence is ambiguous", () 
 
   assert.match(executor, /Action already completed\./);
   assert.match(executor, /confirmationPersistError \|\| !confirmationPersisted/);
+  assert.match(executor, /error_code: "completion_persistence_ambiguous"/);
   assert.match(executor, /Google completed the action, but KovaGPT could not verify completion/);
   assert.match(executor, /Google could not confirm whether the action completed/);
   assert.doesNotMatch(executor, /return \{ ok: false, error: msg \}/);

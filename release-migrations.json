@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 92,
+  "count": 93,
   "latest": "20260904190000_library_images_owner_update_policy.sql",
   "migrations": [
     {
@@ -1847,6 +1847,57 @@
     },
     {
       "order": 92,
+      "filename": "20260903220000_project_templates.sql",
+      "timestamp": "20260903220000",
+      "sha256": "f803e1e3d692d64e56cab79e7145e9b35de61cf06aa5ac36ce1523f5291eca76",
+      "tables": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "functions": [
+        "project_template_snapshot_valid",
+        "create_project_template",
+        "publish_project_template_version",
+        "share_project_template",
+        "revoke_project_template_grant",
+        "archive_project_template",
+        "copy_project_template",
+        "list_project_templates",
+        "get_project_template_version",
+        "purge_project_template_mutation_receipts"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "policies": [
+        "project_templates_authorized_read",
+        "project_template_versions_authorized_read",
+        "project_template_grants_participant_read",
+        "project_template_audit_participant_read"
+      ],
+      "indexes": [
+        "project_templates_owner_updated_idx",
+        "project_templates_owner_active_idx",
+        "project_template_versions_owner_idx",
+        "project_template_grants_grantee_active_idx",
+        "project_template_grants_owner_idx",
+        "project_template_audit_owner_created_idx",
+        "project_template_audit_actor_created_idx",
+        "project_template_mutations_created_idx"
+      ]
+    },
+    {
+      "order": 93,
       "filename": "20260904190000_library_images_owner_update_policy.sql",
       "timestamp": "20260904190000",
       "sha256": "06757db5cc3934824873bb017609ef31cb7f4d39533c877bf5fe5c11d755f38b",
