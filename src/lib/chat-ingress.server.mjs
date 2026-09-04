@@ -48,6 +48,7 @@ const CLIENT_TOOLS = new Set([
   "file_analysis",
 ]);
 const RESPONSE_LENGTHS = new Set(["short", "medium", "long"]);
+const TEMPORARY_CONTEXTS = new Set(["clean", "personalized"]);
 
 const USER_STRING_LIMITS = Object.freeze({
   name: 200,
@@ -134,6 +135,20 @@ function normalizeClientTool(value) {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "string" || !CLIENT_TOOLS.has(value)) {
     invalid("invalid_client_tool", "Invalid chat tool.");
+  }
+  return value;
+}
+
+function normalizeTemporaryContext(value, temporary) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || !TEMPORARY_CONTEXTS.has(value)) {
+    invalid("invalid_temporary_context", "Invalid temporary chat context.");
+  }
+  if (temporary !== true) {
+    invalid(
+      "temporary_context_requires_temporary_chat",
+      "Temporary chat context requires temporary mode.",
+    );
   }
   return value;
 }
@@ -319,6 +334,7 @@ export function normalizeChatPayload(value) {
   });
   const projectId = optionalUuid(value.projectId, "project_id");
   const temporary = optionalBoolean(value.temporary, "temporary");
+  const temporaryContext = normalizeTemporaryContext(value.temporaryContext, temporary);
   const clientTool = normalizeClientTool(value.clientTool);
 
   if (mode !== undefined) payload.mode = mode;
@@ -329,6 +345,7 @@ export function normalizeChatPayload(value) {
   if (personality !== undefined) payload.personality = personality;
   if (projectId !== undefined) payload.projectId = projectId;
   if (temporary !== undefined) payload.temporary = temporary;
+  if (temporaryContext !== undefined) payload.temporaryContext = temporaryContext;
   if (clientTool !== undefined) payload.clientTool = clientTool;
   return payload;
 }
