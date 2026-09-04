@@ -203,6 +203,16 @@ async function storedProjectFileMatches(
   }
 }
 
+function isSafeStorageChildName(value: unknown): value is string {
+  if (typeof value !== "string" || !value || value.includes("/") || value.includes("\\")) {
+    return false;
+  }
+  return !Array.from(value).some((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code <= 31 || code === 127;
+  });
+}
+
 async function cleanupStaleProjectUploadObjects(
   auth: AuthedCaller,
   projectId: string,
@@ -222,14 +232,7 @@ async function cleanupStaleProjectUploadObjects(
       });
     if (error || !data) return false;
     for (const item of data) {
-      if (
-        typeof item.name !== "string" ||
-        !item.name ||
-        item.name.includes("/") ||
-        /[\\\u0000-\u001f\u007f]/u.test(item.name)
-      ) {
-        return false;
-      }
+      if (!isSafeStorageChildName(item.name)) return false;
       paths.push(`${folder}/${item.name}`);
     }
     if (data.length < pageSize) break;
