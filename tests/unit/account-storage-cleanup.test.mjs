@@ -435,6 +435,54 @@ test("deleting a source Project preserves bytes referenced by another live Proje
   assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
 });
 
+test("later cleanup pages do not make pending promoted destinations look live", async () => {
+  const sourcePath = `${PROJECT_ID}/source.txt`;
+  const sourceId = "10000000-0000-4000-8000-000000000001";
+  const destinationId = "f0000000-0000-4000-8000-000000000001";
+  const fixture = promotionFixture({
+    fileId: destinationId,
+    projectId: OTHER_PROJECT_ID,
+    ownerId: USER_ID,
+    storageReference: `project-files:${sourcePath}`,
+  });
+  const fillerRows = Array.from({ length: 999 }, (_, index) => ({
+    id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    project_id: PROJECT_ID,
+    storage_path: `${PROJECT_ID}/filler-${index}.txt`,
+    uploaded_by: USER_ID,
+    project_owner_id: USER_ID,
+    kind: "upload",
+  }));
+  const client = accountClient({
+    promotions: [fixture.promotion],
+    deliverables: [fixture.deliverable],
+    projectRows: [
+      {
+        id: sourceId,
+        project_id: PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: USER_ID,
+        project_owner_id: USER_ID,
+        kind: "upload",
+      },
+      ...fillerRows,
+      {
+        id: destinationId,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: USER_ID,
+        project_owner_id: OTHER_USER_ID,
+        kind: "agent-deliverable",
+      },
+    ],
+  });
+
+  const progress = await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID);
+  assert.equal(progress.complete, true);
+  assert.equal(progress.removed, 1_003);
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), false);
+});
+
 test("a Project Storage failure leaves Library objects untouched", async () => {
   const events = [];
   const client = accountClient({

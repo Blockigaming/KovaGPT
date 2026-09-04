@@ -133,10 +133,18 @@ test("forward migration scrubs legacy receipts and deleted Work bodies", async (
       [userId, recordId],
     );
     assert.deepEqual(after.rows, [{ title: "Deleted Work item", payload: {}, revision: 4 }]);
-    const audits = await database.query(
-      "select count(*)::integer count from public.account_audit_entries where event_type='work_sync'",
-    );
-    assert.equal(audits.rows[0].count, 2);
+    const audits = await database.query(`
+      select safe_description, count(*)::integer count
+      from public.account_audit_entries
+      where event_type='work_sync'
+      group by safe_description
+      order by safe_description
+    `);
+    assert.deepEqual(audits.rows, [
+      { safe_description: "Work recent state synchronized", count: 1 },
+      { safe_description: "Work record deleted", count: 2 },
+      { safe_description: "Work record synchronized", count: 2 },
+    ]);
     await expectDatabaseError(
       () =>
         database.query(
@@ -212,7 +220,7 @@ test("new mutation receipts are compact, exact-request idempotent, and operation
     assert.match(state.rows[0].request_fingerprint, /^[0-9a-f]{64}$/u);
     assert.equal(state.rows[0].result_bytes <= 2_048, true);
     assert.equal(state.rows[0].current_version, 1);
-    assert.equal(state.rows[0].audits, 0);
+    assert.equal(state.rows[0].audits, 1);
   } finally {
     await database.close();
   }
@@ -457,7 +465,10 @@ test("hardening helpers and replacement RPCs remain invoker-only and service-onl
         service_mutation: true,
       },
     ]);
-    assert.doesNotMatch(hardeningMigration, /insert into public\.account_audit_entries/iu);
+    assert.equal(
+      (hardeningMigration.match(/insert into public\.account_audit_entries/giu) ?? []).length,
+      3,
+    );
     assert.doesNotMatch(hardeningMigration, /security definer/iu);
   } finally {
     await database.close();

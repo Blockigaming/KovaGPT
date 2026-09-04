@@ -57,6 +57,7 @@ type AccountStorageClient = {
 type AssociationQuery = {
   select(columns: string): AssociationQuery;
   in(column: string, values: unknown[]): AssociationQuery;
+  eq(column: string, value: unknown): AssociationQuery;
   range(
     from: number,
     to: number,
@@ -76,6 +77,7 @@ async function readAssociatedRows(
   column: string,
   values: unknown[],
   columns = "*",
+  equality?: { column: string; value: unknown },
 ): Promise<Record<string, unknown>[]> {
   const uniqueValues = [...new Set(values)];
   if (uniqueValues.length === 0) return [];
@@ -84,11 +86,9 @@ async function readAssociatedRows(
     const batch = uniqueValues.slice(start, start + ASSOCIATION_QUERY_BATCH_SIZE);
     let exhausted = false;
     for (let offset = 0; offset < MAX_ASSOCIATED_ROWS_PER_BATCH; offset += STORAGE_BATCH_SIZE) {
-      const query = client.from(table) as AssociationQuery;
-      const result = await query
-        .select(columns)
-        .in(column, batch)
-        .range(offset, offset + STORAGE_BATCH_SIZE - 1);
+      let query = (client.from(table) as AssociationQuery).select(columns).in(column, batch);
+      if (equality) query = query.eq(equality.column, equality.value);
+      const result = await query.range(offset, offset + STORAGE_BATCH_SIZE - 1);
       if (result.error || !Array.isArray(result.data)) {
         throw cleanupError("account_project_storage_reference_lookup_failed");
       }
@@ -147,6 +147,7 @@ async function externallyReferencedProjectObjects(
   client: AccountStorageClient,
   entries: Array<ReturnType<typeof resolveProjectFileStorage>>,
   deletingIds: Set<string>,
+  userId: string,
 ): Promise<Set<string>> {
   const storageReferences = entries
     .filter((entry) => entry.source === "canonical" && entry.bucket === PROJECT_FILE_BUCKET)
@@ -159,7 +160,7 @@ async function externallyReferencedProjectObjects(
     "id,owner_id,storage_reference",
   );
   const deliverableById = new Map(deliverables.map((row) => [row.id, row]));
-  const promotions = (
+  const candidatePromotions = (
     await readAssociatedRows(
       client,
       "agent_resource_promotions",
@@ -171,8 +172,37 @@ async function externallyReferencedProjectObjects(
     (row) =>
       row.destination_type === "project_file" &&
       row.status === "completed" &&
-      typeof row.destination_id === "string" &&
-      !deletingIds.has(row.destination_id),
+      typeof row.destination_id === "string",
+  );
+  const destinationIds = candidatePromotions.map((row) => row.destination_id);
+  // A destination outside this 1,000-row page may still be guaranteed to
+  // disappear later in the same account deletion. Classify against the full
+  // deletion scope before treating a promotion as an external live reference.
+  const [uploadedDestinations, ownedProjectDestinations] = await Promise.all([
+    readAssociatedRows(client, "project_files", "id", destinationIds, "id", {
+      column: "uploaded_by",
+      value: userId,
+    }),
+    readAssociatedRows(
+      client,
+      "project_files",
+      "id",
+      destinationIds,
+      "id,projects!inner(owner_id)",
+      { column: "projects.owner_id", value: userId },
+    ),
+  ]);
+  const pendingDeletionIds = new Set([
+    ...deletingIds,
+    ...uploadedDestinations
+      .map((row) => row.id)
+      .filter((id): id is string => typeof id === "string"),
+    ...ownedProjectDestinations
+      .map((row) => row.id)
+      .filter((id): id is string => typeof id === "string"),
+  ]);
+  const promotions = candidatePromotions.filter(
+    (row) => !pendingDeletionIds.has(row.destination_id as string),
   );
   const existingDestinations = await readAssociatedRows(
     client,
@@ -359,6 +389,7 @@ async function cleanupOwnedProjectFiles(
       client,
       entries,
       deletingIds,
+      userId,
     );
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {

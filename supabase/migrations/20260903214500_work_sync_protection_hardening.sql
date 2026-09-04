@@ -325,6 +325,12 @@ begin
   ) values (
     p_user_id, p_mutation_id, 'save', v_request_fingerprint, v_result
   );
+  insert into public.account_audit_entries(
+    user_id, event_type, safe_description, actor_id, target_id, result, metadata
+  ) values (
+    p_user_id, 'work_sync', 'Work record synchronized', p_user_id, p_id::text, 'success',
+    pg_catalog.jsonb_build_object('kind', p_kind, 'revision', v_revision)
+  );
   return v_result;
 end;
 $$;
@@ -415,6 +421,12 @@ begin
     owner_id, mutation_id, operation, request_fingerprint, result
   ) values (
     p_user_id, p_mutation_id, 'delete', v_request_fingerprint, v_result
+  );
+  insert into public.account_audit_entries(
+    user_id, event_type, safe_description, actor_id, target_id, result, metadata
+  ) values (
+    p_user_id, 'work_sync', 'Work record deleted', p_user_id, p_id::text, 'success',
+    pg_catalog.jsonb_build_object('kind', v_existing.kind, 'revision', v_revision)
   );
   return v_result;
 end;
@@ -559,6 +571,13 @@ begin
     owner_id, mutation_id, operation, request_fingerprint, result
   ) values (
     p_user_id, p_mutation_id, 'recent', v_request_fingerprint, v_result
+  );
+  insert into public.account_audit_entries(
+    user_id, event_type, safe_description, actor_id, target_id, result, metadata
+  ) values (
+    p_user_id, 'work_sync', 'Work recent state synchronized', p_user_id,
+    p_resource_id::text, 'success',
+    pg_catalog.jsonb_build_object('resource_type', p_resource_type, 'operation', p_operation)
   );
   return v_result;
 end;
