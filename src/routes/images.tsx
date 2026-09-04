@@ -377,6 +377,9 @@ function ImagesPage() {
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const historyRef = useRef<HistoryItem[]>([]);
+  historyRef.current = history;
+  const historyPersistenceWarningRef = useRef(false);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
   const [resultHistoryId, setResultHistoryId] = useState<string | null>(null);
   const saveImage = useServerFn(saveImageToLibrary);
@@ -409,7 +412,10 @@ function ImagesPage() {
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
-    setHistory(isLoaded && isSignedIn && userKey ? loadHistory(userKey) : []);
+    const nextHistory = isLoaded && isSignedIn && userKey ? loadHistory(userKey) : [];
+    historyRef.current = nextHistory;
+    historyPersistenceWarningRef.current = false;
+    setHistory(nextHistory);
     return () => generationControllerRef.current?.abort();
   }, [isLoaded, isSignedIn, userKey]);
 
@@ -422,27 +428,36 @@ function ImagesPage() {
       createdAt: Date.now(),
       libraryStatus: "saving",
     };
-    setHistory((prev) => {
-      const next = [item, ...prev].slice(0, HISTORY_LIMIT);
-      saveHistory(userKey, next);
-      return next;
-    });
+    const nextHistory = [item, ...historyRef.current].slice(0, HISTORY_LIMIT);
+    const persisted = saveHistory(userKey, nextHistory);
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
+    if (!persisted && !historyPersistenceWarningRef.current) {
+      historyPersistenceWarningRef.current = true;
+      toast.error(
+        "Image history could not be saved on this device. The image is still being saved to your Library.",
+      );
+    }
     return item;
   }
 
   function updateHistoryLibraryStatus(id: string, libraryStatus: HistoryItem["libraryStatus"]) {
-    setHistory((previous) => {
-      const next = previous.map((item) => (item.id === id ? { ...item, libraryStatus } : item));
-      saveHistory(userKey, next);
-      return next;
-    });
+    const nextHistory = historyRef.current.map((item) =>
+      item.id === id ? { ...item, libraryStatus } : item,
+    );
+    saveHistory(userKey, nextHistory);
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
   }
+
   function removeFromHistory(id: string) {
-    setHistory((prev) => {
-      const next = prev.filter((h) => h.id !== id);
-      saveHistory(userKey, next);
-      return next;
-    });
+    const nextHistory = historyRef.current.filter((item) => item.id !== id);
+    if (!saveHistory(userKey, nextHistory)) {
+      toast.error("Image history could not be updated on this device.");
+      return;
+    }
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
   }
 
   async function saveGeneratedImage(item: HistoryItem, options: { automatic?: boolean } = {}) {
