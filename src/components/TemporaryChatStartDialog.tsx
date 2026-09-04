@@ -3,8 +3,7 @@ import { MessageSquareDashed, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-export type TemporaryChatContext = "clean" | "personalized";
+import type { TemporaryChatContext } from "@/lib/chat-store";
 
 export function TemporaryChatStartDialog({
   open,
