@@ -68,9 +68,8 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.match(settings, /billing conflict was detected/i);
   assert.match(settings, /No Stripe billing account is linked/);
   assert.doesNotMatch(settings, /plan changes in the Stripe billing portal/);
-  assert.match(pricing, /Self-service plan switching is not currently available/g);
-  assert.match(pricing, /wait until the current period ends/);
-  assert.doesNotMatch(pricing, /Available plan changes|If plan switching is supported/);
+  assert.match(pricing, /If plan switching is supported/);
+  assert.match(pricing, /Available plan changes/);
   assert.match(settings, /parseAllowedBillingPortalUrl\(res\.url\)/);
   assert.match(settings, /createPortalSession\(\{ data: \{\} \}\)/);
   assert.match(settings, /billingPortalAvailable/);

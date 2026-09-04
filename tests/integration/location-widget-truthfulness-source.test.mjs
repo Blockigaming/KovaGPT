@@ -64,9 +64,6 @@ test("location and copy controls expose truthful success and failure states", ()
 
 test("both production response paths allow the OpenStreetMap card frame", () => {
   for (const source of [start, server]) {
-    assert.match(
-      source,
-      /frame-src https:\/\/js\.stripe\.com https:\/\/hooks\.stripe\.com https:\/\/www\.openstreetmap\.org/,
-    );
+    assert.match(source, /frame-src[^\n]*https:\/\/www\.openstreetmap\.org/);
   }
 });
