@@ -220,7 +220,7 @@ test("account deletion never removes another user's Project objects", async () =
   assert.deepEqual([...client.buckets["project-files"].objects], [otherPath]);
 });
 
-test("account deletion removes collaborator files from projects owned by the deleting user", async () => {
+test("account deletion removes Project-owned files but preserves collaborator evidence references", async () => {
   const canonicalPath = `${PROJECT_ID}/collaborator.txt`;
   const promotedPath = `${OTHER_USER_ID}/promoted.json`;
   const client = accountClient({
@@ -247,6 +247,27 @@ test("account deletion removes collaborator files from projects owned by the del
     removed: 4,
   });
   assert.equal(client.buckets["project-files"].objects.has(canonicalPath), false);
+  assert.equal(client.buckets["agent-evidence"].objects.has(promotedPath), true);
+});
+
+test("deleting the evidence owner removes promoted source objects and their Project metadata", async () => {
+  const promotedPath = `${USER_ID}/promoted.json`;
+  const client = accountClient({
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: promotedPath,
+        uploaded_by: USER_ID,
+        project_owner_id: OTHER_USER_ID,
+      },
+    ],
+  });
+
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: true,
+    removed: 3,
+  });
   assert.equal(client.buckets["agent-evidence"].objects.has(promotedPath), false);
 });
 

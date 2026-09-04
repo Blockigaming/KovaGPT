@@ -163,6 +163,7 @@ function validatedProjectFile(row: ProjectFileRow): {
   id: string;
   bucket: string;
   path: string;
+  removeObject: boolean;
 } {
   if (
     typeof row.id !== "string" ||
@@ -185,13 +186,23 @@ function validatedProjectFile(row: ProjectFileRow): {
   }
 
   if (parts[0] === row.project_id) {
-    return { id: row.id, bucket: PROJECT_FILE_BUCKET, path: row.storage_path };
+    return {
+      id: row.id,
+      bucket: PROJECT_FILE_BUCKET,
+      path: row.storage_path,
+      removeObject: true,
+    };
   }
   // Agent deliverables promoted into a Project historically kept their source
   // object path. The bucket name was dropped, but owner-rooted evidence paths
   // remain distinguishable from canonical Project paths.
   if (parts[0] === row.uploaded_by) {
-    return { id: row.id, bucket: AGENT_EVIDENCE_BUCKET, path: row.storage_path };
+    return {
+      id: row.id,
+      bucket: AGENT_EVIDENCE_BUCKET,
+      path: row.storage_path,
+      removeObject: false,
+    };
   }
   throw cleanupError("account_project_storage_entry_invalid");
 }
@@ -229,9 +240,19 @@ async function cleanupOwnedProjectFiles(
     }
     if (listed.data.length === 0) return { complete: true, removed };
 
-    const entries = listed.data.map((row) => validatedProjectFile(row));
+    const entries = listed.data.map((row) => {
+      const entry = validatedProjectFile(row);
+      // Promoted evidence is a reference to the uploader's source object, not
+      // a Project-owned copy. Delete it only when that uploader is the account
+      // being deleted; deleting somebody else's Project removes metadata only.
+      return {
+        ...entry,
+        removeObject: entry.removeObject || row.uploaded_by === userId,
+      };
+    });
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {
+      if (!entry.removeObject) continue;
       const paths = byBucket.get(entry.bucket) ?? [];
       paths.push(entry.path);
       byBucket.set(entry.bucket, paths);

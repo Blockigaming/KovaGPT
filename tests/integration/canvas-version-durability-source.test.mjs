@@ -65,7 +65,10 @@ test("Canvas debounce survives its saving-state render and records the exact edi
   assert.match(autosave, /const snapshot = value/);
   assert.match(autosave, /window\.setTimeout\(\(\) => \{[\s\S]{0,120}setSaveState\("saving"\)/);
   assert.match(autosave, /content: snapshot/);
-  assert.match(autosave, /lastRecordedValueRef\.current = snapshot/);
+  assert.match(
+    autosave,
+    /await autosaveQueueRef\.current\.enqueue[\s\S]{0,900}lastRecordedValueRef\.current = snapshot/,
+  );
   assert.doesNotMatch(dependencies, /saveState/);
   assert.match(editor, /setSaveState\(durable \? "saved" : "session_only"\)/);
   assert.match(editor, /saveState === "session_only"[\s\S]{0,80}"Session only"/);
@@ -95,6 +98,11 @@ test("Canvas queues a revert behind an in-flight edit", () => {
   assert.match(
     editor,
     /catch \(error\)[\s\S]{0,300}lastScheduledValueRef\.current = lastRecordedValueRef\.current/u,
+  );
+  assert.match(editor, /const autosaveGenerationRef = useRef\(0\)/u);
+  assert.match(
+    editor,
+    /autosaveGenerationRef\.current === generation[\s\S]{0,100}lastRecordedValueRef\.current = snapshot/u,
   );
 });
 

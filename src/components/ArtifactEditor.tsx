@@ -95,6 +95,7 @@ export function ArtifactEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastRecordedValueRef = useRef(initialContent);
   const lastScheduledValueRef = useRef(initialContent);
+  const autosaveGenerationRef = useRef(0);
   const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -118,6 +119,7 @@ export function ArtifactEditor({
 
   useEffect(() => {
     if (open) {
+      autosaveGenerationRef.current += 1;
       lastRecordedValueRef.current = initialContent;
       lastScheduledValueRef.current = initialContent;
       setValue(initialContent);
@@ -235,6 +237,7 @@ export function ArtifactEditor({
     if (!open || value === lastScheduledValueRef.current) return;
     let cancelled = false;
     const snapshot = value;
+    const generation = autosaveGenerationRef.current;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
       lastScheduledValueRef.current = snapshot;
@@ -260,6 +263,12 @@ export function ArtifactEditor({
                 },
               }),
             );
+            // A later edit cancels this effect's UI work, but it does not
+            // cancel an already-started server write. Preserve that successful
+            // durable value for failure recovery within the same artifact.
+            if (autosaveGenerationRef.current === generation) {
+              lastRecordedValueRef.current = snapshot;
+            }
             durable = true;
             if (!cancelled) setHistoryError(null);
           } catch (error) {
@@ -276,7 +285,9 @@ export function ArtifactEditor({
           }
         }
         if (cancelled) return;
-        lastRecordedValueRef.current = snapshot;
+        if (!canPersistVersions && autosaveGenerationRef.current === generation) {
+          lastRecordedValueRef.current = snapshot;
+        }
         setVersions((current) =>
           [
             {
