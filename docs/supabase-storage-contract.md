@@ -23,13 +23,23 @@ HTML and source code are stored as inert `text/plain`, not active browser conten
 
 Browser roles can read only objects whose first path segment belongs to a Project they can access.
 They cannot insert, update, or delete bucket objects or Project file metadata. A verified,
-rate-limited server endpoint performs type inspection, quota reservation, an idempotent
-project-row-locked count reservation, canonical-path upload, and durable finalization. Deletion
-removes Storage first and then atomically removes metadata and returns charged bytes.
+rate-limited server endpoint performs type inspection and an idempotent,
+Project-row-locked reservation. The reservation atomically charges storage to the Project owner
+against the owner's tier (including collaborator uploads), then writes to an attempt-specific
+temporary key before moving verified bytes to the canonical key. Only `ready` rows are visible.
+Known-clean failures atomically delete the reservation and return its storage charge.
 
-Applying the migration remains an operator-controlled release action. Before enabling the product
-surface in production, apply the migration before the matching application revision, run the
-isolated database contract, and verify signed read/upload/delete with two authenticated test users.
+Deletion obtains an expiring database lease before touching Storage. Concurrent deletes cannot
+steal the lease, a crashed delete can be reclaimed after expiry, Storage-not-found is idempotent,
+and finalization atomically removes metadata and returns charged bytes. Promoted agent deliverables
+are references, so removing one deletes only its Project reference and never the underlying
+deliverable object.
+
+Applying the migration remains an operator-controlled release action. Roll out the migration and
+matching application revision as one coordinated maintenance change because neither the old client
+nor the new client is compatible with only half of this contract. Then run the isolated database
+contract and verify signed read/upload/delete, collaborator uploads charged to the owner, duplicate
+idempotency keys, concurrent deletion, and crash recovery with two authenticated test users.
 
 ## Future-object default privileges
 
