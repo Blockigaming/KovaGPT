@@ -33,7 +33,10 @@ export async function buildTransactionalEmail(args: {
   if (
     recipient.length > 254 ||
     !EMAIL_ADDRESS.test(recipient) ||
-    /[\u0000-\u001f\u007f]/.test(recipient)
+    Array.from(recipient).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 31 || codePoint === 127;
+    })
   ) {
     throw new Error("A valid recipient email is required.");
   }
