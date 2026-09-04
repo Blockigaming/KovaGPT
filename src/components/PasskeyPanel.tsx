@@ -159,6 +159,10 @@ export function PasskeyPanel() {
                 const deleting = confirmDelete === passkey.id;
                 const isEditing = editing?.id === passkey.id;
                 const itemBusy = busy === passkey.id;
+                const createdLabel = new Date(passkey.created_at).toLocaleDateString();
+                const lastUsedLabel = passkey.last_used_at
+                  ? new Date(passkey.last_used_at).toLocaleDateString()
+                  : null;
                 return (
                   <li key={passkey.id} className="rounded-lg border border-border/70 p-3">
                     {isEditing ? (
@@ -203,12 +207,8 @@ export function PasskeyPanel() {
                               {passkey.friendly_name || "Passkey"}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Added {new Date(passkey.created_at).toLocaleDateString()}
-                              {passkey.last_used_at
-                                ? ` · Last used ${new Date(
-                                    passkey.last_used_at,
-                                  ).toLocaleDateString()}`
-                                : ""}
+                              Added {createdLabel}
+                              {lastUsedLabel ? ` · Last used ${lastUsedLabel}` : ""}
                             </div>
                           </div>
                           {!deleting ? (
