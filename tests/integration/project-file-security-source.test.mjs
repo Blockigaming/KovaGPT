@@ -47,6 +47,12 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(ui, /onError=\{\(\) => void refreshImageUrl\(f\)\}/);
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
+  assert.doesNotMatch(workspace, /\.from\("project_files"\)\s*\.select\("\*"\)/);
+  assert.match(
+    workspace,
+    /\.select\("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at"\)/,
+  );
+  assert.match(workspace, /item\.kind === "agent-deliverable"/);
   assert.match(workspace, /Promise\.all/);
   assert.match(workspace, /createSignedUrl\(item\.storage_path, 60\)/);
 });
