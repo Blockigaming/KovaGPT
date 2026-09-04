@@ -180,10 +180,7 @@ test("bounded response reader rejects truncated identity bodies", async () => {
   assert.equal(released, true);
 
   await assert.rejects(
-    readResponseBytesBounded(
-      { headers: new Headers({ "content-length": "1" }), body: null },
-      6,
-    ),
+    readResponseBytesBounded({ headers: new Headers({ "content-length": "1" }), body: null }, 6),
     (error) => error instanceof BodyReadError && error.code === "content_length_mismatch",
   );
 });
