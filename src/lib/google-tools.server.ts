@@ -2,8 +2,8 @@
 // Every tool executes as the signed-in user via their stored per-user
 // OAuth token (see google-oauth.server.ts).
 //
-// Read tools execute immediately. Supported writes (save a Gmail draft and
-// create a calendar event) are gated behind an explicit user confirmation card;
+// Read tools execute immediately. Supported writes (save a Gmail draft, send a Gmail
+// message, and create a calendar event) are gated behind an explicit user confirmation card;
 // the chat loop persists the args to `pending_tool_actions` and streams
 // a `tool_confirm` SSE event to the browser, and the actual execution
 // happens later via /api/chat/confirm.
@@ -16,7 +16,11 @@ import {
   getGoogleConnectionHealth,
   logAudit,
 } from "@/lib/google-oauth.server";
-import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
+import {
+  encodeMimeTextBody,
+  foldEmailAddressHeader,
+  validateSupportedGoogleWrite,
+} from "@/lib/google-write-validation.server.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { LockdownPolicyError, assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -42,6 +46,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
+  gmail_send: { running: "Preparing email for review…", done: "Email ready for review" },
   calendar_create_event: {
     running: "Preparing calendar event…",
     done: "Prepared calendar event",
@@ -51,7 +56,11 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 // Tools the model may call whose *effects* only happen after the user
 // explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
-export const WRITE_TOOL_NAMES = new Set<string>(["gmail_create_draft", "calendar_create_event"]);
+export const WRITE_TOOL_NAMES = new Set<string>([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
   {
@@ -193,6 +202,34 @@ export const WRITE_TOOLS: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "gmail_send",
+      description:
+        "Send an email from the user's connected Gmail account. Only call when the user explicitly asks to send an email. The user will review the recipients, subject, and body and confirm before anything is sent.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: {
+            type: "string",
+            description: "Comma-separated recipient email addresses.",
+          },
+          cc: {
+            type: "string",
+            description: "Optional. Comma-separated CC addresses.",
+          },
+          bcc: {
+            type: "string",
+            description: "Optional. Comma-separated BCC addresses.",
+          },
+          subject: { type: "string", description: "Email subject line." },
+          body: { type: "string", description: "Plain-text email body." },
+        },
+        required: ["to", "subject", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "calendar_create_event",
       description:
         "Create a new event on the user's primary Google Calendar. Only call when the user explicitly asks to schedule, add, book, or create a calendar event. The user will confirm before it is created.",
@@ -234,7 +271,11 @@ export const WRITE_TOOLS: ToolDef[] = [
   },
 ];
 
-const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+const SUPPORTED_WRITE_TOOLS = new Set([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
   ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
@@ -247,6 +288,12 @@ export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]
   return ALL_TOOLS.filter((tool) => {
     const name = tool.function.name;
     if (name.startsWith("gmail_")) {
+      if (name === "gmail_send") {
+        return (
+          health.has.gmailWrite ||
+          health.scopes.includes("https://www.googleapis.com/auth/gmail.send")
+        );
+      }
       return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
     }
     if (name.startsWith("calendar_")) {
@@ -260,6 +307,8 @@ export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]
 const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const CAL = "https://www.googleapis.com/calendar/v3";
 const DRIVE = "https://www.googleapis.com/drive/v3";
+const GOOGLE_WRITE_TIMEOUT_MS = 25_000;
+const STALE_PROCESSING_MS = GOOGLE_WRITE_TIMEOUT_MS + 10_000;
 
 function headerValue(headers: Array<{ name: string; value: string }> | undefined, name: string) {
   if (!headers) return "";
@@ -644,26 +693,30 @@ function validateSupportedWrite(tool: string, args: WriteArgs): WriteArgs {
 }
 
 /**
- * Build a short, human-readable summary + a redacted preview of the args so
- * the confirmation card can show the user exactly what will happen. We never
- * echo full recipient lists or full email bodies into the SSE stream - the
- * body preview is capped and long addresses are truncated.
+ * Build a short, human-readable summary and confirmation preview. Actions
+ * that send data outside KovaGPT expose the complete validated envelope so
+ * the approval card never hides a recipient or unsurfaced body content.
+ * Non-sending previews remain bounded.
  */
 export function summarizeWriteTool(
   tool: string,
   args: WriteArgs,
 ): { summary: string; preview: Record<string, unknown> } {
-  if (tool === "gmail_create_draft") {
-    const to = truncate(args.to, 120);
-    const subject = truncate(args.subject, 120);
+  if (tool === "gmail_create_draft" || tool === "gmail_send") {
+    const sending = tool === "gmail_send";
+    const to = String(args.to ?? "");
+    const subject = String(args.subject ?? "");
+    const verb = sending ? "Send email to" : "Save draft to";
     return {
-      summary: `Save draft to ${to || "(no recipient)"} - ${subject || "(no subject)"}`,
+      summary: `${verb} ${truncate(to, 120) || "(no recipient)"} - ${
+        truncate(subject, 120) || "(no subject)"
+      }`,
       preview: {
-        to,
-        cc: args.cc ? truncate(args.cc, 120) : undefined,
-        bcc: args.bcc ? truncate(args.bcc, 120) : undefined,
-        subject,
-        body_preview: truncate(args.body, 500),
+        to: sending ? to : truncate(to, 120),
+        cc: args.cc ? (sending ? String(args.cc) : truncate(args.cc, 120)) : undefined,
+        bcc: args.bcc ? (sending ? String(args.bcc) : truncate(args.bcc, 120)) : undefined,
+        subject: sending ? subject : truncate(subject, 120),
+        body_preview: sending ? String(args.body ?? "") : truncate(args.body, 500),
       },
     };
   }
@@ -695,6 +748,12 @@ export async function stagePendingAction(
 ): Promise<PendingAction> {
   await assertLockdownAllows(admin(), userId, "connector_write");
   const validated = validateSupportedWrite(tool, args);
+  const connection = await getGoogleConnection(userId);
+  const stagedGoogleSub =
+    connection && typeof connection.google_sub === "string" ? connection.google_sub : "";
+  if (!stagedGoogleSub) {
+    throw new Error("Reconnect Google before preparing this action.");
+  }
   const { summary, preview } = summarizeWriteTool(tool, validated);
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
@@ -703,6 +762,7 @@ export async function stagePendingAction(
       tool,
       args: validated as never,
       summary,
+      result: { staged_google_sub: stagedGoogleSub },
     } as never)
     .select("id")
     .single();
@@ -728,11 +788,14 @@ export async function stagePendingAction(
 export async function executePendingAction(
   userId: string,
   actionId: string,
-): Promise<{ ok: true; result_text: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; result_text: string }
+  | { ok: false; error: string; error_code?: "completion_persistence_ambiguous" }
+> {
   const db = admin();
   const { data: row, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .select("id, user_id, tool, args, status, expires_at, result")
+    .select("id, user_id, tool, args, status, expires_at, created_at, result")
     .eq("id", actionId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -741,6 +804,7 @@ export async function executePendingAction(
     user_id: string;
     status: string;
     expires_at: string;
+    created_at: string;
     args?: unknown;
     tool: string;
     result?: unknown;
@@ -754,8 +818,37 @@ export async function executePendingAction(
       storedResult && typeof storedResult.text === "string" ? storedResult.text : "";
     return { ok: true, result_text: storedText || "Action already completed." };
   }
-  if (pendingRow.status === "processing")
-    return { ok: false, error: "Action is already being processed." };
+  if (pendingRow.status === "processing") {
+    const processingResult = pendingRow.result as { processing_started_at?: unknown } | null;
+    const startedAt =
+      processingResult && typeof processingResult.processing_started_at === "string"
+        ? processingResult.processing_started_at
+        : pendingRow.created_at;
+    const stale =
+      Number.isFinite(new Date(startedAt).getTime()) &&
+      Date.now() - new Date(startedAt).getTime() > STALE_PROCESSING_MS;
+    if (!stale) return { ok: false, error: "Action is already being processed." };
+
+    const { data: recovered, error: recoveryError } = await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "failed", result: { error: "abandoned_processing" } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    if (recoveryError || !recovered) {
+      return {
+        ok: false,
+        error: "KovaGPT could not safely recover this action. Check Google before retrying.",
+      };
+    }
+    return {
+      ok: false,
+      error:
+        "KovaGPT could not confirm whether the action completed. Check Google before retrying.",
+    };
+  }
   if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
   try {
     await assertLockdownAllows(db, userId, "connector_write");
@@ -804,11 +897,17 @@ export async function executePendingAction(
   // same event twice. Only the request whose UPDATE affects a row proceeds.
   const { data: claimed, error: claimError } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .update({ status: "processing" })
+    .update({
+      status: "processing",
+      result: {
+        ...((pendingRow.result as Record<string, unknown> | null) ?? {}),
+        processing_started_at: new Date().toISOString(),
+      },
+    })
     .eq("id", actionId)
     .eq("user_id", userId)
     .eq("status", "pending")
-    .select("id, tool, args")
+    .select("id, tool, args, result")
     .maybeSingle();
   if (claimError) {
     return {
@@ -818,7 +917,7 @@ export async function executePendingAction(
   }
   if (!claimed) return { ok: false, error: "Action is already being processed." };
 
-  const claimedAction = claimed as { tool?: unknown; args?: unknown };
+  const claimedAction = claimed as { tool?: unknown; args?: unknown; result?: unknown };
   const claimedTool = typeof claimedAction.tool === "string" ? claimedAction.tool : "";
   let a: WriteArgs;
   try {
@@ -846,13 +945,40 @@ export async function executePendingAction(
     };
   }
 
+  const claimResult = claimedAction.result as { staged_google_sub?: unknown } | null;
+  const stagedGoogleSub =
+    claimResult && typeof claimResult.staged_google_sub === "string"
+      ? claimResult.staged_google_sub
+      : "";
+  if (!stagedGoogleSub) {
+    await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "cancelled", result: { error: "missing_staged_google_identity" } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    return {
+      ok: false,
+      error: "This action predates account binding. Prepare it again.",
+    };
+  }
+
   let token: string;
   try {
-    token = await getValidGoogleAccessToken(userId);
-  } catch {
+    token = await getValidGoogleAccessToken(userId, stagedGoogleSub);
+  } catch (error) {
+    const connectionChanged =
+      error instanceof Error && error.message === "google_connection_changed";
     const { data: released, error: releaseError } = await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
-      .update({ status: "pending" })
+      .update({
+        status: connectionChanged ? "cancelled" : "pending",
+        result: connectionChanged
+          ? { error: "google_connection_changed" }
+          : { staged_google_sub: stagedGoogleSub },
+      })
       .eq("id", actionId)
       .eq("user_id", userId)
       .eq("status", "processing")
@@ -867,7 +993,9 @@ export async function executePendingAction(
     }
     return {
       ok: false,
-      error: "Google needs to be reconnected before this action can run.",
+      error: connectionChanged
+        ? "The connected Google account changed. Prepare this action again."
+        : "Google needs to be reconnected before this action can run.",
     };
   }
   const H: HeadersInit = {
@@ -877,35 +1005,43 @@ export async function executePendingAction(
 
   try {
     let resultText = "";
-    if (claimedTool === "gmail_create_draft") {
+    if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
       const to = String(a.to);
       const subject = String(a.subject);
       const body = String(a.body);
       const cc = a.cc ? String(a.cc) : "";
       const bcc = a.bcc ? String(a.bcc) : "";
       const headers = [
-        `To: ${to}`,
-        cc ? `Cc: ${cc}` : "",
-        bcc ? `Bcc: ${bcc}` : "",
+        foldEmailAddressHeader("To", to),
+        cc ? foldEmailAddressHeader("Cc", cc) : "",
+        bcc ? foldEmailAddressHeader("Bcc", bcc) : "",
         `Subject: ${subject}`,
         "Content-Type: text/plain; charset=UTF-8",
+        "Content-Transfer-Encoding: base64",
         "MIME-Version: 1.0",
       ]
         .filter(Boolean)
         .join("\r\n");
-      const raw = encodeBase64Url(`${headers}\r\n\r\n${body}`);
-      const response = await fetch(`${GMAIL}/users/me/drafts`, {
-        method: "POST",
-        headers: H,
-        body: JSON.stringify({ message: { raw } }),
-      });
-      if (!response.ok) throw new Error("gmail_draft_failed");
-      resultText = `Draft saved to Gmail for ${to}.`;
+      const raw = encodeBase64Url(`${headers}\r\n\r\n${encodeMimeTextBody(body)}`);
+      const sending = claimedTool === "gmail_send";
+      const response = await fetch(
+        sending ? `${GMAIL}/users/me/messages/send` : `${GMAIL}/users/me/drafts`,
+        {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify(sending ? { raw } : { message: { raw } }),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(sending ? "gmail_send_failed" : "gmail_draft_failed");
+      }
+      resultText = sending ? `Email sent to ${to}.` : `Draft saved to Gmail for ${to}.`;
       await logAudit({
         userId,
         provider: "gmail",
-        action: "draft",
-        summary: `Drafted email to ${to}: ${subject}`,
+        action: sending ? "send" : "draft",
+        summary: sending ? `Sent email to ${to}: ${subject}` : `Drafted email to ${to}: ${subject}`,
       });
     } else if (claimedTool === "calendar_create_event") {
       const timezone = a.timezone ? String(a.timezone) : undefined;
@@ -923,6 +1059,7 @@ export async function executePendingAction(
         method: "POST",
         headers: H,
         body: JSON.stringify(eventBody),
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error("calendar_create_failed");
       const created = (await response.json().catch(() => ({}))) as {
@@ -954,6 +1091,7 @@ export async function executePendingAction(
       console.error("[executePendingAction] completion could not be persisted");
       return {
         ok: false,
+        error_code: "completion_persistence_ambiguous",
         error:
           "Google completed the action, but KovaGPT could not verify completion. Check Google before retrying.",
       };
@@ -991,6 +1129,73 @@ export async function executePendingAction(
         "Google could not confirm whether the action completed. Check Google before trying again.",
     };
   }
+}
+
+export type PendingActionStatus =
+  "pending" | "processing" | "confirmed" | "cancelled" | "failed" | "expired";
+
+/**
+ * Read the durable owner-scoped state after an ambiguous client transport
+ * failure. This lets irreversible sends recover a persisted success without
+ * encouraging the user to send the same message twice.
+ */
+export async function getPendingActionStatus(
+  userId: string,
+  actionId: string,
+): Promise<
+  { ok: true; status: PendingActionStatus; result_text?: string } | { ok: false; error: string }
+> {
+  const db = admin();
+  const { data, error } = await (db as unknown as SupabaseQueryLike)
+    .from("pending_tool_actions")
+    .select("status, result, created_at")
+    .eq("id", actionId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return { ok: false, error: "Pending action not found." };
+
+  const row = data as { status?: unknown; result?: unknown; created_at?: unknown };
+  const validStatuses = new Set<PendingActionStatus>([
+    "pending",
+    "processing",
+    "confirmed",
+    "cancelled",
+    "failed",
+    "expired",
+  ]);
+  let status =
+    typeof row.status === "string" && validStatuses.has(row.status as PendingActionStatus)
+      ? (row.status as PendingActionStatus)
+      : "failed";
+  if (status === "processing") {
+    const processingResult = row.result as { processing_started_at?: unknown } | null;
+    const startedAt =
+      processingResult && typeof processingResult.processing_started_at === "string"
+        ? processingResult.processing_started_at
+        : typeof row.created_at === "string"
+          ? row.created_at
+          : "";
+    const startedAtMs = new Date(startedAt).getTime();
+    if (Number.isFinite(startedAtMs) && Date.now() - startedAtMs > STALE_PROCESSING_MS) {
+      const { data: recovered } = await (db as unknown as SupabaseQueryLike)
+        .from("pending_tool_actions")
+        .update({ status: "failed", result: { error: "abandoned_processing" } })
+        .eq("id", actionId)
+        .eq("user_id", userId)
+        .eq("status", "processing")
+        .select("id")
+        .maybeSingle();
+      if (recovered) status = "failed";
+    }
+  }
+  const storedResult = row.result as { text?: unknown } | null;
+  const resultText =
+    storedResult && typeof storedResult.text === "string" ? storedResult.text : undefined;
+  return {
+    ok: true,
+    status,
+    ...(status === "confirmed" && resultText ? { result_text: resultText } : {}),
+  };
 }
 
 /** Mark a pending action cancelled. Idempotent; only touches your own row. */
