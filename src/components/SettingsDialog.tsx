@@ -95,6 +95,7 @@ import {
   loadPrincipalStoredRecord,
   savePrincipalStoredRecord,
   LOCATION_KEY_BASE,
+  LOCATION_STORAGE_CHANGED_EVENT,
   WORKSPACE_DEFAULTS_KEY_BASE,
 } from "@/lib/settings-storage";
 import {
@@ -1284,9 +1285,9 @@ export function SettingsDialog({
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    KovaGPT can use your approximate location to answer questions about local time,
-                    weather, nearby places, and recommendations. Location is optional and never
-                    required.
+                    Your approximate coordinates can be stored in this browser and used to show an
+                    OpenStreetMap map in location cards. They are optional and are not included in
+                    chat requests.
                   </p>
                 </div>
                 <LocationPanel userKey={userKey} principalResolved={isLoaded} />
@@ -2898,13 +2899,19 @@ function LocationPanel({
     );
   }, [principalResolved, userKey]);
 
-  const persist = (next: StoredLocation) => {
-    setLoc(next);
-    if (!principalResolved) return;
+  const persist = (next: StoredLocation): boolean => {
+    if (!principalResolved) {
+      toast.error("Location settings are still loading.");
+      return false;
+    }
     try {
       savePrincipalStoredRecord(LOCATION_KEY_BASE, userKey, next);
+      setLoc(next);
+      window.dispatchEvent(new Event(LOCATION_STORAGE_CHANGED_EVENT));
+      return true;
     } catch {
-      /* ignore */
+      toast.error("Location could not be saved in this browser.");
+      return false;
     }
   };
 
@@ -2917,13 +2924,13 @@ function LocationPanel({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setBusy(false);
-        persist({
+        const saved = persist({
           enabled: true,
           lat: Math.round(pos.coords.latitude * 100) / 100,
           lon: Math.round(pos.coords.longitude * 100) / 100,
           savedAt: Date.now(),
         });
-        toast.success("Location saved");
+        if (saved) toast.success("Location saved");
       },
       (err) => {
         setBusy(false);
@@ -2959,8 +2966,8 @@ function LocationPanel({
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, it improves answers about local time, weather,
-        nearby places, and recommendations.
+        Location is never required. When enabled, the coarse coordinates are used only to render an
+        OpenStreetMap location card in this browser; they are not added to chat requests.
       </p>
     </div>
   );
