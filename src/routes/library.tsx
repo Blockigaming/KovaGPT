@@ -241,6 +241,7 @@ function LibraryPage() {
       if (!isCurrent()) return;
       console.error("[library] load failed");
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
+      setSelected([]);
       toast.error("Could not load your library.");
     } finally {
       if (isCurrent()) setLoading(false);
@@ -316,7 +317,7 @@ function LibraryPage() {
     { kind: "one"; id: string } | { kind: "many" } | null
   >(null);
   const remove = async (id: string, confirmed = false) => {
-    if (!principalReady || !principal) return;
+    if (!principalReady || !principal || folderBusy) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -372,7 +373,7 @@ function LibraryPage() {
   };
 
   const deleteSelected = async (confirmed = false) => {
-    if (!principalReady || !principal) return;
+    if (!principalReady || !principal || folderBusy) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -537,6 +538,7 @@ function LibraryPage() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              disabled={folderBusy}
               onClick={() => remove(item.id)}
               className="text-destructive focus:text-destructive"
             >
@@ -862,6 +864,7 @@ function LibraryPage() {
                 size="sm"
                 variant="destructive"
                 className="min-h-11"
+                disabled={folderBusy}
                 onClick={() => void deleteSelected()}
               >
                 Delete
