@@ -850,7 +850,7 @@ function KovaGPT() {
         description:
           context === "personalized"
             ? "This chat won't appear in history or create new saved memories. Existing enabled personalization and connected apps may be used."
-            : "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, personality settings, or connected apps.",
+            : "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings. Connected apps are off too.",
       });
     },
     [activeId, newChat, userKey],
