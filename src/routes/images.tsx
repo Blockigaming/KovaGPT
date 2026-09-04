@@ -932,8 +932,7 @@ function ImagesPage() {
                           if (resultHistoryItem) void saveGeneratedImage(resultHistoryItem);
                         }}
                         disabled={
-                          !resultHistoryItem ||
-                          resultHistoryItem.libraryStatus === "saving"
+                          !resultHistoryItem || resultHistoryItem.libraryStatus === "saving"
                         }
                         className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
