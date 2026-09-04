@@ -952,9 +952,7 @@ export async function executePendingAction(
         userId,
         provider: "gmail",
         action: sending ? "send" : "draft",
-        summary: sending
-          ? `Sent email to ${to}: ${subject}`
-          : `Drafted email to ${to}: ${subject}`,
+        summary: sending ? `Sent email to ${to}: ${subject}` : `Drafted email to ${to}: ${subject}`,
       });
     } else if (claimedTool === "calendar_create_event") {
       const timezone = a.timezone ? String(a.timezone) : undefined;
