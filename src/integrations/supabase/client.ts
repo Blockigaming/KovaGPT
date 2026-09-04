@@ -35,6 +35,9 @@ function createSupabaseClient() {
       storage: typeof window === "undefined" ? undefined : window.localStorage,
       persistSession: true,
       autoRefreshToken: true,
+      // Required by supabase-js for the experimental WebAuthn passkey API.
+      // The UI still verifies /auth/v1/settings before advertising support.
+      experimental: { passkey: true },
     },
   });
 }
