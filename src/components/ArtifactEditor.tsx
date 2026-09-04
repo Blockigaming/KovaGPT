@@ -235,7 +235,7 @@ export function ArtifactEditor({
   };
 
   useEffect(() => {
-    if (!open || !autosaveQueueRef.current.needsEnqueue(value)) return;
+    if (!open || !autosaveQueueRef.current.needsSync(value)) return;
     let cancelled = false;
     const snapshot = value;
     const timer = window.setTimeout(() => {
@@ -277,6 +277,7 @@ export function ArtifactEditor({
           autosaveQueueRef.current.mark(snapshot);
         }
         if (cancelled) return;
+        autosaveQueueRef.current.acknowledge(snapshot);
         setVersions((current) =>
           [
             {
