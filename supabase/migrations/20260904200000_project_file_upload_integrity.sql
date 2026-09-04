@@ -186,6 +186,7 @@ BEGIN
     OR p_extension !~ '^[a-z0-9]{1,12}$'
     OR p_content_sha256 !~ '^[0-9a-f]{64}$'
     OR p_file_cap NOT BETWEEN 1 AND 200
+    OR p_storage_limit IS NULL
     OR p_storage_limit < 1
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_project_file_reservation';
