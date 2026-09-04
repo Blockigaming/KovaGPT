@@ -14,7 +14,12 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
   assert.match(spec, /const themes = \["light", "dark"\]/u);
   assert.match(spec, /signed-out shell/u);
   assert.match(spec, /signed-in shell/u);
-  assert.match(spec, /KOVA_E2E_SIGNED_IN/u);
+  assert.match(spec, /installAuthenticatedFixture/u);
+  assert.match(spec, /page\.route\(supabaseRequestPattern/u);
+  assert.match(spec, /url\.pathname === "\/auth\/v1\/user"/u);
+  assert.match(spec, /getByRole\("button", \{ name: "Account menu" \}\)/u);
+  assert.doesNotMatch(spec, /KOVA_E2E_SIGNED_IN/u);
+  assert.doesNotMatch(spec, /authenticated storage state/u);
   for (const engine of ["chromium", "firefox", "webkit"]) {
     assert.match(browserConfig, new RegExp(engine, "iu"));
   }
