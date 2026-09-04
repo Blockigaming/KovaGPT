@@ -218,9 +218,7 @@ function KovaGPT() {
   const [workspaceItems, setWorkspaceItems] = useState<
     import("@/lib/workspace.functions").RecentItem[]
   >([]);
-  const [workspaceStatus, setWorkspaceStatus] = useState<"loading" | "ready" | "error">(
-    "ready",
-  );
+  const [workspaceStatus, setWorkspaceStatus] = useState<"loading" | "ready" | "error">("ready");
   const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
   const retryWorkspaceSearch = useCallback(() => {
     setWorkspaceReloadKey((current) => current + 1);
