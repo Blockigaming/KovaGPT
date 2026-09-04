@@ -3,16 +3,20 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(path, "utf8");
-const [library, folders, client, functions] = await Promise.all([
+const [library, folders, client, functions, supabaseTypes] = await Promise.all([
   read("src/routes/library.tsx"),
   read("src/components/LibraryFolderOrganizer.tsx"),
   read("src/lib/library-folders.client.ts"),
   read("src/lib/library.functions.ts"),
+  read("src/integrations/supabase/types.ts"),
 ]);
 
 test("Library loads folder membership and scopes visible items", () => {
   assert.match(functions, /folder_id/);
   assert.match(functions, /file_size, folder_id, created_at/);
+  assert.match(supabaseTypes, /library_folders: \{/);
+  assert.match(supabaseTypes, /folder_id: string \| null/);
+  assert.match(supabaseTypes, /user_library_items_folder_id_fkey/);
   assert.match(library, /LibraryFolderOrganizer/);
   assert.match(library, /folderScope === "unfiled" && item\.folder_id/);
   assert.match(library, /item\.folder_id !== folderScope/);
