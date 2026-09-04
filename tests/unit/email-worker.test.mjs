@@ -69,7 +69,7 @@ function mockApi({
       return json(body.queue_name === "transactional_emails" ? queueRows : []);
     }
     if (url.pathname.endsWith("/rpc/delete_email")) return json(true);
-    if (url.pathname.endsWith("/rpc/move_to_dlq")) return json(91);
+    if (url.pathname.endsWith("/rpc/dead_letter_tracked_email")) return json(91);
     if (url.pathname.endsWith("/email_send_log") && method === "GET") {
       return json([{ id: "log-123", status: logStatus }]);
     }
@@ -190,7 +190,7 @@ test("transient delivery errors retain the queue row until the bounded final att
   assert.equal(retry.retrying, 1);
   assert.equal(retry.retryAfterMs, 3_000);
   assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length, 0);
-  assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/move_to_dlq")).length, 0);
+  assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/dead_letter_tracked_email")).length, 0);
 
   const finalApi = mockApi({ resendStatus: 503, readCount: 3 });
   const final = await createEmailDispatcher(config({ EMAIL_WORKER_MAX_ATTEMPTS: "3" }), {
@@ -198,7 +198,13 @@ test("transient delivery errors retain the queue row until the bounded final att
     now: () => Date.parse("2026-09-04T00:10:00.000Z"),
   }).pollOnce();
   assert.equal(final.deadLettered, 1);
-  assert.ok(finalApi.calls.some((call) => call.url.endsWith("/rpc/move_to_dlq")));
+  const deadLetter = finalApi.calls.find((call) =>
+    call.url.endsWith("/rpc/dead_letter_tracked_email"),
+  );
+  assert.ok(deadLetter);
+  assert.equal(deadLetter.body.p_log_id, "log-123");
+  assert.equal(deadLetter.body.p_reason, "resend_http_503");
+  assert.equal(deadLetter.body.p_attempts, 3);
   assert.equal(finalApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length, 0);
 });
 
