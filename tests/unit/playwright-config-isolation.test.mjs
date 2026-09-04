@@ -60,8 +60,5 @@ test("dependency audit retries registry errors without weakening the gate", asyn
   assert.match(workflow, /for attempt in 1 2 3/u);
   assert.match(workflow, /npm audit --audit-level=high --omit=dev/u);
   assert.match(workflow, /if \[\[ "\$attempt" -eq 3 \]\]; then[\s\S]*?exit 1/u);
-  assert.doesNotMatch(
-    workflow,
-    /name: Dependency audit[\s\S]{0,160}continue-on-error:\s*true/u,
-  );
+  assert.doesNotMatch(workflow, /name: Dependency audit[\s\S]{0,160}continue-on-error:\s*true/u);
 });
