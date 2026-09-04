@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
@@ -114,8 +115,7 @@ async function fetchRemoteImage(
       .trim()
       .toLowerCase();
     if (!SAFE_IMAGE_TYPES.has(contentType)) return null;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > MAX_BYTES) return null;
+    const buf = await readResponseBytesBounded(res, MAX_BYTES);
     return hasImageSignature(buf, contentType) ? { bytes: buf, contentType } : null;
   } catch {
     return null;
