@@ -896,7 +896,8 @@ function KovaGPT() {
     setTempChat(false);
     setTempChatContext("clean");
     toast.success("Chat saved to history", {
-      description: "Future messages continue as a regular chat. Earlier temporary turns stay out of saved memory.",
+      description:
+        "Future messages continue as a regular chat. Earlier temporary turns stay out of saved memory.",
     });
   }, [active, setConversations]);
 
@@ -1455,6 +1456,7 @@ function KovaGPT() {
       settings,
       selectedTool,
       tempChat,
+      tempChatContext,
       editingMessage,
       principalReady,
       setConversations,
