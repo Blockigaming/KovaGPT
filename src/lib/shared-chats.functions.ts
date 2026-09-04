@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { buildTransactionalEmail } from "@/lib/email-queue.server";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 export type SharedChatSummary = {
   id: string;
@@ -36,29 +38,52 @@ export const shareChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => ShareSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const recipientEmail = data.recipient_email.toLowerCase();
     const callerEmail =
       (context.claims as { email?: string } | undefined)?.email?.toLowerCase() ?? "";
-    if (callerEmail && data.recipient_email.toLowerCase() === callerEmail) {
+    if (callerEmail && recipientEmail === callerEmail) {
       throw new Error("You can't share a chat with yourself.");
     }
-    const { data: row, error } = await context.supabase
-      .from("shared_chats")
-      .insert({
-        owner_user_id: context.userId,
-        recipient_email: data.recipient_email.toLowerCase(),
-        title: data.title,
-        local_chat_reference: data.local_chat_reference ?? null,
-        snapshot: data.snapshot,
-        permission: "view",
-        status: "pending",
-      })
-      .select("id")
-      .single();
-    if (error || !row) {
-      console.error("[serverfn]", error?.message);
-      throw new Error("Failed to share chat");
+    const rateLimit = await consumeApplicationRateLimit({
+      identity: `user:${context.userId}`,
+      action: "shared_chat_email",
+      limit: 20,
+      windowSeconds: 3600,
+    });
+    if (!rateLimit.allowed) {
+      throw new Error(
+        rateLimit.status === "limited"
+          ? "Too many shared chats. Please try again later."
+          : "Share protection is temporarily unavailable.",
+      );
     }
-    return { id: row.id };
+
+    const payload = await buildTransactionalEmail({
+      templateName: "shared-chat",
+      recipientEmail,
+      data: {
+        chatTitle: data.title,
+        senderName: "A KovaGPT user",
+        destinationUrl: "https://kovagpt.com/",
+      },
+    });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: sharedId, error } = await supabaseAdmin.rpc(
+      "create_shared_chat_and_enqueue" as never,
+      {
+        p_actor_id: context.userId,
+        p_recipient_email: recipientEmail,
+        p_title: data.title,
+        p_local_chat_reference: data.local_chat_reference ?? null,
+        p_snapshot: data.snapshot,
+        p_payload: payload,
+      } as never,
+    );
+    if (error || typeof sharedId !== "string") {
+      console.error("[shareChat]", { error_code: "shared_chat_enqueue_failed" });
+      throw new Error("The chat could not be shared and emailed.");
+    }
+    return { id: sharedId };
   });
 
 export const listMySharedChats = createServerFn({ method: "GET" })
