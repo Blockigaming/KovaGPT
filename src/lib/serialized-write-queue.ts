@@ -16,3 +16,29 @@ export function createSerializedWriteQueue() {
     },
   };
 }
+
+/**
+ * Tracks the latest snapshot synchronously while serializing its durable write.
+ * This prevents an A → B → A edit from mistaking the final A for the already
+ * durable initial value while B is still in flight.
+ */
+export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
+  const writes = createSerializedWriteQueue();
+  let lastEnqueued = initialSnapshot;
+
+  return {
+    reset(snapshot: T): void {
+      lastEnqueued = snapshot;
+    },
+    needsEnqueue(snapshot: T): boolean {
+      return !Object.is(snapshot, lastEnqueued);
+    },
+    mark(snapshot: T): void {
+      lastEnqueued = snapshot;
+    },
+    enqueue<R>(snapshot: T, write: (value: T) => Promise<R>): Promise<R> {
+      lastEnqueued = snapshot;
+      return writes.enqueue(() => write(snapshot));
+    },
+  };
+}
