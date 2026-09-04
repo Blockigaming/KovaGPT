@@ -45,6 +45,17 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
   assert.match(authSpec, /await captureCandidateVisual\(/u);
 });
 
+test("auth visual preview uses tracked candidate edits without copying local secrets", async () => {
+  const source = await readRootFile("tests/e2e/auth-visual-preview.mjs");
+
+  assert.match(source, /\["ls-files", "-z", "--cached"\]/u);
+  assert.match(source, /await copyFile\(source, destination\)/u);
+  assert.match(source, /baseName\.startsWith\("\.env"\)/u);
+  assert.match(source, /excludedTreePrefixes/u);
+  assert.doesNotMatch(source, /git", \["archive"/u);
+  assert.doesNotMatch(source, /"--others"/u);
+});
+
 test("deployed baseline evidence classifies observations truthfully", async () => {
   const source = await readRootFile("tests/e2e/deployed-baseline-audit.spec.ts");
 
