@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "./fetch-with-timeout.ts";
+import { fetchJsonWithTimeout } from "./fetch-with-timeout.ts";
 import { useCallback, useEffect, useState } from "react";
 
 export type ClientCapabilityState =
@@ -80,11 +80,18 @@ export function invalidateReadiness() {
 
 export async function getReadiness(signal?: AbortSignal): Promise<ClientReadiness> {
   if (snapshot && Date.now() < expiresAt) return snapshot;
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("Request aborted", "AbortError");
+  }
   if (!pending) {
-    pending = fetchWithTimeout("/api/readyz", { headers: { Accept: "application/json" } }, 10_000)
-      .then(async (response) => {
+    pending = fetchJsonWithTimeout<ClientReadiness>(
+      "/api/readyz",
+      { headers: { Accept: "application/json" } },
+      10_000,
+    )
+      .then(({ response, body }) => {
         if (!response.ok && response.status !== 503) throw new Error("readiness_unavailable");
-        return (await response.json()) as ClientReadiness;
+        return body;
       })
       .then((value) => {
         snapshot = value;
