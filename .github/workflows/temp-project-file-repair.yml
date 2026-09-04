@@ -24,7 +24,6 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: >-
           npx prettier --write
-          supabase/migrations/20260904200000_project_file_upload_integrity.sql
           src/routes/api/project-files.ts
           src/lib/project-files-policy.mjs
           tests/unit/project-files-policy.test.mjs
