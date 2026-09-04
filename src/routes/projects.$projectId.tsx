@@ -882,6 +882,14 @@ function FilesTab({
       project_storage_limit_reached: "This project's owner has reached their storage limit.",
       project_storage_quota_unavailable:
         "Project storage limits could not be verified. Retry shortly.",
+      project_file_quota_recovery_failed:
+        "The upload could not be safely released after its quota check. Retry shortly.",
+      project_file_storage_finalize_failed:
+        "The uploaded file could not be finalized safely. Retry shortly.",
+      project_file_temp_cleanup_failed:
+        "The upload completed, but temporary storage cleanup must finish before it appears.",
+      project_file_finalize_unavailable:
+        "The upload is stored safely but could not be published yet. Retry shortly.",
     };
     return messages[code] ?? "The file could not be uploaded. Please retry.";
   }
