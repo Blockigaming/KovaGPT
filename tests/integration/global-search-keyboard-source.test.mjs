@@ -11,11 +11,11 @@ test("workspace results use the keyboard index", () => {
     source,
     /const chatStartIndex = workspaceStartIndex \+ visibleWorkspaceItems\.length/,
   );
-  assert.match(source, /const totalItems = chatStartIndex \+ conversationMatches\.length/);
+  assert.match(source, /const totalItems = optionKeys\\.length/);
   assert.match(source, /id=\{`command-option-\$\{index\}`\}/);
   assert.match(source, /aria-selected=\{activeIndex === index\}/);
-  assert.ok(source.includes(`\`workspace:\${item.type}:\${item.id}\``));
-  assert.ok(source.includes(`\`chat:\${conversation.id}\``));
+  assert.ok(source.includes("`workspace:${item.type}:${item.id}`"));
+  assert.ok(source.includes("`chat:${conversation.id}`"));
   assert.match(source, /optionKeys\.indexOf\(activeOptionKey\)/);
 });
 
@@ -35,7 +35,7 @@ test("the dialog announces workspace search", () => {
 });
 
 test("keyboard navigation keeps the active result visible", () => {
-  assert.match(source, /getElementById\(\`command-option-\\\${activeIndex}\`\)/);
+  assert.ok(source.includes(".getElementById(`command-option-${activeIndex}`)"));
   assert.match(source, /scrollIntoView\(\{ block: "nearest" \}\)/);
   assert.match(
     source,
