@@ -427,7 +427,12 @@ function ProjectDetailPage() {
               onInvite={async (email, role) => {
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
                 const res = await callServerFnDirect(fn, {
-                  data: { project_id: projectId, email, role },
+                  data: {
+                    project_id: projectId,
+                    email,
+                    role,
+                    operation_id: crypto.randomUUID(),
+                  },
                 });
                 toast.success(
                   (res as { auto_accepted: boolean }).auto_accepted
