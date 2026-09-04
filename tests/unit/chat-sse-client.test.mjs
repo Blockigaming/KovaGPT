@@ -36,6 +36,19 @@ test("chat SSE accepts fragmented events only after a terminal DONE frame", asyn
   assert.equal(events[0].choices[0].delta.content, "hello");
 });
 
+test("chat SSE accepts a generated-image frame above the legacy 2 MiB cap", async () => {
+  const image = `data:image/png;base64,${"A".repeat(2 * 1024 * 1024 + 1)}`;
+  const event = {
+    choices: [{ index: 0, delta: { kind: "image", content: image } }],
+  };
+  let received;
+  await consumeChatSse(
+    chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`]),
+    { onEvent: (value) => (received = value) },
+  );
+  assert.equal(received.choices[0].delta.content.length, image.length);
+});
+
 test("chat SSE preserves typed provider error events", async () => {
   const event = {
     choices: [
