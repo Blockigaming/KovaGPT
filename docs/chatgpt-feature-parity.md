@@ -5,7 +5,7 @@ This ledger records product truth, not marketing claims. “Complete” means th
 | Product area                        | Status                    | Existing surface / backend                                                                                                       | Remaining work and checkpoint feasibility                                                                                                                                    |
 | ----------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Chat                                | Complete                  | `src/routes/index.tsx`, chat API and persisted conversation store                                                                | Provider-specific model behavior remains provider-dependent.                                                                                                                 |
-| Work / agentic tasks                | Partial                   | `/work`, templates, Context Packs, research, artifacts, scheduled tasks                                                          | Durable plans, approvals, deliverables, templates, Project/context handoffs and automation drafts exist. Autonomous execution still needs a runner.                          |
+| Work / agentic tasks                | Historical viewer only    | `/work` reads owner-scoped legacy runs, evidence, deliverables and denial/cancellation controls; creation APIs fail closed          | Current Work parity needs one unified isolated runner plus Work/Chat creation, queued prompts, user questions/change direction, approval resume, cross-device background recovery, notifications, finished document/spreadsheet/presentation/report/Site outputs, schedules/triggers/webhooks, and truthful model/reasoning/speed controls. |
 | Unified Recents                     | Complete                  | `/recents`, local chats and authorized workspace aggregation                                                                     | Cross-device pin preferences remain backend-dependent.                                                                                                                       |
 | Projects                            | Complete                  | project routes and authorized project functions                                                                                  | Real-time collaboration remains backend-dependent.                                                                                                                           |
 | Search                              | Complete                  | `SearchDialog` and authorized server searches                                                                                    | Ranking parity is provider/backend-dependent.                                                                                                                                |
@@ -35,6 +35,16 @@ This ledger records product truth, not marketing claims. “Complete” means th
 | Collaboration                       | Partial                   | Project roles, comments, mentions, notes and activity timeline                                                                   | Member-scoped asynchronous collaboration is complete; realtime presence and simultaneous editing require a realtime subscription.                                            |
 | Finances                            | Provider-dependent        | supported finance tool results in chat                                                                                           | No independent financial-data feed; no fabricated quotes.                                                                                                                    |
 | Safety and trusted-contact features | Missing                   | safety policies and account security                                                                                             | Trusted-contact data model and verified workflows are missing; backend-dependent.                                                                                            |
+
+## Fresh Work parity checkpoint (September 4, 2026)
+
+OpenAI's current [Work documentation](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)
+supersedes the retired ChatGPT agent surface. KovaGPT does not expose its historical records as a
+working equivalent: both known queue-creation APIs return 503, only fail-safe cancellation or
+denial is allowed, and the isolated execution service reports not ready. The remaining Work
+capabilities in the ledger above require a single end-to-end queue/runtime contract and deployed
+provider infrastructure; re-enabling either incompatible legacy worker is not an acceptable
+shortcut.
 
 ## This checkpoint
 
