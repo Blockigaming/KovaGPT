@@ -200,7 +200,11 @@ function validateCalendarEvent(args) {
 }
 
 export function foldEmailAddressHeader(name, value, maxLineLength = 78) {
-  if (!["To", "Cc", "Bcc"].includes(name) || typeof value !== "string" || HEADER_BREAK.test(value)) {
+  if (
+    !["To", "Cc", "Bcc"].includes(name) ||
+    typeof value !== "string" ||
+    HEADER_BREAK.test(value)
+  ) {
     throw new GoogleWriteValidationError("Invalid email header.");
   }
   if (!Number.isSafeInteger(maxLineLength) || maxLineLength < 20 || maxLineLength > 998) {
