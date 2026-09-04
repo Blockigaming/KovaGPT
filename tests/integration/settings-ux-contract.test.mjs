@@ -16,8 +16,9 @@ test("signed-out storage copy matches the implemented guest lifecycle", () => {
   assert.match(settingsSource, /Signed-out chats stay in this tab until you refresh or close it\./);
   assert.match(
     settingsSource,
-    /Appearance and\s+language preferences remain in this browser, but nothing here is synced to an\s+account\./,
+    /Your appearance\s+preference remains in this browser, but nothing here is synced to an account\./,
   );
+  assert.doesNotMatch(settingsSource, /kova-guest-language/);
   assert.doesNotMatch(settingsSource, /cleared when (?:the )?tab closes/i);
   assert.doesNotMatch(settingsSource, /chats and preferences stay only until/i);
 });
@@ -29,10 +30,10 @@ test("Settings select controls expose stable accessible names", () => {
     "Response tone",
     "Filter library by item type",
     "Appearance",
-    "Language",
   ]) {
     assert.match(settingsSource, new RegExp(`aria-label="${label}"`));
   }
+  assert.doesNotMatch(settingsSource, /aria-label="Language"/);
 });
 
 test("signed-in mobile navigation uses a grouped section picker", () => {
