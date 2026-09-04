@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "node --watch src/index.mjs",
     "start": "node src/index.mjs",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "start:email": "node src/email-worker.mjs",
+    "health:email": "node scripts/email-health-check.mjs"
   }
 }
