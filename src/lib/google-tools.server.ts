@@ -2,8 +2,8 @@
 // Every tool executes as the signed-in user via their stored per-user
 // OAuth token (see google-oauth.server.ts).
 //
-// Read tools execute immediately. Supported writes (save a Gmail draft and
-// create a calendar event) are gated behind an explicit user confirmation card;
+// Read tools execute immediately. Supported writes (save a Gmail draft, send a Gmail
+// message, and create a calendar event) are gated behind an explicit user confirmation card;
 // the chat loop persists the args to `pending_tool_actions` and streams
 // a `tool_confirm` SSE event to the browser, and the actual execution
 // happens later via /api/chat/confirm.
@@ -42,6 +42,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
+  gmail_send: { running: "Preparing email send…", done: "Sent email" },
   calendar_create_event: {
     running: "Preparing calendar event…",
     done: "Prepared calendar event",
@@ -51,7 +52,11 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 // Tools the model may call whose *effects* only happen after the user
 // explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
-export const WRITE_TOOL_NAMES = new Set<string>(["gmail_create_draft", "calendar_create_event"]);
+export const WRITE_TOOL_NAMES = new Set<string>([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
   {
@@ -193,6 +198,34 @@ export const WRITE_TOOLS: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "gmail_send",
+      description:
+        "Send an email from the user's connected Gmail account. Only call when the user explicitly asks to send an email. The user will review the recipients, subject, and body and confirm before anything is sent.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: {
+            type: "string",
+            description: "Comma-separated recipient email addresses.",
+          },
+          cc: {
+            type: "string",
+            description: "Optional. Comma-separated CC addresses.",
+          },
+          bcc: {
+            type: "string",
+            description: "Optional. Comma-separated BCC addresses.",
+          },
+          subject: { type: "string", description: "Email subject line." },
+          body: { type: "string", description: "Plain-text email body." },
+        },
+        required: ["to", "subject", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "calendar_create_event",
       description:
         "Create a new event on the user's primary Google Calendar. Only call when the user explicitly asks to schedule, add, book, or create a calendar event. The user will confirm before it is created.",
@@ -234,7 +267,11 @@ export const WRITE_TOOLS: ToolDef[] = [
   },
 ];
 
-const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+const SUPPORTED_WRITE_TOOLS = new Set([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
   ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
@@ -247,7 +284,7 @@ export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]
   return ALL_TOOLS.filter((tool) => {
     const name = tool.function.name;
     if (name.startsWith("gmail_")) {
-      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
+      return WRITE_TOOL_NAMES.has(name) ? health.has.gmailWrite : health.has.gmail;
     }
     if (name.startsWith("calendar_")) {
       return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
@@ -653,11 +690,12 @@ export function summarizeWriteTool(
   tool: string,
   args: WriteArgs,
 ): { summary: string; preview: Record<string, unknown> } {
-  if (tool === "gmail_create_draft") {
+  if (tool === "gmail_create_draft" || tool === "gmail_send") {
     const to = truncate(args.to, 120);
     const subject = truncate(args.subject, 120);
+    const verb = tool === "gmail_send" ? "Send email to" : "Save draft to";
     return {
-      summary: `Save draft to ${to || "(no recipient)"} - ${subject || "(no subject)"}`,
+      summary: `${verb} ${to || "(no recipient)"} - ${subject || "(no subject)"}`,
       preview: {
         to,
         cc: args.cc ? truncate(args.cc, 120) : undefined,
@@ -877,7 +915,7 @@ export async function executePendingAction(
 
   try {
     let resultText = "";
-    if (claimedTool === "gmail_create_draft") {
+    if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
       const to = String(a.to);
       const subject = String(a.subject);
       const body = String(a.body);
@@ -894,18 +932,28 @@ export async function executePendingAction(
         .filter(Boolean)
         .join("\r\n");
       const raw = encodeBase64Url(`${headers}\r\n\r\n${body}`);
-      const response = await fetch(`${GMAIL}/users/me/drafts`, {
-        method: "POST",
-        headers: H,
-        body: JSON.stringify({ message: { raw } }),
-      });
-      if (!response.ok) throw new Error("gmail_draft_failed");
-      resultText = `Draft saved to Gmail for ${to}.`;
+      const sending = claimedTool === "gmail_send";
+      const response = await fetch(
+        sending ? `${GMAIL}/users/me/messages/send` : `${GMAIL}/users/me/drafts`,
+        {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify(sending ? { raw } : { message: { raw } }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(sending ? "gmail_send_failed" : "gmail_draft_failed");
+      }
+      resultText = sending
+        ? `Email sent to ${to}.`
+        : `Draft saved to Gmail for ${to}.`;
       await logAudit({
         userId,
         provider: "gmail",
-        action: "draft",
-        summary: `Drafted email to ${to}: ${subject}`,
+        action: sending ? "send" : "draft",
+        summary: sending
+          ? `Sent email to ${to}: ${subject}`
+          : `Drafted email to ${to}: ${subject}`,
       });
     } else if (claimedTool === "calendar_create_event") {
       const timezone = a.timezone ? String(a.timezone) : undefined;
