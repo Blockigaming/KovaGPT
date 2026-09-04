@@ -92,7 +92,6 @@ test("data controls describe the available privacy surface truthfully", () => {
   assert.doesNotMatch(settings, /removed guest training and marketing switches/i);
 });
 
-
 test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {
   const settings = read("src/components/SettingsDialog.tsx");
 
