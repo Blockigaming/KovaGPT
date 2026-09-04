@@ -344,11 +344,13 @@ AS $$
 DECLARE
   tracked_message_id text;
   normalized_recipient text;
+  payload_fingerprint text;
   queued_message_id bigint;
   existing_log public.email_send_log;
 BEGIN
   tracked_message_id := p_payload ->> 'message_id';
   normalized_recipient := lower(trim(p_recipient_email));
+  payload_fingerprint := p_payload ->> 'payload_fingerprint';
 
   IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
     OR p_payload IS NULL
@@ -357,6 +359,10 @@ BEGIN
     OR tracked_message_id !~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'
     OR p_template_name IS NULL
     OR p_template_name !~ '^[a-z0-9][a-z0-9_-]{0,99}$'
+    OR (
+      payload_fingerprint IS NOT NULL
+      AND payload_fingerprint !~ '^[0-9a-f]{64}$'
+    )
     OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
     OR position('@' IN normalized_recipient) <= 1
     OR p_payload ->> 'to' IS NULL
@@ -391,6 +397,8 @@ BEGIN
     IF existing_log.template_name <> p_template_name
       OR lower(trim(existing_log.recipient_email)) <> normalized_recipient
       OR coalesce(existing_log.metadata ->> 'queue_name', '') <> p_queue_name
+      OR coalesce(existing_log.metadata ->> 'payload_fingerprint', '')
+        <> coalesce(payload_fingerprint, '')
     THEN
       RAISE EXCEPTION USING ERRCODE = '23505', MESSAGE = 'tracked_email_message_id_conflict';
     END IF;
@@ -409,7 +417,10 @@ BEGIN
     p_template_name,
     normalized_recipient,
     'pending',
-    jsonb_build_object('queue_name', p_queue_name)
+    jsonb_build_object(
+      'queue_name', p_queue_name,
+      'payload_fingerprint', payload_fingerprint
+    )
   );
 
   BEGIN
