@@ -24,9 +24,7 @@ test("the timer launcher is reachable, responsive, and exposes usable touch targ
 test("due timers are ordered and cannot repeatedly fire when storage is unavailable", () => {
   assert.match(widget, /\.sort\(\(a, b\) => a\.fireAt - b\.fireAt\)/);
   assert.match(widget, /notifiedIdsRef/);
-  assert.ok(
-    (widget.match(/!notifiedIdsRef\.current\.has\(timer\.id\)/g) ?? []).length >= 2,
-  );
+  assert.ok((widget.match(/!notifiedIdsRef\.current\.has\(timer\.id\)/g) ?? []).length >= 2);
   assert.match(widget, /\{ \.\.\.timer, fired: true \}/);
   assert.match(widget, /Loading timers/);
   assert.ok((widget.match(/disabled=\{!ready\}/g) ?? []).length >= 2);
@@ -44,8 +42,5 @@ test("timer persistence rejects malformed records and reports failed writes", ()
   const capGuards =
     timerStore.match(/if \(current\.length >= MAX_TIMER_ITEMS\) return null;/g) ?? [];
   assert.equal(capGuards.length, 2);
-  assert.match(
-    timerStore,
-    /return write\(userKey, \[\.\.\.current, item\]\) \? item : null/,
-  );
+  assert.match(timerStore, /return write\(userKey, \[\.\.\.current, item\]\) \? item : null/);
 });
