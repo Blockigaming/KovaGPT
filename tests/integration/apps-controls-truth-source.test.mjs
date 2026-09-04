@@ -29,7 +29,8 @@ test("GitHub actions are busy-gated and report request failures", () => {
   assert.match(apps, /const busy = busyAction !== null/);
   assert.match(apps, /GitHub authorization could not be started\. Try again\./);
   assert.match(apps, /GitHub installations could not be refreshed\. Try again\./);
-  assert.match(apps, /GitHub could not be disconnected\. Your connection was not changed\./);
+  assert.match(apps, /The disconnect outcome could not be confirmed/);
+  assert.match(apps, /const statusLoaded = await reload\(false\)/);
   assert.match(apps, /disabled=\{busy\}/);
   assert.match(apps, /aria-busy=\{busy\}/);
   assert.doesNotMatch(apps, /refresh\(\)\.then\(reload\)/);
