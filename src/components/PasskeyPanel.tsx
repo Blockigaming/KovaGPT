@@ -137,7 +137,10 @@ export function PasskeyPanel() {
           This browser does not support passkeys. Try a current browser on a supported device.
         </p>
       ) : loading ? (
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Loading passkeys" />
+        <Loader2
+          className="h-4 w-4 animate-spin text-muted-foreground"
+          aria-label="Loading passkeys"
+        />
       ) : loadError ? (
         <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
           <div className="flex items-start gap-2 text-sm text-destructive">
@@ -160,7 +163,10 @@ export function PasskeyPanel() {
                   <li key={passkey.id} className="rounded-lg border border-border/70 p-3">
                     {isEditing ? (
                       <div className="space-y-2">
-                        <label className="text-xs font-medium" htmlFor={`passkey-name-${passkey.id}`}>
+                        <label
+                          className="text-xs font-medium"
+                          htmlFor={`passkey-name-${passkey.id}`}
+                        >
                           Passkey name
                         </label>
                         <Input
