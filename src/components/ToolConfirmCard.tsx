@@ -81,6 +81,11 @@ export function ToolConfirmCard({
               <span className="font-medium text-foreground">Cc:</span> {preview.cc}
             </div>
           )}
+          {typeof preview.bcc === "string" && preview.bcc && (
+            <div>
+              <span className="font-medium text-foreground">Bcc:</span> {preview.bcc}
+            </div>
+          )}
           {typeof preview.subject === "string" && (
             <div>
               <span className="font-medium text-foreground">Subject:</span> {preview.subject}
