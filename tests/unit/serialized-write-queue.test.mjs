@@ -152,6 +152,30 @@ test("snapshot queue writes B again after an intervening C was already queued", 
   assert.equal(queue.needsEnqueue("B"), false);
 });
 
+test("a completed but unacknowledged write remains eligible for UI reconciliation", async () => {
+  const queue = createSerializedSnapshotQueue("A");
+  const writes = [];
+  const persisted = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+
+  assert.equal(await persisted, "B");
+  assert.equal(queue.needsEnqueue("B"), false);
+  assert.equal(queue.needsSync("B"), true);
+
+  const reconciled = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+  assert.equal(reconciled, persisted);
+  assert.equal(await reconciled, "B");
+  queue.acknowledge("B");
+
+  assert.equal(queue.needsSync("B"), false);
+  assert.deepEqual(writes, ["B"]);
+});
+
 test("a completed write from a previous reset cannot corrupt the new snapshot tracker", async () => {
   const queue = createSerializedSnapshotQueue("old-A");
   let release;
