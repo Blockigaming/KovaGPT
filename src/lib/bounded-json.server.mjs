@@ -56,13 +56,16 @@ async function readChunk(reader, signal) {
   let onAbort;
   const aborted = new Promise((_, reject) => {
     onAbort = () => {
-      cancelReaderWithoutWaiting(reader, signal.reason);
-      reject(abortReason(signal));
+      const reason = abortReason(signal);
+      reject(reason);
+      cancelReaderWithoutWaiting(reader, reason);
     };
     signal.addEventListener("abort", onAbort, { once: true });
   });
   try {
-    return await Promise.race([reader.read(), aborted]);
+    const result = await Promise.race([reader.read(), aborted]);
+    if (signal.aborted) throw abortReason(signal);
+    return result;
   } finally {
     signal.removeEventListener("abort", onAbort);
   }
