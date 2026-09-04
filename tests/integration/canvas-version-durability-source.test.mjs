@@ -65,8 +65,9 @@ test("Canvas debounce survives its saving-state render and records the exact edi
 
   assert.match(autosave, /const snapshot = value/);
   assert.match(autosave, /window\.setTimeout\(\(\) => \{[\s\S]{0,120}setSaveState\("saving"\)/);
-  assert.match(autosave, /autosaveQueueRef\.current\.needsEnqueue\(value\)/);
+  assert.match(autosave, /autosaveQueueRef\.current\.needsSync\(value\)/);
   assert.match(autosave, /content: queuedSnapshot/);
+  assert.match(autosave, /if \(cancelled\) return;[\s\S]{0,100}\.acknowledge\(snapshot\)/);
   assert.doesNotMatch(autosave, /lastRecordedValueRef/);
   assert.doesNotMatch(dependencies, /saveState/);
   assert.match(editor, /setSaveState\(durable \? "saved" : "session_only"\)/);
