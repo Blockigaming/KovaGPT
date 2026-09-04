@@ -45,8 +45,7 @@ jobs:
             src/routeTree.gen.ts \
             tests/integration/project-file-security-source.test.mjs \
             tests/unit/project-files-policy.test.mjs \
-            docs/supabase-storage-contract.md \
-            supabase/migrations/20260904200000_project_file_upload_integrity.sql
+            docs/supabase-storage-contract.md
           npm run release:manifest
           npm run release:schema
           npx prettier --write release-migrations.json database-contract.json
