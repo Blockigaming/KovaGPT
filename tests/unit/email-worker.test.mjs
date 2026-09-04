@@ -50,6 +50,7 @@ function mockApi({
   suppressed = false,
   resendStatus = 200,
   readCount = 1,
+  cooldownUntil = null,
 } = {}) {
   const calls = [];
   const queueRows =
@@ -65,10 +66,14 @@ function mockApi({
         ? json({ id: "provider-message-123" })
         : json({ message: "provider failure" }, resendStatus, { "retry-after": "3" });
     }
+    if (url.pathname.endsWith("/email_send_state") && method === "GET") {
+      return json([{ retry_after_until: cooldownUntil }]);
+    }
     if (url.pathname.endsWith("/rpc/read_email_batch")) {
       return json(body.queue_name === "transactional_emails" ? queueRows : []);
     }
     if (url.pathname.endsWith("/rpc/delete_email")) return json(true);
+    if (url.pathname.endsWith("/rpc/defer_email_retry")) return json(true);
     if (url.pathname.endsWith("/rpc/dead_letter_tracked_email")) return json(91);
     if (url.pathname.endsWith("/email_send_log") && method === "GET") {
       return json([{ id: "log-123", status: logStatus }]);
@@ -99,6 +104,18 @@ test("configuration fails closed on missing secrets, insecure origins, and inval
     () => config({ EMAIL_WORKER_CONCURRENCY: "0" }),
     (error) =>
       error instanceof EmailWorkerError && error.code === "invalid_email_worker_concurrency",
+  );
+  assert.throws(
+    () =>
+      config({
+        EMAIL_WORKER_BATCH_SIZE: "10",
+        EMAIL_WORKER_CONCURRENCY: "1",
+        EMAIL_WORKER_REQUEST_TIMEOUT_MS: "30000",
+        EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS: "300",
+      }),
+    (error) =>
+      error instanceof EmailWorkerError &&
+      error.code === "unsafe_email_worker_visibility_budget",
   );
 });
 
@@ -194,6 +211,12 @@ test("transient delivery errors retain the queue row until the bounded final att
     retryApi.calls.filter((call) => call.url.endsWith("/rpc/dead_letter_tracked_email")).length,
     0,
   );
+  const deferred = retryApi.calls.find((call) =>
+    call.url.endsWith("/rpc/defer_email_retry"),
+  );
+  assert.ok(deferred);
+  assert.equal(deferred.body.p_retry_after_seconds, 3);
+  assert.equal(deferred.body.p_lease_seconds, 300);
 
   const finalApi = mockApi({ resendStatus: 503, readCount: 3 });
   const final = await createEmailDispatcher(config({ EMAIL_WORKER_MAX_ATTEMPTS: "3" }), {
@@ -230,4 +253,28 @@ test("invalid or untracked payloads are dead-lettered without becoming an open r
   assert.equal(report.deadLettered, 1);
   assert.equal(api.calls.filter((call) => call.url === "https://api.resend.com/emails").length, 0);
   assert.doesNotMatch(JSON.stringify(logs), /alice@example\.com|Private body|attacker@/);
+});
+
+test("a shared provider cooldown prevents every replica from reclaiming queues early", async () => {
+  const api = mockApi({ cooldownUntil: "2026-09-04T00:10:45.000Z" });
+  const dispatcher = createEmailDispatcher(config(), {
+    fetchImpl: api.fetchImpl,
+    now: () => Date.parse("2026-09-04T00:10:00.000Z"),
+  });
+
+  const report = await dispatcher.pollOnce();
+  assert.deepEqual(report, {
+    processed: 0,
+    sent: 0,
+    suppressed: 0,
+    alreadyComplete: 0,
+    retrying: 0,
+    deadLettered: 0,
+    retryAfterMs: 45_000,
+  });
+  assert.equal(
+    api.calls.filter((call) => call.url.endsWith("/rpc/read_email_batch")).length,
+    0,
+  );
+  assert.equal(api.calls.filter((call) => call.url === "https://api.resend.com/emails").length, 0);
 });
