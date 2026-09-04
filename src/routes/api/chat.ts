@@ -664,7 +664,7 @@ export const Route = createFileRoute("/api/chat")({
                 const data = ownerLookup?.data;
                 const email = data?.user?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
-              } catch {
+              } catch (error) {
                 if (error instanceof ChatPreflightError) throw error;
                 // ignore; treat as non-owner
               }
@@ -1047,7 +1047,7 @@ export const Route = createFileRoute("/api/chat")({
                     }),
                   );
                 }
-              } catch {
+              } catch (error) {
                 if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
                   status: 200,
@@ -1162,7 +1162,7 @@ export const Route = createFileRoute("/api/chat")({
                       "\n--- END PROJECT CONTEXT ---";
                   }
                 }
-              } catch {
+              } catch (error) {
                 if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
                   status: 200,
