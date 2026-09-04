@@ -1262,8 +1262,21 @@ function KovaGPT() {
             );
           }
         } else {
-          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const err = e as Error & {
+            requestId?: string;
+            category?: string;
+            retryable?: boolean;
+            status?: number;
+          };
           const raw = err.message || "Something went wrong";
+          if (err.status === 429 && /limit/i.test(raw)) {
+            const kind: "image" | "chat" | "upload" = /image/i.test(raw)
+              ? "image"
+              : /upload|file/i.test(raw)
+                ? "upload"
+                : "chat";
+            setLimitDialog({ open: true, kind, message: raw });
+          }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;
