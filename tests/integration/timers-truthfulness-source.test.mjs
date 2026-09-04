@@ -34,8 +34,12 @@ test("timer persistence rejects malformed records and reports failed writes", ()
   assert.match(timerStore, /function write\([^)]*\): boolean/);
   assert.match(timerStore, /if \(!storage\) return false/);
   assert.match(timerStore, /\): TimerItem \| null/);
+  assert.equal(
+    (timerStore.match(/if \(current\.length >= MAX_TIMER_ITEMS\) return null;/g) ?? []).length,
+    2,
+  );
   assert.match(
     timerStore,
-    /return write\(userKey, \[\.\.\.read\(userKey\), item\]\) \? item : null/,
+    /return write\(userKey, \[\.\.\.current, item\]\) \? item : null/,
   );
 });
