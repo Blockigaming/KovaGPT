@@ -924,13 +924,26 @@ function ImagesPage() {
                       >
                         <Copy className="h-4 w-4" /> Copy image
                       </button>
-                      <a
-                        href={result}
-                        download="kovagpt-image.png"
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void downloadGeneratedImage({
+                            id: resultHistoryItem?.id ?? "image",
+                            imageUrl: result,
+                          })
+                        }
+                        disabled={Boolean(downloadingImageId)}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
-                        <Download className="w-4 h-4" /> Download
-                      </a>
+                        {downloadingImageId === (resultHistoryItem?.id ?? "image") ? (
+                          <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}{" "}
+                        {downloadingImageId === (resultHistoryItem?.id ?? "image")
+                          ? "Downloading…"
+                          : "Download"}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1017,14 +1030,23 @@ function ImagesPage() {
                           >
                             Reuse
                           </button>
-                          <a
-                            href={h.imageUrl}
-                            download={`kovagpt-${h.id}.png`}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label={`Download image: ${h.prompt}`}
+                          <button
+                            type="button"
+                            onClick={() => void downloadGeneratedImage(h)}
+                            disabled={Boolean(downloadingImageId)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50"
+                            aria-label={
+                              downloadingImageId === h.id
+                                ? `Downloading image: ${h.prompt}`
+                                : `Download image: ${h.prompt}`
+                            }
                           >
-                            <Download className="h-3.5 w-3.5" />
-                          </a>
+                            {downloadingImageId === h.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={() => removeFromHistory(h.id)}
@@ -1147,13 +1169,19 @@ function ImagesPage() {
                         ? "Retry save"
                         : "Save"}
                 </button>
-                <a
-                  href={lightbox.imageUrl}
-                  download={`kovagpt-${lightbox.id}.png`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
+                <button
+                  type="button"
+                  onClick={() => void downloadGeneratedImage(lightbox)}
+                  disabled={Boolean(downloadingImageId)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
-                  <Download className="w-4 h-4" /> Download
-                </a>
+                  {downloadingImageId === lightbox.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}{" "}
+                  {downloadingImageId === lightbox.id ? "Downloading…" : "Download"}
+                </button>
                 <button
                   onClick={() => {
                     removeFromHistory(lightbox.id);
