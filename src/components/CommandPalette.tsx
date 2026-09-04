@@ -187,7 +187,7 @@ export function CommandPalette({
         snippet: `${conversation.messages.length} messages`,
         score: 0,
       }));
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeOptionKey, setActiveOptionKey] = useState("action:new-chat");
   const storageGenerationRef = useRef(0);
   const [commandState, setCommandState] = useState<{
     principal: string | null;
@@ -339,11 +339,35 @@ export function CommandPalette({
   );
   const workspaceStartIndex = actionItems.length;
   const chatStartIndex = workspaceStartIndex + visibleWorkspaceItems.length;
-  const totalItems = chatStartIndex + conversationMatches.length;
+  const optionKeys = useMemo(
+    () => [
+      ...actionItems.map((item, index) => `action:${item ?? index}`),
+      ...visibleWorkspaceItems.map((item) => `workspace:${item.type}:${item.id}`),
+      ...conversationMatches.map(({ conversation }) => `chat:${conversation.id}`),
+    ],
+    [actionItems, conversationMatches, visibleWorkspaceItems],
+  );
+  const resolvedActiveIndex = optionKeys.indexOf(activeOptionKey);
+  const activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : 0;
+  const totalItems = optionKeys.length;
+  const setActiveIndex = (index: number) => {
+    const optionKey = optionKeys[index];
+    if (optionKey) setActiveOptionKey(optionKey);
+  };
 
   useEffect(() => {
-    setActiveIndex(0);
+    setActiveOptionKey("action:new-chat");
   }, [query, open]);
+
+  useEffect(() => {
+    if (!open || totalItems === 0) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`command-option-${activeIndex}`)
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeIndex, open, totalItems]);
 
   const suppressFocusRestore = () => {
     shouldRestoreFocusRef.current = false;
@@ -465,11 +489,11 @@ export function CommandPalette({
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setActiveIndex((i) => Math.min(totalItems - 1, i + 1));
+          setActiveIndex(Math.min(totalItems - 1, activeIndex + 1));
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setActiveIndex((i) => Math.max(0, i - 1));
+          setActiveIndex(Math.max(0, activeIndex - 1));
         }
         if (event.key === "Enter") {
           event.preventDefault();
