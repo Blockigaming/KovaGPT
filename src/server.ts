@@ -22,7 +22,7 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org",
   "worker-src 'self' blob:",
   "media-src 'self' blob:",
   "upgrade-insecure-requests",
