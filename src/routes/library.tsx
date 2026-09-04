@@ -63,6 +63,7 @@ import {
 } from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
 import { isPrivateLibraryImagePath, resolveLibraryImageUrl } from "@/lib/library-image-url";
+import { observeLibraryImageApproach, queueLibraryImageSigning } from "@/lib/library-image-loading";
 import { safeImageUrl } from "@/lib/safe-image-url";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
@@ -125,7 +126,7 @@ type LibraryImageSourceState = {
   status: "idle" | "loading" | "error" | "ready";
 };
 
-function useLibraryImageSource(item: LibItem | null) {
+function useLibraryImageSource(item: LibItem | null, enabled = true) {
   const itemId = item?.id ?? null;
   const fileUrl = item?.file_url ?? null;
   const directUrl = safeImageUrl(fileUrl);
@@ -139,7 +140,7 @@ function useLibraryImageSource(item: LibItem | null) {
   const retryRef = useRef<{ itemId: string | null; count: number }>({ itemId: null, count: 0 });
 
   const retry = useCallback(() => {
-    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    if (!enabled || !itemId || !fileUrl || directUrl || !privatePath) return;
     if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
     if (retryRef.current.count >= 2) {
       setState({ itemId, url: null, status: "error" });
@@ -148,24 +149,31 @@ function useLibraryImageSource(item: LibItem | null) {
     retryRef.current.count += 1;
     setState({ itemId, url: null, status: "loading" });
     setRefreshKey((current) => current + 1);
-  }, [directUrl, fileUrl, itemId, privatePath]);
+  }, [directUrl, enabled, fileUrl, itemId, privatePath]);
 
   const markLoaded = useCallback(() => {
     retryRef.current = { itemId, count: 0 };
   }, [itemId]);
 
   useEffect(() => {
-    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    if (!enabled || !itemId || !fileUrl || directUrl || !privatePath) return;
     let cancelled = false;
     if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
     setState({ itemId, url: null, status: "loading" });
 
     void (async () => {
       try {
-        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
-        const url = await resolveLibraryImageUrl({ id: itemId, file_url: fileUrl }, (id) =>
-          getLibraryImageUrl({ data: { id } }),
+        const url = await queueLibraryImageSigning(
+          async () => {
+            const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+            if (cancelled) return null;
+            return resolveLibraryImageUrl({ id: itemId, file_url: fileUrl }, (id) =>
+              getLibraryImageUrl({ data: { id } }),
+            );
+          },
+          () => cancelled,
         );
+        if (cancelled) return;
         if (!url) throw new Error("Invalid signed image URL");
         if (!cancelled) setState({ itemId, url, status: "ready" });
       } catch {
@@ -176,11 +184,12 @@ function useLibraryImageSource(item: LibItem | null) {
     return () => {
       cancelled = true;
     };
-  }, [directUrl, fileUrl, itemId, privatePath, refreshKey]);
+  }, [directUrl, enabled, fileUrl, itemId, privatePath, refreshKey]);
 
   if (directUrl) return { url: directUrl, loading: false, error: false, retry, markLoaded };
   if (!privatePath)
     return { url: null, loading: false, error: Boolean(fileUrl), retry, markLoaded };
+  if (!enabled) return { url: null, loading: false, error: false, retry, markLoaded };
   if (state.itemId !== itemId) return { url: null, loading: true, error: false, retry, markLoaded };
   return {
     url: state.url,
@@ -195,33 +204,50 @@ function LibraryImageMedia({
   item,
   className,
   fallbackClassName = "",
+  eager = false,
 }: {
   item: LibItem;
   className: string;
   fallbackClassName?: string;
+  eager?: boolean;
 }) {
-  const image = useLibraryImageSource(item);
-  if (image.url) {
-    return (
-      <img
-        src={image.url}
-        alt={item.title}
-        loading="lazy"
-        className={className}
-        onLoad={image.markLoaded}
-        onError={image.retry}
-      />
-    );
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemKey = `${item.id}:${item.file_url ?? ""}`;
+  const [approachedItem, setApproachedItem] = useState<string | null>(null);
+  const enabled = eager || approachedItem === itemKey;
+  const image = useLibraryImageSource(item, enabled);
+
+  useEffect(() => {
+    if (eager || !containerRef.current) return;
+    return observeLibraryImageApproach(containerRef.current, () => setApproachedItem(itemKey));
+  }, [eager, itemKey]);
+
   return (
-    <div
-      className={`flex h-full min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground ${fallbackClassName}`}
-      role="status"
-    >
-      <ImageIcon className="h-6 w-6" aria-hidden="true" />
-      <span className="text-xs">
-        {image.loading ? "Loading image…" : "Image preview unavailable"}
-      </span>
+    <div ref={containerRef} className={eager ? undefined : "h-full w-full"}>
+      {image.url ? (
+        <img
+          src={image.url}
+          alt={item.title}
+          loading={eager ? "eager" : "lazy"}
+          className={className}
+          onLoad={image.markLoaded}
+          onError={image.retry}
+        />
+      ) : (
+        <div
+          className={`flex h-full min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground ${fallbackClassName}`}
+          role="status"
+        >
+          <ImageIcon className="h-6 w-6" aria-hidden="true" />
+          <span className="text-xs">
+            {image.loading
+              ? "Loading image…"
+              : image.error
+                ? "Image preview unavailable"
+                : "Image preview"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1323,6 +1349,7 @@ function LibraryPage() {
                 {isImageItem(visiblePreviewItem) ? (
                   <LibraryImageMedia
                     item={visiblePreviewItem}
+                    eager
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
                     fallbackClassName="min-h-64 rounded-xl bg-[var(--surface-secondary)]"
                   />

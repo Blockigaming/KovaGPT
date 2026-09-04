@@ -136,6 +136,9 @@ function accountClient({
   promotions = [],
   deliverables = [],
   projectRemoveError = false,
+  ownedObjects = [],
+  ownershipLookupError = false,
+  stickyProjectStorage = false,
   events = [],
 } = {}) {
   let rows = [...projectRows];
@@ -159,9 +162,11 @@ function accountClient({
           referencedObjects
             .filter((entry) => entry.bucket === "project-files")
             .map((entry) => entry.path),
-        ),
+        )
+        .concat(ownedObjects.map((entry) => entry.name)),
       {
         removeError: projectRemoveError,
+        sticky: stickyProjectStorage,
         onRemove: () => events.push("project-files"),
       },
     ),
@@ -188,6 +193,21 @@ function accountClient({
       from(bucket) {
         return buckets[bucket];
       },
+    },
+    async rpc(name, { p_owner_id: userId, p_limit: limit }) {
+      assert.equal(name, "list_account_project_storage_objects");
+      events.push("project-ownership");
+      if (ownershipLookupError) return { data: null, error: { message: "lookup failed" } };
+      return {
+        data: ownedObjects
+          .filter(
+            (entry) =>
+              entry.owner_id === userId && buckets["project-files"].objects.has(entry.name),
+          )
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, limit),
+        error: null,
+      };
     },
     from(table) {
       const source =
@@ -379,6 +399,14 @@ test("deleting a destination Project resolves and preserves a cross-project prom
     deliverables: [fixture.deliverable],
     projectRows: [
       {
+        id: FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: OTHER_USER_ID,
+        kind: "upload",
+      },
+      {
         id: OTHER_FILE_ID,
         project_id: PROJECT_ID,
         storage_path: sourcePath,
@@ -506,4 +534,178 @@ test("a Project Storage failure leaves Library objects untouched", async () => {
   assert.deepEqual([...client.buckets["library-images"].objects], [`${USER_ID}/saved.png`]);
   assert.equal(events.includes("project-metadata"), false);
   assert.equal(events.includes("library-images"), false);
+});
+
+test("account deletion discovers unregistered owned uploads without claiming a collaborator's bytes", async () => {
+  const ownPath = `${OTHER_PROJECT_ID}/upload-without-metadata.txt`;
+  const otherPath = `${PROJECT_ID}/other-owner.txt`;
+  const events = [];
+  const client = accountClient({
+    events,
+    ownedObjects: [
+      { name: ownPath, owner_id: USER_ID },
+      { name: otherPath, owner_id: OTHER_USER_ID },
+    ],
+  });
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: true,
+    removed: 3,
+  });
+  assert.deepEqual([...client.buckets["project-files"].objects], [otherPath]);
+  assert.ok(events.indexOf("project-ownership") < events.indexOf("project-files"));
+  assert.ok(events.indexOf("project-files") < events.indexOf("agent-evidence"));
+});
+
+test("unregistered upload cleanup makes bounded progress beyond the first page", async () => {
+  const client = accountClient({
+    ownedObjects: Array.from({ length: 2_001 }, (_, index) => ({
+      name: `${PROJECT_ID}/orphan-${String(index).padStart(5, "0")}.txt`,
+      owner_id: USER_ID,
+    })),
+  });
+  assert.deepEqual(
+    await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID, { maxRemoveBatches: 1 }),
+    {
+      complete: false,
+      removed: 1_000,
+    },
+  );
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+  assert.equal(client.buckets["project-files"].objects.size, 1_001);
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: true,
+    removed: 1_003,
+  });
+  assert.equal(client.buckets["project-files"].objects.size, 0);
+});
+
+test("ownership discovery errors fail before evidence and Library are removed", async () => {
+  const client = accountClient({ ownershipLookupError: true });
+  await assert.rejects(
+    () => cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID),
+    /ownership_lookup_failed/u,
+  );
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+  assert.equal(client.buckets["agent-evidence"].objects.size, 1);
+});
+
+test("unregistered upload cleanup verifies removals and rejects a no-op", async () => {
+  const client = accountClient({
+    stickyProjectStorage: true,
+    ownedObjects: [{ name: `${PROJECT_ID}/orphan.txt`, owner_id: USER_ID }],
+  });
+  await assert.rejects(
+    () => cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID),
+    /cleanup_unverified/u,
+  );
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+});
+
+test("owned orphan discovery fails closed while a surviving canonical Project row depends on it", async () => {
+  const path = `${OTHER_PROJECT_ID}/shared-source.txt`;
+  const client = accountClient({
+    ownedObjects: [{ name: path, owner_id: USER_ID }],
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: path,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: OTHER_USER_ID,
+        kind: "upload",
+      },
+    ],
+  });
+  await assert.rejects(
+    () => cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID),
+    /still_referenced/u,
+  );
+  assert.equal(client.buckets["project-files"].objects.has(path), true);
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+});
+
+test("deleting the last promoted Project reference collects its preserved source bytes", async () => {
+  const sourcePath = `${PROJECT_ID}/source.txt`;
+  const fixture = promotionFixture({
+    fileId: OTHER_FILE_ID,
+    projectId: OTHER_PROJECT_ID,
+    ownerId: OTHER_USER_ID,
+    storageReference: `project-files:${sourcePath}`,
+  });
+  const client = accountClient({
+    promotions: [fixture.promotion],
+    deliverables: [fixture.deliverable],
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: USER_ID,
+        project_owner_id: USER_ID,
+        kind: "upload",
+      },
+      {
+        id: OTHER_FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: OTHER_USER_ID,
+        kind: "agent-deliverable",
+      },
+    ],
+  });
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
+  assert.equal(
+    (await cleanupOwnedStorageBeforeAccountDeletion(client, OTHER_USER_ID)).complete,
+    true,
+  );
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), false);
+});
+
+test("deleting one promoted destination preserves a source needed by another promoted destination", async () => {
+  const sourcePath = `${OTHER_PROJECT_ID}/retained.txt`;
+  const deleting = promotionFixture({
+    fileId: FILE_ID,
+    projectId: PROJECT_ID,
+    ownerId: USER_ID,
+    storageReference: `project-files:${sourcePath}`,
+  });
+  const surviving = promotionFixture({
+    fileId: OTHER_FILE_ID,
+    projectId: OTHER_PROJECT_ID,
+    ownerId: OTHER_USER_ID,
+    storageReference: `project-files:${sourcePath}`,
+    promotionId: "923e4567-e89b-42d3-a456-426614174000",
+    deliverableId: "a23e4567-e89b-42d3-a456-426614174000",
+  });
+  const client = accountClient({
+    promotions: [deleting.promotion, surviving.promotion],
+    deliverables: [deleting.deliverable, surviving.deliverable],
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: PROJECT_ID,
+        uploaded_by: USER_ID,
+        project_owner_id: USER_ID,
+        storage_path: sourcePath,
+        kind: "agent-deliverable",
+      },
+      {
+        id: OTHER_FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: OTHER_USER_ID,
+        storage_path: sourcePath,
+        kind: "agent-deliverable",
+      },
+    ],
+  });
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
+  assert.equal(
+    (await cleanupOwnedStorageBeforeAccountDeletion(client, OTHER_USER_ID)).complete,
+    true,
+  );
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), false);
 });

@@ -1,7 +1,7 @@
 import {
   AGENT_EVIDENCE_BUCKET,
   PROJECT_FILE_BUCKET,
-  parseAgentStorageReference,
+  validateStorageObjectPath,
   resolveProjectFileStorage,
   type StorageReferenceAssociation,
   type StorageReferenceRow,
@@ -52,12 +52,20 @@ type ProjectFileQuery = {
 type AccountStorageClient = {
   storage: { from(bucket: string): StorageBucket };
   from(table: string): unknown;
+  rpc(
+    name: "list_account_project_storage_objects",
+    args: { p_owner_id: string; p_limit: number },
+  ): PromiseLike<{
+    data: Array<{ name: unknown; owner_id: unknown }> | null;
+    error: StorageError | null;
+  }>;
 };
 
 type AssociationQuery = {
   select(columns: string): AssociationQuery;
   in(column: string, values: unknown[]): AssociationQuery;
   eq(column: string, value: unknown): AssociationQuery;
+  order(column: string, options: { ascending: true }): AssociationQuery;
   range(
     from: number,
     to: number,
@@ -88,7 +96,9 @@ async function readAssociatedRows(
     for (let offset = 0; offset < MAX_ASSOCIATED_ROWS_PER_BATCH; offset += STORAGE_BATCH_SIZE) {
       let query = (client.from(table) as AssociationQuery).select(columns).in(column, batch);
       if (equality) query = query.eq(equality.column, equality.value);
-      const result = await query.range(offset, offset + STORAGE_BATCH_SIZE - 1);
+      const result = await query
+        .order("id", { ascending: true })
+        .range(offset, offset + STORAGE_BATCH_SIZE - 1);
       if (result.error || !Array.isArray(result.data)) {
         throw cleanupError("account_project_storage_reference_lookup_failed");
       }
@@ -145,79 +155,45 @@ async function loadProjectFileAssociations(
 
 async function externallyReferencedProjectObjects(
   client: AccountStorageClient,
-  entries: Array<ReturnType<typeof resolveProjectFileStorage>>,
+  entries: Array<{ bucket: string; path: string }>,
   deletingIds: Set<string>,
   userId: string,
 ): Promise<Set<string>> {
-  const storageReferences = entries
-    .filter((entry) => entry.source === "canonical" && entry.bucket === PROJECT_FILE_BUCKET)
-    .map((entry) => `${PROJECT_FILE_BUCKET}:${entry.path}`);
-  const deliverables = await readAssociatedRows(
+  // Both canonical rows and promoted rows can be the last live reference.
+  // Resolve every matching row through its authoritative promotion metadata so
+  // an agent-evidence path collision cannot authorize project-files removal.
+  const candidates = await readAssociatedRows(
     client,
-    "agent_deliverables",
-    "storage_reference",
-    storageReferences,
-    "id,owner_id,storage_reference",
+    "project_files",
+    "storage_path",
+    entries.filter((entry) => entry.bucket === PROJECT_FILE_BUCKET).map((entry) => entry.path),
+    "id,project_id,storage_path,uploaded_by,kind",
   );
-  const deliverableById = new Map(deliverables.map((row) => [row.id, row]));
-  const candidatePromotions = (
-    await readAssociatedRows(
-      client,
-      "agent_resource_promotions",
-      "deliverable_id",
-      [...deliverableById.keys()],
-      "id,destination_id,destination_type,status,project_id,owner_id,deliverable_id",
-    )
-  ).filter(
-    (row) =>
-      row.destination_type === "project_file" &&
-      row.status === "completed" &&
-      typeof row.destination_id === "string",
-  );
-  const destinationIds = candidatePromotions.map((row) => row.destination_id);
-  // A destination outside this 1,000-row page may still be guaranteed to
-  // disappear later in the same account deletion. Classify against the full
-  // deletion scope before treating a promotion as an external live reference.
-  const [uploadedDestinations, ownedProjectDestinations] = await Promise.all([
-    readAssociatedRows(client, "project_files", "id", destinationIds, "id", {
-      column: "uploaded_by",
-      value: userId,
-    }),
-    readAssociatedRows(
-      client,
-      "project_files",
-      "id",
-      destinationIds,
-      "id,projects!inner(owner_id)",
-      { column: "projects.owner_id", value: userId },
-    ),
-  ]);
-  const pendingDeletionIds = new Set([
-    ...deletingIds,
-    ...uploadedDestinations
-      .map((row) => row.id)
-      .filter((id): id is string => typeof id === "string"),
-    ...ownedProjectDestinations
-      .map((row) => row.id)
-      .filter((id): id is string => typeof id === "string"),
-  ]);
-  const promotions = candidatePromotions.filter(
-    (row) => !pendingDeletionIds.has(row.destination_id as string),
-  );
-  const existingDestinations = await readAssociatedRows(
+  const candidateIds = candidates.map((row) => row.id);
+  // A row outside the current page may still disappear later in this deletion.
+  const ownedProjectDestinations = await readAssociatedRows(
     client,
     "project_files",
     "id",
-    promotions.map((row) => row.destination_id),
-    "id",
+    candidateIds,
+    "id,projects!inner(owner_id)",
+    { column: "projects.owner_id", value: userId },
   );
-  const existingIds = new Set(existingDestinations.map((row) => row.id));
+  const pendingDeletionIds = new Set([
+    ...deletingIds,
+    ...ownedProjectDestinations.map((row) => row.id),
+  ]);
+  const remaining = candidates.filter(
+    (row) => row.uploaded_by !== userId && !pendingDeletionIds.has(row.id),
+  );
+  const associations = await loadProjectFileAssociations(client, remaining);
   const referenced = new Set<string>();
-  for (const promotion of promotions) {
-    if (!existingIds.has(promotion.destination_id)) continue;
-    const deliverable = deliverableById.get(promotion.deliverable_id);
+  for (const row of remaining) {
     try {
-      const source = parseAgentStorageReference(deliverable?.storage_reference);
+      const source = resolveProjectFileStorage(
+        row as StorageReferenceRow,
+        typeof row.id === "string" ? associations.get(row.id) : undefined,
+      );
       if (source.bucket === PROJECT_FILE_BUCKET) {
         referenced.add(`${source.bucket}:${source.path}`);
       }
@@ -226,6 +202,60 @@ async function externallyReferencedProjectObjects(
     }
   }
   return referenced;
+}
+
+/**
+ * Browser uploads acquire Storage ownership before metadata registration. Use
+ * the service-only read RPC to discover every remaining owned object even if
+ * registration failed, and remove bytes through Storage (never SQL deletion).
+ */
+async function cleanupUnregisteredOwnedProjectObjects(
+  client: AccountStorageClient,
+  userId: string,
+  options: { maxRemoveBatches?: number } = {},
+): Promise<StorageCleanupProgress> {
+  const { maxRemoveBatches } = cleanupOptions(options);
+  let removed = 0;
+  let lastFingerprint: string | null = null;
+  for (let batch = 0; batch <= maxRemoveBatches; batch += 1) {
+    const listed = await client.rpc("list_account_project_storage_objects", {
+      p_owner_id: userId,
+      p_limit: STORAGE_BATCH_SIZE,
+    });
+    if (listed.error || !Array.isArray(listed.data)) {
+      throw cleanupError("account_project_storage_ownership_lookup_failed");
+    }
+    if (listed.data.length === 0) return { complete: true, removed };
+    if (batch === maxRemoveBatches) return { complete: false, removed };
+    const entries = listed.data.map((row) => {
+      try {
+        if (row.owner_id !== userId) throw new Error("owner_mismatch");
+        const { path, parts } = validateStorageObjectPath(row.name);
+        if (!UUID.test(parts[0] ?? "")) throw new Error("project_prefix_invalid");
+        return { bucket: PROJECT_FILE_BUCKET, path };
+      } catch {
+        throw cleanupError("account_project_storage_ownership_invalid");
+      }
+    });
+    const referenced = await externallyReferencedProjectObjects(client, entries, new Set(), userId);
+    const paths = entries
+      .filter((entry) => !referenced.has(`${entry.bucket}:${entry.path}`))
+      .map((entry) => entry.path);
+    if (paths.length === 0) {
+      // Auth cannot delete an owner while Storage still belongs to them. Keep
+      // the account and all surviving Project dependencies intact.
+      throw cleanupError("account_project_storage_still_referenced");
+    }
+    const fingerprint = paths.join("\0");
+    if (fingerprint === lastFingerprint) {
+      throw cleanupError("account_project_storage_cleanup_unverified");
+    }
+    const result = await client.storage.from(PROJECT_FILE_BUCKET).remove(paths);
+    if (result.error) throw cleanupError("account_project_storage_remove_failed");
+    removed += paths.length;
+    lastFingerprint = fingerprint;
+  }
+  return { complete: false, removed };
 }
 
 export type StorageCleanupProgress = Readonly<{
@@ -393,11 +423,11 @@ async function cleanupOwnedProjectFiles(
     );
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {
-      // Promoted rows are references, never ownership claims. Canonical Project
-      // bytes are removed only when no live promotion in another Project still
-      // references the same source object.
+      // Project source bytes are collectible when their final live reference
+      // disappears, including a promoted row preserved by an earlier deletion.
+      // Agent evidence remains owned by its user prefix and is cleaned below.
       if (
-        entry.source !== "canonical" ||
+        entry.bucket !== PROJECT_FILE_BUCKET ||
         externallyReferenced.has(`${entry.bucket}:${entry.path}`)
       ) {
         continue;
@@ -458,13 +488,17 @@ export async function cleanupOwnedStorageBeforeAccountDeletion(
   const projectFiles = await cleanupOwnedProjectFiles(client, userId, options);
   if (!projectFiles.complete) return projectFiles;
 
+  const unregistered = await cleanupUnregisteredOwnedProjectObjects(client, userId, options);
+  const projectRemoved = projectFiles.removed + unregistered.removed;
+  if (!unregistered.complete) return { complete: false, removed: projectRemoved };
+
   const evidence = await clearStoragePrefix(
     client.storage.from(AGENT_EVIDENCE_BUCKET),
     userId,
     options,
   );
   if (!evidence.complete) {
-    return { complete: false, removed: projectFiles.removed + evidence.removed };
+    return { complete: false, removed: projectRemoved + evidence.removed };
   }
 
   const library = await clearStoragePrefix(
@@ -474,6 +508,6 @@ export async function cleanupOwnedStorageBeforeAccountDeletion(
   );
   return {
     complete: library.complete,
-    removed: projectFiles.removed + evidence.removed + library.removed,
+    removed: projectRemoved + evidence.removed + library.removed,
   };
 }

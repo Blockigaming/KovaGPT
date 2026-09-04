@@ -1839,6 +1839,10 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      list_account_project_storage_objects: {
+        Args: { p_owner_id: string; p_limit?: number };
+        Returns: { name: string; owner_id: string }[];
+      };
       save_writing_document: {
         Args: {
           p_content: string;

@@ -105,7 +105,12 @@ type ChainableQueryLike = {
 
 type SupabaseAdminLike = {
   from: (table: string) => ChainableQueryLike;
-  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }> & {
+    abortSignal: (signal: AbortSignal) => PromiseLike<{ data: unknown; error: unknown }>;
+  };
 };
 
 const OWNER_EMAIL = "support@kovagpt.com";
@@ -985,10 +990,11 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const result = await preflight.run(
                   "web_search",
-                  () =>
+                  (signal) =>
                     runWebSearch(
                       lastText,
                       clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                      signal,
                     ),
                   { required: false, timeoutMs: 8_000 },
                 );
@@ -1136,12 +1142,13 @@ export const Route = createFileRoute("/api/chat")({
                       const chunks =
                         (await preflight.run(
                           "project_retrieval",
-                          () =>
+                          (signal) =>
                             retrieveProjectContext({
                               supabase: admin,
                               project_id: projectId,
                               query: q,
                               k: 6,
+                              signal,
                             }),
                           { required: false, timeoutMs: 5_000 },
                         )) ?? [];

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 92,
-  "latest": "20260903220000_project_templates.sql",
+  "count": 93,
+  "latest": "20260904225602_account_project_storage_discovery.sql",
   "migrations": [
     {
       "order": 1,
@@ -1895,6 +1895,20 @@
         "project_template_audit_actor_created_idx",
         "project_template_mutations_created_idx"
       ]
+    },
+    {
+      "order": 93,
+      "filename": "20260904225602_account_project_storage_discovery.sql",
+      "timestamp": "20260904225602",
+      "sha256": "d0eff32b3d42fbff00297bbf8986bd4d5eec40af35d5b24644ab15a83abaa26b",
+      "tables": [],
+      "functions": ["list_account_project_storage_objects"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

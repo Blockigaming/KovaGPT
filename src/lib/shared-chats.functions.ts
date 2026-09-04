@@ -76,6 +76,7 @@ export const listMySharedChats = createServerFn({ method: "GET" })
         .eq("owner_user_id", context.userId)
         .neq("status", "revoked")
         .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .range(offset, offset + SHARED_CHAT_PAGE_SIZE - 1);
       if (error) {
         console.error("[listMySharedChats]", error.message);
@@ -92,35 +93,45 @@ export const listMySharedChats = createServerFn({ method: "GET" })
 export const listSharedWithMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SharedChatInbox[]> => {
-    // RLS already restricts to shares addressed to this user.
-    const { data, error } = await context.supabase
-      .from("shared_chats")
-      .select("id, title, owner_user_id, snapshot, created_at, status")
-      .neq("status", "revoked")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (error) {
-      console.error("[listSharedWithMe]", error.message);
-      throw new Error("Chats shared with you could not be loaded. Please try again.");
-    }
-    // Exclude shares I created myself (owner sees them via My shares).
-    return (data ?? []).flatMap((row) => {
-      if (row.owner_user_id === context.userId) return [];
-      const snapshot = SnapshotSchema.safeParse(row.snapshot);
-      if (!snapshot.success) {
-        console.warn("[listSharedWithMe] skipped malformed snapshot", row.id);
-        return [];
+    const sharedChats: SharedChatInbox[] = [];
+    let offset = 0;
+    while (true) {
+      // RLS permits both owned and received rows. Exclude owned rows before
+      // paging so a large sent history cannot crowd out the recipient inbox.
+      const { data, error } = await context.supabase
+        .from("shared_chats")
+        .select("id, title, owner_user_id, snapshot, created_at, status")
+        .neq("owner_user_id", context.userId)
+        .neq("status", "revoked")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + SHARED_CHAT_PAGE_SIZE - 1);
+      if (error) {
+        console.error("[listSharedWithMe]", error.message);
+        throw new Error("Chats shared with you could not be loaded. Please try again.");
       }
-      return [
-        {
+
+      const page = data ?? [];
+      for (const row of page) {
+        const snapshot = SnapshotSchema.safeParse(row.snapshot);
+        if (!snapshot.success) {
+          console.warn("[listSharedWithMe] skipped malformed snapshot", row.id);
+          continue;
+        }
+        sharedChats.push({
           id: row.id,
           title: row.title,
           owner_user_id: row.owner_user_id,
           snapshot: snapshot.data,
           created_at: row.created_at,
-        },
-      ];
-    });
+        });
+      }
+      // Count database rows, including malformed snapshots, to avoid truncating
+      // the inbox when validation discards an entry on an otherwise full page.
+      if (page.length < SHARED_CHAT_PAGE_SIZE) break;
+      offset += SHARED_CHAT_PAGE_SIZE;
+    }
+    return sharedChats;
   });
 
 export const revokeSharedChat = createServerFn({ method: "POST" })

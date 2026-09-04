@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 92,
+  "migrationCount": 93,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -225,6 +225,7 @@
     "kovagpt_schema_health",
     "lease_agent_job",
     "lease_agent_job",
+    "list_account_project_storage_objects",
     "list_project_templates",
     "match_project_chunks",
     "move_to_dlq",
@@ -899,6 +900,7 @@
     "EXECUTE ON FUNCTION public.is_family_member(uuid, uuid) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.is_family_member(uuid, uuid) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.is_project_member(uuid, uuid) TO authenticated, service_role",
+    "EXECUTE ON FUNCTION public.list_account_project_storage_objects(uuid, integer)\n  TO service_role",
     "EXECUTE ON FUNCTION public.match_project_chunks(uuid, vector, integer) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.move_to_dlq(TEXT, TEXT, BIGINT, JSONB) TO service_role",
     "EXECUTE ON FUNCTION public.move_to_dlq(TEXT, TEXT, BIGINT, JSONB) TO service_role",
@@ -1135,6 +1137,7 @@
     "ALL ON FUNCTION public.has_active_subscription(uuid, text) FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.is_family_member(uuid, uuid) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.is_project_member(uuid, uuid) FROM PUBLIC, anon",
+    "ALL ON FUNCTION public.list_account_project_storage_objects(uuid, integer)\n  FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.match_project_chunks(uuid, vector, integer) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.move_to_dlq(text, text, bigint, jsonb) FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.project_role_of(uuid, uuid) FROM PUBLIC, anon",
@@ -1349,5 +1352,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "49f0423e7fd2b332a6403df97dced8834e7e4c1aa914a80f2bad19ab17388ae5"
+  "sha256": "9b0201f6817fcb65aec0152ca17b1adf7d27289f3d9e2038bd1e7966864d3d80"
 }
