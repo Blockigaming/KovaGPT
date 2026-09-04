@@ -85,7 +85,6 @@ test("every image download uses a bounded Blob action with real failure state", 
   assert.doesNotMatch(imageRoute, /<a[\s\S]{0,160}download=/);
 });
 
-
 test("saved image history remains a recoverable Library source", () => {
   assert.match(imageRoute, /resultHistoryItem\.libraryStatus === "saving"\s*\}/);
   assert.match(imageRoute, /Save to Library again/);
