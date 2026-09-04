@@ -426,9 +426,53 @@ async function remove(request: Request): Promise<Response> {
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }
 
+async function sign(request: Request): Promise<Response> {
+  const auth = await requireUser(request);
+  if (auth instanceof Response) return auth;
+  const fileId = new URL(request.url).searchParams.get("id") ?? "";
+  if (!UUID_PATTERN.test(fileId)) return json({ error: "invalid_project_file_id" }, 400);
+
+  const rate = await consumeApplicationRateLimit({
+    identity: `user:${auth.userId}`,
+    action: "project_file_sign",
+    limit: 120,
+    windowSeconds: 60,
+  });
+  if (!rate.allowed) {
+    return json(
+      {
+        error:
+          rate.status === "limited"
+            ? "project_file_sign_rate_limited"
+            : "project_file_sign_protection_unavailable",
+      },
+      rate.status === "limited" ? 429 : 503,
+      { "Retry-After": String(rate.retryAfter) },
+    );
+  }
+
+  const { data: file, error } = await auth.supabaseUser
+    .from("project_files")
+    .select("id,storage_path,status")
+    .eq("id", fileId)
+    .eq("status", "ready")
+    .maybeSingle();
+  if (error) return json({ error: "project_file_sign_unavailable" }, 503);
+  if (!file) return json({ error: "project_file_not_found" }, 404);
+
+  const { data: signed, error: signError } = await auth.supabaseUser.storage
+    .from("project-files")
+    .createSignedUrl(file.storage_path, 60);
+  if (signError || !signed?.signedUrl) {
+    return json({ error: "project_file_sign_unavailable" }, 503, { "Retry-After": "5" });
+  }
+  return json({ url: signed.signedUrl, expiresIn: 60 });
+}
+
 export const Route = createFileRoute("/api/project-files")({
   server: {
     handlers: {
+      GET: ({ request }) => sign(request),
       POST: ({ request }) => upload(request),
       DELETE: ({ request }) => remove(request),
     },
