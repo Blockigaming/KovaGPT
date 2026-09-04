@@ -415,6 +415,25 @@ async function remove(request: Request): Promise<Response> {
   const auth = await requireVerifiedUser(request);
   if (auth instanceof Response) return auth;
 
+  const rate = await consumeApplicationRateLimit({
+    identity: `user:${auth.userId}`,
+    action: "project_file_delete",
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (!rate.allowed) {
+    return json(
+      {
+        error:
+          rate.status === "limited"
+            ? "project_file_delete_rate_limited"
+            : "project_file_delete_protection_unavailable",
+      },
+      rate.status === "limited" ? 429 : 503,
+      { "Retry-After": String(rate.retryAfter) },
+    );
+  }
+
   let raw;
   try {
     raw = await readUtf8BodyBounded(request, DELETE_BODY_LIMIT);
