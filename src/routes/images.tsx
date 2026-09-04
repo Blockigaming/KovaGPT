@@ -555,7 +555,11 @@ function ImagesPage() {
     downloadControllerRef.current?.abort();
     downloadControllerRef.current = controller;
     setDownloadingImageId(item.id);
-    const timeout = window.setTimeout(() => controller.abort(), 15_000);
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15_000);
     try {
       const response = await fetch(imageUrl, { signal: controller.signal });
       if (!response.ok) throw new Error("Image download failed");
@@ -589,13 +593,14 @@ function ImagesPage() {
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
     } catch (downloadError) {
-      if (!controller.signal.aborted) {
-        toast.error(
-          downloadError instanceof Error ? downloadError.message : "Image download failed",
-        );
-      } else {
-        toast.error("Image download timed out. Try again.");
-      }
+      if (controller.signal.aborted && !timedOut) return;
+      toast.error(
+        timedOut
+          ? "Image download timed out. Try again."
+          : downloadError instanceof Error
+            ? downloadError.message
+            : "Image download failed",
+      );
     } finally {
       window.clearTimeout(timeout);
       if (downloadControllerRef.current === controller) {
