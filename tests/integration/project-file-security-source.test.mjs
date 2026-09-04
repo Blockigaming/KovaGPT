@@ -33,7 +33,8 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
   assert.match(workspace, /\.eq\("status", "ready"\)/);
-  assert.match(workspace, /createSignedUrl\(it\.storage_path, 60\)/);
+  assert.match(workspace, /Promise\.all/);
+  assert.match(workspace, /createSignedUrl\(item\.storage_path, 60\)/);
 });
 
 test("Project file migration serializes caps and removes browser mutations", () => {
