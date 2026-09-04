@@ -10,6 +10,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
+import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
@@ -50,9 +51,6 @@ export function AuthDialog({
     setEmail("");
     setEmailTouched(false);
     setCooldown(0);
-    setLoading(false);
-    setLoadingMethod(null);
-    submittingRef.current = false;
   }, [initialMode, open]);
 
   useEffect(() => {
@@ -128,7 +126,7 @@ export function AuthDialog({
   };
 
   const handlePasskey = async () => {
-    const supported = typeof window !== "undefined" && "PublicKeyCredential" in window;
+    const supported = browserSupportsPasskeys();
     if (!providers.resolved || !providers.passkeys || !supported) {
       toast.error("Passkey sign-in is not available on this browser or deployment.");
       return;
@@ -281,8 +279,7 @@ export function AuthDialog({
               {!isSignUp &&
               providers.resolved &&
               providers.passkeys &&
-              typeof window !== "undefined" &&
-              "PublicKeyCredential" in window ? (
+              browserSupportsPasskeys() ? (
                 <button
                   type="button"
                   onClick={() => void handlePasskey()}
