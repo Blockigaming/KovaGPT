@@ -4,6 +4,7 @@ export class ChatStreamError extends Error {
   readonly code: string;
   readonly status: number;
   readonly retryable: boolean;
+  readonly category: "streaming_interruption";
   constructor(
     code: string,
     message: string,
