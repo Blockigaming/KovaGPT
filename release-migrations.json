@@ -1860,8 +1860,8 @@
       "order": 91,
       "filename": "20260904210000_resend_webhook_integrity.sql",
       "timestamp": "20260904210000",
-      "sha256": "4c450c04c578caeffb91f0f5ee86bdcc289a5340ece911c4b0dc63085fc20bf2",
-      "tables": ["email_webhook_events"],
+      "sha256": "2b09b7acd2edfccd2dc953b668b5717663ee94084c5e050a6e3d7ca3b9f5d2ec",
+      "tables": ["email_webhook_events", "email_delivery_operations"],
       "functions": [
         "process_resend_webhook_event",
         "reconcile_resend_webhook_events_for_send",
@@ -1874,9 +1874,16 @@
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": ["email_webhook_events"],
-      "policies": ["Service role manages email webhook events"],
-      "indexes": ["email_webhook_events_provider_time_idx", "email_send_log_provider_id_idx"]
+      "rls": ["email_webhook_events", "email_delivery_operations"],
+      "policies": [
+        "Service role manages email webhook events",
+        "Service role manages email delivery operations"
+      ],
+      "indexes": [
+        "email_webhook_events_provider_time_idx",
+        "email_send_log_provider_id_idx",
+        "email_delivery_operations_actor_time_idx"
+      ]
     }
   ]
 }

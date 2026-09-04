@@ -1,10 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import {
-  buildTransactionalEmail,
-  emailOperationFingerprint,
-} from "@/lib/email-queue.server";
+import { buildTransactionalEmail, emailOperationFingerprint } from "@/lib/email-queue.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 export type SharedChatSummary = {
