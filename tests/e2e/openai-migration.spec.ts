@@ -17,9 +17,7 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
   page.on("console", (message) => {
     if (
       message.type() === "error" &&
-      !message.text().startsWith("Failed to load resource:") &&
-      message.text() !==
-        "Potential permissions policy violation: payment is not allowed in this document."
+      !message.text().startsWith("Failed to load resource:")
     )
       errors.push(message.text());
   });
