@@ -696,7 +696,9 @@ export function summarizeWriteTool(
     const subject = String(args.subject ?? "");
     const verb = sending ? "Send email to" : "Save draft to";
     return {
-      summary: `${verb} ${truncate(to, 120) || "(no recipient)"} - ${truncate(subject, 120) || "(no subject)"}`,
+      summary: `${verb} ${truncate(to, 120) || "(no recipient)"} - ${
+        truncate(subject, 120) || "(no subject)"
+      }`,
       preview: {
         to: sending ? to : truncate(to, 120),
         cc: args.cc ? (sending ? String(args.cc) : truncate(args.cc, 120)) : undefined,
