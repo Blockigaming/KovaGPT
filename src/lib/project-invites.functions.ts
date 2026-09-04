@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { buildTransactionalEmail } from "@/lib/email-queue.server";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 import type { PendingInvite, ProjectInvite, ProjectRole } from "./projects.functions";
 
@@ -37,7 +39,7 @@ export const inviteMember = createServerFn({ method: "POST" })
     z
       .object({
         project_id: z.string().uuid(),
-        email: z.string().trim().email().max(255),
+        email: z.string().trim().email().max(254),
         role: z.enum(["editor", "viewer"]).default("editor"),
       })
       .parse(input),
@@ -47,26 +49,56 @@ export const inviteMember = createServerFn({ method: "POST" })
     const callerEmail = (context.claims as { email?: string } | undefined)?.email?.toLowerCase();
     if (callerEmail === email) throw new Error("You can't invite yourself.");
 
-    const { data: row, error } = await context.supabase
-      .from("project_invites")
-      .upsert(
-        {
-          project_id: data.project_id,
-          email,
-          role: data.role,
-          invited_by: context.userId,
-          status: "pending",
-          accepted_at: null,
-        },
-        { onConflict: "project_id,email" },
-      )
-      .select("id")
-      .single();
-    if (error || !row) {
-      console.error("[inviteMember]", error?.message);
-      throw new Error("Failed to invite");
+    const rateLimit = await consumeApplicationRateLimit({
+      identity: `user:${context.userId}`,
+      action: "project_invite_email",
+      limit: 20,
+      windowSeconds: 3600,
+    });
+    if (!rateLimit.allowed) {
+      throw new Error(
+        rateLimit.status === "limited"
+          ? "Too many invitations. Please try again later."
+          : "Invitation protection is temporarily unavailable.",
+      );
     }
-    return { id: row.id, auto_accepted: false };
+
+    const { data: project, error: projectError } = await context.supabase
+      .from("projects")
+      .select("name")
+      .eq("id", data.project_id)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (projectError || !project) {
+      throw new Error("Only the project owner can invite members.");
+    }
+
+    const payload = await buildTransactionalEmail({
+      templateName: "project-invite",
+      recipientEmail: email,
+      data: {
+        projectName: project.name,
+        inviterName: "A KovaGPT user",
+        role: data.role,
+        destinationUrl: "https://kovagpt.com/projects",
+      },
+    });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: inviteId, error } = await supabaseAdmin.rpc(
+      "create_project_invite_and_enqueue" as never,
+      {
+        p_actor_id: context.userId,
+        p_project_id: data.project_id,
+        p_recipient_email: email,
+        p_role: data.role,
+        p_payload: payload,
+      } as never,
+    );
+    if (error || typeof inviteId !== "string") {
+      console.error("[inviteMember]", { error_code: "project_invite_enqueue_failed" });
+      throw new Error("The invitation could not be created and emailed.");
+    }
+    return { id: inviteId, auto_accepted: false };
   });
 
 export const revokeInvite = createServerFn({ method: "POST" })
