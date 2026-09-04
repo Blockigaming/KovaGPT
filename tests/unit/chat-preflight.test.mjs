@@ -119,6 +119,31 @@ test("caller abort terminates a never-settling stage without waiting for its tim
   }
 });
 
+test("a runner whose total deadline elapsed rejects later work before it starts", async () => {
+  const runner = createChatPreflightRunner({
+    optionalTimeoutMs: 5_000,
+    totalTimeoutMs: 20,
+  });
+  try {
+    await assert.rejects(
+      runner.run("memory", () => new Promise(() => {}), { required: false }),
+      (error) => error?.code === "chat_preflight_timeout",
+    );
+
+    let started = false;
+    await assert.rejects(
+      runner.run("connector_tools", () => {
+        started = true;
+        return new Promise(() => {});
+      }),
+      (error) => error?.code === "chat_preflight_timeout",
+    );
+    assert.equal(started, false);
+  } finally {
+    runner.close();
+  }
+});
+
 test("a pre-aborted request never starts preflight work", async () => {
   const controller = new AbortController();
   controller.abort();
