@@ -1,0 +1,31 @@
+name: Library formatter oracle
+
+on:
+  push:
+    branches:
+      - codex/library-folder-ui-20260904
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Print locked Prettier output
+        shell: bash
+        run: |
+          npx prettier --write src/components/LibraryFolderOrganizer.tsx src/lib/library-folders.client.ts src/routes/library.tsx
+          for file in src/components/LibraryFolderOrganizer.tsx src/lib/library-folders.client.ts src/routes/library.tsx; do
+            echo "FORMAT_ORACLE_BEGIN:$file"
+            base64 -w 0 "$file"
+            echo
+            echo "FORMAT_ORACLE_END:$file"
+          done
