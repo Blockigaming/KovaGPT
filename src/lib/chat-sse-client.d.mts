@@ -18,6 +18,7 @@ export function consumeChatSse(
     signal?: AbortSignal;
     onEvent?: (event: ChatSseEvent) => void | Promise<void>;
     maxBufferChars?: number;
+    idleTimeoutMs?: number;
   },
 ): Promise<void>;
 
