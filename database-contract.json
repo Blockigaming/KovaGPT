@@ -141,6 +141,7 @@
     "writing_documents"
   ],
   "functions": [
+    "abort_project_file_upload",
     "accept_chat_message_version",
     "accept_project_invite",
     "accept_project_invite",
@@ -154,6 +155,7 @@
     "can_edit_project",
     "claim_account_export_jobs",
     "claim_due_scheduled_tasks",
+    "claim_project_file_delete",
     "complete_agent_job",
     "complete_agent_job",
     "complete_scheduled_task_execution",
@@ -246,6 +248,7 @@
     "release_project_storage_bytes",
     "reserve_developer_api_credit",
     "reserve_project_file_upload",
+    "restore_project_file_delete",
     "revoke_project_template_grant",
     "save_writing_document",
     "save_writing_document",
@@ -874,10 +877,12 @@
     "ALL PRIVILEGES ON TABLE public.google_oauth_tokens TO service_role",
     "DELETE ON TABLE public.google_oauth_tokens TO authenticated",
     "DELETE ON public.google_oauth_tokens TO authenticated",
+    "EXECUTE ON FUNCTION public.abort_project_file_upload(uuid, uuid)\n  TO service_role",
     "EXECUTE ON FUNCTION public.accept_chat_message_version(uuid) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.acquire_ai_generation(text,text,uuid,text,text,text,text,boolean,text,integer,integer,numeric,boolean,integer,integer,integer,integer,integer,integer,integer,timestamptz,timestamptz) TO service_role",
     "EXECUTE ON FUNCTION public.activate_chat_branch(uuid) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.can_edit_project(uuid, uuid) TO authenticated, service_role",
+    "EXECUTE ON FUNCTION public.claim_project_file_delete(uuid, uuid, uuid)\n  TO service_role",
     "EXECUTE ON FUNCTION public.create_chat_message_version(text, text, text, text, text, text, uuid, integer, integer, boolean) TO authenticated, service_role",
     "EXECUTE ON FUNCTION public.delete_email(TEXT, BIGINT) TO service_role",
     "EXECUTE ON FUNCTION public.delete_email(TEXT, BIGINT) TO service_role",
@@ -901,7 +906,8 @@
     "EXECUTE ON FUNCTION public.read_email_batch(TEXT, INT, INT) TO service_role",
     "EXECUTE ON FUNCTION public.read_email_batch(text, integer, integer) TO service_role",
     "EXECUTE ON FUNCTION public.release_project_storage_bytes(uuid, bigint)\n  TO service_role",
-    "EXECUTE ON FUNCTION public.reserve_project_file_upload(\n  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer\n) TO service_role",
+    "EXECUTE ON FUNCTION public.reserve_project_file_upload(\n  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer, bigint\n) TO service_role",
+    "EXECUTE ON FUNCTION public.restore_project_file_delete(uuid, uuid)\n  TO service_role",
     "EXECUTE ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) TO authenticated",
     "EXECUTE ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) TO authenticated",
     "EXECUTE ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) TO service_role",
@@ -1108,10 +1114,12 @@
     "usage on schema kova_private to authenticated, service_role"
   ],
   "revocations": [
+    "ALL ON FUNCTION public.abort_project_file_upload(uuid, uuid)\n  FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.accept_chat_message_version(uuid) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.acquire_ai_generation(text,text,uuid,text,text,text,text,boolean,text,integer,integer,numeric,boolean,integer,integer,integer,integer,integer,integer,integer,timestamptz,timestamptz) FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.activate_chat_branch(uuid) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.can_edit_project(uuid, uuid) FROM PUBLIC, anon",
+    "ALL ON FUNCTION public.claim_project_file_delete(uuid, uuid, uuid)\n  FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.create_chat_message_version(text, text, text, text, text, text, uuid, integer, integer, boolean) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.delete_email(text, bigint) FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.enqueue_email(text, jsonb) FROM PUBLIC, anon, authenticated",
@@ -1128,7 +1136,8 @@
     "ALL ON FUNCTION public.projects_add_owner_member() FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.read_email_batch(text, integer, integer) FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.release_project_storage_bytes(uuid, bigint)\n  FROM PUBLIC, anon, authenticated",
-    "ALL ON FUNCTION public.reserve_project_file_upload(\n  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer\n) FROM PUBLIC, anon, authenticated",
+    "ALL ON FUNCTION public.reserve_project_file_upload(\n  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer, bigint\n) FROM PUBLIC, anon, authenticated",
+    "ALL ON FUNCTION public.restore_project_file_delete(uuid, uuid)\n  FROM PUBLIC, anon, authenticated",
     "ALL ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.try_increment_daily_usage(uuid, text, int, int) FROM PUBLIC",
     "ALL ON FUNCTION public.user_plan_tier(uuid) FROM PUBLIC, anon",
@@ -1326,5 +1335,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "85d1e69cfb9c245efb409876ab0038ca658d2d842d09a5cbd776f3d91331605a"
+  "sha256": "a0873274b4eddf91c50b379d128534e43eb9c203b726b9fd8228dfa59e8f9442"
 }

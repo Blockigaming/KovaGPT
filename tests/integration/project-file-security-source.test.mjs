@@ -71,16 +71,16 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(migration, /upload_lease_until/);
   assert.match(migration, /delete_lease_until/);
   assert.match(migration, /storage_charged/);
-  assert.match(
-    migration,
-    /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/,
-  );
+  assert.match(migration, /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/);
   assert.match(migration, /kind = 'agent-deliverable'/);
   assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
   assert.match(migration, /file_size_limit[\s\S]*10485760/);
-  assert.match(migration, /abort_project_file_upload[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/);
+  assert.match(
+    migration,
+    /abort_project_file_upload[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/,
+  );
   assert.match(migration, /claim_project_file_delete[\s\S]*'inProgress', true/);
   assert.match(migration, /restore_project_file_delete[\s\S]*delete_lease_until = NULL/);
   assert.match(migration, /finalize_project_file_delete[\s\S]*'idempotent', true/);

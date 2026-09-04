@@ -348,7 +348,7 @@ async function upload(request: Request): Promise<Response> {
     !row ||
     row.project_id !== metadata.projectId ||
     row.storage_owner_id !== authorization.ownerId ||
-    row.storage_charged !== (bytes.byteLength > 0)
+    row.storage_charged !== bytes.byteLength > 0
   ) {
     return json({ error: "project_file_reservation_invalid" }, 503);
   }
@@ -374,8 +374,7 @@ async function upload(request: Request): Promise<Response> {
     }
   }
 
-  const temporaryPath =
-    `${metadata.projectId}/.uploads/${row.id}/${attemptId}.${inspected.extension}`;
+  const temporaryPath = `${metadata.projectId}/.uploads/${row.id}/${attemptId}.${inspected.extension}`;
   const stored = await auth.supabaseAdmin.storage
     .from("project-files")
     .upload(temporaryPath, bytes, {
@@ -572,10 +571,13 @@ async function remove(request: Request): Promise<Response> {
   }
 
   const finalize = () =>
-    auth.supabaseAdmin.rpc("finalize_project_file_delete" as never, {
-      p_file_id: file.id,
-      p_attempt_id: attemptId,
-    } as never);
+    auth.supabaseAdmin.rpc(
+      "finalize_project_file_delete" as never,
+      {
+        p_file_id: file.id,
+        p_attempt_id: attemptId,
+      } as never,
+    );
   let finalized = await finalize();
   if (finalized.error) finalized = await finalize();
   if (finalized.error || record(finalized.data)?.deleted !== true) {
