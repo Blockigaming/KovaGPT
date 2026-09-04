@@ -259,6 +259,9 @@ function reservationFailure(error: { code?: string; message?: string } | null): 
   if (message.includes("project_file_limit_reached")) {
     return json({ error: "project_file_limit_reached" }, 409);
   }
+  if (message.includes("project_storage_limit_reached")) {
+    return json({ error: "project_storage_limit_reached" }, 413);
+  }
   if (code === "22023") return json({ error: "invalid_project_file_request" }, 400);
   return json({ error: "project_file_reservation_unavailable" }, 503);
 }
