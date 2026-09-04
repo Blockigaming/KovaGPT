@@ -4,7 +4,6 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
-  enforceStorage,
   getCallerTier,
   requireUser,
   requireVerifiedUser,
@@ -34,6 +33,7 @@ type ProjectFileRow = {
   kind: "file" | "image";
   status: string;
   storage_charged: boolean;
+  storage_owner_id: string | null;
   inProgress?: boolean;
 };
 
@@ -84,7 +84,7 @@ function uploadMetadata(request: Request): {
 async function projectUploadAuthorization(
   auth: AuthedCaller,
   projectId: string,
-): Promise<{ ownerId: string; fileCap: number } | Response> {
+): Promise<{ ownerId: string; fileCap: number; storageLimit: number } | Response> {
   const { data: membership, error: membershipError } = await auth.supabaseAdmin
     .from("project_members")
     .select("role")
@@ -109,7 +109,11 @@ async function projectUploadAuthorization(
   });
   if (tierError) return json({ error: "project_plan_unavailable" }, 503);
   const tier = ownerTier === "pro" || ownerTier === "plus" ? ownerTier : "free";
-  return { ownerId: project.owner_id, fileCap: PROJECT_LIMITS[tier].filesPerProject };
+  return {
+    ownerId: project.owner_id,
+    fileCap: PROJECT_LIMITS[tier].filesPerProject,
+    storageLimit: STORAGE_LIMITS_BYTES[tier],
+  };
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -143,6 +147,7 @@ function reservationRow(value: unknown): ProjectFileRow | null {
     kind: row.kind,
     status: row.status,
     storage_charged: row.storage_charged === true,
+    storage_owner_id: typeof row.storage_owner_id === "string" ? row.storage_owner_id : null,
     inProgress: row.inProgress === true,
   };
 }
@@ -169,11 +174,31 @@ async function setUploadState(
   return !error && Boolean(data);
 }
 
-async function releaseStorage(auth: AuthedCaller, bytes: number): Promise<boolean> {
+async function chargeProjectStorage(
+  auth: AuthedCaller,
+  ownerId: string,
+  bytes: number,
+  limitBytes: number,
+): Promise<Response | null> {
+  if (bytes <= 0) return null;
+  const { data, error } = await auth.supabaseAdmin.rpc(
+    "try_add_storage_bytes" as never,
+    { _user_id: ownerId, _bytes: bytes, _limit: limitBytes } as never,
+  );
+  if (error) return json({ error: "project_storage_quota_unavailable" }, 503);
+  if (data === false) return json({ error: "project_storage_limit_reached" }, 413);
+  return null;
+}
+
+async function releaseStorage(
+  auth: AuthedCaller,
+  ownerId: string,
+  bytes: number,
+): Promise<boolean> {
   if (bytes <= 0) return true;
   const { error } = await auth.supabaseAdmin.rpc(
     "release_project_storage_bytes" as never,
-    { p_user_id: auth.userId, p_bytes: bytes } as never,
+    { p_user_id: ownerId, p_bytes: bytes } as never,
   );
   return !error;
 }
@@ -263,7 +288,11 @@ async function upload(request: Request): Promise<Response> {
   );
   if (reservationError) return reservationFailure(reservationError);
   const row = reservationRow(reservation);
-  if (!row || row.project_id !== metadata.projectId) {
+  if (
+    !row ||
+    row.project_id !== metadata.projectId ||
+    row.storage_owner_id !== authorization.ownerId
+  ) {
     return json({ error: "project_file_reservation_invalid" }, 503);
   }
   const expectedPath = `${metadata.projectId}/${row.id}.${inspected.extension}`;
@@ -288,14 +317,21 @@ async function upload(request: Request): Promise<Response> {
 
   let storageCharged = row.storage_charged;
   if (!storageCharged) {
-    const storage = await enforceStorage(auth, bytes.byteLength, STORAGE_LIMITS_BYTES[callerTier]);
+    const storage = await chargeProjectStorage(
+      auth,
+      authorization.ownerId,
+      bytes.byteLength,
+      authorization.storageLimit,
+    );
     if (storage) {
       await setUploadState(auth, row.id, attemptId, "upload_failed", false);
       return storage;
     }
     storageCharged = bytes.byteLength > 0;
     if (!(await setUploadState(auth, row.id, attemptId, "pending", storageCharged))) {
-      if (storageCharged) await releaseStorage(auth, bytes.byteLength);
+      if (storageCharged) {
+        await releaseStorage(auth, authorization.ownerId, bytes.byteLength);
+      }
       return json({ error: "project_file_reservation_lost" }, 409);
     }
   }
@@ -305,7 +341,9 @@ async function upload(request: Request): Promise<Response> {
     upsert: true,
   });
   if (stored.error) {
-    const released = !storageCharged || (await releaseStorage(auth, bytes.byteLength));
+    const released =
+      !storageCharged ||
+      (await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
     await setUploadState(
       auth,
       row.id,
@@ -319,7 +357,10 @@ async function upload(request: Request): Promise<Response> {
   if (!(await setUploadState(auth, row.id, attemptId, "ready", storageCharged))) {
     const removed = await auth.supabaseAdmin.storage.from("project-files").remove([row.storage_path]);
     const released =
-      !storageCharged || (removed.error ? false : await releaseStorage(auth, bytes.byteLength));
+      !storageCharged ||
+      (removed.error
+        ? false
+        : await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
     await setUploadState(
       auth,
       row.id,
