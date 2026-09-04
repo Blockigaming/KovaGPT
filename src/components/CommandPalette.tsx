@@ -149,6 +149,8 @@ export function CommandPalette({
   conversations,
   archivedConversations,
   workspaceItems,
+  workspaceStatus = "ready",
+  retryWorkspaceSearch,
   onClose,
   onNewChat,
   onSelectChat,
@@ -162,6 +164,8 @@ export function CommandPalette({
   conversations: Conversation[];
   archivedConversations: Conversation[];
   workspaceItems: RecentItem[];
+  workspaceStatus?: "loading" | "ready" | "error";
+  retryWorkspaceSearch?: () => void;
   onClose: () => void;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
@@ -187,7 +191,7 @@ export function CommandPalette({
         snippet: `${conversation.messages.length} messages`,
         score: 0,
       }));
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeOptionKey, setActiveOptionKey] = useState("action:new-chat");
   const storageGenerationRef = useRef(0);
   const [commandState, setCommandState] = useState<{
     principal: string | null;
@@ -324,15 +328,50 @@ export function CommandPalette({
         .sort((a, b) => b.score - a.score),
     [normalized, recentCommands, pinnedCommands],
   );
+  const visibleWorkspaceItems = useMemo(
+    () =>
+      workspaceItems
+        .filter((item) =>
+          normalized ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized) : true,
+        )
+        .slice(0, 20),
+    [normalized, workspaceItems],
+  );
   const actionItems = useMemo(
     () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
     [visibleActions],
   );
-  const totalItems = actionItems.length + conversationMatches.length;
+  const workspaceStartIndex = actionItems.length;
+  const chatStartIndex = workspaceStartIndex + visibleWorkspaceItems.length;
+  const optionKeys = useMemo(
+    () => [
+      ...actionItems.map((item, index) => `action:${item ?? index}`),
+      ...visibleWorkspaceItems.map((item) => `workspace:${item.type}:${item.id}`),
+      ...conversationMatches.map(({ conversation }) => `chat:${conversation.id}`),
+    ],
+    [actionItems, conversationMatches, visibleWorkspaceItems],
+  );
+  const resolvedActiveIndex = optionKeys.indexOf(activeOptionKey);
+  const activeIndex = resolvedActiveIndex >= 0 ? resolvedActiveIndex : 0;
+  const totalItems = optionKeys.length;
+  const setActiveIndex = (index: number) => {
+    const optionKey = optionKeys[index];
+    if (optionKey) setActiveOptionKey(optionKey);
+  };
 
   useEffect(() => {
-    setActiveIndex(0);
+    setActiveOptionKey("action:new-chat");
   }, [query, open]);
+
+  useEffect(() => {
+    if (!open || totalItems === 0) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`command-option-${activeIndex}`)
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeIndex, open, totalItems]);
 
   const suppressFocusRestore = () => {
     shouldRestoreFocusRef.current = false;
@@ -401,7 +440,17 @@ export function CommandPalette({
       return;
     }
     if (!action) {
-      const match = conversationMatches[activeIndex - actionItems.length];
+      const workspaceMatch = visibleWorkspaceItems[activeIndex - workspaceStartIndex];
+      if (workspaceMatch) {
+        suppressFocusRestore();
+        platformEvents.publish("platform", "command.executed", {
+          command: `workspace:${workspaceMatch.type}`,
+        });
+        window.location.assign(workspaceMatch.href);
+        closePalette();
+        return;
+      }
+      const match = conversationMatches[activeIndex - chatStartIndex];
       if (match) {
         if (archivedConversations.some((item) => item.id === match.conversation.id))
           onSelectArchived(match.conversation);
@@ -420,7 +469,7 @@ export function CommandPalette({
       className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
       role="dialog"
       aria-modal="true"
-      aria-label="Search chats and actions"
+      aria-label="Search workspace, chats, and actions"
       onKeyDown={(event) => {
         if (event.key === "Tab" && dialogRef.current) {
           const focusable = Array.from(
@@ -444,11 +493,11 @@ export function CommandPalette({
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setActiveIndex((i) => Math.min(totalItems - 1, i + 1));
+          setActiveIndex(Math.min(totalItems - 1, activeIndex + 1));
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setActiveIndex((i) => Math.max(0, i - 1));
+          setActiveIndex(Math.max(0, activeIndex - 1));
         }
         if (event.key === "Enter") {
           event.preventDefault();
@@ -478,7 +527,7 @@ export function CommandPalette({
             aria-expanded="true"
             aria-controls="command-palette-results"
             aria-activedescendant={`command-option-${activeIndex}`}
-            aria-label="Search commands and chats"
+            aria-label="Search workspace, commands, and chats"
             className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
           <button
@@ -615,27 +664,61 @@ export function CommandPalette({
           })}
 
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
-          {workspaceItems
-            .filter((item) =>
-              normalized
-                ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized)
-                : true,
-            )
-            .slice(0, 20)
-            .map((item) => (
+          {workspaceStatus === "loading" ? (
+            <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+              Searching workspace…
+            </p>
+          ) : null}
+          {workspaceStatus === "error" ? (
+            <div
+              role="alert"
+              className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-destructive"
+            >
+              <span>Workspace results are unavailable.</span>
+              {retryWorkspaceSearch ? (
+                <button
+                  type="button"
+                  className="min-h-11 rounded-lg border px-3 text-foreground hover:bg-accent"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.stopPropagation();
+                  }}
+                  onClick={retryWorkspaceSearch}
+                >
+                  Retry
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {workspaceStatus === "ready" && visibleWorkspaceItems.length === 0 ? (
+            <p className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+              No workspace results
+            </p>
+          ) : null}
+          {visibleWorkspaceItems.map((item, workspaceIndex) => {
+            const index = workspaceStartIndex + workspaceIndex;
+            return (
               <Link
                 key={`${item.type}:${item.id}`}
+                id={`command-option-${index}`}
                 to={item.href as never}
                 role="option"
-                aria-selected={false}
-                onClick={closePalette}
-                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+                aria-selected={activeIndex === index}
+                onPointerMove={() => setActiveIndex(index)}
+                onClick={() => {
+                  suppressFocusRestore();
+                  platformEvents.publish("platform", "command.executed", {
+                    command: `workspace:${item.type}`,
+                  });
+                  closePalette();
+                }}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
               >
                 <Boxes className="h-4 w-4 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
                 <span className="text-xs text-muted-foreground">{item.type}</span>
               </Link>
-            ))}
+            );
+          })}
 
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
           {normalized ? null : (
@@ -658,10 +741,10 @@ export function CommandPalette({
                   else onSelectChat(chat.id);
                   closePalette();
                 }}
-                id={`command-option-${actionItems.length + chatIndex}`}
+                id={`command-option-${chatStartIndex + chatIndex}`}
                 role="option"
-                aria-selected={activeIndex === actionItems.length + chatIndex}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
+                aria-selected={activeIndex === chatStartIndex + chatIndex}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>

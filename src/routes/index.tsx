@@ -219,6 +219,11 @@ function KovaGPT() {
   const [workspaceItems, setWorkspaceItems] = useState<
     import("@/lib/workspace.functions").RecentItem[]
   >([]);
+  const [workspaceStatus, setWorkspaceStatus] = useState<"loading" | "ready" | "error">("ready");
+  const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
+  const retryWorkspaceSearch = useCallback(() => {
+    setWorkspaceReloadKey((current) => current + 1);
+  }, []);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
@@ -859,21 +864,27 @@ function KovaGPT() {
   useEffect(() => {
     if (!commandOpen || !isSignedIn) {
       setWorkspaceItems([]);
+      setWorkspaceStatus("ready");
       return;
     }
     let cancelled = false;
+    setWorkspaceStatus("loading");
     void import("@/lib/workspace.functions")
       .then(({ listWorkspaceRecents }) => listWorkspaceRecents())
       .then((items) => {
-        if (!cancelled) setWorkspaceItems(items);
+        if (cancelled) return;
+        setWorkspaceItems(items);
+        setWorkspaceStatus("ready");
       })
       .catch(() => {
-        if (!cancelled) setWorkspaceItems([]);
+        if (cancelled) return;
+        setWorkspaceItems([]);
+        setWorkspaceStatus("error");
       });
     return () => {
       cancelled = true;
     };
-  }, [commandOpen, isSignedIn]);
+  }, [commandOpen, isSignedIn, userKey, workspaceReloadKey]);
 
   useEffect(() => {
     const reloadImportedChats = () => {
@@ -2160,6 +2171,8 @@ function KovaGPT() {
         conversations={historyConversations}
         archivedConversations={archivedConversations}
         workspaceItems={workspaceItems}
+        workspaceStatus={workspaceStatus}
+        retryWorkspaceSearch={retryWorkspaceSearch}
         onClose={() => setCommandOpen(false)}
         onNewChat={newChat}
         onSelectChat={setActiveId}

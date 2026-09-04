@@ -12,6 +12,7 @@ export type LibraryItem = {
   file_name: string | null;
   file_type: string | null;
   file_size: number | null;
+  folder_id?: string | null;
   created_at: string;
 };
 
@@ -32,7 +33,7 @@ export const listMyLibrary = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("user_library_items")
       .select(
-        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, created_at",
+        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, folder_id, created_at",
       )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
