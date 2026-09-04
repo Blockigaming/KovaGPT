@@ -106,6 +106,24 @@ test("snapshot queue coalesces B when the effect owning in-flight B was cancelle
   assert.equal(queue.needsEnqueue("B"), false);
 });
 
+test("snapshot queue reuses a completed latest write when reconciliation was delayed", async () => {
+  const queue = createSerializedSnapshotQueue("A");
+  const writes = [];
+  const first = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+  assert.equal(await first, "B");
+
+  const reconciled = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+  assert.equal(reconciled, first);
+  assert.equal(await reconciled, "B");
+  assert.deepEqual(writes, ["B"]);
+});
+
 test("snapshot queue writes B again after an intervening C was already queued", async () => {
   const queue = createSerializedSnapshotQueue("A");
   const writes = [];
