@@ -1,6 +1,7 @@
 import type { ModeId } from "./modes";
 
 export type Role = "user" | "assistant";
+export type TemporaryChatContext = "clean" | "personalized";
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
@@ -46,6 +47,8 @@ export type Conversation = {
   pinned?: boolean;
   pinnedAt?: number;
   temporary?: boolean;
+  /** Immutable context policy selected when a temporary conversation starts. */
+  temporaryContext?: TemporaryChatContext;
   /**
    * Stable root chat id shared by a conversation and every branch taken from it.
    * Durable branch rows are keyed by this, so switching branches can resolve a
