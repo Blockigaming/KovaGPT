@@ -10,6 +10,7 @@ ALTER TABLE public.project_files
   ADD COLUMN IF NOT EXISTS storage_charged boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS upload_attempt_id uuid,
   ADD COLUMN IF NOT EXISTS upload_lease_until timestamptz,
+  ADD COLUMN IF NOT EXISTS delete_attempt_id uuid,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 ALTER TABLE public.project_files
@@ -74,7 +75,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.project_files
       ADD CONSTRAINT project_files_status_check
-      CHECK (status IN ('pending', 'ready', 'upload_failed', 'cleanup_failed')) NOT VALID;
+      CHECK (status IN ('pending', 'ready', 'upload_failed', 'cleanup_failed', 'deleting')) NOT VALID;
   END IF;
 
   IF NOT EXISTS (
@@ -285,18 +286,63 @@ GRANT EXECUTE ON FUNCTION public.reserve_project_file_upload(
   uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
 ) TO service_role;
 
-CREATE OR REPLACE FUNCTION public.finalize_project_file_delete(
-  p_user_id uuid,
-  p_file_id uuid
+CREATE OR REPLACE FUNCTION public.abort_project_file_upload(
+  p_file_id uuid,
+  p_attempt_id uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $$
+AS $
 DECLARE
   target public.project_files;
 BEGIN
+  SELECT *
+  INTO target
+  FROM public.project_files
+  WHERE id = p_file_id
+    AND upload_attempt_id = p_attempt_id
+    AND status IN ('pending', 'upload_failed', 'cleanup_failed')
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('aborted', false);
+  END IF;
+
+  IF target.storage_charged AND target.storage_owner_id IS NOT NULL AND target.size_bytes > 0 THEN
+    UPDATE public.user_storage
+    SET bytes_used = greatest(0, bytes_used - target.size_bytes), updated_at = now()
+    WHERE user_id = target.storage_owner_id;
+  END IF;
+
+  DELETE FROM public.project_files WHERE id = target.id;
+  RETURN jsonb_build_object('aborted', true);
+END
+$;
+
+REVOKE ALL ON FUNCTION public.abort_project_file_upload(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.abort_project_file_upload(uuid, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.claim_project_file_delete(
+  p_user_id uuid,
+  p_file_id uuid,
+  p_attempt_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+DECLARE
+  target public.project_files;
+BEGIN
+  IF p_user_id IS NULL OR p_file_id IS NULL OR p_attempt_id IS NULL THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_project_file_delete';
+  END IF;
+
   SELECT pf.*
   INTO target
   FROM public.project_files AS pf
@@ -305,9 +351,77 @@ BEGIN
    AND pm.user_id = p_user_id
    AND pm.role IN ('owner', 'editor')
   WHERE pf.id = p_file_id
+    AND pf.status IN ('ready', 'deleting')
   FOR UPDATE OF pf;
 
   IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  UPDATE public.project_files
+  SET status = 'deleting',
+      delete_attempt_id = p_attempt_id,
+      updated_at = now()
+  WHERE id = target.id
+  RETURNING * INTO target;
+
+  RETURN to_jsonb(target) || jsonb_build_object('claimed', true);
+END
+$;
+
+REVOKE ALL ON FUNCTION public.claim_project_file_delete(uuid, uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_project_file_delete(uuid, uuid, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.restore_project_file_delete(
+  p_file_id uuid,
+  p_attempt_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+  UPDATE public.project_files
+  SET status = 'ready',
+      delete_attempt_id = NULL,
+      updated_at = now()
+  WHERE id = p_file_id
+    AND delete_attempt_id = p_attempt_id
+    AND status = 'deleting'
+  RETURNING true
+$;
+
+REVOKE ALL ON FUNCTION public.restore_project_file_delete(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.restore_project_file_delete(uuid, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.finalize_project_file_delete(
+  p_file_id uuid,
+  p_attempt_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+DECLARE
+  target public.project_files;
+BEGIN
+  SELECT *
+  INTO target
+  FROM public.project_files
+  WHERE id = p_file_id
+    AND delete_attempt_id = p_attempt_id
+    AND status = 'deleting'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    IF NOT EXISTS (SELECT 1 FROM public.project_files WHERE id = p_file_id) THEN
+      RETURN jsonb_build_object('deleted', true, 'idempotent', true);
+    END IF;
     RETURN jsonb_build_object('deleted', false);
   END IF;
 
@@ -318,9 +432,13 @@ BEGIN
     WHERE user_id = target.storage_owner_id;
   END IF;
 
-  RETURN jsonb_build_object('deleted', true, 'projectId', target.project_id);
+  RETURN jsonb_build_object(
+    'deleted', true,
+    'idempotent', false,
+    'projectId', target.project_id
+  );
 END
-$$;
+$;
 
 REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
