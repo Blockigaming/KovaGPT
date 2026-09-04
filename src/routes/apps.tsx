@@ -608,6 +608,7 @@ function GitHubManager() {
           <DialogFooter className="gap-2 sm:justify-end">
             <Button
               variant="outline"
+              className="min-h-11"
               disabled={busy}
               onClick={() => setDisconnectOpen(false)}
             >
@@ -615,6 +616,7 @@ function GitHubManager() {
             </Button>
             <Button
               variant="outline"
+              className="min-h-11"
               disabled={busy}
               onClick={() => void disconnectAccount(false)}
             >
@@ -622,6 +624,7 @@ function GitHubManager() {
             </Button>
             <Button
               variant="destructive"
+              className="min-h-11"
               disabled={busy}
               onClick={() => void disconnectAccount(true)}
             >
@@ -670,19 +673,22 @@ function GitHubManager() {
           <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
             {repos.map((repo) => (
               <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
-                <input
-                  type="checkbox"
-                  disabled={busy}
-                  aria-label={`Select ${repo.full_name}`}
-                  checked={selected.includes(repo.id)}
-                  onChange={() =>
-                    setSelected((current) =>
-                      current.includes(repo.id)
-                        ? current.filter((id) => id !== repo.id)
-                        : [...current, repo.id],
-                    )
-                  }
-                />
+                <label className="flex min-h-11 min-w-11 items-center justify-center">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    disabled={busy}
+                    aria-label={`Select ${repo.full_name}`}
+                    checked={selected.includes(repo.id)}
+                    onChange={() =>
+                      setSelected((current) =>
+                        current.includes(repo.id)
+                          ? current.filter((id) => id !== repo.id)
+                          : [...current, repo.id],
+                      )
+                    }
+                  />
+                </label>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{repo.full_name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -1072,8 +1078,8 @@ function AppsPage() {
         />
         {activityPersistenceError && (
           <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm">
-            Recent connection activity could not be saved in this browser and will be lost when this
-            tab closes.
+            Recent connection activity could not be saved in this browser and will be lost when you
+            leave or reload this page.
           </p>
         )}
         {!isLoaded ? (
