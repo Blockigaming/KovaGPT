@@ -503,6 +503,208 @@ GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
   text, text, bigint, jsonb, uuid, text, integer
 ) TO service_role;
 
+-- Collaboration writes and their outbound notifications commit together. These
+-- functions are service-only; callers cannot turn them into arbitrary mail.
+CREATE OR REPLACE FUNCTION public.create_project_invite_and_enqueue(
+  p_actor_id uuid,
+  p_project_id uuid,
+  p_recipient_email text,
+  p_role public.project_role,
+  p_payload jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  actor_email text;
+  normalized_recipient text := lower(trim(p_recipient_email));
+  existing_invite_id uuid;
+  result_id uuid;
+BEGIN
+  SELECT lower(email)
+  INTO actor_email
+  FROM auth.users
+  WHERE id = p_actor_id
+    AND email_confirmed_at IS NOT NULL;
+
+  IF actor_email IS NULL
+    OR actor_email = normalized_recipient
+    OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
+    OR position('@' IN normalized_recipient) <= 1
+    OR p_role NOT IN ('editor'::public.project_role, 'viewer'::public.project_role)
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
+    OR p_payload ->> 'purpose' <> 'transactional'
+    OR p_payload ->> 'label' <> 'project-invite'
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_project_invite_email';
+  END IF;
+
+  PERFORM 1
+  FROM public.projects
+  WHERE id = p_project_id
+    AND owner_id = p_actor_id
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'project_owner_required';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.project_members member
+    JOIN auth.users invitee ON invitee.id = member.user_id
+    WHERE member.project_id = p_project_id
+      AND lower(invitee.email) = normalized_recipient
+  ) THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'already_project_member';
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_project_id::text || ':' || normalized_recipient, 0)
+  );
+  SELECT id
+  INTO existing_invite_id
+  FROM public.project_invites
+  WHERE project_id = p_project_id
+    AND lower(email) = normalized_recipient
+  ORDER BY created_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF existing_invite_id IS NULL THEN
+    INSERT INTO public.project_invites (
+      project_id,
+      email,
+      role,
+      invited_by,
+      status,
+      accepted_at
+    )
+    VALUES (
+      p_project_id,
+      normalized_recipient,
+      p_role,
+      p_actor_id,
+      'pending',
+      NULL
+    )
+    RETURNING id INTO result_id;
+  ELSE
+    UPDATE public.project_invites
+    SET email = normalized_recipient,
+        role = p_role,
+        invited_by = p_actor_id,
+        status = 'pending',
+        accepted_at = NULL,
+        created_at = now()
+    WHERE id = existing_invite_id
+    RETURNING id INTO result_id;
+  END IF;
+
+  PERFORM public.enqueue_tracked_email(
+    'transactional_emails',
+    p_payload,
+    'project-invite',
+    normalized_recipient
+  );
+  RETURN result_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.create_project_invite_and_enqueue(
+  uuid, uuid, text, public.project_role, jsonb
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_project_invite_and_enqueue(
+  uuid, uuid, text, public.project_role, jsonb
+) TO service_role;
+
+
+CREATE OR REPLACE FUNCTION public.create_shared_chat_and_enqueue(
+  p_actor_id uuid,
+  p_recipient_email text,
+  p_title text,
+  p_local_chat_reference text,
+  p_snapshot jsonb,
+  p_payload jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  actor_email text;
+  normalized_recipient text := lower(trim(p_recipient_email));
+  result_id uuid;
+BEGIN
+  SELECT lower(email)
+  INTO actor_email
+  FROM auth.users
+  WHERE id = p_actor_id
+    AND email_confirmed_at IS NOT NULL;
+
+  IF actor_email IS NULL
+    OR actor_email = normalized_recipient
+    OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
+    OR position('@' IN normalized_recipient) <= 1
+    OR p_title IS NULL
+    OR char_length(trim(p_title)) NOT BETWEEN 1 AND 200
+    OR (p_local_chat_reference IS NOT NULL AND char_length(p_local_chat_reference) > 100)
+    OR p_snapshot IS NULL
+    OR jsonb_typeof(p_snapshot) <> 'object'
+    OR jsonb_typeof(p_snapshot -> 'messages') <> 'array'
+    OR jsonb_array_length(p_snapshot -> 'messages') NOT BETWEEN 1 AND 500
+    OR octet_length(p_snapshot::text) > 25000000
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
+    OR p_payload ->> 'purpose' <> 'transactional'
+    OR p_payload ->> 'label' <> 'shared-chat'
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_shared_chat_email';
+  END IF;
+
+  INSERT INTO public.shared_chats (
+    owner_user_id,
+    recipient_email,
+    local_chat_reference,
+    title,
+    snapshot,
+    permission,
+    status
+  )
+  VALUES (
+    p_actor_id,
+    normalized_recipient,
+    p_local_chat_reference,
+    trim(p_title),
+    p_snapshot,
+    'view',
+    'pending'
+  )
+  RETURNING id INTO result_id;
+
+  PERFORM public.enqueue_tracked_email(
+    'transactional_emails',
+    p_payload,
+    'shared-chat',
+    normalized_recipient
+  );
+  RETURN result_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.create_shared_chat_and_enqueue(
+  uuid, text, text, text, jsonb, jsonb
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_shared_chat_and_enqueue(
+  uuid, text, text, text, jsonb, jsonb
+) TO service_role;
+
+
 -- A provider Retry-After must be shared across every worker replica and must
 -- extend the message lease. Otherwise another replica can reclaim the row and
 -- retry before the provider permits it.
