@@ -196,6 +196,9 @@ function reservationFailure(error: { code?: string; message?: string } | null): 
 
 async function upload(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return json({ error: "cross_site_request_blocked" }, 403);
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/octet-stream") {
+    return json({ error: "unsupported_media_type" }, 415);
+  }
   const auth = await requireVerifiedUser(request);
   if (auth instanceof Response) return auth;
 
@@ -361,7 +364,10 @@ function missingObject(error: unknown): boolean {
 
 async function remove(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return json({ error: "cross_site_request_blocked" }, 403);
-  const auth = await requireUser(request);
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+    return json({ error: "unsupported_media_type" }, 415);
+  }
+  const auth = await requireVerifiedUser(request);
   if (auth instanceof Response) return auth;
 
   let raw;
