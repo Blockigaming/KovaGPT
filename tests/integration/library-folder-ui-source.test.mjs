@@ -62,7 +62,6 @@ test("bulk moves and folder deletion preserve truthful limits and data copy", ()
   assert.match(library, /removed\.has\(item\.folder_id\).*folder_id: null/s);
 });
 
-
 test("folder UI keeps async loads, principals, and mutation state consistent", () => {
   assert.match(folders, /refreshKey: number/);
   assert.match(folders, /\[enabled, load, principalKey, refreshKey\]/);
