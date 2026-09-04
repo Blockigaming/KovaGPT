@@ -26,7 +26,7 @@ test("support payload remains bounded and retains the reply address", () => {
 
 test("support delivery uses the Kova-owned queue and fixed-recipient template", () => {
   assert.match(route, /enqueueFixedRecipient/u);
-  assert.match(route, /rpc\("enqueue_email"/u);
+  assert.match(route, /rpc\(\s*"enqueue_tracked_email"/u);
   assert.match(route, /KOVA_EMAIL_QUEUE_ENABLED/u);
   assert.doesNotMatch(route, /\/lovable|legacyLovable/iu);
 });
