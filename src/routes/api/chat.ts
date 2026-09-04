@@ -611,6 +611,7 @@ export const Route = createFileRoute("/api/chat")({
                   lockdownBlocksNetwork = lockdownResult;
                 }
               } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 lockdownBlocksNetwork = true;
                 if (explicitLockdownCapability) {
                   return (
@@ -664,6 +665,7 @@ export const Route = createFileRoute("/api/chat")({
                 const email = data?.user?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
               } catch {
+                if (error instanceof ChatPreflightError) throw error;
                 // ignore; treat as non-owner
               }
             }
@@ -1046,6 +1048,7 @@ export const Route = createFileRoute("/api/chat")({
                   );
                 }
               } catch {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
@@ -1160,6 +1163,7 @@ export const Route = createFileRoute("/api/chat")({
                   }
                 }
               } catch {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
