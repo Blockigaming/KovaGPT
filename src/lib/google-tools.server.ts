@@ -42,7 +42,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
-  gmail_send: { running: "Preparing email send…", done: "Sent email" },
+  gmail_send: { running: "Preparing email for review…", done: "Email ready for review" },
   calendar_create_event: {
     running: "Preparing calendar event…",
     done: "Prepared calendar event",
