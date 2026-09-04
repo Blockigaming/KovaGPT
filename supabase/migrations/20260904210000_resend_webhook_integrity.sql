@@ -300,6 +300,7 @@ BEGIN
     OR p_template_name !~ '^[a-z0-9][a-z0-9_-]{0,99}$'
     OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
     OR position('@' IN normalized_recipient) <= 1
+    OR p_payload ->> 'to' IS NULL
     OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
     OR (
       p_queue_name = 'auth_emails'
