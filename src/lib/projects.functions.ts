@@ -128,7 +128,11 @@ export const listProjects = createServerFn({ method: "GET" })
     const [{ data: counts }, { data: chats }, { data: files }] = await Promise.all([
       context.supabase.from("project_members").select("project_id").in("project_id", ids),
       context.supabase.from("project_chats").select("project_id").in("project_id", ids),
-      context.supabase.from("project_files").select("project_id").in("project_id", ids),
+      context.supabase
+        .from("project_files")
+        .select("project_id")
+        .in("project_id", ids)
+        .eq("status", "ready"),
     ]);
     const countMap = new Map<string, number>();
     const chatMap = new Map<string, number>();
