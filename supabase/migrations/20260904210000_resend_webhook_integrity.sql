@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.email_webhook_events (
   CONSTRAINT email_webhook_events_id_check
     CHECK (event_id ~ '^[A-Za-z0-9_.:-]{1,200}$'),
   CONSTRAINT email_webhook_events_type_check
-    CHECK (event_type ~ '^email\\.[a-z_]{1,80}$'),
+    CHECK (event_type ~ '^email\.[a-z_]{1,80}$'),
   CONSTRAINT email_webhook_events_provider_id_check
     CHECK (provider_message_id ~ '^[A-Za-z0-9_.:-]{1,200}$'),
   CONSTRAINT email_webhook_events_sha_check
@@ -73,7 +73,7 @@ BEGIN
   IF p_event_id IS NULL
     OR p_event_id !~ '^[A-Za-z0-9_.:-]{1,200}$'
     OR p_event_type IS NULL
-    OR p_event_type !~ '^email\\.[a-z_]{1,80}$'
+    OR p_event_type !~ '^email\.[a-z_]{1,80}$'
     OR p_provider_message_id IS NULL
     OR p_provider_message_id !~ '^[A-Za-z0-9_.:-]{1,200}$'
     OR p_occurred_at IS NULL
@@ -287,6 +287,7 @@ DECLARE
   tracked_message_id text;
   normalized_recipient text;
   queued_message_id bigint;
+  existing_log public.email_send_log;
 BEGIN
   tracked_message_id := p_payload ->> 'message_id';
   normalized_recipient := lower(trim(p_recipient_email));
@@ -312,6 +313,30 @@ BEGIN
     )
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email';
+  END IF;
+
+  -- Serialize a retried producer by its durable message id. The queue send
+  -- and log insert remain in this transaction, so an existing log proves the
+  -- original queue write committed as well.
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(tracked_message_id, 0)
+  );
+
+  SELECT *
+  INTO existing_log
+  FROM public.email_send_log
+  WHERE message_id = tracked_message_id
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF FOUND THEN
+    IF existing_log.template_name <> p_template_name
+      OR lower(trim(existing_log.recipient_email)) <> normalized_recipient
+      OR coalesce(existing_log.metadata ->> 'queue_name', '') <> p_queue_name
+    THEN
+      RAISE EXCEPTION USING ERRCODE = '23505', MESSAGE = 'tracked_email_message_id_conflict';
+    END IF;
+    RETURN 0;
   END IF;
 
   INSERT INTO public.email_send_log (
@@ -419,3 +444,80 @@ REVOKE ALL ON FUNCTION public.dead_letter_tracked_email(
 GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
   text, text, bigint, jsonb, uuid, text, integer
 ) TO service_role;
+
+-- A provider Retry-After must be shared across every worker replica and must
+-- extend the message lease. Otherwise another replica can reclaim the row and
+-- retry before the provider permits it.
+CREATE OR REPLACE FUNCTION public.defer_email_retry(
+  p_queue_name text,
+  p_message_id bigint,
+  p_delay_seconds integer
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  deferred boolean;
+  retry_until timestamptz;
+BEGIN
+  IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
+    OR p_message_id IS NULL
+    OR p_message_id < 1
+    OR p_delay_seconds IS NULL
+    OR p_delay_seconds NOT BETWEEN 1 AND 900
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_email_retry_deferral';
+  END IF;
+
+  PERFORM 1
+  FROM pgmq.set_vt(p_queue_name, p_message_id, p_delay_seconds);
+  deferred := FOUND;
+  IF NOT deferred THEN
+    RETURN false;
+  END IF;
+
+  retry_until := now() + pg_catalog.make_interval(secs => p_delay_seconds);
+  INSERT INTO public.email_send_state (id, retry_after_until, updated_at)
+  VALUES (1, retry_until, now())
+  ON CONFLICT (id) DO UPDATE
+  SET retry_after_until = pg_catalog.greatest(
+        coalesce(public.email_send_state.retry_after_until, '-infinity'::timestamptz),
+        EXCLUDED.retry_after_until
+      ),
+      updated_at = now();
+
+  RETURN true;
+EXCEPTION WHEN undefined_table THEN
+  RETURN false;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.defer_email_retry(
+  text, bigint, integer
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.defer_email_retry(
+  text, bigint, integer
+) TO service_role;
+
+-- The dedicated worker supersedes the historical five-second Edge Function
+-- wake-up job. Remove every same-named cron entry so two dispatchers cannot
+-- race the same queues after this migration is applied.
+DO $remove_legacy_email_cron$
+DECLARE
+  target_job_id bigint;
+BEGIN
+  IF to_regclass('cron.job') IS NULL
+    OR to_regprocedure('cron.unschedule(bigint)') IS NULL
+  THEN
+    RETURN;
+  END IF;
+
+  FOR target_job_id IN
+    SELECT jobid FROM cron.job WHERE jobname = 'process-email-queue'
+  LOOP
+    PERFORM cron.unschedule(target_job_id);
+  END LOOP;
+END
+$remove_legacy_email_cron$;
