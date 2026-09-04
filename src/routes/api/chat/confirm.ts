@@ -70,7 +70,10 @@ export const Route = createFileRoute("/api/chat/confirm")({
         if (lockdown) return lockdown;
         const result = await executePendingAction(auth.userId, id);
         if (result.ok) return Response.json({ ok: true, result_text: result.result_text });
-        return Response.json({ ok: false, error: result.error }, { status: 400 });
+        return Response.json(
+          { ok: false, error: result.error, error_code: result.error_code },
+          { status: 400 },
+        );
       },
     },
   },
