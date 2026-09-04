@@ -1,0 +1,272 @@
+-- Reconcile Resend delivery webhooks without trusting event recipients.
+-- The signed delivery id is the replay key; only provider message ids already
+-- recorded by the sender worker may change delivery state or suppression.
+
+ALTER TABLE public.suppressed_emails
+  DROP CONSTRAINT IF EXISTS suppressed_emails_reason_check;
+ALTER TABLE public.suppressed_emails
+  ADD CONSTRAINT suppressed_emails_reason_check
+  CHECK (reason IN ('unsubscribe', 'bounce', 'complaint', 'provider_suppression'));
+
+CREATE TABLE IF NOT EXISTS public.email_webhook_events (
+  event_id text PRIMARY KEY,
+  event_type text NOT NULL,
+  provider_message_id text NOT NULL,
+  occurred_at timestamptz NOT NULL,
+  payload_sha256 text NOT NULL,
+  status text NOT NULL DEFAULT 'received'
+    CHECK (status IN ('received', 'processed', 'ignored', 'failed')),
+  attempt_count integer NOT NULL DEFAULT 1 CHECK (attempt_count BETWEEN 1 AND 1000),
+  last_error_code text,
+  processed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT email_webhook_events_id_check
+    CHECK (event_id ~ '^[A-Za-z0-9_.:-]{1,200}$'),
+  CONSTRAINT email_webhook_events_type_check
+    CHECK (event_type ~ '^email\\.[a-z_]{1,80}$'),
+  CONSTRAINT email_webhook_events_provider_id_check
+    CHECK (provider_message_id ~ '^[A-Za-z0-9_.:-]{1,200}$'),
+  CONSTRAINT email_webhook_events_sha_check
+    CHECK (payload_sha256 ~ '^[0-9a-f]{64}$')
+);
+
+ALTER TABLE public.email_webhook_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.email_webhook_events FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.email_webhook_events TO service_role;
+
+DROP POLICY IF EXISTS "Service role manages email webhook events"
+  ON public.email_webhook_events;
+CREATE POLICY "Service role manages email webhook events"
+ON public.email_webhook_events
+FOR ALL
+TO service_role
+USING (auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'service_role');
+
+CREATE INDEX IF NOT EXISTS email_webhook_events_provider_time_idx
+  ON public.email_webhook_events(provider_message_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS email_send_log_provider_id_idx
+  ON public.email_send_log ((metadata ->> 'provider_id'))
+  WHERE metadata ? 'provider_id';
+
+CREATE OR REPLACE FUNCTION public.process_resend_webhook_event(
+  p_event_id text,
+  p_event_type text,
+  p_provider_message_id text,
+  p_occurred_at timestamptz,
+  p_payload_sha256 text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  event_row public.email_webhook_events;
+  send_row public.email_send_log;
+  inserted_count integer;
+  next_status text;
+  suppression_reason text;
+  merged_metadata jsonb;
+BEGIN
+  IF p_event_id IS NULL
+    OR p_event_id !~ '^[A-Za-z0-9_.:-]{1,200}$'
+    OR p_event_type IS NULL
+    OR p_event_type !~ '^email\\.[a-z_]{1,80}$'
+    OR p_provider_message_id IS NULL
+    OR p_provider_message_id !~ '^[A-Za-z0-9_.:-]{1,200}$'
+    OR p_occurred_at IS NULL
+    OR p_payload_sha256 IS NULL
+    OR p_payload_sha256 !~ '^[0-9a-f]{64}$'
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_resend_webhook_event';
+  END IF;
+
+  INSERT INTO public.email_webhook_events (
+    event_id,
+    event_type,
+    provider_message_id,
+    occurred_at,
+    payload_sha256
+  )
+  VALUES (
+    p_event_id,
+    p_event_type,
+    p_provider_message_id,
+    p_occurred_at,
+    p_payload_sha256
+  )
+  ON CONFLICT (event_id) DO NOTHING;
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+
+  SELECT *
+  INTO event_row
+  FROM public.email_webhook_events
+  WHERE event_id = p_event_id
+  FOR UPDATE;
+
+  IF event_row.payload_sha256 <> p_payload_sha256
+    OR event_row.event_type <> p_event_type
+    OR event_row.provider_message_id <> p_provider_message_id
+  THEN
+    RETURN jsonb_build_object(
+      'duplicate', false,
+      'applied', false,
+      'retryable', false,
+      'conflict', true,
+      'code', 'resend_webhook_replay_conflict'
+    );
+  END IF;
+
+  IF inserted_count = 0 AND event_row.status IN ('processed', 'ignored') THEN
+    RETURN jsonb_build_object(
+      'duplicate', true,
+      'applied', event_row.status = 'processed',
+      'retryable', false,
+      'conflict', false
+    );
+  END IF;
+
+  IF inserted_count = 0 THEN
+    UPDATE public.email_webhook_events
+    SET status = 'received',
+        attempt_count = least(1000, attempt_count + 1),
+        last_error_code = NULL,
+        updated_at = now()
+    WHERE event_id = p_event_id;
+  END IF;
+
+  next_status := CASE p_event_type
+    WHEN 'email.bounced' THEN 'bounced'
+    WHEN 'email.complained' THEN 'complained'
+    WHEN 'email.suppressed' THEN 'suppressed'
+    WHEN 'email.failed' THEN 'failed'
+    WHEN 'email.delivered' THEN 'sent'
+    WHEN 'email.delivery_delayed' THEN 'sent'
+    ELSE NULL
+  END;
+
+  suppression_reason := CASE p_event_type
+    WHEN 'email.bounced' THEN 'bounce'
+    WHEN 'email.complained' THEN 'complaint'
+    WHEN 'email.suppressed' THEN 'provider_suppression'
+    ELSE NULL
+  END;
+
+  IF next_status IS NULL THEN
+    UPDATE public.email_webhook_events
+    SET status = 'ignored',
+        processed_at = now(),
+        last_error_code = NULL,
+        updated_at = now()
+    WHERE event_id = p_event_id;
+    RETURN jsonb_build_object(
+      'duplicate', false,
+      'applied', false,
+      'retryable', false,
+      'conflict', false
+    );
+  END IF;
+
+  SELECT *
+  INTO send_row
+  FROM public.email_send_log
+  WHERE metadata ->> 'provider_id' = p_provider_message_id
+  ORDER BY created_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    UPDATE public.email_webhook_events
+    SET status = 'failed',
+        last_error_code = 'email_send_log_not_found',
+        updated_at = now()
+    WHERE event_id = p_event_id;
+    RETURN jsonb_build_object(
+      'duplicate', false,
+      'applied', false,
+      'retryable', true,
+      'conflict', false,
+      'code', 'email_send_log_not_found'
+    );
+  END IF;
+
+  IF send_row.recipient_email IS NULL
+    OR char_length(send_row.recipient_email) NOT BETWEEN 3 AND 254
+    OR position('@' IN send_row.recipient_email) <= 1
+  THEN
+    UPDATE public.email_webhook_events
+    SET status = 'failed',
+        last_error_code = 'email_log_recipient_invalid',
+        updated_at = now()
+    WHERE event_id = p_event_id;
+    RETURN jsonb_build_object(
+      'duplicate', false,
+      'applied', false,
+      'retryable', false,
+      'conflict', false,
+      'code', 'email_log_recipient_invalid'
+    );
+  END IF;
+
+  IF suppression_reason IS NOT NULL THEN
+    INSERT INTO public.suppressed_emails (email, reason, metadata)
+    VALUES (
+      lower(trim(send_row.recipient_email)),
+      suppression_reason,
+      jsonb_build_object(
+        'provider', 'resend',
+        'provider_id', p_provider_message_id,
+        'event_id', p_event_id,
+        'event_type', p_event_type,
+        'occurred_at', p_occurred_at
+      )
+    )
+    ON CONFLICT (email) DO NOTHING;
+  END IF;
+
+  merged_metadata := coalesce(send_row.metadata, '{}'::jsonb) || jsonb_build_object(
+    'last_provider_event_id', p_event_id,
+    'last_provider_event_type', p_event_type,
+    'last_provider_event_at', p_occurred_at
+  );
+
+  UPDATE public.email_send_log
+  SET status = CASE
+        WHEN send_row.status = 'complained' OR next_status = 'complained' THEN 'complained'
+        WHEN send_row.status = 'suppressed' OR next_status = 'suppressed' THEN 'suppressed'
+        WHEN send_row.status = 'bounced' OR next_status = 'bounced' THEN 'bounced'
+        WHEN next_status = 'failed' THEN 'failed'
+        ELSE send_row.status
+      END,
+      error_message = CASE
+        WHEN p_event_type IN ('email.bounced', 'email.complained', 'email.suppressed', 'email.failed')
+          THEN replace(p_event_type, 'email.', '')
+        ELSE error_message
+      END,
+      metadata = merged_metadata
+  WHERE id = send_row.id;
+
+  UPDATE public.email_webhook_events
+  SET status = 'processed',
+      processed_at = now(),
+      last_error_code = NULL,
+      updated_at = now()
+  WHERE event_id = p_event_id;
+
+  RETURN jsonb_build_object(
+    'duplicate', false,
+    'applied', true,
+    'retryable', false,
+    'conflict', false
+  );
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.process_resend_webhook_event(
+  text, text, text, timestamptz, text
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.process_resend_webhook_event(
+  text, text, text, timestamptz, text
+) TO service_role;
