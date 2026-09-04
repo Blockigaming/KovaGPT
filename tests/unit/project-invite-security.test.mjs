@@ -202,6 +202,9 @@ test("application routes resolve through the secure invitation facade", async ()
   assert.match(secureInvites, /buildTransactionalEmail/u);
   assert.match(secureInvites, /action: "project_invite_email"/u);
   assert.match(secureInvites, /"create_project_invite_and_enqueue"/u);
+  assert.match(secureInvites, /operation_id: z\.string\(\)\.uuid\(\)/u);
+  assert.match(secureInvites, /messageId: data\.operation_id/u);
+  assert.match(secureInvites, /p_request_fingerprint: requestFingerprint/u);
   assert.match(secureInvites, /auto_accepted: false/u);
   assert.doesNotMatch(secureInvites, /auth\.admin\.listUsers|existingUserId/u);
   assert.doesNotMatch(secureInvites, /from\("project_members"\).*upsert/su);
@@ -215,7 +218,12 @@ test("application routes resolve through the secure invitation facade", async ()
   assert.match(collaborationMigration, /already_project_member/u);
   assert.match(
     collaborationMigration,
-    /INSERT INTO public\.project_invites[\s\S]*public\.enqueue_tracked_email/u,
+    /CREATE TABLE IF NOT EXISTS public\.email_delivery_operations/u,
+  );
+  assert.match(collaborationMigration, /email_delivery_operation_conflict/u);
+  assert.match(
+    collaborationMigration,
+    /INSERT INTO public\.project_invites[\s\S]*public\.enqueue_tracked_email[\s\S]*INSERT INTO public\.email_delivery_operations/u,
   );
   assert.match(
     collaborationMigration,
