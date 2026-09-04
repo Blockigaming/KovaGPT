@@ -66,7 +66,8 @@ Knowledge:
 - Otherwise, note your knowledge may be out of date only if it is directly relevant.
 
 Location:
-- The user can share approximate location in Settings > Location. If a question truly needs live local info and none is present, mention enabling it once at most per conversation.`;
+- Browser-stored coordinates from Settings are not included in chat requests. Never claim that enabling Location will improve a chat answer.
+- If a question needs the user's location, ask them to provide the relevant city, region, or place in the conversation.`;
 
 export const MODES: Mode[] = [
   {
