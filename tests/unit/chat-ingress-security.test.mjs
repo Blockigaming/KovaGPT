@@ -169,6 +169,37 @@ test("chat payload normalization preserves valid clients and strips unexpected f
   });
 });
 
+test("temporary context accepts only an explicit immutable creation policy", () => {
+  const base = { messages: [{ role: "user", content: "hello" }], temporary: true };
+  assert.deepEqual(normalizeChatPayload({ ...base, temporaryContext: "clean" }), {
+    ...base,
+    temporaryContext: "clean",
+  });
+  assert.deepEqual(normalizeChatPayload({ ...base, temporaryContext: "personalized" }), {
+    ...base,
+    temporaryContext: "personalized",
+  });
+  assert.throws(
+    () => normalizeChatPayload({ ...base, temporaryContext: "sometimes" }),
+    (error) =>
+      error instanceof ChatIngressError &&
+      error.code === "invalid_temporary_context" &&
+      error.status === 400,
+  );
+  assert.throws(
+    () =>
+      normalizeChatPayload({
+        messages: base.messages,
+        temporary: false,
+        temporaryContext: "personalized",
+      }),
+    (error) =>
+      error instanceof ChatIngressError &&
+      error.code === "temporary_context_requires_temporary_chat" &&
+      error.status === 400,
+  );
+});
+
 test("chat payload accepts attachments only on the latest authenticated turn boundary", () => {
   const historicalAttachmentCases = [
     {
