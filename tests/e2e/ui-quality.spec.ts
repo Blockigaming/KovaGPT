@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { captureCandidateVisual } from "./candidate-visual-evidence";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -262,6 +263,11 @@ for (const theme of ["light", "dark"] as const) {
         maxDiffPixelRatio: 0.005,
         scale: "css",
       },
+    );
+    await captureCandidateVisual(
+      page,
+      testInfo,
+      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}`,
     );
   });
 }
