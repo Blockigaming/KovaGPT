@@ -5,6 +5,7 @@ import {
   assertNotBanned,
   enforceQuota,
   getCallerTier,
+  getUserTier,
   requireUser,
   requireVerifiedUser,
   type AuthedCaller,
@@ -105,11 +106,7 @@ async function projectUploadAuthorization(
   if (projectError) return json({ error: "project_authorization_unavailable" }, 503);
   if (!project) return json({ error: "project_not_found" }, 404);
 
-  const { data: ownerTier, error: tierError } = await auth.supabaseAdmin.rpc("user_plan_tier", {
-    _user_id: project.owner_id,
-  });
-  if (tierError) return json({ error: "project_plan_unavailable" }, 503);
-  const tier = ownerTier === "pro" || ownerTier === "plus" ? ownerTier : "free";
+  const tier = await getUserTier(auth, project.owner_id);
   return {
     ownerId: project.owner_id,
     fileCap: PROJECT_LIMITS[tier].filesPerProject,
