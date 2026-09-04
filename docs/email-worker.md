@@ -49,6 +49,17 @@ Optional bounded tuning:
 - `EMAIL_WORKER_AUTH_TTL_MINUTES` (default `15`)
 - `EMAIL_WORKER_TRANSACTIONAL_TTL_MINUTES` (default `60`)
 
+## Atomic application producers
+
+Help acknowledgements, Project invitations, and shared-chat invitations render only registered
+KovaGPT templates on the server. Project/share mutations carry a client-generated operation UUID
+and a server-computed SHA-256 request fingerprint. The collaboration record, tracked send log,
+PGMQ message, and immutable operation result commit in one database transaction. An exact transport
+retry returns the original result without another row or email; reusing an operation UUID for
+different content fails closed. The collaboration RPCs and operation ledger are executable only by
+`service_role`, while authenticated callers still pass through ownership checks and distributed
+rate limits in the server functions.
+
 ## Delivery reconciliation
 
 Configure Resend to send webhooks to `https://kovagpt.com/api/public/email/webhook`. Subscribe to
