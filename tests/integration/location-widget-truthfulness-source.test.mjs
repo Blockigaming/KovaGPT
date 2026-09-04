@@ -10,6 +10,7 @@ const infoChip = read("src/components/InfoChip.tsx");
 const mapWidget = read("src/components/MapWidget.tsx");
 const settings = read("src/components/SettingsDialog.tsx");
 const settingsStorage = read("src/lib/settings-storage.ts");
+const modes = read("src/lib/modes.ts");
 
 test("location cards receive and isolate the resolved browser principal", () => {
   assert.match(
@@ -54,4 +55,7 @@ test("location and copy controls expose truthful success and failure states", ()
   assert.match(settings, /they are not added to chat requests/);
   assert.doesNotMatch(settings, /it improves answers about local time, weather/);
   assert.doesNotMatch(settings, /answer questions about local time/);
+  assert.match(modes, /Browser-stored coordinates[\s\S]*not included in chat requests/);
+  assert.match(modes, /ask them to provide the relevant city, region, or place/);
+  assert.doesNotMatch(modes, /mention enabling it once at most per conversation/);
 });
