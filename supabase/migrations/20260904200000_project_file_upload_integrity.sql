@@ -11,6 +11,7 @@ ALTER TABLE public.project_files
   ADD COLUMN IF NOT EXISTS upload_attempt_id uuid,
   ADD COLUMN IF NOT EXISTS upload_lease_until timestamptz,
   ADD COLUMN IF NOT EXISTS delete_attempt_id uuid,
+  ADD COLUMN IF NOT EXISTS delete_lease_until timestamptz,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 ALTER TABLE public.project_files
@@ -373,17 +374,25 @@ BEGIN
   FOR UPDATE OF pf;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('claimed', false);
+    RETURN jsonb_build_object('claimed', false, 'inProgress', false);
+  END IF;
+
+  IF target.status = 'deleting' AND target.delete_lease_until > now() THEN
+    RETURN jsonb_build_object('claimed', false, 'inProgress', true);
   END IF;
 
   UPDATE public.project_files
   SET status = 'deleting',
       delete_attempt_id = p_attempt_id,
+      delete_lease_until = now() + interval '2 minutes',
       updated_at = now()
   WHERE id = target.id
   RETURNING * INTO target;
 
-  RETURN to_jsonb(target) || jsonb_build_object('claimed', true);
+  RETURN to_jsonb(target) || jsonb_build_object(
+    'claimed', true,
+    'inProgress', false
+  );
 END
 $$;
 
@@ -404,6 +413,7 @@ AS $$
   UPDATE public.project_files
   SET status = 'ready',
       delete_attempt_id = NULL,
+      delete_lease_until = NULL,
       updated_at = now()
   WHERE id = p_file_id
     AND delete_attempt_id = p_attempt_id
