@@ -877,6 +877,9 @@ function FilesTab({
       project_file_limit_reached: "This project has reached its file limit.",
       project_file_upload_in_progress: "This upload is already in progress.",
       project_file_storage_unavailable: "File storage is temporarily unavailable. Retry shortly.",
+      project_storage_limit_reached: "This project's owner has reached their storage limit.",
+      project_storage_quota_unavailable:
+        "Project storage limits could not be verified. Retry shortly.",
     };
     return messages[code] ?? "The file could not be uploaded. Please retry.";
   }
