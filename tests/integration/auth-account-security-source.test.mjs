@@ -56,18 +56,22 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
 });
 
 test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {
-  const [client, providers, dialog, panel] = await Promise.all([
+  const [client, providers, support, dialog, panel] = await Promise.all([
     read("src/integrations/supabase/client.ts"),
     read("src/lib/auth-providers.ts"),
+    read("src/lib/passkey-support.ts"),
     read("src/components/auth/AuthDialog.tsx"),
     read("src/components/PasskeyPanel.tsx"),
   ]);
   assert.match(client, /experimental: \{ passkey: true \}/);
   assert.match(providers, /passkeys_enabled/);
   assert.match(providers, /passkeys: bool\(data\.passkeys_enabled\)/);
+  assert.match(providers, /bool\(data\.passkey_enabled\)/);
+  assert.match(support, /typeof navigator\.credentials\?\.create === "function"/);
+  assert.match(support, /typeof navigator\.credentials\?\.get === "function"/);
   assert.match(dialog, /providers\.resolved[\s\S]*providers\.passkeys/);
   assert.match(dialog, /auth\.signInWithPasskey\(\)/);
-  assert.match(dialog, /"PublicKeyCredential" in window/);
+  assert.match(dialog, /browserSupportsPasskeys\(\)/);
   assert.match(panel, /auth\.registerPasskey\(\)/);
   assert.match(panel, /auth\.passkey\.list\(\)/);
   assert.match(panel, /auth\.passkey\.update\(/);
