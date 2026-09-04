@@ -503,6 +503,36 @@ GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
   text, text, bigint, jsonb, uuid, text, integer
 ) TO service_role;
 
+-- Each browser mutation carries a random operation id. Bind it to an immutable
+-- request fingerprint so transport retries return the original result without
+-- duplicating a share, reopening an accepted invite, or sending a second email.
+CREATE TABLE IF NOT EXISTS public.email_delivery_operations (
+  operation_id uuid PRIMARY KEY,
+  actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  operation_type text NOT NULL
+    CHECK (operation_type IN ('project-invite', 'shared-chat')),
+  request_fingerprint text NOT NULL
+    CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+  result_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.email_delivery_operations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.email_delivery_operations FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON public.email_delivery_operations TO service_role;
+
+DROP POLICY IF EXISTS "Service role manages email delivery operations"
+  ON public.email_delivery_operations;
+CREATE POLICY "Service role manages email delivery operations"
+ON public.email_delivery_operations
+FOR ALL
+TO service_role
+USING (auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'service_role');
+
+CREATE INDEX IF NOT EXISTS email_delivery_operations_actor_time_idx
+  ON public.email_delivery_operations(actor_id, created_at DESC);
+
 -- Collaboration writes and their outbound notifications commit together. These
 -- functions are service-only; callers cannot turn them into arbitrary mail.
 CREATE OR REPLACE FUNCTION public.create_project_invite_and_enqueue(
@@ -510,6 +540,8 @@ CREATE OR REPLACE FUNCTION public.create_project_invite_and_enqueue(
   p_project_id uuid,
   p_recipient_email text,
   p_role public.project_role,
+  p_operation_id uuid,
+  p_request_fingerprint text,
   p_payload jsonb
 )
 RETURNS uuid
@@ -522,6 +554,7 @@ DECLARE
   normalized_recipient text := lower(trim(p_recipient_email));
   existing_invite_id uuid;
   result_id uuid;
+  operation_row public.email_delivery_operations;
 BEGIN
   SELECT lower(email)
   INTO actor_email
@@ -537,13 +570,40 @@ BEGIN
     OR position('@' IN normalized_recipient) <= 1
     OR p_role IS NULL
     OR p_role NOT IN ('editor'::public.project_role, 'viewer'::public.project_role)
+    OR p_operation_id IS NULL
+    OR p_request_fingerprint IS NULL
+    OR p_request_fingerprint !~ '^[0-9a-f]{64}$'
     OR p_payload IS NULL
     OR jsonb_typeof(p_payload) <> 'object'
     OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
     OR p_payload ->> 'purpose' <> 'transactional'
     OR p_payload ->> 'label' <> 'project-invite'
+    OR p_payload ->> 'message_id' IS NULL
+    OR p_payload ->> 'message_id' <> p_operation_id::text
+    OR p_payload ->> 'idempotency_key' IS NULL
+    OR p_payload ->> 'idempotency_key' <> p_operation_id::text
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_project_invite_email';
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_operation_id::text, 0)
+  );
+  SELECT *
+  INTO operation_row
+  FROM public.email_delivery_operations
+  WHERE operation_id = p_operation_id;
+
+  IF FOUND THEN
+    IF operation_row.actor_id <> p_actor_id
+      OR operation_row.operation_type <> 'project-invite'
+      OR operation_row.request_fingerprint <> p_request_fingerprint
+    THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '23505',
+        MESSAGE = 'email_delivery_operation_conflict';
+    END IF;
+    RETURN operation_row.result_id;
   END IF;
 
   PERFORM 1
@@ -613,20 +673,36 @@ BEGIN
     'project-invite',
     normalized_recipient
   );
+  INSERT INTO public.email_delivery_operations (
+    operation_id,
+    actor_id,
+    operation_type,
+    request_fingerprint,
+    result_id
+  )
+  VALUES (
+    p_operation_id,
+    p_actor_id,
+    'project-invite',
+    p_request_fingerprint,
+    result_id
+  );
   RETURN result_id;
 END
 $$;
 
 REVOKE ALL ON FUNCTION public.create_project_invite_and_enqueue(
-  uuid, uuid, text, public.project_role, jsonb
+  uuid, uuid, text, public.project_role, uuid, text, jsonb
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_project_invite_and_enqueue(
-  uuid, uuid, text, public.project_role, jsonb
+  uuid, uuid, text, public.project_role, uuid, text, jsonb
 ) TO service_role;
 
 
 CREATE OR REPLACE FUNCTION public.create_shared_chat_and_enqueue(
   p_actor_id uuid,
+  p_operation_id uuid,
+  p_request_fingerprint text,
   p_recipient_email text,
   p_title text,
   p_local_chat_reference text,
@@ -642,6 +718,7 @@ DECLARE
   actor_email text;
   normalized_recipient text := lower(trim(p_recipient_email));
   result_id uuid;
+  operation_row public.email_delivery_operations;
 BEGIN
   SELECT lower(email)
   INTO actor_email
@@ -650,6 +727,9 @@ BEGIN
     AND email_confirmed_at IS NOT NULL;
 
   IF actor_email IS NULL
+    OR p_operation_id IS NULL
+    OR p_request_fingerprint IS NULL
+    OR p_request_fingerprint !~ '^[0-9a-f]{64}$'
     OR p_recipient_email IS NULL
     OR actor_email = normalized_recipient
     OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
@@ -667,8 +747,32 @@ BEGIN
     OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
     OR p_payload ->> 'purpose' <> 'transactional'
     OR p_payload ->> 'label' <> 'shared-chat'
+    OR p_payload ->> 'message_id' IS NULL
+    OR p_payload ->> 'message_id' <> p_operation_id::text
+    OR p_payload ->> 'idempotency_key' IS NULL
+    OR p_payload ->> 'idempotency_key' <> p_operation_id::text
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_shared_chat_email';
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_operation_id::text, 0)
+  );
+  SELECT *
+  INTO operation_row
+  FROM public.email_delivery_operations
+  WHERE operation_id = p_operation_id;
+
+  IF FOUND THEN
+    IF operation_row.actor_id <> p_actor_id
+      OR operation_row.operation_type <> 'shared-chat'
+      OR operation_row.request_fingerprint <> p_request_fingerprint
+    THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '23505',
+        MESSAGE = 'email_delivery_operation_conflict';
+    END IF;
+    RETURN operation_row.result_id;
   END IF;
 
   INSERT INTO public.shared_chats (
@@ -697,15 +801,29 @@ BEGIN
     'shared-chat',
     normalized_recipient
   );
+  INSERT INTO public.email_delivery_operations (
+    operation_id,
+    actor_id,
+    operation_type,
+    request_fingerprint,
+    result_id
+  )
+  VALUES (
+    p_operation_id,
+    p_actor_id,
+    'shared-chat',
+    p_request_fingerprint,
+    result_id
+  );
   RETURN result_id;
 END
 $$;
 
 REVOKE ALL ON FUNCTION public.create_shared_chat_and_enqueue(
-  uuid, text, text, text, jsonb, jsonb
+  uuid, uuid, text, text, text, text, jsonb, jsonb
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_shared_chat_and_enqueue(
-  uuid, text, text, text, jsonb, jsonb
+  uuid, uuid, text, text, text, text, jsonb, jsonb
 ) TO service_role;
 
 
