@@ -1953,8 +1953,10 @@ function LibraryItemViewer({
 }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgErr, setImgErr] = useState<string | null>(null);
+  const [imgRetry, setImgRetry] = useState(0);
   const itemId = item?.id;
   const itemType = item?.item_type;
+  useEffect(() => setImgRetry(0), [itemId]);
   useEffect(() => {
     let cancelled = false;
     setImgUrl(null);
@@ -1972,7 +1974,7 @@ function LibraryItemViewer({
     return () => {
       cancelled = true;
     };
-  }, [itemId, itemType]);
+  }, [imgRetry, itemId, itemType]);
 
   const isImage = item?.item_type === "image";
   return (
@@ -1993,6 +1995,10 @@ function LibraryItemViewer({
                 src={imgUrl}
                 alt={item?.title ?? ""}
                 className="max-h-[55vh] mx-auto rounded-lg"
+                onError={() => {
+                  if (imgRetry < 2) setImgRetry((attempt) => attempt + 1);
+                  else setImgErr("Image preview unavailable. Close and reopen this item to retry.");
+                }}
               />
             ) : (
               <div className="text-sm text-muted-foreground">Loading image…</div>

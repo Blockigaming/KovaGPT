@@ -128,6 +128,16 @@ test("only the service role can invoke export worker functions", async () => {
     `);
     assert.equal(definition.rows[0].prosecdef, false);
     assert.deepEqual(definition.rows[0].proconfig, ['search_path=""']);
+
+    const cancellationPrivileges = await database.query(`
+      SELECT
+        has_function_privilege('anon','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS anon_execute,
+        has_function_privilege('authenticated','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS authenticated_execute,
+        has_function_privilege('service_role','public.cancel_account_export_account_deletion(uuid)','EXECUTE') AS service_execute
+    `);
+    assert.deepEqual(cancellationPrivileges.rows, [
+      { anon_execute: false, authenticated_execute: false, service_execute: true },
+    ]);
   } finally {
     await database.close();
   }
@@ -192,6 +202,23 @@ test("account deletion fences new exports without stealing an active worker leas
       [jobId, workerId, `${userId}/${jobId}/${artifactId}.json`, "a".repeat(64), 1234],
     );
     assert.deepEqual(activeSettlement.rows, [{ ok: true }]);
+
+    const released = await database.query(
+      "SELECT public.cancel_account_export_account_deletion($1) AS released",
+      [userId],
+    );
+    assert.deepEqual(released.rows, [{ released: true }]);
+    const newExport = await database.query(
+      "INSERT INTO public.account_export_jobs(user_id) VALUES ($1) RETURNING status",
+      [userId],
+    );
+    assert.deepEqual(newExport.rows, [{ status: "queued" }]);
+    await database.query("DELETE FROM public.account_export_jobs WHERE status = 'queued'");
+    const alreadyReleased = await database.query(
+      "SELECT public.cancel_account_export_account_deletion($1) AS released",
+      [userId],
+    );
+    assert.deepEqual(alreadyReleased.rows, [{ released: false }]);
 
     await database.query("SELECT public.begin_account_export_account_deletion($1)", [userId]);
     const canceled = await database.query(

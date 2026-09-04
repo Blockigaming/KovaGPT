@@ -12,7 +12,8 @@ test("durable versions require a signed-in user plus chat and message ids", () =
 });
 
 test("an entry is labelled saved only after the server write resolves", () => {
-  assert.match(editor, /await saveVersionFn\(\{/);
+  assert.match(editor, /await autosaveQueueRef\.current\.enqueue/u);
+  assert.match(editor, /saveVersionFn\(\{/u);
   assert.match(editor, /durable = true;/);
   assert.match(editor, /label: durable \? "Saved to this chat" : "Session only"/);
   // Unsaved entries carry an explicit badge.
@@ -68,6 +69,14 @@ test("Canvas debounce survives its saving-state render and records the exact edi
   assert.doesNotMatch(dependencies, /saveState/);
   assert.match(editor, /setSaveState\(durable \? "saved" : "session_only"\)/);
   assert.match(editor, /saveState === "session_only"[\s\S]{0,80}"Session only"/);
+});
+
+test("Canvas serializes accepted autosaves so an older request cannot win", () => {
+  assert.match(editor, /createSerializedWriteQueue\(\)/u);
+  assert.match(
+    editor,
+    /autosaveQueueRef\.current\.enqueue\(\(\) =>[\s\S]{0,300}saveVersionFn\(\{/u,
+  );
 });
 
 test("Canvas Improve uses a real text selection and refuses an empty request", () => {

@@ -25,6 +25,7 @@ import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
+import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
 
 type SessionVersion = {
   id: number;
@@ -93,6 +94,7 @@ export function ArtifactEditor({
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastRecordedValueRef = useRef(initialContent);
+  const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
@@ -236,16 +238,21 @@ export function ArtifactEditor({
         let durable = false;
         if (canPersistVersions && chatId && messageId && snapshot.trim()) {
           try {
-            await saveVersionFn({
-              data: {
-                chatId,
-                messageId,
-                source: "inline_edit",
-                content: snapshot,
-                originalContent: initialContent,
-                accepted: true,
-              },
-            });
+            // The accepted version is a last-write-wins server value. Queue
+            // requests in edit order so a slow older request can never arrive
+            // after and replace a newer snapshot.
+            await autosaveQueueRef.current.enqueue(() =>
+              saveVersionFn({
+                data: {
+                  chatId,
+                  messageId,
+                  source: "inline_edit",
+                  content: snapshot,
+                  originalContent: initialContent,
+                  accepted: true,
+                },
+              }),
+            );
             durable = true;
             if (!cancelled) setHistoryError(null);
           } catch (error) {

@@ -70,3 +70,28 @@ $$;
 revoke all on function public.begin_account_export_account_deletion(uuid)
   from public, anon, authenticated;
 grant execute on function public.begin_account_export_account_deletion(uuid) to service_role;
+
+-- Account deletion is an explicit, retryable workflow rather than a permanent
+-- account state. If any post-fence cleanup or Auth deletion step aborts, remove
+-- the fence so the still-active user can request another export. The advisory
+-- lock serializes this transition with both begin() and export job insertion.
+create or replace function public.cancel_account_export_account_deletion(p_user_id uuid)
+returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_deleted integer;
+begin
+  if p_user_id is null then raise exception 'account_deletion_principal_invalid'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 20260903204500));
+  delete from public.account_deletion_fences where user_id = p_user_id;
+  get diagnostics v_deleted = row_count;
+  return v_deleted = 1;
+end;
+$$;
+
+revoke all on function public.cancel_account_export_account_deletion(uuid)
+  from public, anon, authenticated;
+grant execute on function public.cancel_account_export_account_deletion(uuid) to service_role;

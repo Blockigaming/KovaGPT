@@ -148,6 +148,7 @@
     "can_edit_project",
     "can_edit_project",
     "can_edit_project",
+    "cancel_account_export_account_deletion",
     "claim_account_export_jobs",
     "claim_due_scheduled_tasks",
     "complete_agent_job",
@@ -946,6 +947,7 @@
     "execute on function public.begin_account_export_account_deletion(uuid) to service_role",
     "execute on function public.bulk_move_library_items(uuid, uuid[], uuid) to service_role",
     "execute on function public.can_edit_project(uuid, uuid) to authenticated, service_role",
+    "execute on function public.cancel_account_export_account_deletion(uuid) to service_role",
     "execute on function public.claim_account_export_jobs(text, integer, integer) to service_role",
     "execute on function public.claim_due_scheduled_tasks(text, integer, integer)\n  to service_role",
     "execute on function public.complete_agent_job(uuid, text, jsonb) to service_role",
@@ -1151,6 +1153,7 @@
     "all on function public.begin_account_export_account_deletion(uuid)\n  from public, anon, authenticated",
     "all on function public.bulk_move_library_items(uuid, uuid[], uuid)\n  from public, anon, authenticated",
     "all on function public.can_edit_project(uuid, uuid) from public, anon, authenticated",
+    "all on function public.cancel_account_export_account_deletion(uuid)\n  from public, anon, authenticated",
     "all on function public.claim_account_export_jobs(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_due_scheduled_tasks(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.complete_agent_job(uuid, text, jsonb)\n  from public, anon, authenticated",
@@ -1280,5 +1283,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "429c3053339c0521f42050c2e2b07789b532af970d999655330658eb6a7deb50"
+  "sha256": "7c071686db8f71f35fae4df78603e30dfbbc7c364102724c3697fdb12e82722b"
 }

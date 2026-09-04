@@ -68,13 +68,14 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
 test("account deletion is fenced and export cleanup completes before auth cascade", async () => {
   const accountRoute = await read("src/routes/api/account.ts");
   const cleanup = await read("src/lib/account-export.server.ts");
+  const storageCleanup = await read("src/lib/account-storage-cleanup.server.ts");
   const migration = await read(
     "supabase/migrations/20260903204500_account_export_deletion_fence.sql",
   );
 
   assert.ok(
     accountRoute.indexOf("cleanupAccountExportsBeforeAccountDeletion(auth.userId)") <
-      accountRoute.indexOf("auth.supabaseAdmin.auth.admin.deleteUser(auth.userId)"),
+      accountRoute.indexOf(".auth.admin.deleteUser("),
     "auth deletion must not cascade export metadata before cleanup",
   );
   assert.match(accountRoute, /account_export_cleanup_pending/u);
@@ -82,7 +83,18 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(cleanup, /begin_account_export_account_deletion/u);
   assert.match(cleanup, /discoverAccountExportJobIds/u);
   assert.match(cleanup, /job\.status === "processing"/u);
+  assert.match(cleanup, /cancel_account_export_account_deletion/u);
+  assert.match(accountRoute, /cleanupLibraryImagesBeforeAccountDeletion/u);
+  assert.match(accountRoute, /releaseAccountExportDeletionFence\(auth\.userId\)/u);
+  assert.ok(
+    accountRoute.indexOf(
+      "await cleanupLibraryImagesBeforeAccountDeletion(auth.supabaseAdmin, auth.userId)",
+    ) < accountRoute.indexOf(".auth.admin.deleteUser("),
+    "Library image objects must be removed before Auth deletion",
+  );
+  assert.match(storageCleanup, /account_storage_cleanup_unverified/u);
   assert.match(migration, /account_deletion_fences/u);
+  assert.match(migration, /cancel_account_export_account_deletion/u);
   assert.match(migration, /before insert on public\.account_export_jobs/u);
   assert.match(migration, /set status = 'canceled', updated_at = now\(\)/u);
   assert.doesNotMatch(migration, /set status = 'canceled',[\s\S]{0,180}storage_path\s*=\s*null/u);

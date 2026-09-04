@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { z } from "zod";
 
 export type LibraryItem = {
@@ -86,14 +87,20 @@ export const deleteLibraryItem = createServerFn({ method: "POST" })
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     // If the item is an image with a stored object, remove it from the private bucket first.
-    const { data: row } = await context.supabase
+    const { data: row, error: lookupError } = await context.supabase
       .from("user_library_items")
       .select("item_type, file_url")
       .eq("id", data.id)
       .eq("user_id", context.userId)
-      .single();
+      .maybeSingle();
+    if (lookupError) {
+      console.error("[serverfn]", lookupError.message);
+      throw new Error("Request failed. Please try again.");
+    }
     if (row?.item_type === "image" && row.file_url) {
-      await context.supabase.storage.from("library-images").remove([row.file_url]);
+      await removePrivateLibraryImage(row.file_url, (paths) =>
+        context.supabase.storage.from("library-images").remove(paths),
+      );
     }
     const { error } = await context.supabase
       .from("user_library_items")

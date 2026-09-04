@@ -7,6 +7,7 @@ import {
   resolveLibraryImageUrl,
 } from "../../src/lib/library-image-url.ts";
 import { safeImageUrl } from "../../src/lib/safe-image-url.ts";
+import { removePrivateLibraryImage } from "../../src/lib/library-storage-policy.ts";
 
 const VALID_DATA_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==";
 const PRIVATE_IMAGE_PATH =
@@ -79,10 +80,39 @@ test("Library image signing rejects unsafe signer output and does not sign arbit
   assert.equal(calls, 1);
 });
 
+test("Library metadata deletion cannot pass a failed private-object removal", async () => {
+  const calls = [];
+  assert.equal(
+    await removePrivateLibraryImage(PRIVATE_IMAGE_PATH, async (paths) => {
+      calls.push(paths);
+      return { error: null };
+    }),
+    true,
+  );
+  assert.deepEqual(calls, [[PRIVATE_IMAGE_PATH]]);
+
+  await assert.rejects(
+    () =>
+      removePrivateLibraryImage(PRIVATE_IMAGE_PATH, async () => ({
+        error: { message: "storage unavailable" },
+      })),
+    /library_image_storage_remove_failed/u,
+  );
+
+  assert.equal(
+    await removePrivateLibraryImage("https://cdn.openai.com/legacy.png", async () => {
+      throw new Error("public URLs must not be sent to private Storage");
+    }),
+    false,
+  );
+});
+
 test("Images and Library routes retain the durable image-pipeline wiring", async () => {
-  const [images, library] = await Promise.all([
+  const [images, library, libraryFunctions, imageFunctions] = await Promise.all([
     readFile("src/routes/images.tsx", "utf8"),
     readFile("src/routes/library.tsx", "utf8"),
+    readFile("src/lib/library.functions.ts", "utf8"),
+    readFile("src/lib/library-images.functions.ts", "utf8"),
   ]);
 
   assert.match(images, /useServerFn\(saveImageToLibrary\)/);
@@ -95,6 +125,17 @@ test("Images and Library routes retain the durable image-pipeline wiring", async
   assert.match(library, /resolveLibraryImageUrl/);
   assert.match(library, /<LibraryImageDownloadAction item=\{item\} \/>/);
   assert.match(library, /<LibraryImageMedia item=\{item\}/);
+  assert.match(library, /onError=\{image\.retry\}/);
   assert.doesNotMatch(library, /src=\{item\.file_url!?\}/);
   assert.doesNotMatch(library, /src=\{visiblePreviewItem\.file_url!?\}/);
+
+  for (const source of [libraryFunctions, imageFunctions]) {
+    const removeAt = source.indexOf("await removePrivateLibraryImage");
+    const deleteAt = source.indexOf('.from("user_library_items")', removeAt);
+    assert.ok(
+      removeAt >= 0 && deleteAt > removeAt,
+      "Storage removal must precede metadata deletion",
+    );
+    assert.match(source, /if \(lookupError\)/u);
+  }
 });

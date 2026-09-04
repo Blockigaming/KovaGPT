@@ -196,6 +196,14 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
   return { ready: (await discoverAccountExportJobIds(userId)).length === 0 };
 }
 
+/** Releases the export fence when account deletion leaves the Auth user active. */
+export async function releaseAccountExportDeletionFence(userId: string): Promise<void> {
+  const released = await admin.rpc("cancel_account_export_account_deletion", {
+    p_user_id: userId,
+  });
+  if (released.error) throw exportError("account_export_fence_release_unavailable");
+}
+
 async function assertClaimStillOwnsUpload(
   job: ClaimedAccountExport,
   workerId: string,

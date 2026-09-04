@@ -1753,10 +1753,14 @@
       "order": 88,
       "filename": "20260903204500_account_export_deletion_fence.sql",
       "timestamp": "20260903204500",
-      "sha256": "dfcc9eb1d13be1102a2e55b45952f96b88e981edb48c347b391b2ac0a76927f1",
+      "sha256": "3733d68b8c60a5aa51bc67e05e0436610d139d920b9cbe9fa5476ed4d8cbe08a",
       "tables": ["account_deletion_fences"],
-      "functions": ["kova_private", "begin_account_export_account_deletion"],
-      "destructive": false,
+      "functions": [
+        "kova_private",
+        "begin_account_export_account_deletion",
+        "cancel_account_export_account_deletion"
+      ],
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": ["account_deletion_fences"],

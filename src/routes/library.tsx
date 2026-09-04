@@ -130,10 +130,29 @@ function useLibraryImageSource(item: LibItem | null) {
     url: null,
     status: "idle",
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const retryRef = useRef<{ itemId: string | null; count: number }>({ itemId: null, count: 0 });
+
+  const retry = useCallback(() => {
+    if (!itemId || !fileUrl || directUrl || !privatePath) return;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
+    if (retryRef.current.count >= 2) {
+      setState({ itemId, url: null, status: "error" });
+      return;
+    }
+    retryRef.current.count += 1;
+    setState({ itemId, url: null, status: "loading" });
+    setRefreshKey((current) => current + 1);
+  }, [directUrl, fileUrl, itemId, privatePath]);
+
+  const markLoaded = useCallback(() => {
+    retryRef.current = { itemId, count: 0 };
+  }, [itemId]);
 
   useEffect(() => {
     if (!itemId || !fileUrl || directUrl || !privatePath) return;
     let cancelled = false;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
     setState({ itemId, url: null, status: "loading" });
 
     void (async () => {
@@ -152,15 +171,18 @@ function useLibraryImageSource(item: LibItem | null) {
     return () => {
       cancelled = true;
     };
-  }, [directUrl, fileUrl, itemId, privatePath]);
+  }, [directUrl, fileUrl, itemId, privatePath, refreshKey]);
 
-  if (directUrl) return { url: directUrl, loading: false, error: false };
-  if (!privatePath) return { url: null, loading: false, error: Boolean(fileUrl) };
-  if (state.itemId !== itemId) return { url: null, loading: true, error: false };
+  if (directUrl) return { url: directUrl, loading: false, error: false, retry, markLoaded };
+  if (!privatePath)
+    return { url: null, loading: false, error: Boolean(fileUrl), retry, markLoaded };
+  if (state.itemId !== itemId) return { url: null, loading: true, error: false, retry, markLoaded };
   return {
     url: state.url,
     loading: state.status === "loading",
     error: state.status === "error",
+    retry,
+    markLoaded,
   };
 }
 
@@ -175,7 +197,16 @@ function LibraryImageMedia({
 }) {
   const image = useLibraryImageSource(item);
   if (image.url) {
-    return <img src={image.url} alt={item.title} loading="lazy" className={className} />;
+    return (
+      <img
+        src={image.url}
+        alt={item.title}
+        loading="lazy"
+        className={className}
+        onLoad={image.markLoaded}
+        onError={image.retry}
+      />
+    );
   }
   return (
     <div

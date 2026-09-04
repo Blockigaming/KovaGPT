@@ -7,7 +7,11 @@ import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 import { disconnectAllFinance } from "@/finances/plaid.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
-import { cleanupAccountExportsBeforeAccountDeletion } from "@/lib/account-export.server";
+import {
+  cleanupAccountExportsBeforeAccountDeletion,
+  releaseAccountExportDeletionFence,
+} from "@/lib/account-export.server";
+import { cleanupLibraryImagesBeforeAccountDeletion } from "@/lib/account-storage-cleanup.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
@@ -138,10 +142,11 @@ export const Route = createFileRoute("/api/account")({
           );
         }
 
+        let deletionFailure: Response | null = null;
         try {
           const exportCleanup = await cleanupAccountExportsBeforeAccountDeletion(auth.userId);
           if (!exportCleanup.ready) {
-            return Response.json(
+            deletionFailure = Response.json(
               {
                 error:
                   "Account export cleanup is still in progress. Your account was not deleted; retry shortly.",
@@ -157,7 +162,7 @@ export const Route = createFileRoute("/api/account")({
           console.error("[account-delete] account export cleanup failed", {
             error: error instanceof Error ? error.name : "unknown_error",
           });
-          return Response.json(
+          deletionFailure = Response.json(
             {
               error:
                 "Private export data could not be removed, so your account was not deleted. Retry shortly.",
@@ -170,13 +175,73 @@ export const Route = createFileRoute("/api/account")({
           );
         }
 
-        const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
-        if (deleteError) {
-          console.error("[account-delete] auth deletion failed", {
-            code: deleteError.code,
-          });
-          return jsonError("Account deletion failed. Your account remains active.", 500);
+        // Supabase Auth refuses to delete users who still own Storage objects.
+        // Remove and verify the newly durable Library image prefix before the
+        // metadata/auth cascade. On failure, keep metadata so cleanup can retry.
+        if (!deletionFailure) {
+          try {
+            await cleanupLibraryImagesBeforeAccountDeletion(auth.supabaseAdmin, auth.userId);
+          } catch (error) {
+            console.error("[account-delete] Library image cleanup failed", {
+              error: error instanceof Error ? error.name : "unknown_error",
+            });
+            deletionFailure = jsonError(
+              "Private Library images could not be removed, so your account was not deleted. Please try again.",
+              503,
+            );
+          }
         }
+
+        if (!deletionFailure) {
+          try {
+            const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(
+              auth.userId,
+            );
+            if (deleteError) {
+              console.error("[account-delete] auth deletion failed", {
+                code: deleteError.code,
+              });
+              deletionFailure = jsonError(
+                "Account deletion failed. Your account remains active.",
+                500,
+              );
+            }
+          } catch (error) {
+            console.error("[account-delete] auth deletion request failed", {
+              error: error instanceof Error ? error.name : "unknown_error",
+            });
+            deletionFailure = jsonError(
+              "Account deletion failed. Your account remains active.",
+              500,
+            );
+          }
+        }
+
+        if (deletionFailure) {
+          // cleanupAccountExportsBeforeAccountDeletion inserts a durable fence.
+          // The Auth user is still active on every failure above, so always
+          // remove that fence before returning and restore export availability.
+          try {
+            await releaseAccountExportDeletionFence(auth.userId);
+          } catch (error) {
+            console.error("[account-delete] export fence release failed", {
+              error: error instanceof Error ? error.name : "unknown_error",
+            });
+            return Response.json(
+              {
+                error:
+                  "Account deletion paused, but account exports could not be re-enabled. Retry account deletion shortly.",
+                code: "account_export_fence_release_failed",
+              },
+              {
+                status: 503,
+                headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+              },
+            );
+          }
+          return deletionFailure;
+        }
+
         return new Response(null, {
           status: 204,
           headers: { "Cache-Control": "no-store" },
