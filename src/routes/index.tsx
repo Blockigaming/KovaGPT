@@ -1170,39 +1170,41 @@ function KovaGPT() {
             chatId: activeTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            user: tempChat && tempChatContext === "clean"
-              ? undefined
-              : {
-                  name: settings.displayName,
-                  pronouns: settings.preferredPronouns,
-                  email: settings.email,
-                  phone: settings.phone,
-                  address: [
-                    settings.addressLine1,
-                    settings.addressLine2,
-                    settings.city,
-                    settings.region,
-                    settings.postalCode,
-                    settings.country,
-                  ]
-                    .filter(Boolean)
-                    .join(", "),
-                  extraFacts: settings.extraFacts,
-                  customInstructions: settings.customInstructions,
-                  mood: settings.mood,
-                  responseLength: settings.responseLength,
-                  language: settings.language,
-                  rememberAcross: settings.rememberAcross,
-                  webSearch: settings.webSearch,
-                },
+            user:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : {
+                    name: settings.displayName,
+                    pronouns: settings.preferredPronouns,
+                    email: settings.email,
+                    phone: settings.phone,
+                    address: [
+                      settings.addressLine1,
+                      settings.addressLine2,
+                      settings.city,
+                      settings.region,
+                      settings.postalCode,
+                      settings.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", "),
+                    extraFacts: settings.extraFacts,
+                    customInstructions: settings.customInstructions,
+                    mood: settings.mood,
+                    responseLength: settings.responseLength,
+                    language: settings.language,
+                    rememberAcross: settings.rememberAcross,
+                    webSearch: settings.webSearch,
+                  },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality: tempChat && tempChatContext === "clean"
-              ? undefined
-              : personalityToInstruction(
-                  loadPersonality(isLoaded ? userKey : undefined),
-                  isLoaded ? userKey : undefined,
-                ) || undefined,
+            personality:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : personalityToInstruction(
+                    loadPersonality(isLoaded ? userKey : undefined),
+                    isLoaded ? userKey : undefined,
+                  ) || undefined,
           }),
           signal: controller.signal,
         });
