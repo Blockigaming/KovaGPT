@@ -11,7 +11,8 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
-const FROM_DOMAIN = "kovagpt.com";
+const FROM_ADDRESS =
+  process.env.KOVA_EMAIL_FROM?.trim() || `${SITE_NAME} <noreply@${SENDER_DOMAIN}>`;
 const MAX_BODY_BYTES = 32 * 1024;
 
 const BodySchema = z.object({
@@ -92,7 +93,7 @@ async function enqueueFixedRecipient(args: {
     payload: {
       message_id: messageId,
       to: recipient,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: FROM_ADDRESS,
       sender_domain: SENDER_DOMAIN,
       subject,
       html,
