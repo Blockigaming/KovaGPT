@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const source = await readFile("src/components/CommandPalette.tsx", "utf8");
+const [source, indexSource] = await Promise.all([
+  readFile("src/components/CommandPalette.tsx", "utf8"),
+  readFile("src/routes/index.tsx", "utf8"),
+]);
 
 test("workspace results use the keyboard index", () => {
   assert.match(source, /const visibleWorkspaceItems = useMemo/);
@@ -47,4 +50,8 @@ test("workspace search exposes truthful loading, error, retry, and empty states"
   assert.match(source, /Workspace results are unavailable\./);
   assert.match(source, /onClick=\{retryWorkspaceSearch\}/);
   assert.match(source, /No workspace results/);
+  assert.match(indexSource, /setWorkspaceStatus\("loading"\)/);
+  assert.match(indexSource, /setWorkspaceStatus\("ready"\)/);
+  assert.match(indexSource, /setWorkspaceStatus\("error"\)/);
+  assert.match(indexSource, /retryWorkspaceSearch=\{retryWorkspaceSearch\}/);
 });
