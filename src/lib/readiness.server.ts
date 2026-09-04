@@ -30,6 +30,13 @@ function supabaseConfigured(): boolean {
   );
 }
 
+function emailAppConfigured(): boolean {
+  return (
+    runtimeEnv("KOVA_EMAIL_QUEUE_ENABLED") === "true" &&
+    present("RESEND_WEBHOOK_SECRET")
+  );
+}
+
 function aiProviderConfigured(): boolean {
   if (runtimeEnv("AZURE_OPENAI_ENDPOINT")) {
     const authenticated =
@@ -55,7 +62,9 @@ export function structuralReadiness(): ReadinessReport {
     aiProvider: capability(aiProviderConfigured()),
     agentRunner: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     stripe: capability(present("STRIPE_LIVE_API_KEY", "PAYMENTS_LIVE_WEBHOOK_SECRET")),
-    email: capability(any("RESEND_API_KEY", "EMAIL_API_KEY")),
+    // The dedicated sender proves RESEND_API_KEY separately at its own
+    // /readyz; this process needs only the queue gate and signed webhook.
+    email: capability(emailAppConfigured()),
     google: capability(
       present("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"),
     ),
