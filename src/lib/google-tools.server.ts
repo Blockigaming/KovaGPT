@@ -842,7 +842,8 @@ export async function executePendingAction(
     }
     return {
       ok: false,
-      error: "KovaGPT could not confirm whether the action completed. Check Google before retrying.",
+      error:
+        "KovaGPT could not confirm whether the action completed. Check Google before retrying.",
     };
   }
   if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
@@ -1127,12 +1128,7 @@ export async function executePendingAction(
 }
 
 export type PendingActionStatus =
-  | "pending"
-  | "processing"
-  | "confirmed"
-  | "cancelled"
-  | "failed"
-  | "expired";
+  "pending" | "processing" | "confirmed" | "cancelled" | "failed" | "expired";
 
 /**
  * Read the durable owner-scoped state after an ambiguous client transport
@@ -1143,8 +1139,7 @@ export async function getPendingActionStatus(
   userId: string,
   actionId: string,
 ): Promise<
-  | { ok: true; status: PendingActionStatus; result_text?: string }
-  | { ok: false; error: string }
+  { ok: true; status: PendingActionStatus; result_text?: string } | { ok: false; error: string }
 > {
   const db = admin();
   const { data, error } = await (db as unknown as SupabaseQueryLike)
