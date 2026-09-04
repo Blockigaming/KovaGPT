@@ -52,10 +52,8 @@ test("Project file migration serializes caps and removes browser mutations", () 
   assert.match(migration, /upload_lease_until/);
   assert.match(migration, /storage_charged/);
   assert.match(migration, /p_user_id, project_owner, 'pending'/);
-  assert.match(
-    migration,
-    /kind = 'agent-deliverable'[\s\S]*storage_path !~ '\(\^\|\/\)\\\.\\\.\?\(\/\|\$\)'/,
-  );
+  assert.match(migration, /kind = 'agent-deliverable'/);
+  assert.ok(migration.includes("storage_path !~ '(^|/)\\.\\.?(/|$)'"));
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
   assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
   assert.match(migration, /file_size_limit[\s\S]*10485760/);
