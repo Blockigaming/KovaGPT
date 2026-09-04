@@ -103,7 +103,9 @@ BEGIN
         )
         OR (
           kind = 'agent-deliverable'
-          AND split_part(storage_path, '/', 1) = project_id::text
+          AND char_length(storage_path) BETWEEN 1 AND 1024
+          AND storage_path !~ '(^|/)\.\.?(/|$)'
+          AND storage_path !~ '[[:cntrl:]]'
         )
       ) NOT VALID;
   END IF;
