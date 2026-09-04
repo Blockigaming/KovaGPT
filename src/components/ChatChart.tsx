@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { BarChart3, Copy, Download, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,14 +42,27 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   const [type, setType] = useState<ChartType>(spec.type);
   const [table, setTable] = useState(false);
   const figureRef = useRef<HTMLElement>(null);
+  const chartTypeId = useId();
   const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
   const save = (content: string, mime: string, extension: string) => {
-    const url = URL.createObjectURL(new Blob([content], { type: mime }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${spec.title ?? "chart"}.${extension}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    let url: string | null = null;
+    let anchor: HTMLAnchorElement | null = null;
+    try {
+      url = URL.createObjectURL(new Blob([content], { type: mime }));
+      anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${spec.title ?? "chart"}.${extension}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      const completedUrl = url;
+      url = null;
+      window.setTimeout(() => URL.revokeObjectURL(completedUrl), 1_000);
+    } catch {
+      if (url) URL.revokeObjectURL(url);
+      toast.error("Could not download the chart data. Try copying it instead.");
+    } finally {
+      anchor?.remove();
+    }
   };
   const axes = (
     <>
@@ -69,14 +82,14 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <figcaption className="mr-auto text-sm font-semibold">{spec.title ?? "Chart"}</figcaption>
-        <label className="sr-only" htmlFor={`chart-type-${spec.title ?? "data"}`}>
+        <label className="sr-only" htmlFor={chartTypeId}>
           Chart type
         </label>
         <select
-          id={`chart-type-${spec.title ?? "data"}`}
+          id={chartTypeId}
           value={type}
           onChange={(event) => setType(event.target.value as ChartType)}
-          className="h-9 rounded-lg border border-border bg-background px-2 text-sm"
+          className="min-h-11 rounded-lg border border-border bg-background px-2 text-sm"
         >
           {CHART_TYPES.map((item) => (
             <option key={item} value={item}>
@@ -88,24 +101,28 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           type="button"
           onClick={() => setTable((value) => !value)}
           aria-pressed={table}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
         >
           <Table2 className="h-4 w-4" /> Table
         </button>
         <button
           type="button"
           onClick={async () => {
-            await navigator.clipboard.writeText(chartToCsv(spec));
-            toast.success("Chart data copied");
+            try {
+              await navigator.clipboard.writeText(chartToCsv(spec));
+              toast.success("Chart data copied");
+            } catch {
+              toast.error("Could not copy the chart data. Try downloading the CSV instead.");
+            }
           }}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
         >
           <Copy className="h-4 w-4" /> Copy
         </button>
         <button
           type="button"
           onClick={() => save(chartToCsv(spec), "text/csv", "csv")}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
+          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2 hover:bg-accent"
         >
           <Download className="h-4 w-4" /> CSV
         </button>
