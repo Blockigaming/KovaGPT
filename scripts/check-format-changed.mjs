@@ -24,9 +24,11 @@ function changedFiles() {
 }
 
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
-const target = "src/components/SettingsDialog.tsx";
-const result = spawnSync("npx", ["prettier", "--write", target], { stdio: "inherit" });
-console.log(`---BEGIN FORMAT-DIFF:${target}---`);
-spawnSync("git", ["diff", "--", target], { stdio: "inherit" });
-console.log(`---END FORMAT-DIFF:${target}---`);
-process.exit(result.status === 0 ? 1 : (result.status ?? 1));
+
+if (files.length === 0) {
+  console.log("No changed format-supported files to check.");
+  process.exit(0);
+}
+
+const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
+process.exit(result.status ?? 1);
