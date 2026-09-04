@@ -235,10 +235,7 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   }
 }
 
-export function saveConversations(
-  userKey: ChatStorageUserKey,
-  convs: Conversation[],
-): boolean {
+export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]): boolean {
   if (typeof window === "undefined") return false;
   try {
     localStorage.setItem(
