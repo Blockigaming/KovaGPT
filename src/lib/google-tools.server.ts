@@ -1049,6 +1049,57 @@ export async function executePendingAction(
   }
 }
 
+export type PendingActionStatus =
+  | "pending"
+  | "processing"
+  | "confirmed"
+  | "cancelled"
+  | "failed"
+  | "expired";
+
+/**
+ * Read the durable owner-scoped state after an ambiguous client transport
+ * failure. This lets irreversible sends recover a persisted success without
+ * encouraging the user to send the same message twice.
+ */
+export async function getPendingActionStatus(
+  userId: string,
+  actionId: string,
+): Promise<
+  | { ok: true; status: PendingActionStatus; result_text?: string }
+  | { ok: false; error: string }
+> {
+  const { data, error } = await (admin() as unknown as SupabaseQueryLike)
+    .from("pending_tool_actions")
+    .select("status, result")
+    .eq("id", actionId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return { ok: false, error: "Pending action not found." };
+
+  const row = data as { status?: unknown; result?: unknown };
+  const validStatuses = new Set<PendingActionStatus>([
+    "pending",
+    "processing",
+    "confirmed",
+    "cancelled",
+    "failed",
+    "expired",
+  ]);
+  const status =
+    typeof row.status === "string" && validStatuses.has(row.status as PendingActionStatus)
+      ? (row.status as PendingActionStatus)
+      : "failed";
+  const storedResult = row.result as { text?: unknown } | null;
+  const resultText =
+    storedResult && typeof storedResult.text === "string" ? storedResult.text : undefined;
+  return {
+    ok: true,
+    status,
+    ...(status === "confirmed" && resultText ? { result_text: resultText } : {}),
+  };
+}
+
 /** Mark a pending action cancelled. Idempotent; only touches your own row. */
 export async function cancelPendingAction(userId: string, actionId: string): Promise<boolean> {
   const db = admin();
