@@ -182,5 +182,5 @@ test("release route manifest is generated from all route files and one sitemap s
       .every(({ sitemapIncluded }) => sitemapIncluded === false),
   );
   assert.match(read("src/routes/$slug.tsx"), /name: "robots", content: "noindex, follow"/u);
-  assert.match(read("src/routes/developers.$docSlug.tsx"), /content: "noindex, follow"/u);
+  assert.match(read("src/routes/developers.$docSlug.tsx"), /throw notFound\(\)/u);
 });

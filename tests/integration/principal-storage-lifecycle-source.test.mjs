@@ -80,12 +80,21 @@ test("first resolution and guest-to-user transitions purge only ownerless privat
     clerkSource,
     /browserStorageUserIdRef = useRef<string \| null \| undefined>\(undefined\)/,
   );
+  assert.match(
+    clerkSource,
+    /pendingValidationUserIdRef = useRef<string \| undefined>\(undefined\)/,
+  );
   assert.match(clerkSource, /const result = purgeUnscopedPrivateBrowserStorage\(userId\)/);
   assert.match(
     clerkSource,
     /if \(browserStorageUserIdRef\.current !== validatedUser\.id\) \{\s*purgeOwnerlessStateFor\(validatedUser\.id\)/,
   );
   assert.match(clerkSource, /typeof previousUserId === "string" \? previousUserId : undefined/);
+  assert.match(
+    clerkSource,
+    /clearBrowserStateFor\(\s*typeof previousUserId === "string" \? previousUserId : undefined,\s*pendingUserId,\s*\)/,
+  );
+  assert.doesNotMatch(clerkSource, /pendingValidationUserIdRef\.current = null/);
   assert.doesNotMatch(clerkSource, /clearBrowserStateFor\(previousUserId\)/);
 });
 

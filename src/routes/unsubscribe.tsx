@@ -121,7 +121,7 @@ function UnsubscribePage() {
             <CheckCircle2 className="mx-auto w-8 h-8 text-foreground mb-2" />
             <h1 className="text-xl font-semibold mb-2">You're unsubscribed</h1>
             <p className="text-sm text-muted-foreground">
-              We won't email you again. If this was a mistake, contact help@kovagpt.com.
+              We won't email you again. If this was a mistake, contact support@kovagpt.com.
             </p>
           </>
         )}

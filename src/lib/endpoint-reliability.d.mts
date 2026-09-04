@@ -19,6 +19,11 @@ export class BodyReadError extends Error {
 
 export function readUtf8BodyBounded(request: Request, maxBytes: number): Promise<string>;
 
+export function readResponseBytesBounded(
+  response: Pick<Response, "headers" | "body">,
+  maxBytes: number,
+): Promise<Uint8Array>;
+
 export function assertDatabaseSuccess<T>(
   result: { data: T; error?: unknown } | null | undefined,
   operation: string,

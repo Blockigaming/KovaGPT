@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 90,
-  "latest": "20260903220000_project_templates.sql",
+  "count": 93,
+  "latest": "20260904190000_library_images_owner_update_policy.sql",
   "migrations": [
     {
       "order": 1,
@@ -1751,6 +1751,24 @@
     },
     {
       "order": 88,
+      "filename": "20260903204500_account_export_deletion_fence.sql",
+      "timestamp": "20260903204500",
+      "sha256": "3733d68b8c60a5aa51bc67e05e0436610d139d920b9cbe9fa5476ed4d8cbe08a",
+      "tables": ["account_deletion_fences"],
+      "functions": [
+        "kova_private",
+        "begin_account_export_account_deletion",
+        "cancel_account_export_account_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["account_deletion_fences"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 89,
       "filename": "20260903210000_library_folders_and_bulk_move.sql",
       "timestamp": "20260903210000",
       "sha256": "4eb47d962711a82cc1dff199a42d222a50cc3b51a73e939b801e6f3c3ec7923e",
@@ -1769,7 +1787,7 @@
       ]
     },
     {
-      "order": 89,
+      "order": 90,
       "filename": "20260903213000_work_cross_device_sync.sql",
       "timestamp": "20260903213000",
       "sha256": "87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b",
@@ -1806,7 +1824,29 @@
       ]
     },
     {
-      "order": 90,
+      "order": 91,
+      "filename": "20260903214500_work_sync_protection_hardening.sql",
+      "timestamp": "20260903214500",
+      "sha256": "53969de4ad43c24b5c51417e36821debdc20fab26a1adfc233d1ea02dde197ae",
+      "tables": [],
+      "functions": [
+        "work_sync_request_fingerprint",
+        "work_sync_payload_depth_allowed",
+        "enforce_work_sync_receipt_capacity",
+        "enforce_work_saved_payload_capacity",
+        "upsert_work_saved_record",
+        "delete_work_saved_record",
+        "mutate_work_recent_item"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["work_sync_mutations_owner_created_idx"]
+    },
+    {
+      "order": 92,
       "filename": "20260903220000_project_templates.sql",
       "timestamp": "20260903220000",
       "sha256": "f803e1e3d692d64e56cab79e7145e9b35de61cf06aa5ac36ce1523f5291eca76",
@@ -1855,6 +1895,20 @@
         "project_template_audit_actor_created_idx",
         "project_template_mutations_created_idx"
       ]
+    },
+    {
+      "order": 93,
+      "filename": "20260904190000_library_images_owner_update_policy.sql",
+      "timestamp": "20260904190000",
+      "sha256": "06757db5cc3934824873bb017609ef31cb7f4d39533c877bf5fe5c11d755f38b",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["Users update own library images"],
+      "indexes": []
     }
   ]
 }

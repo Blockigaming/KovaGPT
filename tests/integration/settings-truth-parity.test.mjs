@@ -92,6 +92,26 @@ test("data controls describe the available privacy surface truthfully", () => {
   assert.doesNotMatch(settings, /removed guest training and marketing switches/i);
 });
 
+test("settings does not expose local switches for unenforced email, family, or location behavior", () => {
+  const settings = read("src/components/SettingsDialog.tsx");
+  const mapWidget = read("src/components/MapWidget.tsx");
+
+  assert.match(settings, /Optional email preferences are unavailable/);
+  assert.match(settings, /Family controls are not available yet/);
+  assert.match(settings, /Device location is not requested/);
+  assert.doesNotMatch(settings, /title="Product updates"|title="Tips & guides"/);
+  assert.doesNotMatch(settings, /title="Family-safe mode"/);
+  assert.doesNotMatch(settings, /navigator\.geolocation|getCurrentPosition/);
+  assert.doesNotMatch(settings, /kova-safe-audience|kova-family-pin/);
+
+  assert.match(settings, /const controlId = useId\(\)/);
+  assert.match(settings, /<label htmlFor=\{controlId\}/);
+  assert.match(settings, /aria-describedby=\{hintId\}/);
+
+  assert.match(mapWidget, /Map previews are not available yet/);
+  assert.doesNotMatch(mapWidget, /localStorage|getItem\("kova-location"\)|<iframe/);
+});
+
 test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {
   const settings = read("src/components/SettingsDialog.tsx");
 

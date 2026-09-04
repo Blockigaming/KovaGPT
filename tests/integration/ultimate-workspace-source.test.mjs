@@ -29,12 +29,18 @@ test("destructive workspace actions use accessible application dialogs", () => {
   }
 });
 
-test("GitHub disconnect distinguishes retained and removed synchronized data", () => {
+test("GitHub disconnect targets the selected account and withholds unsafe bulk removal", () => {
   const source = read("src/routes/apps.tsx");
-  assert.match(source, /Disconnect only/);
-  assert.match(source, /Disconnect and remove data/);
+  assert.match(source, /setDisconnectAccount\(\{ id: account\.id, login: account\.login \}\)/);
+  assert.match(source, /const accountId = disconnectAccount\.id/);
   assert.match(source, /removeData: false/);
-  assert.match(source, /removeData: true/);
+  assert.match(source, /account-scoped data removal is not available yet/);
+  assert.doesNotMatch(source, /data\.accounts\[0\]\.id|removeData: true/);
+  assert.match(source, /\["connected", "degraded"\]\.includes\(account\.status\)/);
+  assert.match(source, /activeAccountIds\.has\(installation\.account_id\)/);
+  assert.match(source, /activeInstallationIds\.has\(String\(repo\.installation_id\)\)/);
+  assert.match(source, /!activeAccounts\.length/);
+  assert.match(source, /Connect again/);
 });
 
 test("dialog positioning is not overwritten by the shared menu transform animation", () => {

@@ -64,6 +64,7 @@ type ComposerAction = {
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
+  { id: "deep_research", label: "Deep research", icon: Telescope },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
@@ -710,7 +711,9 @@ export function ChatInput({
         {photosRow}
         {filesRow}
         {cameraRow}
-        {COMPOSER_TOOLS.map(toolRow)}
+        {COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(
+          toolRow,
+        )}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
           <Sparkles className={iconClass} />
           <span>Apps and connectors</span>
@@ -940,7 +943,8 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full active:scale-90"
-                  aria-label="Stop"
+                  aria-label="Stop generating"
+                  data-testid="stop-button"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
@@ -951,7 +955,8 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
-                  aria-label="Send"
+                  aria-label="Send message"
+                  data-testid="send-button"
                 >
                   <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
@@ -962,7 +967,8 @@ export function ChatInput({
                   aria-disabled={blockedAttachmentMessage ? true : undefined}
                   onClick={blockedAttachmentMessage ? triggerSubmit : undefined}
                   className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
-                  aria-label={blockedAttachmentMessage ?? "Send"}
+                  aria-label={blockedAttachmentMessage ?? "Send message"}
+                  data-testid="send-button"
                   title={
                     disabled
                       ? "Messaging is unavailable"

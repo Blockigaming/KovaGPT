@@ -4,6 +4,7 @@ import { safeRelativeRedirect } from "@/lib/auth-security.mjs";
 
 export const OAUTH_CALLBACK_PATH = "/~oauth/callback";
 export const POST_AUTH_REDIRECT_KEY = "kovagpt:post-auth-redirect";
+export const POST_AUTH_REDIRECT_PARAM = "return_to";
 export const PASSWORD_RECOVERY_KEY = "kovagpt:password-recovery-started";
 const PASSWORD_RECOVERY_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -40,6 +41,18 @@ export function getOAuthRedirectUri(): string {
   return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
 }
 
+function readRememberedPostAuthRedirect(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(POST_AUTH_REDIRECT_KEY);
+  } catch (error) {
+    console.error("[KovaAuth] Could not read post sign in destination.", {
+      error: authErrorKind(error),
+    });
+    return null;
+  }
+}
+
 export function rememberPostAuthRedirect() {
   if (typeof window === "undefined") return;
   try {
@@ -53,18 +66,40 @@ export function rememberPostAuthRedirect() {
   }
 }
 
-export function getSafePostAuthRedirect(): string {
+export function getEmailAuthRedirectUri(): string {
+  const callback = new URL(getOAuthRedirectUri());
+  const baseOrigin = typeof window === "undefined" ? callback.origin : window.location.origin;
+  const next = safeRelativeRedirect(
+    readRememberedPostAuthRedirect(),
+    baseOrigin,
+    OAUTH_CALLBACK_PATH,
+  );
+  callback.searchParams.set(POST_AUTH_REDIRECT_PARAM, next);
+  return callback.toString();
+}
+
+export function getCallbackPostAuthRedirect(): string | null {
+  const url = getCurrentUrl();
+  return url?.pathname === OAUTH_CALLBACK_PATH
+    ? url.searchParams.get(POST_AUTH_REDIRECT_PARAM)
+    : null;
+}
+
+export function getSafePostAuthRedirect(callbackRedirect?: string | null): string {
   if (typeof window === "undefined") return "/";
+  const remembered = readRememberedPostAuthRedirect();
   try {
-    const stored = sessionStorage.getItem(POST_AUTH_REDIRECT_KEY);
     sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY);
-    return safeRelativeRedirect(stored, window.location.origin, OAUTH_CALLBACK_PATH);
   } catch (error) {
-    console.error("[KovaAuth] Could not read post sign in destination.", {
+    console.error("[KovaAuth] Could not clear post sign in destination.", {
       error: authErrorKind(error),
     });
-    return "/";
   }
+  return safeRelativeRedirect(
+    callbackRedirect ?? remembered,
+    window.location.origin,
+    OAUTH_CALLBACK_PATH,
+  );
 }
 
 export function markPasswordRecoveryFlow(userId: string) {
@@ -137,6 +172,7 @@ export function clearOAuthResponseFromUrl() {
   url.searchParams.delete("provider_refresh_token");
   url.searchParams.delete("token_type");
   url.searchParams.delete("type");
+  url.searchParams.delete(POST_AUTH_REDIRECT_PARAM);
   url.hash = "";
 
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);

@@ -5,6 +5,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import {
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
+  getCallbackPostAuthRedirect,
   getSafePostAuthRedirect,
 } from "@/lib/oauth-session";
 
@@ -26,22 +27,23 @@ function OAuthCallbackPage() {
 
     async function finishSignIn() {
       try {
+        const callbackRedirect = getCallbackPostAuthRedirect();
         const session = await completeOAuthSessionFromUrl("callback route");
         if (cancelled) return;
 
         if (!session?.user) {
-          throw new Error("No saved session was found after Google sign in.");
+          throw new Error("No saved session was found after sign in.");
         }
 
         clearOAuthResponseFromUrl();
-        const next = getSafePostAuthRedirect();
+        const next = getSafePostAuthRedirect(callbackRedirect);
         window.location.replace(next);
       } catch (err) {
         if (cancelled) return;
-        console.error("[KovaAuth] OAuth callback could not create a session", {
+        console.error("[KovaAuth] Authentication callback could not create a session", {
           error: err instanceof Error ? err.name : "unknown_error",
         });
-        setError("Google sign in could not be completed. Please try again.");
+        setError("Sign in could not be completed. Please try again.");
       }
     }
 

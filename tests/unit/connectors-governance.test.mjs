@@ -102,7 +102,7 @@ test("account deletion verifies every credential store before removing auth", ()
   const github = read("src/lib/github-oauth.server.ts");
   const finance = read("src/finances/plaid.server.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
-  const authDeletion = account.indexOf("auth.admin.deleteUser(auth.userId)");
+  const authDeletion = account.indexOf("auth.admin.deleteUser(");
 
   for (const cleanup of [
     "disconnectAllFinance(auth)",

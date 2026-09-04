@@ -14,7 +14,7 @@ test("account deletion is authenticated, explicit, billing-safe, and server exec
   assert.match(account, /requireUser\(request\)/);
   assert.match(account, /confirmation !== "DELETE"/);
   assert.match(account, /subscriptions\.cancel/);
-  assert.match(account, /auth\.admin\.deleteUser\(auth\.userId\)/);
+  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
   assert.match(account, /account was not deleted/);
   assert.match(settings, /authFetch\("\/api\/account"/);
   assert.match(settings, /deleteConfirmation !== "DELETE"/);

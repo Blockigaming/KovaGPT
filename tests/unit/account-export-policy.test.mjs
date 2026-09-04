@@ -2,16 +2,45 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ACCOUNT_EXPORT_COOLDOWN_SECONDS,
+  ACCOUNT_EXPORT_RATE_LIMIT,
   ACCOUNT_EXPORT_DIRECT_TABLES,
+  accountExportCooldownRetryAfter,
   accountExportStoragePrefix,
   accountExportStoragePath,
   publicAccountExportJob,
   sanitizeAccountExportValue,
   serializeAccountExport,
 } from "../../src/lib/account-export-policy.mjs";
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const jobId = "22222222-2222-4222-8222-222222222222";
+
+test("account export throttling uses the supported limiter contract and a durable cooldown", async () => {
+  assert.deepEqual(ACCOUNT_EXPORT_RATE_LIMIT, {
+    action: "account_data_export",
+    limit: 2,
+    windowSeconds: 3_600,
+  });
+  const unavailable = await consumeDistributedRateLimit({
+    identity: `user:${userId}`,
+    ...ACCOUNT_EXPORT_RATE_LIMIT,
+    backendUrl: null,
+    serviceRoleKey: null,
+    hashSecret: null,
+  });
+  assert.equal(unavailable.status, "unavailable");
+
+  const now = Date.parse("2026-09-03T20:00:00.000Z");
+  assert.throws(() => accountExportCooldownRetryAfter(null, now), /job_invalid/u);
+  assert.equal(
+    accountExportCooldownRetryAfter("2026-09-03T19:00:00.000Z", now),
+    ACCOUNT_EXPORT_COOLDOWN_SECONDS - 60 * 60,
+  );
+  assert.equal(accountExportCooldownRetryAfter("2026-09-03T08:00:00.000Z", now), 0);
+  assert.throws(() => accountExportCooldownRetryAfter("not-a-date", now), /job_invalid/u);
+});
 
 test("account exports recursively remove credentials and private moderation notes", () => {
   const sanitized = sanitizeAccountExportValue({
@@ -35,9 +64,9 @@ test("account exports recursively remove credentials and private moderation note
   assert.doesNotMatch(JSON.stringify(sanitized), /never-export/u);
 });
 
-test("account export artifacts are deterministic JSON with a final newline", () => {
+test("account export artifacts are deterministic compact JSON with a final newline", () => {
   const result = serializeAccountExport({ format: "kovagpt-account-export", rows: [{ ok: true }] });
-  assert.equal(result.text.endsWith("\n"), true);
+  assert.equal(result.text, '{"format":"kovagpt-account-export","rows":[{"ok":true}]}\n');
   assert.deepEqual(JSON.parse(result.text), {
     format: "kovagpt-account-export",
     rows: [{ ok: true }],
@@ -84,6 +113,15 @@ test("public job state never exposes storage paths or expired downloads", () => 
   );
   assert.equal(expired.status, "expired");
   assert.equal(expired.downloadable, false);
+
+  const cleanupPending = publicAccountExportJob({
+    ...ready,
+    id: jobId,
+    status: "canceled",
+    storage_path: `${userId}/${jobId}/33333333-3333-4333-8333-333333333333.json`,
+  });
+  assert.equal(cleanupPending.cleanupPending, true);
+  assert.equal("storagePath" in cleanupPending, false);
 });
 
 test("the direct export allowlist contains no credential-state tables", () => {
