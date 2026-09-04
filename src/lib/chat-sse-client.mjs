@@ -52,13 +52,23 @@ async function readWithSignal(reader, signal, idleTimeoutMs) {
 }
 
 export class ChatStreamError extends Error {
-  constructor(code, message, { status = 502, retryable = true } = {}) {
+  constructor(
+    code,
+    message,
+    {
+      status = 502,
+      retryable = true,
+      category = "streaming_interruption",
+      requestId,
+    } = {},
+  ) {
     super(message);
     this.name = "ChatStreamError";
     this.code = code;
     this.status = status;
     this.retryable = retryable;
-    this.category = "streaming_interruption";
+    this.category = category;
+    this.requestId = requestId;
   }
 }
 
@@ -115,6 +125,32 @@ export async function consumeChatSse(
       throw protocolError(
         "chat_stream_invalid_event",
         "KovaGPT returned an invalid streaming response. Please retry.",
+      );
+    }
+    const delta = parsed.choices?.[0]?.delta;
+    if (delta?.kind === "error") {
+      const status =
+        Number.isSafeInteger(delta.status) && delta.status >= 400 && delta.status <= 599
+          ? delta.status
+          : 502;
+      throw new ChatStreamError(
+        typeof delta.code === "string" && delta.code ? delta.code : "chat_stream_provider_error",
+        typeof delta.error === "string" && delta.error
+          ? delta.error
+          : "KovaGPT could not complete this response. Please retry.",
+        {
+          status,
+          retryable:
+            typeof delta.retryable === "boolean" ? delta.retryable : defaultRetryable(status),
+          category:
+            typeof delta.category === "string" && delta.category
+              ? delta.category
+              : "model_provider_failure",
+          requestId:
+            typeof delta.request_id === "string" && delta.request_id
+              ? delta.request_id
+              : undefined,
+        },
       );
     }
     await onEvent?.(parsed);
