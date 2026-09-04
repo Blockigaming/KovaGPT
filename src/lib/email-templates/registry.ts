@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import { template as helpContactNotification } from "./help-contact-notification";
 import { template as helpContactAutoreply } from "./help-contact-autoreply";
+import { template as projectInvite } from "./project-invite";
+import { template as sharedChat } from "./shared-chat";
 
 export type TemplateData = Record<string, unknown>;
 
@@ -16,4 +18,6 @@ export interface TemplateEntry {
 export const TEMPLATES: Record<string, TemplateEntry> = {
   "help-contact-notification": helpContactNotification,
   "help-contact-autoreply": helpContactAutoreply,
+  "project-invite": projectInvite,
+  "shared-chat": sharedChat,
 };
