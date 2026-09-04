@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { captureCandidateVisual } from "./candidate-visual-evidence";
 import { waitForKovaHydration } from "./hydration";
 
 type ThemeMode = "light" | "dark";
@@ -135,6 +136,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
     maxDiffPixelRatio: 0.005,
     scale: "css",
   });
+  await captureCandidateVisual(page, testInfo, `guest-auth-dialog-${theme}`);
   expect(authNetwork.writes).toEqual([]);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 });
