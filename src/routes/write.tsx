@@ -301,10 +301,7 @@ function WritePage() {
         await exportDocumentPdf(title, text);
       } else {
         const escapeHtml = (value: string) =>
-          value
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;");
+          value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
         downloadBlob(
           new Blob(
             [
