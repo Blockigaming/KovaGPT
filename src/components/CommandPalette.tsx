@@ -679,7 +679,9 @@ export function CommandPalette({
                 <button
                   type="button"
                   className="min-h-11 rounded-lg border px-3 text-foreground hover:bg-accent"
-                  onKeyDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.stopPropagation();
+                  }}
                   onClick={retryWorkspaceSearch}
                 >
                   Retry
