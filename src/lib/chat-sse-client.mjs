@@ -1,4 +1,5 @@
 const DEFAULT_MAX_BUFFER_CHARS = 2 * 1024 * 1024;
+const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
 const MAX_ERROR_BODY_BYTES = 64 * 1024;
 
 function defaultRetryable(status) {
@@ -20,16 +21,29 @@ function abortReason(signal) {
   return error;
 }
 
-async function readWithSignal(reader, signal) {
-  if (!signal) return reader.read();
-  if (signal.aborted) throw abortReason(signal);
+async function readWithSignal(reader, signal, idleTimeoutMs) {
+  if (signal?.aborted) throw abortReason(signal);
   let onAbort;
   const aborted = new Promise((_, reject) => {
+    if (!signal) return;
     onAbort = () => reject(abortReason(signal));
     signal.addEventListener("abort", onAbort, { once: true });
   });
+  const timedOut = new Promise((_, reject) => {
+    setTimeout(
+      () =>
+        reject(
+          new ChatStreamError(
+            "chat_stream_timeout",
+            "KovaGPT took too long to continue this response. Please retry.",
+            { status: 504, retryable: true },
+          ),
+        ),
+      idleTimeoutMs,
+    );
+  });
   try {
-    return await Promise.race([reader.read(), aborted]);
+    return await Promise.race([reader.read(), aborted, timedOut]);
   } finally {
     if (onAbort) signal.removeEventListener("abort", onAbort);
   }
@@ -52,13 +66,21 @@ function protocolError(code, message) {
 
 export async function consumeChatSse(
   stream,
-  { signal, onEvent, maxBufferChars = DEFAULT_MAX_BUFFER_CHARS } = {},
+  {
+    signal,
+    onEvent,
+    maxBufferChars = DEFAULT_MAX_BUFFER_CHARS,
+    idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
+  } = {},
 ) {
   if (!stream || typeof stream.getReader !== "function") {
     throw protocolError("chat_stream_missing_body", "KovaGPT returned an empty response.");
   }
   if (!Number.isSafeInteger(maxBufferChars) || maxBufferChars < 1) {
     throw new TypeError("maxBufferChars must be a positive safe integer");
+  }
+  if (!Number.isFinite(idleTimeoutMs) || idleTimeoutMs <= 0) {
+    throw new TypeError("idleTimeoutMs must be a positive finite number");
   }
 
   const reader = stream.getReader();
@@ -98,7 +120,7 @@ export async function consumeChatSse(
 
   try {
     while (!receivedDone) {
-      const { done, value } = await readWithSignal(reader, signal);
+      const { done, value } = await readWithSignal(reader, signal, Math.floor(idleTimeoutMs));
       if (done) {
         buffer += decoder.decode();
         if (buffer) {
