@@ -54,4 +54,6 @@ test("Work exposes history but browser execution fails closed", async () => {
   assert.match(disabledTeamCreate, /throw new Error\("agent_team_execution_unavailable"\)/);
   assert.doesNotMatch(disabledTeamCreate, /\.from\("agent_runs"\)|status: "queued"/);
   assert.match(teamExecution, /command !== "cancel" && command !== "deny"/);
+  assert.match(teamExecution, /rawUser\(caller\)\.rpc\("control_disabled_agent_team_run"/);
+  assert.doesNotMatch(teamExecution, /\.from\("agent_run_tasks"\)[\s\S]*?\.update\(/);
 });
