@@ -47,10 +47,7 @@ test("image Library saves use a deterministic private path and safe concurrent r
 
 test("newly generated images auto-save with durable retry and truthful status", () => {
   assert.match(imageRoute, /libraryStatus: "saving"/);
-  assert.match(
-    imageRoute,
-    /saveGeneratedImage\(historyItem, \{ automatic: true \}\)/,
-  );
+  assert.match(imageRoute, /saveGeneratedImage\(historyItem, \{ automatic: true \}\)/);
   assert.match(imageRoute, /idempotencyKey: item\.id/);
   assert.match(imageRoute, /Saved to Library/);
   assert.match(imageRoute, /Retry Library save/);
