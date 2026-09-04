@@ -12,7 +12,7 @@ jobs:
   validate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -29,22 +29,34 @@ jobs:
           worker/src/email-dispatcher.mjs
           worker/src/email-worker.mjs
           worker/scripts/email-health-check.mjs
+          src/lib/resend-webhook.mjs
+          src/lib/resend-webhook.d.ts
           src/routes/api/public/help-submit.ts
+          src/routes/api/public/email/webhook.ts
           tests/unit/email-worker.test.mjs
+          tests/unit/resend-webhook.test.mjs
           tests/integration/email-worker-source.test.mjs
           docs/email-worker.md
       - run: node --check worker/src/email-dispatcher.mjs
       - run: node --check worker/src/email-worker.mjs
-      - run: node --test tests/unit/email-worker.test.mjs tests/integration/email-worker-source.test.mjs
+      - run: node --check src/lib/resend-webhook.mjs
+      - run: >-
+          node --test
+          tests/unit/email-worker.test.mjs
+          tests/unit/resend-webhook.test.mjs
+          tests/integration/email-worker-source.test.mjs
+      - run: npm run release:manifest
+      - run: npm run release:schema
+      - run: npx vite build
       - run: npm run lint
       - run: npm run typecheck
       - run: docker build -f worker/Dockerfile.email -t kovagpt-email-worker:test .
-      - name: Commit formatting
+      - name: Commit formatting and generated contracts
         run: |
           git diff --check
           if git diff --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add             package.json             worker/package.json             worker/src/email-dispatcher.mjs             worker/src/email-worker.mjs             worker/scripts/email-health-check.mjs             src/routes/api/public/help-submit.ts             tests/unit/email-worker.test.mjs             tests/integration/email-worker-source.test.mjs             docs/email-worker.md
-          git commit -m "chore(email): format worker sources"
+          git add             .env.example             package.json             worker/package.json             worker/src/email-dispatcher.mjs             worker/src/email-worker.mjs             worker/scripts/email-health-check.mjs             src/lib/resend-webhook.mjs             src/lib/resend-webhook.d.ts             src/routes/api/public/help-submit.ts             src/routes/api/public/email/webhook.ts             src/routeTree.gen.ts             tests/unit/email-worker.test.mjs             tests/unit/resend-webhook.test.mjs             tests/integration/email-worker-source.test.mjs             docs/email-worker.md             release-migrations.json             database-contract.json
+          git commit -m "chore(email): format and refresh generated contracts"
           git push origin HEAD:codex/email-dispatch-worker-20260904
