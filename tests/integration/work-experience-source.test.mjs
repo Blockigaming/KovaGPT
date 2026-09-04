@@ -10,6 +10,10 @@ const migration = await readFile(
   "supabase/migrations/20260728090000_helios_agent_runtime.sql",
   "utf8",
 );
+const terminalControlMigration = await readFile(
+  "supabase/migrations/20260904100000_agent_team_atomic_terminal_controls.sql",
+  "utf8",
+);
 
 test("Work is loaded from persisted runs, events, deliverables, and approvals", () => {
   for (const contract of [
@@ -58,6 +62,21 @@ test("consequential Work transitions are validated in security-definer RPCs", ()
   assert.match(migration, /grant execute on function public\.decide_agent_approval/);
   assert.match(server, /action: z\.literal\("cancel"\)/);
   assert.match(server, /decision: z\.literal\("denied"\)/);
+  assert.match(terminalControlMigration, /auth\.uid\(\)/);
+  assert.match(terminalControlMigration, /from public\.agent_runs[\s\S]*?for update/);
+  assert.match(terminalControlMigration, /update public\.agent_run_tasks/);
+  assert.match(terminalControlMigration, /update public\.agent_runs/);
+  assert.match(terminalControlMigration, /insert into public\.agent_run_events/);
+  assert.match(
+    terminalControlMigration,
+    /revoke all on function public\.control_disabled_agent_team_run[\s\S]*?from public, anon, service_role/,
+  );
+  assert.match(
+    terminalControlMigration,
+    /grant execute on function public\.control_disabled_agent_team_run[\s\S]*?to authenticated/,
+  );
+  assert.match(teamServer, /rawUser\(caller\)\.rpc\("control_disabled_agent_team_run"/);
+  assert.doesNotMatch(teamServer, /\.from\("agent_run_tasks"\)[\s\S]*?\.update\(/);
 });
 
 test("Work graph, evidence, inspector, and revision controls are interactive", () => {
