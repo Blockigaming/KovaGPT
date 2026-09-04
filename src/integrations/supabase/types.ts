@@ -1413,6 +1413,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      library_folder_locks: {
+        Row: {
+          touched_at: string;
+          user_id: string;
+        };
+        Insert: {
+          touched_at?: string;
+          user_id: string;
+        };
+        Update: {
+          touched_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      library_folders: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          parent_id: string | null;
+          position: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          parent_id?: string | null;
+          position?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          parent_id?: string | null;
+          position?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "library_folders_parent_owner_fk";
+            columns: ["parent_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       user_library_items: {
         Row: {
           content_text: string | null;
@@ -1421,6 +1474,7 @@ export type Database = {
           file_size: number | null;
           file_type: string | null;
           file_url: string | null;
+          folder_id: string | null;
           id: string;
           item_type: string;
           metadata: Json | null;
@@ -1436,6 +1490,7 @@ export type Database = {
           file_size?: number | null;
           file_type?: string | null;
           file_url?: string | null;
+          folder_id?: string | null;
           id?: string;
           item_type: string;
           metadata?: Json | null;
@@ -1451,6 +1506,7 @@ export type Database = {
           file_size?: number | null;
           file_type?: string | null;
           file_url?: string | null;
+          folder_id?: string | null;
           id?: string;
           item_type?: string;
           metadata?: Json | null;
@@ -1459,7 +1515,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "user_library_items_folder_id_fkey";
+            columns: ["folder_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_onboarding: {
         Row: {

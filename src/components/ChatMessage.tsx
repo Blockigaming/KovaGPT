@@ -572,7 +572,12 @@ function ChatMessageInner({
                   const chip = detectInfoChip(cleaned);
                   if (chip)
                     return (
-                      <InfoChip kind={chip} rawText={cleaned}>
+                      <InfoChip
+                        kind={chip}
+                        rawText={cleaned}
+                        userKey={userKey}
+                        principalResolved={principalResolved}
+                      >
                         {markdown}
                       </InfoChip>
                     );

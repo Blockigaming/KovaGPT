@@ -174,7 +174,7 @@ export async function getGoogleConnection(userId: string) {
   const db = admin();
   const { data } = await db
     .from("google_oauth_tokens")
-    .select("email, scopes, expires_at, refresh_token")
+    .select("email, google_sub, scopes, expires_at, refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
   return data;
@@ -313,15 +313,18 @@ export async function disconnectGoogle(userId: string) {
   if (error) throw new Error("google_token_purge_failed");
 }
 
-async function refreshAccessToken(userId: string): Promise<string> {
+async function refreshAccessToken(userId: string, expectedGoogleSub?: string): Promise<string> {
   const db = admin();
   const { data, error } = await db
     .from("google_oauth_tokens")
-    .select("refresh_token")
+    .select("refresh_token, google_sub")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data?.refresh_token) {
     throw new Error("google_not_connected");
+  }
+  if (expectedGoogleSub && data.google_sub !== expectedGoogleSub) {
+    throw new Error("google_connection_changed");
   }
   const refreshToken = await decryptGoogleToken(data.refresh_token);
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -343,27 +346,38 @@ async function refreshAccessToken(userId: string): Promise<string> {
   }
   const t = (await res.json()) as TokenResponse;
   const expiresAt = new Date(Date.now() + (t.expires_in - 30) * 1000).toISOString();
-  await db
+  let refreshUpdate = db
     .from("google_oauth_tokens")
     .update({
       access_token: await encryptGoogleToken(t.access_token),
       expires_at: expiresAt,
     })
     .eq("user_id", userId);
+  if (expectedGoogleSub) {
+    refreshUpdate = refreshUpdate.eq("google_sub", expectedGoogleSub);
+  }
+  const { error: updateError } = await refreshUpdate;
+  if (updateError) throw new Error("google_token_refresh_persist_failed");
   return t.access_token;
 }
 
-export async function getValidGoogleAccessToken(userId: string): Promise<string> {
+export async function getValidGoogleAccessToken(
+  userId: string,
+  expectedGoogleSub?: string,
+): Promise<string> {
   const db = admin();
   const { data, error } = await db
     .from("google_oauth_tokens")
-    .select("access_token, expires_at")
+    .select("access_token, expires_at, google_sub")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) throw new Error("google_not_connected");
+  if (expectedGoogleSub && data.google_sub !== expectedGoogleSub) {
+    throw new Error("google_connection_changed");
+  }
   if (new Date(data.expires_at).getTime() > Date.now() + 5000)
     return decryptGoogleToken(data.access_token);
-  return refreshAccessToken(userId);
+  return refreshAccessToken(userId, expectedGoogleSub);
 }
 
 export async function logAudit(opts: {

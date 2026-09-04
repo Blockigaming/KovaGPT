@@ -19,7 +19,11 @@ test.describe("product completeness responsive scaffolding", () => {
     await composer.click();
     await page.waitForTimeout(250);
     await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
-    await expect(page.getByRole("dialog", { name: "Search chats and actions" })).toBeVisible();
+    await expect(
+      page.getByRole("dialog", {
+        name: "Search workspace, chats, and actions",
+      }),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
     await page.goto("/notifications", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
