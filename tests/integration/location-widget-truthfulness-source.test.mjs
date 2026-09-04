@@ -11,6 +11,8 @@ const mapWidget = read("src/components/MapWidget.tsx");
 const settings = read("src/components/SettingsDialog.tsx");
 const settingsStorage = read("src/lib/settings-storage.ts");
 const modes = read("src/lib/modes.ts");
+const start = read("src/start.ts");
+const server = read("src/server.ts");
 
 test("location cards receive and isolate the resolved browser principal", () => {
   assert.match(
@@ -58,4 +60,13 @@ test("location and copy controls expose truthful success and failure states", ()
   assert.match(modes, /Browser-stored coordinates[\s\S]*not included in chat requests/);
   assert.match(modes, /ask them to provide the relevant city, region, or place/);
   assert.doesNotMatch(modes, /mention enabling it once at most per conversation/);
+});
+
+test("both production response paths allow the OpenStreetMap card frame", () => {
+  for (const source of [start, server]) {
+    assert.match(
+      source,
+      /frame-src https:\/\/js\.stripe\.com https:\/\/hooks\.stripe\.com https:\/\/www\.openstreetmap\.org/,
+    );
+  }
 });
