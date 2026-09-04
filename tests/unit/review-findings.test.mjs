@@ -186,7 +186,10 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
   for (const source of [checkout, apiAuth, clientTier])
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
-  assert.match(apiAuth, /tierForLookupKey\(row\.price_id\)/);
-  assert.match(clientTier, /tierForLookupKey\(row\.price_id\)/);
-  assert.match(webhook, /resolveBillingPlan\(candidate\)/);
+  assert.match(apiAuth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, caller\.userId\)/);
+  assert.match(clientTier, /rpc\("current_subscription_summary"\)/);
+  assert.doesNotMatch(apiAuth, /tierForLookupKey|\.from\("subscriptions"\)/);
+  assert.doesNotMatch(clientTier, /tierForLookupKey|\.from\("subscriptions"\)/);
+  assert.match(webhook, /from\("billing_plan_tiers"\)/);
+  assert.match(webhook, /mapping\.stripe_price_id|stripe_price_id/);
 });

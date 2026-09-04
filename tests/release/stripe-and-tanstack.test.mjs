@@ -14,10 +14,17 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
     ),
+    reliability = await readFile(
+      new URL("../../src/lib/webhook-reliability.mjs", import.meta.url),
+      "utf8",
+    ),
     pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
 
   assert.equal(pkg.dependencies.stripe, "22.6.0");
   assert.match(stripeSource, /apiVersion: "2026-08-26\.dahlia"/);
+  assert.match(stripeSource, /const stripeClients = new Map/);
+  assert.match(stripeSource, /cached\?\.apiKey === connectionApiKey/);
+  assert.match(stripeSource, /stripeClients\.set\(env,/);
   assert.match(stripeSource, /req\.text\(\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
@@ -30,15 +37,28 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
   assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
   assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
+  assert.match(checkoutSource, /claim_stripe_checkout_attempt/);
+  assert.match(checkoutSource, /_trial_eligible: requestedTrialEligibility/);
+  assert.match(checkoutSource, /idempotencyKey: `kova-checkout-/);
+  assert.match(
+    checkoutSource,
+    /subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/,
+  );
+  assert.match(checkoutSource, /stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/);
+  assert.match(checkoutSource, /\.select\("status, current_period_end"\)/);
+  assert.match(checkoutSource, /if \(!session\.client_secret\)/);
+  assert.doesNotMatch(checkoutSource, /client_secret \?\? ""/);
   assert.match(
     checkoutSource,
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
   );
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
   assert.match(hook, /processStripeEvent/);
-  assert.match(hook, /createStripeClient\(env\)\.subscriptions\.retrieve/);
-  assert.match(hook, /status: verificationFailure \? 400 : 503/);
-  assert.match(hook, /"Retry-After": "5"/);
+  assert.match(reliability, /rpc\("begin_stripe_event"/);
+  assert.match(reliability, /rpc\("complete_stripe_event"/);
+  assert.doesNotMatch(reliability, /currentSubscriptionTimestamp/);
+  assert.match(reliability, /retrieveSubscription/);
+  assert.doesNotMatch(reliability, /processed_stripe_events"\)\s*\.delete/);
   assert.match(hook, /correlationId/);
   assert.doesNotMatch(hook, /console\.(log|error)/);
 });

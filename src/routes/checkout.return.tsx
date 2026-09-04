@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 
 export const Route = createFileRoute("/checkout/return")({
@@ -13,14 +13,13 @@ export const Route = createFileRoute("/checkout/return")({
       {
         name: "description",
         content:
-          "Your KovaGPT subscription is now active. Access advanced AI modes, web search, image generation, and priority models on every device.",
+          "KovaGPT is verifying your checkout with Stripe. Subscription access appears only after server-side confirmation.",
       },
       { name: "robots", content: "noindex, nofollow" },
-      { property: "og:title", content: "Payment Successful - KovaGPT" },
+      { property: "og:title", content: "Checkout verification - KovaGPT" },
       {
         property: "og:description",
-        content:
-          "Your KovaGPT subscription is now active. Access all advanced AI modes and priority features.",
+        content: "KovaGPT is verifying the checkout result with Stripe.",
       },
       { property: "og:url", content: "https://kovagpt.com/checkout/return" },
     ],
@@ -36,20 +35,21 @@ function CheckoutReturn() {
         <NovaLogo className="w-12 h-12 mx-auto mb-4" />
         {session_id ? (
           <>
-            <div className="w-14 h-14 rounded-full bg-green-500/20 text-green-500 mx-auto mb-4 grid place-items-center">
-              <Check className="w-7 h-7" />
+            <div className="w-14 h-14 rounded-full bg-muted text-muted-foreground mx-auto mb-4 grid place-items-center">
+              <Clock3 className="w-7 h-7" />
             </div>
-            <h1 className="text-2xl font-semibold mb-2">Subscription activated</h1>
+            <h1 className="text-2xl font-semibold mb-2">Checkout received</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              Your subscription is active. Welcome to KovaGPT.
+              Stripe returned you to KovaGPT. We're verifying the subscription server-side; access
+              will update only after that confirmation. You can refresh billing status in Settings.
             </p>
           </>
         ) : (
           <>
             <h1 className="text-2xl font-semibold mb-2">No session found</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              We couldn't find your checkout session. If you completed a payment, it should still go
-              through.
+              We couldn't identify a checkout session from this page. This does not confirm a charge
+              or an active subscription. Check billing status in Settings or contact support.
             </p>
           </>
         )}

@@ -1,3 +1,4 @@
+import { PUBLIC_STRIPE_ACCOUNT_ID } from "@/config/public-config";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 
 export type CapabilityState =
@@ -30,6 +31,38 @@ function supabaseConfigured(): boolean {
   );
 }
 
+function stripeAccountConfigured(): boolean {
+  return runtimeEnv("STRIPE_LIVE_ACCOUNT_ID") === PUBLIC_STRIPE_ACCOUNT_ID;
+}
+
+function stripeServerKeyConfigured(): boolean {
+  return /^(?:rk|sk)_live_[A-Za-z0-9]+$/u.test(runtimeEnv("STRIPE_LIVE_API_KEY") ?? "");
+}
+
+function stripeWebhookConfigured(): boolean {
+  return (
+    stripeAccountConfigured() &&
+    stripeServerKeyConfigured() &&
+    /^whsec_[A-Za-z0-9]+$/u.test(runtimeEnv("PAYMENTS_LIVE_WEBHOOK_SECRET") ?? "")
+  );
+}
+
+function stripeCheckoutConfigured(): boolean {
+  return (
+    stripeAccountConfigured() &&
+    stripeServerKeyConfigured() &&
+    /^pk_live_[A-Za-z0-9]+$/u.test(runtimeEnv("VITE_PAYMENTS_CLIENT_TOKEN") ?? "")
+  );
+}
+
+function stripePortalConfigured(): boolean {
+  return (
+    stripeAccountConfigured() &&
+    stripeServerKeyConfigured() &&
+    /^bpc_[A-Za-z0-9]+$/u.test(runtimeEnv("STRIPE_BILLING_PORTAL_CONFIGURATION_ID") ?? "")
+  );
+}
+
 function aiProviderConfigured(): boolean {
   if (runtimeEnv("AZURE_OPENAI_ENDPOINT")) {
     const authenticated =
@@ -54,7 +87,12 @@ export function structuralReadiness(): ReadinessReport {
     supabase: capability(supabaseConfigured(), false),
     aiProvider: capability(aiProviderConfigured()),
     agentRunner: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
-    stripe: capability(present("STRIPE_LIVE_API_KEY", "PAYMENTS_LIVE_WEBHOOK_SECRET")),
+    stripe: capability(
+      stripeWebhookConfigured() && stripeCheckoutConfigured() && stripePortalConfigured(),
+    ),
+    stripeWebhook: capability(stripeWebhookConfigured()),
+    stripeCheckout: capability(stripeCheckoutConfigured()),
+    stripePortal: capability(stripePortalConfigured()),
     email: capability(any("RESEND_API_KEY", "EMAIL_API_KEY")),
     google: capability(
       present("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"),

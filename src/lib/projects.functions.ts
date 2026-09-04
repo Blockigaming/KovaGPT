@@ -30,16 +30,16 @@ export const PROJECT_LIMITS: Record<
   pro: { projects: 200, filesPerProject: 40 },
 };
 
-async function planTier(supabase: unknown, userId: string): Promise<"free" | "plus" | "pro"> {
+async function planTier(supabase: unknown): Promise<"free" | "plus" | "pro"> {
   try {
-    const s = supabase as {
-      rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
+    const client = supabase as {
+      rpc: (name: string) => Promise<{ data: unknown }>;
     };
-    const { data } = await s.rpc("user_plan_tier", { _user_id: userId });
-    const t = String(data ?? "free");
-    if (t === "pro" || t === "plus") return t;
+    const { data } = await client.rpc("current_effective_plan_tier");
+    const tier = String(data ?? "free");
+    if (tier === "pro" || tier === "plus") return tier;
   } catch {
-    /* ignore */
+    /* fail closed */
   }
   return "free";
 }
@@ -171,7 +171,7 @@ export const createProject = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     // Enforce per-plan active-project cap (owned by user).
-    const tier = await planTier(context.supabase, context.userId);
+    const tier = await planTier(context.supabase);
     const cap = PROJECT_LIMITS[tier].projects;
     const { count } = await context.supabase
       .from("projects")
@@ -241,7 +241,7 @@ export const duplicateProject = createServerFn({ method: "POST" })
     if (sErr || !src) throw new Error("Project not found");
 
     // Enforce plan cap
-    const tier = await planTier(context.supabase, context.userId);
+    const tier = await planTier(context.supabase);
     const cap = PROJECT_LIMITS[tier].projects;
     const { count } = await context.supabase
       .from("projects")

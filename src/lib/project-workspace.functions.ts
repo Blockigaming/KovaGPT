@@ -302,11 +302,11 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
     // Enforce per-plan file cap per project
     const { PROJECT_LIMITS } = await import("./projects.functions");
     const s = context.supabase as unknown as {
-      rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }>;
+      rpc: (name: string) => Promise<{ data: unknown }>;
     };
     let tier: "free" | "plus" | "pro" = "free";
     try {
-      const { data: t } = await s.rpc("user_plan_tier", { _user_id: context.userId });
+      const { data: t } = await s.rpc("current_effective_plan_tier");
       const v = String(t ?? "free");
       if (v === "pro" || v === "plus") tier = v;
     } catch {

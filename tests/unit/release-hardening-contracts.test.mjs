@@ -112,13 +112,14 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
   assert.deepEqual(verifyCheckoutRequestBoundary(), []);
 
   const valid = {
-    webhookSource:
-      'normalizeStripeEnvironment value === "sandbox" || value === "live" processStripeEvent createStripeClient webhook_processing_failed status: verificationFailure ? 400 : 503',
+    webhookSource: 'normalizeStripeEnvironment value === "sandbox" || value === "live"',
+    reliabilitySource:
+      'rpc("begin_stripe_event" await retrieveSubscription(subscriptionId) rpc("complete_stripe_event"',
     stripeSource:
       'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
-    planSource: "plus_monthly pro_monthly",
+    planSource: "plus_monthly pro_monthly livePriceId price_1UAzhHAEZlsb6DBYWw2oUCeO",
     checkoutSource:
-      '.validator((data: unknown) => { const parsed = parseCheckoutRequest(data); if (!resolveBillingPlan(parsed.priceId)) throw new Error("Invalid priceId"); return parsed; }) const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef", return_url: CHECKOUT_RETURN_URL }; stripe.checkout.sessions.create(sessionParams)',
+      '.validator((data: unknown) => { const parsed = parseCheckoutRequest(data); if (!resolveBillingPlan(parsed.priceId)) throw new Error("Invalid priceId"); return parsed; }) resolveStripeCustomerId claim_stripe_checkout_attempt _trial_eligible: requestedTrialEligibility subscriptions.list({ customer: customerId, status: "all", limit: 100 }) stripeSubscriptionBlocksCheckout(subscription, nowSeconds) const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef", return_url: CHECKOUT_RETURN_URL }; stripe.checkout.sessions.create(sessionParams, { idempotencyKey: `kova-checkout-live-user-id` }); if (!session.client_secret) throw new Error("missing")',
   };
   assert.deepEqual(verifyStripeTestPath(valid), []);
 

@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      billing_plan_tiers: {
+        Row: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Insert: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Update: {
+          environment?: string;
+          lookup_key?: string;
+          stripe_price_id?: string;
+          tier?: string;
+        };
+        Relationships: [];
+      };
       ai_generation_events: {
         Row: {
           actual_cost_usd: number | null;
@@ -763,21 +784,66 @@ export type Database = {
       };
       processed_stripe_events: {
         Row: {
+          checkout_session_id: string | null;
+          completed_at: string | null;
+          correlation_id: string | null;
+          customer_id: string | null;
           environment: string;
+          event_created_at: string | null;
           event_id: string;
+          invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          object_id: string | null;
+          observation_sequence: number | null;
+          outcome: string;
+          payload_hash: string | null;
           processed_at: string;
+          processing_status: string;
+          retryable: boolean;
+          subscription_id: string | null;
           type: string;
         };
         Insert: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment: string;
+          event_created_at?: string | null;
           event_id: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type: string;
         };
         Update: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment?: string;
+          event_created_at?: string | null;
           event_id?: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type?: string;
         };
         Relationships: [];
@@ -1257,6 +1323,156 @@ export type Database = {
         };
         Relationships: [];
       };
+      stripe_checkout_attempts: {
+        Row: {
+          created_at: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          trial_eligible: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          idempotency_expires_at?: string;
+          idempotency_key?: string;
+          session_expires_at?: string;
+          stripe_price_id?: string;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      stripe_event_processing_claims: {
+        Row: {
+          checkout_session_id: string | null;
+          correlation_id: string | null;
+          created_at: string;
+          customer_id: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          object_id: string | null;
+          observation_sequence: number | null;
+          outcome: string;
+          subscription_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment?: string;
+          event_created_at?: string;
+          event_id?: string;
+          event_type?: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_subscription_sync_state: {
+        Row: {
+          active_event_id: string | null;
+          active_lease_expires_at: string | null;
+          active_lease_token: string | null;
+          active_observation_sequence: number | null;
+          applied_observation_sequence: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment?: string;
+          stripe_subscription_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_customer_mappings: {
+        Row: {
+          created_at: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          stripe_customer_id?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null;
@@ -1267,6 +1483,7 @@ export type Database = {
           id: string;
           last_stripe_event_created_at: string | null;
           last_stripe_event_id: string | null;
+          last_stripe_observation_sequence: number | null;
           price_id: string;
           product_id: string;
           status: string;
@@ -1284,6 +1501,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id: string;
           product_id: string;
           status?: string;
@@ -1301,6 +1519,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id?: string;
           product_id?: string;
           status?: string;
@@ -1625,6 +1844,52 @@ export type Database = {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
       };
+      begin_stripe_event: {
+        Args: {
+          _checkout_session_id?: string;
+          _correlation_id?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_created_at: string;
+          _event_id: string;
+          _event_type: string;
+          _invoice_id?: string;
+          _lease_seconds?: number;
+          _object_id?: string;
+          _outcome: string;
+          _subscription_id?: string;
+        };
+        Returns: Json;
+      };
+      claim_stripe_checkout_attempt: {
+        Args: {
+          _environment: string;
+          _price_id: string;
+          _trial_eligible: boolean;
+          _user_id: string;
+        };
+        Returns: Json;
+      };
+      complete_stripe_event: {
+        Args: {
+          _apply_subscription: boolean;
+          _cancel_at_period_end?: boolean;
+          _current_period_end?: string;
+          _current_period_start?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_id: string;
+          _lease_token: string;
+          _observation_sequence: number;
+          _price_id?: string;
+          _product_id?: string;
+          _status?: string;
+        };
+        Returns: Json;
+      };
+      current_effective_plan_tier: { Args: never; Returns: string };
+      current_subscription_summary: { Args: never; Returns: Json };
+      current_user_plan_tier: { Args: never; Returns: string };
       delete_email: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -1879,7 +2144,10 @@ export type Database = {
         };
         Returns: boolean;
       };
+      billing_user_plan_tier: { Args: { _user_id: string }; Returns: string };
+      effective_user_plan_tier: { Args: { _user_id: string }; Returns: string };
       user_plan_tier: { Args: { _user_id: string }; Returns: string };
+      user_subscription_summary: { Args: { _user_id: string }; Returns: Json };
     };
     Enums: {
       project_role: "owner" | "editor" | "viewer";

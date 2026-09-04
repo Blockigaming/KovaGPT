@@ -2,22 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-type SubscriptionQueryLike = {
-  from: (table: string) => {
-    select: (columns: string) => {
-      eq: (
-        column: string,
-        value: unknown,
-      ) => {
-        in: (
-          column: string,
-          values: unknown[],
-        ) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
-      };
-    };
-  };
-};
-
 type SupabaseQueryLike = {
   from: (table: string) => SupabaseQueryLike;
   select: (columns?: string) => SupabaseQueryLike;
@@ -46,46 +30,19 @@ export type ScheduledTask = {
 
 const RepeatEnum = z.enum(["none", "daily", "weekly", "monthly"]);
 
-function classifyTier(priceId: string | null | undefined): "free" | "plus" | "pro" {
-  const id = (priceId ?? "").toLowerCase();
-  if (id.includes("pro")) return "pro";
-  if (id.includes("plus")) return "plus";
-  return "free";
-}
-
-async function ensurePlusOrAbove(supabase: unknown, userId: string): Promise<"plus" | "pro"> {
-  const { data, error } = await (supabase as SubscriptionQueryLike)
-    .from("subscriptions")
-    .select("status, current_period_end, price_id")
-    .eq("user_id", userId)
-    .in("status", ["active", "trialing"]);
+async function ensurePlusOrAbove(supabase: unknown): Promise<"plus" | "pro"> {
+  const client = supabase as {
+    rpc: (name: string) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+  const { data, error } = await client.rpc("current_effective_plan_tier");
   if (error) {
     console.error("[serverfn]", error.message);
     throw new Error("Request failed. Please try again.");
   }
-  const active = (
-    (data ?? []) as {
-      status?: string;
-      current_period_end?: string | null;
-      price_id?: string | null;
-    }[]
-  ).filter(
-    (r: { status?: string; current_period_end?: string | null; price_id?: string | null }) =>
-      ["active", "trialing"].includes(r.status ?? "") &&
-      (!r.current_period_end || new Date(r.current_period_end) > new Date()),
-  );
-  if (active.length === 0) {
+  if (data !== "plus" && data !== "pro") {
     throw new Error("Scheduled tasks are available on Plus, Pro, and higher plans.");
   }
-  let tier: "plus" | "pro" = "plus";
-  for (const row of active) {
-    const t = classifyTier(row.price_id ?? null);
-    if (t === "pro") {
-      tier = "pro";
-      break;
-    }
-  }
-  return tier;
+  return data;
 }
 
 const MAX_TASKS: Record<"plus" | "pro", number> = { plus: 5, pro: 20 };
@@ -98,18 +55,12 @@ export const scheduledExecutionAvailable = false;
 export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ eligible: boolean; executionAvailable: boolean }> => {
-    const { data, error } = await context.supabase
-      .from("subscriptions")
-      .select("status, current_period_end")
-      .eq("user_id", context.userId)
-      .in("status", ["active", "trialing"]);
-    if (error) throw new Error("Plan status could not be checked. Please try again.");
-    const ok = (data ?? []).some(
-      (r: { status?: string; current_period_end?: string | null; price_id?: string | null }) =>
-        ["active", "trialing"].includes(r.status ?? "") &&
-        (!r.current_period_end || new Date(r.current_period_end) > new Date()),
-    );
-    return { eligible: ok, executionAvailable: scheduledExecutionAvailable };
+    try {
+      await ensurePlusOrAbove(context.supabase);
+      return { eligible: true, executionAvailable: scheduledExecutionAvailable };
+    } catch {
+      return { eligible: false, executionAvailable: scheduledExecutionAvailable };
+    }
   });
 
 export const listScheduledTasks = createServerFn({ method: "POST" })
@@ -143,7 +94,7 @@ export const createScheduledTask = createServerFn({ method: "POST" })
         "Scheduled execution is not available in this deployment. No task was created.",
       );
     }
-    const tier = await ensurePlusOrAbove(context.supabase, context.userId);
+    const tier = await ensurePlusOrAbove(context.supabase);
     const { count, error: countError } = await context.supabase
       .from("scheduled_tasks")
       .select("id", { count: "exact", head: true })
@@ -194,7 +145,7 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) => UpdateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
-    await ensurePlusOrAbove(context.supabase, context.userId);
+    await ensurePlusOrAbove(context.supabase);
     const patch: Record<string, unknown> = {};
     if (data.title !== undefined) patch.title = data.title;
     if (data.prompt !== undefined) patch.prompt = data.prompt;

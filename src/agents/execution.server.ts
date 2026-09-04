@@ -1,5 +1,5 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
-import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { createClient } from "@supabase/supabase-js";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -18,22 +18,8 @@ export const AGENT_LIMITS: Record<
 };
 
 export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEntitlement | null> {
-  const { data, error } = await caller.supabaseAdmin
-    .from("subscriptions")
-    .select("price_id, status, current_period_end, environment")
-    .eq("user_id", caller.userId)
-    .eq("environment", BILLING_ENV)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(10);
-  if (error) {
-    console.error("[getAgentEntitlement] subscription lookup failed", error);
-    return null;
-  }
-  return resolveAgentEntitlement(data, {
-    billingEnvironment: BILLING_ENV,
-    tierForLookupKey,
-  });
+  const tier = await resolveEffectiveBillingTier(caller.supabaseAdmin, caller.userId);
+  return resolveAgentEntitlement(tier);
 }
 
 /** Browser automation remains intentionally unavailable until the isolated worker is deployed. */

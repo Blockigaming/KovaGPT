@@ -9,19 +9,19 @@ export class WebhookProcessingError extends Error {
   }
 }
 
-function fail(code, status, cause) {
+function fail(code, status = 500, cause) {
   throw new WebhookProcessingError(code, status, cause);
 }
 
 function requireResult(result, code, { requireData = false } = {}) {
   if (result?.error) fail(code, 500, result.error);
-  if (requireData && !result?.data) fail(`${code}_no_rows`, 500);
+  if (requireData && !result?.data) fail(`${code}_no_rows`);
   return result?.data ?? null;
 }
 
 function affectedRows(result, code) {
   const data = requireResult(result, code);
-  if (!Array.isArray(data)) fail(`${code}_missing_affected_rows`, 500);
+  if (!Array.isArray(data)) fail(`${code}_missing_affected_rows`);
   return data.length;
 }
 
@@ -33,58 +33,73 @@ function stringId(value) {
   return null;
 }
 
-function unixTimestamp(value, field) {
-  if (value === undefined || value === null) return null;
-  if (!Number.isSafeInteger(value) || value < 0) fail(`invalid_${field}`, 422);
+export function invoiceSubscriptionId(invoice) {
+  if (invoice?.parent?.type !== "subscription_details") return null;
+  return stringId(invoice.parent.subscription_details?.subscription);
+}
+
+function eventSubscriptionId(event) {
+  if (event.type.startsWith("customer.subscription.")) return stringId(event.data?.object);
+  if (event.type.startsWith("invoice.")) return invoiceSubscriptionId(event.data?.object);
+  return null;
+}
+
+function stripeTimestamp(value) {
+  if (value === null || value === undefined) return null;
+  if (!Number.isSafeInteger(value) || value < 0) {
+    fail("authoritative_subscription_timestamp_invalid");
+  }
   return new Date(value * 1000).toISOString();
 }
 
-function subscriptionRow(subscription, eventType, environment, resolvePriceId) {
-  const userId = subscription?.metadata?.userId;
-  const item = subscription?.items?.data?.[0];
-  const priceId = resolvePriceId(item);
+async function subscriptionRow(subscription, eventType, resolvePriceId) {
+  const items = subscription?.items;
+  if (!items || items.has_more !== false || !Array.isArray(items.data) || items.data.length !== 1) {
+    fail("authoritative_subscription_items_ambiguous");
+  }
+  const item = items.data[0];
+  let priceId;
+  try {
+    priceId = await resolvePriceId(item);
+  } catch (error) {
+    fail("stripe_price_registry_lookup_failed", 500, error);
+  }
   const customerId = stringId(subscription?.customer);
   const productId = stringId(item?.price?.product);
-  const status = eventType === "customer.subscription.deleted" ? "canceled" : subscription?.status;
-
   if (
     !subscription?.id ||
-    !userId ||
     !item ||
     !priceId ||
     !customerId ||
     !productId ||
-    typeof status !== "string" ||
-    !status
+    typeof subscription.status !== "string"
   ) {
-    fail("subscription_metadata_incomplete", 422);
+    fail("authoritative_subscription_incomplete");
   }
-
-  const periodStart = item.current_period_start ?? subscription.current_period_start;
-  const periodEnd = item.current_period_end ?? subscription.current_period_end;
-
+  const periodStart = item.current_period_start;
+  const periodEnd = item.current_period_end;
   return {
-    user_id: userId,
-    stripe_subscription_id: subscription.id,
-    stripe_customer_id: customerId,
-    product_id: productId,
-    price_id: priceId,
-    status,
-    current_period_start: unixTimestamp(periodStart, "subscription_period_start"),
-    current_period_end: unixTimestamp(periodEnd, "subscription_period_end"),
-    cancel_at_period_end:
+    subscriptionId: subscription.id,
+    customerId,
+    productId,
+    priceId,
+    status: eventType === "customer.subscription.deleted" ? "canceled" : subscription.status,
+    currentPeriodStart: stripeTimestamp(periodStart),
+    currentPeriodEnd: stripeTimestamp(periodEnd),
+    cancelAtPeriodEnd:
       eventType === "customer.subscription.deleted" || Boolean(subscription.cancel_at_period_end),
-    environment,
   };
 }
 
-const subscriptionReconciliationEvents = new Set([
+const subscriptionEvents = new Set([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
   "customer.subscription.paused",
   "customer.subscription.resumed",
-  "checkout.session.completed",
+]);
+
+const invoiceEvents = new Set([
   "invoice.paid",
   "invoice.payment_failed",
   "invoice.payment_action_required",
@@ -92,29 +107,50 @@ const subscriptionReconciliationEvents = new Set([
   "invoice.marked_uncollectible",
 ]);
 
-export function billingOutcome(type) {
-  if (type === "checkout.session.completed") return "verification_pending";
-  if (type === "checkout.session.expired") return "checkout_expired";
-  if (type === "invoice.paid") return "payment_confirmed";
-  if (type === "invoice.payment_failed") return "payment_failed";
-  if (type === "invoice.payment_action_required") return "payment_action_required";
-  if (["invoice.voided", "invoice.marked_uncollectible"].includes(type)) {
-    return "payment_uncollectible";
-  }
-  if (type === "customer.subscription.deleted") return "subscription_ended";
-  if (type.startsWith("customer.subscription.")) return "subscription_updated";
-  return "observed";
+function correlationUuid(value) {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value)
+    ? value
+    : null;
 }
 
-export function stripeSubscriptionId(event) {
-  if (!subscriptionReconciliationEvents.has(event?.type)) return null;
-  const object = event?.data?.object;
-  if (!object || typeof object !== "object" || Array.isArray(object)) return null;
-  if (event.type.startsWith("customer.subscription.")) return stringId(object);
+function beginResult(result) {
+  const value = requireResult(result, "stripe_event_begin_failed", {
+    requireData: true,
+  });
+  if (
+    typeof value !== "object" ||
+    typeof value.duplicate !== "boolean" ||
+    typeof value.busy !== "boolean"
+  ) {
+    fail("stripe_event_begin_invalid");
+  }
+  if (!value.duplicate && !value.busy) {
+    if (
+      !Number.isSafeInteger(value.observationSequence) ||
+      value.observationSequence <= 0 ||
+      typeof value.leaseToken !== "string" ||
+      !value.leaseToken
+    ) {
+      fail("stripe_event_lease_invalid");
+    }
+  }
+  return value;
+}
 
-  const direct = stringId(object.subscription);
-  if (direct) return direct;
-  return stringId(object.parent?.subscription_details?.subscription);
+function completionResult(result) {
+  const value = requireResult(result, "stripe_event_completion_failed", {
+    requireData: true,
+  });
+  if (
+    typeof value !== "object" ||
+    typeof value.duplicate !== "boolean" ||
+    typeof value.subscriptionApplied !== "boolean" ||
+    typeof value.orphaned !== "boolean"
+  ) {
+    fail("stripe_event_completion_invalid");
+  }
+  return value;
 }
 
 export async function processStripeEvent({
@@ -123,69 +159,84 @@ export async function processStripeEvent({
   environment,
   resolvePriceId,
   retrieveSubscription,
+  billingOutcome = () => "observed",
   correlationId = null,
 }) {
   if (
     !event?.id ||
     !event?.type ||
     !Number.isSafeInteger(event.created) ||
-    event.created < 1 ||
-    (environment !== "live" && environment !== "sandbox")
+    !event?.data ||
+    !("object" in event.data)
   ) {
     fail("stripe_event_incomplete", 400);
   }
-
-  const existing = await supabase
-    .from("processed_stripe_events")
-    .select("event_id")
-    .eq("event_id", event.id)
-    .maybeSingle();
-  if (requireResult(existing, "stripe_event_lookup_failed")) {
-    return { duplicate: true, applied: false };
+  if (environment !== "sandbox" && environment !== "live") {
+    fail("stripe_environment_invalid", 400);
   }
 
-  const eventObject = event.data?.object;
-  if (!eventObject || typeof eventObject !== "object" || Array.isArray(eventObject)) {
-    fail("stripe_event_object_invalid", 400);
+  const subscriptionId = eventSubscriptionId(event);
+  const requiresSubscription = subscriptionEvents.has(event.type);
+  if (requiresSubscription && !subscriptionId) {
+    fail("stripe_subscription_id_missing");
   }
 
-  const subscriptionId = stripeSubscriptionId(event);
-  let subscription = null;
-  if (subscriptionId) {
-    if (typeof retrieveSubscription !== "function") {
-      fail("stripe_subscription_retriever_missing", 500);
-    }
-    let canonical;
+  const object = event.data.object;
+  const claim = beginResult(
+    await supabase.rpc("begin_stripe_event", {
+      _event_id: event.id,
+      _event_created_at: new Date(event.created * 1000).toISOString(),
+      _event_type: event.type,
+      _environment: environment,
+      _outcome: billingOutcome(event.type),
+      _subscription_id: subscriptionId,
+      _correlation_id: correlationUuid(correlationId),
+      _object_id: stringId(object),
+      _customer_id: stringId(object?.customer),
+      _invoice_id: event.type.startsWith("invoice.") ? stringId(object) : null,
+      _checkout_session_id: event.type.startsWith("checkout.session.") ? stringId(object) : null,
+      _lease_seconds: 90,
+    }),
+  );
+
+  if (claim.duplicate) return { duplicate: true, orphaned: false };
+  if (claim.busy) fail("stripe_event_busy", 503);
+
+  let row = null;
+  if (requiresSubscription || (invoiceEvents.has(event.type) && subscriptionId)) {
+    let authoritativeSubscription;
     try {
-      canonical = await retrieveSubscription(subscriptionId);
+      authoritativeSubscription = await retrieveSubscription(subscriptionId);
     } catch (error) {
-      fail("stripe_subscription_retrieval_failed", 503, error);
+      fail("stripe_subscription_retrieve_failed", 500, error);
     }
-    subscription = subscriptionRow(canonical, event.type, environment, resolvePriceId);
+    if (!authoritativeSubscription || authoritativeSubscription.id !== subscriptionId) {
+      fail("stripe_subscription_retrieve_mismatch");
+    }
+    row = await subscriptionRow(authoritativeSubscription, event.type, resolvePriceId);
   }
 
-  const result = await supabase.rpc("process_stripe_webhook_event", {
-    p_event_id: event.id,
-    p_type: event.type,
-    p_environment: environment,
-    p_event_created_at: new Date(event.created * 1000).toISOString(),
-    p_correlation_id: correlationId,
-    p_object_id: stringId(eventObject),
-    p_customer_id: stringId(eventObject.customer) ?? subscription?.stripe_customer_id ?? null,
-    p_subscription_id: subscriptionId,
-    p_invoice_id: event.type.startsWith("invoice.") ? stringId(eventObject) : null,
-    p_checkout_session_id: event.type.startsWith("checkout.session.")
-      ? stringId(eventObject)
-      : null,
-    p_outcome: billingOutcome(event.type),
-    p_subscription: subscription,
-  });
-  const rows = requireResult(result, "stripe_event_transaction_failed");
-  const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
-  if (!row || typeof row.duplicate !== "boolean" || typeof row.applied !== "boolean") {
-    fail("stripe_event_transaction_invalid", 500);
-  }
-  return { duplicate: row.duplicate, applied: row.applied };
+  const completed = completionResult(
+    await supabase.rpc("complete_stripe_event", {
+      _event_id: event.id,
+      _environment: environment,
+      _lease_token: claim.leaseToken,
+      _observation_sequence: claim.observationSequence,
+      _apply_subscription: Boolean(row),
+      _customer_id: row?.customerId ?? stringId(object?.customer),
+      _product_id: row?.productId ?? null,
+      _price_id: row?.priceId ?? null,
+      _status: row?.status ?? null,
+      _current_period_start: row?.currentPeriodStart ?? null,
+      _current_period_end: row?.currentPeriodEnd ?? null,
+      _cancel_at_period_end: row?.cancelAtPeriodEnd ?? false,
+    }),
+  );
+
+  return {
+    duplicate: completed.duplicate,
+    orphaned: completed.orphaned,
+  };
 }
 
 async function deliveryStatus(supabase, delivery) {
@@ -194,7 +245,9 @@ async function deliveryStatus(supabase, delivery) {
     .select("delivery_id,status")
     .eq("delivery_id", delivery)
     .maybeSingle();
-  return requireResult(result, "github_delivery_lookup_failed", { requireData: true });
+  return requireResult(result, "github_delivery_lookup_failed", {
+    requireData: true,
+  });
 }
 
 async function markGitHubDelivery(supabase, delivery, values, code) {
@@ -243,7 +296,9 @@ export async function processGitHubDelivery({
       return { duplicate: true };
     }
   } else {
-    requireResult(inserted, "github_delivery_record_failed", { requireData: true });
+    requireResult(inserted, "github_delivery_record_failed", {
+      requireData: true,
+    });
   }
 
   try {
@@ -254,8 +309,6 @@ export async function processGitHubDelivery({
         .delete()
         .eq("id", installationId)
         .select("id");
-      // Zero rows is an idempotent success: a prior attempt may have revoked it before
-      // its final delivery-status write failed.
       affectedRows(revoked, "github_installation_revoke_failed");
     }
 
@@ -269,7 +322,6 @@ export async function processGitHubDelivery({
         .update({ explicitly_granted: false, revoked_at: now() })
         .eq("id", repositoryId);
       if (installationId) revoke = revoke.eq("installation_id", installationId);
-      // GitHub can deliver before repository discovery finishes, so an untracked row is a safe no-op.
       affectedRows(await revoke.select("id"), "github_repository_revoke_failed");
     }
 
