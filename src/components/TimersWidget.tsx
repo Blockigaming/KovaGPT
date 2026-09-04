@@ -1,7 +1,7 @@
 // Floating widget in the bottom-right that shows active timers/alarms,
 // counts down live, plays a beep + notification when a timer fires, and
 // exposes a quick "add timer" affordance.
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   addTimer,
   formatRemaining,
@@ -78,10 +78,22 @@ export function TimersWidget({
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(5);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const wasOpenRef = useRef(false);
   const notifiedIds = useMemo(
     () => (principal ? sessionNotifiedIds(principal) : new Set<string>()),
     [principal],
   );
+
+  useEffect(() => {
+    if (open) {
+      panelRef.current?.focus();
+    } else if (wasOpenRef.current) {
+      launcherRef.current?.focus();
+    }
+    wasOpenRef.current = open;
+  }, [open]);
 
   const refresh = useCallback(() => {
     if (!principalResolved || !principal) {
@@ -149,10 +161,20 @@ export function TimersWidget({
 
   return (
     <div
-      className={`fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col ${mobileSidebarOpen ? "max-lg:hidden" : ""}`}
+      className={`fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] sm:top-[calc(8rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col ${mobileSidebarOpen ? "max-lg:hidden" : ""}`}
     >
       {open && (
-        <div className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur sm:w-72">
+        <div
+          ref={panelRef}
+          id="kova-timers-panel"
+          role="region"
+          aria-label="Timer controls"
+          tabIndex={-1}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setOpen(false);
+          }}
+          className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-72"
+        >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <TimerIcon className="w-3.5 h-3.5" /> Timers
@@ -242,10 +264,13 @@ export function TimersWidget({
         </div>
       )}
       <button
+        ref={launcherRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-lg backdrop-blur transition hover:bg-accent"
         aria-label={ready ? "Timers" : "Timers (loading)"}
+        aria-expanded={open}
+        aria-controls="kova-timers-panel"
       >
         {nextItem ? (
           <>
