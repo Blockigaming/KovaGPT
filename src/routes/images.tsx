@@ -386,6 +386,8 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
+  const downloadControllerRef = useRef<AbortController | null>(null);
+  const [downloadingImageId, setDownloadingImageId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
   const scrollPresets = (direction: 1 | -1) => {
@@ -401,6 +403,9 @@ function ImagesPage() {
     generationRef.current += 1;
     generationControllerRef.current?.abort();
     generationControllerRef.current = null;
+    downloadControllerRef.current?.abort();
+    downloadControllerRef.current = null;
+    setDownloadingImageId(null);
     submittingRef.current = false;
     setLoading(false);
     setPrompt("");
@@ -416,7 +421,10 @@ function ImagesPage() {
     historyRef.current = nextHistory;
     historyPersistenceWarningRef.current = false;
     setHistory(nextHistory);
-    return () => generationControllerRef.current?.abort();
+    return () => {
+      generationControllerRef.current?.abort();
+      downloadControllerRef.current?.abort();
+    };
   }, [isLoaded, isSignedIn, userKey]);
 
   function addToHistory(p: string, imageUrl: string): HistoryItem | null {
@@ -529,6 +537,71 @@ function ImagesPage() {
       toast.success("Image copied");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not copy image");
+    }
+  }
+
+  async function downloadGeneratedImage(item: {
+    id: string;
+    imageUrl: string;
+  }) {
+    if (downloadingImageId) return;
+    const imageUrl = safeImageUrl(item.imageUrl);
+    if (!imageUrl) {
+      toast.error("This image cannot be downloaded.");
+      return;
+    }
+
+    const controller = new AbortController();
+    downloadControllerRef.current?.abort();
+    downloadControllerRef.current = controller;
+    setDownloadingImageId(item.id);
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
+    try {
+      const response = await fetch(imageUrl, { signal: controller.signal });
+      if (!response.ok) throw new Error("Image download failed");
+      const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
+      const declaredLength = Number(response.headers.get("content-length") ?? 0);
+      if (
+        !contentType.toLowerCase().startsWith("image/") ||
+        (Number.isFinite(declaredLength) && declaredLength > 8 * 1024 * 1024)
+      ) {
+        throw new Error("Image download response was invalid");
+      }
+      const blob = await response.blob();
+      if (blob.size > 8 * 1024 * 1024) throw new Error("Image download was too large");
+      if (controller.signal.aborted) return;
+
+      const extension =
+        blob.type === "image/jpeg"
+          ? "jpg"
+          : blob.type === "image/webp"
+            ? "webp"
+            : blob.type === "image/gif"
+              ? "gif"
+              : "png";
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `kovagpt-${item.id}.${extension}`;
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (downloadError) {
+      if (!controller.signal.aborted) {
+        toast.error(
+          downloadError instanceof Error ? downloadError.message : "Image download failed",
+        );
+      } else {
+        toast.error("Image download timed out. Try again.");
+      }
+    } finally {
+      window.clearTimeout(timeout);
+      if (downloadControllerRef.current === controller) {
+        downloadControllerRef.current = null;
+        setDownloadingImageId(null);
+      }
     }
   }
 
