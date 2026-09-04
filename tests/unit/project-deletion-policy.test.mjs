@@ -163,7 +163,6 @@ test("a confirmed missing object is an idempotent removal success", async () => 
   assert.equal(storage.paths.size, 0);
 });
 
-
 test("stale upload cleanup is bounded to one exact file attempt folder", async () => {
   const fileId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const siblingId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -223,8 +222,7 @@ test("stale upload cleanup stops at its per-pass cap and resumes safely", async 
       maxObjects: 2,
     }),
     (error) =>
-      error instanceof ProjectDeletionError &&
-      error.code === "project_upload_cleanup_incomplete",
+      error instanceof ProjectDeletionError && error.code === "project_upload_cleanup_incomplete",
   );
   assert.equal(storage.paths.size, 1);
 

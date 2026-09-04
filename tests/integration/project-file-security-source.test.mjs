@@ -116,14 +116,8 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
     migration,
     /legacy_to_charge[\s\S]*storage_owner_id = legacy\.owner_id[\s\S]*user_storage/,
   );
-  assert.match(
-    migration,
-    /existing\.status = 'deleting'[\s\S]*project_file_delete_pending/,
-  );
-  assert.match(
-    migration,
-    /id <> existing\.id[\s\S]*current_count >= p_file_cap/,
-  );
+  assert.match(migration, /existing\.status = 'deleting'[\s\S]*project_file_delete_pending/);
+  assert.match(migration, /id <> existing\.id[\s\S]*current_count >= p_file_cap/);
   assert.match(migration, /try_add_storage_bytes\(project_owner, p_size_bytes, p_storage_limit\)/);
   assert.match(migration, /kind = 'agent-deliverable'/);
   assert.match(
@@ -153,10 +147,7 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
     /Uploads completed by the immediately preceding implementation[\s\S]*SET upload_quota_acquired = true[\s\S]*VALIDATE CONSTRAINT project_files_upload_quota_check/,
   );
   assert.match(migration, /claim_project_file_delete[\s\S]*'inProgress', true/);
-  assert.match(
-    migration,
-    /claim_stale_project_file_cleanup[\s\S]*FOR UPDATE SKIP LOCKED/,
-  );
+  assert.match(migration, /claim_stale_project_file_cleanup[\s\S]*FOR UPDATE SKIP LOCKED/);
   assert.match(
     migration,
     /finalize_stale_project_file_cleanup[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/,
@@ -199,11 +190,13 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(ui, /className="mt-3 min-h-11"/);
 });
 
-
 test("recovered reservations cannot bypass quota and stale rows remain recoverable", () => {
   const route = read("src/routes/api/project-files.ts");
   const migration = read("supabase/migrations/20260904200000_project_file_upload_integrity.sql");
-  const upload = route.slice(route.indexOf("async function upload"), route.indexOf("function missingObject"));
+  const upload = route.slice(
+    route.indexOf("async function upload"),
+    route.indexOf("function missingObject"),
+  );
 
   assert.match(upload, /let uploadQuotaAcquired = row\.upload_quota_acquired/);
   assert.match(upload, /if \(!uploadQuotaAcquired\)[\s\S]*acquireUploadQuota/);
@@ -220,8 +213,5 @@ test("recovered reservations cannot bypass quota and stale rows remain recoverab
     migration,
     /claim_stale_project_file_cleanup[\s\S]*status = 'deleting'[\s\S]*delete_lease_until <= now\(\)/,
   );
-  assert.match(
-    migration,
-    /set_project_file_upload_state[\s\S]*lock_project_for_file_operation/,
-  );
+  assert.match(migration, /set_project_file_upload_state[\s\S]*lock_project_for_file_operation/);
 });

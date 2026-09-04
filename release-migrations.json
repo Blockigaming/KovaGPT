@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 91,
-  "latest": "20260904200000_project_file_upload_integrity.sql",
+  "count": 92,
+  "latest": "20260904210000_project_deletion_storage_integrity.sql",
   "migrations": [
     {
       "order": 1,
@@ -1860,11 +1860,18 @@
       "order": 91,
       "filename": "20260904200000_project_file_upload_integrity.sql",
       "timestamp": "20260904200000",
-      "sha256": "4a0ff63ae6fcf1a3e13031452b44c400e80d651a2b6f032ac6929e3921773c91",
+      "sha256": "fedeb3a840e7de078cfe46bec7b4e2c44d6a3c7972dbea1d7d9229b395392105",
       "tables": [],
       "functions": [
+        "lock_project_for_file_operation",
         "reserve_project_file_upload",
+        "acquire_project_file_upload_quota",
+        "set_project_file_upload_state",
         "abort_project_file_upload",
+        "claim_stale_project_file_cleanup",
+        "renew_stale_project_file_cleanup",
+        "fail_stale_project_file_cleanup",
+        "finalize_stale_project_file_cleanup",
         "claim_project_file_delete",
         "restore_project_file_delete",
         "finalize_project_file_delete",
@@ -1880,6 +1887,29 @@
         "project_files_upload_idempotency_unique",
         "project_files_status_idx"
       ]
+    },
+    {
+      "order": 92,
+      "filename": "20260904210000_project_deletion_storage_integrity.sql",
+      "timestamp": "20260904210000",
+      "sha256": "1c3d34e8cc19bb00cec59587666a3c5190b8053f00f583942a9987f22c975140",
+      "tables": ["project_deletion_jobs"],
+      "functions": [
+        "project_deletion_project_write_fence",
+        "project_deletion_child_write_fence",
+        "project_file_deletion_fence",
+        "claim_project_deletion",
+        "renew_project_deletion",
+        "fail_project_deletion",
+        "project_storage_first_delete_guard",
+        "finalize_project_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_deletion_jobs"],
+      "policies": [],
+      "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
     }
   ]
 }

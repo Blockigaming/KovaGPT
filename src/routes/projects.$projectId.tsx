@@ -1103,10 +1103,7 @@ function FilesTab({
           Loading…
         </div>
       ) : loadError ? (
-        <div
-          className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
-          role="alert"
-        >
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4" role="alert">
           <p className="text-sm text-foreground">{loadError}</p>
           <Button className="mt-3 min-h-11" variant="outline" onClick={() => void refresh()}>
             Retry
