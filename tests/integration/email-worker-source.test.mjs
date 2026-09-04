@@ -25,7 +25,10 @@ test("email execution is a distinct fail-closed worker artifact", () => {
   assert.match(dispatcher, /move_to_dlq/);
   assert.match(dispatcher, /recipient_suppressed/);
   assert.match(dispatcher, /MAX_HTML_BYTES/);
-  assert.doesNotMatch(dispatcher, /log\([^\n]*(?:message\.to|message\.subject|message\.html|message\.text)/);
+  assert.doesNotMatch(
+    dispatcher,
+    /log\([^\n]*(?:message\.to|message\.subject|message\.html|message\.text)/,
+  );
   assert.match(docker, /USER kova/);
   assert.match(docker, /email-health-check\.mjs/);
   assert.match(docker, /email-worker\.mjs/);

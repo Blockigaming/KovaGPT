@@ -53,9 +53,7 @@ function mockApi({
 } = {}) {
   const calls = [];
   const queueRows =
-    rows.length > 0
-      ? rows
-      : [{ msg_id: 17, read_ct: readCount, message: message() }];
+    rows.length > 0 ? rows : [{ msg_id: 17, read_ct: readCount, message: message() }];
   const fetchImpl = async (input, init = {}) => {
     const url = new URL(input);
     const method = init.method ?? "GET";
@@ -108,25 +106,21 @@ test("payload validation restricts recipients, verified sender domains, content,
   const now = Date.parse("2026-09-04T00:10:00.000Z");
   assert.equal(parseEmailQueueMessage(message(), config(), now).messageId, "message-123");
   assert.throws(
-    () => parseEmailQueueMessage(message({ to: "alice@example.com\r\nBcc: bad@example.com" }), config(), now),
+    () =>
+      parseEmailQueueMessage(
+        message({ to: "alice@example.com\r\nBcc: bad@example.com" }),
+        config(),
+        now,
+      ),
     (error) => error instanceof EmailWorkerError && error.code === "invalid_recipient",
   );
   assert.throws(
     () =>
-      parseEmailQueueMessage(
-        message({ from: "Attacker <attacker@other.example>" }),
-        config(),
-        now,
-      ),
+      parseEmailQueueMessage(message({ from: "Attacker <attacker@other.example>" }), config(), now),
     (error) => error instanceof EmailWorkerError && error.code === "sender_domain_not_allowed",
   );
   assert.throws(
-    () =>
-      parseEmailQueueMessage(
-        message({ queued_at: "2026-09-03T22:00:00.000Z" }),
-        config(),
-        now,
-      ),
+    () => parseEmailQueueMessage(message({ queued_at: "2026-09-03T22:00:00.000Z" }), config(), now),
     (error) => error instanceof EmailWorkerError && error.code === "email_expired",
   );
   assert.throws(
@@ -195,14 +189,8 @@ test("transient delivery errors retain the queue row until the bounded final att
   }).pollOnce();
   assert.equal(retry.retrying, 1);
   assert.equal(retry.retryAfterMs, 3_000);
-  assert.equal(
-    retryApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length,
-    0,
-  );
-  assert.equal(
-    retryApi.calls.filter((call) => call.url.endsWith("/rpc/move_to_dlq")).length,
-    0,
-  );
+  assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length, 0);
+  assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/move_to_dlq")).length, 0);
 
   const finalApi = mockApi({ resendStatus: 503, readCount: 3 });
   const final = await createEmailDispatcher(config({ EMAIL_WORKER_MAX_ATTEMPTS: "3" }), {
@@ -211,10 +199,7 @@ test("transient delivery errors retain the queue row until the bounded final att
   }).pollOnce();
   assert.equal(final.deadLettered, 1);
   assert.ok(finalApi.calls.some((call) => call.url.endsWith("/rpc/move_to_dlq")));
-  assert.equal(
-    finalApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length,
-    0,
-  );
+  assert.equal(finalApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length, 0);
 });
 
 test("invalid or untracked payloads are dead-lettered without becoming an open relay", async () => {
@@ -234,9 +219,6 @@ test("invalid or untracked payloads are dead-lettered without becoming an open r
     log: (level, event, fields) => logs.push({ level, event, fields }),
   }).pollOnce();
   assert.equal(report.deadLettered, 1);
-  assert.equal(
-    api.calls.filter((call) => call.url === "https://api.resend.com/emails").length,
-    0,
-  );
+  assert.equal(api.calls.filter((call) => call.url === "https://api.resend.com/emails").length, 0);
   assert.doesNotMatch(JSON.stringify(logs), /alice@example\.com|Private body|attacker@/);
 });

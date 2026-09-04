@@ -93,13 +93,7 @@ export function loadEmailWorkerConfig(env = process.env) {
       30,
       900,
     ),
-    requestTimeoutMs: boundedInteger(
-      env,
-      "EMAIL_WORKER_REQUEST_TIMEOUT_MS",
-      10_000,
-      1_000,
-      30_000,
-    ),
+    requestTimeoutMs: boundedInteger(env, "EMAIL_WORKER_REQUEST_TIMEOUT_MS", 10_000, 1_000, 30_000),
     maxAttempts: boundedInteger(env, "EMAIL_WORKER_MAX_ATTEMPTS", 5, 1, 20),
     authTtlMinutes: boundedInteger(env, "EMAIL_WORKER_AUTH_TTL_MINUTES", 15, 1, 120),
     transactionalTtlMinutes: boundedInteger(
@@ -115,7 +109,11 @@ export function loadEmailWorkerConfig(env = process.env) {
 function boundedString(value, code, max, { required = true } = {}) {
   if (typeof value !== "string") throw new EmailWorkerError(code);
   const normalized = value.trim();
-  if ((required && !normalized) || normalized.length > max || /[\u0000-\u001f\u007f]/.test(normalized)) {
+  if (
+    (required && !normalized) ||
+    normalized.length > max ||
+    /[\u0000-\u001f\u007f]/.test(normalized)
+  ) {
     throw new EmailWorkerError(code);
   }
   return normalized;
@@ -165,18 +163,13 @@ export function parseEmailQueueMessage(value, config, now = Date.now()) {
   if (!Number.isFinite(queuedAt) || queuedAt > now + 60_000) {
     throw new EmailWorkerError("invalid_queued_at");
   }
-  const ttlMinutes =
-    purpose === "auth" ? config.authTtlMinutes : config.transactionalTtlMinutes;
+  const ttlMinutes = purpose === "auth" ? config.authTtlMinutes : config.transactionalTtlMinutes;
   if (now - queuedAt > ttlMinutes * 60_000) {
     throw new EmailWorkerError("email_expired");
   }
   let unsubscribeToken = null;
   if (value.unsubscribe_token !== undefined && value.unsubscribe_token !== null) {
-    unsubscribeToken = boundedString(
-      value.unsubscribe_token,
-      "invalid_unsubscribe_token",
-      128,
-    );
+    unsubscribeToken = boundedString(value.unsubscribe_token, "invalid_unsubscribe_token", 128);
     if (!/^[a-f0-9]{64,128}$/i.test(unsubscribeToken)) {
       throw new EmailWorkerError("invalid_unsubscribe_token");
     }
@@ -469,16 +462,13 @@ export function createEmailDispatcher(config, dependencies = {}) {
   async function mapLimit(rows, task) {
     const results = new Array(rows.length);
     let cursor = 0;
-    const workers = Array.from(
-      { length: Math.min(config.concurrency, rows.length) },
-      async () => {
-        while (cursor < rows.length) {
-          const index = cursor;
-          cursor += 1;
-          results[index] = await task(rows[index]);
-        }
-      },
-    );
+    const workers = Array.from({ length: Math.min(config.concurrency, rows.length) }, async () => {
+      while (cursor < rows.length) {
+        const index = cursor;
+        cursor += 1;
+        results[index] = await task(rows[index]);
+      }
+    });
     await Promise.all(workers);
     return results;
   }
