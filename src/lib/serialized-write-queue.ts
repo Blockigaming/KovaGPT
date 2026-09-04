@@ -27,9 +27,7 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
   let generation = 0;
   let lastEnqueued = initialSnapshot;
   let lastCompleted = initialSnapshot;
-  let latestOperation:
-    | { generation: number; snapshot: T; promise: Promise<unknown> }
-    | undefined;
+  let latestOperation: { generation: number; snapshot: T; promise: Promise<unknown> } | undefined;
 
   return {
     reset(snapshot: T): void {
