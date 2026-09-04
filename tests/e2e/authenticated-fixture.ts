@@ -72,6 +72,19 @@ export async function installAuthenticatedFixture(page: Page) {
       });
       return;
     }
+    if (url.pathname === "/rest/v1/user_onboarding") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          primary_use: "work",
+          response_style: "balanced",
+          completed: true,
+          completed_at: "2026-01-01T00:00:00.000Z",
+        }),
+      });
+      return;
+    }
     if (url.pathname.startsWith("/rest/v1/")) {
       await route.fulfill({
         status: 200,
