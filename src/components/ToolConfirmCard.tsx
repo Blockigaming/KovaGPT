@@ -85,13 +85,15 @@ export function ToolConfirmCard({
         ok?: boolean;
         result_text?: string;
         error?: string;
+        error_code?: string;
       };
       if (!res.ok || !json.ok) {
         const err = json.error || `Failed (${res.status})`;
         if (
           decision === "confirm" &&
           confirm.tool === "gmail_send" &&
-          /could not (?:confirm|verify).*completed/i.test(err)
+          (json.error_code === "completion_persistence_ambiguous" ||
+            /could not (?:confirm|verify).*completed/i.test(err))
         ) {
           await reconcileAmbiguousSend();
           return;
