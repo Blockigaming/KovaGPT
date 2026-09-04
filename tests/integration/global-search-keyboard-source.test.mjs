@@ -35,7 +35,9 @@ test("the dialog announces workspace search", () => {
 });
 
 test("keyboard navigation keeps the active result visible", () => {
-  assert.ok(source.includes(".getElementById(`command-option-${activeIndex}`)"));
+  assert.ok(
+    source.includes(".getElementById(`command-option-${activeIndex}`)"),
+  );
   assert.match(source, /scrollIntoView\(\{ block: "nearest" \}\)/);
   assert.match(
     source,
