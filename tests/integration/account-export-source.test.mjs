@@ -84,13 +84,12 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(cleanup, /discoverAccountExportJobIds/u);
   assert.match(cleanup, /job\.status === "processing"/u);
   assert.match(cleanup, /cancel_account_export_account_deletion/u);
-  assert.match(accountRoute, /cleanupLibraryImagesBeforeAccountDeletion/u);
+  assert.match(accountRoute, /cleanupOwnedStorageBeforeAccountDeletion/u);
   assert.match(accountRoute, /releaseAccountExportDeletionFence\(auth\.userId\)/u);
   assert.ok(
-    accountRoute.indexOf(
-      "await cleanupLibraryImagesBeforeAccountDeletion(auth.supabaseAdmin, auth.userId)",
-    ) < accountRoute.indexOf(".auth.admin.deleteUser("),
-    "Library image objects must be removed before Auth deletion",
+    accountRoute.indexOf("await cleanupOwnedStorageBeforeAccountDeletion(") <
+      accountRoute.indexOf(".auth.admin.deleteUser("),
+    "all owned Storage objects must be removed before Auth deletion",
   );
   assert.match(storageCleanup, /account_storage_cleanup_unverified/u);
   assert.match(migration, /account_deletion_fences/u);
