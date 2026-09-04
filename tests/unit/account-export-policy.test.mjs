@@ -6,6 +6,7 @@ import {
   ACCOUNT_EXPORT_RATE_LIMIT,
   ACCOUNT_EXPORT_DIRECT_TABLES,
   accountExportCooldownRetryAfter,
+  accountExportJobCooldownRetryAfter,
   accountExportStoragePrefix,
   accountExportStoragePath,
   publicAccountExportJob,
@@ -40,6 +41,30 @@ test("account export throttling uses the supported limiter contract and a durabl
   );
   assert.equal(accountExportCooldownRetryAfter("2026-09-03T08:00:00.000Z", now), 0);
   assert.throws(() => accountExportCooldownRetryAfter("not-a-date", now), /job_invalid/u);
+});
+
+test("audit setup failures remain retryable without bypassing the distributed limiter", () => {
+  const now = Date.parse("2026-09-03T20:00:00.000Z");
+  const requestedAt = "2026-09-03T19:00:00.000Z";
+  assert.equal(
+    accountExportJobCooldownRetryAfter(
+      {
+        status: "failed",
+        failureCode: "account_export_audit_failed",
+        requestedAt,
+      },
+      now,
+    ),
+    0,
+  );
+  assert.equal(
+    accountExportJobCooldownRetryAfter(
+      { status: "failed", failureCode: "account_export_generation_failed", requestedAt },
+      now,
+    ),
+    ACCOUNT_EXPORT_COOLDOWN_SECONDS - 60 * 60,
+  );
+  assert.throws(() => accountExportJobCooldownRetryAfter(null, now), /job_invalid/u);
 });
 
 test("account exports recursively remove credentials and private moderation notes", () => {

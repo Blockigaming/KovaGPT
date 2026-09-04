@@ -15,22 +15,27 @@ type CheckoutSubscriptionRow = {
   current_period_end: string | null;
 };
 
+function isStillActiveSubscription(
+  subscription: CheckoutSubscriptionRow,
+  now = Date.now(),
+): boolean {
+  const isPotentiallyCurrent = ["active", "trialing", "past_due", "canceled"].includes(
+    subscription.status,
+  );
+  if (!isPotentiallyCurrent) return false;
+  if (!subscription.current_period_end) return subscription.status !== "canceled";
+  const periodEnd = new Date(subscription.current_period_end).getTime();
+  // Ambiguous current-subscription data fails closed instead of risking a
+  // second subscription. A successfully parsed period is current only while
+  // its access window remains open.
+  return !Number.isFinite(periodEnd) || periodEnd > now;
+}
+
 function hasStillActiveSubscription(
   rows: readonly CheckoutSubscriptionRow[],
   now = Date.now(),
 ): boolean {
-  return rows.some((subscription) => {
-    const isPotentiallyCurrent = ["active", "trialing", "past_due", "canceled"].includes(
-      subscription.status,
-    );
-    if (!isPotentiallyCurrent) return false;
-    if (!subscription.current_period_end) return subscription.status !== "canceled";
-    const periodEnd = new Date(subscription.current_period_end).getTime();
-    // Ambiguous current-subscription data fails closed instead of risking a
-    // second subscription. A successfully parsed period is current only while
-    // its access window remains open.
-    return !Number.isFinite(periodEnd) || periodEnd > now;
-  });
+  return rows.some((subscription) => isStillActiveSubscription(subscription, now));
 }
 
 async function resolveOrCreateCustomer(
@@ -226,6 +231,21 @@ export type SubscriptionSummary = {
   hasBillingAccount: boolean;
 };
 
+type SubscriptionSummaryRow = CheckoutSubscriptionRow & {
+  stripe_customer_id: string | null;
+  price_id: string | null;
+  cancel_at_period_end: boolean | null;
+};
+
+function selectSubscriptionSummaryRow(
+  rows: readonly SubscriptionSummaryRow[],
+  now = Date.now(),
+): SubscriptionSummaryRow | null {
+  return (
+    rows.find((subscription) => isStillActiveSubscription(subscription, now)) ?? rows[0] ?? null
+  );
+}
+
 // Server-verified subscription summary for the current user. Reads through
 // the RLS-scoped supabase client on the middleware context, so users only
 // ever see their own row.
@@ -234,25 +254,20 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
     const { supabase, userId } = context;
-    const { data: row, error: subscriptionError } = await supabase
+    const { data: rows, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
       .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
     if (subscriptionError) {
       throw new Error("Billing details couldn't be verified.");
     }
-    const priceId = row?.price_id ?? null;
+    const subscriptions = rows ?? [];
     const now = Date.now();
-    const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
-    const active =
-      !!row &&
-      ((["active", "trialing", "past_due"].includes(row.status) &&
-        (!row.current_period_end || end > now)) ||
-        (row.status === "canceled" && end > now));
+    const row = selectSubscriptionSummaryRow(subscriptions, now);
+    const priceId = row?.price_id ?? null;
+    const active = !!row && isStillActiveSubscription(row, now);
     const tier = active ? tierForLookupKey(priceId) : "free";
     return {
       tier,
@@ -261,6 +276,6 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       currentPeriodEnd: row?.current_period_end ?? null,
       cancelAtPeriodEnd: !!row?.cancel_at_period_end,
       trialing: row?.status === "trialing",
-      hasBillingAccount: !!row?.stripe_customer_id,
+      hasBillingAccount: subscriptions.some((subscription) => !!subscription.stripe_customer_id),
     };
   });

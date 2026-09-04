@@ -98,5 +98,9 @@ test("enterprise inquiry form is labeled and describes the email handoff truthfu
   assert.match(dialog, /Nothing is sent until you review/);
   assert.match(dialog, /Nothing has been sent by KovaGPT/);
   assert.match(dialog, /grid-cols-1.*sm:grid-cols-2/);
+  assert.match(
+    dialog,
+    /useEffect\(\(\) => \{\s*if \(!open\) setMailDraftOpened\(false\);\s*\}, \[open\]\)/u,
+  );
   assert.doesNotMatch(submit, /onOpenChange\(false\)/);
 });

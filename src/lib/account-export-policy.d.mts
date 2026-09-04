@@ -13,6 +13,14 @@ export const ACCOUNT_EXPORT_PROJECT_TABLES: readonly string[];
 
 export function isUuid(value: unknown): value is string;
 export function accountExportCooldownRetryAfter(requestedAt: unknown, now?: number): number;
+export function accountExportJobCooldownRetryAfter(
+  job: {
+    status: string;
+    requestedAt: unknown;
+    failureCode?: string | null;
+  },
+  now?: number,
+): number;
 export function sanitizeAccountExportValue(value: unknown, depth?: number): unknown;
 export function accountExportStoragePrefix(userId: string, jobId: string): string;
 export function accountExportStoragePath(userId: string, jobId: string, artifactId: string): string;

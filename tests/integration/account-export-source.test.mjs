@@ -10,13 +10,13 @@ test("account export ingress is authenticated, bounded, rate-limited, and no-sto
   assert.match(route, /isCrossSiteMutation\(request\)/u);
   assert.match(route, /readBoundedJsonObject\(request, 512\)/u);
   assert.match(route, /ACCOUNT_EXPORT_RATE_LIMIT/u);
-  assert.match(route, /accountExportCooldownRetryAfter/u);
+  assert.match(route, /accountExportJobCooldownRetryAfter/u);
   assert.doesNotMatch(route, /windowSeconds:\s*86_400/u);
   assert.match(route, /"Cache-Control": "no-store"/u);
   assert.match(route, /createSignedUrl\(result\.data\.storage_path, 300\)/u);
   assert.doesNotMatch(route, /getPublicUrl/u);
   assert.ok(
-    route.indexOf("accountExportCooldownRetryAfter") <
+    route.indexOf("accountExportJobCooldownRetryAfter") <
       route.indexOf('.from("account_export_jobs")\n          .insert'),
     "the durable cooldown must run before a new export job is inserted",
   );

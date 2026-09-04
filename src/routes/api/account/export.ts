@@ -5,7 +5,7 @@ import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.serv
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import {
   ACCOUNT_EXPORT_RATE_LIMIT,
-  accountExportCooldownRetryAfter,
+  accountExportJobCooldownRetryAfter,
   isUuid,
   publicAccountExportJob,
 } from "@/lib/account-export-policy.mjs";
@@ -178,7 +178,7 @@ export const Route = createFileRoute("/api/account/export")({
         }
         let retryAfter: number;
         try {
-          retryAfter = currentJob ? accountExportCooldownRetryAfter(currentJob.requestedAt) : 0;
+          retryAfter = currentJob ? accountExportJobCooldownRetryAfter(currentJob) : 0;
         } catch {
           return json({ error: "account_export_status_invalid" }, 503);
         }

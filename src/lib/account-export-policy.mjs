@@ -131,6 +131,12 @@ export function accountExportCooldownRetryAfter(requestedAt, now = Date.now()) {
   return Math.max(0, Math.ceil(remainingMs / 1_000));
 }
 
+export function accountExportJobCooldownRetryAfter(job, now = Date.now()) {
+  if (!isRecord(job)) throw new Error("account_export_job_invalid");
+  if (job.status === "failed" && job.failureCode === "account_export_audit_failed") return 0;
+  return accountExportCooldownRetryAfter(job.requestedAt, now);
+}
+
 export function sanitizeAccountExportValue(value, depth = 0) {
   if (depth > 24) throw new Error("account_export_nesting_exceeded");
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;

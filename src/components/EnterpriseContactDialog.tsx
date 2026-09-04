@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const SALES_EMAIL = "sales@kovagpt.com";
 
@@ -26,6 +26,10 @@ export function EnterpriseContactDialog({
   const [teamSize, setTeamSize] = useState("");
   const [needs, setNeeds] = useState("");
   const [mailDraftOpened, setMailDraftOpened] = useState(false);
+
+  useEffect(() => {
+    if (!open) setMailDraftOpened(false);
+  }, [open]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

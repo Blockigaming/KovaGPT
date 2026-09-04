@@ -6,7 +6,7 @@ import ts from "typescript";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-function loadPureFunction(source, name, scriptKind) {
+function loadPureFunction(source, name, scriptKind, dependencies = []) {
   const sourceFile = ts.createSourceFile(
     `source.${scriptKind === ts.ScriptKind.TSX ? "tsx" : "ts"}`,
     source,
@@ -14,15 +14,27 @@ function loadPureFunction(source, name, scriptKind) {
     true,
     scriptKind,
   );
-  let declaration;
+  const declarations = new Map();
   const visit = (node) => {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === name) declaration = node;
-    if (!declaration) ts.forEachChild(node, visit);
+    if (ts.isFunctionDeclaration(node) && node.name?.text) {
+      declarations.set(node.name.text, node);
+    }
+    ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  assert.ok(declaration, `Expected ${name} to be declared`);
+  const requested = [...dependencies, name];
+  for (const functionName of requested) {
+    assert.ok(declarations.has(functionName), `Expected ${functionName} to be declared`);
+  }
 
-  const functionSource = declaration.getText(sourceFile).replace(/^export\s+/u, "");
+  const functionSource = requested
+    .map((functionName) =>
+      declarations
+        .get(functionName)
+        .getText(sourceFile)
+        .replace(/^export\s+/u, ""),
+    )
+    .join("\n");
   const compiled = ts.transpileModule(functionSource, {
     compilerOptions: {
       module: ts.ModuleKind.None,
@@ -81,7 +93,12 @@ test("checkout return reports active only from the server-verified account tier"
 
 test("every still-active subscription blocks a second Checkout session", async () => {
   const payments = await read("src/utils/payments.functions.ts");
-  const blocksCheckout = loadPureFunction(payments, "hasStillActiveSubscription", ts.ScriptKind.TS);
+  const blocksCheckout = loadPureFunction(
+    payments,
+    "hasStillActiveSubscription",
+    ts.ScriptKind.TS,
+    ["isStillActiveSubscription"],
+  );
   const now = Date.parse("2026-09-03T12:00:00.000Z");
   const future = "2026-10-03T12:00:00.000Z";
   const expired = "2026-08-03T12:00:00.000Z";
@@ -134,4 +151,33 @@ test("every still-active subscription blocks a second Checkout session", async (
     checkout.indexOf("if (stillActive)") < checkout.indexOf("stripe.checkout.sessions.create"),
     "the current-subscription guard must run before Checkout session creation",
   );
+});
+
+test("subscription summary prefers an older active row over a newer expired row", async () => {
+  const payments = await read("src/utils/payments.functions.ts");
+  const selectSummaryRow = loadPureFunction(
+    payments,
+    "selectSubscriptionSummaryRow",
+    ts.ScriptKind.TS,
+    ["isStillActiveSubscription"],
+  );
+  const now = Date.parse("2026-09-03T12:00:00.000Z");
+  const expiredNewest = {
+    status: "canceled",
+    current_period_end: "2026-08-03T12:00:00.000Z",
+    price_id: "plus_monthly",
+  };
+  const activeOlder = {
+    status: "active",
+    current_period_end: "2026-10-03T12:00:00.000Z",
+    price_id: "pro_monthly",
+  };
+  assert.equal(selectSummaryRow([expiredNewest, activeOlder], now).price_id, "pro_monthly");
+  assert.equal(selectSummaryRow([expiredNewest], now), expiredNewest);
+  assert.equal(selectSummaryRow([], now), null);
+
+  const summary = payments.slice(payments.indexOf("export const getSubscriptionSummary"));
+  assert.doesNotMatch(summary, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
+  assert.match(summary, /selectSubscriptionSummaryRow\(subscriptions, now\)/u);
+  assert.match(summary, /isStillActiveSubscription\(row, now\)/u);
 });
