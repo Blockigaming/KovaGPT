@@ -49,10 +49,7 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
     assert.ok(stageMatch, `${stage} must be bounded`);
     const stageAt = stageMatch.index;
     const nextStageAt = chatRoute.indexOf("preflight.run(", stageAt + stageMatch[0].length);
-    const stageCall = chatRoute.slice(
-      stageAt,
-      nextStageAt === -1 ? chatRoute.length : nextStageAt,
-    );
+    const stageCall = chatRoute.slice(stageAt, nextStageAt === -1 ? chatRoute.length : nextStageAt);
     assert.match(stageCall, /\{ required: false(?:, timeoutMs: [\d_]+)? \}/u);
   }
   assert.match(chatRoute, /\[chat\] preflight stage/u);
