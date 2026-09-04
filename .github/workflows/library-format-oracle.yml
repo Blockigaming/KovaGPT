@@ -1,15 +1,15 @@
 name: Library formatter oracle
 
 on:
-  push:
-    branches:
-      - codex/library-folder-ui-20260904
+  pull_request:
+
 
 permissions:
   contents: read
 
 jobs:
   format:
+    if: github.head_ref == 'codex/library-folder-ui-20260904'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
