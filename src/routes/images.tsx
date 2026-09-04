@@ -1071,11 +1071,7 @@ function ImagesPage() {
                             onClick={() => void downloadGeneratedImage(h)}
                             disabled={Boolean(downloadingImageId)}
                             className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50"
-                            aria-label={
-                              downloadingImageId === h.id
-                                ? `Downloading image: ${h.prompt}`
-                                : `Download image: ${h.prompt}`
-                            }
+                            aria-label={`Download image: ${h.prompt}`}
                           >
                             {downloadingImageId === h.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
