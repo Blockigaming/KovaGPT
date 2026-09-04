@@ -143,20 +143,20 @@ function rfc3339Date(value, label) {
   return date;
 }
 
-function validateDraft(args) {
+function validateEmailEnvelope(args) {
   const to = recipientList(args.to, "To", true);
   const cc = recipientList(args.cc, "Cc");
   const bcc = recipientList(args.bcc, "Bcc");
   if (to.length + cc.length + bcc.length > MAX_RECIPIENTS) {
     throw new GoogleWriteValidationError(
-      `A draft can have no more than ${MAX_RECIPIENTS} total recipients.`,
+      `An email can have no more than ${MAX_RECIPIENTS} total recipients.`,
     );
   }
-  const subject = requiredString(args, "subject", "Draft subject", 300, {
+  const subject = requiredString(args, "subject", "Email subject", 300, {
     trim: true,
     header: true,
   });
-  const body = requiredString(args, "body", "Draft body", 50_000);
+  const body = requiredString(args, "body", "Email body", 50_000);
   return {
     to: to.join(", "),
     ...(cc.length ? { cc: cc.join(", ") } : {}),
@@ -204,5 +204,5 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  return tool === "calendar_create_event" ? validateCalendarEvent(args) : validateDraft(args);
+  return tool === "calendar_create_event" ? validateCalendarEvent(args) : validateEmailEnvelope(args);
 }
