@@ -92,7 +92,7 @@ jobs:
         run: |
           set -u
           for attempt in 1 2 3; do
-            if timeout --signal=TERM --kill-after=10s 90s npm audit --audit-level=high --omit=dev; then
+            if timeout --signal=TERM --kill-after=10s 210s npm audit --audit-level=high --omit=dev; then
               exit 0
             fi
             if [[ "$attempt" -eq 3 ]]; then
