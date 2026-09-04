@@ -27,7 +27,8 @@ test("chat route bounds mandatory authorization and usage stages", () => {
   }
   assert.match(chatRoute, /finally \{\s*preflight\.close\(\)/u);
   assert.match(chatRoute, /e instanceof ChatPreflightError/u);
-  assert.match(chatRoute, /retryable: e\.retryable/u);
+  assert.match(chatRoute, /\.\.\.e\.toEnvelope\(\)/u);
+  assert.match(chatRoute, /e\.retryable \? \{ "Retry-After": "5" \} : \{\}/u);
 });
 
 test("optional chat enrichment stages fail open behind explicit short bounds", () => {
@@ -44,10 +45,14 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
     "chat_workspace",
     "connector_tools",
   ]) {
-    assert.match(
-      chatRoute,
-      new RegExp(`preflight\\.run\\([\\s\\S]{0,120}"${stage}"[\\s\\S]{0,500}required: false`, "u"),
+    const stageAt = chatRoute.indexOf(`"${stage}"`);
+    const nextStageAt = chatRoute.indexOf("preflight.run(", stageAt + stage.length + 2);
+    const stageCall = chatRoute.slice(
+      stageAt,
+      nextStageAt === -1 ? chatRoute.length : nextStageAt,
     );
+    assert.ok(stageAt > 0, `${stage} must be bounded`);
+    assert.match(stageCall, /\{ required: false(?:, timeoutMs: [\d_]+)? \}/u);
   }
   assert.match(chatRoute, /\[chat\] preflight stage/u);
 });
