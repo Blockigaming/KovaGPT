@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  BodyReadError,
-  readUtf8BodyBounded,
-} from "@/lib/endpoint-reliability.mjs";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 import {
   parseResendWebhookEvent,
   ResendWebhookError,
@@ -48,9 +45,7 @@ export const Route = createFileRoute("/api/public/email/webhook")({
             return noStore(
               {
                 error:
-                  error.status === 413
-                    ? "resend_webhook_too_large"
-                    : "invalid_resend_webhook_body",
+                  error.status === 413 ? "resend_webhook_too_large" : "invalid_resend_webhook_body",
               },
               error.status,
             );

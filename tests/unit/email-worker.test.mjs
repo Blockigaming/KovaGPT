@@ -190,7 +190,10 @@ test("transient delivery errors retain the queue row until the bounded final att
   assert.equal(retry.retrying, 1);
   assert.equal(retry.retryAfterMs, 3_000);
   assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/delete_email")).length, 0);
-  assert.equal(retryApi.calls.filter((call) => call.url.endsWith("/rpc/dead_letter_tracked_email")).length, 0);
+  assert.equal(
+    retryApi.calls.filter((call) => call.url.endsWith("/rpc/dead_letter_tracked_email")).length,
+    0,
+  );
 
   const finalApi = mockApi({ resendStatus: 503, readCount: 3 });
   const final = await createEmailDispatcher(config({ EMAIL_WORKER_MAX_ATTEMPTS: "3" }), {

@@ -62,9 +62,7 @@ test("email producers and documented environment use the verified sender domain"
 test("Resend delivery reconciliation is signed, replay-safe, and suppression-first", () => {
   const route = read("src/routes/api/public/email/webhook.ts");
   const verifier = read("src/lib/resend-webhook.mjs");
-  const migration = read(
-    "supabase/migrations/20260904210000_resend_webhook_integrity.sql",
-  );
+  const migration = read("supabase/migrations/20260904210000_resend_webhook_integrity.sql");
   const docs = read("docs/email-worker.md");
 
   for (const contract of [
@@ -105,10 +103,7 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   );
   assert.match(migration, /payload_sha256 text NOT NULL/);
   assert.match(migration, /ON CONFLICT \(event_id\) DO NOTHING/);
-  assert.match(
-    migration,
-    /metadata ->> 'provider_id' = p_provider_message_id/,
-  );
+  assert.match(migration, /metadata ->> 'provider_id' = p_provider_message_id/);
   assert.match(migration, /ON CONFLICT \(email\) DO NOTHING/);
   assert.match(migration, /'provider_suppression'/);
   assert.match(

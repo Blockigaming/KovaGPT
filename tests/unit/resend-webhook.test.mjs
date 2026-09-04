@@ -53,8 +53,7 @@ test("Resend signature verification binds delivery, timestamp, and exact body", 
       body: `${body} `,
       now: Number(timestamp) * 1000,
     }),
-    (error) =>
-      error instanceof ResendWebhookError && error.code === "invalid_resend_signature",
+    (error) => error instanceof ResendWebhookError && error.code === "invalid_resend_signature",
   );
 });
 
@@ -73,8 +72,7 @@ test("Resend verification rejects stale deliveries and missing server secrets", 
       body,
       now: (Number(timestamp) + 301) * 1000,
     }),
-    (error) =>
-      error instanceof ResendWebhookError && error.code === "expired_resend_webhook",
+    (error) => error instanceof ResendWebhookError && error.code === "expired_resend_webhook",
   );
   await assert.rejects(
     verifyResendWebhookSignature({
@@ -107,14 +105,8 @@ test("Resend event parsing retains only trusted reconciliation identifiers", asy
     providerMessageId: "provider_123",
     occurredAt: "2026-09-04T05:00:00.000Z",
   });
-  assert.equal(
-    await sha256Text("same payload"),
-    await sha256Text("same payload"),
-  );
-  assert.notEqual(
-    await sha256Text("same payload"),
-    await sha256Text("different payload"),
-  );
+  assert.equal(await sha256Text("same payload"), await sha256Text("same payload"));
+  assert.notEqual(await sha256Text("same payload"), await sha256Text("different payload"));
   assert.throws(
     () =>
       parseResendWebhookEvent({
@@ -123,7 +115,6 @@ test("Resend event parsing retains only trusted reconciliation identifiers", asy
         data: { email_id: "provider_123" },
       }),
     (error) =>
-      error instanceof ResendWebhookError &&
-      error.code === "invalid_resend_webhook_payload",
+      error instanceof ResendWebhookError && error.code === "invalid_resend_webhook_payload",
   );
 });

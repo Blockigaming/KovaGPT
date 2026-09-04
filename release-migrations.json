@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 90,
-  "latest": "20260903220000_project_templates.sql",
+  "count": 91,
+  "latest": "20260904210000_resend_webhook_integrity.sql",
   "migrations": [
     {
       "order": 1,
@@ -1855,6 +1855,24 @@
         "project_template_audit_actor_created_idx",
         "project_template_mutations_created_idx"
       ]
+    },
+    {
+      "order": 91,
+      "filename": "20260904210000_resend_webhook_integrity.sql",
+      "timestamp": "20260904210000",
+      "sha256": "b5ae0f428fff2c7c7cf3b37eb728dfebe1e479a1d73a2ddbec3dc1f544e40d83",
+      "tables": ["email_webhook_events"],
+      "functions": [
+        "process_resend_webhook_event",
+        "enqueue_tracked_email",
+        "dead_letter_tracked_email"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["email_webhook_events"],
+      "policies": ["Service role manages email webhook events"],
+      "indexes": ["email_webhook_events_provider_time_idx", "email_send_log_provider_id_idx"]
     }
   ]
 }

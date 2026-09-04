@@ -152,8 +152,7 @@ export const Route = createFileRoute("/api/public/help-submit")({
           if (error instanceof BodyReadError) {
             return Response.json(
               {
-                error:
-                  error.status === 413 ? "Request too large" : "Invalid request body",
+                error: error.status === 413 ? "Request too large" : "Invalid request body",
               },
               { status: error.status },
             );

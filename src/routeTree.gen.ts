@@ -116,6 +116,7 @@ import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/l
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
+import { Route as ApiPublicEmailWebhookRouteImport } from './routes/api/public/email/webhook'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
@@ -664,6 +665,11 @@ const ApiIntegrationsOauthStartRoute =
     path: '/api/integrations/oauth/start',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailWebhookRoute = ApiPublicEmailWebhookRouteImport.update({
+  id: '/api/public/email/webhook',
+  path: '/api/public/email/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -791,6 +797,7 @@ export interface FileRoutesByFullPath {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/public/email/webhook': typeof ApiPublicEmailWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
@@ -903,6 +910,7 @@ export interface FileRoutesByTo {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/public/email/webhook': typeof ApiPublicEmailWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
@@ -1016,6 +1024,7 @@ export interface FileRoutesById {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/public/email/webhook': typeof ApiPublicEmailWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
@@ -1130,6 +1139,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/public/email/webhook'
     | '/api/public/payments/webhook'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
@@ -1242,6 +1252,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/public/email/webhook'
     | '/api/public/payments/webhook'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
@@ -1354,6 +1365,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/public/email/webhook'
     | '/api/public/payments/webhook'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
@@ -1463,6 +1475,7 @@ export interface RootRouteChildren {
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
+  ApiPublicEmailWebhookRoute: typeof ApiPublicEmailWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
 }
@@ -2218,6 +2231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsOauthStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/webhook': {
+      id: '/api/public/email/webhook'
+      path: '/api/public/email/webhook'
+      fullPath: '/api/public/email/webhook'
+      preLoaderRoute: typeof ApiPublicEmailWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -2405,6 +2425,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
+  ApiPublicEmailWebhookRoute: ApiPublicEmailWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
