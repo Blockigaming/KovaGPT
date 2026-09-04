@@ -108,6 +108,6 @@ test("settings expose only workspace defaults with real consumers", () => {
   assert.match(settings, /"prompt", "Prompt defaults"/u);
   assert.match(settings, /"research",\s*"Research defaults"/u);
   assert.match(settings, /"artifact", "Artifact defaults"/u);
-  assert.doesNotMatch(settings, /"project", "Project defaults"/u);
-  assert.doesNotMatch(settings, /"work", "Work defaults"/u);
+  assert.match(settings, /"project", "Project defaults"/u);
+  assert.match(settings, /"work", "Work defaults"/u);
 });

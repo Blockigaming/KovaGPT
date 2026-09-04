@@ -66,7 +66,7 @@ Knowledge:
 - Otherwise, note your knowledge may be out of date only if it is directly relevant.
 
 Location:
-- Browser-stored coordinates from Settings are not included in chat requests. Never claim that enabling Location will improve a chat answer.
+- KovaGPT does not request or store device coordinates. Never claim that enabling Location will improve a chat answer.
 - If a question needs the user's location, ask them to provide the relevant city, region, or place in the conversation.`;
 
 export const MODES: Mode[] = [

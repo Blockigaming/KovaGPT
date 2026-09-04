@@ -7,22 +7,28 @@ const read = (path) => readFileSync(path, "utf8");
 test("command palette places workspace rows in the keyboard option model", () => {
   const palette = read("src/components/CommandPalette.tsx");
 
-  assert.match(palette, /type PaletteOption =/);
-  assert.match(palette, /kind: "workspace"/);
-  assert.match(palette, /const paletteOptions = useMemo<PaletteOption\[\]>/);
-  assert.match(palette, /\.\.\.visibleWorkspaceItems\.map/);
-  assert.match(palette, /const totalItems = paletteOptions\.length/);
-  assert.match(palette, /const activeOption = paletteOptions\[activeIndex\]/);
-  assert.match(palette, /aria-activedescendant=\{activeOption\?\.id\}/);
-  assert.match(palette, /document\.getElementById\(activeOption\.id\)\?\.scrollIntoView/);
+  assert.match(palette, /const workspaceStartIndex = actionItems\.length/);
   assert.match(
     palette,
-    /if \(option\.kind === "workspace"\)[\s\S]{0,220}window\.location\.assign\(option\.item\.href\)/,
+    /const chatStartIndex = workspaceStartIndex \+ visibleWorkspaceItems\.length/,
+  );
+  assert.match(palette, /const optionKeys = useMemo/);
+  assert.match(
+    palette,
+    /\.\.\.visibleWorkspaceItems\.map\(\(item\) => `workspace:\$\{item\.type\}:\$\{item\.id\}`\)/,
+  );
+  assert.match(palette, /const totalItems = optionKeys\.length/);
+  assert.match(palette, /const resolvedActiveIndex = optionKeys\.indexOf\(activeOptionKey\)/);
+  assert.match(palette, /aria-activedescendant=\{`command-option-\$\{activeIndex\}`\}/);
+  assert.match(
+    palette,
+    /document[\s\S]{0,100}\.getElementById\(`command-option-\$\{activeIndex\}`\)[\s\S]{0,80}\.scrollIntoView/,
   );
   assert.match(
     palette,
-    /const index = actionItems\.length \+ visibleWorkspaceItems\.length \+ chatIndex/,
+    /const workspaceMatch = visibleWorkspaceItems\[activeIndex - workspaceStartIndex\][\s\S]{0,260}window\.location\.assign\(workspaceMatch\.href\)/,
   );
+  assert.match(palette, /const index = workspaceStartIndex \+ workspaceIndex/);
   assert.doesNotMatch(palette, /role="option"\s+aria-selected=\{false\}/);
 });
 
