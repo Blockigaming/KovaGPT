@@ -1,0 +1,29 @@
+name: Library auto-save formatter oracle
+
+on:
+  push:
+    branches:
+      - codex/library-auto-save-20260904
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Print locked Prettier output
+        shell: bash
+        run: |
+          for file in src/hooks/use-library-attachment-auto-save.ts src/lib/library-images.functions.ts src/lib/library.functions.ts src/routes/images.tsx tests/integration/library-auto-save-source.test.mjs; do
+            echo "FORMAT_ORACLE_BEGIN:$file"
+            npx prettier "$file" | base64 -w0
+            echo
+            echo "FORMAT_ORACLE_END:$file"
+          done
