@@ -353,17 +353,24 @@ test("records the read-only deployed UI baseline without accepting its defects",
   // No styles, font substitutions, or animation mutations are injected into this
   // observational screenshot. Candidate screenshots have their own strict gate.
   await page.screenshot({ path: screenshotPath, fullPage: false });
+  const status = response?.status() ?? null;
+  const reachability =
+    navigationError === null && status !== null && status >= 200 && status < 400
+      ? "reachable"
+      : "unreachable";
+
   await writeFile(
     jsonPath,
     `${JSON.stringify(
       {
-        classification: "observed-failed-production-baseline",
+        classification: "observational-production-baseline",
+        reachability,
         candidateAcceptance: false,
         note: "Semantic and visual observations are evidence only, never pass criteria for the candidate UI.",
         observedAt: new Date().toISOString(),
         targetUrl: DEPLOYED_URL,
         finalUrl: redactUrl(page.url()),
-        status: response?.status() ?? null,
+        status,
         navigationError,
         redirectChain,
         viewport,
