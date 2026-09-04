@@ -82,6 +82,7 @@ export function LibraryFolderOrganizer({
   scope,
   selectedItemIds,
   onScopeChange,
+  onBusyChange,
   onMoved,
   onFoldersDeleted,
 }: {
@@ -91,6 +92,7 @@ export function LibraryFolderOrganizer({
   scope: LibraryFolderScope;
   selectedItemIds: string[];
   onScopeChange: (scope: LibraryFolderScope) => void;
+  onBusyChange: (busy: boolean) => void;
   onMoved: (itemIds: string[], folderId: string | null) => void;
   onFoldersDeleted: (folderIds: string[]) => void;
 }) {
@@ -105,6 +107,11 @@ export function LibraryFolderOrganizer({
   const [folderName, setFolderName] = useState("");
   const [deletePending, setDeletePending] = useState(false);
   const [moveTarget, setMoveTarget] = useState("root");
+
+  useEffect(() => {
+    onBusyChange(Boolean(busy));
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
 
   const load = useCallback(async () => {
     if (!enabled) return;
