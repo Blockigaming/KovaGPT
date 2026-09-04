@@ -384,14 +384,9 @@ function ImagesPage() {
     return item;
   }
 
-  function updateHistoryLibraryStatus(
-    id: string,
-    libraryStatus: HistoryItem["libraryStatus"],
-  ) {
+  function updateHistoryLibraryStatus(id: string, libraryStatus: HistoryItem["libraryStatus"]) {
     setHistory((previous) => {
-      const next = previous.map((item) =>
-        item.id === id ? { ...item, libraryStatus } : item,
-      );
+      const next = previous.map((item) => (item.id === id ? { ...item, libraryStatus } : item));
       saveHistory(userKey, next);
       return next;
     });
@@ -404,10 +399,7 @@ function ImagesPage() {
     });
   }
 
-  async function saveGeneratedImage(
-    item: HistoryItem,
-    options: { automatic?: boolean } = {},
-  ) {
+  async function saveGeneratedImage(item: HistoryItem, options: { automatic?: boolean } = {}) {
     if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
@@ -1009,10 +1001,7 @@ function ImagesPage() {
                 </button>
                 <button
                   onClick={() => void saveGeneratedImage(lightbox)}
-                  disabled={
-                    lightboxLibraryStatus === "saving" ||
-                    lightboxLibraryStatus === "saved"
-                  }
+                  disabled={lightboxLibraryStatus === "saving" || lightboxLibraryStatus === "saved"}
                   className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   <Bookmark className="h-4 w-4" />{" "}
