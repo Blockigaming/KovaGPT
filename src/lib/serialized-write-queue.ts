@@ -27,12 +27,16 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
   let generation = 0;
   let lastEnqueued = initialSnapshot;
   let lastCompleted = initialSnapshot;
+  let latestPending:
+    | { generation: number; snapshot: T; promise: Promise<unknown> }
+    | undefined;
 
   return {
     reset(snapshot: T): void {
       generation += 1;
       lastEnqueued = snapshot;
       lastCompleted = snapshot;
+      latestPending = undefined;
     },
     needsEnqueue(snapshot: T): boolean {
       return !Object.is(snapshot, lastEnqueued) || !Object.is(snapshot, lastCompleted);
@@ -42,13 +46,28 @@ export function createSerializedSnapshotQueue<T>(initialSnapshot: T) {
       lastCompleted = snapshot;
     },
     enqueue<R>(snapshot: T, write: (value: T) => Promise<R>): Promise<R> {
+      const pending = latestPending;
+      if (
+        pending &&
+        pending.generation === generation &&
+        Object.is(pending.snapshot, snapshot) &&
+        Object.is(lastEnqueued, snapshot)
+      ) {
+        return pending.promise as Promise<R>;
+      }
+
       const writeGeneration = generation;
       lastEnqueued = snapshot;
-      return writes.enqueue(async () => {
-        const result = await write(snapshot);
+      const result = writes.enqueue(async () => {
+        const value = await write(snapshot);
         if (generation === writeGeneration) lastCompleted = snapshot;
-        return result;
+        return value;
       });
+      latestPending = { generation: writeGeneration, snapshot, promise: result };
+      void result.finally(() => {
+        if (latestPending?.promise === result) latestPending = undefined;
+      });
+      return result;
     },
   };
 }
