@@ -748,9 +748,17 @@ function AppsPage() {
     setConnecting({});
     setFailed({});
     if (!principal || !activityKey) return;
-    const storedActivity = parseAppActivity(
-      safeBrowserStorage("localStorage")?.getItem(activityKey) ?? null,
-    );
+    let storedActivity: AppActivity[] = [];
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (storage) {
+        storedActivity = parseAppActivity(storage.getItem(activityKey));
+      } else {
+        setActivityPersistenceError(true);
+      }
+    } catch {
+      setActivityPersistenceError(true);
+    }
     activityRef.current = storedActivity;
     setActivity(storedActivity);
     setActivityPrincipal(principal);
