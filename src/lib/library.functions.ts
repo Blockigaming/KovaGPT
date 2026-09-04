@@ -82,8 +82,8 @@ export const saveToLibrary = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({
-        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
         user_id: context.userId,
+        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
         title: data.title,
         item_type: data.item_type,
         source: data.source,
