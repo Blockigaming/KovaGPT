@@ -8,6 +8,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { resolveBackendUrl } from "@/lib/backend-url";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
@@ -144,14 +145,20 @@ export const Route = createFileRoute("/api/public/help-submit")({
           );
         }
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-          return Response.json({ error: "Request too large" }, { status: 413 });
-        }
-
-        const rawText = await request.text();
-        if (new TextEncoder().encode(rawText).byteLength > MAX_BODY_BYTES) {
-          return Response.json({ error: "Request too large" }, { status: 413 });
+        let rawText: string;
+        try {
+          rawText = await readUtf8BodyBounded(request, MAX_BODY_BYTES);
+        } catch (error) {
+          if (error instanceof BodyReadError) {
+            return Response.json(
+              {
+                error:
+                  error.status === 413 ? "Request too large" : "Invalid request body",
+              },
+              { status: error.status },
+            );
+          }
+          return Response.json({ error: "Invalid request body" }, { status: 400 });
         }
 
         let raw: unknown;
