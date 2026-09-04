@@ -541,7 +541,11 @@ function ImagesPage() {
       }
       const response = await fetch(imageUrl);
       if (!response.ok) throw new Error("Could not read the generated image");
-      const source = await response.blob();
+      const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
+      if (!contentType.toLowerCase().startsWith("image/")) {
+        throw new Error("Image copy response was invalid");
+      }
+      const source = await readImageDownloadBlob(response, contentType);
       const blob =
         source.type === "image/png"
           ? source
