@@ -475,6 +475,9 @@ function ImagesPage() {
     }
     const operationUserKey = userKey;
     const isCurrent = () => userKeyRef.current === operationUserKey;
+    // A toast action can outlive the account that created it. Refuse the
+    // request before sending old image data under a newly authenticated user.
+    if (!isCurrent()) return;
     updateHistoryLibraryStatus(item.id, "saving");
     try {
       await saveImage({
