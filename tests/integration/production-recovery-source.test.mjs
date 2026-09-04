@@ -48,12 +48,15 @@ test("root route has a safe branded error boundary with retry and home actions",
   assert.doesNotMatch(rootRoute, /diagnostic details server-side|while we log/i);
 });
 
-test("CI blocks changed-file formatting while isolating legacy repository drift", () => {
+test("CI blocks changed-file and repository-wide formatting", () => {
   assert.match(packageJson, /format:check:changed/);
   assert.match(changedFormat, /git/);
   assert.match(changedFormat, /prettier/);
   assert.match(workflow, /Formatting changed files/);
-  assert.match(workflow, /Legacy repository formatting audit/);
-  assert.match(workflow, /continue-on-error: true/);
+  assert.match(workflow, /Repository formatting audit/);
+  assert.doesNotMatch(
+    workflow,
+    /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/,
+  );
   assert.match(workflow, /Production build/);
 });
