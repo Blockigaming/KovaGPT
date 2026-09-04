@@ -1,0 +1,28 @@
+name: Library types formatter oracle
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    if: github.head_ref == 'codex/library-folder-ui-20260904'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Print locked Prettier output
+        shell: bash
+        run: |
+          npx prettier --write src/integrations/supabase/types.ts
+          echo "FORMAT_ORACLE_BEGIN"
+          base64 -w 0 src/integrations/supabase/types.ts
+          echo
+          echo "FORMAT_ORACLE_END"
