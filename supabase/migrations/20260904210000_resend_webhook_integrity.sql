@@ -376,6 +376,7 @@ BEGIN
     OR jsonb_typeof(p_payload) <> 'object'
     OR p_reason IS NULL
     OR p_reason !~ '^[a-z0-9_]{1,100}$'
+    OR p_attempts IS NULL
     OR p_attempts NOT BETWEEN 1 AND 1000
   THEN
     RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email_dead_letter';
