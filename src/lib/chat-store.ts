@@ -108,10 +108,23 @@ function boundConversations(value: unknown[]): Conversation[] {
       return true;
     })
     .slice(0, MAX_STORED_CONVERSATIONS)
-    .map((conversation) => ({
-      ...conversation,
-      messages: dedupeMessages(conversation.messages).slice(-MAX_MESSAGES_PER_CONVERSATION),
-    }));
+    .map((conversation) => {
+      const messages = dedupeMessages(conversation.messages);
+      const removedCount = Math.max(0, messages.length - MAX_MESSAGES_PER_CONVERSATION);
+      const boundedMessages = messages.slice(-MAX_MESSAGES_PER_CONVERSATION);
+      return {
+        ...conversation,
+        messages: boundedMessages,
+        ...(typeof conversation.memoryStartIndex === "number"
+          ? {
+              memoryStartIndex: Math.min(
+                boundedMessages.length,
+                Math.max(0, conversation.memoryStartIndex - removedCount),
+              ),
+            }
+          : {}),
+      };
+    });
 }
 
 export function dedupeMessages(messages: Message[]): Message[] {
