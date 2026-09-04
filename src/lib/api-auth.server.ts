@@ -232,20 +232,24 @@ async function resolveSubscriptionTier(caller: AuthedCaller, userId: string): Pr
  * Resolve the server-authoritative plan, including a higher family-owner plan.
  * Client labels and mode choices are never used for authorization.
  */
-export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
-  const ownTier = await resolveSubscriptionTier(caller, caller.userId);
+export async function getUserTier(caller: AuthedCaller, userId: string): Promise<CallerTier> {
+  const ownTier = await resolveSubscriptionTier(caller, userId);
   if (ownTier === "pro") return ownTier;
 
   const { data: ownerId, error } = await caller.supabaseAdmin.rpc("family_owner_of", {
-    _user_id: caller.userId,
+    _user_id: userId,
   });
   if (error) {
-    console.error("[getCallerTier] family entitlement lookup failed");
+    console.error("[getUserTier] family entitlement lookup failed");
     return ownTier;
   }
-  if (typeof ownerId !== "string" || !ownerId || ownerId === caller.userId) return ownTier;
+  if (typeof ownerId !== "string" || !ownerId || ownerId === userId) return ownTier;
 
   return higherTier(ownTier, await resolveSubscriptionTier(caller, ownerId));
+}
+
+export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
+  return getUserTier(caller, caller.userId);
 }
 
 /**

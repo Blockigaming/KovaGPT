@@ -259,7 +259,13 @@ async function embedFile(
 async function collectFiles(records: Record<string, ExportRow[]>): Promise<EmbeddedFile[]> {
   const candidates = new Map<string, { bucket: string; path: string; type: string | null }>();
   for (const row of records.project_files ?? []) {
-    if (typeof row.storage_path === "string") {
+    // Keep every metadata row in the export, including recoverable failures,
+    // but embed bytes only for objects the file lifecycle has published.
+    if (
+      row.status === "ready" &&
+      (row.kind === "file" || row.kind === "image") &&
+      typeof row.storage_path === "string"
+    ) {
       candidates.set(`project-files:${row.storage_path}`, {
         bucket: "project-files",
         path: row.storage_path,

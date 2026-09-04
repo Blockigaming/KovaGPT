@@ -79,8 +79,6 @@ import {
   deleteTask,
   reorderTasks,
   listFiles,
-  registerUploadedFile,
-  deleteProjectFile,
   listMemory,
   addMemory,
   deleteMemory,
@@ -119,6 +117,7 @@ function ProjectDetailPage() {
   const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [deletionBusy, setDeletionBusy] = useState(false);
   const currentRequestKeyRef = useRef(requestKey);
   const requestSequenceRef = useRef(0);
   currentRequestKeyRef.current = requestKey;
@@ -186,6 +185,7 @@ function ProjectDetailPage() {
     setLoadError(null);
     setTab("overview");
     setSearchOpen(false);
+    setDeletionBusy(false);
 
     if (!isSignedIn || !requestKey) {
       setResolvedRequestKey(null);
@@ -266,6 +266,88 @@ function ProjectDetailPage() {
   const canEdit = project.role === "owner" || project.role === "editor";
   const isOwner = project.role === "owner";
   const archived = !!project.archived_at;
+
+  if (project.deletion_requested_at) {
+    return (
+      <AppShell>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          aria-busy={deletionBusy || undefined}
+          className="mx-auto w-full max-w-2xl p-4 md:p-8"
+        >
+          <Link
+            to="/projects"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            All projects
+          </Link>
+          <section
+            role="alert"
+            className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5 sm:p-8"
+          >
+            <h1 className="text-xl font-semibold">Project deletion is incomplete</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              “{project.name}” is read-only while its stored-file cleanup is pending. No new
+              workspace changes are accepted.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isOwner
+                ? "Retrying resumes the bounded cleanup and never deletes outside this Project."
+                : "The Project owner must retry deletion. You can return to your Projects list."}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {isOwner ? (
+                <Button
+                  variant="destructive"
+                  className="min-h-11"
+                  disabled={deletionBusy}
+                  onClick={async () => {
+                    const operationRequestKey = requestKey;
+                    setDeletionBusy(true);
+                    try {
+                      await fnDelete({ data: { id: projectId } });
+                      if (currentRequestKeyRef.current !== operationRequestKey) return;
+                      toast.success("Project deleted");
+                      await navigate({ to: "/projects" });
+                    } catch (error) {
+                      if (currentRequestKeyRef.current !== operationRequestKey) return;
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Deletion is incomplete. Retry when the service is available.",
+                      );
+                      await refresh();
+                    } finally {
+                      if (currentRequestKeyRef.current === operationRequestKey) {
+                        setDeletionBusy(false);
+                      }
+                    }
+                  }}
+                >
+                  {deletionBusy ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Retrying deletion…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      Retry deletion
+                    </>
+                  )}
+                </Button>
+              ) : null}
+              <Button variant="outline" className="min-h-11" asChild>
+                <Link to="/projects">Back to projects</Link>
+              </Button>
+            </div>
+          </section>
+        </main>
+      </AppShell>
+    );
+  }
 
   async function toggleArchive() {
     const operationRequestKey = requestKey;
@@ -470,9 +552,15 @@ function ProjectDetailPage() {
                   toast.success("Saved");
                 }}
                 onDelete={async () => {
-                  await fnDelete({ data: { id: projectId } });
-                  toast.success("Project deleted");
-                  navigate({ to: "/projects" });
+                  try {
+                    await fnDelete({ data: { id: projectId } });
+                    toast.success("Project deleted");
+                    await navigate({ to: "/projects" });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Deletion is incomplete. Try again.",
+                    );
+                  }
                 }}
               />
             </TabsContent>
@@ -774,21 +862,26 @@ function FilesTab({
   kind: "file" | "image";
 }) {
   const fnList = useServerFn(listFiles);
-  const fnRegister = useServerFn(registerUploadedFile);
-  const fnDelete = useServerFn(deleteProjectFile);
   const [items, setItems] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const refreshedImageUrlsRef = useRef<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+    refreshedImageUrlsRef.current.clear();
     try {
       setItems(await fnList({ data: { project_id: projectId, kind } }));
     } catch {
-      toast.error("Failed to load");
+      setLoadError(
+        "Files could not be loaded because earlier storage cleanup is incomplete. Retry shortly.",
+      );
     } finally {
       setLoading(false);
     }
@@ -797,41 +890,159 @@ function FilesTab({
     refresh();
   }, [refresh]);
 
+  async function projectFileRequest(input: RequestInit, search = ""): Promise<Response> {
+    const { data, error } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (error || !token) throw new Error("Your session expired. Sign in again and retry.");
+    const headers = new Headers(input.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    return fetch(`/api/project-files${search}`, {
+      ...input,
+      headers,
+    });
+  }
+
+  async function getFreshFileUrl(fileId: string): Promise<string> {
+    const response = await projectFileRequest(
+      {
+        method: "GET",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      },
+      `?id=${encodeURIComponent(fileId)}`,
+    );
+    const payload = (await response.json().catch(() => null)) as { url?: unknown } | null;
+    if (!response.ok || typeof payload?.url !== "string" || !payload.url) {
+      throw new Error("A fresh file link could not be created. Please retry.");
+    }
+    const url = new URL(payload.url, window.location.origin);
+    const localHttp =
+      url.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localHttp) {
+      throw new Error("The file service returned an unsafe link.");
+    }
+    return url.toString();
+  }
+
+  async function openFile(file: ProjectFile) {
+    setDownloadingId(file.id);
+    const target = window.open("about:blank", "_blank");
+    if (target) target.opener = null;
+    try {
+      const url = await getFreshFileUrl(file.id);
+      if (target) target.location.replace(url);
+      else window.location.assign(url);
+    } catch (error) {
+      target?.close();
+      toast.error(error instanceof Error ? error.message : "The file could not be opened.");
+    } finally {
+      setDownloadingId((current) => (current === file.id ? null : current));
+    }
+  }
+
+  async function refreshImageUrl(file: ProjectFile) {
+    if (refreshedImageUrlsRef.current.has(file.id)) {
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: null } : item)),
+      );
+      return;
+    }
+    refreshedImageUrlsRef.current.add(file.id);
+    try {
+      const url = await getFreshFileUrl(file.id);
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: url } : item)),
+      );
+    } catch {
+      setItems((current) =>
+        current.map((item) => (item.id === file.id ? { ...item, signed_url: null } : item)),
+      );
+      toast.error(`${file.name} could not be previewed. Retry shortly.`);
+    }
+  }
+
+  async function responseError(response: Response): Promise<string> {
+    const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
+    const code = typeof payload?.error === "string" ? payload.error : "";
+    const messages: Record<string, string> = {
+      file_too_large: "Files must be 10 MB or smaller.",
+      unsupported_file_type: "That file type is not supported.",
+      image_signature_required: "The selected file is not a valid image.",
+      file_content_does_not_match_type: "The file contents do not match its type.",
+      invalid_json_file: "The selected JSON file is invalid.",
+      project_file_limit_reached: "This project has reached its file limit.",
+      project_file_upload_in_progress: "This upload is already in progress.",
+      project_file_daily_limit_reached: "You have reached today's file upload limit.",
+      project_file_quota_unavailable: "Upload limits could not be verified. Retry shortly.",
+      project_file_cleanup_incomplete:
+        "Earlier file cleanup must finish before another upload. Retry shortly.",
+      project_file_storage_unavailable: "File storage is temporarily unavailable. Retry shortly.",
+      project_storage_limit_reached: "This project's owner has reached their storage limit.",
+      project_storage_quota_unavailable:
+        "Project storage limits could not be verified. Retry shortly.",
+      project_file_quota_recovery_failed:
+        "The upload could not be safely released after its quota check. Retry shortly.",
+      project_file_storage_finalize_failed:
+        "The uploaded file could not be finalized safely. Retry shortly.",
+      project_file_temp_cleanup_failed:
+        "The upload completed, but temporary storage cleanup must finish before it appears.",
+      project_file_finalize_unavailable:
+        "The upload is stored safely but could not be published yet. Retry shortly.",
+    };
+    return messages[code] ?? "The file could not be uploaded. Please retry.";
+  }
+
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0 || !canEdit) return;
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        const isImg = file.type.startsWith("image/");
-        if (kind === "image" && !isImg) {
-          toast.error(`${file.name} is not an image`);
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}: files must be 10 MB or smaller`);
           continue;
         }
-        const cleanName = file.name.replace(/[^\w.\- ]+/g, "_");
-        const path = `${projectId}/${Date.now()}-${cleanName}`;
-        const { error: upErr } = await supabase.storage.from("project-files").upload(path, file, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
-        if (upErr) {
-          toast.error(`${file.name}: ${upErr.message}`);
-          continue;
+        const idempotencyKey = crypto.randomUUID();
+        try {
+          const response = await projectFileRequest({
+            method: "POST",
+            body: file,
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-Kova-Project-Id": projectId,
+              "X-Kova-File-Name": encodeURIComponent(file.name),
+              "X-Kova-File-Kind": kind,
+              "X-Kova-Idempotency-Key": idempotencyKey,
+            },
+          });
+          if (!response.ok) throw new Error(await responseError(response));
+          toast.success(`${file.name} uploaded`);
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : `${file.name} could not be uploaded`,
+          );
         }
-        await fnRegister({
-          data: {
-            project_id: projectId,
-            name: file.name,
-            storage_path: path,
-            mime_type: file.type || null,
-            size_bytes: file.size,
-            kind: isImg && kind === "image" ? "image" : "file",
-          },
-        });
       }
       await refresh();
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteFile(id: string) {
+    try {
+      const response = await projectFileRequest({
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) {
+        throw new Error("The file could not be deleted. Please retry.");
+      }
+      setConfirmId(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The file could not be deleted.");
     }
   }
 
@@ -849,7 +1060,11 @@ function FilesTab({
               type="file"
               multiple
               hidden
-              accept={kind === "image" ? "image/*" : undefined}
+              accept={
+                kind === "image"
+                  ? "image/png,image/jpeg,image/webp,image/gif"
+                  : ".txt,.md,.markdown,.csv,.tsv,.json,.yaml,.yml,.xml,.log,.ini,.conf,.cfg,.toml,.sql,.html,.htm,.css,.js,.jsx,.ts,.tsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.sh,.c,.cpp,.h,.hpp,.cs,.vue,.svelte,.r,.pdf"
+              }
               onChange={(e) => handleFiles(e.target.files)}
             />
             <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
@@ -883,9 +1098,16 @@ function FilesTab({
       )}
 
       {loading ? (
-        <div className="text-muted-foreground text-sm flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
+        <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
+          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           Loading…
+        </div>
+      ) : loadError ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4" role="alert">
+          <p className="text-sm text-foreground">Files could not be loaded. Try again.</p>
+          <Button className="mt-3 min-h-11" variant="outline" onClick={() => void refresh()}>
+            Retry
+          </Button>
         </div>
       ) : items.length === 0 ? (
         <EmptyState
@@ -916,6 +1138,7 @@ function FilesTab({
                   alt={f.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={() => void refreshImageUrl(f)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -927,11 +1150,12 @@ function FilesTab({
               </div>
               {canEdit && (
                 <button
+                  type="button"
                   onClick={() => setConfirmId(f.id)}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-background/90 rounded p-1 transition"
+                  className="absolute right-2 top-2 flex min-h-11 min-w-11 items-center justify-center rounded bg-background/90 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                   aria-label="Delete image"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -948,25 +1172,30 @@ function FilesTab({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {f.signed_url && (
-                  <a
-                    href={f.signed_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded hover:bg-accent"
-                    aria-label="Download"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-11 min-w-11"
+                  onClick={() => void openFile(f)}
+                  disabled={downloadingId === f.id}
+                  aria-label={`Open ${f.name}`}
+                >
+                  {downloadingId === f.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
                 {canEdit && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setConfirmId(f.id)}
-                    aria-label="Delete"
+                    className="min-h-11 min-w-11"
+                    aria-label={`Delete ${f.name}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -984,9 +1213,7 @@ function FilesTab({
         destructive
         onConfirm={async () => {
           if (!confirmId) return;
-          await fnDelete({ data: { id: confirmId } });
-          setConfirmId(null);
-          await refresh();
+          await handleDeleteFile(confirmId);
         }}
       />
     </div>
@@ -1801,8 +2028,8 @@ function SettingsTab({
       <div className="border border-destructive/40 rounded-xl p-4">
         <div className="text-sm font-medium text-destructive mb-1">Danger zone</div>
         <p className="text-xs text-muted-foreground mb-3">
-          Deleting a project removes it for every member and permanently deletes all its chats,
-          files, tasks, and notes.
+          Deleting a project removes it for every member and permanently deletes its stored file
+          copies, chats, tasks, notes, and memberships. Interrupted cleanup stays retryable.
         </p>
         <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}>
           <Trash2 className="w-4 h-4 mr-1.5" />
@@ -1814,7 +2041,7 @@ function SettingsTab({
         open={confirming}
         onOpenChange={setConfirming}
         title={`Delete “${project.name}”?`}
-        message="This can't be undone. All project chats, files, tasks, notes, and memberships will be removed."
+        message="This can't be undone. Stored file copies, chats, tasks, notes, and memberships will be removed. If cleanup is interrupted, this dialog stays available so you can retry."
         confirmLabel="Delete forever"
         destructive
         onConfirm={onDelete}
@@ -1874,8 +2101,16 @@ function ConfirmDialog({
                 setBusy(false);
               }
             }}
+            aria-busy={busy || undefined}
           >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : confirmLabel}
+            {busy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>{confirmLabel}…</span>
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

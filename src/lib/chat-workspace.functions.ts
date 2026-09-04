@@ -733,6 +733,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
         .from("project_files")
         .select("id, name, project_id")
         .eq("project_id", pin.project_id ?? "")
+        .eq("status", "ready")
         .eq("id", pin.source_id)
         .maybeSingle();
       if (!file) {
