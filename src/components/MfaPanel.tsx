@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { PasskeyPanel } from "@/components/PasskeyPanel";
 
 type Factor = { id: string; friendly_name?: string | null; status: string };
 
@@ -129,6 +130,7 @@ export function MfaPanel() {
 
   return (
     <div className="space-y-4">
+      <PasskeyPanel />
       <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck className="w-4 h-4 text-primary" />
