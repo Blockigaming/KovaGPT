@@ -17,14 +17,19 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     "sha256Hex",
     "reserve_project_file_upload",
     "enforceQuota",
-    "enforceStorage",
+    "try_add_storage_bytes",
+    "storage_owner_id",
+    "authorization.ownerId",
+    "unsupported_media_type",
     "upload_attempt_id",
     "finalize_project_file_delete",
   ]) {
     assert.match(route, new RegExp(contract));
   }
-  assert.match(ui, /fetch\("\/api\/project-files"/);
+  assert.match(ui, /fetch\(\`\/api\/project-files\\\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
+  assert.match(ui, /getFreshFileUrl/);
+  assert.match(ui, /onError=\{\(\) => void refreshImageUrl\(f\)\}/);
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
   assert.match(workspace, /\.eq\("status", "ready"\)/);
@@ -40,6 +45,12 @@ test("Project file migration serializes caps and removes browser mutations", () 
   assert.match(migration, /project_files_upload_idempotency_unique/);
   assert.match(migration, /upload_lease_until/);
   assert.match(migration, /storage_charged/);
+  assert.match(migration, /p_user_id, project_owner, 'pending'/);
+  assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
+  assert.match(
+    migration,
+    /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/,
+  );
   assert.match(migration, /file_size_limit[\s\S]*10485760/);
   assert.match(migration, /REVOKE INSERT, UPDATE, DELETE ON public\.project_files FROM authenticated/);
   assert.match(
