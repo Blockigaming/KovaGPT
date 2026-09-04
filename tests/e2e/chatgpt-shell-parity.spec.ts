@@ -132,7 +132,12 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     for (const theme of themes) {
       for (const width of widths) {
         await verifyConversationShell(page, width, theme);
-        await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+        if (width < 1024) {
+          await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
+          await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+        } else {
+          await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+        }
       }
     }
     expect(mockedBackendOrigins.size).toBe(1);
