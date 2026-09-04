@@ -430,9 +430,7 @@ export function LibraryFolderOrganizer({
           <Button
             className="min-h-11"
             size="sm"
-            disabled={
-              Boolean(busy) || loading || selectedItemIds.length > MAX_BULK_MOVE_ITEMS
-            }
+            disabled={Boolean(busy) || loading || selectedItemIds.length > MAX_BULK_MOVE_ITEMS}
             onClick={() => void moveSelected()}
           >
             {busy === "move" ? (
