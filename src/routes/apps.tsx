@@ -487,7 +487,7 @@ function GitHubManager() {
   }
 
   async function disconnectAccount(removeData: boolean) {
-    const accountId = data.accounts[0]?.id;
+    const accountId = data?.accounts[0]?.id;
     if (!accountId || busy) return;
     setBusyAction("disconnect");
     try {

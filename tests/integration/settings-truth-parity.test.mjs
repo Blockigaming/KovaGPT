@@ -91,3 +91,22 @@ test("data controls describe the available privacy surface truthfully", () => {
   assert.doesNotMatch(settings, /removed model-improvement switch/i);
   assert.doesNotMatch(settings, /removed guest training and marketing switches/i);
 });
+
+test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {
+  const settings = read("src/components/SettingsDialog.tsx");
+
+  assert.match(settings, /to="\/apps"/);
+  assert.match(settings, /onClick=\{\(\) => onOpenChange\(false\)\}/);
+  assert.match(settings, /Manage apps and permissions/);
+  assert.match(settings, /verified from the server-backed Apps page/);
+  for (const obsolete of [
+    "linked-accounts",
+    "getLinkedAccounts",
+    "connectProvider",
+    "disconnectProvider",
+    "CONNECTOR_CATALOG",
+    "ConnectorRow",
+  ]) {
+    assert.doesNotMatch(settings, new RegExp(obsolete), obsolete);
+  }
+});

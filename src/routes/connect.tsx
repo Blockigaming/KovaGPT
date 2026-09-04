@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/connect")({
@@ -36,14 +37,20 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       type="button"
       aria-label={label}
       disabled={!value}
-      onClick={() => {
+      onClick={async () => {
         if (!value) return;
-        void navigator.clipboard.writeText(value).then(() => {
+        try {
+          await navigator.clipboard.writeText(value);
           setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        });
+          window.setTimeout(() => setCopied(false), 2000);
+        } catch {
+          setCopied(false);
+          toast.error(
+            "Could not copy the connection details. Select the text and copy it manually.",
+          );
+        }
       }}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+      className="inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
     >
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       {copied ? "Copied" : "Copy"}
