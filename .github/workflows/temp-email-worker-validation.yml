@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: temporary-email-worker-validation
+  cancel-in-progress: true
+
 jobs:
   validate:
     if: github.actor != 'github-actions[bot]'
