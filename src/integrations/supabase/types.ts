@@ -908,6 +908,7 @@ export type Database = {
           content_sha256: string | null;
           created_at: string;
           delete_attempt_id: string | null;
+          delete_lease_until: string | null;
           id: string;
           idempotency_key: string | null;
           kind: string;
@@ -928,6 +929,7 @@ export type Database = {
           content_sha256?: string | null;
           created_at?: string;
           delete_attempt_id?: string | null;
+          delete_lease_until?: string | null;
           id?: string;
           idempotency_key?: string | null;
           kind?: string;
@@ -948,6 +950,7 @@ export type Database = {
           content_sha256?: string | null;
           created_at?: string;
           delete_attempt_id?: string | null;
+          delete_lease_until?: string | null;
           id?: string;
           idempotency_key?: string | null;
           kind?: string;
