@@ -290,10 +290,10 @@ BEGIN
   THEN
     RETURN NEW;
   END IF;
-  IF TG_OP = 'UPDATE'
-    AND (OLD.metadata ->> 'provider_id') IS NOT DISTINCT FROM provider_message_id
-  THEN
-    RETURN NEW;
+  IF TG_OP = 'UPDATE' THEN
+    IF (OLD.metadata ->> 'provider_id') IS NOT DISTINCT FROM provider_message_id THEN
+      RETURN NEW;
+    END IF;
   END IF;
 
   FOR pending_event IN
