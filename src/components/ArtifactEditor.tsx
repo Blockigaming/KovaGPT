@@ -26,10 +26,7 @@ import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspac
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 import { createSerializedSnapshotQueue } from "@/lib/serialized-write-queue";
-import {
-  loadPrincipalStoredRecord,
-  WORKSPACE_DEFAULTS_KEY_BASE,
-} from "@/lib/settings-storage";
+import { loadPrincipalStoredRecord, WORKSPACE_DEFAULTS_KEY_BASE } from "@/lib/settings-storage";
 
 type SessionVersion = {
   id: number;
@@ -133,11 +130,9 @@ export function ArtifactEditor({
       try {
         const principal = authPrincipalRef.current;
         if (principal.principalResolved) {
-          const stored = loadPrincipalStoredRecord(
-            WORKSPACE_DEFAULTS_KEY_BASE,
-            principal.userKey,
-            { migrateLegacyGuest: principal.userKey === null },
-          );
+          const stored = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, principal.userKey, {
+            migrateLegacyGuest: principal.userKey === null,
+          });
           preferred = typeof stored?.artifact === "string" ? stored.artifact : "";
         }
       } catch {
