@@ -426,7 +426,7 @@ async function remove(request: Request): Promise<Response> {
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }
 
-export const Route = createFileRoute("/api/project-files" as never)({
+export const Route = createFileRoute("/api/project-files")({
   server: {
     handlers: {
       POST: ({ request }) => upload(request),
