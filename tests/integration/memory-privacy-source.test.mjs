@@ -68,6 +68,14 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.doesNotMatch(page, /title: active\.title\.slice\(0, 120\)/);
   assert.match(page, /if \(!saveConversations\(userKey, nextConversations\)\)/);
   assert.match(page, /This chat could not be saved/);
+  const conversionStart = page.indexOf("const saveTemporaryChat");
+  const conversionBoundary = page.indexOf("const convertedAt = active.messages.length", conversionStart);
+  const retryCancellation = page.indexOf("window.clearTimeout(retryTimerRef.current)", conversionStart);
+  assert.ok(
+    conversionStart > -1 &&
+      retryCancellation > conversionStart &&
+      retryCancellation < conversionBoundary,
+  );
   assert.match(page, /disabled=\{isStreaming\}/);
   assert.match(page, /setTempChat\(false\)[\s\S]*?setTempChatContext\("clean"\)/);
   assert.match(
@@ -77,6 +85,11 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(
     chatStore,
     /memoryStartIndex:[\s\S]*?Math\.min\(Math\.max\(0, source\.memoryStartIndex\), index \+ 1\)/,
+  );
+  assert.match(chatStore, /const removedCount = Math\.max\(0, messages\.length - MAX_MESSAGES_PER_CONVERSATION\)/);
+  assert.match(
+    chatStore,
+    /memoryStartIndex:[\s\S]*?conversation\.memoryStartIndex - removedCount/,
   );
   assert.match(chatStore, /export function saveConversations\([\s\S]*?\): boolean/);
   assert.match(page, /Save to history/);
