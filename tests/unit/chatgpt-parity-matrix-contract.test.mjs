@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const spec = readFileSync("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8");
+const modelSelectorSpec = readFileSync("tests/e2e/model-selector.spec.ts", "utf8");
 const browserConfig = readFileSync("playwright.browser.config.ts", "utf8");
 const goal = readFileSync("docs/release-reconciliation/chatgpt-parity-target.md", "utf8");
 
@@ -23,6 +24,12 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
   for (const engine of ["chromium", "firefox", "webkit"]) {
     assert.match(browserConfig, new RegExp(engine, "iu"));
   }
+});
+
+test("required model-selector coverage cannot silently skip an absent control", () => {
+  assert.match(modelSelectorSpec, /primary chat composer must expose its truthful model selector/u);
+  assert.doesNotMatch(modelSelectorSpec, /testInfo\.skip/u);
+  assert.doesNotMatch(modelSelectorSpec, /Model selector not present/u);
 });
 
 test("the visual goal explicitly rejects a futuristic dashboard detour", () => {
