@@ -90,9 +90,7 @@ test("bounded response reader rejects declared overflow without reading", async 
   await assert.rejects(
     readResponseBytesBounded(response, 6),
     (error) =>
-      error instanceof BodyReadError &&
-      error.status === 413 &&
-      error.code === "response_too_large",
+      error instanceof BodyReadError && error.status === 413 && error.code === "response_too_large",
   );
   assert.equal(readerRequested, false);
   assert.equal(cancelReason, "response_too_large");
@@ -133,9 +131,7 @@ test("bounded response reader cancels streamed overflow at the byte limit", asyn
   await assert.rejects(
     readResponseBytesBounded(overflow, 6),
     (error) =>
-      error instanceof BodyReadError &&
-      error.status === 413 &&
-      error.code === "response_too_large",
+      error instanceof BodyReadError && error.status === 413 && error.code === "response_too_large",
   );
   assert.equal(cancelReason, "response_too_large");
   assert.equal(released, true);
