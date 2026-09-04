@@ -504,8 +504,8 @@ export const Route = createFileRoute("/api/chat")({
           try {
             let ingress;
             try {
-              ingress = await preflight.run("request_body", () =>
-                readChatRequest(request, CHAT_BODY_LIMIT_BYTES),
+              ingress = await preflight.run("request_body", (signal) =>
+                readChatRequest(request, CHAT_BODY_LIMIT_BYTES, signal),
               );
             } catch (error) {
               const ingressError = error instanceof ChatPreflightError ? error.cause : error;
@@ -776,8 +776,8 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (maint) return maint;
                 const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
-                const quota = await preflight.run("image_quota", () =>
-                  enforceQuota(auth, "images", imgLimit),
+                const quota = await preflight.run("image_quota", (signal) =>
+                  enforceQuota(auth, "images", imgLimit, 1, signal),
                 );
                 if (quota) return quota;
               }
@@ -790,8 +790,8 @@ export const Route = createFileRoute("/api/chat")({
                 assertFeatureEnabled(auth, "chat"),
               );
               if (maint) return maint;
-              const quota = await preflight.run("chat_quota", () =>
-                enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]),
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
               );
               if (quota) return quota;
             }
@@ -846,12 +846,13 @@ export const Route = createFileRoute("/api/chat")({
                 assertFeatureEnabled(auth, "uploads"),
               );
               if (maint) return maint;
-              const quota = await preflight.run("upload_quota", () =>
+              const quota = await preflight.run("upload_quota", (signal) =>
                 enforceQuota(
                   auth,
                   "uploads",
                   DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
                   totalAttachments,
+                  signal,
                 ),
               );
               if (quota) return quota;
