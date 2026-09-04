@@ -876,11 +876,7 @@ function LibraryPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Your saved items are temporarily unavailable. Try again in a moment.
             </p>
-            <Button
-              className="mt-4 min-h-11"
-              onClick={refreshLibrary}
-              disabled={folderBusy}
-            >
+            <Button className="mt-4 min-h-11" onClick={refreshLibrary} disabled={folderBusy}>
               Retry
             </Button>
           </section>
