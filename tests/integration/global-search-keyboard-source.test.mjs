@@ -14,6 +14,9 @@ test("workspace results use the keyboard index", () => {
   assert.match(source, /const totalItems = chatStartIndex \+ conversationMatches\.length/);
   assert.match(source, /id=\{`command-option-\$\{index\}`\}/);
   assert.match(source, /aria-selected=\{activeIndex === index\}/);
+  assert.match(source, /workspace:\\${item\.type}:\\${item\.id}/);
+  assert.match(source, /chat:\\${conversation\.id}/);
+  assert.match(source, /optionKeys\.indexOf\(activeOptionKey\)/);
 });
 
 test("Enter opens workspace results before chats", () => {
@@ -29,4 +32,13 @@ test("Enter opens workspace results before chats", () => {
 test("the dialog announces workspace search", () => {
   assert.match(source, /aria-label="Search workspace, chats, and actions"/);
   assert.match(source, /aria-label="Search workspace, commands, and chats"/);
+});
+
+test("keyboard navigation keeps the active result visible", () => {
+  assert.match(source, /getElementById\(\`command-option-\\\${activeIndex}\`\)/);
+  assert.match(source, /scrollIntoView\(\{ block: "nearest" \}\)/);
+  assert.match(
+    source,
+    /setActiveIndex\(Math\.min\(totalItems - 1, activeIndex \+ 1\)\)/,
+  );
 });
