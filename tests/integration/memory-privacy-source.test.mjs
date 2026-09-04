@@ -49,10 +49,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(chatApi, /const personalContext = usesExistingContext \? user : undefined/);
   assert.match(chatApi, /usesExistingContext && personality/);
   assert.match(chatApi, /temporary: !usesExistingContext/);
-  assert.match(
-    chatApi,
-    /auth &&\s*usesExistingContext[\s\S]{0,120}getAvailableGoogleTools/,
-  );
+  assert.match(chatApi, /auth &&\s*usesExistingContext[\s\S]{0,120}getAvailableGoogleTools/);
   assert.match(chatApi, /buildUserContextBlock\(personalContext \?\? \{\}\)/);
   assert.match(page, /if \(!active \|\| active\.temporary\) return/);
   assert.match(page, /memoryStartIndex: convertedAt/);
