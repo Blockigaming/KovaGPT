@@ -1,4 +1,8 @@
-const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+const SUPPORTED_WRITE_TOOLS = new Set([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 const HEADER_BREAK = /[\r\n]/;
 const EMAIL =
   /^(?=.{3,254}$)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?$/i;
@@ -200,5 +204,5 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  return tool === "gmail_create_draft" ? validateDraft(args) : validateCalendarEvent(args);
+  return tool === "calendar_create_event" ? validateCalendarEvent(args) : validateDraft(args);
 }
