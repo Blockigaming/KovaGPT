@@ -164,7 +164,8 @@ async function setUploadState(
     .update({
       status,
       storage_charged: storageCharged,
-      upload_lease_until: status === "pending" ? new Date(Date.now() + 120_000).toISOString() : null,
+      upload_lease_until:
+        status === "pending" ? new Date(Date.now() + 120_000).toISOString() : null,
       updated_at: new Date().toISOString(),
     } as never)
     .eq("id", fileId)
@@ -221,7 +222,10 @@ function reservationFailure(error: { code?: string; message?: string } | null): 
 
 async function upload(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return json({ error: "cross_site_request_blocked" }, 403);
-  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/octet-stream") {
+  if (
+    request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !==
+    "application/octet-stream"
+  ) {
     return json({ error: "unsupported_media_type" }, 415);
   }
   const auth = await requireVerifiedUser(request);
@@ -305,11 +309,7 @@ async function upload(request: Request): Promise<Response> {
   }
 
   const callerTier = await getCallerTier(auth);
-  const quota = await enforceQuota(
-    auth,
-    "uploads",
-    DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
-  );
+  const quota = await enforceQuota(auth, "uploads", DAILY_UPLOAD_LIMIT_BY_TIER[callerTier]);
   if (quota) {
     await setUploadState(auth, row.id, attemptId, "upload_failed", row.storage_charged);
     return quota;
@@ -336,14 +336,15 @@ async function upload(request: Request): Promise<Response> {
     }
   }
 
-  const stored = await auth.supabaseAdmin.storage.from("project-files").upload(row.storage_path, bytes, {
-    contentType: inspected.mimeType,
-    upsert: true,
-  });
+  const stored = await auth.supabaseAdmin.storage
+    .from("project-files")
+    .upload(row.storage_path, bytes, {
+      contentType: inspected.mimeType,
+      upsert: true,
+    });
   if (stored.error) {
     const released =
-      !storageCharged ||
-      (await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
+      !storageCharged || (await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
     await setUploadState(
       auth,
       row.id,
@@ -355,12 +356,12 @@ async function upload(request: Request): Promise<Response> {
   }
 
   if (!(await setUploadState(auth, row.id, attemptId, "ready", storageCharged))) {
-    const removed = await auth.supabaseAdmin.storage.from("project-files").remove([row.storage_path]);
+    const removed = await auth.supabaseAdmin.storage
+      .from("project-files")
+      .remove([row.storage_path]);
     const released =
       !storageCharged ||
-      (removed.error
-        ? false
-        : await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
+      (removed.error ? false : await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
     await setUploadState(
       auth,
       row.id,
@@ -405,7 +406,10 @@ function missingObject(error: unknown): boolean {
 
 async function remove(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return json({ error: "cross_site_request_blocked" }, 403);
-  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+  if (
+    request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !==
+    "application/json"
+  ) {
     return json({ error: "unsupported_media_type" }, 415);
   }
   const auth = await requireVerifiedUser(request);

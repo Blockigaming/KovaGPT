@@ -38,9 +38,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
 });
 
 test("Project file migration serializes caps and removes browser mutations", () => {
-  const migration = read(
-    "supabase/migrations/20260904200000_project_file_upload_integrity.sql",
-  );
+  const migration = read("supabase/migrations/20260904200000_project_file_upload_integrity.sql");
 
   assert.match(migration, /FOR UPDATE OF p/);
   assert.match(migration, /project_files_upload_idempotency_unique/);
@@ -48,12 +46,12 @@ test("Project file migration serializes caps and removes browser mutations", () 
   assert.match(migration, /storage_charged/);
   assert.match(migration, /p_user_id, project_owner, 'pending'/);
   assert.match(migration, /CREATE POLICY "files_select_members"[\s\S]*status = 'ready'/);
+  assert.match(migration, /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/);
+  assert.match(migration, /file_size_limit[\s\S]*10485760/);
   assert.match(
     migration,
-    /pf\.storage_path = storage\.objects\.name[\s\S]*pf\.status = 'ready'/,
+    /REVOKE INSERT, UPDATE, DELETE ON public\.project_files FROM authenticated/,
   );
-  assert.match(migration, /file_size_limit[\s\S]*10485760/);
-  assert.match(migration, /REVOKE INSERT, UPDATE, DELETE ON public\.project_files FROM authenticated/);
   assert.match(
     migration,
     /REVOKE ALL ON FUNCTION public\.reserve_project_file_upload[\s\S]*FROM PUBLIC, anon, authenticated/,
@@ -62,11 +60,7 @@ test("Project file migration serializes caps and removes browser mutations", () 
     migration,
     /GRANT EXECUTE ON FUNCTION public\.reserve_project_file_upload[\s\S]*TO service_role/,
   );
-  for (const policy of [
-    "project_files_write",
-    "project_files_update",
-    "project_files_delete",
-  ]) {
+  for (const policy of ["project_files_write", "project_files_update", "project_files_delete"]) {
     assert.match(migration, new RegExp(`DROP POLICY IF EXISTS "${policy}"`));
   }
 });

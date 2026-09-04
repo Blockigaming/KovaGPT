@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 90,
-  "latest": "20260903220000_project_templates.sql",
+  "count": 91,
+  "latest": "20260904200000_project_file_upload_integrity.sql",
   "migrations": [
     {
       "order": 1,
@@ -1854,6 +1854,28 @@
         "project_template_audit_owner_created_idx",
         "project_template_audit_actor_created_idx",
         "project_template_mutations_created_idx"
+      ]
+    },
+    {
+      "order": 91,
+      "filename": "20260904200000_project_file_upload_integrity.sql",
+      "timestamp": "20260904200000",
+      "sha256": "31bfa439b1f56eb9943316643118321e2f52063a4a0d9c112147e67e0a9edf91",
+      "tables": [],
+      "functions": [
+        "reserve_project_file_upload",
+        "finalize_project_file_delete",
+        "release_project_storage_bytes"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": ["files_select_members", "project_files_read"],
+      "indexes": [
+        "project_files_project_storage_unique",
+        "project_files_upload_idempotency_unique",
+        "project_files_status_idx"
       ]
     }
   ]

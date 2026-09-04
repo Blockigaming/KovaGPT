@@ -4,11 +4,7 @@
     {
       "table": "projects",
       "accessModel": "project_membership",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -27,11 +23,7 @@
     {
       "table": "project_chats",
       "accessModel": "project_membership",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -50,11 +42,7 @@
     {
       "table": "project_files",
       "accessModel": "project_membership",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -77,11 +65,7 @@
     {
       "table": "project_memory",
       "accessModel": "project_membership",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -97,11 +81,7 @@
     {
       "table": "user_library_items",
       "accessModel": "direct_user",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -119,11 +99,7 @@
     {
       "table": "user_preferences",
       "accessModel": "direct_user",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "user_id",
         "row": {
@@ -142,11 +118,7 @@
     {
       "table": "chat_memories",
       "accessModel": "direct_user",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -164,11 +136,7 @@
     {
       "table": "shared_chats",
       "accessModel": "shared_resource",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -190,11 +158,7 @@
     {
       "table": "connected_accounts",
       "accessModel": "server_managed",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -213,11 +177,7 @@
     {
       "table": "financial_accounts",
       "accessModel": "server_managed",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -236,11 +196,7 @@
     {
       "table": "subscriptions",
       "accessModel": "server_managed",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -261,11 +217,7 @@
     {
       "table": "scheduled_tasks",
       "accessModel": "direct_user",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {
@@ -284,11 +236,7 @@
     {
       "table": "user_storage",
       "accessModel": "server_managed",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "user_id",
         "row": {
@@ -303,11 +251,7 @@
     {
       "table": "writing_documents",
       "accessModel": "direct_user",
-      "operations": [
-        "select",
-        "update",
-        "delete"
-      ],
+      "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "id",
         "row": {

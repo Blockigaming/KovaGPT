@@ -796,10 +796,7 @@ function FilesTab({
     refresh();
   }, [refresh]);
 
-  async function projectFileRequest(
-    input: RequestInit,
-    search = "",
-  ): Promise<Response> {
+  async function projectFileRequest(input: RequestInit, search = ""): Promise<Response> {
     const { data, error } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (error || !token) throw new Error("Your session expired. Sign in again and retry.");
@@ -909,7 +906,9 @@ function FilesTab({
           if (!response.ok) throw new Error(await responseError(response));
           toast.success(`${file.name} uploaded`);
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : `${file.name} could not be uploaded`);
+          toast.error(
+            error instanceof Error ? error.message : `${file.name} could not be uploaded`,
+          );
         }
       }
       await refresh();
