@@ -87,6 +87,8 @@ function isConversation(value: unknown): value is Conversation {
     typeof candidate.createdAt === "number" &&
     typeof candidate.updatedAt === "number" &&
     typeof candidate.mode === "string" &&
+    (candidate.memoryStartIndex === undefined ||
+      (Number.isInteger(candidate.memoryStartIndex) && candidate.memoryStartIndex >= 0)) &&
     Array.isArray(candidate.messages) &&
     candidate.messages.every(
       (message) =>
