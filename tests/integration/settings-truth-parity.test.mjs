@@ -111,3 +111,22 @@ test("settings does not expose local switches for unenforced email, family, or l
   assert.match(mapWidget, /Map previews are not available yet/);
   assert.doesNotMatch(mapWidget, /localStorage|getItem\("kova-location"\)|<iframe/);
 });
+
+test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {
+  const settings = read("src/components/SettingsDialog.tsx");
+
+  assert.match(settings, /to="\/apps"/);
+  assert.match(settings, /onClick=\{\(\) => onOpenChange\(false\)\}/);
+  assert.match(settings, /Manage apps and permissions/);
+  assert.match(settings, /verified from the server-backed Apps page/);
+  for (const obsolete of [
+    "linked-accounts",
+    "getLinkedAccounts",
+    "connectProvider",
+    "disconnectProvider",
+    "CONNECTOR_CATALOG",
+    "ConnectorRow",
+  ]) {
+    assert.doesNotMatch(settings, new RegExp(obsolete), obsolete);
+  }
+});

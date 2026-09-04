@@ -31,6 +31,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { SharedChatInbox, SharedChatSummary } from "@/lib/shared-chats.functions";
+import {
+  LibraryFolderOrganizer,
+  type LibraryFolderScope,
+} from "@/components/LibraryFolderOrganizer";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -80,6 +84,7 @@ const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
 const EMPTY_RECEIVED_SHARES: SharedChatInbox[] = [];
 const EMPTY_SENT_SHARES: SharedChatSummary[] = [];
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function readFavorites(key: string | null): Set<string> {
   if (!key) return new Set();
@@ -352,6 +357,13 @@ function LibraryPage() {
       });
     }
   }, [isLoaded, isSignedIn, principal]);
+  const [folderScope, setFolderScope] = useState<LibraryFolderScope>("all");
+  const [folderRefreshKey, setFolderRefreshKey] = useState(0);
+  const [folderBusy, setFolderBusy] = useState(false);
+  const selectedDurableIds = useMemo(
+    () => selected.filter((id) => UUID_PATTERN.test(id)),
+    [selected],
+  );
 
   const load = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -424,11 +436,18 @@ function LibraryPage() {
       if (!isCurrent()) return;
       console.error("[library] load failed");
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
+      setSelected([]);
       toast.error("Could not load your library.");
     } finally {
       if (isCurrent()) setLoading(false);
     }
   }, [isLoaded, isSignedIn, principal, setItems, userKey]);
+
+  const refreshLibrary = useCallback(() => {
+    if (folderBusy) return;
+    setFolderRefreshKey((current) => current + 1);
+    void load();
+  }, [folderBusy, load]);
 
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
@@ -449,6 +468,7 @@ function LibraryPage() {
       loading: false,
       error: null,
     });
+    setFolderScope("all");
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
       setFavoritesPrincipal(null);
@@ -479,6 +499,7 @@ function LibraryPage() {
         loading: false,
         error: null,
       });
+      setFolderScope("all");
       setSelected([]);
       setQuery("");
       setFilter("all");
@@ -514,11 +535,15 @@ function LibraryPage() {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
   }, [view]);
 
+  useEffect(() => {
+    setSelected([]);
+  }, [folderScope]);
+
   const [pendingDelete, setPendingDelete] = useState<
     { kind: "one"; id: string } | { kind: "many" } | null
   >(null);
   const remove = async (id: string, confirmed = false) => {
-    if (!principalReady || !principal) return;
+    if (!principalReady || !principal || folderBusy) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -603,7 +628,7 @@ function LibraryPage() {
   };
 
   const deleteSelected = async (confirmed = false) => {
-    if (!principalReady || !principal) return;
+    if (!principalReady || !principal || folderBusy) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -665,9 +690,19 @@ function LibraryPage() {
     window.location.href = "/";
   };
 
+  const folderItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (folderScope === "unfiled") return UUID_PATTERN.test(item.id) && !item.folder_id;
+        if (folderScope !== "all") return item.folder_id === folderScope;
+        return true;
+      }),
+    [folderScope, items],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items
+    return folderItems
       .filter((item) => {
         if (filter === "favorites" && !visibleFavorites.has(item.id)) return false;
         if (filter === "chats" && !item.id.startsWith("chat:")) return false;
@@ -693,7 +728,7 @@ function LibraryPage() {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return sort === "oldest" ? -delta : delta;
       });
-  }, [filter, items, query, sort, visibleFavorites]);
+  }, [filter, folderItems, query, sort, visibleFavorites]);
 
   const storageKnown = items.some((item) => typeof item.file_size === "number");
   const storageTotal = storageKnown
@@ -760,6 +795,7 @@ function LibraryPage() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              disabled={folderBusy}
               onClick={() => remove(item.id)}
               className="text-destructive focus:text-destructive"
             >
@@ -899,10 +935,10 @@ function LibraryPage() {
                 variant="outline"
                 className="min-h-11"
                 onClick={() => {
-                  void load();
+                  refreshLibrary();
                   void loadShares();
                 }}
-                disabled={loading || sharesLoading}
+                disabled={loading || folderBusy || sharesLoading}
               >
                 <RefreshCw
                   aria-hidden="true"
@@ -1036,6 +1072,36 @@ function LibraryPage() {
           </section>
         ) : null}
 
+        {isSignedIn && isLoaded && principal ? (
+          <LibraryFolderOrganizer
+            key={principal}
+            enabled
+            principalKey={principal}
+            refreshKey={folderRefreshKey}
+            itemStateUnavailable={loading || Boolean(loadError)}
+            scope={folderScope}
+            selectedItemIds={selectedDurableIds}
+            onScopeChange={setFolderScope}
+            onBusyChange={setFolderBusy}
+            onRefresh={refreshLibrary}
+            onMoved={(itemIds, folderId) => {
+              loadGenerationRef.current += 1;
+              setLoading(false);
+              const moved = new Set(itemIds);
+              setItems((current) =>
+                current.map((item) =>
+                  moved.has(item.id) ? { ...item, folder_id: folderId } : item,
+                ),
+              );
+              setSelected([]);
+            }}
+            onFoldersDeleted={() => {
+              setSelected([]);
+              void load();
+            }}
+          />
+        ) : null}
+
         {items.length > 0 && !loadError ? (
           <>
             <section className="kova-toolbar" aria-label="Library toolbar">
@@ -1155,6 +1221,7 @@ function LibraryPage() {
                 size="sm"
                 variant="destructive"
                 className="min-h-11"
+                disabled={folderBusy}
                 onClick={() => void deleteSelected()}
               >
                 Delete
@@ -1170,7 +1237,7 @@ function LibraryPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Your saved items are temporarily unavailable. Try again in a moment.
             </p>
-            <Button className="mt-4 min-h-11" onClick={load}>
+            <Button className="mt-4 min-h-11" onClick={refreshLibrary} disabled={folderBusy}>
               Retry
             </Button>
           </section>
@@ -1196,12 +1263,20 @@ function LibraryPage() {
                 ? isSignedIn
                   ? "Your Library is empty"
                   : "Nothing saved in this browser"
-                : "No matches"}
+                : query
+                  ? "No matches"
+                  : folderScope !== "all" && folderItems.length === 0
+                    ? "This folder is empty"
+                    : "No items match this filter"}
             </h2>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
               {items.length === 0
-                ? "Save a response, generated image, research report, or upload to find it here."
-                : `Nothing matches “${query}”.`}
+                ? "Saved uploads and generated files outside Temporary Chat appear here automatically."
+                : query
+                  ? `Nothing matches “${query}”.`
+                  : folderScope !== "all" && folderItems.length === 0
+                    ? "Move selected durable items here from All items or another folder."
+                    : "Try a different file-type filter."}
             </p>
           </section>
         ) : (

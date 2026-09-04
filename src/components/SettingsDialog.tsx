@@ -54,20 +54,6 @@ import {
   MapPin,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
-import {
-  connectProvider,
-  disconnectProvider,
-  getLinkedAccounts,
-  type LinkedProvider,
-} from "@/lib/linked-accounts";
-import {
-  CONNECTOR_CATALOG,
-  CONNECTOR_CATEGORIES,
-  connectorUnavailableLabel,
-  connectorUnavailableReason,
-  isConnectorActionable,
-  type ConnectorItem,
-} from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -278,9 +264,6 @@ export function SettingsDialog({
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
   const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
-  const [linked, setLinked] = useState<LinkedProvider[]>(() =>
-    user?.id ? getLinkedAccounts(user.id) : [],
-  );
   const [tab, setTab] = useState<string>(initialTab ?? "general");
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
@@ -357,11 +340,6 @@ export function SettingsDialog({
   useEffect(() => {
     if (open && initialTab) setTab(initialTab);
   }, [open, initialTab]);
-
-  useEffect(() => {
-    if (!open) return;
-    setLinked(user?.id ? getLinkedAccounts(user.id) : []);
-  }, [open, user?.id]);
 
   const setMode = (m: ThemeMode) => {
     applyThemeMode(m);
@@ -603,7 +581,6 @@ export function SettingsDialog({
         {!loggedIn ? (
           <SignedOutSettings
             settings={settings}
-            onChange={onChange}
             setMode={setMode}
             onSignIn={() => clerk?.openSignIn()}
             onClose={() => onOpenChange(false)}
@@ -898,56 +875,20 @@ export function SettingsDialog({
                 {!loggedIn ? (
                   <SignInGate label="Apps" />
                 ) : (
-                  <>
-                    <section className="space-y-1">
-                      <h3 className="text-sm font-semibold">Apps</h3>
+                  <section className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold">Connected apps</h3>
                       <p className="text-xs text-muted-foreground">
-                        Connect external accounts so KovaGPT can use them in your chats. Live
-                        integrations work today; others are on the roadmap.
+                        Connection status, provider permissions, reconnection, and revocation are
+                        verified from the server-backed Apps page.
                       </p>
-                      <p className="text-xs text-muted-foreground pt-1">
-                        Linking apps is free for everyone. Disconnect at any time.
-                      </p>
-                    </section>
-
-                    {CONNECTOR_CATEGORIES.map((cat) => {
-                      const items = CONNECTOR_CATALOG.filter((c) => c.category === cat);
-                      if (items.length === 0) return null;
-                      return (
-                        <section key={cat} className="space-y-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            {cat}
-                          </h4>
-                          <div className="space-y-2">
-                            {items.map((item) => (
-                              <ConnectorRow
-                                key={item.id}
-                                item={item}
-                                linked={linked}
-                                canConnect={true}
-                                onConnect={async (p) => {
-                                  if (!user?.id) return;
-                                  const res = await connectProvider(user.id, p);
-                                  if (res.error) {
-                                    toast.error(res.error);
-                                    return;
-                                  }
-                                  setLinked(getLinkedAccounts(user.id));
-                                  if (!res.redirected) toast.success(`Connected.`);
-                                }}
-                                onDisconnect={(p) => {
-                                  if (!user?.id) return;
-                                  disconnectProvider(user.id, p);
-                                  setLinked(getLinkedAccounts(user.id));
-                                  toast.success(`Disconnected.`);
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </section>
-                      );
-                    })}
-                  </>
+                    </div>
+                    <Button asChild variant="outline" className="min-h-11">
+                      <Link to="/apps" onClick={() => onOpenChange(false)}>
+                        Manage apps and permissions
+                      </Link>
+                    </Button>
+                  </section>
                 )}
               </TabsContent>
 
@@ -1612,177 +1553,6 @@ function SignInGate({ label }: { label: string }) {
   );
 }
 
-function ConnectorRow({
-  item,
-  linked,
-  canConnect,
-  onConnect,
-  onDisconnect,
-}: {
-  item: ConnectorItem;
-  linked: LinkedProvider[];
-  canConnect: boolean;
-  onConnect: (p: LinkedProvider) => void;
-  onDisconnect: (p: LinkedProvider) => void;
-}) {
-  const actionable = isConnectorActionable(item);
-  // Some genuinely connectable entries (e.g. Google Calendar) are covered by a
-  // broader account grant and have no standalone row of their own, so they are
-  // managed from the Apps page rather than toggled here.
-  const provider = item.legacyProvider ?? null;
-  const connected = actionable && !!provider && linked.includes(provider);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-9 h-9 rounded-lg bg-muted text-foreground flex items-center justify-center text-xs font-semibold shrink-0">
-          {item.label.slice(0, 2).toUpperCase()}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-medium truncate flex items-center gap-2">{item.label}</div>
-          <div className="text-xs text-muted-foreground truncate">{item.description}</div>
-        </div>
-      </div>
-      {!actionable ? (
-        <span
-          className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
-          title={connectorUnavailableReason(item)}
-        >
-          {connectorUnavailableLabel(item)}
-        </span>
-      ) : !provider ? (
-        <Button asChild variant="outline" size="sm" className="h-8 shrink-0">
-          <Link to="/apps">Manage in Apps</Link>
-        </Button>
-      ) : connected ? (
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex items-center gap-1 text-xs text-foreground">
-            <Check className="w-3.5 h-3.5" /> Connected
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onDisconnect(provider)}
-          >
-            Disconnect
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 shrink-0"
-          disabled={!canConnect}
-          onClick={() => onConnect(provider)}
-        >
-          Connect
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ProviderIcon({ provider }: { provider: LinkedProvider }) {
-  const base = "w-9 h-9 rounded-lg flex items-center justify-center shrink-0";
-  if (provider === "apple") {
-    return (
-      <div className={base + " bg-foreground text-background"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
-          <path d="M16.365 1.43c0 1.14-.456 2.227-1.197 3.02-.79.85-2.07 1.51-3.12 1.43-.13-1.1.43-2.26 1.16-3.04.82-.88 2.2-1.54 3.16-1.4zM20.5 17.27c-.55 1.27-.82 1.84-1.53 2.97-.99 1.57-2.39 3.53-4.12 3.55-1.54.01-1.94-1-4.04-1-2.1.01-2.54 1.02-4.08 1-1.73-.02-3.06-1.78-4.05-3.35C-.06 16.66-.34 11.5 2.27 8.84c1.42-1.44 3.44-2.27 5.36-2.27 1.94 0 3.16 1.07 4.76 1.07 1.55 0 2.5-1.07 4.74-1.07 1.71 0 3.52.93 4.81 2.54-4.23 2.32-3.54 8.37 1.06 9.18z" />
-        </svg>
-      </div>
-    );
-  }
-  if (provider === "youtube") {
-    return (
-      <div className={base + " bg-[#FF0000] text-white"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
-          <path d="M23.5 6.2a3.02 3.02 0 0 0-2.13-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.37.56A3.02 3.02 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.8a3.02 3.02 0 0 0 2.13 2.14C4.5 20.5 12 20.5 12 20.5s7.5 0 9.37-.56a3.02 3.02 0 0 0 2.13-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.8zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z" />
-        </svg>
-      </div>
-    );
-  }
-  if (provider === "gmail") {
-    return (
-      <div className={base + " bg-white border border-border"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
-          <path
-            fill="#EA4335"
-            d="M12 13.065L1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11l6 4.5 6-4.5v8.5h3a1.5 1.5 0 0 0 1.5-1.5V5.4L12 13.065z"
-          />
-          <path fill="#4285F4" d="M22.5 5.4V18a1.5 1.5 0 0 1-1.5 1.5h-3V11l-6 4.5V13l10.5-7.6z" />
-          <path fill="#34A853" d="M1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11L1.5 5.4z" />
-          <path fill="#FBBC05" d="M22.5 5.4L12 13.065 1.5 5.4l10.5 7.6 10.5-7.6z" />
-        </svg>
-      </div>
-    );
-  }
-  if (provider === "google-drive") {
-    return (
-      <div className={base + " bg-white border border-border"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
-          <path fill="#0F9D58" d="M7.71 21l4.29-7.43L7.7 6.14h8.6L20.6 13.57 16.29 21H7.71z" />
-          <path
-            fill="#F4B400"
-            d="M2 13.57L7.71 21h8.58L10.57 11l-4.28-7.43L2 13.57z"
-            opacity=".85"
-          />
-          <path
-            fill="#4285F4"
-            d="M22 13.57L16.29 21H7.71L13.43 11l4.28-7.43L22 13.57z"
-            opacity=".7"
-          />
-        </svg>
-      </div>
-    );
-  }
-  return (
-    <div className={base + " bg-white border border-border"}>
-      <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
-        <path
-          fill="#4285F4"
-          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-        />
-        <path
-          fill="#34A853"
-          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        />
-        <path
-          fill="#FBBC05"
-          d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"
-        />
-        <path
-          fill="#EA4335"
-          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function LockedTab({
-  title,
-  body,
-  onSignIn,
-}: {
-  title: string;
-  body: string;
-  onSignIn?: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-border bg-muted/30">
-      <div className="w-12 h-12 rounded-full bg-foreground/10 flex items-center justify-center mb-4">
-        <Lock className="w-5 h-5 text-foreground/70" />
-      </div>
-      <h3 className="text-base font-semibold mb-1.5">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-5">{body}</p>
-      <Button size="sm" onClick={() => onSignIn?.()} className="rounded-full px-5">
-        Log in or sign up
-      </Button>
-    </div>
-  );
-}
-
 function SecurityRow({
   title,
   body,
@@ -2282,23 +2052,20 @@ function LibraryPanel() {
 // FinancesPanel removed - the Finances tab is no longer part of Settings.
 
 // Limited settings panel shown to signed-out visitors. Includes only privacy
-// preferences, appearance, and language. All copy is KovaGPT-branded (not
-// copied from any other provider).
+// preferences and appearance. All copy is KovaGPT-branded (not copied from
+// any other provider).
 function SignedOutSettings({
   settings,
-  onChange,
   setMode,
   onSignIn,
   onClose,
 }: {
   settings: Settings;
-  onChange: (s: Settings) => void;
   setMode: (m: ThemeMode) => void;
   onSignIn: () => void;
   onClose: () => void;
 }) {
   const [section, setSection] = useState<"general" | "data">("general");
-  void onChange;
 
   return (
     <div className="kova-settings-surface flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-modal)] md:flex-row">
@@ -2351,16 +2118,11 @@ function SignedOutSettings({
               </div>
             </div>
             <div className="flex items-center justify-between gap-4 py-4">
-              <span className="text-sm">Language</span>
-              <div className="w-44">
-                <GuestLanguageSelect />
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-4 py-4">
               <div className="min-w-0">
                 <div className="text-sm">Account</div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Sign in to sync chats, memory, and settings across devices.
+                  Sign in to use account-backed chats, memory, and paid features. Browser
+                  preferences stay on this device.
                 </p>
               </div>
               <Button onClick={onSignIn} className="h-9 rounded-full px-5 text-sm">
@@ -2374,9 +2136,9 @@ function SignedOutSettings({
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
               <div className="text-sm font-medium">How signed-out data is stored</div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Signed-out chats stay in this tab until you refresh or close it. Appearance and
-                language preferences remain in this browser, but nothing here is synced to an
-                account. Read the{" "}
+                Signed-out chats stay in this tab until you refresh or close it. Your appearance
+                preference remains in this browser, but nothing here is synced to an account. Read
+                the{" "}
                 <Link
                   to="/privacy"
                   onClick={onClose}
@@ -2461,87 +2223,6 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
         )}
       </div>
     </section>
-  );
-}
-
-const KOVA_LANGUAGES: { value: string; label: string }[] = [
-  { value: "auto", label: "Auto detect" },
-  { value: "en", label: "English" },
-  { value: "en-GB", label: "English (UK)" },
-  { value: "es", label: "Español" },
-  { value: "es-MX", label: "Español (México)" },
-  { value: "fr", label: "Français" },
-  { value: "de", label: "Deutsch" },
-  { value: "it", label: "Italiano" },
-  { value: "pt", label: "Português" },
-  { value: "pt-BR", label: "Português (Brasil)" },
-  { value: "nl", label: "Nederlands" },
-  { value: "sv", label: "Svenska" },
-  { value: "no", label: "Norsk" },
-  { value: "da", label: "Dansk" },
-  { value: "fi", label: "Suomi" },
-  { value: "pl", label: "Polski" },
-  { value: "cs", label: "Čeština" },
-  { value: "ro", label: "Română" },
-  { value: "hu", label: "Magyar" },
-  { value: "el", label: "Ελληνικά" },
-  { value: "tr", label: "Türkçe" },
-  { value: "ru", label: "Русский" },
-  { value: "uk", label: "Українська" },
-  { value: "ar", label: "العربية" },
-  { value: "he", label: "עברית" },
-  { value: "fa", label: "فارسی" },
-  { value: "hi", label: "हिन्दी" },
-  { value: "bn", label: "বাংলা" },
-  { value: "ur", label: "اردو" },
-  { value: "ta", label: "தமிழ்" },
-  { value: "te", label: "తెలుగు" },
-  { value: "th", label: "ไทย" },
-  { value: "vi", label: "Tiếng Việt" },
-  { value: "id", label: "Bahasa Indonesia" },
-  { value: "ms", label: "Bahasa Melayu" },
-  { value: "tl", label: "Tagalog" },
-  { value: "zh-CN", label: "中文 (简体)" },
-  { value: "zh-TW", label: "中文 (繁體)" },
-  { value: "ja", label: "日本語" },
-  { value: "ko", label: "한국어" },
-  { value: "sw", label: "Kiswahili" },
-  { value: "af", label: "Afrikaans" },
-];
-
-function GuestLanguageSelect() {
-  const KEY = "kova-guest-language";
-  const [value, setValue] = useState<string>("auto");
-  useEffect(() => {
-    try {
-      setValue(localStorage.getItem(KEY) || "auto");
-    } catch {
-      /* noop */
-    }
-  }, []);
-  return (
-    <Select
-      value={value}
-      onValueChange={(v) => {
-        setValue(v);
-        try {
-          localStorage.setItem(KEY, v);
-        } catch {
-          /* noop */
-        }
-      }}
-    >
-      <SelectTrigger aria-label="Language">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="max-h-72">
-        {KOVA_LANGUAGES.map((l) => (
-          <SelectItem key={l.value} value={l.value}>
-            {l.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 

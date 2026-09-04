@@ -20,6 +20,9 @@ export type TimerItem = {
 
 const KEY_BASE = "kova-timers";
 const EVT = "kova-timers-change";
+const MAX_TIMER_ITEMS = 100;
+const MAX_TIMER_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_ALARM_AHEAD_MS = 365 * 24 * 60 * 60 * 1000;
 type TimerUserKey = string | null | undefined;
 
 function read(userKey: TimerUserKey): TimerItem[] {
@@ -28,22 +31,56 @@ function read(userKey: TimerUserKey): TimerItem[] {
   try {
     const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((candidate): TimerItem[] => {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
+      const item = candidate as Record<string, unknown>;
+      if (
+        typeof item.id !== "string" ||
+        item.id.length === 0 ||
+        item.id.length > 120 ||
+        (item.kind !== "timer" && item.kind !== "alarm") ||
+        typeof item.label !== "string" ||
+        typeof item.fireAt !== "number" ||
+        !Number.isFinite(item.fireAt)
+      ) {
+        return [];
+      }
+      const durationMs =
+        typeof item.durationMs === "number" &&
+        Number.isFinite(item.durationMs) &&
+        item.durationMs > 0
+          ? item.durationMs
+          : undefined;
+      return [
+        {
+          id: item.id,
+          kind: item.kind,
+          label: item.label.slice(0, 120) || (item.kind === "timer" ? "Timer" : "Alarm"),
+          fireAt: item.fireAt,
+          ...(durationMs === undefined ? {} : { durationMs }),
+          ...(item.fired === true ? { fired: true } : {}),
+        },
+      ];
+    });
   } catch {
     return [];
   }
 }
 
-function write(userKey: TimerUserKey, items: TimerItem[]) {
+function write(userKey: TimerUserKey, items: TimerItem[]): boolean {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
   const principal = browserStoragePrincipal(userKey);
-  if (!key || !principal) return;
+  if (!key || !principal) return false;
   try {
-    safeBrowserStorage("localStorage")?.setItem(key, JSON.stringify(items));
+    const storage = safeBrowserStorage("localStorage");
+    if (!storage) return false;
+    storage.setItem(key, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(EVT, { detail: { principal } }));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
@@ -70,7 +107,16 @@ export function subscribeTimers(userKey: TimerUserKey, cb: () => void): () => vo
   };
 }
 
-export function addTimer(userKey: TimerUserKey, durationMs: number, label = "Timer"): TimerItem {
+export function addTimer(
+  userKey: TimerUserKey,
+  durationMs: number,
+  label = "Timer",
+): TimerItem | null {
+  if (!Number.isFinite(durationMs) || durationMs < 1000 || durationMs > MAX_TIMER_DURATION_MS) {
+    return null;
+  }
+  const current = read(userKey);
+  if (current.length >= MAX_TIMER_ITEMS) return null;
   const item: TimerItem = {
     id: `t_${crypto.randomUUID()}`,
     kind: "timer",
@@ -78,39 +124,46 @@ export function addTimer(userKey: TimerUserKey, durationMs: number, label = "Tim
     durationMs,
     fireAt: Date.now() + durationMs,
   };
-  write(userKey, [...read(userKey), item]);
-  return item;
+  return write(userKey, [...current, item]) ? item : null;
 }
 
-export function addAlarm(userKey: TimerUserKey, fireAt: number, label = "Alarm"): TimerItem {
+export function addAlarm(userKey: TimerUserKey, fireAt: number, label = "Alarm"): TimerItem | null {
+  if (
+    !Number.isFinite(fireAt) ||
+    fireAt <= Date.now() ||
+    fireAt - Date.now() > MAX_ALARM_AHEAD_MS
+  ) {
+    return null;
+  }
+  const current = read(userKey);
+  if (current.length >= MAX_TIMER_ITEMS) return null;
   const item: TimerItem = {
     id: `a_${crypto.randomUUID()}`,
     kind: "alarm",
     label,
     fireAt,
   };
-  write(userKey, [...read(userKey), item]);
-  return item;
+  return write(userKey, [...current, item]) ? item : null;
 }
 
-export function removeTimer(userKey: TimerUserKey, id: string) {
-  write(
+export function removeTimer(userKey: TimerUserKey, id: string): boolean {
+  return write(
     userKey,
-    read(userKey).filter((t) => t.id !== id),
+    read(userKey).filter((timer) => timer.id !== id),
   );
 }
 
-export function markFired(userKey: TimerUserKey, id: string) {
-  write(
+export function markFired(userKey: TimerUserKey, id: string): boolean {
+  return write(
     userKey,
-    read(userKey).map((t) => (t.id === id ? { ...t, fired: true } : t)),
+    read(userKey).map((timer) => (timer.id === id ? { ...timer, fired: true } : timer)),
   );
 }
 
-export function clearFired(userKey: TimerUserKey) {
-  write(
+export function clearFired(userKey: TimerUserKey): boolean {
+  return write(
     userKey,
-    read(userKey).filter((t) => !t.fired),
+    read(userKey).filter((timer) => !timer.fired),
   );
 }
 

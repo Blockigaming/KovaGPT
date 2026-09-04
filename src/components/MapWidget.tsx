@@ -1,6 +1,12 @@
 import { MapPin } from "lucide-react";
 
-export function MapWidget({ height = 180 }: { height?: number }) {
+export function MapWidget({
+  height = 180,
+}: {
+  height?: number;
+  userKey?: string | null;
+  principalResolved?: boolean;
+}) {
   return (
     <div
       className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted/40 px-4 text-center text-xs text-muted-foreground"
