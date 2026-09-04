@@ -25,7 +25,7 @@ export type PendingConfirm = {
   tool: string;
   summary: string;
   argsPreview: Record<string, unknown>;
-  status: "pending" | "confirmed" | "cancelled" | "failed";
+  status: "pending" | "confirmed" | "cancelled" | "failed" | "uncertain";
   resultText?: string;
 };
 export type Message = {
