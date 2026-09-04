@@ -107,8 +107,7 @@ export function loadEmailWorkerConfig(env = process.env) {
   // PGMQ leases start when the whole batch is read. Budget five bounded
   // network operations per message for every sequential wave, plus teardown.
   const waves = Math.ceil(config.batchSize / config.concurrency);
-  const minimumVisibilitySeconds =
-    Math.ceil((waves * config.requestTimeoutMs * 5) / 1_000) + 30;
+  const minimumVisibilitySeconds = Math.ceil((waves * config.requestTimeoutMs * 5) / 1_000) + 30;
   if (config.visibilityTimeoutSeconds < minimumVisibilitySeconds) {
     throw new EmailWorkerError("unsafe_email_worker_visibility_budget");
   }

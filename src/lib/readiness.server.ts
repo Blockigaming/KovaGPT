@@ -31,10 +31,7 @@ function supabaseConfigured(): boolean {
 }
 
 function emailAppConfigured(): boolean {
-  return (
-    runtimeEnv("KOVA_EMAIL_QUEUE_ENABLED") === "true" &&
-    present("RESEND_WEBHOOK_SECRET")
-  );
+  return runtimeEnv("KOVA_EMAIL_QUEUE_ENABLED") === "true" && present("RESEND_WEBHOOK_SECRET");
 }
 
 function aiProviderConfigured(): boolean {

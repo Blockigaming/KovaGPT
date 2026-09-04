@@ -1860,12 +1860,17 @@
       "order": 91,
       "filename": "20260904210000_resend_webhook_integrity.sql",
       "timestamp": "20260904210000",
-      "sha256": "b5ae0f428fff2c7c7cf3b37eb728dfebe1e479a1d73a2ddbec3dc1f544e40d83",
+      "sha256": "eb873af13a1b732b895a348a47b500fafe7b820f8bf8ed4de41368b864c33afa",
       "tables": ["email_webhook_events"],
       "functions": [
         "process_resend_webhook_event",
+        "reconcile_resend_webhook_events_for_send",
         "enqueue_tracked_email",
-        "dead_letter_tracked_email"
+        "dead_letter_tracked_email",
+        "defer_email_retry",
+        "enqueue_tracked_email",
+        "dead_letter_tracked_email",
+        "defer_email_retry"
       ],
       "destructive": false,
       "dataBackfill": true,

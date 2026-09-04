@@ -114,8 +114,7 @@ test("configuration fails closed on missing secrets, insecure origins, and inval
         EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS: "300",
       }),
     (error) =>
-      error instanceof EmailWorkerError &&
-      error.code === "unsafe_email_worker_visibility_budget",
+      error instanceof EmailWorkerError && error.code === "unsafe_email_worker_visibility_budget",
   );
 });
 
@@ -211,9 +210,7 @@ test("transient delivery errors retain the queue row until the bounded final att
     retryApi.calls.filter((call) => call.url.endsWith("/rpc/dead_letter_tracked_email")).length,
     0,
   );
-  const deferred = retryApi.calls.find((call) =>
-    call.url.endsWith("/rpc/defer_email_retry"),
-  );
+  const deferred = retryApi.calls.find((call) => call.url.endsWith("/rpc/defer_email_retry"));
   assert.ok(deferred);
   assert.equal(deferred.body.p_retry_after_seconds, 3);
   assert.equal(deferred.body.p_lease_seconds, 300);
@@ -272,9 +269,6 @@ test("a shared provider cooldown prevents every replica from reclaiming queues e
     deadLettered: 0,
     retryAfterMs: 45_000,
   });
-  assert.equal(
-    api.calls.filter((call) => call.url.endsWith("/rpc/read_email_batch")).length,
-    0,
-  );
+  assert.equal(api.calls.filter((call) => call.url.endsWith("/rpc/read_email_batch")).length, 0);
   assert.equal(api.calls.filter((call) => call.url === "https://api.resend.com/emails").length, 0);
 });
