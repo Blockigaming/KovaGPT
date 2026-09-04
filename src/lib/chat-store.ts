@@ -235,17 +235,23 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   }
 }
 
-export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]) {
-  if (typeof window === "undefined") return;
+export function saveConversations(
+  userKey: ChatStorageUserKey,
+  convs: Conversation[],
+): boolean {
+  if (typeof window === "undefined") return false;
   try {
     localStorage.setItem(
       conversationStorageKey(userKey),
       JSON.stringify(boundConversations(convs)),
     );
+    if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
+    return true;
   } catch {
-    // Storage can be unavailable or full; the in-memory conversation remains usable.
+    // Storage can be unavailable or full; callers that require durable
+    // acknowledgement can report the failure instead of claiming success.
+    return false;
   }
-  if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
 export function clearConversations(userKey: ChatStorageUserKey) {
@@ -419,6 +425,10 @@ export function branchConversation(source: Conversation, throughMessageId: strin
     updatedAt: timestamp,
     pinned: false,
     pinnedAt: undefined,
+    memoryStartIndex:
+      typeof source.memoryStartIndex === "number"
+        ? Math.min(Math.max(0, source.memoryStartIndex), index + 1)
+        : undefined,
     branchOrigin: {
       conversationId: source.id,
       messageId: throughMessageId,
