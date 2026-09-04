@@ -484,7 +484,7 @@ async function remove(request: Request): Promise<Response> {
   ) {
     return json({ error: "unsupported_media_type" }, 415);
   }
-  const auth = await requireVerifiedUser(request);
+  const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
 
   const rate = await consumeApplicationRateLimit({
