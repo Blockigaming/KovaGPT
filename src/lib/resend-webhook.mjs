@@ -16,7 +16,7 @@ function fail(code, status) {
   throw new ResendWebhookError(code, status);
 }
 
-function decodeBase64(value, code) {
+function decodeBase64(value, code, status = 401) {
   if (
     typeof value !== "string" ||
     !value ||
@@ -24,13 +24,13 @@ function decodeBase64(value, code) {
     value.length % 4 === 1 ||
     !BASE64.test(value)
   ) {
-    fail(code, 401);
+    fail(code, status);
   }
   try {
     const decoded = atob(value);
     return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
   } catch {
-    fail(code, 401);
+    fail(code, status);
   }
 }
 
@@ -76,7 +76,11 @@ export async function verifyResendWebhookSignature({
     .map((value) => decodeBase64(value.slice(3), "invalid_resend_signature"));
   if (!candidates.length) fail("invalid_resend_signature", 401);
 
-  const secretBytes = decodeBase64(secret.slice("whsec_".length), "invalid_resend_webhook_secret");
+  const secretBytes = decodeBase64(
+    secret.slice("whsec_".length),
+    "invalid_resend_webhook_secret",
+    503,
+  );
   if (secretBytes.byteLength < 16) fail("invalid_resend_webhook_secret", 503);
   const key = await crypto.subtle.importKey(
     "raw",
