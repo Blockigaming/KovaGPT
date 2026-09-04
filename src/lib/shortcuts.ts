@@ -72,9 +72,7 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
 
 const KEY_BASE = "kova-shortcuts";
 const MAX_STORED_COMBO_LENGTH = 80;
-const KNOWN_SHORTCUT_IDS = new Set<ShortcutId>(
-  DEFAULT_SHORTCUTS.map((shortcut) => shortcut.id),
-);
+const KNOWN_SHORTCUT_IDS = new Set<ShortcutId>(DEFAULT_SHORTCUTS.map((shortcut) => shortcut.id));
 type ShortcutUserKey = string | null | undefined;
 type StoredShortcut = Pick<Shortcut, "id" | "combo">;
 
