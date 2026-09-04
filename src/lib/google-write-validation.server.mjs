@@ -232,6 +232,14 @@ export function foldEmailAddressHeader(name, value, maxLineLength = 78) {
   return lines.join("\r\n");
 }
 
+export function encodeMimeTextBody(value) {
+  if (typeof value !== "string") {
+    throw new TypeError("MIME body must be a string.");
+  }
+  const encoded = Buffer.from(value, "utf8").toString("base64");
+  return encoded.match(/.{1,76}/g)?.join("\r\n") ?? "";
+}
+
 export function validateSupportedGoogleWrite(tool, input) {
   if (!SUPPORTED_WRITE_TOOLS.has(tool)) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
