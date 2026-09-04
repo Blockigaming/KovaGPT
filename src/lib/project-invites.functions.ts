@@ -41,6 +41,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         project_id: z.string().uuid(),
         email: z.string().trim().email().max(254),
         role: z.enum(["editor", "viewer"]).default("editor"),
+        operation_id: z.string().uuid(),
       })
       .parse(input),
   )
@@ -76,6 +77,8 @@ export const inviteMember = createServerFn({ method: "POST" })
     const payload = await buildTransactionalEmail({
       templateName: "project-invite",
       recipientEmail: email,
+      messageId: data.operation_id,
+      idempotencyKey: data.operation_id,
       data: {
         projectName: project.name,
         inviterName: "A KovaGPT user",
@@ -91,6 +94,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         p_project_id: data.project_id,
         p_recipient_email: email,
         p_role: data.role,
+        p_operation_id: data.operation_id,
         p_payload: payload,
       } as never,
     );
