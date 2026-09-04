@@ -139,3 +139,53 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   assert.match(docs, /\/api\/public\/email\/webhook/);
   assert.match(docs, /event-supplied recipients and subjects are never trusted/);
 });
+
+test("collaboration emails are server-built, rate-limited, and transactionally paired", () => {
+  const builder = read("src/lib/email-queue.server.ts");
+  const projectInvites = read("src/lib/project-invites.functions.ts");
+  const sharedChats = read("src/lib/shared-chats.functions.ts");
+  const registry = read("src/lib/email-templates/registry.ts");
+  const shareDialog = read("src/components/ShareChatDialog.tsx");
+  const migration = read("supabase/migrations/20260904210000_resend_webhook_integrity.sql");
+
+  assert.match(builder, /KOVA_EMAIL_QUEUE_ENABLED !== "true"/);
+  assert.match(builder, /TEMPLATES\[args\.templateName\]/);
+  assert.match(builder, /crypto\.randomUUID\(\)/);
+  assert.match(registry, /"project-invite": projectInvite/);
+  assert.match(registry, /"shared-chat": sharedChat/);
+
+  assert.match(projectInvites, /action: "project_invite_email"/);
+  assert.match(projectInvites, /buildTransactionalEmail/);
+  assert.match(projectInvites, /"create_project_invite_and_enqueue"/);
+  assert.doesNotMatch(projectInvites, /\.from\("project_invites"\)[\s\S]*\.upsert/);
+
+  assert.match(sharedChats, /action: "shared_chat_email"/);
+  assert.match(sharedChats, /buildTransactionalEmail/);
+  assert.match(sharedChats, /"create_shared_chat_and_enqueue"/);
+  assert.doesNotMatch(sharedChats, /\.from\("shared_chats"\)[\s\S]*\.insert/);
+  assert.match(shareDialog, /Chat shared and invitation emailed\./);
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.create_project_invite_and_enqueue[\s\S]*INSERT INTO public\.project_invites[\s\S]*public\.enqueue_tracked_email/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.create_shared_chat_and_enqueue[\s\S]*INSERT INTO public\.shared_chats[\s\S]*public\.enqueue_tracked_email/,
+  );
+  for (const functionName of [
+    "create_project_invite_and_enqueue",
+    "create_shared_chat_and_enqueue",
+  ]) {
+    assert.match(
+      migration,
+      new RegExp(
+        `REVOKE ALL ON FUNCTION public\\.${functionName}[\\s\\S]*FROM PUBLIC, anon, authenticated`,
+      ),
+    );
+    assert.match(
+      migration,
+      new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${functionName}[\\s\\S]*TO service_role`),
+    );
+  }
+});
