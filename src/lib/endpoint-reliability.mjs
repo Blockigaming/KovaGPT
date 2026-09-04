@@ -73,6 +73,74 @@ export async function readUtf8BodyBounded(request, maxBytes) {
   }
 }
 
+async function cancelUnlockedBody(body, reason) {
+  if (!body || typeof body.cancel !== "function") return;
+  try {
+    await body.cancel(reason);
+  } catch {
+    // The size/format error below remains authoritative if cancellation fails.
+  }
+}
+
+/**
+ * Reads an upstream response without allowing an unknown-length body to be
+ * buffered beyond maxBytes. Declared overflows are rejected before a reader is
+ * acquired; streamed overflows cancel the reader before chunks are assembled.
+ */
+export async function readResponseBytesBounded(response, maxBytes) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new TypeError("maxBytes must be a nonnegative safe integer");
+  }
+
+  const contentLength = response.headers.get("content-length");
+  if (contentLength !== null) {
+    if (!/^(0|[1-9]\d*)$/.test(contentLength)) {
+      await cancelUnlockedBody(response.body, "invalid_content_length");
+      throw new BodyReadError(502, "invalid_content_length");
+    }
+    const declaredBytes = Number(contentLength);
+    if (!Number.isSafeInteger(declaredBytes)) {
+      await cancelUnlockedBody(response.body, "invalid_content_length");
+      throw new BodyReadError(502, "invalid_content_length");
+    }
+    if (declaredBytes > maxBytes) {
+      await cancelUnlockedBody(response.body, "response_too_large");
+      throw new BodyReadError(413, "response_too_large");
+    }
+  }
+
+  if (!response.body) return new Uint8Array();
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) {
+        await reader.cancel("invalid_response_body").catch(() => undefined);
+        throw new BodyReadError(502, "invalid_response_body");
+      }
+      if (value.byteLength > maxBytes - totalBytes) {
+        await reader.cancel("response_too_large").catch(() => undefined);
+        throw new BodyReadError(413, "response_too_large");
+      }
+      totalBytes += value.byteLength;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export function assertDatabaseSuccess(result, operation) {
   if (!result || result.error) throw new DurableBackendError(operation);
   return result.data;
