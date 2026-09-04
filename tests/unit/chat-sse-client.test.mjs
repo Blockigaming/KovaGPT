@@ -53,6 +53,7 @@ test("chat SSE rejects malformed JSON instead of reinserting it forever", async 
       assert.ok(error instanceof ChatStreamError);
       assert.equal(error.code, "chat_stream_malformed_json");
       assert.equal(error.retryable, true);
+      assert.equal(error.category, "streaming_interruption");
       return true;
     },
   );
