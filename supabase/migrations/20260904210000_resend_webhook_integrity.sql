@@ -346,3 +346,75 @@ REVOKE ALL ON FUNCTION public.enqueue_tracked_email(
 GRANT EXECUTE ON FUNCTION public.enqueue_tracked_email(
   text, jsonb, text, text
 ) TO service_role;
+
+
+CREATE OR REPLACE FUNCTION public.dead_letter_tracked_email(
+  p_source_queue text,
+  p_dlq_name text,
+  p_message_id bigint,
+  p_payload jsonb,
+  p_log_id uuid,
+  p_reason text,
+  p_attempts integer
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  dlq_message_id bigint;
+  updated_count integer;
+BEGIN
+  IF (p_source_queue, p_dlq_name) NOT IN (
+      ('auth_emails', 'auth_emails_dlq'),
+      ('transactional_emails', 'transactional_emails_dlq')
+    )
+    OR p_message_id IS NULL
+    OR p_message_id < 1
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR p_reason IS NULL
+    OR p_reason !~ '^[a-z0-9_]{1,100}$'
+    OR p_attempts NOT BETWEEN 1 AND 1000
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email_dead_letter';
+  END IF;
+
+  BEGIN
+    dlq_message_id := pgmq.send(p_dlq_name, p_payload);
+  EXCEPTION WHEN undefined_table THEN
+    PERFORM pgmq.create(p_dlq_name);
+    dlq_message_id := pgmq.send(p_dlq_name, p_payload);
+  END;
+
+  IF NOT pgmq.delete(p_source_queue, p_message_id) THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'tracked_email_source_delete_failed';
+  END IF;
+
+  IF p_log_id IS NOT NULL THEN
+    UPDATE public.email_send_log
+    SET status = 'dlq',
+        error_message = p_reason,
+        metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
+          'terminal_reason', p_reason,
+          'attempts', p_attempts,
+          'dead_lettered_at', now()
+        )
+    WHERE id = p_log_id;
+    GET DIAGNOSTICS updated_count = ROW_COUNT;
+    IF updated_count <> 1 THEN
+      RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'tracked_email_log_update_failed';
+    END IF;
+  END IF;
+
+  RETURN dlq_message_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.dead_letter_tracked_email(
+  text, text, bigint, jsonb, uuid, text, integer
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.dead_letter_tracked_email(
+  text, text, bigint, jsonb, uuid, text, integer
+) TO service_role;
