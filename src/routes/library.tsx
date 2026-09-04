@@ -163,6 +163,7 @@ function LibraryPage() {
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [folderScope, setFolderScope] = useState<LibraryFolderScope>("all");
+  const [folderRefreshKey, setFolderRefreshKey] = useState(0);
   const selectedDurableIds = useMemo(
     () => selected.filter((id) => UUID_PATTERN.test(id)),
     [selected],
@@ -245,14 +246,19 @@ function LibraryPage() {
     }
   }, [isLoaded, isSignedIn, principal, setItems, userKey]);
 
+  const refreshLibrary = useCallback(() => {
+    setFolderRefreshKey((current) => current + 1);
+    void load();
+  }, [load]);
+
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
     setQuery("");
     setFilter("all");
     setSort("newest");
     setPreviewItem(null);
-    setSelected([]);
     setFolderScope("all");
+    setSelected([]);
     setLoadError(null);
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
@@ -273,8 +279,8 @@ function LibraryPage() {
       setFavorites(new Set());
       setFavoritesPrincipal(principal);
       setPreviewItem(null);
-      setSelected([]);
       setFolderScope("all");
+      setSelected([]);
       setQuery("");
       setFilter("all");
       setSort("newest");
@@ -426,14 +432,20 @@ function LibraryPage() {
     window.location.href = "/";
   };
 
+  const folderItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (folderScope === "unfiled") return !item.folder_id;
+        if (folderScope !== "all") return item.folder_id === folderScope;
+        return true;
+      }),
+    [folderScope, items],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items
+    return folderItems
       .filter((item) => {
-        if (folderScope === "unfiled" && item.folder_id) return false;
-        if (folderScope !== "all" && folderScope !== "unfiled" && item.folder_id !== folderScope) {
-          return false;
-        }
         if (filter === "favorites" && !visibleFavorites.has(item.id)) return false;
         if (filter === "chats" && !item.id.startsWith("chat:")) return false;
         if (filter === "work" && !item.id.startsWith("work:")) return false;
@@ -458,7 +470,7 @@ function LibraryPage() {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return sort === "oldest" ? -delta : delta;
       });
-  }, [filter, folderScope, items, query, sort, visibleFavorites]);
+  }, [filter, folderItems, query, sort, visibleFavorites]);
 
   const storageKnown = items.some((item) => typeof item.file_size === "number");
   const storageTotal = storageKnown
@@ -666,7 +678,7 @@ function LibraryPage() {
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                onClick={load}
+                onClick={refreshLibrary}
                 disabled={loading}
               >
                 <RefreshCw
@@ -705,10 +717,13 @@ function LibraryPage() {
             key={principal}
             enabled
             principalKey={principal}
+            refreshKey={folderRefreshKey}
             scope={folderScope}
             selectedItemIds={selectedDurableIds}
             onScopeChange={setFolderScope}
             onMoved={(itemIds, folderId) => {
+              loadGenerationRef.current += 1;
+              setLoading(false);
               const moved = new Set(itemIds);
               setItems((current) =>
                 current.map((item) =>
@@ -718,6 +733,8 @@ function LibraryPage() {
               setSelected([]);
             }}
             onFoldersDeleted={(folderIds) => {
+              loadGenerationRef.current += 1;
+              setLoading(false);
               const removed = new Set(folderIds);
               setItems((current) =>
                 current.map((item) =>
@@ -865,7 +882,7 @@ function LibraryPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Your saved items are temporarily unavailable. Try again in a moment.
             </p>
-            <Button className="mt-4 min-h-11" onClick={load}>
+            <Button className="mt-4 min-h-11" onClick={refreshLibrary}>
               Retry
             </Button>
           </section>
@@ -893,7 +910,7 @@ function LibraryPage() {
                   : "Nothing saved in this browser"
                 : query
                   ? "No matches"
-                  : folderScope !== "all"
+                  : folderScope !== "all" && folderItems.length === 0
                     ? "This folder is empty"
                     : "No items match this filter"}
             </h2>
@@ -902,7 +919,7 @@ function LibraryPage() {
                 ? "Saved uploads and generated files outside Temporary Chat appear here automatically."
                 : query
                   ? `Nothing matches “${query}”.`
-                  : folderScope !== "all"
+                  : folderScope !== "all" && folderItems.length === 0
                     ? "Move selected durable items here from All items or another folder."
                     : "Try a different file-type filter."}
             </p>
