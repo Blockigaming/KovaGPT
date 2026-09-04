@@ -20,8 +20,34 @@ test("stored shortcuts are validated before reaching the keyboard listener", () 
   assert.match(shortcutsSource, /if \(!Array\.isArray\(parsed\)\) return DEFAULT_SHORTCUTS;/);
   assert.match(shortcutsSource, /KNOWN_SHORTCUT_IDS\.has\(candidate\.id as ShortcutId\)/);
   assert.match(shortcutsSource, /typeof candidate\.combo === "string"/);
-  assert.match(shortcutsSource, /candidate\.combo\.length <= MAX_STORED_COMBO_LENGTH/);
+  assert.match(shortcutsSource, /isValidShortcutCombo\(candidate\.combo\)/);
+  assert.match(
+    shortcutsSource,
+    /new Set\(resolved\.map\(\(\{ combo \}\) => combo\)\)\.size === resolved\.length/,
+  );
   assert.doesNotMatch(shortcutsSource, /JSON\.parse\(raw\) as Partial<Shortcut>\[\]/);
+});
+
+test("shortcut bindings are executable and collision-free", () => {
+  assert.match(shortcutsSource, /if \(key === " "\) return "Space";/);
+  assert.match(shortcutsSource, /if \(key === "\+"\) return "Plus";/);
+  assert.match(
+    shortcutsSource,
+    /export function shortcutComboFromKeyboardEvent\([\s\S]*?normalizedShortcutKey\(event\.key\)/,
+  );
+  assert.match(
+    shortcutsSource,
+    /new Set\(saved\.map\(\(\{ combo \}\) => combo\)\)\.size !== saved\.length/,
+  );
+  assert.match(
+    shortcutsSource,
+    /return normalizedShortcutKey\(e\.key\)\.toLowerCase\(\) === key;/,
+  );
+  assert.match(
+    shortcutPanel,
+    /const conflict = visibleList\.find\([\s\S]*?shortcut\.combo === combo[\s\S]*?That shortcut is already assigned to/,
+  );
+  assert.match(shortcutPanel, /That key can't be used for a shortcut\./);
 });
 
 test("shortcut persistence reports unavailable or failed browser storage", () => {
