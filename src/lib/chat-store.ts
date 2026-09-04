@@ -49,6 +49,8 @@ export type Conversation = {
   temporary?: boolean;
   /** Immutable context policy selected when a temporary conversation starts. */
   temporaryContext?: TemporaryChatContext;
+  /** Earliest message eligible for memory after a temporary chat is converted. */
+  memoryStartIndex?: number;
   /**
    * Stable root chat id shared by a conversation and every branch taken from it.
    * Durable branch rows are keyed by this, so switching branches can resolve a
