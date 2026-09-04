@@ -79,8 +79,6 @@ import {
   deleteTask,
   reorderTasks,
   listFiles,
-  registerUploadedFile,
-  deleteProjectFile,
   listMemory,
   addMemory,
   deleteMemory,
@@ -774,8 +772,6 @@ function FilesTab({
   kind: "file" | "image";
 }) {
   const fnList = useServerFn(listFiles);
-  const fnRegister = useServerFn(registerUploadedFile);
-  const fnDelete = useServerFn(deleteProjectFile);
   const [items, setItems] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -797,41 +793,84 @@ function FilesTab({
     refresh();
   }, [refresh]);
 
+  async function projectFileRequest(input: RequestInit): Promise<Response> {
+    const { data, error } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (error || !token) throw new Error("Your session expired. Sign in again and retry.");
+    return fetch("/api/project-files", {
+      ...input,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...input.headers,
+      },
+    });
+  }
+
+  async function responseError(response: Response): Promise<string> {
+    const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
+    const code = typeof payload?.error === "string" ? payload.error : "";
+    const messages: Record<string, string> = {
+      file_too_large: "Files must be 10 MB or smaller.",
+      unsupported_file_type: "That file type is not supported.",
+      image_signature_required: "The selected file is not a valid image.",
+      file_content_does_not_match_type: "The file contents do not match its type.",
+      invalid_json_file: "The selected JSON file is invalid.",
+      project_file_limit_reached: "This project has reached its file limit.",
+      project_file_upload_in_progress: "This upload is already in progress.",
+      project_file_storage_unavailable: "File storage is temporarily unavailable. Retry shortly.",
+    };
+    return messages[code] ?? "The file could not be uploaded. Please retry.";
+  }
+
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0 || !canEdit) return;
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        const isImg = file.type.startsWith("image/");
-        if (kind === "image" && !isImg) {
-          toast.error(`${file.name} is not an image`);
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}: files must be 10 MB or smaller`);
           continue;
         }
-        const cleanName = file.name.replace(/[^\w.\- ]+/g, "_");
-        const path = `${projectId}/${Date.now()}-${cleanName}`;
-        const { error: upErr } = await supabase.storage.from("project-files").upload(path, file, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
-        if (upErr) {
-          toast.error(`${file.name}: ${upErr.message}`);
-          continue;
+        const idempotencyKey = crypto.randomUUID();
+        try {
+          const response = await projectFileRequest({
+            method: "POST",
+            body: file,
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-Kova-Project-Id": projectId,
+              "X-Kova-File-Name": encodeURIComponent(file.name),
+              "X-Kova-File-Kind": kind,
+              "X-Kova-Idempotency-Key": idempotencyKey,
+            },
+          });
+          if (!response.ok) throw new Error(await responseError(response));
+          toast.success(`${file.name} uploaded`);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : `${file.name} could not be uploaded`);
         }
-        await fnRegister({
-          data: {
-            project_id: projectId,
-            name: file.name,
-            storage_path: path,
-            mime_type: file.type || null,
-            size_bytes: file.size,
-            kind: isImg && kind === "image" ? "image" : "file",
-          },
-        });
       }
       await refresh();
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteFile(id: string) {
+    try {
+      const response = await projectFileRequest({
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) {
+        throw new Error("The file could not be deleted. Please retry.");
+      }
+      setConfirmId(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The file could not be deleted.");
     }
   }
 
@@ -849,7 +888,11 @@ function FilesTab({
               type="file"
               multiple
               hidden
-              accept={kind === "image" ? "image/*" : undefined}
+              accept={
+                kind === "image"
+                  ? "image/png,image/jpeg,image/webp,image/gif"
+                  : ".txt,.md,.markdown,.csv,.tsv,.json,.yaml,.yml,.xml,.log,.ini,.conf,.cfg,.toml,.sql,.html,.htm,.css,.js,.jsx,.ts,.tsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.sh,.c,.cpp,.h,.hpp,.cs,.vue,.svelte,.r,.pdf"
+              }
               onChange={(e) => handleFiles(e.target.files)}
             />
             <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
@@ -984,9 +1027,7 @@ function FilesTab({
         destructive
         onConfirm={async () => {
           if (!confirmId) return;
-          await fnDelete({ data: { id: confirmId } });
-          setConfirmId(null);
-          await refresh();
+          await handleDeleteFile(confirmId);
         }}
       />
     </div>
