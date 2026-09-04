@@ -26,6 +26,7 @@ const SnapshotMessage = z.object({
   content: z.string().max(50_000),
 });
 const ShareSchema = z.object({
+  operation_id: z.string().uuid(),
   recipient_email: z.string().trim().email().max(255),
   title: z.string().trim().min(1).max(200),
   local_chat_reference: z.string().max(100).optional().nullable(),
@@ -61,6 +62,8 @@ export const shareChat = createServerFn({ method: "POST" })
     const payload = await buildTransactionalEmail({
       templateName: "shared-chat",
       recipientEmail,
+      messageId: data.operation_id,
+      idempotencyKey: data.operation_id,
       data: {
         chatTitle: data.title,
         senderName: "A KovaGPT user",
@@ -72,6 +75,7 @@ export const shareChat = createServerFn({ method: "POST" })
       "create_shared_chat_and_enqueue" as never,
       {
         p_actor_id: context.userId,
+        p_operation_id: data.operation_id,
         p_recipient_email: recipientEmail,
         p_title: data.title,
         p_local_chat_reference: data.local_chat_reference ?? null,
