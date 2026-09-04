@@ -276,14 +276,14 @@ export const listFiles = createServerFn({ method: "GET" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const items = (rows ?? []) as ProjectFile[];
-    // sign URLs for viewing
-    for (const it of items) {
-      const { data: signed } = await context.supabase.storage
-        .from("project-files")
-        .createSignedUrl(it.storage_path, 60);
-      it.signed_url = signed?.signedUrl ?? null;
-    }
-    return items;
+    return Promise.all(
+      items.map(async (item) => {
+        const { data: signed } = await context.supabase.storage
+          .from("project-files")
+          .createSignedUrl(item.storage_path, 60);
+        return { ...item, signed_url: signed?.signedUrl ?? null };
+      }),
+    );
   });
 
 export const reindexProjectFile = createServerFn({ method: "POST" })
