@@ -68,6 +68,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
+import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
@@ -416,6 +417,11 @@ const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
   path: '/api/project-suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectTemplatesRoute = ApiProjectTemplatesRouteImport.update({
+  id: '/api/project-templates',
+  path: '/api/project-templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiReadyzRoute = ApiReadyzRouteImport.update({
   id: '/api/readyz',
   path: '/api/readyz',
@@ -737,6 +743,7 @@ export interface FileRoutesByFullPath {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
@@ -848,6 +855,7 @@ export interface FileRoutesByTo {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
@@ -960,6 +968,7 @@ export interface FileRoutesById {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
@@ -1073,6 +1082,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
@@ -1184,6 +1194,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
@@ -1295,6 +1306,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
@@ -1407,6 +1419,7 @@ export interface RootRouteChildren {
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
+  ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiVersionRoute: typeof ApiVersionRoute
@@ -1867,6 +1880,13 @@ declare module '@tanstack/react-router' {
       path: '/api/project-suggest'
       fullPath: '/api/project-suggest'
       preLoaderRoute: typeof ApiProjectSuggestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/project-templates': {
+      id: '/api/project-templates'
+      path: '/api/project-templates'
+      fullPath: '/api/project-templates'
+      preLoaderRoute: typeof ApiProjectTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/readyz': {
@@ -2341,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
+  ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
   ApiReadyzRoute: ApiReadyzRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiVersionRoute: ApiVersionRoute,
