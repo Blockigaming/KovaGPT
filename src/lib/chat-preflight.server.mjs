@@ -144,10 +144,7 @@ export function createChatPreflightRunner({
       if (typeof operation !== "function") throw new TypeError("operation must be a function");
       const stage = safeStage(stageValue);
       const stageStartedAt = now();
-      const stageLimit = positiveTimeout(
-        timeoutMs,
-        required ? requiredLimit : optionalLimit,
-      );
+      const stageLimit = positiveTimeout(timeoutMs, required ? requiredLimit : optionalLimit);
       const stageController = new AbortController();
       let stageTimedOut = false;
       const onTotalAbort = () => {
