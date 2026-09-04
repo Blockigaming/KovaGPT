@@ -27,7 +27,10 @@ test("writing copy and download controls expose failure states and safe URL life
   assert.match(writeRoute, /Document export failed/);
   assert.match(writeRoute, /escapeHtml\(title\)/);
   assert.match(writeRoute, /document\.body\.appendChild\(anchor\)/);
-  assert.match(writeRoute, /window\.setTimeout\(\(\) => URL\.revokeObjectURL\(completedUrl\), 1_000\)/);
+  assert.match(
+    writeRoute,
+    /window\.setTimeout\(\(\) => URL\.revokeObjectURL\(completedUrl\), 1_000\)/,
+  );
   assert.match(exportCommon, /document\.body\.appendChild\(anchor\)/);
   assert.match(exportCommon, /finally\s*\{\s*anchor\?\.remove\(\)/);
   assert.match(
