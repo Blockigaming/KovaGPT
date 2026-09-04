@@ -50,7 +50,8 @@ test("location and copy controls expose truthful success and failure states", ()
   assert.match(settings, /window\.dispatchEvent\(new Event\(LOCATION_STORAGE_CHANGED_EVENT\)\)/);
   assert.match(settings, /Location could not be saved in this browser/);
   assert.match(settings, /if \(saved\) toast\.success\("Location saved"\)/);
-  assert.match(settings, /used only for\s+location cards shown in this browser/);
+  assert.match(settings, /used only to render an\s+OpenStreetMap location card in this browser/);
   assert.match(settings, /they are not added to chat requests/);
   assert.doesNotMatch(settings, /it improves answers about local time, weather/);
+  assert.doesNotMatch(settings, /answer questions about local time/);
 });
