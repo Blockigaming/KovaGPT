@@ -513,7 +513,7 @@ async function remove(request: Request): Promise<Response> {
     if (error instanceof BodyReadError) return json({ error: error.code }, error.status);
     return json({ error: "invalid_request_body" }, 400);
   }
-  let fileId = "";
+  let fileId: string;
   try {
     const body = JSON.parse(raw) as { id?: unknown };
     fileId = typeof body.id === "string" ? body.id : "";
