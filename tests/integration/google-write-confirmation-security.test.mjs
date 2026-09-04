@@ -111,6 +111,25 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(card, /confirm\.tool === "gmail_send"[\s\S]*\? "Send"/);
 });
 
+test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const route = read("src/routes/api/chat/confirm.ts");
+  const card = read("src/components/ToolConfirmCard.tsx");
+  const store = read("src/lib/chat-store.ts");
+
+  const statusStart = executor.indexOf("export async function getPendingActionStatus");
+  const statusEnd = executor.indexOf("export async function cancelPendingAction", statusStart);
+  const statusLookup = executor.slice(statusStart, statusEnd);
+  assert.match(statusLookup, /\.eq\("id", actionId\)\s*\.eq\("user_id", userId\)/);
+  assert.match(route, /GET: async \(\{ request \}\)/);
+  assert.match(route, /getPendingActionStatus\(auth\.userId, id\)/);
+  assert.match(card, /\/api\/chat\/confirm\?action_id=/);
+  assert.match(card, /statusJson\.status === "confirmed"/);
+  assert.match(card, /status: "uncertain"/);
+  assert.match(card, /Check Sent mail before sending again/);
+  assert.match(store, /"failed" \| "uncertain"/);
+});
+
 test("expiration cannot overwrite a concurrently claimed or completed action", () => {
   const executor = read("src/lib/google-tools.server.ts");
   const start = executor.indexOf("new Date(pendingRow.expires_at)");
