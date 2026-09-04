@@ -22,7 +22,7 @@ test("email execution is a distinct fail-closed worker artifact", () => {
   assert.match(dispatcher, /TERMINAL_LOG_STATUSES\.has/);
   assert.match(dispatcher, /sender_domain_not_allowed/);
   assert.match(dispatcher, /email_log_missing/);
-  assert.match(dispatcher, /move_to_dlq/);
+  assert.match(dispatcher, /dead_letter_tracked_email/);
   assert.match(dispatcher, /recipient_suppressed/);
   assert.match(dispatcher, /MAX_HTML_BYTES/);
   assert.doesNotMatch(
@@ -86,6 +86,11 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   assert.match(verifier, /Math\.abs\([\s\S]*timestampSeconds\)[\s\S]*toleranceSeconds/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.email_webhook_events/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.enqueue_tracked_email/);
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.dead_letter_tracked_email/);
+  assert.match(
+    migration,
+    /pgmq\.send\(p_dlq_name, p_payload\)[\s\S]*pgmq\.delete\(p_source_queue, p_message_id\)[\s\S]*UPDATE public\.email_send_log/,
+  );
   assert.match(
     migration,
     /INSERT INTO public\.email_send_log[\s\S]*pgmq\.send\(p_queue_name, p_payload\)/,
