@@ -53,6 +53,7 @@ export function ShareChatDialog({
       }
       await share({
         data: {
+          operation_id: crypto.randomUUID(),
           recipient_email: trimmed,
           title: conversation.title || "Shared chat",
           local_chat_reference: conversation.id,
