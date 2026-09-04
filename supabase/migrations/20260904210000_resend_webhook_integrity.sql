@@ -270,3 +270,78 @@ REVOKE ALL ON FUNCTION public.process_resend_webhook_event(
 GRANT EXECUTE ON FUNCTION public.process_resend_webhook_event(
   text, text, text, timestamptz, text
 ) TO service_role;
+
+
+CREATE OR REPLACE FUNCTION public.enqueue_tracked_email(
+  p_queue_name text,
+  p_payload jsonb,
+  p_template_name text,
+  p_recipient_email text
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  tracked_message_id text;
+  normalized_recipient text;
+  queued_message_id bigint;
+BEGIN
+  tracked_message_id := p_payload ->> 'message_id';
+  normalized_recipient := lower(trim(p_recipient_email));
+
+  IF p_queue_name NOT IN ('auth_emails', 'transactional_emails')
+    OR p_payload IS NULL
+    OR jsonb_typeof(p_payload) <> 'object'
+    OR tracked_message_id IS NULL
+    OR tracked_message_id !~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'
+    OR p_template_name IS NULL
+    OR p_template_name !~ '^[a-z0-9][a-z0-9_-]{0,99}$'
+    OR char_length(normalized_recipient) NOT BETWEEN 3 AND 254
+    OR position('@' IN normalized_recipient) <= 1
+    OR lower(trim(p_payload ->> 'to')) <> normalized_recipient
+    OR (
+      p_queue_name = 'auth_emails'
+      AND coalesce(p_payload ->> 'purpose', '') <> 'auth'
+    )
+    OR (
+      p_queue_name = 'transactional_emails'
+      AND coalesce(p_payload ->> 'purpose', '') <> 'transactional'
+    )
+  THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'invalid_tracked_email';
+  END IF;
+
+  INSERT INTO public.email_send_log (
+    message_id,
+    template_name,
+    recipient_email,
+    status,
+    metadata
+  )
+  VALUES (
+    tracked_message_id,
+    p_template_name,
+    normalized_recipient,
+    'pending',
+    jsonb_build_object('queue_name', p_queue_name)
+  );
+
+  BEGIN
+    queued_message_id := pgmq.send(p_queue_name, p_payload);
+  EXCEPTION WHEN undefined_table THEN
+    PERFORM pgmq.create(p_queue_name);
+    queued_message_id := pgmq.send(p_queue_name, p_payload);
+  END;
+
+  RETURN queued_message_id;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.enqueue_tracked_email(
+  text, jsonb, text, text
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enqueue_tracked_email(
+  text, jsonb, text, text
+) TO service_role;
