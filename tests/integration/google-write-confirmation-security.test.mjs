@@ -70,6 +70,15 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   const executor = read("src/lib/google-tools.server.ts");
   const card = read("src/components/ToolConfirmCard.tsx");
 
+  const activityStart = executor.indexOf("export const TOOL_ACTIVITY");
+  const activityEnd = executor.indexOf("export const WRITE_TOOL_NAMES", activityStart);
+  const activity = executor.slice(activityStart, activityEnd);
+  assert.match(
+    activity,
+    /gmail_send: \{ running: "Preparing email for review…", done: "Email ready for review" \}/,
+  );
+  assert.doesNotMatch(activity, /Sent email/);
+
   const definitionStart = executor.indexOf('name: "gmail_send"');
   const definitionEnd = executor.indexOf('name: "calendar_create_event"', definitionStart);
   const definition = executor.slice(definitionStart, definitionEnd);
