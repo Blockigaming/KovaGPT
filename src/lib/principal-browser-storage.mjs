@@ -348,7 +348,11 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
     ...PRINCIPAL_LOCAL_STORAGE_BASES.map((base) => `${base}:v2:${principal}`),
   ];
   if (userKey !== null) {
-    localExact.push(`novagpt-image-history-${userKey}`, `kova-linked-accounts:${userKey}`);
+    localExact.push(
+      `kovagpt:v2:image-history:${userKey}`,
+      `novagpt-image-history-${userKey}`,
+      `kova-linked-accounts:${userKey}`,
+    );
   }
   if (userKey === null) localExact.push(...GUEST_LEGACY_LOCAL_EXACT_KEYS);
   if (purgeUnscopedPrivate) localExact.push(...UNSCOPED_PRIVATE_LOCAL_EXACT_KEYS);
