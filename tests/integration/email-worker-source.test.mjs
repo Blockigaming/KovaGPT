@@ -64,7 +64,7 @@ test("email producers and documented environment use the verified sender domain"
   assert.doesNotMatch(environment, /^EMAIL_API_KEY=/m);
   assert.match(
     readiness,
-    /email:\s*capability\([\s\S]*KOVA_EMAIL_QUEUE_ENABLED[\s\S]*RESEND_API_KEY[\s\S]*RESEND_WEBHOOK_SECRET/,
+    /emailAppConfigured[\s\S]*KOVA_EMAIL_QUEUE_ENABLED[\s\S]*RESEND_WEBHOOK_SECRET[\s\S]*email:\s*capability\(emailAppConfigured\(\)\)/,
   );
   assert.doesNotMatch(readiness, /EMAIL_API_KEY/);
 });
