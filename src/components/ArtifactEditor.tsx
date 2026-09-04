@@ -25,7 +25,11 @@ import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
-import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
+import { createSerializedSnapshotQueue } from "@/lib/serialized-write-queue";
+import {
+  loadPrincipalStoredRecord,
+  WORKSPACE_DEFAULTS_KEY_BASE,
+} from "@/lib/settings-storage";
 
 type SessionVersion = {
   id: number;
@@ -93,10 +97,13 @@ export function ArtifactEditor({
   );
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const lastRecordedValueRef = useRef(initialContent);
-  const autosaveQueueRef = useRef(createSerializedWriteQueue());
-  const { isSignedIn, user } = useUser();
+  const autosaveQueueRef = useRef(createSerializedSnapshotQueue(initialContent));
+  const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const authPrincipalRef = useRef({ principalResolved: isLoaded, userKey });
+  useEffect(() => {
+    authPrincipalRef.current = { principalResolved: isLoaded, userKey };
+  }, [isLoaded, userKey]);
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
   const listVersionsFn = useServerFn(listMessageVersions);
@@ -117,17 +124,24 @@ export function ArtifactEditor({
 
   useEffect(() => {
     if (open) {
-      lastRecordedValueRef.current = initialContent;
+      autosaveQueueRef.current.reset(initialContent);
       setValue(initialContent);
       setCopied(false);
       setSaved(false);
       let preferred: string | undefined;
 
       try {
-        preferred =
-          JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").artifact ?? "";
+        const principal = authPrincipalRef.current;
+        if (principal.principalResolved) {
+          const stored = loadPrincipalStoredRecord(
+            WORKSPACE_DEFAULTS_KEY_BASE,
+            principal.userKey,
+            { migrateLegacyGuest: principal.userKey === null },
+          );
+          preferred = typeof stored?.artifact === "string" ? stored.artifact : "";
+        }
       } catch {
-        /* Invalid local preferences fall back to the requested initial mode. */
+        /* Unavailable local preferences fall back to the requested initial mode. */
       }
       setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
       setSplitView(preferred === "Split view" && kind === "website");
@@ -167,7 +181,7 @@ export function ArtifactEditor({
             // already changed while version history was loading.
             setValue((current) => {
               if (current !== initialContent) return current;
-              lastRecordedValueRef.current = accepted.content;
+              autosaveQueueRef.current.reset(accepted.content);
               return accepted.content;
             });
           }
@@ -226,7 +240,7 @@ export function ArtifactEditor({
   };
 
   useEffect(() => {
-    if (!open || value === lastRecordedValueRef.current) return;
+    if (!open || !autosaveQueueRef.current.needsEnqueue(value)) return;
     let cancelled = false;
     const snapshot = value;
     const timer = window.setTimeout(() => {
@@ -241,13 +255,13 @@ export function ArtifactEditor({
             // The accepted version is a last-write-wins server value. Queue
             // requests in edit order so a slow older request can never arrive
             // after and replace a newer snapshot.
-            await autosaveQueueRef.current.enqueue(() =>
+            await autosaveQueueRef.current.enqueue(snapshot, (queuedSnapshot) =>
               saveVersionFn({
                 data: {
                   chatId,
                   messageId,
                   source: "inline_edit",
-                  content: snapshot,
+                  content: queuedSnapshot,
                   originalContent: initialContent,
                   accepted: true,
                 },
@@ -264,9 +278,10 @@ export function ArtifactEditor({
               );
             }
           }
+        } else {
+          autosaveQueueRef.current.mark(snapshot);
         }
         if (cancelled) return;
-        lastRecordedValueRef.current = snapshot;
         setVersions((current) =>
           [
             {
