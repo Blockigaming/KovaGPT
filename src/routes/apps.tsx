@@ -108,6 +108,56 @@ type ConnState =
   | "syncing"
   | "temporarily_unavailable";
 
+type AppActivity = { app: string; action: string; at: string };
+const MAX_APP_ACTIVITY = 50;
+
+function parseAppActivity(raw: string | null): AppActivity[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const activity: AppActivity[] = [];
+    for (const candidate of parsed) {
+      if (activity.length >= MAX_APP_ACTIVITY) break;
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+      const entry = candidate as Record<string, unknown>;
+      if (
+        typeof entry.app !== "string" ||
+        entry.app.length === 0 ||
+        entry.app.length > 120 ||
+        typeof entry.action !== "string" ||
+        entry.action.length === 0 ||
+        entry.action.length > 240 ||
+        typeof entry.at !== "string" ||
+        !Number.isFinite(Date.parse(entry.at))
+      ) {
+        continue;
+      }
+      activity.push({ app: entry.app, action: entry.action, at: entry.at });
+    }
+    return activity;
+  } catch {
+    return [];
+  }
+}
+
+function parseGitHubAuthorizationUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "github.com" ||
+      url.pathname !== "/login/oauth/authorize"
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function AppLogo({ domain, label }: { domain: string; label: string }) {
   // Locally rendered brand mark using the domain's own favicon as a fallback.
   // Avoids Logo.dev entirely.
@@ -598,8 +648,10 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
-  const [activity, setActivity] = useState<{ app: string; action: string; at: string }[]>([]);
+  const [activity, setActivity] = useState<AppActivity[]>([]);
+  const activityRef = useRef<AppActivity[]>([]);
   const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
+  const [activityPersistenceError, setActivityPersistenceError] = useState(false);
   const activityReady = principal !== null && activityPrincipal === principal;
   const visibleActivity = activityReady ? activity : [];
   const visibleGoogleStatus = activityReady ? googleStatus : null;
@@ -609,19 +661,21 @@ function AppsPage() {
   useEffect(() => {
     generationRef.current += 1;
     setQuery("");
+    activityRef.current = [];
     setActivity([]);
     setActivityPrincipal(null);
+    setActivityPersistenceError(false);
     setGoogleStatus(null);
     setGoogleLoading(true);
     setSelectedApp(null);
     setConnecting({});
     setFailed({});
     if (!principal || !activityKey) return;
-    try {
-      setActivity(JSON.parse(safeBrowserStorage("localStorage")?.getItem(activityKey) ?? "[]"));
-    } catch {
-      setActivity([]);
-    }
+    const storedActivity = parseAppActivity(
+      safeBrowserStorage("localStorage")?.getItem(activityKey) ?? null,
+    );
+    activityRef.current = storedActivity;
+    setActivity(storedActivity);
     setActivityPrincipal(principal);
   }, [activityKey, principal]);
 
@@ -630,8 +684,10 @@ function AppsPage() {
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       generationRef.current += 1;
+      activityRef.current = [];
       setActivity([]);
       setActivityPrincipal(principal);
+      setActivityPersistenceError(false);
       setGoogleStatus(null);
       setGoogleLoading(true);
       setSelectedApp(null);
@@ -647,11 +703,20 @@ function AppsPage() {
   const recordActivity = useCallback(
     (app: string, action: string) => {
       if (!activityReady || !activityKey) return;
-      setActivity((current) => {
-        const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
-        safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
-        return next;
-      });
+      const next = [
+        { app, action, at: new Date().toISOString() },
+        ...activityRef.current,
+      ].slice(0, MAX_APP_ACTIVITY);
+      activityRef.current = next;
+      setActivity(next);
+      try {
+        const storage = safeBrowserStorage("localStorage");
+        if (!storage) throw new Error("browser_storage_unavailable");
+        storage.setItem(activityKey, JSON.stringify(next));
+        setActivityPersistenceError(false);
+      } catch {
+        setActivityPersistenceError(true);
+      }
     },
     [activityKey, activityReady],
   );
@@ -934,6 +999,12 @@ function AppsPage() {
           titleId="apps-title"
           description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
+        {activityPersistenceError && (
+          <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm">
+            Recent connection activity could not be saved in this browser and will be lost when this
+            tab closes.
+          </p>
+        )}
         {!isLoaded ? (
           <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
             <h2 id="apps-loading-title" className="sr-only">
@@ -974,7 +1045,7 @@ function AppsPage() {
               />
             </label>
 
-            <GitHubManager />
+            <GitHubManager key={principal ?? "unresolved"} />
 
             {filtered.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
