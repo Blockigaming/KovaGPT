@@ -166,6 +166,32 @@ test("draft validation caps total recipients and relevant field lengths", () => 
   );
 });
 
+
+test("confirmed send validation uses the same strict MIME envelope as drafts", () => {
+  const result = validateSupportedGoogleWrite("gmail_send", {
+    to: "recipient@example.com",
+    cc: "copy@example.net",
+    subject: "  Release update  ",
+    body: "The release is ready.",
+    ignored: "never persisted",
+  });
+  assert.deepEqual(result, {
+    to: "recipient@example.com",
+    cc: "copy@example.net",
+    subject: "Release update",
+    body: "The release is ready.",
+  });
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("gmail_send", {
+        to: "recipient@example.com\r\nBcc: attacker@example.com",
+        subject: "Release update",
+        body: "Unsafe",
+      }),
+    GoogleWriteValidationError,
+  );
+});
+
 test("calendar validation is strict, bounded, and removes unexpected fields", () => {
   const result = validateSupportedGoogleWrite("calendar_create_event", {
     summary: "  Review  ",
@@ -191,7 +217,7 @@ test("calendar validation is strict, bounded, and removes unexpected fields", ()
       }),
     GoogleWriteValidationError,
   );
-  assert.throws(() => validateSupportedGoogleWrite("gmail_send", {}), /not supported/);
+  assert.throws(() => validateSupportedGoogleWrite("gmail_reply", {}), /not supported/);
 });
 
 test("calendar validation requires real RFC 3339 instants with explicit timezones", () => {
