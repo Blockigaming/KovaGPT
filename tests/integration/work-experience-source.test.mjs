@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 
 const route = await readFile("src/routes/work.tsx", "utf8");
 const server = await readFile("src/lib/work.functions.ts", "utf8");
+const teamRoute = await readFile("src/routes/api/agents/teams.ts", "utf8");
+const teamServer = await readFile("src/agents/team.server.ts", "utf8");
 const migration = await readFile(
   "supabase/migrations/20260728090000_helios_agent_runtime.sql",
   "utf8",
@@ -33,6 +35,19 @@ test("Work exposes historical evidence and fail-closed controls", () => {
     "cancel",
   ])
     assert.ok(route.includes(contract), contract);
+});
+
+test("both legacy execution queues reject new or resumptive work", () => {
+  assert.match(teamRoute, /POST:[\s\S]*?agent_team_execution_unavailable[\s\S]*?status: 503/);
+  assert.match(teamRoute, /!\["cancel", "deny"\]\.includes\(body\.command\)/);
+  assert.doesNotMatch(teamRoute, /status: 202|createAgentTeamRun/);
+  const disabledCreate = teamServer.slice(
+    teamServer.indexOf("export async function createAgentTeamRun"),
+    teamServer.indexOf("export async function getAgentTeamRuns"),
+  );
+  assert.match(disabledCreate, /Promise<never>/);
+  assert.match(disabledCreate, /agent_team_execution_unavailable/);
+  assert.doesNotMatch(disabledCreate, /status: "queued"|\.from\("agent_runs"\)/);
 });
 
 test("consequential Work transitions are validated in security-definer RPCs", () => {
