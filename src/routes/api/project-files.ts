@@ -208,28 +208,35 @@ async function storedProjectFileMatches(
 
 function projectFileDeleteClaim(value: unknown): {
   claimed: boolean;
+  inProgress: boolean;
   id?: string;
   projectId?: string;
   storagePath?: string;
   name?: string;
+  kind?: "file" | "image" | "agent-deliverable";
 } | null {
   const row = record(value);
   if (!row || typeof row.claimed !== "boolean") return null;
-  if (!row.claimed) return { claimed: false };
+  if (!row.claimed) {
+    return { claimed: false, inProgress: row.inProgress === true };
+  }
   if (
     typeof row.id !== "string" ||
     typeof row.project_id !== "string" ||
     typeof row.storage_path !== "string" ||
-    typeof row.name !== "string"
+    typeof row.name !== "string" ||
+    !["file", "image", "agent-deliverable"].includes(String(row.kind))
   ) {
     return null;
   }
   return {
     claimed: true,
+    inProgress: false,
     id: row.id,
     projectId: row.project_id,
     storagePath: row.storage_path,
     name: row.name,
+    kind: row.kind as "file" | "image" | "agent-deliverable",
   };
 }
 
@@ -529,6 +536,9 @@ async function remove(request: Request): Promise<Response> {
   const file = projectFileDeleteClaim(claimed);
   if (!file) return json({ error: "project_file_delete_unavailable" }, 503);
   if (!file.claimed) {
+    if (file.inProgress) {
+      return json({ error: "project_file_delete_in_progress" }, 409, { "Retry-After": "2" });
+    }
     return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
   }
   if (
@@ -536,26 +546,29 @@ async function remove(request: Request): Promise<Response> {
     !file.projectId ||
     !file.storagePath ||
     !file.name ||
-    !file.storagePath.startsWith(`${file.projectId}/`)
+    !file.kind ||
+    (file.kind !== "agent-deliverable" && !file.storagePath.startsWith(`${file.projectId}/`))
   ) {
     await restoreProjectFileDelete(auth, fileId, attemptId);
     return json({ error: "project_file_path_invalid" }, 503);
   }
 
-  const removed = await auth.supabaseAdmin.storage
-    .from("project-files")
-    .remove([file.storagePath]);
-  if (removed.error && !missingObject(removed.error)) {
-    const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
-    return json(
-      {
-        error: restored
-          ? "project_file_storage_delete_failed"
-          : "project_file_delete_recovery_failed",
-      },
-      503,
-      { "Retry-After": "30" },
-    );
+  if (file.kind !== "agent-deliverable") {
+    const removed = await auth.supabaseAdmin.storage
+      .from("project-files")
+      .remove([file.storagePath]);
+    if (removed.error && !missingObject(removed.error)) {
+      const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
+      return json(
+        {
+          error: restored
+            ? "project_file_storage_delete_failed"
+            : "project_file_delete_recovery_failed",
+        },
+        503,
+        { "Retry-After": "30" },
+      );
+    }
   }
 
   const finalize = () =>
