@@ -57,7 +57,7 @@ test("claimed legacy arguments are revalidated immediately before Google access"
   const executor = read("src/lib/google-tools.server.ts");
   const claim = executor.indexOf('.select("id, tool, args, result")');
   const revalidate = executor.indexOf("validateSupportedWrite(claimedTool,", claim);
-  const token = executor.indexOf("getValidGoogleAccessToken(userId)", revalidate);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", revalidate);
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
@@ -86,7 +86,7 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(definition, /confirm before anything is sent/);
 
   const claim = executor.indexOf("const claimedTool");
-  const token = executor.indexOf("getValidGoogleAccessToken(userId)", claim);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", claim);
   const endpoint = executor.indexOf("${GMAIL}/users/me/messages/send", token);
   assert.ok(claim > -1 && token > claim && endpoint > token);
   assert.match(executor, /sending \? `\$\{GMAIL\}\/users\/me\/messages\/send`/);
