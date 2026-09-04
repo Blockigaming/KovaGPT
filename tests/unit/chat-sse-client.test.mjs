@@ -55,7 +55,7 @@ test("chat SSE preserves typed provider error events", async () => {
   };
   await assert.rejects(
     consumeChatSse(
-      chunkedStream([`data: ${JSON.stringify(event)}\\n\\ndata: [DONE]\\n\\n`]),
+      chunkedStream([`data: ${JSON.stringify(event)}\n\ndata: [DONE]\n\n`]),
     ),
     (error) => {
       assert.ok(error instanceof ChatStreamError);
