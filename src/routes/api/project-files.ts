@@ -204,6 +204,45 @@ async function releaseStorage(
   return !error;
 }
 
+function projectFileDeleteClaim(value: unknown): {
+  claimed: boolean;
+  id?: string;
+  projectId?: string;
+  storagePath?: string;
+  name?: string;
+} | null {
+  const row = record(value);
+  if (!row || typeof row.claimed !== "boolean") return null;
+  if (!row.claimed) return { claimed: false };
+  if (
+    typeof row.id !== "string" ||
+    typeof row.project_id !== "string" ||
+    typeof row.storage_path !== "string" ||
+    typeof row.name !== "string"
+  ) {
+    return null;
+  }
+  return {
+    claimed: true,
+    id: row.id,
+    projectId: row.project_id,
+    storagePath: row.storage_path,
+    name: row.name,
+  };
+}
+
+async function restoreProjectFileDelete(
+  auth: AuthedCaller,
+  fileId: string,
+  attemptId: string,
+): Promise<boolean> {
+  const { data, error } = await auth.supabaseAdmin.rpc(
+    "restore_project_file_delete" as never,
+    { p_file_id: fileId, p_attempt_id: attemptId } as never,
+  );
+  return !error && data === true;
+}
+
 function reservationFailure(error: { code?: string; message?: string } | null): Response {
   const code = error?.code ?? "";
   const message = error?.message ?? "";
@@ -450,45 +489,63 @@ async function remove(request: Request): Promise<Response> {
   }
   if (!UUID_PATTERN.test(fileId)) return json({ error: "invalid_project_file_id" }, 400);
 
-  const { data: file, error: fileError } = await auth.supabaseAdmin
-    .from("project_files")
-    .select("id,project_id,storage_path,name")
-    .eq("id", fileId)
-    .maybeSingle();
-  if (fileError) return json({ error: "project_file_delete_unavailable" }, 503);
-  if (!file) return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
-
-  const { data: member, error: memberError } = await auth.supabaseAdmin
-    .from("project_members")
-    .select("role")
-    .eq("project_id", file.project_id)
-    .eq("user_id", auth.userId)
-    .maybeSingle();
-  if (memberError) return json({ error: "project_authorization_unavailable" }, 503);
-  if (!member || !["owner", "editor"].includes(member.role)) {
-    return json({ error: "project_file_not_found" }, 404);
+  const attemptId = crypto.randomUUID();
+  const { data: claimed, error: claimError } = await auth.supabaseAdmin.rpc(
+    "claim_project_file_delete" as never,
+    {
+      p_user_id: auth.userId,
+      p_file_id: fileId,
+      p_attempt_id: attemptId,
+    } as never,
+  );
+  if (claimError) return json({ error: "project_file_delete_unavailable" }, 503);
+  const file = projectFileDeleteClaim(claimed);
+  if (!file) return json({ error: "project_file_delete_unavailable" }, 503);
+  if (!file.claimed) {
+    return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
   }
-  if (!file.storage_path.startsWith(`${file.project_id}/`)) {
+  if (
+    !file.id ||
+    !file.projectId ||
+    !file.storagePath ||
+    !file.name ||
+    !file.storagePath.startsWith(`${file.projectId}/`)
+  ) {
+    await restoreProjectFileDelete(auth, fileId, attemptId);
     return json({ error: "project_file_path_invalid" }, 503);
   }
 
   const removed = await auth.supabaseAdmin.storage
     .from("project-files")
-    .remove([file.storage_path]);
+    .remove([file.storagePath]);
   if (removed.error && !missingObject(removed.error)) {
-    return json({ error: "project_file_storage_delete_failed" }, 503, { "Retry-After": "30" });
+    const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
+    return json(
+      {
+        error: restored
+          ? "project_file_storage_delete_failed"
+          : "project_file_delete_recovery_failed",
+      },
+      503,
+      { "Retry-After": "30" },
+    );
   }
 
-  const { data: result, error: finalizeError } = await auth.supabaseAdmin.rpc(
-    "finalize_project_file_delete" as never,
-    { p_user_id: auth.userId, p_file_id: file.id } as never,
-  );
-  if (finalizeError || record(result)?.deleted !== true) {
-    return json({ error: "project_file_delete_finalize_failed" }, 503, { "Retry-After": "30" });
+  const finalize = () =>
+    auth.supabaseAdmin.rpc("finalize_project_file_delete" as never, {
+      p_file_id: file.id,
+      p_attempt_id: attemptId,
+    } as never);
+  let finalized = await finalize();
+  if (finalized.error) finalized = await finalize();
+  if (finalized.error || record(finalized.data)?.deleted !== true) {
+    return json({ error: "project_file_delete_finalize_failed" }, 503, {
+      "Retry-After": "5",
+    });
   }
 
   await auth.supabaseAdmin.from("project_activity").insert({
-    project_id: file.project_id,
+    project_id: file.projectId,
     actor_id: auth.userId,
     kind: "file_deleted",
     summary: `Removed “${file.name}”`,
