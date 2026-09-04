@@ -81,11 +81,8 @@ export function invalidateReadiness() {
 export async function getReadiness(signal?: AbortSignal): Promise<ClientReadiness> {
   if (snapshot && Date.now() < expiresAt) return snapshot;
   if (!pending) {
-    pending = fetchWithTimeout(
-      "/api/readyz",
-      { headers: { Accept: "application/json" } },
-      10_000,
-    ).then(async (response) => {
+    pending = fetchWithTimeout("/api/readyz", { headers: { Accept: "application/json" } }, 10_000)
+      .then(async (response) => {
         if (!response.ok && response.status !== 503) throw new Error("readiness_unavailable");
         return (await response.json()) as ClientReadiness;
       })

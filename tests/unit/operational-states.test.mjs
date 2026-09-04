@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import {
-  operationalStateForHttpStatus,
-  waitForReadiness,
-} from "../../src/lib/readiness-client.ts";
+import { operationalStateForHttpStatus, waitForReadiness } from "../../src/lib/readiness-client.ts";
 
 test("HTTP failures map to explicit user-facing operational states", () => {
   assert.equal(operationalStateForHttpStatus(401), "expired-auth");
@@ -26,7 +23,6 @@ test("operational state component has accessible copy and retry boundaries", () 
   assert.match(source, /"rate-limited"/u);
   assert.match(source, />\s*Retry\s*</u);
 });
-
 
 test("one readiness caller can abort without cancelling shared work", async () => {
   let complete;
