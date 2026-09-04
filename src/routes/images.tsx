@@ -256,46 +256,130 @@ const PRESETS: Preset[] = [
   },
 ];
 
-type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
+type HistoryItem = {
+  id: string;
+  prompt: string;
+  imageUrl: string;
+  createdAt: number;
+  libraryStatus?: "saving" | "saved" | "error";
+};
 const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
 const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
+const MAX_HISTORY_STORAGE_CHARS = 4_000_000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-function loadHistory(userKey: string | null): HistoryItem[] {
-  if (!userKey || typeof window === "undefined") return [];
+function parseHistory(raw: string | null): HistoryItem[] {
+  if (!raw || raw.length > MAX_HISTORY_STORAGE_CHARS) return [];
   try {
-    let raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
-    if (!raw) {
-      const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
-      raw = localStorage.getItem(legacyKey);
-      if (raw) {
-        localStorage.setItem(HISTORY_KEY_PREFIX + userKey, raw);
-        localStorage.removeItem(legacyKey);
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const now = Date.now();
+    return parsed.slice(0, HISTORY_LIMIT).flatMap((value): HistoryItem[] => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const row = value as Record<string, unknown>;
+      const imageUrl = safeImageUrl(row.imageUrl);
+      if (
+        typeof row.id !== "string" ||
+        !UUID_PATTERN.test(row.id) ||
+        typeof row.prompt !== "string" ||
+        row.prompt.length === 0 ||
+        row.prompt.length > 2_000 ||
+        !imageUrl ||
+        typeof row.createdAt !== "number" ||
+        !Number.isFinite(row.createdAt) ||
+        row.createdAt < 0 ||
+        row.createdAt > now + 5 * 60_000
+      ) {
+        return [];
       }
-    }
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+      const libraryStatus =
+        row.libraryStatus === "saved"
+          ? "saved"
+          : row.libraryStatus === "saving" || row.libraryStatus === "error"
+            ? "error"
+            : undefined;
+      return [
+        {
+          id: row.id,
+          prompt: row.prompt,
+          imageUrl,
+          createdAt: row.createdAt,
+          libraryStatus,
+        },
+      ];
+    });
   } catch {
     return [];
   }
 }
-function saveHistory(userKey: string | null, items: HistoryItem[]) {
-  if (!userKey || typeof window === "undefined") return;
+
+function loadHistory(userKey: string | null): HistoryItem[] {
+  if (!userKey || typeof window === "undefined") return [];
   try {
-    localStorage.setItem(
-      HISTORY_KEY_PREFIX + userKey,
-      JSON.stringify(items.slice(0, HISTORY_LIMIT)),
-    );
+    const currentKey = HISTORY_KEY_PREFIX + userKey;
+    const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
+    const currentRaw = localStorage.getItem(currentKey);
+    const legacyRaw = currentRaw ? null : localStorage.getItem(legacyKey);
+    const parsed = parseHistory(currentRaw ?? legacyRaw);
+    if (legacyRaw && saveHistory(userKey, parsed)) {
+      localStorage.removeItem(legacyKey);
+    }
+    return parsed;
   } catch {
-    /*ignore*/
+    return [];
   }
+}
+
+function saveHistory(userKey: string | null, items: HistoryItem[]): boolean {
+  if (!userKey || typeof window === "undefined") return false;
+  try {
+    const serialized = JSON.stringify(items.slice(0, HISTORY_LIMIT));
+    if (serialized.length > MAX_HISTORY_STORAGE_CHARS) return false;
+    localStorage.setItem(HISTORY_KEY_PREFIX + userKey, serialized);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const MAX_IMAGE_DOWNLOAD_BYTES = 8 * 1024 * 1024;
+
+async function readImageDownloadBlob(response: Response, contentType: string): Promise<Blob> {
+  if (!response.body) throw new Error("Image download response was invalid");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > MAX_IMAGE_DOWNLOAD_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error("Image download was too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new Blob([joined.buffer], { type: contentType });
 }
 
 function ImagesPage() {
   const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
+  const userKeyRef = useRef(userKey);
+  userKeyRef.current = userKey;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -323,12 +407,17 @@ function ImagesPage() {
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const historyRef = useRef<HistoryItem[]>([]);
+  historyRef.current = history;
+  const historyPersistenceWarningRef = useRef(false);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
-  const [savingImage, setSavingImage] = useState(false);
+  const [resultHistoryId, setResultHistoryId] = useState<string | null>(null);
   const saveImage = useServerFn(saveImageToLibrary);
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
+  const downloadControllerRef = useRef<AbortController | null>(null);
+  const [downloadingImageId, setDownloadingImageId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
   const scrollPresets = (direction: 1 | -1) => {
@@ -344,6 +433,9 @@ function ImagesPage() {
     generationRef.current += 1;
     generationControllerRef.current?.abort();
     generationControllerRef.current = null;
+    downloadControllerRef.current?.abort();
+    downloadControllerRef.current = null;
+    setDownloadingImageId(null);
     submittingRef.current = false;
     setLoading(false);
     setPrompt("");
@@ -351,55 +443,99 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setLightbox(null);
-    setSavingImage(false);
+    setResultHistoryId(null);
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
-    setHistory(isLoaded && isSignedIn && userKey ? loadHistory(userKey) : []);
-    return () => generationControllerRef.current?.abort();
+    const nextHistory = isLoaded && isSignedIn && userKey ? loadHistory(userKey) : [];
+    historyRef.current = nextHistory;
+    historyPersistenceWarningRef.current = false;
+    setHistory(nextHistory);
+    return () => {
+      generationControllerRef.current?.abort();
+      downloadControllerRef.current?.abort();
+    };
   }, [isLoaded, isSignedIn, userKey]);
 
-  function addToHistory(p: string, imageUrl: string) {
-    if (!isSignedIn || !userKey) return;
+  function addToHistory(p: string, imageUrl: string): HistoryItem | null {
+    if (!isSignedIn || !userKey) return null;
     const item: HistoryItem = {
       id: crypto.randomUUID(),
       prompt: p,
       imageUrl,
       createdAt: Date.now(),
+      libraryStatus: "saving",
     };
-    setHistory((prev) => {
-      const next = [item, ...prev].slice(0, HISTORY_LIMIT);
-      saveHistory(userKey, next);
-      return next;
-    });
-  }
-  function removeFromHistory(id: string) {
-    setHistory((prev) => {
-      const next = prev.filter((h) => h.id !== id);
-      saveHistory(userKey, next);
-      return next;
-    });
+    const nextHistory = [item, ...historyRef.current].slice(0, HISTORY_LIMIT);
+    const persisted = saveHistory(userKey, nextHistory);
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
+    if (!persisted && !historyPersistenceWarningRef.current) {
+      historyPersistenceWarningRef.current = true;
+      toast.error(
+        "Image history could not be saved on this device. The image is still being saved to your Library.",
+      );
+    }
+    return item;
   }
 
-  async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
-    if (!isSignedIn) {
+  function updateHistoryLibraryStatus(id: string, libraryStatus: HistoryItem["libraryStatus"]) {
+    const nextHistory = historyRef.current.map((item) =>
+      item.id === id ? { ...item, libraryStatus } : item,
+    );
+    saveHistory(userKey, nextHistory);
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
+  }
+
+  function removeFromHistory(id: string) {
+    const nextHistory = historyRef.current.filter((item) => item.id !== id);
+    if (!saveHistory(userKey, nextHistory)) {
+      toast.error("Image history could not be updated on this device.");
+      return;
+    }
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
+    if (resultHistoryId === id) {
+      setResult(null);
+      setResultPrompt("");
+      setResultHistoryId(null);
+    }
+  }
+
+  async function saveGeneratedImage(item: HistoryItem, options: { automatic?: boolean } = {}) {
+    if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
-    setSavingImage(true);
+    const operationUserKey = userKey;
+    const isCurrent = () => userKeyRef.current === operationUserKey;
+    // A toast action can outlive the account that created it. Refuse the
+    // request before sending old image data under a newly authenticated user.
+    if (!isCurrent()) return;
+    updateHistoryLibraryStatus(item.id, "saving");
     try {
       await saveImage({
         data: {
           title: item.prompt.slice(0, 100) || "Generated image",
           prompt: item.prompt,
           imageUrl: item.imageUrl,
+          source: "images",
+          idempotencyKey: item.id,
         },
       });
-      toast.success("Saved to Library");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save image");
-    } finally {
-      setSavingImage(false);
+      if (!isCurrent()) return;
+      updateHistoryLibraryStatus(item.id, "saved");
+      if (!options.automatic) toast.success("Saved to Library");
+    } catch {
+      if (!isCurrent()) return;
+      updateHistoryLibraryStatus(item.id, "error");
+      toast.error("This generated image was not saved to your Library.", {
+        action: {
+          label: "Retry",
+          onClick: () => void saveGeneratedImage(item),
+        },
+      });
     }
   }
 
@@ -410,7 +546,12 @@ function ImagesPage() {
       }
       const response = await fetch(imageUrl);
       if (!response.ok) throw new Error("Could not read the generated image");
-      const source = await response.blob();
+      const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
+      if (!contentType.toLowerCase().startsWith("image/")) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new Error("Image copy response was invalid");
+      }
+      const source = await readImageDownloadBlob(response, contentType);
       const blob =
         source.type === "image/png"
           ? source
@@ -439,6 +580,73 @@ function ImagesPage() {
       toast.success("Image copied");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not copy image");
+    }
+  }
+
+  async function downloadGeneratedImage(item: { id: string; imageUrl: string }) {
+    if (downloadingImageId) return;
+    const imageUrl = safeImageUrl(item.imageUrl);
+    if (!imageUrl) {
+      toast.error("This image cannot be downloaded.");
+      return;
+    }
+
+    const controller = new AbortController();
+    downloadControllerRef.current?.abort();
+    downloadControllerRef.current = controller;
+    setDownloadingImageId(item.id);
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 15_000);
+    try {
+      const response = await fetch(imageUrl, { signal: controller.signal });
+      if (!response.ok) throw new Error("Image download failed");
+      const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
+      const declaredLength = Number(response.headers.get("content-length") ?? 0);
+      if (
+        !contentType.toLowerCase().startsWith("image/") ||
+        (Number.isFinite(declaredLength) && declaredLength > MAX_IMAGE_DOWNLOAD_BYTES)
+      ) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new Error("Image download response was invalid");
+      }
+      const blob = await readImageDownloadBlob(response, contentType);
+      if (controller.signal.aborted) return;
+
+      const extension =
+        blob.type === "image/jpeg"
+          ? "jpg"
+          : blob.type === "image/webp"
+            ? "webp"
+            : blob.type === "image/gif"
+              ? "gif"
+              : "png";
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `kovagpt-${item.id}.${extension}`;
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (downloadError) {
+      if (controller.signal.aborted && !timedOut) return;
+      toast.error(
+        timedOut
+          ? "Image download timed out. Try again."
+          : downloadError instanceof Error
+            ? downloadError.message
+            : "Image download failed",
+      );
+    } finally {
+      window.clearTimeout(timeout);
+      if (downloadControllerRef.current === controller) {
+        downloadControllerRef.current = null;
+        setDownloadingImageId(null);
+      }
     }
   }
 
@@ -483,7 +691,9 @@ function ImagesPage() {
       }
       setResult(imageUrl);
       setResultPrompt(trimmed);
-      addToHistory(trimmed, imageUrl);
+      const historyItem = addToHistory(trimmed, imageUrl);
+      setResultHistoryId(historyItem?.id ?? null);
+      if (historyItem) void saveGeneratedImage(historyItem, { automatic: true });
       setPrompt("");
     } catch (e) {
       if (controller.signal.aborted || generation !== generationRef.current) return;
@@ -501,6 +711,13 @@ function ImagesPage() {
     setPrompt(p.prompt);
     inputRef.current?.focus();
   };
+
+  const resultHistoryItem = resultHistoryId
+    ? (history.find((item) => item.id === resultHistoryId) ?? null)
+    : null;
+  const lightboxLibraryStatus = lightbox
+    ? history.find((item) => item.id === lightbox.id)?.libraryStatus
+    : undefined;
 
   return (
     <div className="flex h-dvh w-full bg-background text-foreground">
@@ -718,14 +935,22 @@ function ImagesPage() {
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <button
                         type="button"
-                        onClick={() =>
-                          saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
+                        onClick={() => {
+                          if (resultHistoryItem) void saveGeneratedImage(resultHistoryItem);
+                        }}
+                        disabled={
+                          !resultHistoryItem || resultHistoryItem.libraryStatus === "saving"
                         }
-                        disabled={savingImage}
                         className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <Bookmark className="h-4 w-4" />{" "}
-                        {savingImage ? "Saving…" : "Save to Library"}
+                        {resultHistoryItem?.libraryStatus === "saving"
+                          ? "Saving…"
+                          : resultHistoryItem?.libraryStatus === "saved"
+                            ? "Save to Library again"
+                            : resultHistoryItem?.libraryStatus === "error"
+                              ? "Retry Library save"
+                              : "Save to Library"}
                       </button>
                       <button
                         type="button"
@@ -742,13 +967,26 @@ function ImagesPage() {
                       >
                         <Copy className="h-4 w-4" /> Copy image
                       </button>
-                      <a
-                        href={result}
-                        download="kovagpt-image.png"
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void downloadGeneratedImage({
+                            id: resultHistoryItem?.id ?? "image",
+                            imageUrl: result,
+                          })
+                        }
+                        disabled={Boolean(downloadingImageId)}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
-                        <Download className="w-4 h-4" /> Download
-                      </a>
+                        {downloadingImageId === (resultHistoryItem?.id ?? "image") ? (
+                          <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}{" "}
+                        {downloadingImageId === (resultHistoryItem?.id ?? "image")
+                          ? "Downloading…"
+                          : "Download"}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -835,14 +1073,19 @@ function ImagesPage() {
                           >
                             Reuse
                           </button>
-                          <a
-                            href={h.imageUrl}
-                            download={`kovagpt-${h.id}.png`}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                          <button
+                            type="button"
+                            onClick={() => void downloadGeneratedImage(h)}
+                            disabled={Boolean(downloadingImageId)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50"
                             aria-label={`Download image: ${h.prompt}`}
                           >
-                            <Download className="h-3.5 w-3.5" />
-                          </a>
+                            {downloadingImageId === h.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={() => removeFromHistory(h.id)}
@@ -875,7 +1118,11 @@ function ImagesPage() {
           } catch {
             /* ignore */
           }
+          historyRef.current = [];
           setHistory([]);
+          setResult(null);
+          setResultPrompt("");
+          setResultHistoryId(null);
         }}
       />
 
@@ -952,19 +1199,32 @@ function ImagesPage() {
                   <RefreshCw className="h-4 w-4" /> Generate again
                 </button>
                 <button
-                  onClick={() => saveGeneratedImage(lightbox)}
-                  disabled={savingImage}
+                  onClick={() => void saveGeneratedImage(lightbox)}
+                  disabled={lightboxLibraryStatus === "saving"}
                   className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
-                  <Bookmark className="h-4 w-4" /> Save
+                  <Bookmark className="h-4 w-4" />{" "}
+                  {lightboxLibraryStatus === "saving"
+                    ? "Saving…"
+                    : lightboxLibraryStatus === "saved"
+                      ? "Save again"
+                      : lightboxLibraryStatus === "error"
+                        ? "Retry save"
+                        : "Save"}
                 </button>
-                <a
-                  href={lightbox.imageUrl}
-                  download={`kovagpt-${lightbox.id}.png`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
+                <button
+                  type="button"
+                  onClick={() => void downloadGeneratedImage(lightbox)}
+                  disabled={Boolean(downloadingImageId)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
-                  <Download className="w-4 h-4" /> Download
-                </a>
+                  {downloadingImageId === lightbox.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}{" "}
+                  {downloadingImageId === lightbox.id ? "Downloading…" : "Download"}
+                </button>
                 <button
                   onClick={() => {
                     removeFromHistory(lightbox.id);

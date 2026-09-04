@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 91,
+  "migrationCount": 92,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -505,6 +505,7 @@
     "Users read their notifications",
     "Users read their safety reports",
     "Users read their support tickets",
+    "Users update own library images",
     "Users update own memories",
     "Users update their notifications",
     "Users upload to own library folder",
@@ -1283,5 +1284,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "7c071686db8f71f35fae4df78603e30dfbbc7c364102724c3697fdb12e82722b"
+  "sha256": "3c6e00a2862f47ea685e75b18c1a1a538119b221e62ea1cb182315f0c83a6a9d"
 }

@@ -49,7 +49,8 @@ const SaveSchema = z.object({
   title: z.string().trim().min(1).max(200),
   item_type: ItemTypeEnum,
   source: SourceEnum.default("manual"),
-  content_text: z.string().max(200_000).optional().nullable(),
+  content_text: z.string().max(300_000).optional().nullable(),
+  idempotencyKey: z.string().uuid().optional(),
   file_url: z.string().url().max(2000).optional().nullable(),
   file_name: z.string().max(300).optional().nullable(),
   file_type: z.string().max(100).optional().nullable(),
@@ -60,10 +61,29 @@ export const saveToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const findOwnedItem = async () => {
+      if (!data.idempotencyKey) return null;
+      const { data: existing, error: lookupError } = await context.supabase
+        .from("user_library_items")
+        .select("id")
+        .eq("id", data.idempotencyKey)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (lookupError) {
+        console.error("[saveToLibrary:lookup]", lookupError.message);
+        throw new Error("Failed to save");
+      }
+      return existing;
+    };
+
+    const existing = await findOwnedItem();
+    if (existing) return { id: existing.id };
+
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({
         user_id: context.userId,
+        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
         title: data.title,
         item_type: data.item_type,
         source: data.source,
@@ -76,7 +96,9 @@ export const saveToLibrary = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !row) {
-      console.error("[serverfn]", error?.message);
+      const concurrent = await findOwnedItem();
+      if (concurrent) return { id: concurrent.id };
+      console.error("[saveToLibrary:insert]", error?.message);
       throw new Error("Failed to save");
     }
     return { id: row.id };

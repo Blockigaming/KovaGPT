@@ -119,6 +119,8 @@ test("Images and Library routes retain the durable image-pipeline wiring", async
   assert.match(images, /safeImageUrl\(data\.imageUrl\)/);
   assert.match(images, /imageUrl: item\.imageUrl/);
   assert.match(images, /prompt: item\.prompt/);
+  assert.match(imageFunctions, /readResponseBytesBounded\(res, MAX_BYTES\)/);
+  assert.doesNotMatch(imageFunctions, /res\.arrayBuffer\(\)/);
   assert.doesNotMatch(images, /saveToLibrary/);
 
   assert.match(library, /getLibraryImageUrl\(\{ data: \{ id \} \}\)/);
