@@ -19,6 +19,40 @@ const excludedTreePrefixes = [
   "test-results/",
 ];
 
+const inheritedChildEnvironmentNames = new Set([
+  "CI",
+  "COMSPEC",
+  "FORCE_COLOR",
+  "GITHUB_ACTIONS",
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "NODE_EXTRA_CA_CERTS",
+  "NODE_OPTIONS",
+  "NPM_CONFIG_CACHE",
+  "PATH",
+  "PATHEXT",
+  "RUNNER_ARCH",
+  "RUNNER_OS",
+  "SHELL",
+  "SSL_CERT_DIR",
+  "SSL_CERT_FILE",
+  "SystemRoot",
+  "TEMP",
+  "TERM",
+  "TMP",
+  "TMPDIR",
+  "TZ",
+  "USER",
+  "npm_config_cache",
+]);
+const childEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([name]) => inheritedChildEnvironmentNames.has(name) || name.startsWith("LC_"),
+  ),
+);
+childEnvironment.KOVA_BROWSER_PREVIEW = "node";
+
 let activeChild;
 let shuttingDown = false;
 
@@ -39,7 +73,7 @@ async function run(command, args, options = {}) {
   const output = [];
   const child = spawn(command, args, {
     cwd: options.cwd || sourceRoot,
-    env: process.env,
+    env: childEnvironment,
     stdio: options.captureStdout ? ["ignore", "pipe", "inherit"] : "inherit",
   });
   activeChild = child;
