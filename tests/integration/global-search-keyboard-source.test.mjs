@@ -14,8 +14,8 @@ test("workspace results use the keyboard index", () => {
   assert.match(source, /const totalItems = chatStartIndex \+ conversationMatches\.length/);
   assert.match(source, /id=\{`command-option-\$\{index\}`\}/);
   assert.match(source, /aria-selected=\{activeIndex === index\}/);
-  assert.match(source, /workspace:\\${item\.type}:\\${item\.id}/);
-  assert.match(source, /chat:\\${conversation\.id}/);
+  assert.ok(source.includes(`\`workspace:\${item.type}:\${item.id}\``));
+  assert.ok(source.includes(`\`chat:\${conversation.id}\``));
   assert.match(source, /optionKeys\.indexOf\(activeOptionKey\)/);
 });
 
