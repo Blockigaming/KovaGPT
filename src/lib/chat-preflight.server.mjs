@@ -91,7 +91,7 @@ function normalizedFailure(stage, error, { timedOut, parentAborted, totalTimedOu
     stage,
     code: metadata.code ?? "chat_preflight_failed",
     status,
-    retryable: metadata.retryable ?? status === 408 || status === 429 || status >= 500,
+    retryable: metadata.retryable ?? (status === 408 || status === 429 || status >= 500),
     cause: error,
   });
 }
