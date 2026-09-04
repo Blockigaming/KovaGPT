@@ -249,7 +249,7 @@ BEGIN
     'inProgress', false
   );
 END
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.reserve_project_file_upload(
   uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
@@ -266,7 +266,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   target public.project_files;
 BEGIN
@@ -293,7 +293,7 @@ BEGIN
 
   RETURN jsonb_build_object('deleted', true, 'projectId', target.project_id);
 END
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
