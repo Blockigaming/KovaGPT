@@ -236,6 +236,14 @@ test("Azure v1 Responses endpoint and deployment-name routing remain exact", () 
   assert.match(catalog, /deep:[\s\S]{0,180}fallback: "gpt-5\.6-sol"/u);
 });
 
+test("client stream idle deadline exceeds the longest configured provider request", () => {
+  const client = readFileSync("src/lib/chat-sse-client.mjs", "utf8");
+  const provider = readFileSync("src/lib/ai/provider.server.ts", "utf8");
+
+  assert.match(client, /DEFAULT_IDLE_TIMEOUT_MS = 130_000/u);
+  assert.match(provider, /Math\.min\(Math\.max\(n, 5_000\), 120_000\)/u);
+});
+
 test("chat failures complete with a user-visible error and SSE terminator", () => {
   const chat = readFileSync("src/routes/api/chat.ts", "utf8");
   const client = readFileSync("src/routes/index.tsx", "utf8");
@@ -250,5 +258,8 @@ test("chat failures complete with a user-visible error and SSE terminator", () =
   assert.match(chat, /request\.signal\.aborted[\s\S]{0,220}status: 499/u);
   assert.match(chat, /final provider request failed/u);
   assert.match(chat, /\.\.\.providerError\.toSafeResponse\(\)/u);
-  assert.match(client, /if \(!resp\.ok \|\| !resp\.body\)[\s\S]{0,500}errJson\.error/u);
+  assert.match(
+    client,
+    /if \(!resp\.ok \|\| !resp\.body\)[\s\S]{0,500}chatResponseError\(resp, "Request failed"\)/u,
+  );
 });
