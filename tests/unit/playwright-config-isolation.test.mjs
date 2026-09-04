@@ -18,3 +18,23 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
   assert.match(authVisualConfig, /testMatch:\s*"auth-visual-regression\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /testMatch:\s*"deployed-baseline-audit\.spec\.ts"/u);
 });
+
+test("visual evidence contains screenshots rendered by the candidate", async () => {
+  const [workflow, helper, shellSpec, authSpec] = await Promise.all([
+    readRootFile(".github/workflows/ci.yml"),
+    readRootFile("tests/e2e/candidate-visual-evidence.ts"),
+    readRootFile("tests/e2e/ui-quality.spec.ts"),
+    readRootFile("tests/e2e/auth-visual-regression.spec.ts"),
+  ]);
+
+  assert.match(
+    workflow,
+    /KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: artifacts\/ui-audit\/candidate-visual/u,
+  );
+  assert.match(workflow, /path: artifacts\/ui-audit\/candidate-visual\/\*\.png/u);
+  assert.doesNotMatch(workflow, /candidate-visual-baselines/u);
+  assert.match(helper, /await page\.screenshot\(/u);
+  assert.match(helper, /KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR/u);
+  assert.match(shellSpec, /await captureCandidateVisual\(/u);
+  assert.match(authSpec, /await captureCandidateVisual\(/u);
+});
