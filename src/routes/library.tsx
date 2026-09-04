@@ -435,7 +435,7 @@ function LibraryPage() {
   const folderItems = useMemo(
     () =>
       items.filter((item) => {
-        if (folderScope === "unfiled") return !item.folder_id;
+        if (folderScope === "unfiled") return UUID_PATTERN.test(item.id) && !item.folder_id;
         if (folderScope !== "all") return item.folder_id === folderScope;
         return true;
       }),
@@ -732,18 +732,9 @@ function LibraryPage() {
               );
               setSelected([]);
             }}
-            onFoldersDeleted={(folderIds) => {
-              loadGenerationRef.current += 1;
-              setLoading(false);
-              const removed = new Set(folderIds);
-              setItems((current) =>
-                current.map((item) =>
-                  item.folder_id && removed.has(item.folder_id)
-                    ? { ...item, folder_id: null }
-                    : item,
-                ),
-              );
+            onFoldersDeleted={() => {
               setSelected([]);
+              void load();
             }}
           />
         ) : null}
