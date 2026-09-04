@@ -11,7 +11,7 @@ import {
   cleanupAccountExportsBeforeAccountDeletion,
   releaseAccountExportDeletionFence,
 } from "@/lib/account-export.server";
-import { cleanupLibraryImagesBeforeAccountDeletion } from "@/lib/account-storage-cleanup.server";
+import { cleanupOwnedStorageBeforeAccountDeletion } from "@/lib/account-storage-cleanup.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
@@ -176,17 +176,35 @@ export const Route = createFileRoute("/api/account")({
         }
 
         // Supabase Auth refuses to delete users who still own Storage objects.
-        // Remove and verify the newly durable Library image prefix before the
-        // metadata/auth cascade. On failure, keep metadata so cleanup can retry.
+        // Project files and agent evidence must be exhausted before Library
+        // images begin so another bucket cannot strand an active account whose
+        // Library bytes have already been removed. Cleanup is bounded and
+        // retryable; metadata is released only after its Storage object.
         if (!deletionFailure) {
           try {
-            await cleanupLibraryImagesBeforeAccountDeletion(auth.supabaseAdmin, auth.userId);
+            const storageCleanup = await cleanupOwnedStorageBeforeAccountDeletion(
+              auth.supabaseAdmin,
+              auth.userId,
+            );
+            if (!storageCleanup.complete) {
+              deletionFailure = Response.json(
+                {
+                  error:
+                    "Private file cleanup is still in progress. Your account was not deleted; retry shortly.",
+                  code: "account_storage_cleanup_pending",
+                },
+                {
+                  status: 409,
+                  headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                },
+              );
+            }
           } catch (error) {
-            console.error("[account-delete] Library image cleanup failed", {
+            console.error("[account-delete] private Storage cleanup failed", {
               error: error instanceof Error ? error.name : "unknown_error",
             });
             deletionFailure = jsonError(
-              "Private Library images could not be removed, so your account was not deleted. Please try again.",
+              "Private files could not be removed, so your account was not deleted. Please try again.",
               503,
             );
           }
