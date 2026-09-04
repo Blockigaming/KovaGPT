@@ -1,4 +1,7 @@
-const DEFAULT_MAX_BUFFER_CHARS = 2 * 1024 * 1024;
+// Generated images are delivered as one base64 SSE event. Keep this slightly
+// above the server's 16 MiB image-provider response contract so valid images
+// are accepted while every unterminated event remains strictly bounded.
+const DEFAULT_MAX_BUFFER_CHARS = 16 * 1024 * 1024 + 64 * 1024;
 const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
 const MAX_ERROR_BODY_BYTES = 64 * 1024;
 
