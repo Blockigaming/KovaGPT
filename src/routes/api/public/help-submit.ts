@@ -82,30 +82,32 @@ async function enqueueFixedRecipient(args: {
   // The email API rejects transactional sends without an unsubscribe token,
   // so the internal support recipient needs one too.
   const unsubscribeToken = await unsubscribeTokenFor(args.supabase, recipient);
-  await args.supabase.from("email_send_log").insert({
+  const payload = {
     message_id: messageId,
-    template_name: args.templateName,
-    recipient_email: recipient,
-    status: "pending",
-  });
-  const { error } = await args.supabase.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
-      message_id: messageId,
-      to: recipient,
-      from: FROM_ADDRESS,
-      sender_domain: SENDER_DOMAIN,
-      subject,
-      html,
-      text: plainText,
-      purpose: "transactional",
-      label: args.templateName,
-      idempotency_key: args.idempotencyKey,
-      unsubscribe_token: unsubscribeToken,
-      queued_at: new Date().toISOString(),
-    },
-  });
-  if (error) throw new Error(error.message);
+    to: recipient,
+    from: FROM_ADDRESS,
+    sender_domain: SENDER_DOMAIN,
+    subject,
+    html,
+    text: plainText,
+    purpose: "transactional",
+    label: args.templateName,
+    idempotency_key: args.idempotencyKey,
+    unsubscribe_token: unsubscribeToken,
+    queued_at: new Date().toISOString(),
+  };
+  const { data: queuedMessageId, error } = await args.supabase.rpc(
+    "enqueue_tracked_email" as never,
+    {
+      p_queue_name: "transactional_emails",
+      p_payload: payload,
+      p_template_name: args.templateName,
+      p_recipient_email: recipient,
+    } as never,
+  );
+  if (error || queuedMessageId === null) {
+    throw new Error(error?.message ?? "Failed to enqueue email");
+  }
 }
 
 export const Route = createFileRoute("/api/public/help-submit")({
