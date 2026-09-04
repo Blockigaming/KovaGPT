@@ -89,7 +89,20 @@ jobs:
 
       - name: Dependency audit
         if: steps.scope.outputs.run_ci == 'true'
-        run: npm audit --audit-level=high --omit=dev
+        shell: bash
+        run: |
+          set -u
+          for attempt in 1 2 3; do
+            if npm audit --audit-level=high --omit=dev; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "::error::Dependency audit failed after 3 attempts."
+              exit 1
+            fi
+            echo "::warning::Dependency audit attempt ${attempt} failed; retrying."
+            sleep "$((attempt * 5))"
+          done
 
       - name: Unit tests
         if: steps.scope.outputs.run_ci == 'true'
