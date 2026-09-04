@@ -31,15 +31,21 @@ function libraryFolderErrorMessage(code: string, status: number): string {
   if (status === 409 || code === "library_folder_name_conflict") {
     return "A folder with that name already exists here.";
   }
-  if (status === 429) return "Too many Library changes. Wait a moment and retry.";
-  if (code === "library_folder_not_found") return "That folder no longer exists.";
+  if (status === 429) {
+    return "Too many Library changes. Wait a moment and retry.";
+  }
+  if (code === "library_folder_not_found") {
+    return "That folder no longer exists.";
+  }
   if (code === "library_item_or_folder_not_found") {
     return "Some selected items or the destination folder no longer exist. Refresh and retry.";
   }
   if (code === "invalid_folder_name") {
     return "Use a folder name between 1 and 120 characters without slashes.";
   }
-  if (status === 503) return "Library organization is temporarily unavailable. Retry shortly.";
+  if (status === 503) {
+    return "Library organization is temporarily unavailable. Retry shortly.";
+  }
   return "The Library change could not be completed. Please try again.";
 }
 
@@ -51,9 +57,16 @@ function objectValue(value: unknown): JsonObject | null {
 
 function folderValue(value: unknown): LibraryFolder | null {
   const row = objectValue(value);
-  if (!row || typeof row.id !== "string" || !UUID_PATTERN.test(row.id)) return null;
+  if (!row || typeof row.id !== "string" || !UUID_PATTERN.test(row.id)) {
+    return null;
+  }
   const parent = row.parentId ?? row.parent_id ?? null;
-  if (parent !== null && (typeof parent !== "string" || !UUID_PATTERN.test(parent))) return null;
+  if (
+    parent !== null &&
+    (typeof parent !== "string" || !UUID_PATTERN.test(parent))
+  ) {
+    return null;
+  }
   if (typeof row.name !== "string" || !row.name.trim()) return null;
   const position =
     typeof row.position === "number" && Number.isInteger(row.position) ? row.position : 0;
@@ -72,10 +85,15 @@ function folderValue(value: unknown): LibraryFolder | null {
 async function responseObject(response: Response): Promise<JsonObject> {
   const payload = objectValue(await response.json().catch(() => null));
   if (!response.ok) {
-    const code = typeof payload?.error === "string" ? payload.error : "library_request_failed";
+    const code =
+      typeof payload?.error === "string"
+        ? payload.error
+        : "library_request_failed";
     throw new LibraryFolderRequestError(code, response.status);
   }
-  if (!payload) throw new LibraryFolderRequestError("invalid_library_response", 503);
+  if (!payload) {
+    throw new LibraryFolderRequestError("invalid_library_response", 503);
+  }
   return payload;
 }
 
@@ -115,7 +133,9 @@ export async function createLibraryFolder(input: {
 }): Promise<LibraryFolder> {
   const payload = await libraryRequest("POST", "/api/library/folders", input);
   const folder = folderValue(payload.folder);
-  if (!folder) throw new LibraryFolderRequestError("invalid_library_response", 503);
+  if (!folder) {
+    throw new LibraryFolderRequestError("invalid_library_response", 503);
+  }
   return folder;
 }
 
@@ -125,7 +145,9 @@ export async function renameLibraryFolder(input: {
 }): Promise<LibraryFolder> {
   const payload = await libraryRequest("PATCH", "/api/library/folders", input);
   const folder = folderValue(payload.folder);
-  if (!folder) throw new LibraryFolderRequestError("invalid_library_response", 503);
+  if (!folder) {
+    throw new LibraryFolderRequestError("invalid_library_response", 503);
+  }
   return folder;
 }
 
@@ -152,7 +174,10 @@ export async function moveLibraryItems(input: {
   folderId: string | null;
 }): Promise<{ movedCount: number; folderId: string | null }> {
   const payload = await libraryRequest("POST", "/api/library/bulk-move", input);
-  if (typeof payload.movedCount !== "number" || payload.movedCount !== input.itemIds.length) {
+  if (
+    typeof payload.movedCount !== "number" ||
+    payload.movedCount !== input.itemIds.length
+  ) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
   }
   return { movedCount: payload.movedCount, folderId: input.folderId };
