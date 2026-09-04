@@ -279,14 +279,58 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   provider_message_id text;
   pending_event public.email_webhook_events;
 BEGIN
   provider_message_id := NEW.metadata ->> 'provider_id';
   IF provider_message_id IS NULL
-    OR provider_message_id !~ '^[A-Za-z0-9_.:-]{1,200}(
+    OR provider_message_id !~ '^[A-Za-z0-9_.:-]{1,200}$'
+  THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'UPDATE'
+    AND (OLD.metadata ->> 'provider_id') IS NOT DISTINCT FROM provider_message_id
+  THEN
+    RETURN NEW;
+  END IF;
+
+  FOR pending_event IN
+    SELECT *
+    FROM public.email_webhook_events
+    WHERE email_webhook_events.provider_message_id = provider_message_id
+      AND status = 'failed'
+      AND last_error_code = 'email_send_log_not_found'
+    ORDER BY occurred_at
+  LOOP
+    PERFORM public.process_resend_webhook_event(
+      pending_event.event_id,
+      pending_event.event_type,
+      pending_event.provider_message_id,
+      pending_event.occurred_at,
+      pending_event.payload_sha256
+    );
+  END LOOP;
+
+  RETURN NEW;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.reconcile_resend_webhook_events_for_send()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reconcile_resend_webhook_events_for_send()
+  TO service_role;
+
+DROP TRIGGER IF EXISTS reconcile_resend_webhook_events_after_send
+  ON public.email_send_log;
+CREATE TRIGGER reconcile_resend_webhook_events_after_send
+AFTER INSERT OR UPDATE OF metadata ON public.email_send_log
+FOR EACH ROW
+EXECUTE FUNCTION public.reconcile_resend_webhook_events_for_send();
+
+
+CREATE OR REPLACE FUNCTION public.enqueue_tracked_email(
   p_queue_name text,
   p_payload jsonb,
   p_template_name text,
