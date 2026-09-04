@@ -17,6 +17,7 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
   );
   assert.match(authVisualConfig, /testMatch:\s*"auth-visual-regression\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /testMatch:\s*"deployed-baseline-audit\.spec\.ts"/u);
+  assert.match(deployedAuditConfig, /timeout:\s*90_000/u);
 });
 
 test("visual evidence contains screenshots rendered by the candidate", async () => {
@@ -33,6 +34,10 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
   );
   assert.match(workflow, /path: artifacts\/ui-audit\/candidate-visual\/\*\.png/u);
   assert.doesNotMatch(workflow, /candidate-visual-baselines/u);
+  assert.match(
+    workflow,
+    /path: artifacts\/ui-audit\/deployed-baseline[\s\S]{0,120}if-no-files-found: error/u,
+  );
   assert.match(helper, /await page\.screenshot\(/u);
   assert.match(helper, /KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR/u);
   assert.match(shellSpec, /await captureCandidateVisual\(/u);
