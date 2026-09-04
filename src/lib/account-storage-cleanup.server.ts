@@ -40,8 +40,12 @@ type ProjectFileQuery = {
 };
 type AccountStorageClient = {
   storage: { from(bucket: string): StorageBucket };
-  from(table: "project_files"): ProjectFileQuery;
+  from(table: "project_files"): unknown;
 };
+
+function projectFiles(client: AccountStorageClient): ProjectFileQuery {
+  return client.from("project_files") as ProjectFileQuery;
+}
 
 export type StorageCleanupProgress = Readonly<{
   complete: boolean;
@@ -201,8 +205,7 @@ async function cleanupOwnedProjectFiles(
   let removed = 0;
 
   for (let batch = 0; batch < maxRemoveBatches; batch += 1) {
-    const listed = await client
-      .from("project_files")
+    const listed = await projectFiles(client)
       .select("id,project_id,storage_path")
       .eq("uploaded_by", userId)
       .order("id", { ascending: true })
@@ -226,8 +229,7 @@ async function cleanupOwnedProjectFiles(
 
     // Storage must be gone before metadata is released. Removing these rows
     // makes the next bounded account-deletion retry advance to a new page.
-    const deleted = await client
-      .from("project_files")
+    const deleted = await projectFiles(client)
       .delete()
       .in(
         "id",
