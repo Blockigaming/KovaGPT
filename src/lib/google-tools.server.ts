@@ -788,7 +788,10 @@ export async function stagePendingAction(
 export async function executePendingAction(
   userId: string,
   actionId: string,
-): Promise<{ ok: true; result_text: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; result_text: string }
+  | { ok: false; error: string; error_code?: "completion_persistence_ambiguous" }
+> {
   const db = admin();
   const { data: row, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
@@ -1088,6 +1091,7 @@ export async function executePendingAction(
       console.error("[executePendingAction] completion could not be persisted");
       return {
         ok: false,
+        error_code: "completion_persistence_ambiguous",
         error:
           "Google completed the action, but KovaGPT could not verify completion. Check Google before retrying.",
       };
