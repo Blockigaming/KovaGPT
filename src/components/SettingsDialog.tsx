@@ -1856,16 +1856,12 @@ function ToggleRow({
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
 type WorkspaceDefaultValues = {
-  project: string;
-  work: string;
   prompt: string;
   research: string;
   artifact: string;
 };
 
 const DEFAULT_WORKSPACE_DEFAULTS: WorkspaceDefaultValues = {
-  project: "Balanced",
-  work: "Review before completion",
   prompt: "General",
   research: "Balanced sources",
   artifact: "Edit",
@@ -1906,8 +1902,6 @@ function WorkspaceDefaults({
     }
   };
   const fields = [
-    ["project", "Project defaults", ["Balanced", "Concise instructions", "Detailed instructions"]],
-    ["work", "Work defaults", ["Review before completion", "Approval gates", "Manual steps"]],
     ["prompt", "Prompt defaults", ["General", "Writing", "Research", "Analysis", "Coding"]],
     [
       "research",
@@ -1921,7 +1915,7 @@ function WorkspaceDefaults({
       <div>
         <h3 className="text-sm font-semibold">Workspace preferences</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Defaults are saved on this device and never imply an action ran.
+          These preferences apply the next time you open the matching workspace on this device.
         </p>
       </div>
       {fields.map(([key, label, options]) => (
