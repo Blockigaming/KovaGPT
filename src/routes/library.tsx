@@ -79,8 +79,7 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function readFavorites(key: string | null): Set<string> {
   if (!key) return new Set();
@@ -432,11 +431,7 @@ function LibraryPage() {
     return items
       .filter((item) => {
         if (folderScope === "unfiled" && item.folder_id) return false;
-        if (
-          folderScope !== "all" &&
-          folderScope !== "unfiled" &&
-          item.folder_id !== folderScope
-        ) {
+        if (folderScope !== "all" && folderScope !== "unfiled" && item.folder_id !== folderScope) {
           return false;
         }
         if (filter === "favorites" && !visibleFavorites.has(item.id)) return false;
