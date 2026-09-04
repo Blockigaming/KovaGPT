@@ -74,7 +74,7 @@ export function loadEmailWorkerConfig(env = process.env) {
   if (env.KOVA_EMAIL_QUEUE_ENABLED !== "true") {
     throw new EmailWorkerError("email_queue_disabled");
   }
-  return Object.freeze({
+  const config = {
     supabaseUrl: httpsOrigin(String(env.SUPABASE_URL ?? ""), "invalid_supabase_url"),
     supabaseServiceKey: requiredSecret(env, "SUPABASE_SERVICE_ROLE_KEY"),
     resendApiKey: requiredSecret(env, "RESEND_API_KEY"),
@@ -89,7 +89,7 @@ export function loadEmailWorkerConfig(env = process.env) {
     visibilityTimeoutSeconds: boundedInteger(
       env,
       "EMAIL_WORKER_VISIBILITY_TIMEOUT_SECONDS",
-      120,
+      300,
       30,
       900,
     ),
@@ -103,7 +103,16 @@ export function loadEmailWorkerConfig(env = process.env) {
       1,
       1_380,
     ),
-  });
+  };
+  // PGMQ leases start when the whole batch is read. Budget five bounded
+  // network operations per message for every sequential wave, plus teardown.
+  const waves = Math.ceil(config.batchSize / config.concurrency);
+  const minimumVisibilitySeconds =
+    Math.ceil((waves * config.requestTimeoutMs * 5) / 1_000) + 30;
+  if (config.visibilityTimeoutSeconds < minimumVisibilitySeconds) {
+    throw new EmailWorkerError("unsafe_email_worker_visibility_budget");
+  }
+  return Object.freeze(config);
 }
 
 function boundedString(value, code, max, { required = true } = {}) {
@@ -289,6 +298,41 @@ export function createEmailDispatcher(config, dependencies = {}) {
     return Array.isArray(rows) && rows.length > 0;
   }
 
+  async function retryCooldownMs() {
+    const url = new URL("rest/v1/email_send_state", `${config.supabaseUrl}/`);
+    url.searchParams.set("select", "retry_after_until");
+    url.searchParams.set("id", "eq.1");
+    url.searchParams.set("limit", "1");
+    const rows = await supabase(url, { method: "GET" });
+    if (!Array.isArray(rows) || !rows[0]) {
+      throw new EmailWorkerError("invalid_email_send_state", { retryable: true });
+    }
+    const value = rows[0].retry_after_until;
+    if (value === null) return 0;
+    const retryAt = Date.parse(String(value));
+    if (!Number.isFinite(retryAt)) {
+      throw new EmailWorkerError("invalid_email_send_state", { retryable: true });
+    }
+    return Math.max(0, Math.min(retryAt - now(), 900_000));
+  }
+
+  async function deferMessage(queueName, messageId, retryAfterMs) {
+    const retryAfterSeconds = Math.max(1, Math.min(900, Math.ceil(retryAfterMs / 1_000)));
+    const leaseSeconds = Math.min(
+      900,
+      Math.max(config.visibilityTimeoutSeconds, retryAfterSeconds + 5),
+    );
+    const deferred = await rpc("defer_email_retry", {
+      p_queue_name: queueName,
+      p_message_id: messageId,
+      p_retry_after_seconds: retryAfterSeconds,
+      p_lease_seconds: leaseSeconds,
+    });
+    if (deferred !== true) {
+      throw new EmailWorkerError("email_retry_deferral_failed", { retryable: true });
+    }
+  }
+
   async function removeMessage(queueName, messageId) {
     const deleted = await rpc("delete_email", {
       queue_name: queueName,
@@ -441,6 +485,9 @@ export function createEmailDispatcher(config, dependencies = {}) {
           last_attempt_at: new Date(now()).toISOString(),
         },
       });
+      if (failure.retryAfterMs > 0) {
+        await deferMessage(queueName, row.msg_id, failure.retryAfterMs);
+      }
       log("warn", "email_retry_scheduled", {
         queue: queueName,
         message_id: String(row.msg_id),
@@ -479,6 +526,18 @@ export function createEmailDispatcher(config, dependencies = {}) {
 
   return Object.freeze({
     async pollOnce() {
+      const sharedCooldownMs = await retryCooldownMs();
+      if (sharedCooldownMs > 0) {
+        return Object.freeze({
+          processed: 0,
+          sent: 0,
+          suppressed: 0,
+          alreadyComplete: 0,
+          retrying: 0,
+          deadLettered: 0,
+          retryAfterMs: sharedCooldownMs,
+        });
+      }
       const settled = await Promise.allSettled(QUEUES.map((queueName) => readQueue(queueName)));
       const results = [];
       let failed = false;
