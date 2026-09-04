@@ -114,11 +114,7 @@ export function addTimer(
   durationMs: number,
   label = "Timer",
 ): TimerItem | null {
-  if (
-    !Number.isFinite(durationMs) ||
-    durationMs < 1000 ||
-    durationMs > MAX_TIMER_DURATION_MS
-  ) {
+  if (!Number.isFinite(durationMs) || durationMs < 1000 || durationMs > MAX_TIMER_DURATION_MS) {
     return null;
   }
   const item: TimerItem = {
