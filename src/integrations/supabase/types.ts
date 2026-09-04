@@ -911,37 +911,61 @@ export type Database = {
       }
       project_files: {
         Row: {
+          content_sha256: string | null
           created_at: string
           id: string
+          idempotency_key: string | null
           kind: string
           mime_type: string | null
           name: string
           project_id: string
           size_bytes: number
+          status: string
+          storage_charged: boolean
+          storage_owner_id: string | null
           storage_path: string
-          uploaded_by: string
+          updated_at: string
+          upload_attempt_id: string | null
+          upload_lease_until: string | null
+          uploaded_by: string | null
         }
         Insert: {
+          content_sha256?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           kind?: string
           mime_type?: string | null
           name: string
           project_id: string
           size_bytes?: number
+          status?: string
+          storage_charged?: boolean
+          storage_owner_id?: string | null
           storage_path: string
-          uploaded_by: string
+          updated_at?: string
+          upload_attempt_id?: string | null
+          upload_lease_until?: string | null
+          uploaded_by?: string | null
         }
         Update: {
+          content_sha256?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           kind?: string
           mime_type?: string | null
           name?: string
           project_id?: string
           size_bytes?: number
+          status?: string
+          storage_charged?: boolean
+          storage_owner_id?: string | null
           storage_path?: string
-          uploaded_by?: string
+          updated_at?: string
+          upload_attempt_id?: string | null
+          upload_lease_until?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
           {
