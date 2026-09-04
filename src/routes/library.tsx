@@ -164,6 +164,7 @@ function LibraryPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [folderScope, setFolderScope] = useState<LibraryFolderScope>("all");
   const [folderRefreshKey, setFolderRefreshKey] = useState(0);
+  const [folderBusy, setFolderBusy] = useState(false);
   const selectedDurableIds = useMemo(
     () => selected.filter((id) => UUID_PATTERN.test(id)),
     [selected],
@@ -247,9 +248,10 @@ function LibraryPage() {
   }, [isLoaded, isSignedIn, principal, setItems, userKey]);
 
   const refreshLibrary = useCallback(() => {
+    if (folderBusy) return;
     setFolderRefreshKey((current) => current + 1);
     void load();
-  }, [load]);
+  }, [folderBusy, load]);
 
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
@@ -679,7 +681,7 @@ function LibraryPage() {
                 variant="outline"
                 className="min-h-11"
                 onClick={refreshLibrary}
-                disabled={loading}
+                disabled={loading || folderBusy}
               >
                 <RefreshCw
                   aria-hidden="true"
@@ -721,6 +723,7 @@ function LibraryPage() {
             scope={folderScope}
             selectedItemIds={selectedDurableIds}
             onScopeChange={setFolderScope}
+            onBusyChange={setFolderBusy}
             onMoved={(itemIds, folderId) => {
               loadGenerationRef.current += 1;
               setLoading(false);
@@ -873,7 +876,11 @@ function LibraryPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Your saved items are temporarily unavailable. Try again in a moment.
             </p>
-            <Button className="mt-4 min-h-11" onClick={refreshLibrary}>
+            <Button
+              className="mt-4 min-h-11"
+              onClick={refreshLibrary}
+              disabled={folderBusy}
+            >
               Retry
             </Button>
           </section>
