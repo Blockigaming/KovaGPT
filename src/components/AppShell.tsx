@@ -258,7 +258,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <OnboardingDialog />
       </Suspense>
-      <TimersWidget userKey={userKey} principalResolved={isLoaded} />
+      <TimersWidget
+        userKey={userKey}
+        principalResolved={isLoaded}
+        mobileSidebarOpen={sidebarOpen}
+      />
     </div>
   );
 }
