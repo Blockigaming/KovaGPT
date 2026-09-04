@@ -8,7 +8,7 @@ test("Writing Workspace keeps bounded local versions and exports portable format
   const source = read("src/routes/write.tsx");
   assert.match(source, /kova\.write\.versions\.v1/);
   assert.match(source, /\.slice\(0, 20\)/);
-  assert.match(source, /Document version history/);
+  assert.match(source, />\s*Save version\s*</);
   assert.match(source, /Version restored/);
   assert.match(source, /text\/html/);
   assert.match(source, /Download HTML/);
