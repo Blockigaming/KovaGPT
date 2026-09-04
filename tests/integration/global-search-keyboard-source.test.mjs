@@ -39,3 +39,12 @@ test("keyboard navigation keeps the active result visible", () => {
   assert.match(source, /scrollIntoView\(\{ block: "nearest" \}\)/);
   assert.match(source, /setActiveIndex\(Math\.min\(totalItems - 1, activeIndex \+ 1\)\)/);
 });
+
+test("workspace search exposes truthful loading, error, retry, and empty states", () => {
+  assert.match(source, /workspaceStatus === "loading"/);
+  assert.match(source, /Searching workspace…/);
+  assert.match(source, /workspaceStatus === "error"/);
+  assert.match(source, /Workspace results are unavailable\./);
+  assert.match(source, /onClick=\{retryWorkspaceSearch\}/);
+  assert.match(source, /No workspace results/);
+});
