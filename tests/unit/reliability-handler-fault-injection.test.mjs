@@ -188,7 +188,7 @@ test("bounded response reader rejects truncated identity bodies", async () => {
   );
 });
 
-test("bounded response reader allows decoded length to differ from encoded wire length", async () => {
+test("bounded response reader ignores encoded wire-length mismatch", async () => {
   const chunks = [new Uint8Array([1, 2, 3, 4, 5, 6])];
   const response = {
     headers: new Headers({ "content-encoding": "gzip", "content-length": "4" }),
