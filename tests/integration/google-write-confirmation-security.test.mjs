@@ -61,12 +61,39 @@ test("claimed legacy arguments are revalidated immediately before Google access"
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
-  assert.match(executor, /"gmail_create_draft",\s*"calendar_create_event"/);
+  assert.match(executor, /"gmail_create_draft",\s*"gmail_send",\s*"calendar_create_event"/);
   assert.match(executor, /This action is no longer valid\. Prepare it again\./);
-  assert.doesNotMatch(
-    executor,
-    /gmail_send|calendar_delete_event|drive_upload_text_file|drive_create_doc/,
-  );
+  assert.doesNotMatch(executor, /calendar_delete_event|drive_upload_text_file|drive_create_doc/);
+});
+
+test("Gmail send is confirmation-gated, exact in the approval card, and POST-only", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const card = read("src/components/ToolConfirmCard.tsx");
+
+  const definitionStart = executor.indexOf('name: "gmail_send"');
+  const definitionEnd = executor.indexOf('name: "calendar_create_event"', definitionStart);
+  const definition = executor.slice(definitionStart, definitionEnd);
+  assert.match(definition, /Only call when the user explicitly asks to send an email/);
+  assert.match(definition, /confirm before anything is sent/);
+
+  const claim = executor.indexOf("const claimedTool");
+  const token = executor.indexOf("getValidGoogleAccessToken(userId)", claim);
+  const endpoint = executor.indexOf("${GMAIL}/users/me/messages/send", token);
+  assert.ok(claim > -1 && token > claim && endpoint > token);
+  assert.match(executor, /sending \? `\$\{GMAIL\}\/users\/me\/messages\/send`/);
+  assert.match(executor, /method: "POST"/);
+  assert.match(executor, /JSON\.stringify\(sending \? \{ raw \} : \{ message: \{ raw \} \}\)/);
+
+  const summarizeStart = executor.indexOf("export function summarizeWriteTool");
+  const summarizeEnd = executor.indexOf("export async function stagePendingAction", summarizeStart);
+  const summarize = executor.slice(summarizeStart, summarizeEnd);
+  assert.match(summarize, /to: sending \? to : truncate\(to, 120\)/);
+  assert.match(summarize, /bcc: args\.bcc \? \(sending \? String\(args\.bcc\)/);
+  assert.match(summarize, /body_preview: sending \? String\(args\.body \?\? ""\)/);
+
+  assert.match(card, /preview\.bcc/);
+  assert.match(card, />Bcc:<\/span>/);
+  assert.match(card, /confirm\.tool === "gmail_send"[\s\S]*\? "Send"/);
 });
 
 test("expiration cannot overwrite a concurrently claimed or completed action", () => {
