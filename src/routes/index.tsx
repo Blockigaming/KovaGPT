@@ -19,6 +19,10 @@ import {
   Share2,
   Download,
   Sliders,
+  Lightbulb,
+  ListChecks,
+  PenLine,
+  Sparkles,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
@@ -34,6 +38,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import { ChatBranchBar } from "@/components/ChatBranchBar";
 import { useChatBranches } from "@/hooks/useChatBranches";
+import { NovaLogo } from "@/components/NovaLogo";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -137,6 +142,29 @@ export const Route = createFileRoute("/")({
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
 
+const EMPTY_STATE_STARTERS = [
+  {
+    label: "Brainstorm ideas",
+    prompt: "Help me brainstorm thoughtful ideas for ",
+    icon: Lightbulb,
+  },
+  {
+    label: "Make a plan",
+    prompt: "Create a practical step-by-step plan for ",
+    icon: ListChecks,
+  },
+  {
+    label: "Improve writing",
+    prompt: "Help me rewrite this clearly while preserving the meaning:\n\n",
+    icon: PenLine,
+  },
+  {
+    label: "Explore a topic",
+    prompt: "Explain this topic clearly, including the most important context: ",
+    icon: Sparkles,
+  },
+] as const;
+
 // Some environments report non-canonical locales (e.g. "en-US@posix"), which the
 // API rejects. Fall back to a canonical tag instead of failing the request.
 function safeLocale(): string {
@@ -190,6 +218,11 @@ function KovaGPT() {
   const [workspaceItems, setWorkspaceItems] = useState<
     import("@/lib/workspace.functions").RecentItem[]
   >([]);
+  const [workspaceStatus, setWorkspaceStatus] = useState<"loading" | "ready" | "error">("ready");
+  const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
+  const retryWorkspaceSearch = useCallback(() => {
+    setWorkspaceReloadKey((current) => current + 1);
+  }, []);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
@@ -830,21 +863,27 @@ function KovaGPT() {
   useEffect(() => {
     if (!commandOpen || !isSignedIn) {
       setWorkspaceItems([]);
+      setWorkspaceStatus("ready");
       return;
     }
     let cancelled = false;
+    setWorkspaceStatus("loading");
     void import("@/lib/workspace.functions")
       .then(({ listWorkspaceRecents }) => listWorkspaceRecents())
       .then((items) => {
-        if (!cancelled) setWorkspaceItems(items);
+        if (cancelled) return;
+        setWorkspaceItems(items);
+        setWorkspaceStatus("ready");
       })
       .catch(() => {
-        if (!cancelled) setWorkspaceItems([]);
+        if (cancelled) return;
+        setWorkspaceItems([]);
+        setWorkspaceStatus("error");
       });
     return () => {
       cancelled = true;
     };
-  }, [commandOpen, isSignedIn]);
+  }, [commandOpen, isSignedIn, userKey, workspaceReloadKey]);
 
   useEffect(() => {
     const reloadImportedChats = () => {
@@ -1515,7 +1554,9 @@ function KovaGPT() {
       />
 
       <main
-        className="flex min-w-0 flex-1 flex-col bg-background"
+        id="main-content"
+        tabIndex={-1}
+        className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <MobileTopBar
@@ -1530,7 +1571,7 @@ function KovaGPT() {
           onOpenChatSettings={active ? () => setWorkspaceOpen(true) : undefined}
           chatRulesActive={chatRulesActive}
         />
-        <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
+        <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
           <div
             hidden={sidebarOpen || Boolean(isSignedIn)}
             className="flex items-center gap-1 mr-2 shrink-0"
@@ -1544,7 +1585,7 @@ function KovaGPT() {
                     ?.focus({ preventScroll: true });
                 });
               }}
-              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              className="kova-topbar-button shrink-0 rounded-xl p-2 hover:bg-accent transition"
               aria-label="Open sidebar"
               title="Open sidebar"
             >
@@ -1552,7 +1593,7 @@ function KovaGPT() {
             </button>
             <button
               onClick={openCommandPalette}
-              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              className="kova-topbar-button shrink-0 rounded-xl p-2 hover:bg-accent transition"
               aria-label="Search chats"
               title="Search chats"
             >
@@ -1651,12 +1692,12 @@ function KovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition">
+                  <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-4 h-9 rounded-full bg-muted text-foreground hover:bg-accent active:scale-[0.98] transition whitespace-nowrap">
+                  <button className="kova-auth-secondary h-10 whitespace-nowrap rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.98] transition">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -1689,14 +1730,20 @@ function KovaGPT() {
             className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
             aria-labelledby="chat-greeting"
           >
-            <div className="flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-              <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
+            <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
+              <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6">
+                <div className="kova-greeting-mark" aria-hidden="true">
+                  <NovaLogo decorative mark className="h-5 w-5" />
+                </div>
                 <h1
                   id="chat-greeting"
-                  className="text-balance px-4 text-center text-[28px] font-semibold leading-9 tracking-tight text-foreground lg:text-[32px]"
+                  className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
                 >
                   {greeting}
                 </h1>
+                <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                  Think through a question, shape an idea, or get a polished first draft.
+                </p>
               </div>
 
               <div className="mx-auto w-full max-w-[48rem] px-1 sm:px-2">
@@ -1706,6 +1753,7 @@ function KovaGPT() {
                   onSubmit={() => send(input, attachments)}
                   onStop={stop}
                   isStreaming={isStreaming}
+                  disabled={!principalReady}
                   attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
@@ -1721,7 +1769,38 @@ function KovaGPT() {
                   recentLibraryLoading={recentLibraryLoading}
                   recentLibraryError={recentLibraryError}
                   onRecentLibraryRetry={loadRecentLibraryFiles}
+                  surface="empty"
                 />
+              </div>
+              <div className="kova-starter-grid mx-auto grid w-full max-w-[48rem] grid-cols-2 gap-2 px-1 pt-2 sm:px-2">
+                {EMPTY_STATE_STARTERS.map((starter) => {
+                  const Icon = starter.icon;
+                  return (
+                    <button
+                      key={starter.label}
+                      type="button"
+                      className="kova-starter-prompt group flex min-h-14 items-center gap-2.5 rounded-xl border border-border px-3 text-left"
+                      aria-label={`Start with ${starter.label}`}
+                      onClick={() => {
+                        setInput((current) => (current.trim() ? current : starter.prompt));
+                        window.requestAnimationFrame(() => {
+                          document
+                            .querySelector<HTMLTextAreaElement>(
+                              'textarea[aria-label="Message KovaGPT"]',
+                            )
+                            ?.focus({ preventScroll: true });
+                        });
+                      }}
+                    >
+                      <span className="kova-starter-icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                        {starter.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
             {!isLoaded || isSignedIn ? null : (
@@ -2015,6 +2094,7 @@ function KovaGPT() {
                 onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
+                disabled={!principalReady}
                 attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}
@@ -2113,6 +2193,8 @@ function KovaGPT() {
         conversations={historyConversations}
         archivedConversations={archivedConversations}
         workspaceItems={workspaceItems}
+        workspaceStatus={workspaceStatus}
+        retryWorkspaceSearch={retryWorkspaceSearch}
         onClose={() => setCommandOpen(false)}
         onNewChat={newChat}
         onSelectChat={setActiveId}

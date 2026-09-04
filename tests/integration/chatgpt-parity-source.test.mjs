@@ -98,7 +98,7 @@ test("the neutral shell has one theme layer and accessible collapsed navigation"
   assert.match(styles, /--surface-workspace: var\(--background\);/);
   assert.match(
     styles,
-    /\.kova-topbar\s*\{[^}]*background: var\(--background\) !important;[^}]*box-shadow: none !important;/s,
+    /\.kova-topbar\s*\{[^}]*background: color-mix\(in oklab, var\(--background\) 92%, transparent\) !important;[^}]*box-shadow: 0 1px 0 color-mix\(in oklab, var\(--background\) 70%, transparent\) !important;[^}]*backdrop-filter: blur\(18px\) saturate\(130%\) !important;/s,
   );
   assert.doesNotMatch(styles, /main button\.rounded-full/);
   assert.doesNotMatch(styles, /\[role=["']dialog["']\] button\.rounded-full/);

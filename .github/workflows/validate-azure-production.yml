@@ -1,0 +1,255 @@
+name: Validate KovaGPT Azure production plan
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type PLAN to run the non-deploying production validation
+        required: true
+        type: string
+      image_reference:
+        description: Immutable production ACR image in registry/repository@sha256:digest form
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kovagpt-azure-production-plan
+  cancel-in-progress: false
+
+env:
+  AZURE_CORE_OUTPUT: none
+  ACR_NAME: ${{ vars.KOVA_PRODUCTION_ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
+  IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
+  IMAGE_REFERENCE: ${{ inputs.image_reference }}
+  KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
+  RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_RESOURCE_GROUP }}
+
+jobs:
+  plan-only:
+    if: inputs.confirmation == 'PLAN' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the selected main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate the immutable production candidate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ACR_NAME ACR_LOGIN_SERVER IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Required protected production setting ${name} is missing."
+              exit 1
+            fi
+          done
+          if [[ ! "$ACR_NAME" =~ ^[a-z0-9]{5,50}$ ]]; then
+            echo "::error::The production ACR name is invalid."
+            exit 1
+          fi
+          if [[ ! "$ACR_LOGIN_SERVER" =~ ^[a-z0-9][a-z0-9.-]*\.azurecr\.io$ ]]; then
+            echo "::error::The production ACR login server is invalid."
+            exit 1
+          fi
+          if [[ ! "$IMAGE_REPOSITORY" =~ ^[a-z0-9]+([._/-][a-z0-9]+)*$ ]]; then
+            echo "::error::The production image repository is invalid."
+            exit 1
+          fi
+          if [[ ! "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "::error::The production Supabase project ref is invalid."
+            exit 1
+          fi
+          if [[ ! "$RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ ]]; then
+            echo "::error::The production resource group name is invalid."
+            exit 1
+          fi
+
+          expected_prefix="${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}@sha256:"
+          if [[ "$IMAGE_REFERENCE" != "$expected_prefix"* ]]; then
+            echo "::error::The image must use the approved production ACR and repository."
+            exit 1
+          fi
+          digest="${IMAGE_REFERENCE#"$expected_prefix"}"
+          if [[ ! "$digest" =~ ^[a-f0-9]{64}$ ]]; then
+            echo "::error::The image reference must end in one lowercase sha256 digest."
+            exit 1
+          fi
+
+      - name: Sign in to Azure with protected-environment OIDC
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Pull and verify the immutable ACR candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          az acr login --name "$ACR_NAME" --only-show-errors >/dev/null
+          docker pull "$IMAGE_REFERENCE" >/dev/null
+
+          expected_tree="$(git rev-parse 'HEAD^{tree}')"
+          revision_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+          )"
+          tree_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "com.kovagpt.source.tree" }}'
+          )"
+          project_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.supabase-project-ref" }}'
+          )"
+          verified_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.config-verified" }}'
+          )"
+
+          [[ "$revision_label" == "$GITHUB_SHA" ]] || {
+            echo "::error::The candidate revision label does not match the selected main SHA."
+            exit 1
+          }
+          [[ "$tree_label" == "$expected_tree" ]] || {
+            echo "::error::The candidate tree label does not match the selected main tree."
+            exit 1
+          }
+          [[ "$project_label" == "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" ]] || {
+            echo "::error::The candidate was not built for the approved production Supabase project."
+            exit 1
+          }
+          [[ "$verified_label" == "true" ]] || {
+            echo "::error::The candidate browser configuration is not verified."
+            exit 1
+          }
+
+          provenance="$RUNNER_TEMP/browser-config-provenance.json"
+          container_id="$(docker create "$IMAGE_REFERENCE")"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          docker cp "$container_id:/app/dist/browser-config-provenance.json" "$provenance"
+          docker rm "$container_id" >/dev/null
+          trap - EXIT
+
+          node - "$provenance" "$GITHUB_SHA" "$expected_tree" "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" <<'NODE'
+          const fs = require("fs");
+          const [path, sourceSha, sourceTree, projectRef] = process.argv.slice(2);
+          const value = JSON.parse(fs.readFileSync(path, "utf8"));
+          if (
+            value.schemaVersion !== 3 ||
+            value.sourceSha !== sourceSha ||
+            value.sourceTree !== sourceTree ||
+            value.supabaseProjectRef !== projectRef ||
+            value.sourceContext !== "acr-git"
+          ) {
+            throw new Error("The candidate provenance does not match the selected production source");
+          }
+          NODE
+
+      - name: Render protected production parameters for planning
+        id: parameters
+        shell: bash
+        env:
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
+        run: |
+          set -euo pipefail
+          parameters_path="$RUNNER_TEMP/kova-production-plan.parameters.json"
+          umask 077
+          PARAMETERS_PATH="$parameters_path" node <<'NODE'
+          const { createHash } = require("node:crypto");
+          const fs = require("fs");
+          const raw = process.env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON;
+          if (!raw) throw new Error("KOVA_PRODUCTION_BICEP_PARAMETERS_JSON is required");
+          const document = JSON.parse(raw);
+          if (!document || typeof document !== "object" || !document.parameters) {
+            throw new Error("The protected production parameters document is invalid");
+          }
+          document.parameters.imageReference = { value: process.env.IMAGE_REFERENCE };
+          const serialized = JSON.stringify(document);
+          if (/REPLACE_WITH|SYNTHETIC_STAGING|rg-kovagpt-dev/iu.test(serialized)) {
+            throw new Error("The protected production parameters still contain a placeholder or non-production target");
+          }
+          if (document.parameters.acrName?.value !== process.env.ACR_NAME) {
+            throw new Error("The Bicep ACR name does not match the approved production registry");
+          }
+          const expectedUrl = `https://${process.env.KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co`;
+          if (document.parameters.supabaseUrl?.value !== expectedUrl) {
+            throw new Error("The Bicep Supabase URL does not match the approved production project");
+          }
+          const publishableKey = document.parameters.supabasePublishableKey?.value;
+          if (
+            typeof publishableKey !== "string" ||
+            !/^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey)
+          ) {
+            throw new Error("The protected Supabase publishable key is invalid");
+          }
+          const provenance = JSON.parse(
+            fs.readFileSync(
+              `${process.env.RUNNER_TEMP}/browser-config-provenance.json`,
+              "utf8",
+            ),
+          );
+          const publishableKeySha256 = createHash("sha256")
+            .update(publishableKey)
+            .digest("hex");
+          if (provenance.publishableKeySha256 !== publishableKeySha256) {
+            throw new Error(
+              "The candidate publishable-key fingerprint does not match the protected production key",
+            );
+          }
+          fs.writeFileSync(process.env.PARAMETERS_PATH, `${JSON.stringify(document, null, 2)}\n`, {
+            mode: 0o600,
+          });
+          NODE
+          echo "path=$parameters_path" >> "$GITHUB_OUTPUT"
+
+      - name: Compile and validate the production Bicep deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep build \
+            --file infra/azure/production/main.bicep \
+            --outfile "$RUNNER_TEMP/kova-production-plan.template.json"
+          az deployment group validate \
+            --name "kova-production-plan-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/azure/production/main.bicep \
+            --parameters "@${{ steps.parameters.outputs.path }}" \
+            --only-show-errors \
+            --output none
+
+      - name: Show the non-deploying Azure production what-if plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --name "kova-production-plan-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/azure/production/main.bicep \
+            --parameters "@${{ steps.parameters.outputs.path }}" \
+            --no-pretty-print \
+            --result-format ResourceIdOnly \
+            --only-show-errors \
+            --output jsonc
+
+      - name: Remove transient production planning files
+        if: always()
+        shell: bash
+        run: |
+          rm -f \
+            "$RUNNER_TEMP/kova-production-plan.parameters.json" \
+            "$RUNNER_TEMP/kova-production-plan.template.json" \
+            "$RUNNER_TEMP/browser-config-provenance.json"
+
+      - name: Record the non-deployment boundary
+        run: echo "Azure validation and what-if completed. This workflow cannot deploy, update a Container App, or shift traffic."

@@ -14,7 +14,12 @@ import {
   type CenterNotification,
 } from "@/lib/notification-center.functions";
 
-export const Route = createFileRoute("/notifications")({ component: NotificationsRoute });
+export const Route = createFileRoute("/notifications")({
+  head: () => ({
+    meta: [{ title: "KovaGPT Notifications" }, { name: "robots", content: "noindex" }],
+  }),
+  component: NotificationsRoute,
+});
 type Filter = "all" | "unread" | "agent" | "connector" | "scheduled";
 
 function NotificationsRoute() {

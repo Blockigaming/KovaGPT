@@ -1,5 +1,7 @@
 # KovaGPT direct OpenAI runtime
 
+> **Current zero-Lovable status:** PR #227 is merged and its former compatibility routes are absent from source, route metadata, and locally built artifacts. The direct Azure OpenAI/OpenAI runtime is current. Production control-plane and deployed-network proof remains tracked separately in issue #208; see `docs/release-reconciliation/zero-lovable-classification.md`.
+
 ## Active request flow and inventory
 
 The only active text-generation flow is browser chat -> `POST /api/chat` -> bounded validation -> trusted-IP/authentication -> server billing entitlement -> catalog routing -> conservative token/cost preflight -> atomic Supabase reservation/concurrency lease -> `provider.server.ts` -> OpenAI `POST /v1/responses` -> server Responses-to-Kova SSE adapter -> existing streaming UI -> atomic usage reconciliation. Stop or disconnect cancels the provider reader and finalizes the lease. No browser module receives a provider credential, model override, provider URL, or output limit.
@@ -15,7 +17,7 @@ The only active text-generation flow is browser chat -> `POST /api/chat` -> boun
 | Images                          | chat/images UI            | `/api/chat`, `/api/generate-image`   | OpenAI Images                | verified user, daily image quota                     |
 | Project RAG                     | project ingestion/query   | `project-rag.server.ts`              | OpenAI Embeddings            | authenticated project boundary                       |
 
-Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. Lovable-named editor metadata, email, OAuth consent, deployment, Supabase, auth, database, and storage functionality is unrelated and remains. Lovable AI is neither active nor a fallback.
+Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. The former Lovable-named compatibility surfaces were removed by merged PR #227. Lovable AI is neither active nor a fallback.
 
 ## Versioned model catalog
 

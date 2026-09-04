@@ -1,5 +1,7 @@
 # Non-Actions release-preparation validation
 
+> **Historical and superseded (2026-09-03):** This is evidence for the named 2026-08-16 commit only. It is not current dependency, route, build, or release guidance.
+
 Commit `702b75314d9431bf2038a21d0132dfb80a66fd1a` was created with `[skip actions]` and GitHub reported zero workflow runs for the commit.
 
 Local Node validation completed without GitHub-hosted runners:

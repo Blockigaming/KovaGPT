@@ -32,18 +32,9 @@ test("Checkout blocks every open or unknown Stripe status", () => {
 });
 
 test("canceled Checkout history is allowed only after its one item expires", () => {
-  assert.equal(
-    stripeSubscriptionBlocksCheckout(subscription("canceled", now + 1), now),
-    true,
-  );
-  assert.equal(
-    stripeSubscriptionBlocksCheckout(subscription("canceled", now), now),
-    false,
-  );
-  assert.equal(
-    stripeSubscriptionBlocksCheckout(subscription("canceled", now - 1), now),
-    false,
-  );
+  assert.equal(stripeSubscriptionBlocksCheckout(subscription("canceled", now + 1), now), true);
+  assert.equal(stripeSubscriptionBlocksCheckout(subscription("canceled", now), now), false);
+  assert.equal(stripeSubscriptionBlocksCheckout(subscription("canceled", now - 1), now), false);
 });
 
 test("Checkout fails closed for ambiguous, paginated, or malformed item projections", () => {
@@ -51,10 +42,7 @@ test("Checkout fails closed for ambiguous, paginated, or malformed item projecti
     stripeSubscriptionBlocksCheckout(
       subscription("canceled", now - 1, {
         items: {
-          data: [
-            { current_period_end: now - 1 },
-            { current_period_end: now - 1 },
-          ],
+          data: [{ current_period_end: now - 1 }, { current_period_end: now - 1 }],
           has_more: false,
         },
       }),

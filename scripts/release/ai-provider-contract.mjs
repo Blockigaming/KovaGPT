@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 
-export function verifyAiProviderContract({ provider, catalog, staging }) {
+export function verifyAiProviderContract({ provider, transport = "", catalog, staging }) {
   const failures = [];
+  const providerRuntime = `${provider}\n${transport}`;
   const requiredProviderPatterns = [
     /ProviderKind = "azure_openai" \| "openai"/u,
     /https:\/\/api\.openai\.com\/v1/u,
@@ -11,7 +12,7 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
     /IDENTITY_ENDPOINT/u,
     /IDENTITY_HEADER/u,
     /const AZURE_OPENAI_RESOURCE = "https:\/\/cognitiveservices\.azure\.com"/u,
-    /searchParams\.set\("resource", AZURE_OPENAI_RESOURCE\)/u,
+    /searchParams\.set\("resource", (?:AZURE_OPENAI_RESOURCE|resource)\)/u,
     /searchParams\.set\("api-version", "2019-08-01"\)/u,
     /redirect: "error"/u,
     /"\/responses"/u,
@@ -19,9 +20,9 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
     /AZURE_OPENAI_DEPLOYMENT_DEEP/u,
   ];
   for (const pattern of requiredProviderPatterns) {
-    if (!pattern.test(provider)) failures.push(`provider:${pattern}`);
+    if (!pattern.test(providerRuntime)) failures.push(`provider:${pattern}`);
   }
-  if (/lovable\.(?:app|dev)|LOVABLE_API_KEY|@lovable\.dev/iu.test(provider)) {
+  if (/lovable\.(?:app|dev)|LOVABLE_API_KEY|@lovable\.dev/iu.test(providerRuntime)) {
     failures.push("provider:Lovable runtime present");
   }
   if (!/fallback: "gpt-5\.6-sol"/u.test(catalog)) {
@@ -47,6 +48,7 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const failures = verifyAiProviderContract({
     provider: readFileSync("src/lib/ai/provider.server.ts", "utf8"),
+    transport: readFileSync("src/lib/ai/provider-transport.server.mjs", "utf8"),
     catalog: readFileSync("src/lib/ai/model-catalog.server.ts", "utf8"),
     staging: readFileSync("infra/azure/staging/main.bicep", "utf8"),
   });

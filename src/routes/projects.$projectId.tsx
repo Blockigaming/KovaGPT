@@ -103,7 +103,9 @@ export const Route = createFileRoute("/projects/$projectId")({
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const requestKey = userKey ? `${userKey}:${projectId}` : null;
   const navigate = useNavigate();
 
   const [project, setProject] = useState<(ProjectDetail & { archived_at?: string | null }) | null>(
@@ -113,8 +115,13 @@ function ProjectDetailPage() {
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [chats, setChats] = useState<ProjectChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [searchOpen, setSearchOpen] = useState(false);
+  const currentRequestKeyRef = useRef(requestKey);
+  const requestSequenceRef = useRef(0);
+  currentRequestKeyRef.current = requestKey;
 
   const fnGet = useServerFn(getProject);
   const fnUpdate = useServerFn(updateProject);
@@ -125,7 +132,11 @@ function ProjectDetailPage() {
   const fnListChats = useServerFn(listProjectChats);
 
   const refresh = useCallback(async () => {
+    if (!isSignedIn || !requestKey || currentRequestKeyRef.current !== requestKey) return;
+    const loadRequestKey = requestKey;
+    const requestId = ++requestSequenceRef.current;
     setLoading(true);
+    setLoadError(null);
     try {
       const [p, m, i, c] = await Promise.all([
         fnGet({ data: { id: projectId } }),
@@ -133,46 +144,121 @@ function ProjectDetailPage() {
         fnListInvites({ data: { project_id: projectId } }),
         fnListChats({ data: { project_id: projectId } }),
       ]);
+      if (
+        requestId !== requestSequenceRef.current ||
+        currentRequestKeyRef.current !== loadRequestKey
+      )
+        return;
       setProject(p as never);
       setMembers(m);
       setInvites(i);
       setChats(c);
-    } catch {
-      toast.error("Failed to load project");
+    } catch (error) {
+      if (
+        requestId !== requestSequenceRef.current ||
+        currentRequestKeyRef.current !== loadRequestKey
+      )
+        return;
+      setProject(null);
+      setMembers([]);
+      setInvites([]);
+      setChats([]);
+      setLoadError(error instanceof Error ? error.message : "The project could not be loaded.");
     } finally {
-      setLoading(false);
+      if (
+        requestId === requestSequenceRef.current &&
+        currentRequestKeyRef.current === loadRequestKey
+      ) {
+        setResolvedRequestKey(loadRequestKey);
+        setLoading(false);
+      }
     }
-  }, [projectId, fnGet, fnListMembers, fnListInvites, fnListChats]);
+  }, [fnGet, fnListChats, fnListInvites, fnListMembers, isSignedIn, projectId, requestKey]);
 
   useEffect(() => {
-    if (isSignedIn) refresh();
-  }, [isSignedIn, refresh]);
+    if (!isLoaded) return;
 
-  if (!isLoaded)
+    requestSequenceRef.current += 1;
+    setProject(null);
+    setMembers([]);
+    setInvites([]);
+    setChats([]);
+    setLoadError(null);
+    setTab("overview");
+    setSearchOpen(false);
+
+    if (!isSignedIn || !requestKey) {
+      setResolvedRequestKey(null);
+      setLoading(false);
+      return;
+    }
+
+    setResolvedRequestKey(null);
+    void refresh();
+  }, [isLoaded, isSignedIn, refresh, requestKey]);
+
+  const isLoading =
+    !isLoaded ||
+    Boolean(isSignedIn && (!requestKey || loading || resolvedRequestKey !== requestKey));
+
+  if (isLoading)
     return (
       <AppShell>
-        <div className="p-8 text-muted-foreground">Loading…</div>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          aria-busy="true"
+          className="mx-auto w-full max-w-6xl p-4 md:p-8"
+        >
+          <section
+            role="status"
+            aria-labelledby="project-loading-title"
+            className="flex min-h-40 items-center gap-2 text-muted-foreground"
+          >
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <h1 id="project-loading-title" className="text-sm font-normal">
+              Loading project…
+            </h1>
+          </section>
+        </main>
       </AppShell>
     );
   if (!isSignedIn) {
     return (
       <AppShell>
-        <div className="max-w-2xl mx-auto p-8 text-center">
+        <main id="main-content" tabIndex={-1} className="max-w-2xl mx-auto p-8 text-center">
           <h1 className="text-2xl font-semibold mb-2">Sign in required</h1>
+          <p className="mb-6 text-sm text-muted-foreground">
+            Sign in to open this project and its shared workspace.
+          </p>
           <SignInButton mode="modal">
             <Button>Sign in</Button>
           </SignInButton>
-        </div>
+        </main>
       </AppShell>
     );
   }
-  if (loading || !project) {
+  if (loadError || !project) {
     return (
       <AppShell>
-        <div className="p-8 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading project…
-        </div>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-2xl p-4 text-center md:p-8"
+        >
+          <section role="alert" className="mt-8 rounded-2xl border border-destructive/40 p-8">
+            <h1 className="text-xl font-semibold">Project could not be opened</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This project is unavailable right now, or you no longer have access.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Button onClick={() => void refresh()}>Try again</Button>
+              <Button variant="outline" asChild>
+                <Link to="/projects">Back to projects</Link>
+              </Button>
+            </div>
+          </section>
+        </main>
       </AppShell>
     );
   }
@@ -182,14 +268,16 @@ function ProjectDetailPage() {
   const archived = !!project.archived_at;
 
   async function toggleArchive() {
+    const operationRequestKey = requestKey;
     await fnArchive({ data: { id: projectId, archived: !archived } });
+    if (currentRequestKeyRef.current !== operationRequestKey) return;
     toast.success(archived ? "Project restored" : "Project archived");
     await refresh();
   }
 
   return (
     <AppShell>
-      <div className="max-w-6xl mx-auto p-4 md:p-8 w-full">
+      <main id="main-content" tabIndex={-1} className="max-w-6xl mx-auto p-4 md:p-8 w-full">
         <div className="flex items-center justify-between gap-2 mb-4">
           <Link
             to="/projects"
@@ -315,7 +403,9 @@ function ProjectDetailPage() {
               project={project}
               canEdit={canEdit}
               onSave={async (system_prompt) => {
+                const operationRequestKey = requestKey;
                 await fnUpdate({ data: { id: projectId, system_prompt } });
+                if (currentRequestKeyRef.current !== operationRequestKey) return;
                 setProject((prev) => (prev ? { ...prev, system_prompt } : prev));
               }}
             />
@@ -388,7 +478,7 @@ function ProjectDetailPage() {
             </TabsContent>
           )}
         </Tabs>
-      </div>
+      </main>
 
       <SearchDialog
         projectId={projectId}
@@ -415,21 +505,34 @@ function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: str
   const [activity, setActivity] = useState<ProjectActivity[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
+    let active = true;
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         const [a, t] = await Promise.all([
           fnAct({ data: { project_id: projectId } }),
           fnTasks({ data: { project_id: projectId } }),
         ]);
+        if (!active) return;
         setActivity(a);
         setTasks(t);
+      } catch (reason) {
+        if (!active) return;
+        setError(
+          reason instanceof Error ? reason.message : "Project overview could not be loaded.",
+        );
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     })();
-  }, [projectId, fnAct, fnTasks]);
+    return () => {
+      active = false;
+    };
+  }, [projectId, fnAct, fnTasks, reloadKey]);
 
   const openTasks = tasks.filter((t) => t.status !== "done").slice(0, 5);
   const doneCount = tasks.filter((t) => t.status === "done").length;
@@ -440,6 +543,24 @@ function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: str
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading…
       </div>
+    );
+
+  if (error)
+    return (
+      <section role="alert" className="rounded-xl border border-destructive/40 p-4">
+        <h2 className="font-medium">Project overview could not be loaded</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Project activity and tasks are temporarily unavailable. Try again in a moment.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-4"
+          onClick={() => setReloadKey((key) => key + 1)}
+        >
+          Try again
+        </Button>
+      </section>
     );
 
   return (
@@ -967,7 +1088,7 @@ function ProjectInstructionsTab({
           id="project-instructions-error"
           className="mt-3 rounded-[var(--kova-radius-input)] border border-[var(--border-destructive)] bg-destructive/10 p-3 text-sm text-destructive"
         >
-          {error}
+          Your instructions could not be saved. Your draft is preserved.
           <button
             type="button"
             className="ml-2 underline"

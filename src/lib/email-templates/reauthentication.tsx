@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Body, Container, Head, Heading, Html, Preview, Text } from "@react-email/components";
-import { BrandFooter, BrandHeader, styles } from "./_brand";
+import { Body, Container, Heading, Html, Preview, Text } from "@react-email/components";
+import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 
 interface ReauthenticationEmailProps {
   token: string;
@@ -8,16 +8,23 @@ interface ReauthenticationEmailProps {
 
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your verification code</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
+    <EmailHead />
+    <Preview>Your KovaGPT verification code</Preview>
+    <Body className="kova-email-body" style={styles.main}>
+      <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
-        <Heading style={styles.h1}>Confirm reauthentication</Heading>
-        <Text style={styles.text}>
-          Enter this verification code to continue. It expires shortly.
+        <Heading className="kova-heading" style={styles.h1}>
+          Confirm it’s you
+        </Heading>
+        <Text className="kova-text" style={styles.text}>
+          Enter this verification code in KovaGPT to continue. It expires shortly.
         </Text>
-        <Text style={styles.code}>{token}</Text>
+        <Text className="kova-code kova-text" style={styles.code}>
+          {token}
+        </Text>
+        <Text className="kova-text" style={styles.text}>
+          If you did not initiate this request, you can safely ignore this email.
+        </Text>
         <BrandFooter />
       </Container>
     </Body>

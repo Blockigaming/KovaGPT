@@ -158,9 +158,9 @@ export function Sidebar({
   };
 
   const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
-  const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
+  const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-3";
   const navItemClass = (active: boolean) =>
-    `relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+    `kova-nav-row relative flex h-10 items-center rounded-xl py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -203,7 +203,7 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`kova-chat-row group relative mx-2 flex h-9 items-center gap-1 rounded-lg px-1.5 text-sm transition-colors duration-100 ${
+      className={`kova-chat-row group relative mx-2 flex min-h-10 items-center gap-1 rounded-xl px-1.5 text-sm transition-colors duration-100 ${
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
@@ -327,14 +327,14 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 backdrop-blur-[2px] lg:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
 
       {collapsed && showSignedIn ? (
         <div
-          className="hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+          className="kova-sidebar-rail hidden h-[100dvh] w-[56px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
           aria-label="Collapsed navigation"
         >
           <button
@@ -344,7 +344,7 @@ export function Sidebar({
             aria-label="Open sidebar"
             title="Open sidebar"
           >
-            <NovaLogo mark className="h-[22px] w-[22px] text-foreground" />
+            <NovaLogo decorative mark className="h-[22px] w-[22px] text-foreground" />
           </button>
           <button
             type="button"
@@ -398,10 +398,10 @@ export function Sidebar({
         inert={collapsed ? true : undefined}
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
-        <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
-          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
+        <div className="kova-sidebar-inner flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
+          <div className="kova-sidebar-header relative z-20 flex min-h-[56px] items-center gap-1 bg-sidebar px-3 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-              <NovaLogo className="h-6 w-6 rounded-md" />
+              <NovaLogo decorative mark className="h-6 w-6 text-foreground" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
 
@@ -448,7 +448,7 @@ export function Sidebar({
           />
 
           {searchOpen && !collapsed ? (
-            <div className="px-2 pb-1 pt-2">
+            <div className="px-3 pb-1 pt-2">
               <label className="sr-only" htmlFor="sidebar-chat-search">
                 Search chats
               </label>
@@ -458,12 +458,12 @@ export function Sidebar({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
-                className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+                className="kova-sidebar-search h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-0.5 px-2 pt-2">
+          <div className="kova-sidebar-primary flex flex-col gap-0.5 px-2 pt-2">
             <button
               onClick={() => {
                 onNew();
@@ -494,7 +494,7 @@ export function Sidebar({
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Plugins", Blocks)}
             {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "New")}
+            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "Preview")}
 
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
@@ -510,7 +510,7 @@ export function Sidebar({
           </div>
 
           <div
-            className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            className="kova-sidebar-history relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
             role="group"
             aria-label="Chats"
           >
@@ -570,7 +570,7 @@ export function Sidebar({
           </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+            className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
           >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
@@ -650,7 +650,7 @@ export function Sidebar({
                   </button>
                 </div>
                 {!collapsed ? (
-                  <div className="border-t border-border/60 px-4 pb-4 pt-4">
+                  <div className="kova-sidebar-auth-card mx-1 rounded-2xl border border-border/70 px-4 pb-4 pt-4">
                     <p className="text-[15px] font-semibold text-foreground">
                       Get responses tailored to you
                     </p>
@@ -659,7 +659,7 @@ export function Sidebar({
                       advanced models.
                     </p>
                     <SignInButton mode="modal">
-                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
+                      <button className="kova-sidebar-auth-button mt-4 flex min-h-11 w-full items-center justify-center rounded-full border border-transparent bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
                         Log in
                       </button>
                     </SignInButton>

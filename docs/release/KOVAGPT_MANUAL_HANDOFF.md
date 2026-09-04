@@ -52,9 +52,11 @@ following in one release record:
 3. No unresolved P0, P1, or P2 release blocker or unresolved required review thread.
 4. An immutable ACR image reference of the form `repository@sha256:<64 hex>` built from that SHA.
 5. A green staging deployment of that same digest, including authenticated owner-isolation and
-   rollback rehearsal evidence. The current `.github/workflows/staging-rehearsal.yml` still
-   performs a Wrangler/Cloudflare deployment and is not Azure same-digest staging proof; it must be
-   corrected before use.
+   rollback rehearsal evidence. The current `.github/workflows/staging-rehearsal.yml` is
+   deployment-capable: an approved dispatch invokes bare `npx wrangler deploy`, but no `--env` or
+   Wrangler staging environment proves which Cloudflare account and Worker it will write. It is
+   neither validation-only nor Azure same-digest staging proof; do not dispatch it until an
+   authorized owner verifies the exact Cloudflare account/Worker target and approves that write.
 6. A reviewed Supabase production migration/backup record and green readiness.
 7. Billing source remediations merged and proven in sandbox; no live customer or payment object is
    needed to satisfy this entry gate.
@@ -65,6 +67,14 @@ following in one release record:
    the second phase may enforce `clientCertificateMode: require` and the exact certificate hash
    only after proxied DNS/AOP has been proven for at least the prior DNS TTL. A one-phase
    require-and-proxy sequence is an engineering blocker, not a manual workaround.
+10. PR #227 is merged and the former compatibility routes are absent from current source. Before
+    declaring production zero-Lovable, complete a read-only control-plane and log inventory for
+    the retired compatibility URLs: Supabase Auth authorization and redirect configuration, Azure
+    and Cloudflare routing/access logs, provider webhook/email configuration and logs, and known
+    external clients. Migrate any legitimate external caller to Kova-owned routes through a
+    separately reviewed change, attach redacted evidence to issue #208, and keep that issue open
+    through post-deploy exact-SHA route/asset/network/log proof. Repository-only search is
+    insufficient production evidence.
 
 From an exact detached checkout, the repository-side check begins with:
 

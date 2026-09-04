@@ -65,7 +65,10 @@ const DialogContent = React.forwardRef<
         className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
       />
       {children}
-      <DialogPrimitive.Close className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-compact)] opacity-65 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:h-10 sm:w-10 data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      <DialogPrimitive.Close
+        data-kova-dialog-close=""
+        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-compact)] opacity-65 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:h-10 sm:w-10 data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+      >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

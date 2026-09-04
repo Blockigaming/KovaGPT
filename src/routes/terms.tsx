@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -25,8 +25,12 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
+    <PublicShell>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5"
+      >
         <h1>Terms of Service</h1>
         <p>By using KovaGPT, you agree to use the service responsibly and follow these terms.</p>
 
@@ -88,7 +92,6 @@ function TermsPage() {
           <Link to="/">← Back to KovaGPT</Link> · <Link to="/privacy">Privacy Policy</Link>
         </p>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

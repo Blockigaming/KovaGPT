@@ -59,9 +59,7 @@ test("deletion paginates the mapped Customer and cancels every nonterminal statu
     }),
     { examined: rows.length, canceled: 5 },
   );
-  assert.deepEqual(calls.list, [
-    { customer: "cus_authoritative", status: "all", limit: 100 },
-  ]);
+  assert.deepEqual(calls.list, [{ customer: "cus_authoritative", status: "all", limit: 100 }]);
   assert.deepEqual(calls.cancel, [
     "sub_active",
     "sub_incomplete",
@@ -72,19 +70,16 @@ test("deletion paginates the mapped Customer and cancels every nonterminal statu
 });
 
 test("a concurrent cancellation is idempotent only when a fresh GET proves terminal", async () => {
-  const { calls, stripe } = stripeFixture(
-    [{ id: "sub_race", status: "active" }],
-    {
-      async cancel(id) {
-        calls.cancel.push(id);
-        throw new Error("already canceled");
-      },
-      async retrieve(id) {
-        calls.retrieve.push(id);
-        return { id, status: "canceled" };
-      },
+  const { calls, stripe } = stripeFixture([{ id: "sub_race", status: "active" }], {
+    async cancel(id) {
+      calls.cancel.push(id);
+      throw new Error("already canceled");
     },
-  );
+    async retrieve(id) {
+      calls.retrieve.push(id);
+      return { id, status: "canceled" };
+    },
+  });
   assert.deepEqual(
     await cancelAuthoritativeStripeSubscriptions({
       stripe,
@@ -96,17 +91,14 @@ test("a concurrent cancellation is idempotent only when a fresh GET proves termi
 });
 
 test("deletion fails closed when cancellation cannot be proven", async () => {
-  const { stripe } = stripeFixture(
-    [{ id: "sub_still_open", status: "active" }],
-    {
-      async cancel() {
-        throw new Error("network failed");
-      },
-      async retrieve(id) {
-        return { id, status: "active" };
-      },
+  const { stripe } = stripeFixture([{ id: "sub_still_open", status: "active" }], {
+    async cancel() {
+      throw new Error("network failed");
     },
-  );
+    async retrieve(id) {
+      return { id, status: "active" };
+    },
+  });
   await assert.rejects(
     () =>
       cancelAuthoritativeStripeSubscriptions({
@@ -159,7 +151,7 @@ test("Customer deletion closes a Checkout race after the subscription scan", asy
   assert.deepEqual(
     await retireStripeCustomerForAccountDeletion({
       stripe,
-      customerId: "cus_race_barrier",
+      customerId: "cus_racebarrier",
     }),
     { alreadyDeleted: false, examined: 0, canceled: 0 },
   );
@@ -175,7 +167,7 @@ test("Customer retirement is idempotent only with an exact deleted-Customer proo
       list() {
         listed = true;
         return {
-          async *[Symbol.asyncIterator]() {}
+          async *[Symbol.asyncIterator]() {},
         };
       },
     },
@@ -191,7 +183,7 @@ test("Customer retirement is idempotent only with an exact deleted-Customer proo
   assert.deepEqual(
     await retireStripeCustomerForAccountDeletion({
       stripe,
-      customerId: "cus_already_deleted",
+      customerId: "cus_alreadydeleted",
     }),
     { alreadyDeleted: true, examined: 0, canceled: 0 },
   );
@@ -209,10 +201,7 @@ test("account deletion uses mappings and the Customer barrier before auth remova
   const authoritative = source.lastIndexOf("retireStripeCustomerForAccountDeletion");
   const authDelete = source.indexOf("auth.admin.deleteUser(auth.userId)");
   assert.ok(
-    mapping >= 0 &&
-      cleanup > mapping &&
-      authoritative > cleanup &&
-      authDelete > authoritative,
+    mapping >= 0 && cleanup > mapping && authoritative > cleanup && authDelete > authoritative,
   );
   assert.match(source, /unmappedOpenSubscription/);
   assert.doesNotMatch(

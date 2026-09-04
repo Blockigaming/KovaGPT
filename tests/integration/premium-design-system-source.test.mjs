@@ -7,14 +7,27 @@ const shell = await readFile("src/components/AppShell.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 
 test("brand accents remain available while the primary shell stays neutral", () => {
-  assert.match(styles, /--kova-blue:/);
-  assert.match(styles, /--surface-workspace: var\(--background\)/);
-  assert.match(styles, /--surface-composer: oklch\(0\.955 0\.002 255\)/);
+  const lightTheme = styles.match(/^:root\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
+  const darkTheme = styles.match(/^\.dark\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
+
+  assert.ok(lightTheme, "the canonical light theme block must exist");
+  assert.ok(darkTheme, "the canonical dark theme block must exist");
+  assert.equal((styles.match(/^:root\s*\{/gm) ?? []).length, 1);
+  assert.equal((styles.match(/^\.dark\s*\{/gm) ?? []).length, 1);
+  assert.equal((styles.match(/--surface-composer:/g) ?? []).length, 2);
+  assert.match(lightTheme, /--kova-blue:/);
+  assert.match(lightTheme, /--background: oklch\(1 0 0\)/);
+  assert.match(lightTheme, /--foreground: oklch\(0\.19 0\.008 255\)/);
+  assert.match(lightTheme, /--surface-workspace: var\(--background\)/);
+  assert.match(lightTheme, /--surface-composer: oklch\(0\.982 0\.002 255\)/);
+  assert.match(darkTheme, /color-scheme: dark/);
+  assert.match(darkTheme, /--background: oklch\(0\.175 0\.004 255\)/);
+  assert.match(darkTheme, /--foreground: oklch\(0\.965 0 0\)/);
+  assert.match(darkTheme, /--surface-composer: oklch\(0\.225 0\.004 255\)/);
   assert.match(
     styles,
-    /\.kova-topbar\s*\{[^}]*background: var\(--background\) !important;[^}]*box-shadow: none !important;/s,
+    /\.kova-topbar\s*\{[^}]*background: color-mix\(in oklab, var\(--background\) 92%, transparent\) !important;[^}]*box-shadow: 0 1px 0 color-mix\(in oklab, var\(--background\) 70%, transparent\) !important;[^}]*backdrop-filter: blur\(18px\) saturate\(130%\) !important;/s,
   );
-  assert.match(styles, /\.dark\s*\{[\s\S]*color-scheme: dark/);
 });
 
 test("keyboard focus and overflow-sensitive rich content remain usable", () => {

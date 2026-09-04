@@ -68,9 +68,11 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
+import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
+import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
@@ -83,8 +85,8 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
@@ -105,17 +107,16 @@ import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
+import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
+import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
+import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
 
@@ -416,6 +417,11 @@ const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
   path: '/api/project-suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectTemplatesRoute = ApiProjectTemplatesRouteImport.update({
+  id: '/api/project-templates',
+  path: '/api/project-templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiReadyzRoute = ApiReadyzRouteImport.update({
   id: '/api/readyz',
   path: '/api/readyz',
@@ -429,6 +435,11 @@ const ApiTitleRoute = ApiTitleRouteImport.update({
 const ApiVersionRoute = ApiVersionRouteImport.update({
   id: '/api/version',
   path: '/api/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWeatherRoute = ApiWeatherRouteImport.update({
+  id: '/api/weather',
+  path: '/api/weather',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWriteRoute = ApiWriteRouteImport.update({
@@ -493,17 +504,17 @@ const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAccountExportRoute = ApiAccountExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ApiAccountRoute,
+} as any)
 const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
   id: '/api/admin/ai-usage',
   path: '/api/admin/ai-usage',
@@ -604,20 +615,41 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAccountExportsRoute =
+  ApiInternalAccountExportsRouteImport.update({
+    id: '/api/internal/account-exports',
+    path: '/api/internal/account-exports',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
     path: '/api/internal/scheduled-execution',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiLibraryBulkMoveRoute = ApiLibraryBulkMoveRouteImport.update({
+  id: '/api/library/bulk-move',
+  path: '/api/library/bulk-move',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
+  id: '/api/library/folders',
+  path: '/api/library/folders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
+const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
+  id: '/api/security/lockdown',
+  path: '/api/security/lockdown',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkSyncRoute = ApiWorkSyncRouteImport.update({
+  id: '/api/work/sync',
+  path: '/api/work/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIntegrationsOauthDisconnectRoute =
@@ -636,34 +668,6 @@ const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
     path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ProjectsProjectIdChatChatIdRoute =
@@ -732,16 +736,18 @@ export interface FileRoutesByFullPath {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -754,8 +760,8 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -776,17 +782,16 @@ export interface FileRoutesByFullPath {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
 }
@@ -843,16 +848,18 @@ export interface FileRoutesByTo {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -865,8 +872,8 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -887,17 +894,16 @@ export interface FileRoutesByTo {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
 }
@@ -955,16 +961,18 @@ export interface FileRoutesById {
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/account': typeof ApiAccountRoute
+  '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -977,8 +985,8 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
@@ -999,17 +1007,16 @@ export interface FileRoutesById {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
-  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
-  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
 }
@@ -1075,9 +1082,11 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1090,8 +1099,8 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
-    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1112,17 +1121,16 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
-    | '/lovable/email/suppression'
+    | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
-    | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
   fileRoutesByTo: FileRoutesByTo
@@ -1186,9 +1194,11 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1201,8 +1211,8 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers'
-    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1223,17 +1233,16 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
-    | '/lovable/email/suppression'
+    | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
-    | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
   id:
@@ -1297,9 +1306,11 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/project-templates'
     | '/api/readyz'
     | '/api/title'
     | '/api/version'
+    | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
@@ -1312,8 +1323,8 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
-    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
@@ -1334,17 +1345,16 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-exports'
     | '/api/internal/scheduled-execution'
+    | '/api/library/bulk-move'
+    | '/api/library/folders'
     | '/api/public/help-submit'
-    | '/lovable/email/suppression'
+    | '/api/security/lockdown'
+    | '/api/work/sync'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
-    | '/lovable/email/auth/preview'
-    | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
-    | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
   fileRoutesById: FileRoutesById
@@ -1402,16 +1412,18 @@ export interface RootRouteChildren {
   SectionArticleSlugRoute: typeof SectionArticleSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  ApiAccountRoute: typeof ApiAccountRoute
+  ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
+  ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiVersionRoute: typeof ApiVersionRoute
+  ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
@@ -1422,7 +1434,6 @@ export interface RootRouteChildren {
   OauthConsentRoute: typeof OauthConsentRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
-  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
@@ -1443,17 +1454,16 @@ export interface RootRouteChildren {
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
+  ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
+  ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
-  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
+  ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
-  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
-  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
-  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
-  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
 }
 
@@ -1872,6 +1882,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProjectSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/project-templates': {
+      id: '/api/project-templates'
+      path: '/api/project-templates'
+      fullPath: '/api/project-templates'
+      preLoaderRoute: typeof ApiProjectTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/readyz': {
       id: '/api/readyz'
       path: '/api/readyz'
@@ -1891,6 +1908,13 @@ declare module '@tanstack/react-router' {
       path: '/api/version'
       fullPath: '/api/version'
       preLoaderRoute: typeof ApiVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/weather': {
+      id: '/api/weather'
+      path: '/api/weather'
+      fullPath: '/api/weather'
+      preLoaderRoute: typeof ApiWeatherRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/write': {
@@ -1977,19 +2001,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/account/export': {
+      id: '/api/account/export'
+      path: '/export'
+      fullPath: '/api/account/export'
+      preLoaderRoute: typeof ApiAccountExportRouteImport
+      parentRoute: typeof ApiAccountRoute
     }
     '/api/admin/ai-usage': {
       id: '/api/admin/ai-usage'
@@ -2131,11 +2155,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/account-exports': {
+      id: '/api/internal/account-exports'
+      path: '/api/internal/account-exports'
+      fullPath: '/api/internal/account-exports'
+      preLoaderRoute: typeof ApiInternalAccountExportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/scheduled-execution': {
       id: '/api/internal/scheduled-execution'
       path: '/api/internal/scheduled-execution'
       fullPath: '/api/internal/scheduled-execution'
       preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/library/bulk-move': {
+      id: '/api/library/bulk-move'
+      path: '/api/library/bulk-move'
+      fullPath: '/api/library/bulk-move'
+      preLoaderRoute: typeof ApiLibraryBulkMoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/library/folders': {
+      id: '/api/library/folders'
+      path: '/api/library/folders'
+      fullPath: '/api/library/folders'
+      preLoaderRoute: typeof ApiLibraryFoldersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/help-submit': {
@@ -2145,11 +2190,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHelpSubmitRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+    '/api/security/lockdown': {
+      id: '/api/security/lockdown'
+      path: '/api/security/lockdown'
+      fullPath: '/api/security/lockdown'
+      preLoaderRoute: typeof ApiSecurityLockdownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/work/sync': {
+      id: '/api/work/sync'
+      path: '/api/work/sync'
+      fullPath: '/api/work/sync'
+      preLoaderRoute: typeof ApiWorkSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/disconnect': {
@@ -2171,41 +2223,6 @@ declare module '@tanstack/react-router' {
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/chat/$chatId': {
@@ -2258,6 +2275,18 @@ const ProjectsRouteChildren: ProjectsRouteChildren = {
 
 const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
   ProjectsRouteChildren,
+)
+
+interface ApiAccountRouteChildren {
+  ApiAccountExportRoute: typeof ApiAccountExportRoute
+}
+
+const ApiAccountRouteChildren: ApiAccountRouteChildren = {
+  ApiAccountExportRoute: ApiAccountExportRoute,
+}
+
+const ApiAccountRouteWithChildren = ApiAccountRoute._addFileChildren(
+  ApiAccountRouteChildren,
 )
 
 interface ApiChatRouteChildren {
@@ -2325,16 +2354,18 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  ApiAccountRoute: ApiAccountRoute,
+  ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
+  ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
   ApiReadyzRoute: ApiReadyzRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiVersionRoute: ApiVersionRoute,
+  ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
@@ -2345,7 +2376,6 @@ const rootRouteChildren: RootRouteChildren = {
   OauthConsentRoute: OauthConsentRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
-  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
@@ -2366,17 +2396,16 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
+  ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
+  ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
-  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
+  ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
-  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
-  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
-  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
-  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
 }

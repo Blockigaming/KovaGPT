@@ -396,6 +396,7 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
+      data-message-role={message.role}
       className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
@@ -571,7 +572,12 @@ function ChatMessageInner({
                   const chip = detectInfoChip(cleaned);
                   if (chip)
                     return (
-                      <InfoChip kind={chip} rawText={cleaned}>
+                      <InfoChip
+                        kind={chip}
+                        rawText={cleaned}
+                        userKey={userKey}
+                        principalResolved={principalResolved}
+                      >
                         {markdown}
                       </InfoChip>
                     );
@@ -722,6 +728,9 @@ function ChatMessageInner({
                     disabled={!chatId || !message.id}
                   >
                     <History className="mr-2 h-4 w-4" /> Version history
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRetry} disabled={!onRetry}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Retry
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat

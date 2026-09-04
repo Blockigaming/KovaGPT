@@ -36,8 +36,7 @@ export function useTier(): { tier: Tier; loading: boolean } {
           : null;
       const effectiveTier = summary?.effectiveTier;
       const resolved: Tier =
-        summary?.billingConflict !== true &&
-        (effectiveTier === "plus" || effectiveTier === "pro")
+        summary?.billingConflict !== true && (effectiveTier === "plus" || effectiveTier === "pro")
           ? effectiveTier
           : "free";
       if (!alive) return;

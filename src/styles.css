@@ -2,6 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./styles/chatgpt-parity.css";
+@import "./styles/chatgpt-final-parity.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -78,11 +79,11 @@
   --destructive-foreground: oklch(0.995 0 0);
   --border: oklch(0 0 0 / 8%);
   --input: oklch(0 0 0 / 10%);
-  --ring: oklch(0.45 0.01 255);
+  --ring: var(--kova-blue);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.975 0.003 255);
   --sidebar-foreground: oklch(0.24 0 0);
-  --sidebar-hover: oklch(0 0 0 / 6%);
+  --sidebar-hover: oklch(0 0 0 / 5%);
   --sidebar-active: oklch(0 0 0 / 7%);
   --user-bubble: oklch(0.955 0.002 255);
 
@@ -90,11 +91,11 @@
   --surface-app: var(--background);
   --surface-workspace: var(--background);
   --surface-raised: var(--card);
-  --surface-floating: oklch(1 0 0 / 94%);
+  --surface-floating: oklch(1 0 0 / 98%);
   --surface-secondary: oklch(0.958 0.004 255);
   --surface-hover: oklch(0 0 0 / 6%);
   --surface-selected: oklch(0 0 0 / 9%);
-  --surface-composer: oklch(0.955 0.002 255);
+  --surface-composer: oklch(0.982 0.002 255);
   --surface-input: oklch(1 0 0);
   --surface-modal: var(--popover);
   --surface-scrim: oklch(0 0 0 / 45%);
@@ -139,6 +140,9 @@
   --blur-glass: 18px;
   --blur-drawer: 24px;
   --shadow-floating: 0 12px 34px -18px oklch(0 0 0 / 32%), 0 1px 2px oklch(0 0 0 / 8%);
+  --shadow-composer:
+    0 0 0 1px oklch(0 0 0 / 2%), 0 10px 28px -20px oklch(0 0 0 / 36%),
+    0 2px 8px -6px oklch(0 0 0 / 20%);
   --shadow-drawer: 0 18px 44px -16px oklch(0 0 0 / 35%);
   --z-header: 30;
   --z-drawer: 40;
@@ -195,9 +199,9 @@
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.65 0.01 250);
+  --ring: var(--kova-blue);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.155 0.004 255);
   --sidebar-foreground: oklch(0.92 0 0);
   --sidebar-hover: oklch(1 0 0 / 6%);
   --sidebar-active: oklch(1 0 0 / 9%);
@@ -206,11 +210,11 @@
   --surface-app: var(--background);
   --surface-workspace: var(--background);
   --surface-raised: var(--card);
-  --surface-floating: oklch(0.175 0.004 255 / 94%);
+  --surface-floating: oklch(0.205 0.004 255 / 98%);
   --surface-secondary: oklch(0.215 0.004 255);
   --surface-hover: oklch(1 0 0 / 6%);
   --surface-selected: oklch(1 0 0 / 10%);
-  --surface-composer: oklch(0.245 0.004 255);
+  --surface-composer: oklch(0.225 0.004 255);
   --surface-input: oklch(0.205 0.004 255);
   --surface-modal: var(--popover);
   --surface-scrim: oklch(0 0 0 / 62%);
@@ -250,6 +254,9 @@
     0 12px 32px -14px color-mix(in oklab, var(--kova-blue) 55%, transparent),
     0 2px 6px -2px rgba(0, 0, 0, 0.5);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px -8px rgba(0, 0, 0, 0.6);
+  --shadow-composer:
+    0 0 0 1px oklch(1 0 0 / 3%), 0 14px 34px -22px oklch(0 0 0 / 80%),
+    0 2px 8px -5px oklch(0 0 0 / 65%);
 }
 
 @layer base {
@@ -1787,29 +1794,10 @@ body {
     --composer-control: calc(var(--composer-unit) * 9);
     --composer-inset: calc(var(--composer-unit) * 2.5);
     --composer-icon: calc(var(--composer-unit) * 5);
-    border-radius: calc(var(--composer-height) / 2) !important;
-    border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent) !important;
-    background: var(--surface-composer) !important;
-    box-shadow: none !important;
     transition:
       border-color var(--motion-fast) var(--ease-standard),
       box-shadow var(--motion-fast) var(--ease-standard),
-      background-color var(--motion-fast) var(--ease-standard) !important;
-  }
-
-  .kova-composer:hover {
-    border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
-  }
-
-  .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
-    outline: 2px solid currentColor !important;
-    outline-offset: 2px !important;
-    box-shadow: none !important;
-  }
-
-  .kova-composer.is-streaming {
-    border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+      background-color var(--motion-fast) var(--ease-standard);
   }
 
   .kova-composer-row {
@@ -2116,6 +2104,15 @@ body {
     scrollbar-width: none;
   }
 
+  .kova-settings-dialog {
+    background-color: var(--surface-modal);
+    color: var(--popover-foreground);
+    /* DialogContent sets a duration for its open/close motion. Without an
+       explicit property list, theme colors interpolate at a different pace
+       from the inner Settings surface and briefly split the panel in two. */
+    transition-property: opacity, transform;
+  }
+
   .kova-settings-dialog [role="tab"] {
     min-height: 2.5rem;
     transition:
@@ -2138,6 +2135,10 @@ body {
   .kova-secondary-page button,
   .kova-settings-dialog button,
   .kova-auth-surface button {
+    min-height: 44px;
+  }
+
+  .kova-settings-mobile-section-option {
     min-height: 44px;
   }
 
@@ -2171,25 +2172,497 @@ body {
   }
 }
 
-/* DAY10 composer focus contract */
-.kova-composer:focus-within {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
+/* Core workspace overhaul: one restrained visual language for the shell,
+   navigation, messages, and composer. These selectors intentionally sit last
+   so older parity layers cannot reintroduce an always-on composer outline. */
+.kova-app-shell,
+.kova-chat-main,
+.kova-app-content {
+  min-width: 0;
+  background: var(--background);
 }
 
-/* FINAL composer keyboard focus contract */
+.kova-sidebar,
+.kova-sidebar-rail {
+  background: var(--sidebar);
+  border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
+}
+
+.kova-sidebar-inner {
+  background: var(--sidebar);
+}
+
+.kova-sidebar-header {
+  border-bottom: 1px solid transparent;
+}
+
+.kova-sidebar-header .font-semibold,
+.kova-sidebar-header > div > span {
+  letter-spacing: -0.025em;
+}
+
+.kova-sidebar .kova-nav-row {
+  min-height: 2.5rem !important;
+  border-radius: 0.7rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 450;
+}
+
+.kova-sidebar .kova-nav-row[aria-current="page"] {
+  background: var(--sidebar-active);
+  font-weight: 560;
+}
+
+.kova-sidebar .kova-chat-row {
+  border-radius: 0.7rem;
+}
+
+.kova-sidebar .kova-chat-row:hover {
+  background: var(--sidebar-hover);
+}
+
+.kova-sidebar-primary {
+  padding-top: 0.55rem;
+}
+
+.kova-sidebar-history {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 0.85rem,
+    black calc(100% - 1rem),
+    transparent
+  );
+}
+
+.kova-sidebar-search {
+  background: color-mix(in oklab, var(--background) 82%, var(--sidebar));
+  border-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.kova-sidebar-footer {
+  background: var(--sidebar);
+  border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
+}
+
+.kova-sidebar-auth-card {
+  background: color-mix(in oklab, var(--background) 72%, var(--sidebar));
+  box-shadow: 0 10px 30px -28px oklch(0 0 0 / 48%);
+}
+
+.kova-sidebar-auth-button {
+  box-shadow: 0 1px 2px oklch(0 0 0 / 12%);
+}
+
+.kova-sidebar-scrim {
+  animation: kova-scrim-in var(--motion-fast) var(--ease-standard) both;
+}
+
+@keyframes kova-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.kova-topbar {
+  min-height: calc(56px + var(--safe-top));
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 6%, transparent) !important;
+  background: color-mix(in oklab, var(--background) 92%, transparent) !important;
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--background) 70%, transparent) !important;
+  backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+.kova-desktop-topbar {
+  flex: 0 0 56px;
+}
+
+.kova-topbar-button,
+.kova-floating-sidebar-trigger {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  color: var(--text-secondary);
+}
+
+.kova-model-static {
+  cursor: default;
+}
+
+.kova-auth-primary,
+.kova-auth-secondary {
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.kova-state-screen {
+  display: flex;
+  min-height: 100dvh;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: max(1.5rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1.5rem, var(--safe-bottom))
+    max(1rem, var(--safe-left));
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.kova-state-screen[data-app-error-boundary] {
+  min-height: 0;
+}
+
+.kova-state-panel {
+  width: min(100%, 30rem);
+  text-align: center;
+}
+
+.kova-state-mark {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  border-radius: 0.9rem;
+  color: var(--destructive);
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+}
+
+.kova-state-eyebrow {
+  margin: 0 0 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kova-state-panel h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.kova-state-panel > p:not(.kova-state-eyebrow) {
+  max-width: 26rem;
+  margin: 0.85rem auto 0;
+  color: var(--text-secondary);
+  font-size: 0.925rem;
+  line-height: 1.6;
+}
+
+.kova-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-top: 1.5rem;
+}
+
+.kova-state-primary,
+.kova-state-secondary {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+
+.kova-state-primary {
+  color: var(--background);
+  background: var(--foreground);
+}
+
+.kova-state-primary:hover {
+  opacity: 0.86;
+}
+
+.kova-state-secondary {
+  border-color: var(--border);
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.kova-state-secondary:hover {
+  background: var(--accent);
+}
+
+.kova-state-primary:focus-visible,
+.kova-state-secondary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kova-greeting-mark {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, var(--kova-blue) 22%, var(--border));
+  border-radius: 0.9rem;
+  color: var(--kova-blue);
+  background: color-mix(in oklab, var(--kova-blue) 8%, var(--background));
+  box-shadow: 0 10px 24px -18px color-mix(in oklab, var(--kova-blue) 70%, transparent);
+}
+
+.kova-logo-mark {
+  color: inherit;
+}
+
+.kova-logo-ink {
+  color: var(--background);
+}
+
+.kova-starter-grid {
+  animation: kova-starters-in 280ms var(--ease-spring) 60ms both;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    visibility var(--motion-fast) var(--ease-standard);
+}
+
+.kova-empty-chat:has(.kova-composer-menu) .kova-starter-grid {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+@keyframes kova-starters-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+.kova-starter-prompt {
+  border-color: color-mix(in oklab, var(--foreground) 7%, transparent);
+  background: transparent;
+}
+
+.kova-starter-prompt:hover {
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  background: var(--accent);
+  transform: translateY(-1px);
+}
+
+.kova-starter-prompt:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.kova-starter-icon {
+  color: var(--kova-blue);
+  background: color-mix(in oklab, var(--kova-blue) 9%, transparent);
+}
+
+.kova-chat-input[data-composer-surface="conversation"] {
+  background: linear-gradient(to top, var(--background) 70%, transparent);
+}
+
+.kova-composer {
+  --composer-height: 3.75rem !important;
+  --composer-control: 2.5rem !important;
+  --composer-inset: 0.5rem !important;
+  border: 1px solid color-mix(in oklab, var(--foreground) 11%, transparent) !important;
+  border-radius: 1.55rem !important;
+  outline: none !important;
+  background: var(--surface-composer) !important;
+  box-shadow: var(--shadow-composer) !important;
+}
+
+.kova-composer:hover {
+  border-color: color-mix(in oklab, var(--foreground) 16%, transparent) !important;
+}
+
 .kova-composer:focus-within,
 .kova-composer:has(textarea:focus),
 .kova-composer:has(textarea:focus-visible) {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
-  outline-style: solid !important;
+  border-color: color-mix(in oklab, var(--kova-blue) 42%, var(--border)) !important;
+  outline: 2px solid var(--kova-blue) !important;
+  outline-offset: 1px !important;
+  box-shadow: var(--shadow-composer) !important;
 }
 
-/* Day 10 final accessibility focus contract */
-.kova-composer:focus-within {
-  outline-width: 2px !important;
-  outline-style: solid !important;
-  outline-color: currentColor !important;
-  outline-offset: 2px !important;
+.kova-composer-row {
+  min-height: var(--composer-height) !important;
 }
+
+.kova-composer-input {
+  min-height: 3.625rem !important;
+  padding-block: 1.05rem !important;
+}
+
+.kova-composer-button {
+  width: var(--composer-control) !important;
+  height: var(--composer-control) !important;
+  flex-basis: var(--composer-control) !important;
+}
+
+.kova-composer-menu {
+  isolation: isolate;
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--foreground) 11%, transparent) !important;
+  background: var(--popover) !important;
+  box-shadow:
+    0 20px 50px -24px oklch(0 0 0 / 48%),
+    0 4px 14px -8px oklch(0 0 0 / 24%) !important;
+  backdrop-filter: blur(20px) saturate(120%) !important;
+}
+
+.kova-composer-menu > :is(button, [aria-disabled="true"]) {
+  min-height: 2.75rem;
+}
+
+.kova-composer-menu .kova-composer-locked {
+  opacity: 0.78;
+}
+
+.kova-message[data-message-role="user"] {
+  padding-top: 1.15rem;
+  padding-bottom: 0.7rem;
+}
+
+.kova-message[data-message-role="assistant"] {
+  padding-top: 0.7rem;
+  padding-bottom: 1.15rem;
+}
+
+.kova-user-message {
+  border: 1px solid color-mix(in oklab, var(--foreground) 4%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.kova-assistant-message .prose-chat {
+  line-height: 1.75;
+}
+
+.kova-message-actions button {
+  border-radius: 0.65rem !important;
+}
+
+.kova-message-actions button:hover {
+  background: var(--accent);
+}
+
+@media (min-width: 1024px) {
+  .kova-empty-chat > .kova-empty-chat-content {
+    padding-bottom: clamp(1.5rem, 5vh, 3rem);
+  }
+
+  .kova-greeting {
+    margin-bottom: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .kova-starter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (pointer: coarse), (max-width: 1023px) {
+  .kova-message-actions button {
+    width: auto !important;
+    height: auto !important;
+    min-width: var(--kova-touch) !important;
+    min-height: var(--kova-touch) !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1023px) {
+  .kova-topbar {
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+  }
+
+  .kova-empty-chat > .kova-empty-chat-content {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding-top: clamp(3.25rem, 11vh, 6rem);
+    padding-bottom: 2rem;
+  }
+
+  .kova-composer {
+    --composer-height: 3.5rem !important;
+    --composer-control: 2.75rem !important;
+    border-radius: 1.45rem !important;
+  }
+
+  .kova-composer-input {
+    min-height: 3.375rem !important;
+    padding-block: 0.95rem !important;
+  }
+
+  .kova-sidebar {
+    width: min(88vw, 20rem) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .kova-starter-icon {
+    display: none;
+  }
+
+  .kova-disclaimer {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .kova-starter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kova-starter-prompt:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .kova-topbar,
+  .kova-composer-menu {
+    background: var(--background) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .kova-sidebar-scrim {
+    background: oklch(0 0 0 / 72%) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar-scrim,
+  .kova-starter-grid {
+    animation: none;
+  }
+
+  .kova-starter-prompt:hover {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .kova-composer:focus-within {
+    outline-color: Highlight !important;
+  }
+
+  .kova-starter-prompt,
+  .kova-sidebar-auth-card {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* End core workspace overhaul. Keep this section last in the stylesheet. */

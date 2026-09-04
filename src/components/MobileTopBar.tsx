@@ -39,7 +39,7 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden">
-      <div className="kova-topbar-inner grid min-h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1 px-1">
+      <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -48,7 +48,7 @@ export function MobileTopBar({
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex min-w-0 items-center justify-center">
+        <div className="flex min-w-0 items-center justify-start pl-1">
           {mode && onModeChange ? (
             <ResponsiveModelSelector
               mode={mode}
@@ -58,7 +58,7 @@ export function MobileTopBar({
               compact
             />
           ) : (
-            <div className="flex min-w-0 items-center justify-center">
+            <div className="flex min-w-0 items-center justify-start">
               <span className="font-display font-semibold tracking-tight text-base truncate">
                 {title || "KovaGPT"}
               </span>
@@ -72,7 +72,7 @@ export function MobileTopBar({
             </button>
           </SignInButton>
         ) : (
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-0.5">
             {onOpenChatSettings ? (
               <button
                 type="button"

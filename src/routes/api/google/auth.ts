@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { buildGoogleAuthUrl } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 export const Route = createFileRoute("/api/google/auth")({
   server: {
@@ -10,7 +11,13 @@ export const Route = createFileRoute("/api/google/auth")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "oauth", 10);
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          "connector_write",
+        );
+        if (lockdown) return lockdown;
+        const limited = await enforceGoogleRateLimit(auth.userId, "oauth", 10);
         if (limited) return limited;
         if (
           !process.env.GOOGLE_OAUTH_CLIENT_ID ||

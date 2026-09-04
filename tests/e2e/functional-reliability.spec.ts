@@ -27,25 +27,17 @@ test("sensitive and malformed API requests fail closed", async ({ request }) => 
 test("real sharing remains available without the misleading local-member flow", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "share-reliability",
-          title: "Reliability review",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [{ id: "m", role: "user", content: "Review this" }],
-        },
-      ]),
-    );
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Ready to share"}}]}\n\ndata: [DONE]\n\n',
+    });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("button", { name: "Chat options" }).click();
-  await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Review this");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Add members/i })).toHaveCount(0);
 });

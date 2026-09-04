@@ -104,5 +104,7 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(deepResearch, /if \(!owner && tier === "free"\)/);
   assert.match(paymentWebhook, /verifyWebhook/);
   assert.match(paymentWebhook, /resolveBillingPlan/);
-  assert.match(paymentWebhook, /received: true, duplicate: result\.duplicate/);
+  assert.match(paymentWebhook, /received: true,[\s\S]*duplicate: result\.duplicate/);
+  assert.match(paymentWebhook, /processStripeEvent/);
+  assert.match(paymentWebhook, /status: verificationFailure \? 400 : 503/);
 });

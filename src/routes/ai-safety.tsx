@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/ai-safety")({
   head: () => ({
@@ -25,8 +25,12 @@ export const Route = createFileRoute("/ai-safety")({
 
 function AISafetyPage() {
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
+    <PublicShell>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5"
+      >
         <h1>AI Safety</h1>
         <p>
           KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and
@@ -66,7 +70,6 @@ function AISafetyPage() {
           <Link to="/">← Back to KovaGPT</Link>
         </p>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

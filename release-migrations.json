@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 83,
-  "latest": "20260902013000_storage_bucket_and_default_privilege_reconciliation.sql",
+  "count": 92,
+  "latest": "20260903220000_project_templates.sql",
   "migrations": [
     {
       "order": 1,
@@ -1684,6 +1684,232 @@
       "rls": [],
       "policies": ["Owners read agent evidence"],
       "indexes": []
+    },
+    {
+      "order": 84,
+      "filename": "20260902023000_stripe_customer_identity_and_completion.sql",
+      "timestamp": "20260902023000",
+      "sha256": "1f42738000c80afcc68342b038669ebbcdf92c5bb672571de0e5486b6dbfa10e",
+      "tables": ["stripe_customer_mappings"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["stripe_customer_mappings"],
+      "policies": ["stripe_customer_mappings_deny_clients"],
+      "indexes": []
+    },
+    {
+      "order": 85,
+      "filename": "20260902024000_billing_plan_tier_and_atomic_stripe_events.sql",
+      "timestamp": "20260902024000",
+      "sha256": "a150906daa1d04bb7ab2e133f7651a2cd5b8e3911ba648d0990716b435b7c57d",
+      "tables": [
+        "billing_plan_tiers",
+        "stripe_subscription_sync_state",
+        "stripe_checkout_attempts",
+        "stripe_event_processing_claims"
+      ],
+      "functions": [
+        "normalize_legacy_live_subscription_price",
+        "billing_user_plan_tier",
+        "user_plan_tier",
+        "effective_user_plan_tier",
+        "current_user_plan_tier",
+        "current_effective_plan_tier",
+        "user_subscription_summary",
+        "current_subscription_summary",
+        "begin_stripe_event",
+        "complete_stripe_event",
+        "claim_stripe_checkout_attempt"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "billing_plan_tiers",
+        "stripe_subscription_sync_state",
+        "stripe_checkout_attempts",
+        "stripe_event_processing_claims"
+      ],
+      "policies": [
+        "Billing plan tiers deny client access",
+        "Stripe subscription sync state denies clients",
+        "Stripe checkout attempts deny clients",
+        "Stripe event processing claims deny clients"
+      ],
+      "indexes": []
+    },
+    {
+      "order": 86,
+      "filename": "20260903145843_remediate_security_advisor_warnings.sql",
+      "timestamp": "20260903145843",
+      "sha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 87,
+      "filename": "20260903193000_atomic_stripe_webhook_processing.sql",
+      "timestamp": "20260903193000",
+      "sha256": "bb0a262d2bcf708b8e0a5f386678a395115e7fa6c354523d8563ec9c4f7f3f85",
+      "tables": [],
+      "functions": ["process_stripe_webhook_event"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 88,
+      "filename": "20260903200000_account_lockdown_mode.sql",
+      "timestamp": "20260903200000",
+      "sha256": "974b91ec837d40c8a448ade9ba3d7664da863a1d36c2e931f54a7fae329cd4d7",
+      "tables": [],
+      "functions": ["set_lockdown_mode", "kova_private"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 89,
+      "filename": "20260903203000_account_data_exports.sql",
+      "timestamp": "20260903203000",
+      "sha256": "acbdfd3daf731406d5e5715ec8424e0461249d0bbd265063d4f158d880a08ed6",
+      "tables": ["account_export_jobs"],
+      "functions": [
+        "claim_account_export_jobs",
+        "settle_account_export_success",
+        "settle_account_export_failure"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["account_export_jobs"],
+      "policies": ["Users read own account exports"],
+      "indexes": [
+        "account_export_jobs_user_requested_idx",
+        "account_export_jobs_claim_idx",
+        "account_export_jobs_one_active_per_user"
+      ]
+    },
+    {
+      "order": 90,
+      "filename": "20260903210000_library_folders_and_bulk_move.sql",
+      "timestamp": "20260903210000",
+      "sha256": "4eb47d962711a82cc1dff199a42d222a50cc3b51a73e939b801e6f3c3ec7923e",
+      "tables": ["library_folders", "library_folder_locks"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["library_folders", "library_folder_locks"],
+      "policies": ["library folders owner read"],
+      "indexes": [
+        "library_folders_unique_root_name",
+        "library_folders_unique_child_name",
+        "library_folders_tree_order",
+        "user_library_items_folder_order"
+      ]
+    },
+    {
+      "order": 91,
+      "filename": "20260903213000_work_cross_device_sync.sql",
+      "timestamp": "20260903213000",
+      "sha256": "87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b",
+      "tables": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations"
+      ],
+      "functions": [
+        "next_work_sync_version",
+        "upsert_work_saved_record",
+        "delete_work_saved_record",
+        "mutate_work_recent_item",
+        "purge_work_sync_receipts",
+        "get_work_sync_changes"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations"
+      ],
+      "policies": ["work_saved_records_owner_read", "work_recent_items_owner_read"],
+      "indexes": [
+        "work_saved_records_owner_sync_idx",
+        "work_saved_records_owner_active_idx",
+        "work_recent_items_owner_sync_idx",
+        "work_recent_items_owner_active_idx",
+        "work_sync_mutations_created_idx"
+      ]
+    },
+    {
+      "order": 92,
+      "filename": "20260903220000_project_templates.sql",
+      "timestamp": "20260903220000",
+      "sha256": "f803e1e3d692d64e56cab79e7145e9b35de61cf06aa5ac36ce1523f5291eca76",
+      "tables": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "functions": [
+        "project_template_snapshot_valid",
+        "create_project_template",
+        "publish_project_template_version",
+        "share_project_template",
+        "revoke_project_template_grant",
+        "archive_project_template",
+        "copy_project_template",
+        "list_project_templates",
+        "get_project_template_version",
+        "purge_project_template_mutation_receipts"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "project_templates",
+        "project_template_versions",
+        "project_template_grants",
+        "project_template_audit_events",
+        "project_template_mutations"
+      ],
+      "policies": [
+        "project_templates_authorized_read",
+        "project_template_versions_authorized_read",
+        "project_template_grants_participant_read",
+        "project_template_audit_participant_read"
+      ],
+      "indexes": [
+        "project_templates_owner_updated_idx",
+        "project_templates_owner_active_idx",
+        "project_template_versions_owner_idx",
+        "project_template_grants_grantee_active_idx",
+        "project_template_grants_owner_idx",
+        "project_template_audit_owner_created_idx",
+        "project_template_audit_actor_created_idx",
+        "project_template_mutations_created_idx"
+      ]
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/getting-started")({
   head: () => ({
@@ -49,8 +49,8 @@ const STEPS: { title: string; body: string }[] = [
 
 function GettingStartedPage() {
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight mb-3">Getting Started with KovaGPT</h1>
         <p className="text-muted-foreground mb-10">
           KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and
@@ -104,7 +104,6 @@ function GettingStartedPage() {
           </Link>
         </p>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

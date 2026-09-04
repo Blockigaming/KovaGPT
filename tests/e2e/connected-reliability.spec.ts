@@ -12,13 +12,12 @@ test.beforeEach(({ page }, testInfo) => {
 test("connected apps and scheduled tasks expose truthful signed-out states", async ({ page }) => {
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Your KovaGPT workspace" })).toBeVisible();
-  await expect(page.getByText("Sign in to connect apps.")).toBeVisible();
-  await expect(page.getByText(/connected/i).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Apps & plugins", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to connect services" })).toBeVisible();
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Scheduled Tasks" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scheduled Tasks Status" })).toBeVisible();
   await expect(page.getByText("Sign in to review task history")).toBeVisible();
   await expect(
     page.getByText("Background execution is unavailable in this deployment."),
@@ -36,7 +35,17 @@ test("the built preview serves its safe health endpoint", async ({ request }) =>
   expect(response.headers()["cache-control"]).toBe("no-store");
 
   const body = await response.json();
-  expect(body).toEqual({ ok: true, app: "KovaGPT" });
+  expect(body).toEqual(
+    expect.objectContaining({
+      ok: true,
+      app: "KovaGPT",
+      status: "ok",
+      service: "kovagpt-web",
+      environment: expect.any(String),
+      build: expect.any(String),
+      timestamp: expect.any(String),
+    }),
+  );
   expect(JSON.stringify(body)).not.toMatch(
     /secret|token|credential|private|service[_-]?role|api[_-]?key|commit|branch/i,
   );

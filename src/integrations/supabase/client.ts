@@ -2,60 +2,42 @@
 // there is no editor/preview session brokerage of any kind.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-import { PUBLIC_BACKEND_KEY, PUBLIC_BACKEND_URL } from "@/config/public-config";
-
-type BrowserRuntimeEnv = Record<string, string | undefined>;
-
-function readRuntimeEnv(): BrowserRuntimeEnv {
-  return typeof process !== "undefined" && process.env ? process.env : {};
-}
-
-function supabaseUrl(): string | undefined {
-  const runtimeEnv = readRuntimeEnv();
-  return import.meta.env.VITE_SUPABASE_URL || runtimeEnv.SUPABASE_URL || PUBLIC_BACKEND_URL;
-}
-
-function supabasePublishableKey(): string | undefined {
-  const runtimeEnv = readRuntimeEnv();
-  return (
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    runtimeEnv.SUPABASE_PUBLISHABLE_KEY ||
-    runtimeEnv.SUPABASE_ANON_KEY ||
-    PUBLIC_BACKEND_KEY
-  );
-}
+import { SUPABASE_BROWSER_CONFIG } from "./config";
 
 export function getSupabaseClientConfigStatus() {
-  const url = supabaseUrl();
-  const key = supabasePublishableKey();
+  const { url, publishableKey } = SUPABASE_BROWSER_CONFIG;
   return {
-    configured: Boolean(url && key),
+    configured: Boolean(url && publishableKey),
     missing: [
       !url ? "VITE_SUPABASE_URL" : null,
-      !key ? "VITE_SUPABASE_PUBLISHABLE_KEY" : null,
+      !publishableKey ? "VITE_SUPABASE_PUBLISHABLE_KEY" : null,
     ].filter(Boolean) as string[],
   };
 }
 
 function createSupabaseClient() {
-  const SUPABASE_URL = supabaseUrl();
-  const SUPABASE_PUBLISHABLE_KEY = supabasePublishableKey();
+  const { url, publishableKey } = SUPABASE_BROWSER_CONFIG;
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = getSupabaseClientConfigStatus().missing;
+  if (!url || !publishableKey) {
+    const missing = [
+      !url ? "VITE_SUPABASE_URL" : null,
+      !publishableKey ? "VITE_SUPABASE_PUBLISHABLE_KEY" : null,
+    ].filter(Boolean);
     const message = `Supabase browser auth is unavailable because deployment configuration is missing: ${missing.join(", ")}.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  return createClient<Database>(url, publishableKey, {
     auth: {
       // Undefined on the server: supabase-js then keeps the session in memory,
       // which is what SSR needs.
       storage: typeof window === "undefined" ? undefined : window.localStorage,
       persistSession: true,
       autoRefreshToken: true,
+      // Required by supabase-js for the experimental WebAuthn passkey API.
+      // The UI still verifies /auth/v1/settings before advertising support.
+      experimental: { passkey: true },
     },
   });
 }

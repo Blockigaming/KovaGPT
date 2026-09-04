@@ -82,34 +82,17 @@ test("mobile workspaces and settings never overflow", async ({ page }) => {
 test("long rich assistant output scrolls locally instead of widening the page", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "mobile-rich",
-          title: "A very long conversation title that must remain contained on a phone",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            { id: "u", role: "user", content: "Show a rich response" },
-            {
-              id: "a",
-              role: "assistant",
-              content:
-                "## Mobile report\n\nAverylongunbrokenwordthatmustwrapwithoutmovingtheentireviewportsideways.\n\n| Metric | Result |\n|---|---|\n| Containment | Stable |\n\n```ts\nconst extremelyLongIdentifierThatMustOnlyScrollInsideThisCodeBlock = 'abcdefghijklmnopqrstuvwxyz0123456789';\n```",
-            },
-          ],
-        },
-      ]),
-    );
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"## Mobile report\\n\\nAverylongunbrokenwordthatmustwrapwithoutmovingtheentireviewportsideways.\\n\\n| Metric | Result |\\n|---|---|\\n| Containment | Stable |\\n\\n```ts\\nconst extremelyLongIdentifierThatMustOnlyScrollInsideThisCodeBlock = \'abcdefghijklmnopqrstuvwxyz0123456789\';\\n```"}}]}\n\ndata: [DONE]\n\n',
+    });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("button", { name: /Open chat A very long conversation/ }).click();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Show a rich response");
+  await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByRole("heading", { name: "Mobile report" })).toBeVisible();
   await expectNoPageOverflow(page);
   const code = page.locator("pre").first();

@@ -7,7 +7,7 @@ test.describe("projects and library workspaces", () => {
     await waitForKovaHydration(page);
     const signInGate = page.getByRole("heading", { name: /sign in to use projects/i }).first();
     const projectsHeading = page.getByRole("heading", { name: /^projects$/i }).first();
-    await expect(signInGate.or(projectsHeading)).toBeVisible();
+    await expect(projectsHeading).toBeVisible();
     if (await signInGate.isVisible().catch(() => false)) {
       await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
       return;
@@ -23,7 +23,18 @@ test.describe("projects and library workspaces", () => {
     await page.goto("/library", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(page.getByRole("heading", { name: /library/i }).first()).toBeVisible();
-    await expect(page.getByRole("textbox", { name: /search library/i }).first()).toBeVisible();
+    const guestState = page.getByRole("heading", {
+      name: "Saved in this browser",
+      exact: true,
+    });
+    const librarySearch = page.getByRole("textbox", { name: /search library/i }).first();
+    await expect(guestState.or(librarySearch).first()).toBeVisible();
+    if (await guestState.isVisible().catch(() => false)) {
+      await expect(page.getByText("Nothing saved in this browser")).toBeVisible();
+      await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
+      return;
+    }
+    await expect(librarySearch).toBeVisible();
     await page.getByRole("button", { name: /list view/i }).click();
     await expect(page.getByRole("button", { name: /grid view/i })).toBeVisible();
   });

@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { actualCostUsd, type CatalogModel } from "@/lib/ai/model-catalog.server";
+import { resolveCurrentBillingPeriod } from "@/lib/ai/billing-period.mjs";
+import { BILLING_ENV } from "@/lib/billing-plans";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 
 type AccountingClient = SupabaseClient;
@@ -42,17 +44,24 @@ async function billingPeriod(
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   if (!userId) return [monthStart.toISOString(), monthEnd.toISOString()];
-  const { data } = await db
+  const nowIso = now.toISOString();
+  const { data, error } = await db
     .from("subscriptions")
-    .select("current_period_start,current_period_end,status")
+    .select("environment,status,current_period_start,current_period_end")
     .eq("user_id", userId)
-    .in("status", ["active", "trialing", "past_due", "canceled"])
+    .eq("environment", BILLING_ENV)
+    .in("status", ["active", "trialing", "past_due"])
+    .lte("current_period_start", nowIso)
+    .gt("current_period_end", nowIso)
     .order("current_period_end", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.current_period_start && data.current_period_end
-    ? [data.current_period_start, data.current_period_end]
-    : [monthStart.toISOString(), monthEnd.toISOString()];
+    .limit(5);
+  if (error) throw new Error("billing_period_lookup_failed");
+  return (
+    resolveCurrentBillingPeriod(data, {
+      billingEnvironment: BILLING_ENV,
+      now: now.getTime(),
+    }) ?? [monthStart.toISOString(), monthEnd.toISOString()]
+  );
 }
 
 export type Acquisition = { eventId: string } | { rejection: string };

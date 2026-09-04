@@ -110,21 +110,19 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
 
       const requestedTrialEligibility =
-        plan.trialPeriodDays > 0 &&
-        (subscriptionHistory ?? []).length === 0 &&
-        !stripeHasHistory;
+        plan.trialPeriodDays > 0 && (subscriptionHistory ?? []).length === 0 && !stripeHasHistory;
 
-      const { data: checkoutAttempt, error: checkoutAttemptError } =
-        await supabaseAdmin.rpc("claim_stripe_checkout_attempt", {
+      const { data: checkoutAttempt, error: checkoutAttemptError } = await supabaseAdmin.rpc(
+        "claim_stripe_checkout_attempt",
+        {
           _user_id: userId,
           _environment: BILLING_ENV,
           _price_id: stripePrice.id,
           _trial_eligible: requestedTrialEligibility,
-        });
+        },
+      );
       if (checkoutAttemptError) {
-        const active = checkoutAttemptError.message?.includes(
-          "stripe_active_subscription_exists",
-        );
+        const active = checkoutAttemptError.message?.includes("stripe_active_subscription_exists");
         return {
           error: active
             ? "You already have an active subscription. Resume or manage it in Billing, or wait until it expires before starting another."

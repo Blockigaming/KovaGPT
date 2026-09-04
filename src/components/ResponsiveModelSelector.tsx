@@ -118,12 +118,8 @@ export function ResponsiveModelSelector({
   // Guests see the brand label in the same position, but no switchable menu.
   if (locked)
     return (
-      <span
-        className={triggerClass + " pointer-events-none select-none text-muted-foreground"}
-        aria-hidden="true"
-      >
+      <span className="kova-model-static inline-flex h-10 select-none items-center px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
         <span className="leading-none">KovaGPT</span>
-        <ChevronDown className="h-4 w-4" />
       </span>
     );
 

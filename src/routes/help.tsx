@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
@@ -479,8 +480,12 @@ function HelpPage() {
   }, [query, results.length]);
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 sm:py-12">
+    <PublicShell>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12"
+      >
         <div className="flex items-center justify-between mb-6">
           <Link
             to="/"
@@ -631,8 +636,8 @@ function HelpPage() {
         </section>
 
         <SupportForm />
-      </div>
-    </div>
+      </main>
+    </PublicShell>
   );
 }
 

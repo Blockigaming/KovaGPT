@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/status")({
   head: () => ({
@@ -16,8 +16,8 @@ export const Route = createFileRoute("/status")({
     links: [{ rel: "canonical", href: "https://kovagpt.com/status" }],
   }),
   component: () => (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="mb-3 text-4xl font-bold tracking-tight">KovaGPT Service Status</h1>
         <p className="mb-8 text-muted-foreground">
           This page is not connected to automated incident monitoring and does not claim that all
@@ -44,7 +44,6 @@ export const Route = createFileRoute("/status")({
           with the page URL, time, and action you were attempting.
         </p>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   ),
 });

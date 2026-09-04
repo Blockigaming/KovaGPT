@@ -4,16 +4,20 @@ permissions: { contents: read }
 concurrency: { group: staging-rehearsal, cancel-in-progress: false }
 jobs:
   rehearse:
+    if: github.ref == 'refs/heads/main'
     environment: staging
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/setup-node@1e60f620b9541dcec8f7a90236bce6b204a1f5b
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run release:db:isolated
       - name: Validate and build staging artifact
+        id: staging-build
         env:
           VITE_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           VITE_SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
@@ -26,31 +30,41 @@ jobs:
             echo "::error::STAGING_SUPABASE_URL must be an https://<project-ref>.supabase.co URL."
             exit 1
           fi
+          export VITE_SUPABASE_URL="$staging_url"
           if [[ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]]; then
             echo "::error::STAGING_SUPABASE_PUBLISHABLE_KEY is required."
             exit 1
           fi
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { appendFileSync } from "node:fs";
+
+          const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          if (!/^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey || "")) {
+            throw new Error("STAGING_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key");
+          }
+          const fingerprint = createHash("sha256").update(publishableKey).digest("hex");
+          appendFileSync(process.env.GITHUB_OUTPUT, `supabase_publishable_key_sha256=${fingerprint}\n`);
+          NODE
           node scripts/validate-public-build-env.mjs
           npm run release:validate
           npm run typecheck
           npm run lint
           npm run build
       - run: npm run test:unit && npm run test:integration && npm run test:api && npm run test:a11y && npm run test:visual && npm run test:browser
-      - name: Deploy approved staging commit
-        run: npx wrangler deploy
+      - name: Verify the externally deployed staging build and browser target
+        run: npm run smoke:deployment
         env:
-          {
-            CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
-            CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
-          }
+          KOVA_SMOKE_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
+          KOVA_EXPECTED_SHA: "${{ github.sha }}"
+          KOVA_EXPECTED_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
+          KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256: "${{ steps.staging-build.outputs.supabase_publishable_key_sha256 }}"
       - run: npm run release:edge
         env:
           {
             KOVA_EDGE_BASE_URL: "${{ vars.STAGING_BASE_URL }}",
             KOVA_EDGE_ALLOWED_HOSTS: "${{ vars.STAGING_ALLOWED_HOST }}",
           }
-      - run: KOVA_STAGING_SMOKE=1 npm run release:smoke
-        env: { KOVA_SMOKE_BASE_URL: "${{ vars.STAGING_BASE_URL }}" }
       - run: node scripts/release/authenticated-smoke.mjs
         env:
           KOVA_STAGING_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
@@ -60,24 +74,84 @@ jobs:
           KOVA_STAGING_SECONDARY_TOKEN: "${{ secrets.STAGING_SECONDARY_TOKEN }}"
           SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
-      - run: PLAYWRIGHT_BASE_URL=${{ vars.STAGING_BASE_URL }} npm run test:e2e -- --reporter=line
-      - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=1 KOVA_RELEASE_TARGET=staging npm run release:candidate
+      - name: Derive authenticated staging gates
+        id: authenticated-evidence
+        env:
+          KOVA_STAGING_ALLOWED_HOST: "${{ vars.STAGING_ALLOWED_HOST }}"
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from "node:fs";
+
+          const report = JSON.parse(
+            readFileSync("artifacts/release/authenticated-smoke.json", "utf8"),
+          );
+          const requiredWorkflows = ["agents", "projects", "writing", "library", "scheduledTasks"];
+          const allowedStatuses = new Set(["passed", "failed", "unavailable", "skipped"]);
+          const statusPrecedence = ["failed", "unavailable", "skipped"];
+
+          if (report.schemaVersion !== 1) throw new Error("Unsupported authenticated smoke schema");
+          if (report.target !== process.env.KOVA_STAGING_ALLOWED_HOST) {
+            throw new Error("Authenticated smoke target does not match the protected staging host");
+          }
+          if (!Array.isArray(report.orphans)) throw new Error("Authenticated smoke orphans are invalid");
+          if (!new Set(["cleaned", "orphaned"]).has(report.cleanup)) {
+            throw new Error("Authenticated smoke cleanup status is invalid");
+          }
+          if ((report.cleanup === "cleaned") !== (report.orphans.length === 0)) {
+            throw new Error("Authenticated smoke cleanup and orphan evidence disagree");
+          }
+
+          const workflows = requiredWorkflows.map((name) => {
+            const workflow = report.workflows?.[name];
+            if (!workflow || !allowedStatuses.has(workflow.status)) {
+              throw new Error(`Authenticated smoke workflow ${name} has invalid evidence`);
+            }
+            return workflow;
+          });
+          const workflowStatus =
+            statusPrecedence.find((status) => workflows.some((workflow) => workflow.status === status)) ??
+            "passed";
+          const authenticatedCrud = report.cleanup === "orphaned" ? "failed" : workflowStatus;
+          const isolationPassed = workflows.every(
+            (workflow) =>
+              workflow.cleanup === "cleaned" &&
+              workflow.isolation?.select === true &&
+              workflow.isolation?.update === true &&
+              workflow.isolation?.delete === true,
+          );
+          const ownerIsolation =
+            authenticatedCrud === "passed" && !isolationPassed ? "failed" : authenticatedCrud;
+          const output = [
+            `authenticated_crud=${authenticatedCrud}`,
+            `owner_isolation=${ownerIsolation}`,
+            `cleanup=${report.cleanup}`,
+          ].join("\n");
+          appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          console.log(
+            `Authenticated staging gates: CRUD=${authenticatedCrud}, owner isolation=${ownerIsolation}, cleanup=${report.cleanup}`,
+          );
+          NODE
+      - run: npm run test:e2e -- --reporter=line
+        env:
+          PLAYWRIGHT_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
+      - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=0 KOVA_RELEASE_TARGET=staging npm run release:candidate
       - name: Consolidate immutable staging evidence
         run: npm run release:launch-report
         env:
           KOVA_RELEASE_TARGET: staging
           KOVA_STAGING_CREDENTIALS: "1"
-          KOVA_SMOKE_CLEANUP: cleaned
+          KOVA_SMOKE_CLEANUP: "${{ steps.authenticated-evidence.outputs.cleanup }}"
           KOVA_GATE_REPOSITORY: passed
           KOVA_GATE_ISOLATED_DATABASE: passed
           KOVA_GATE_LOCAL_BROWSER: passed
           KOVA_GATE_DEPLOYED_EDGE: passed
           KOVA_GATE_UNAUTHENTICATED_SMOKE: passed
-          KOVA_GATE_AUTHENTICATED_CRUD: passed
-          KOVA_GATE_OWNER_ISOLATION: passed
-          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed
+          KOVA_GATE_AUTHENTICATED_CRUD: "${{ steps.authenticated-evidence.outputs.authenticated_crud }}"
+          KOVA_GATE_OWNER_ISOLATION: "${{ steps.authenticated-evidence.outputs.owner_isolation }}"
+          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run
           KOVA_GATE_STAGING_E2E: passed
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: staging-release-candidate
           path: artifacts/release

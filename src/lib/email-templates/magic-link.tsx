@@ -3,7 +3,6 @@ import {
   Body,
   Button,
   Container,
-  Head,
   Heading,
   Html,
   Link,
@@ -11,7 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { BrandFooter, BrandHeader, styles } from "./_brand";
+import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 
 interface MagicLinkEmailProps {
   siteName: string;
@@ -20,23 +19,26 @@ interface MagicLinkEmailProps {
 
 export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your login link for {siteName}</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
+    <EmailHead />
+    <Preview>Sign in to {siteName}</Preview>
+    <Body className="kova-email-body" style={styles.main}>
+      <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
-        <Heading style={styles.h1}>Your login link</Heading>
-        <Text style={styles.text}>
-          Use the button below to log in to {siteName}. This link expires shortly and can only be
-          used once.
+        <Heading className="kova-heading" style={styles.h1}>
+          Sign in to {siteName}
+        </Heading>
+        <Text className="kova-text" style={styles.text}>
+          Use the secure link below to sign in. This link expires shortly and can only be used once.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button style={styles.button} href={confirmationUrl}>
-            Log in to {siteName}
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
+            Continue to {siteName}
           </Button>
         </Section>
-        <Text style={styles.fallbackLabel}>Or paste this link in your browser:</Text>
-        <Link style={styles.fallbackLink} href={confirmationUrl}>
+        <Text className="kova-muted" style={styles.fallbackLabel}>
+          If the button does not work, copy and paste this link:
+        </Text>
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

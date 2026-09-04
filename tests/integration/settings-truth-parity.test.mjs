@@ -93,17 +93,34 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.doesNotMatch(billing, /return \{ error: error\./);
 });
 
-test("data controls describe only the removed local-only switches", () => {
+test("data controls describe the available privacy surface truthfully", () => {
   const settings = read("src/components/SettingsDialog.tsx");
 
   assert.doesNotMatch(settings, /Improve the model for everyone|Help improve Kova/);
   assert.doesNotMatch(settings, /GuestToggleRow/);
-  assert.match(settings, /removed model-improvement switch changed only a\s+browser-local value/);
-  assert.match(settings, /was\s+not wired to an account-level or\s+AI-provider training control/);
-  assert.match(
-    settings,
-    /removed guest training and marketing switches changed only\s+browser-local values/,
-  );
-  assert.doesNotMatch(settings, /Device settings are not sent to an AI provider/);
-  assert.match(settings, /Deprecated local-only value retained/);
+  assert.match(settings, />AI data controls</);
+  assert.match(settings, /Model-training preferences are not available in Settings\./);
+  assert.match(settings, /to="\/privacy"/);
+  assert.match(settings, /how chats may be processed by KovaGPT and its AI providers/);
+  assert.doesNotMatch(settings, /removed model-improvement switch/i);
+  assert.doesNotMatch(settings, /removed guest training and marketing switches/i);
+});
+
+test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {
+  const settings = read("src/components/SettingsDialog.tsx");
+
+  assert.match(settings, /to="\/apps"/);
+  assert.match(settings, /onClick=\{\(\) => onOpenChange\(false\)\}/);
+  assert.match(settings, /Manage apps and permissions/);
+  assert.match(settings, /verified from the server-backed Apps page/);
+  for (const obsolete of [
+    "linked-accounts",
+    "getLinkedAccounts",
+    "connectProvider",
+    "disconnectProvider",
+    "CONNECTOR_CATALOG",
+    "ConnectorRow",
+  ]) {
+    assert.doesNotMatch(settings, new RegExp(obsolete), obsolete);
+  }
 });

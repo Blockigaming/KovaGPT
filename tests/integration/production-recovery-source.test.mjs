@@ -3,6 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const supabaseClient = await readFile("src/integrations/supabase/client.ts", "utf8");
+const supabaseBrowserConfig = await readFile("src/integrations/supabase/config.ts", "utf8");
+const supabaseAdminClient = await readFile("src/integrations/supabase/client.server.ts", "utf8");
 const clerkSafe = await readFile("src/components/auth/ClerkSafe.tsx", "utf8");
 const authMiddleware = await readFile("src/integrations/supabase/auth-middleware.ts", "utf8");
 const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
@@ -12,8 +14,15 @@ const changedFormat = await readFile("scripts/check-format-changed.mjs", "utf8")
 
 test("Supabase browser config is feature-scoped and cannot crash public boot", () => {
   assert.match(supabaseClient, /getSupabaseClientConfigStatus/);
-  assert.match(supabaseClient, /typeof process !== \"undefined\"/);
-  assert.match(supabaseClient, /VITE_SUPABASE_ANON_KEY/);
+  assert.match(supabaseClient, /SUPABASE_BROWSER_CONFIG/);
+  assert.doesNotMatch(supabaseClient, /process\.env/);
+  assert.match(supabaseBrowserConfig, /Object\.freeze/);
+  assert.match(supabaseBrowserConfig, /VITE_SUPABASE_URL/);
+  assert.match(supabaseBrowserConfig, /VITE_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(supabaseBrowserConfig, /VITE_SUPABASE_ANON_KEY/);
+  assert.doesNotMatch(supabaseBrowserConfig, /process\.env/);
+  assert.match(supabaseAdminClient, /process\.env\.SUPABASE_URL/);
+  assert.match(supabaseAdminClient, /process\.env\.SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(clerkSafe, /Supabase auth unavailable/);
   assert.match(clerkSafe, /setIsLoaded\(true\)/);
   assert.match(clerkSafe, /getSupabaseClientConfigStatus/);

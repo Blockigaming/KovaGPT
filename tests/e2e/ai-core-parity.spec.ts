@@ -10,10 +10,10 @@ test("AI core controls fit the configured viewport", async ({ page }) => {
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });
 
-test("search and deep research are reachable from the composer", async ({ page }) => {
+test("signed-out composer exposes search and truthfully locks deep research", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await expect(page.getByRole("button", { name: "Search the web" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Deep research" })).toBeVisible();
+  await expect(page.locator('[aria-disabled="true"]', { hasText: "Deep research" })).toBeVisible();
 });

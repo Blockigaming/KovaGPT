@@ -88,10 +88,7 @@ function parseVerifiedStripeEvent(body: string, env: StripeEnv): VerifiedStripeE
   if (!event.data || typeof event.data !== "object" || !("object" in event.data)) {
     rejectWebhook("Invalid webhook event data");
   }
-  if (
-    typeof event.livemode !== "boolean" ||
-    !stripeEventMatchesEnvironment(event.livemode, env)
-  ) {
+  if (typeof event.livemode !== "boolean" || !stripeEventMatchesEnvironment(event.livemode, env)) {
     rejectWebhook("Webhook environment mismatch");
   }
 

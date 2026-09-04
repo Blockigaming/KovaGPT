@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 const provider = read("src/lib/ai/provider.server.ts");
+const transport = read("src/lib/ai/provider-transport.server.mjs");
 const catalog = read("src/lib/ai/model-catalog.server.ts");
 const chat = read("src/routes/api/chat.ts");
 const image = read("src/routes/api/generate-image.ts");
@@ -23,14 +24,16 @@ test("the approved provider path supports Responses streaming and Azure managed 
   assert.match(provider, /providerFetch\(\s*"\/responses"/u);
   assert.match(provider, /responsesStreamToChatStream/u);
   assert.match(provider, /AZURE_OPENAI_DEPLOYMENT_DEEP/u);
-  assert.match(provider, /IDENTITY_ENDPOINT/u);
-  assert.match(provider, /IDENTITY_HEADER/u);
-  assert.match(provider, /AZURE_CLIENT_ID/u);
-  assert.match(provider, /Bearer \$\{await fetchManagedIdentityToken\(\)\}/u);
+  assert.match(transport, /IDENTITY_ENDPOINT/u);
+  assert.match(transport, /IDENTITY_HEADER/u);
+  assert.match(transport, /AZURE_CLIENT_ID/u);
+  assert.match(provider, /Bearer \$\{await fetchManagedIdentityToken\(signal\)\}/u);
   assert.match(provider, /provider_timeout/u);
   assert.match(provider, /provider_rate_limited/u);
   assert.match(provider, /provider_unavailable/u);
   assert.match(provider, /KOVA_AI_TIMEOUT_MS/u);
+  assert.match(transport, /createRequestDeadline/u);
+  assert.match(transport, /wrapResponseBodyWithDeadline/u);
   assert.doesNotMatch(provider, /VITE_.*(?:OPENAI|AZURE).*KEY/iu);
 });
 

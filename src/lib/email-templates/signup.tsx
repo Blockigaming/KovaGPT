@@ -3,7 +3,6 @@ import {
   Body,
   Button,
   Container,
-  Head,
   Heading,
   Html,
   Link,
@@ -11,7 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { BrandFooter, BrandHeader, styles } from "./_brand";
+import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 
 interface SignupEmailProps {
   siteName: string;
@@ -22,22 +21,26 @@ interface SignupEmailProps {
 
 export const SignupEmail = ({ siteName, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
-    <Head />
+    <EmailHead />
     <Preview>Confirm your email for {siteName}</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
+    <Body className="kova-email-body" style={styles.main}>
+      <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
-        <Heading style={styles.h1}>Confirm your email</Heading>
-        <Text style={styles.text}>
+        <Heading className="kova-heading" style={styles.h1}>
+          Confirm your email
+        </Heading>
+        <Text className="kova-text" style={styles.text}>
           Welcome to {siteName}. Confirm {recipient} to finish setting up your account.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button style={styles.button} href={confirmationUrl}>
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
             Confirm email
           </Button>
         </Section>
-        <Text style={styles.fallbackLabel}>Or paste this link in your browser:</Text>
-        <Link style={styles.fallbackLink} href={confirmationUrl}>
+        <Text className="kova-muted" style={styles.fallbackLabel}>
+          If the button does not work, copy and paste this link:
+        </Text>
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

@@ -1,26 +1,33 @@
-const buckets = new Map<string, { count: number; resetAt: number }>();
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
-export function enforceGoogleRateLimit(
+export async function enforceGoogleRateLimit(
   userId: string,
   operation: string,
   limit = 60,
-): Response | null {
-  const now = Date.now();
-  const key = `${userId}:${operation}`;
-  const current = buckets.get(key);
-  if (!current || current.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + 60_000 });
-    return null;
-  }
-  if (current.count >= limit) {
+): Promise<Response | null> {
+  const result = await consumeApplicationRateLimit({
+    identity: `user:${userId}`,
+    action: `google_${operation}`,
+    limit,
+    windowSeconds: 60,
+  });
+  if (!result.allowed) {
     return Response.json(
-      { error: "rate_limited", message: "Too many Google requests. Try again shortly." },
       {
-        status: 429,
-        headers: { "Retry-After": String(Math.ceil((current.resetAt - now) / 1000)) },
+        error: result.status === "limited" ? "rate_limited" : "request_protection_unavailable",
+        message:
+          result.status === "limited"
+            ? "Too many Google requests. Try again shortly."
+            : "Google request protection is temporarily unavailable.",
+      },
+      {
+        status: result.status === "limited" ? 429 : 503,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(result.retryAfter),
+        },
       },
     );
   }
-  current.count += 1;
   return null;
 }

@@ -4,12 +4,7 @@ export function stripeSubscriptionBlocksCheckout(subscription, nowSeconds) {
   if (subscription.status === "incomplete_expired") return false;
 
   const items = subscription.items;
-  if (
-    !items ||
-    items.has_more !== false ||
-    !Array.isArray(items.data) ||
-    items.data.length !== 1
-  ) {
+  if (!items || items.has_more !== false || !Array.isArray(items.data) || items.data.length !== 1) {
     return true;
   }
 

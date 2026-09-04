@@ -55,6 +55,9 @@ test("anonymous limiting uses bounded buckets and only trusted Cloudflare client
 
   assert.match(chat, /resolveAnonymousClientKey\(request\.headers\)/);
   assert.match(chat, /chatAnonymousRateLimiter\.isLimited\(clientKey\)/);
+  assert.match(chat, /consumeApplicationRateLimit/);
+  assert.match(chat, /action: "guest_chat_preflight"/);
+  assert.match(chat, /Retry-After/);
   assert.match(ingress, /CHAT_MAX_ANON_BUCKETS = 4096/);
   assert.match(ingress, /buckets\.size >= maxBuckets - 1/);
   assert.match(ingress, /const overflowKey = "ip:overflow"/);

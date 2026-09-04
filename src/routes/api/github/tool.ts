@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { decryptSecret } from "@/lib/github-oauth.server";
 import { GitHubClient } from "@/lib/github-connector.mjs";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 /* eslint-disable @typescript-eslint/no-explicit-any -- GitHub migration types are generated after deployment. */
 const reads = new Set([
     "file",
@@ -40,6 +41,13 @@ export const Route = createFileRoute("/api/github/tool")({
         }
         if (!reads.has(input.tool) && !writes.has(input.tool))
           return Response.json({ error: "Unknown GitHub tool" }, { status: 400 });
+        const write = writes.has(input.tool);
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          write ? "connector_write" : "connector_read",
+        );
+        if (lockdown) return lockdown;
         const repo = await (auth.supabaseAdmin as any)
           .from("github_repositories")
           .select("id,full_name,account_id,permissions,default_branch")
@@ -58,7 +66,6 @@ export const Route = createFileRoute("/api/github/tool")({
           .single();
         if (account.error || account.data.status !== "connected" || !account.data.token_ciphertext)
           return Response.json({ error: "GitHub reconnect required" }, { status: 401 });
-        const write = writes.has(input.tool);
         if (write && !input.confirmed)
           return Response.json({ error: "Explicit confirmation required" }, { status: 409 });
         const permissions = repo.data.permissions ?? {};

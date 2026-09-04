@@ -60,7 +60,7 @@
 
 ## Rollback
 
-- [ ] Leave production Lovable deployment untouched.
+- [ ] Leave the currently active production revision and traffic weights untouched during development validation.
 - [ ] Leave `kovagpt.com` DNS unchanged.
 - [ ] Stop or roll back only the Azure development Container App if validation fails.
 
@@ -71,4 +71,5 @@
 - [ ] Push immutable images to ACR.
 - [ ] Complete data/storage/email migration rehearsals.
 - [ ] Prepare DNS TTL and cutover window.
-- [ ] Confirm Lovable and Supabase are not deleted until post-cutover sign-off.
+- [ ] Confirm no Lovable deployment, redirect, proxy, secret, or integration remains in the production routing or rollback plan; record any external cleanup separately from this source-only checklist.
+- [ ] Do not delete or mutate Supabase production during this checklist.

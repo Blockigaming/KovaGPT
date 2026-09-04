@@ -6,7 +6,7 @@
 .kova-composer:focus-within {
   outline: 2px solid var(--parity-focus) !important;
   outline-offset: 2px !important;
-  box-shadow: none !important;
+  box-shadow: var(--shadow-composer) !important;
 }
 
 /* Current ChatGPT navigation uses a quiet background change rather than a
@@ -43,7 +43,7 @@
 
 @media (max-width: 390px) {
   .kova-topbar-inner {
-    grid-template-columns: 3.25rem minmax(0, 1fr) 5.5rem !important;
+    grid-template-columns: 44px minmax(0, 1fr) auto !important;
   }
 }
 

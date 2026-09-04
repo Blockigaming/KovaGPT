@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 // -------- Types --------
 export type SummaryProject = { id: string; name: string; color: string | null; updated_at: string };
@@ -159,6 +160,7 @@ export const getGmailSummary = createServerFn({ method: "POST" })
     const { getValidGoogleAccessToken } = await import("@/lib/google-oauth.server");
     let token: string;
     try {
+      await assertLockdownAllows(context.supabase, context.userId, "connector_read");
       token = await getValidGoogleAccessToken(context.userId);
     } catch {
       return { available: false, messages: [] };
@@ -203,6 +205,7 @@ export const getCalendarSummary = createServerFn({ method: "POST" })
     const { getValidGoogleAccessToken } = await import("@/lib/google-oauth.server");
     let token: string;
     try {
+      await assertLockdownAllows(context.supabase, context.userId, "connector_read");
       token = await getValidGoogleAccessToken(context.userId);
     } catch {
       return { available: false, events: [] };

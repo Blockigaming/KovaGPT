@@ -53,10 +53,7 @@ test("server routes wire entitlement checks ahead of costly research/provider ca
   assert.ok(accessGate < chat.indexOf("missingAiProviderResponse()"));
   assert.ok(accessGate < chat.indexOf("return handleDeepResearchRequest("));
 
-  assert.match(
-    execution,
-    /resolveEffectiveBillingTier\(caller\.supabaseAdmin, caller\.userId\)/,
-  );
+  assert.match(execution, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, caller\.userId\)/);
   assert.match(execution, /return resolveAgentEntitlement\(tier\)/);
   assert.doesNotMatch(execution, /tierForLookupKey|\.from\("subscriptions"\)|price\.includes\(/);
 });

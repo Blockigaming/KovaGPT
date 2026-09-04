@@ -1,5 +1,6 @@
 declare module "@/lib/webhook-reliability.mjs" {
   export class WebhookProcessingError extends Error {
+    constructor(code: string, status?: number, cause?: unknown);
     code: string;
     status: number;
   }

@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { PublicFooter } from "@/components/PublicFooter";
+import { toast } from "sonner";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/connect")({
   head: () => ({
@@ -36,14 +37,20 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       type="button"
       aria-label={label}
       disabled={!value}
-      onClick={() => {
+      onClick={async () => {
         if (!value) return;
-        void navigator.clipboard.writeText(value).then(() => {
+        try {
+          await navigator.clipboard.writeText(value);
           setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        });
+          window.setTimeout(() => setCopied(false), 2000);
+        } catch {
+          setCopied(false);
+          toast.error(
+            "Could not copy the connection details. Select the text and copy it manually.",
+          );
+        }
       }}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+      className="inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
     >
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       {copied ? "Copied" : "Copy"}
@@ -80,8 +87,8 @@ function ConnectPage() {
     : "https://claude.ai/customize/connectors";
 
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="mb-3 text-4xl font-bold tracking-tight">
           Connect KovaGPT to your assistant
         </h1>
@@ -269,7 +276,6 @@ function ConnectPage() {
           </Link>
         </div>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

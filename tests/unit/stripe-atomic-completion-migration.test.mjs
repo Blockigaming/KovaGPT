@@ -108,14 +108,7 @@ async function beginEvent(
 
 async function completeEvent(
   database,
-  {
-    id,
-    claim,
-    apply = true,
-    status = "active",
-    customerId = "cus_trusted",
-    priceId = plusPriceId,
-  },
+  { id, claim, apply = true, status = "active", customerId = "cus_trusted", priceId = plusPriceId },
 ) {
   const result = await database.query(
     `SELECT public.complete_stripe_event(
@@ -138,15 +131,7 @@ async function completeEvent(
       END,
       _cancel_at_period_end => false
     ) AS result`,
-    [
-      id,
-      claim.leaseToken,
-      claim.observationSequence,
-      apply,
-      customerId,
-      priceId,
-      status,
-    ],
+    [id, claim.leaseToken, claim.observationSequence, apply, customerId, priceId, status],
   );
   return result.rows[0]?.result;
 }
@@ -294,9 +279,7 @@ test("a second event for one subscription defers until the active lease complete
       FROM public.subscriptions
       WHERE stripe_subscription_id = 'sub_atomic'
     `);
-    assert.deepEqual(state.rows, [
-      { status: "canceled", last_stripe_event_id: "evt_second" },
-    ]);
+    assert.deepEqual(state.rows, [{ status: "canceled", last_stripe_event_id: "evt_second" }]);
   } finally {
     await database.close();
   }
@@ -507,11 +490,14 @@ test("concurrent Checkout claims converge and freeze trial parameters", async ()
       /stripe_checkout_attempt_open/u,
     );
 
-    await database.query(`
+    await database.query(
+      `
       UPDATE public.stripe_checkout_attempts
       SET session_expires_at = now() - interval '1 second'
       WHERE user_id = $1::uuid AND environment = 'live'
-    `, [userId]);
+    `,
+      [userId],
+    );
     const rotated = await claimCheckout(database, {
       priceId: proPriceId,
       trialEligible: false,

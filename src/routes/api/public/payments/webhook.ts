@@ -36,10 +36,7 @@ export function normalizeStripeEnvironment(value: string | null): StripeEnv | nu
   return value === "sandbox" || value === "live" ? value : null;
 }
 
-async function priceIdFrom(
-  value: unknown,
-  environment: StripeEnv,
-): Promise<string | undefined> {
+async function priceIdFrom(value: unknown, environment: StripeEnv): Promise<string | undefined> {
   const item = value as StripeLineItemLike | undefined;
   const priceId = item?.price?.id;
   if (!priceId || !/^price_[A-Za-z0-9]+$/u.test(priceId)) return undefined;
@@ -58,9 +55,7 @@ async function priceIdFrom(
   }
 
   const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, priceId];
-  return candidates.some((candidate) => resolveBillingPlan(candidate ?? undefined))
-    ? priceId
-    : undefined;
+  return candidates.some((candidate) => resolveBillingPlan(candidate)) ? priceId : undefined;
 }
 
 export async function handleWebhook(
@@ -92,7 +87,13 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         if (!environment) {
           return Response.json(
             { error: "invalid_environment", correlationId },
-            { status: 400, headers: correlationHeaders(correlationId) },
+            {
+              status: 400,
+              headers: {
+                ...correlationHeaders(correlationId),
+                "Cache-Control": "no-store",
+              },
+            },
           );
         }
         try {
@@ -112,7 +113,12 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           });
           return Response.json(
             { received: true, duplicate: result.duplicate, correlationId },
-            { headers: correlationHeaders(correlationId) },
+            {
+              headers: {
+                ...correlationHeaders(correlationId),
+                "Cache-Control": "no-store",
+              },
+            },
           );
         } catch (error) {
           const verificationFailure = error instanceof StripeWebhookVerificationError;
@@ -132,8 +138,12 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               correlationId,
             },
             {
-              status: retryableFailure ? 500 : 400,
-              headers: correlationHeaders(correlationId),
+              status: retryableFailure ? 503 : 400,
+              headers: {
+                ...correlationHeaders(correlationId),
+                "Cache-Control": "no-store",
+                ...(retryableFailure ? { "Retry-After": "5" } : {}),
+              },
             },
           );
         }

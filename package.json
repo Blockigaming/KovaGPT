@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "vite build && npm run release:zero-lovable:built",
+    "build:dev": "vite build --mode development && npm run release:zero-lovable:built",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -21,7 +21,7 @@
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
-    "test:visual": "node --test tests/visual/*.test.mjs",
+    "test:visual": "node --test tests/visual/*.test.mjs && KOVA_BROWSER_PREVIEW=node playwright test tests/e2e/ui-quality.spec.ts --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900",
     "test:ui-parity": "playwright test tests/e2e/chatgpt-parity.spec.ts --project=desktop-1280x800",
     "test:ui-parity:shell": "playwright test tests/e2e/chatgpt-shell-parity.spec.ts --config=playwright.release.config.ts",
     "smoke:deployment": "node scripts/post-deploy-smoke.mjs",
@@ -40,6 +40,7 @@
     "release:rls:two-user": "node scripts/release/rls-two-user.mjs --execute",
     "release:zero-lovable": "node scripts/release/zero-lovable.mjs",
     "release:zero-lovable:strict": "node scripts/release/zero-lovable.mjs --strict-lock",
+    "release:zero-lovable:built": "node scripts/release/zero-lovable.mjs --strict-lock --require-build",
     "release:auth-provider": "node scripts/release/auth-provider-contract.mjs",
     "release:auth-provider:strict": "node scripts/release/auth-provider-contract.mjs --strict-lock",
     "release:chatgpt-parity-source": "node scripts/release/apply-chatgpt-parity-source.mjs --check",
@@ -172,6 +173,7 @@
   },
   "overrides": {
     "nanoid": "3.3.18",
-    "undici": "8.9.0"
+    "undici": "8.9.0",
+    "fast-uri": "3.1.6"
   }
 }

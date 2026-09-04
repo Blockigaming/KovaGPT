@@ -1,5 +1,7 @@
 # KovaGPT Final Completion Matrix
 
+> **Historical and superseded (2026-09-02):** This planning snapshot is retained only for audit history. Its dependency, provider, route, test, and completion statuses are not current release evidence. Use `docs/release/KOVAGPT_MANUAL_HANDOFF.md` and `docs/release-reconciliation/zero-lovable-classification.md` for current owner actions and zero-Lovable status.
+
 Status legend: NOT STARTED, IN PROGRESS, PASS, BLOCKED — EXTERNAL CREDENTIAL, BLOCKED — EXTERNAL SERVICE.
 
 | System                                                                 | Existing implementation                                                                                                                         | Missing frontend behavior                                                                 | Missing backend behavior                                                                                                       | Missing persistence / DB behavior                                                     | Missing authorization behavior                                                     | Missing mobile behavior                          | Missing accessibility behavior                                   | Missing tests                                                               | Current status                | Evidence file paths                                                                                                                                                                      | Test names | Screenshot names |

@@ -1,5 +1,8 @@
 export type ArtifactKind = "writing" | "code" | "website";
 
+const PREVIEW_CSP =
+  "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; font-src data:;\">";
+
 function splitEditorBlocks(value: string): string[] {
   const parts = value
     .split(/\n?\/\/ --- Block \d+ ---\n?/g)
@@ -40,13 +43,15 @@ export function buildPreviewDoc(value: string): { doc: string; hadScripts: boole
   const hasFullDoc = /<html[\s>]/i.test(sanitized) || /<!doctype/i.test(sanitized);
   let doc: string;
   if (hasFullDoc) {
-    if (styleTag && /<head[\s>]/i.test(sanitized)) {
-      doc = sanitized.replace(/<\/head>/i, `${styleTag}</head>`);
-    } else if (styleTag) {
-      doc = sanitized.replace(/<html[^>]*>/i, (match) => `${match}<head>${styleTag}</head>`);
-    } else doc = sanitized;
+    if (/<head[\s>]/i.test(sanitized)) {
+      doc = sanitized.replace(/<head([^>]*)>/i, `<head$1>${PREVIEW_CSP}${styleTag}`);
+    } else if (/<html[\s>]/i.test(sanitized)) {
+      doc = sanitized.replace(/<html([^>]*)>/i, `<html$1><head>${PREVIEW_CSP}${styleTag}</head>`);
+    } else {
+      doc = `${PREVIEW_CSP}${styleTag}${sanitized}`;
+    }
   } else {
-    doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_blank">${styleTag}</head><body>${sanitized}</body></html>`;
+    doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${PREVIEW_CSP}<base target="_blank">${styleTag}</head><body>${sanitized}</body></html>`;
   }
   return { doc, hadScripts };
 }

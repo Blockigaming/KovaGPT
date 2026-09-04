@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 const DRIVE = "https://www.googleapis.com/drive/v3";
 
@@ -14,7 +15,13 @@ export const Route = createFileRoute("/api/google/drive")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "drive", 60);
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          "connector_read",
+        );
+        if (lockdown) return lockdown;
+        const limited = await enforceGoogleRateLimit(auth.userId, "drive", 60);
         if (limited) return limited;
         if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
           return Response.json({ error: "request_too_large" }, { status: 413 });

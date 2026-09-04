@@ -26,12 +26,17 @@ test("operational state is accessible and correlation safe", async () => {
 });
 test("diagnostics uses distributed fail-closed database limiter", async () => {
   const route = await read("src/routes/api/admin/diagnostics.ts");
+  const limiter = await read("src/lib/distributed-rate-limit.mjs");
+  const serverLimiter = await read("src/lib/distributed-rate-limit.server.ts");
   const migration = await read(
     "supabase/migrations/20260803122000_distributed_diagnostics_limit.sql",
   );
   assert.doesNotMatch(route, /new Map/);
-  assert.match(route, /consume_diagnostic_rate_limit/);
+  assert.match(route, /consumeApplicationRateLimit/);
   assert.match(route, /Retry-After/);
+  assert.match(limiter, /consume_diagnostic_rate_limit/);
+  assert.match(limiter, /AbortSignal\.timeout/);
+  assert.match(serverLimiter, /KOVA_IP_HASH_SECRET/);
   assert.match(migration, /on conflict/);
   assert.match(migration, /revoke all/);
   assert.match(migration, /service_role/);

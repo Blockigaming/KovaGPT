@@ -176,8 +176,7 @@ test("GET or completion failure remains retryable behind the database lease", as
           throw new Error("network");
         },
       }),
-    (error) =>
-      error.code === "stripe_subscription_retrieve_failed" && error.status === 500,
+    (error) => error.code === "stripe_subscription_retrieve_failed" && error.status === 500,
   );
   assert.equal(retrieveDatabase.calls.length, 1);
 
@@ -281,8 +280,7 @@ test("authoritative snapshots reject ambiguous or paginated subscription items",
           retrieveSubscription: async () => ({ ...subscription, items }),
         }),
       (error) =>
-        error.code === "authoritative_subscription_items_ambiguous" &&
-        error.status === 500,
+        error.code === "authoritative_subscription_items_ambiguous" && error.status === 500,
     );
     assert.equal(database.calls.length, 1);
   }

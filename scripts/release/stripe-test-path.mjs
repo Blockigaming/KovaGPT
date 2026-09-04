@@ -72,9 +72,7 @@ export function verifyStripeTestPath({
   )
     failures.push("webhook retains a non-causal Event ordering check");
   const beginCall = reliabilitySource.indexOf('rpc("begin_stripe_event"');
-  const retrieveCall = reliabilitySource.indexOf(
-    "await retrieveSubscription(subscriptionId)",
-  );
+  const retrieveCall = reliabilitySource.indexOf("await retrieveSubscription(subscriptionId)");
   const completeCall = reliabilitySource.indexOf('rpc("complete_stripe_event"');
   if (!(beginCall >= 0 && retrieveCall > beginCall && completeCall > retrieveCall))
     failures.push("webhook does not claim before GET and complete after projection");

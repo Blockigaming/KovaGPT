@@ -28,6 +28,7 @@ import {
   imageModel,
   missingAiProviderResponse,
 } from "@/lib/ai/provider.server";
+import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
@@ -66,6 +67,12 @@ import {
   readProviderJsonObject,
   readProviderText,
 } from "@/lib/provider-response.server.mjs";
+import {
+  LockdownPolicyError,
+  lockdownErrorResponse,
+  readLockdownMode,
+} from "@/lib/lockdown-policy.mjs";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -506,6 +513,33 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 );
               }
+              // Keep the bounded in-process bucket as a first-line flood
+              // guard, then consume an atomic Supabase bucket before any
+              // optional search or provider work can begin. Generation has a
+              // second authoritative reservation later in the request.
+              const distributedLimit = await consumeApplicationRateLimit({
+                identity: clientKey,
+                action: "guest_chat_preflight",
+                limit: 60,
+                windowSeconds: 3600,
+              });
+              if (!distributedLimit.allowed) {
+                return Response.json(
+                  {
+                    error:
+                      distributedLimit.status === "limited"
+                        ? "Too many requests. Sign in to continue."
+                        : "Request protection is temporarily unavailable.",
+                  },
+                  {
+                    status: distributedLimit.status === "limited" ? 429 : 503,
+                    headers: {
+                      "Cache-Control": "no-store",
+                      "Retry-After": String(distributedLimit.retryAfter),
+                    },
+                  },
+                );
+              }
             }
             const {
               messages,
@@ -519,6 +553,41 @@ export const Route = createFileRoute("/api/chat")({
               temporary,
               clientTool,
             } = ingress;
+            // Lockdown Mode is a server-enforced account boundary. Explicit
+            // network tools fail with a truthful policy response; implicit web
+            // enrichment fails closed while ordinary local/model chat remains
+            // available. Guests have no account setting to enforce.
+            const explicitLockdownCapability =
+              clientTool === "deep_research"
+                ? "deep_research"
+                : clientTool === "web_search"
+                  ? "live_web"
+                  : null;
+            let lockdownBlocksNetwork = false;
+            if (auth) {
+              try {
+                lockdownBlocksNetwork = await readLockdownMode(auth.supabaseAdmin, auth.userId);
+              } catch (error) {
+                lockdownBlocksNetwork = true;
+                if (explicitLockdownCapability) {
+                  return (
+                    lockdownErrorResponse(error) ??
+                    Response.json(
+                      { error: "Lockdown Mode could not be verified. Try again shortly." },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    )
+                  );
+                }
+              }
+              if (lockdownBlocksNetwork && explicitLockdownCapability) {
+                return lockdownErrorResponse(
+                  new LockdownPolicyError(`lockdown_blocked_${explicitLockdownCapability}`, 403),
+                )!;
+              }
+            }
             // Temporary Chat is a clean-room request: even a custom client
             // cannot combine `temporary: true` with profile or personality
             // fields and have those values reach the model prompt.
@@ -845,6 +914,7 @@ export const Route = createFileRoute("/api/chat")({
             // Fast mode skips web search entirely to stay instant.
             let webBlock = "";
             if (
+              !lockdownBlocksNetwork &&
               lastText &&
               !hasImages &&
               (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")
@@ -1717,24 +1787,25 @@ export const Route = createFileRoute("/api/chat")({
                     controller.enqueue(value);
                   }
                   await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
-                } catch {
+                } catch (error) {
+                  const providerTimedOut = isProviderTimeoutError(error);
+                  const providerFailureCode = providerTimedOut
+                    ? "provider_timeout"
+                    : "stream_terminated";
+                  const providerFailureMessage = providerTimedOut
+                    ? "\n\n_KovaGPT took too long to respond. Please try again._"
+                    : "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._";
                   await finalizeUsage(
                     request.signal.aborted ? "client_disconnected" : "provider_failed",
-                    request.signal.aborted ? "client_disconnected" : "stream_terminated",
+                    request.signal.aborted ? "client_disconnected" : providerFailureCode,
                   );
                   if (!request.signal?.aborted) {
                     logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
-                      status: 502,
+                      status: providerTimedOut ? 504 : 502,
                       category: "provider",
-                      code: "final_provider_stream_limit",
+                      code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
                     });
-                    controller.enqueue(
-                      enc.encode(
-                        sseChunk(
-                          "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._",
-                        ),
-                      ),
-                    );
+                    controller.enqueue(enc.encode(sseChunk(providerFailureMessage)));
                     controller.enqueue(enc.encode(sseDone()));
                   }
                 }
@@ -1758,6 +1829,12 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (request.signal.aborted) {
+              return new Response(null, {
+                status: 499,
+                headers: { "Cache-Control": "no-store" },
+              });
+            }
             const providerError = mapProviderError(e);
             const status = providerError.status;
             const envelope = buildErrorEnvelope(providerError, requestId, status);

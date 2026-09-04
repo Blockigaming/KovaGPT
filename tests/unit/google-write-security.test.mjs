@@ -3,6 +3,8 @@ import test from "node:test";
 
 import { BoundedJsonError, readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 import {
+  encodeMimeTextBody,
+  foldEmailAddressHeader,
   GoogleWriteValidationError,
   validateSupportedGoogleWrite,
 } from "../../src/lib/google-write-validation.server.mjs";
@@ -166,6 +168,55 @@ test("draft validation caps total recipients and relevant field lengths", () => 
   );
 });
 
+test("confirmed send validation uses the same strict MIME envelope as drafts", () => {
+  const result = validateSupportedGoogleWrite("gmail_send", {
+    to: "recipient@example.com",
+    cc: "copy@example.net",
+    subject: "  Release update  ",
+    body: "The release is ready.",
+    ignored: "never persisted",
+  });
+  assert.deepEqual(result, {
+    to: "recipient@example.com",
+    cc: "copy@example.net",
+    subject: "Release update",
+    body: "The release is ready.",
+  });
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("gmail_send", {
+        to: "recipient@example.com\r\nBcc: attacker@example.com",
+        subject: "Release update",
+        body: "Unsafe",
+      }),
+    GoogleWriteValidationError,
+  );
+});
+
+test("recipient headers fold at address boundaries below the MIME hard limit", () => {
+  const recipients = Array.from(
+    { length: 20 },
+    (_, index) => `person-${String(index + 1).padStart(2, "0")}@example.com`,
+  ).join(", ");
+  const folded = foldEmailAddressHeader("To", recipients);
+  const lines = folded.split("\r\n");
+  assert.ok(lines.length > 1);
+  assert.ok(lines.every((line) => line.length <= 78));
+  assert.ok(lines.slice(1).every((line) => line.startsWith(" ")));
+  assert.equal(folded.replace(/\r\n /g, " "), `To: ${recipients}`);
+  assert.throws(
+    () => foldEmailAddressHeader("To", "recipient@example.com\r\nBcc: attacker@example.com"),
+    GoogleWriteValidationError,
+  );
+});
+
+test("MIME text bodies use transport-safe base64 lines without data loss", () => {
+  const body = `Release notes: ${"🚀 alpha beta ".repeat(500)}`;
+  const encoded = encodeMimeTextBody(body);
+  assert.ok(encoded.split("\r\n").every((line) => line.length <= 76));
+  assert.equal(Buffer.from(encoded.replace(/\r\n/g, ""), "base64").toString("utf8"), body);
+});
+
 test("calendar validation is strict, bounded, and removes unexpected fields", () => {
   const result = validateSupportedGoogleWrite("calendar_create_event", {
     summary: "  Review  ",
@@ -191,7 +242,7 @@ test("calendar validation is strict, bounded, and removes unexpected fields", ()
       }),
     GoogleWriteValidationError,
   );
-  assert.throws(() => validateSupportedGoogleWrite("gmail_send", {}), /not supported/);
+  assert.throws(() => validateSupportedGoogleWrite("gmail_reply", {}), /not supported/);
 });
 
 test("calendar validation requires real RFC 3339 instants with explicit timezones", () => {

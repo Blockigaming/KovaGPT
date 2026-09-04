@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { decryptCredential, encryptCredential, sha256 } from "./credential-vault.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "./oauth-providers.server";
 import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -22,6 +23,7 @@ export async function beginOAuth(input: {
   optionalScopes?: string[];
   returnPath?: string;
 }) {
+  await assertLockdownAllows(admin(), input.ownerId, "connector_write");
   const provider = OAUTH_PROVIDERS[input.providerId];
   const clientId = process.env[provider.clientIdEnv];
   if (!clientId || !process.env[provider.clientSecretEnv])
@@ -100,6 +102,9 @@ export async function completeOAuth(input: {
   if (record.nonce_hash !== (await sha256(input.browserNonce))) {
     throw new Error("invalid_oauth_browser_binding");
   }
+  // Close the start/callback race: enabling Lockdown Mode while the provider
+  // consent page is open must prevent token exchange and credential storage.
+  await assertLockdownAllows(db, record.owner_id, "connector_write");
   const consumed = await db
     .from("integration_oauth_states")
     .update({ consumed_at: new Date().toISOString() })

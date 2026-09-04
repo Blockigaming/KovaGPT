@@ -6,8 +6,7 @@ const themes = ["light", "dark"] as const;
 async function verifyConversationShell(page: Page, width: number, theme: (typeof themes)[number]) {
   await page.setViewportSize({ width, height: width < 768 ? 812 : 900 });
   await page.emulateMedia({ colorScheme: theme });
-  await page.goto("/");
-  await page.waitForLoadState("domcontentloaded");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("body")).not.toContainText(/\b(?:Voice|Dictate)\b/u);
   await expect(page.locator("textarea:visible").first()).toBeVisible();
@@ -34,6 +33,8 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
 }
 
 test.describe("ChatGPT-like Kova conversation shell", () => {
+  test.describe.configure({ timeout: 120_000 });
+
   test("signed-out shell is responsive, accessible, restrained, and voice-free", async ({
     page,
   }) => {

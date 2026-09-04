@@ -17,25 +17,7 @@ import {
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 import { modelForRole } from "@/lib/ai/model-router.server";
 import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
-
-// Per-IP sliding window rate limit; keeps this public AI endpoint from
-// becoming an unlimited free LLM call. Lower cap than /api/title since
-// there's no signal of legitimate use.
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const bucket = rateLimitBuckets.get(ip);
-  if (!bucket || bucket.resetAt < now) {
-    rateLimitBuckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (bucket.count >= RATE_LIMIT_MAX) return false;
-  bucket.count += 1;
-  return true;
-}
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 
 export const Route = createFileRoute("/api/project-suggest")({
   server: {
@@ -49,14 +31,27 @@ export const Route = createFileRoute("/api/project-suggest")({
           const maintenance = await assertFeatureEnabled(auth, "chat");
           if (maintenance) return maintenance;
 
-          const ip =
-            request.headers.get("cf-connecting-ip") ??
-            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-            "unknown";
-          if (!checkRateLimit(ip)) {
+          const rateLimit = await consumeApplicationRateLimit({
+            identity: `user:${auth.userId}`,
+            action: "project_suggestion",
+            limit: 10,
+            windowSeconds: 3600,
+          });
+          if (!rateLimit.allowed) {
             return Response.json(
-              { error: "Too many suggestion requests. Try again later." },
-              { status: 429 },
+              {
+                error:
+                  rateLimit.status === "limited"
+                    ? "Too many suggestion requests. Try again later."
+                    : "Suggestion protection is temporarily unavailable.",
+              },
+              {
+                status: rateLimit.status === "limited" ? 429 : 503,
+                headers: {
+                  "Cache-Control": "no-store",
+                  "Retry-After": String(rateLimit.retryAfter),
+                },
+              },
             );
           }
           const contentLength = Number(request.headers.get("content-length") ?? "0");

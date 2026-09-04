@@ -150,7 +150,7 @@ function ResetPassword() {
           </div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Set a new password</h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-            <NovaLogo className="w-4 h-4" /> KovaGPT account recovery
+            <NovaLogo decorative className="w-4 h-4" /> KovaGPT account recovery
           </p>
         </div>
 

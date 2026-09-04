@@ -13,6 +13,7 @@ import {
   readAgentJsonRequest,
   type AgentProjectAuthorizationClient,
 } from "@/agents/agent-ingress.server.mjs";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 const TEAM_CREATE_ERRORS = new Set([
   "agent_plan_required",
@@ -63,6 +64,8 @@ export const Route = createFileRoute("/api/agents/teams")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const lockdown = await enforceLockdownCapability(auth.supabaseAdmin, auth.userId, "agent");
+        if (lockdown) return lockdown;
         let body: ReturnType<typeof parseAgentTeamCreatePayload>;
         try {
           body = parseAgentTeamCreatePayload(
@@ -114,6 +117,14 @@ export const Route = createFileRoute("/api/agents/teams")({
           );
         } catch (error) {
           return agentRequestError(error, "invalid_agent_control");
+        }
+        if (["resume", "retry", "approve"].includes(body.command)) {
+          const lockdown = await enforceLockdownCapability(
+            auth.supabaseAdmin,
+            auth.userId,
+            "agent",
+          );
+          if (lockdown) return lockdown;
         }
         try {
           return Response.json(

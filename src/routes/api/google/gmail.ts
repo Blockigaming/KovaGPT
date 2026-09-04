@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/api-auth.server";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
@@ -51,7 +52,13 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "gmail", 60);
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          "connector_read",
+        );
+        if (lockdown) return lockdown;
+        const limited = await enforceGoogleRateLimit(auth.userId, "gmail", 60);
         if (limited) return limited;
         let body: JsonRecord;
         try {

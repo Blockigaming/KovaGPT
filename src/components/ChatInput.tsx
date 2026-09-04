@@ -118,6 +118,7 @@ export function ChatInput({
   recentLibraryLoading = false,
   recentLibraryError = null,
   onRecentLibraryRetry,
+  surface = "conversation",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -149,6 +150,8 @@ export function ChatInput({
   recentLibraryLoading?: boolean;
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
+  /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
+  surface?: "empty" | "conversation";
 }) {
   const { isDesktop, interaction } = useLayout();
   const { user } = useUser();
@@ -593,7 +596,7 @@ export function ChatInput({
 
   const renderComposerActions = (mobile: boolean) => {
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-      mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
+      mobile ? "min-h-14 px-4 py-3 text-base" : "min-h-11 px-3 py-2.5 text-sm"
     }`;
     const iconClass = mobile
       ? "h-5 w-5 shrink-0 text-muted-foreground"
@@ -671,7 +674,7 @@ export function ChatInput({
         <div
           key={key}
           aria-disabled="true"
-          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+          className={`kova-composer-locked ${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
         >
           <Icon className={`${iconClass} opacity-70`} />
           <span className="opacity-70">{label}</span>
@@ -718,7 +721,8 @@ export function ChatInput({
 
   return (
     <div
-      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
+      className="kova-chat-input w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
+      data-composer-surface={surface}
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
@@ -732,13 +736,6 @@ export function ChatInput({
         ) : null}
         <span className="sr-only">Drop files to attach</span>
         <div
-          style={{
-            outlineWidth: "2px",
-            outlineStyle: "solid",
-            outlineColor: "currentColor",
-            outlineOffset: "2px",
-          }}
-
           tabIndex={-1}
           className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}
         >
@@ -883,7 +880,11 @@ export function ChatInput({
                 <div
                   role="dialog"
                   aria-label="Add files, tools, or prompts"
-                  className="kova-glass absolute bottom-11 left-0 z-50 max-h-[70vh] min-w-[240px] overflow-y-auto rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
+                  className={`kova-composer-menu kova-glass absolute left-0 z-50 max-h-[70vh] min-w-[280px] overflow-y-auto rounded-2xl p-1.5 animate-in fade-in ${
+                    surface === "empty"
+                      ? "top-[calc(100%+1.25rem)] origin-top-left"
+                      : "bottom-[calc(100%+1.25rem)] origin-bottom-left"
+                  }`}
                 >
                   {renderComposerActions(false)}
                 </div>

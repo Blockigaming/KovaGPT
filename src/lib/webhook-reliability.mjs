@@ -54,12 +54,7 @@ function stripeTimestamp(value) {
 
 async function subscriptionRow(subscription, eventType, resolvePriceId) {
   const items = subscription?.items;
-  if (
-    !items ||
-    items.has_more !== false ||
-    !Array.isArray(items.data) ||
-    items.data.length !== 1
-  ) {
+  if (!items || items.has_more !== false || !Array.isArray(items.data) || items.data.length !== 1) {
     fail("authoritative_subscription_items_ambiguous");
   }
   const item = items.data[0];
@@ -114,9 +109,7 @@ const invoiceEvents = new Set([
 
 function correlationUuid(value) {
   return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value)
     ? value
     : null;
 }
@@ -201,9 +194,7 @@ export async function processStripeEvent({
       _object_id: stringId(object),
       _customer_id: stringId(object?.customer),
       _invoice_id: event.type.startsWith("invoice.") ? stringId(object) : null,
-      _checkout_session_id: event.type.startsWith("checkout.session.")
-        ? stringId(object)
-        : null,
+      _checkout_session_id: event.type.startsWith("checkout.session.") ? stringId(object) : null,
       _lease_seconds: 90,
     }),
   );

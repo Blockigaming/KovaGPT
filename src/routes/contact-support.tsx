@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
 import { LegalArticle } from "@/components/LegalArticle";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/contact-support")({
 
 function ContactSupportPage() {
   return (
-    <>
+    <PublicShell>
       <LegalArticle>
         <h1>Contact Support</h1>
         <p>Need help with KovaGPT? We're here to help.</p>
@@ -105,7 +105,6 @@ function ContactSupportPage() {
           <Link to="/">← Back to KovaGPT</Link>
         </p>
       </LegalArticle>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

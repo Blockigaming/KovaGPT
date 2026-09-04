@@ -94,13 +94,10 @@ async function createDatabase({ beforeMigration } = {}) {
 }
 
 async function tier(database, targetUserId = userId, effective = false) {
-  const functionName = effective
-    ? "effective_user_plan_tier"
-    : "billing_user_plan_tier";
-  const result = await database.query(
-    `SELECT public.${functionName}($1::uuid) AS tier`,
-    [targetUserId],
-  );
+  const functionName = effective ? "effective_user_plan_tier" : "billing_user_plan_tier";
+  const result = await database.query(`SELECT public.${functionName}($1::uuid) AS tier`, [
+    targetUserId,
+  ]);
   return result.rows[0]?.tier;
 }
 
@@ -137,13 +134,7 @@ async function addSubscription(
        now() + interval '30 days',
        $5
      )`,
-    [
-      targetUserId,
-      subscriptionId ?? `sub_${crypto.randomUUID()}`,
-      priceId,
-      status,
-      environment,
-    ],
+    [targetUserId, subscriptionId ?? `sub_${crypto.randomUUID()}`, priceId, status, environment],
   );
 }
 
@@ -305,12 +296,8 @@ test("family member summary returns own and effective tiers from one resolver", 
     assert.equal(await tier(database, memberId), "free");
     assert.equal(await tier(database, memberId, true), "pro");
 
-    await database.query("INSERT INTO auth.test_session (user_id) VALUES ($1::uuid)", [
-      memberId,
-    ]);
-    const current = await database.query(
-      "SELECT public.current_subscription_summary() AS summary",
-    );
+    await database.query("INSERT INTO auth.test_session (user_id) VALUES ($1::uuid)", [memberId]);
+    const current = await database.query("SELECT public.current_subscription_summary() AS summary");
     assert.equal(current.rows[0].summary.tier, "free");
     assert.equal(current.rows[0].summary.effectiveTier, "pro");
     assert.equal(current.rows[0].summary.inherited, true);
@@ -399,9 +386,7 @@ test("arbitrary-user resolvers remain service-role-only", async () => {
       priceId: plusPriceId,
       subscriptionId: "sub_compatibility",
     });
-    await database.query("INSERT INTO auth.test_session (user_id) VALUES ($1::uuid)", [
-      userId,
-    ]);
+    await database.query("INSERT INTO auth.test_session (user_id) VALUES ($1::uuid)", [userId]);
     const compatibility = await database.query(
       "SELECT public.user_plan_tier($1::uuid) AS own, public.user_plan_tier($2::uuid) AS other",
       [userId, ownerId],

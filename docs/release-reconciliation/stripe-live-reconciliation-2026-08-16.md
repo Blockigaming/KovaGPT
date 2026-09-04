@@ -1,5 +1,7 @@
 # Stripe live catalog reconciliation — August 16, 2026
 
+> **Historical and superseded (2026-09-03):** This dated read-only snapshot is retained for audit history. Its prices, metadata, webhook state, and recommended actions are not current billing or release guidance. No runtime code depends on the historical metadata described below.
+
 Read-only inspection of the connected Blocera, LLC Stripe account found the following KovaGPT live-mode records. No customer, subscription, product, price, payment, or charge was changed.
 
 ## KovaGPT Plus

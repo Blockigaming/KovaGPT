@@ -7,6 +7,7 @@ import {
   decryptSecret,
   listGitHubAppInstallations,
 } from "@/lib/github-oauth.server";
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mercury tables are available after generated types refresh. */
 export type GitHubManagement = {
   configured: boolean;
@@ -71,6 +72,7 @@ export const getGitHubManagement = createServerFn({ method: "GET" })
 export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await assertLockdownAllows(supabaseAdmin, context.userId, "connector_read");
     // The App-JWT installation list is deployment-wide. Bind an installation
     // only after proving that one of this KovaGPT owner's OAuth identities is
     // either the matching personal account or an active organization admin.
@@ -176,6 +178,9 @@ export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
       .parse(value),
   )
   .handler(async ({ data, context }) => {
+    if (data.granted) {
+      await assertLockdownAllows(supabaseAdmin, context.userId, "connector_write");
+    }
     if (!data.granted && data.repositoryIds.length > 1 && !data.confirmed)
       throw new Error("Bulk revocation requires confirmation");
     const owned = await (supabaseAdmin as any)
@@ -222,10 +227,11 @@ export const disconnectGitHub = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId)
       .single();
     if (account.error) throw new Error("GitHub account not found");
-    await (supabaseAdmin as any).rpc("disconnect_github_account", {
+    const disconnect = await (context.supabase as any).rpc("disconnect_github_account", {
       p_account_id: data.accountId,
       p_remove_data: data.removeData,
     });
+    if (disconnect.error) throw new Error("Unable to disconnect GitHub account");
     if (data.removeData)
       await (supabaseAdmin as any)
         .from("github_sync_records")

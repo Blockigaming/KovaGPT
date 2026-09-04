@@ -3,7 +3,6 @@ import {
   Body,
   Button,
   Container,
-  Head,
   Heading,
   Html,
   Link,
@@ -11,11 +10,10 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { BrandFooter, BrandHeader, styles } from "./_brand";
+import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 
 interface EmailChangeEmailProps {
   siteName: string;
-  // oldEmail is the user's current address; newEmail is the requested one.
   oldEmail: string;
   newEmail: string;
   confirmationUrl: string;
@@ -28,23 +26,30 @@ export const EmailChangeEmail = ({
   confirmationUrl,
 }: EmailChangeEmailProps) => (
   <Html lang="en" dir="ltr">
-    <Head />
+    <EmailHead />
     <Preview>Confirm your new email for {siteName}</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
+    <Body className="kova-email-body" style={styles.main}>
+      <Container className="kova-email-container" style={styles.container}>
         <BrandHeader />
-        <Heading style={styles.h1}>Confirm your new email</Heading>
-        <Text style={styles.text}>
-          You asked to change your {siteName} email from {oldEmail} to {newEmail}. Confirm the
+        <Heading className="kova-heading" style={styles.h1}>
+          Confirm your new email
+        </Heading>
+        <Text className="kova-text" style={styles.text}>
+          You requested to change your {siteName} email from {oldEmail} to {newEmail}. Confirm the
           change below.
         </Text>
         <Section style={styles.buttonWrap}>
-          <Button style={styles.button} href={confirmationUrl}>
+          <Button className="kova-button" style={styles.button} href={confirmationUrl}>
             Confirm new email
           </Button>
         </Section>
-        <Text style={styles.fallbackLabel}>Or paste this link in your browser:</Text>
-        <Link style={styles.fallbackLink} href={confirmationUrl}>
+        <Text className="kova-text" style={styles.text}>
+          If you did not request this change, do not confirm it and contact Kova support.
+        </Text>
+        <Text className="kova-muted" style={styles.fallbackLabel}>
+          If the button does not work, copy and paste this link:
+        </Text>
+        <Link className="kova-link" style={styles.fallbackLink} href={confirmationUrl}>
           {confirmationUrl}
         </Link>
         <BrandFooter />

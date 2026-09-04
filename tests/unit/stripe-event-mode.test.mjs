@@ -11,10 +11,7 @@ test("signed Stripe Event mode must exactly match the selected environment", asy
   assert.equal(stripeEventMatchesEnvironment(true, "sandbox"), false);
   assert.equal(stripeEventMatchesEnvironment(undefined, "live"), false);
 
-  const source = await readFile(
-    new URL("../../src/lib/stripe.server.ts", import.meta.url),
-    "utf8",
-  );
+  const source = await readFile(new URL("../../src/lib/stripe.server.ts", import.meta.url), "utf8");
   assert.match(source, /livemode: boolean/);
   assert.match(source, /stripeEventMatchesEnvironment\(event\.livemode, env\)/);
   assert.match(

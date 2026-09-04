@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/api-auth.server";
 import { getGoogleConnectionHealth } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { safeConnectorError } from "@/lib/connectors.server";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
 export const Route = createFileRoute("/api/google/status")({
   server: {
@@ -10,7 +11,13 @@ export const Route = createFileRoute("/api/google/status")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const limited = enforceGoogleRateLimit(auth.userId, "status", 30);
+        const lockdown = await enforceLockdownCapability(
+          auth.supabaseAdmin,
+          auth.userId,
+          "connector_read",
+        );
+        if (lockdown) return lockdown;
+        const limited = await enforceGoogleRateLimit(auth.userId, "status", 30);
         if (limited) return limited;
         try {
           return Response.json(await getGoogleConnectionHealth(auth.userId));

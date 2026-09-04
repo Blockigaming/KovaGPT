@@ -85,13 +85,25 @@ test("library workspace supports filters, sorting, view preference, safe actions
     "SortId",
     "Grid view",
     "List view",
-    "Storage totals require backend usage records",
     "Delete this Library item",
     "loadGuestLibrary",
     "deleteLibraryItem",
   ]) {
     assert.match(library, new RegExp(marker));
   }
+  assert.match(
+    library,
+    /const storageKnown = items\.some\(\(item\) => typeof item\.file_size === "number"\)/,
+  );
+  assert.match(
+    library,
+    /const storageTotal = storageKnown\s+\? items\.reduce\([\s\S]*?\)\s+: null/,
+  );
+  assert.match(
+    library,
+    /storageTotal !== null\s+\? `Known file storage: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
+  );
+  assert.doesNotMatch(library, /Storage totals require backend usage records/);
 });
 
 test("composer can reuse recent authorized Library files without duplicate upload", () => {
