@@ -2750,26 +2750,30 @@ function ShortcutsEditor({
       if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
-      // Ignore lone modifiers.
+      // Ignore lone modifiers until the user presses a complete binding.
       if (["Shift", "Control", "Meta", "Alt"].includes(e.key)) return;
-      const parts: string[] = [];
-      if (e.metaKey || e.ctrlKey) parts.push("Mod");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      parts.push(key);
-      const combo = parts.join("+");
+      setRecordingId(null);
       const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
       if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const combo = mod.shortcutComboFromKeyboardEvent(e);
+      if (!combo) {
+        toast.error("That key can't be used for a shortcut.");
+        return;
+      }
+      const conflict = visibleList.find(
+        (shortcut) => shortcut.id !== recordingId && shortcut.combo === combo,
+      );
+      if (conflict) {
+        toast.error(`That shortcut is already assigned to ${conflict.label}.`);
+        return;
+      }
       const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
       if (!mod.saveShortcuts(userKey, next)) {
-        setRecordingId(null);
         toast.error("Shortcut couldn't be saved in this browser.");
         return;
       }
       setList(next);
-      setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
