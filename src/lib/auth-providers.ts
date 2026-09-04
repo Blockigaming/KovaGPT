@@ -46,7 +46,9 @@ type SettingsPayload = {
   external?: Record<string, unknown>;
   disable_signup?: unknown;
   mailer_autoconfirm?: unknown;
+  /** Public GoTrue settings uses plural; singular is a legacy/management compatibility alias. */
   passkeys_enabled?: unknown;
+  passkey_enabled?: unknown;
 };
 
 function bool(value: unknown): boolean {
@@ -69,7 +71,7 @@ export function parseAuthSettings(payload: unknown): AuthProviderAvailability {
     azure: bool(external["azure"]),
     github: bool(external["github"]),
     email: bool(external["email"]),
-    passkeys: bool(data.passkeys_enabled),
+    passkeys: bool(data.passkeys_enabled) || bool(data.passkey_enabled),
     signupEnabled: data.disable_signup !== true,
     autoConfirmEmail: bool(data.mailer_autoconfirm),
   };
