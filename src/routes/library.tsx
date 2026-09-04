@@ -260,9 +260,9 @@ function LibraryPage() {
     setFilter("all");
     setSort("newest");
     setPreviewItem(null);
-    setFolderScope("all");
     setSelected([]);
     setLoadError(null);
+    setFolderScope("all");
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
       setFavoritesPrincipal(null);
