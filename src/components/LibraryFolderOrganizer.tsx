@@ -35,7 +35,7 @@ function folderDepth(folderId: string, folders: LibraryFolder[]): number {
   while (current && !seen.has(current.id) && depth < MAX_FOLDER_DEPTH + 1) {
     seen.add(current.id);
     depth += 1;
-    const parentId = current.parentId;
+    const parentId: string | null = current.parentId;
     current = parentId ? folders.find((folder) => folder.id === parentId) : undefined;
   }
   return depth;
