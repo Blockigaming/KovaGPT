@@ -7,6 +7,8 @@ ALTER TABLE public.project_files
   ADD COLUMN IF NOT EXISTS content_sha256 text,
   ADD COLUMN IF NOT EXISTS idempotency_key uuid,
   ADD COLUMN IF NOT EXISTS storage_owner_id uuid,
+  ADD COLUMN IF NOT EXISTS upload_attempt_id uuid,
+  ADD COLUMN IF NOT EXISTS upload_lease_until timestamptz,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 ALTER TABLE public.project_files
@@ -129,6 +131,7 @@ CREATE OR REPLACE FUNCTION public.reserve_project_file_upload(
   p_extension text,
   p_content_sha256 text,
   p_idempotency_key uuid,
+  p_attempt_id uuid,
   p_file_cap integer
 )
 RETURNS jsonb
@@ -147,6 +150,7 @@ BEGIN
   IF p_user_id IS NULL
     OR p_project_id IS NULL
     OR p_idempotency_key IS NULL
+    OR p_attempt_id IS NULL
     OR p_name IS NULL
     OR char_length(p_name) NOT BETWEEN 1 AND 180
     OR p_mime_type IS NULL
@@ -190,13 +194,29 @@ BEGIN
     THEN
       RAISE EXCEPTION USING ERRCODE = '23505', MESSAGE = 'project_file_idempotency_conflict';
     END IF;
-    IF existing.status <> 'ready' THEN
-      UPDATE public.project_files
-      SET status = 'pending', updated_at = now()
-      WHERE id = existing.id
-      RETURNING * INTO existing;
+    IF existing.status = 'ready' THEN
+      RETURN to_jsonb(existing) || jsonb_build_object(
+        'reservationCreated', false,
+        'inProgress', false
+      );
     END IF;
-    RETURN to_jsonb(existing);
+    IF existing.status = 'pending' AND existing.upload_lease_until > now() THEN
+      RETURN to_jsonb(existing) || jsonb_build_object(
+        'reservationCreated', false,
+        'inProgress', true
+      );
+    END IF;
+    UPDATE public.project_files
+    SET status = 'pending',
+        upload_attempt_id = p_attempt_id,
+        upload_lease_until = now() + interval '2 minutes',
+        updated_at = now()
+    WHERE id = existing.id
+    RETURNING * INTO existing;
+    RETURN to_jsonb(existing) || jsonb_build_object(
+      'reservationCreated', false,
+      'inProgress', false
+    );
   END IF;
 
   SELECT count(*)
@@ -214,24 +234,71 @@ BEGIN
 
   INSERT INTO public.project_files (
     id, project_id, name, storage_path, mime_type, size_bytes, kind,
-    uploaded_by, storage_owner_id, status, content_sha256, idempotency_key
+    uploaded_by, storage_owner_id, status, content_sha256, idempotency_key,
+    upload_attempt_id, upload_lease_until
   )
   VALUES (
     file_id, p_project_id, p_name, canonical_path, p_mime_type, p_size_bytes, p_kind,
-    p_user_id, p_user_id, 'pending', p_content_sha256, p_idempotency_key
+    p_user_id, p_user_id, 'pending', p_content_sha256, p_idempotency_key,
+    p_attempt_id, now() + interval '2 minutes'
   )
   RETURNING * INTO existing;
 
-  RETURN to_jsonb(existing);
+  RETURN to_jsonb(existing) || jsonb_build_object(
+    'reservationCreated', true,
+    'inProgress', false
+  );
 END
-$$;
+$;
 
 REVOKE ALL ON FUNCTION public.reserve_project_file_upload(
-  uuid, uuid, text, text, bigint, text, text, text, uuid, integer
+  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reserve_project_file_upload(
-  uuid, uuid, text, text, bigint, text, text, text, uuid, integer
+  uuid, uuid, text, text, bigint, text, text, text, uuid, uuid, integer
 ) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.finalize_project_file_delete(
+  p_user_id uuid,
+  p_file_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+DECLARE
+  target public.project_files;
+BEGIN
+  SELECT pf.*
+  INTO target
+  FROM public.project_files AS pf
+  JOIN public.project_members AS pm
+    ON pm.project_id = pf.project_id
+   AND pm.user_id = p_user_id
+   AND pm.role IN ('owner', 'editor')
+  WHERE pf.id = p_file_id
+  FOR UPDATE OF pf;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('deleted', false);
+  END IF;
+
+  DELETE FROM public.project_files WHERE id = target.id;
+  IF target.storage_owner_id IS NOT NULL AND target.size_bytes > 0 THEN
+    UPDATE public.user_storage
+    SET bytes_used = greatest(0, bytes_used - target.size_bytes), updated_at = now()
+    WHERE user_id = target.storage_owner_id;
+  END IF;
+
+  RETURN jsonb_build_object('deleted', true, 'projectId', target.project_id);
+END
+$;
+
+REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
+  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.release_project_storage_bytes(
   p_user_id uuid,
