@@ -49,10 +49,10 @@ test.describe("mobile shell UI truth", () => {
     expect(openerHandle).not.toBeNull();
     await page.keyboard.press("Control+K");
 
-    const palette = page.getByRole("dialog", { name: "Search chats and actions" });
+    const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
     await expect(palette).toBeVisible();
     await expect(
-      palette.getByRole("combobox", { name: "Search commands and chats" }),
+      palette.getByRole("combobox", { name: "Search workspace, commands, and chats" }),
     ).toBeFocused();
     const paletteBox = await palette.boundingBox();
     expect(paletteBox).not.toBeNull();

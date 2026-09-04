@@ -55,6 +55,40 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
 });
 
+test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {
+  const [client, providers, support, dialog, panel] = await Promise.all([
+    read("src/integrations/supabase/client.ts"),
+    read("src/lib/auth-providers.ts"),
+    read("src/lib/passkey-support.ts"),
+    read("src/components/auth/AuthDialog.tsx"),
+    read("src/components/PasskeyPanel.tsx"),
+  ]);
+  assert.match(client, /experimental: \{ passkey: true \}/);
+  assert.match(providers, /passkeys_enabled/);
+  assert.match(providers, /passkeys: bool\(data\.passkeys_enabled\)/);
+  assert.match(providers, /bool\(data\.passkey_enabled\)/);
+  assert.match(support, /typeof navigator\.credentials\?\.create === "function"/);
+  assert.match(support, /typeof navigator\.credentials\?\.get === "function"/);
+  assert.match(dialog, /providers\.resolved[\s\S]*providers\.passkeys/);
+  assert.match(dialog, /auth\.signInWithPasskey\(\)/);
+  assert.match(dialog, /browserSupportsPasskeys\(\)/);
+  assert.match(panel, /auth\.registerPasskey\(\)/);
+  assert.match(panel, /auth\.passkey\.list\(\)/);
+  assert.match(panel, /auth\.passkey\.update\(/);
+  assert.match(panel, /auth\.passkey\.delete\(/);
+  assert.match(panel, /providers\.resolved && providers\.passkeys/);
+  assert.match(panel, /const canLoad = enabled;/);
+  assert.doesNotMatch(panel, /const canLoad = enabled && supported/);
+  assert.match(panel, /you can still review, rename, or remove registered/);
+  assert.match(panel, /disabled=\{Boolean\(busy\) \|\| !supported\}/);
+  assert.match(panel, /const mutationInFlight = useRef\(false\)/);
+  assert.match(panel, /if \(mutationInFlight\.current\) return false/);
+  assert.match(panel, /if \(!beginMutation\(editing\.id\)\) return/);
+  assert.match(panel, /if \(!beginMutation\(id\)\) return/);
+  assert.doesNotMatch(panel, /disabled=\{itemBusy \|\| !editing\.name\.trim\(\)\}/);
+  assert.doesNotMatch(panel, /toast\.error\([^\n]*error\.message/);
+});
+
 test("recovery and OAuth flows avoid open redirects, query-token consumption, and ordinary-session password changes", async () => {
   const [oauth, reset, callback] = await Promise.all([
     read("src/lib/oauth-session.ts"),

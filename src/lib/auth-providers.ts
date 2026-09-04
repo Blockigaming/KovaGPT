@@ -20,6 +20,8 @@ export type AuthProviderAvailability = {
   github: boolean;
   /** Email/password + email OTP surface. */
   email: boolean;
+  /** Passwordless WebAuthn reported by this deployment. */
+  passkeys: boolean;
   /** New signups are accepted at all. */
   signupEnabled: boolean;
   /** Confirmation email is skipped by the deployment (auto-confirm). */
@@ -35,6 +37,7 @@ export const UNRESOLVED_AUTH_PROVIDERS: AuthProviderAvailability = {
   azure: false,
   github: false,
   email: true,
+  passkeys: false,
   signupEnabled: true,
   autoConfirmEmail: false,
 };
@@ -43,6 +46,9 @@ type SettingsPayload = {
   external?: Record<string, unknown>;
   disable_signup?: unknown;
   mailer_autoconfirm?: unknown;
+  /** Public GoTrue settings uses plural; singular is a legacy/management compatibility alias. */
+  passkeys_enabled?: unknown;
+  passkey_enabled?: unknown;
 };
 
 function bool(value: unknown): boolean {
@@ -65,6 +71,7 @@ export function parseAuthSettings(payload: unknown): AuthProviderAvailability {
     azure: bool(external["azure"]),
     github: bool(external["github"]),
     email: bool(external["email"]),
+    passkeys: bool(data.passkeys_enabled) || bool(data.passkey_enabled),
     signupEnabled: data.disable_signup !== true,
     autoConfirmEmail: bool(data.mailer_autoconfirm),
   };
