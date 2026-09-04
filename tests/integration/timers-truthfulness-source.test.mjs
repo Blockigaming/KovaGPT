@@ -10,7 +10,10 @@ const timerStore = read("src/lib/timers.ts");
 
 test("the timer launcher is reachable, responsive, and exposes usable touch targets", () => {
   assert.doesNotMatch(widget, /visibleItems\.length === 0 && !open/);
-  assert.match(widget, /bottom-\[max\(1rem,var\(--safe-bottom\)\)\]/);
+  assert.match(widget, /lg:bottom-\[max\(1rem,var\(--safe-bottom\)\)\]/);
+  assert.match(widget, /top-\[calc\(4rem\+var\(--safe-top\)\)\]/);
+  assert.match(widget, /flex-col-reverse/);
+  assert.match(widget, /lg:flex-col/);
   assert.match(widget, /left-\[max\(1rem,var\(--safe-left\)\)\]/);
   assert.match(widget, /right-\[max\(1rem,var\(--safe-right\)\)\]/);
   assert.match(widget, /sm:w-72/);
@@ -21,8 +24,12 @@ test("the timer launcher is reachable, responsive, and exposes usable touch targ
 test("due timers are ordered and cannot repeatedly fire when storage is unavailable", () => {
   assert.match(widget, /\.sort\(\(a, b\) => a\.fireAt - b\.fireAt\)/);
   assert.match(widget, /notifiedIdsRef/);
-  assert.match(widget, /notifiedIdsRef\.current\.has\(timer\.id\)/);
+  assert.ok(
+    (widget.match(/!notifiedIdsRef\.current\.has\(timer\.id\)/g) ?? []).length >= 2,
+  );
   assert.match(widget, /\{ \.\.\.timer, fired: true \}/);
+  assert.match(widget, /Loading timers/);
+  assert.ok((widget.match(/disabled=\{!ready\}/g) ?? []).length >= 2);
   assert.match(widget, /The timer could not be saved in this browser/);
   assert.match(widget, /The timer could not be removed from this browser/);
 });
@@ -34,10 +41,9 @@ test("timer persistence rejects malformed records and reports failed writes", ()
   assert.match(timerStore, /function write\([^)]*\): boolean/);
   assert.match(timerStore, /if \(!storage\) return false/);
   assert.match(timerStore, /\): TimerItem \| null/);
-  assert.equal(
-    (timerStore.match(/if \(current\.length >= MAX_TIMER_ITEMS\) return null;/g) ?? []).length,
-    2,
-  );
+  const capGuards =
+    timerStore.match(/if \(current\.length >= MAX_TIMER_ITEMS\) return null;/g) ?? [];
+  assert.equal(capGuards.length, 2);
   assert.match(
     timerStore,
     /return write\(userKey, \[\.\.\.current, item\]\) \? item : null/,
