@@ -17,7 +17,7 @@ test("the timer launcher is reachable, responsive, and exposes usable touch targ
   assert.match(widget, /left-\[max\(1rem,var\(--safe-left\)\)\]/);
   assert.match(widget, /right-\[max\(1rem,var\(--safe-right\)\)\]/);
   assert.match(widget, /sm:w-72/);
-  assert.match(widget, /max-h-\\[calc\\(100dvh-8rem-var\\(--safe-top\\)-var\\(--safe-bottom\\)\\)\\]/);
+  assert.match(widget, /max-h-\[calc\(100dvh-8rem-var\(--safe-top\)-var\(--safe-bottom\)\)\]/);
   assert.match(widget, /overflow-y-auto/);
   assert.ok((widget.match(/min-h-11/g) ?? []).length >= 4);
   assert.match(widget, /aria-label=\{\`\$\{done \? "Remove" : "Cancel"\} \$\{t\.label\}\`\}/);
