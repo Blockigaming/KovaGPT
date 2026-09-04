@@ -663,9 +663,7 @@ export function CommandPalette({
             );
           })}
 
-          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">
-            Workspace
-          </div>
+          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
           {workspaceStatus === "loading" ? (
             <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
               Searching workspace…
