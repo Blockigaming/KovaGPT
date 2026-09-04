@@ -501,7 +501,13 @@ function GitHubManager() {
         toast.warning("GitHub disconnected, but its current status could not be loaded.");
       }
     } catch {
-      toast.error("GitHub could not be disconnected. Your connection was not changed.");
+      setDisconnectOpen(false);
+      const statusLoaded = await reload(false);
+      toast.error(
+        statusLoaded
+          ? "The disconnect outcome could not be confirmed. Review the current GitHub status before retrying."
+          : "The disconnect outcome and current GitHub status could not be confirmed. Reload before retrying.",
+      );
     } finally {
       setBusyAction(null);
     }
