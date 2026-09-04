@@ -1,0 +1,43 @@
+name: Temporary Project File Repair
+
+on:
+  push:
+    branches:
+      - codex/project-file-security-20260904
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: codex/project-file-security-20260904
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: >-
+          npx prettier --write
+          supabase/migrations/20260904200000_project_file_upload_integrity.sql
+          src/routes/api/project-files.ts
+          src/lib/project-files-policy.mjs
+          tests/unit/project-files-policy.test.mjs
+          tests/integration/project-file-security-source.test.mjs
+      - run: npm run release:manifest
+      - run: npm run release:schema
+      - run: node --test tests/unit/project-files-policy.test.mjs tests/integration/project-file-security-source.test.mjs
+      - name: Commit
+        run: |
+          git diff --check
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add             supabase/migrations/20260904200000_project_file_upload_integrity.sql             src/routes/api/project-files.ts             src/lib/project-files-policy.mjs             tests/unit/project-files-policy.test.mjs             tests/integration/project-file-security-source.test.mjs             release-migrations.json             database-contract.json
+          git commit -m "chore(project-files): format and refresh contracts"
+          git push origin HEAD:codex/project-file-security-20260904
