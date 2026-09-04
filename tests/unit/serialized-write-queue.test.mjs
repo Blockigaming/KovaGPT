@@ -75,7 +75,7 @@ test("snapshot queue preserves an A-B-A revert while B is in flight", async () =
   assert.deepEqual(writes, ["B", "A"]);
 });
 
-test("snapshot queue re-enqueues B when the effect owning in-flight B was cancelled", async () => {
+test("snapshot queue coalesces B when the effect owning in-flight B was cancelled", async () => {
   const queue = createSerializedSnapshotQueue("A");
   const writes = [];
   let releaseFirst;
@@ -99,9 +99,38 @@ test("snapshot queue re-enqueues B when the effect owning in-flight B was cancel
   await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(writes, ["B"]);
 
+  assert.equal(reconciled, first);
   releaseFirst();
   assert.deepEqual(await Promise.all([first, reconciled]), ["B", "B"]);
-  assert.deepEqual(writes, ["B", "B"]);
+  assert.deepEqual(writes, ["B"]);
+  assert.equal(queue.needsEnqueue("B"), false);
+});
+
+test("snapshot queue writes B again after an intervening C was already queued", async () => {
+  const queue = createSerializedSnapshotQueue("A");
+  const writes = [];
+  let releaseFirst;
+  const firstGate = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+
+  const first = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    await firstGate;
+    return snapshot;
+  });
+  const second = queue.enqueue("C", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+  const final = queue.enqueue("B", async (snapshot) => {
+    writes.push(snapshot);
+    return snapshot;
+  });
+
+  releaseFirst();
+  assert.deepEqual(await Promise.all([first, second, final]), ["B", "C", "B"]);
+  assert.deepEqual(writes, ["B", "C", "B"]);
   assert.equal(queue.needsEnqueue("B"), false);
 });
 
