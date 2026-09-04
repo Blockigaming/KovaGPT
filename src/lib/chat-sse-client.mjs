@@ -29,8 +29,9 @@ async function readWithSignal(reader, signal, idleTimeoutMs) {
     onAbort = () => reject(abortReason(signal));
     signal.addEventListener("abort", onAbort, { once: true });
   });
+  let timeoutId;
   const timedOut = new Promise((_, reject) => {
-    setTimeout(
+    timeoutId = setTimeout(
       () =>
         reject(
           new ChatStreamError(
@@ -45,6 +46,7 @@ async function readWithSignal(reader, signal, idleTimeoutMs) {
   try {
     return await Promise.race([reader.read(), aborted, timedOut]);
   } finally {
+    if (timeoutId) clearTimeout(timeoutId);
     if (onAbort) signal.removeEventListener("abort", onAbort);
   }
 }
