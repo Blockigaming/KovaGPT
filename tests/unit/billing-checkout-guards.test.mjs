@@ -97,7 +97,7 @@ test("every still-active subscription blocks a second Checkout session", async (
     payments,
     "hasStillActiveSubscription",
     ts.ScriptKind.TS,
-    ["isStillActiveSubscription"],
+    ["subscriptionWindowState"],
   );
   const now = Date.parse("2026-09-03T12:00:00.000Z");
   const future = "2026-10-03T12:00:00.000Z";
@@ -159,7 +159,7 @@ test("subscription summary prefers an older active row over a newer expired row"
     payments,
     "selectSubscriptionSummaryRow",
     ts.ScriptKind.TS,
-    ["isStillActiveSubscription"],
+    ["subscriptionWindowState", "hasVerifiedSubscriptionAccess"],
   );
   const now = Date.parse("2026-09-03T12:00:00.000Z");
   const expiredNewest = {
@@ -176,8 +176,21 @@ test("subscription summary prefers an older active row over a newer expired row"
   assert.equal(selectSummaryRow([expiredNewest], now), expiredNewest);
   assert.equal(selectSummaryRow([], now), null);
 
+  const hasVerifiedAccess = loadPureFunction(
+    payments,
+    "hasVerifiedSubscriptionAccess",
+    ts.ScriptKind.TS,
+    ["subscriptionWindowState"],
+  );
+  assert.equal(
+    hasVerifiedAccess({ status: "active", current_period_end: "invalid-date" }, now),
+    false,
+    "ambiguous periods must block Checkout without granting paid access",
+  );
+  assert.equal(hasVerifiedAccess(activeOlder, now), true);
+
   const summary = payments.slice(payments.indexOf("export const getSubscriptionSummary"));
   assert.doesNotMatch(summary, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
   assert.match(summary, /selectSubscriptionSummaryRow\(subscriptions, now\)/u);
-  assert.match(summary, /isStillActiveSubscription\(row, now\)/u);
+  assert.match(summary, /hasVerifiedSubscriptionAccess\(row, now\)/u);
 });

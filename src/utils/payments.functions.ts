@@ -15,27 +15,38 @@ type CheckoutSubscriptionRow = {
   current_period_end: string | null;
 };
 
-function isStillActiveSubscription(
+type SubscriptionWindowState = "open" | "closed" | "ambiguous";
+
+function subscriptionWindowState(
   subscription: CheckoutSubscriptionRow,
   now = Date.now(),
-): boolean {
+): SubscriptionWindowState {
   const isPotentiallyCurrent = ["active", "trialing", "past_due", "canceled"].includes(
     subscription.status,
   );
-  if (!isPotentiallyCurrent) return false;
-  if (!subscription.current_period_end) return subscription.status !== "canceled";
+  if (!isPotentiallyCurrent) return "closed";
+  if (!subscription.current_period_end) {
+    return subscription.status === "canceled" ? "closed" : "open";
+  }
   const periodEnd = new Date(subscription.current_period_end).getTime();
-  // Ambiguous current-subscription data fails closed instead of risking a
-  // second subscription. A successfully parsed period is current only while
-  // its access window remains open.
-  return !Number.isFinite(periodEnd) || periodEnd > now;
+  if (!Number.isFinite(periodEnd)) return "ambiguous";
+  return periodEnd > now ? "open" : "closed";
+}
+
+function hasVerifiedSubscriptionAccess(
+  subscription: CheckoutSubscriptionRow,
+  now = Date.now(),
+): boolean {
+  return subscriptionWindowState(subscription, now) === "open";
 }
 
 function hasStillActiveSubscription(
   rows: readonly CheckoutSubscriptionRow[],
   now = Date.now(),
 ): boolean {
-  return rows.some((subscription) => isStillActiveSubscription(subscription, now));
+  // Ambiguous current-subscription data blocks another Checkout session but
+  // cannot grant paid access through the customer-facing summary.
+  return rows.some((subscription) => subscriptionWindowState(subscription, now) !== "closed");
 }
 
 async function resolveOrCreateCustomer(
@@ -242,7 +253,7 @@ function selectSubscriptionSummaryRow(
   now = Date.now(),
 ): SubscriptionSummaryRow | null {
   return (
-    rows.find((subscription) => isStillActiveSubscription(subscription, now)) ?? rows[0] ?? null
+    rows.find((subscription) => hasVerifiedSubscriptionAccess(subscription, now)) ?? rows[0] ?? null
   );
 }
 
@@ -267,7 +278,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const now = Date.now();
     const row = selectSubscriptionSummaryRow(subscriptions, now);
     const priceId = row?.price_id ?? null;
-    const active = !!row && isStillActiveSubscription(row, now);
+    const active = !!row && hasVerifiedSubscriptionAccess(row, now);
     const tier = active ? tierForLookupKey(priceId) : "free";
     return {
       tier,
