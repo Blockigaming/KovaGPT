@@ -72,10 +72,7 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import {
-  ChatPreflightError,
-  createChatPreflightRunner,
-} from "@/lib/chat-preflight.server.mjs";
+import { ChatPreflightError, createChatPreflightRunner } from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -704,14 +701,12 @@ export const Route = createFileRoute("/api/chat")({
             let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
             if (clientTool === "deep_research" && auth) {
               try {
-                authorizedResearchReferences = await preflight.run(
-                  "research_authorization",
-                  () =>
-                    authorizeResearchPersistence({
-                      supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
-                      chatId,
-                      projectId,
-                    }),
+                authorizedResearchReferences = await preflight.run("research_authorization", () =>
+                  authorizeResearchPersistence({
+                    supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
+                    chatId,
+                    projectId,
+                  }),
                 );
               } catch (error) {
                 const authorizationError =
@@ -1941,9 +1936,7 @@ export const Route = createFileRoute("/api/chat")({
                           kind: "error",
                           error: providerFailureMessage.trim(),
                           code: providerFailureCode,
-                          category: providerTimedOut
-                            ? "model_timeout"
-                            : "streaming_interruption",
+                          category: providerTimedOut ? "model_timeout" : "streaming_interruption",
                           retryable: true,
                           status: providerTimedOut ? 504 : 502,
                           request_id: requestId,
