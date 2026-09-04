@@ -33,7 +33,7 @@ test("enabled agent controls use the shared bounded JSON ingress", () => {
     runsSource,
     /readAgentJsonRequest\(\s*request,\s*AGENT_RUN_CONTROL_BODY_LIMIT_BYTES,?\s*\)/,
   );
-   assert.match(
+  assert.match(
     teamsSource,
     /readAgentJsonRequest\(\s*request,\s*AGENT_TEAM_CONTROL_BODY_LIMIT_BYTES,?\s*\)/,
   );
@@ -43,13 +43,12 @@ test("enabled agent controls use the shared bounded JSON ingress", () => {
 
 test("team creation is hard-disabled and cannot leave permanently queued records", () => {
   const post = handlerSlice(teamsSource, "POST", "PATCH");
-  const lockdownAt = post.indexOf("enforceLockdownCapability(");
   const cancelAt = post.indexOf("await request.body?.cancel()");
   const unavailableAt = post.indexOf('error: "agent_team_execution_unavailable"');
 
-  assert.ok(lockdownAt > 0, "account policy must precede the disabled boundary");
-  assert.ok(cancelAt > lockdownAt, "disabled creation must drain the unread request body");
+  assert.ok(cancelAt > 0, "disabled creation must drain the unread request body");
   assert.ok(unavailableAt > cancelAt, "the unavailable response must follow body cancellation");
+  assert.doesNotMatch(post, /enforceLockdownCapability/);
   assert.match(post, /status: 503/);
   assert.match(post, /"Retry-After": "3600"/);
   assert.doesNotMatch(teamsSource, /\bcreateAgentTeamRun\b/);
@@ -97,5 +96,7 @@ test("agent responses do not cache authenticated run data or errors", () => {
   assert.match(teamsSource, /"Cache-Control": "no-store"/);
   assert.match(runsSource, /RUN_CONTROL_ERRORS\.has\(message\)/);
   assert.match(teamsSource, /TEAM_CONTROL_ERRORS\.has\(message\)/);
+  assert.match(teamsSource, /TEAM_CONTROL_CONFLICTS\.has\(message\)/);
+  assert.match(teamsSource, /status: conflict \? 409/);
   assert.match(teamsSource, /agent_team_execution_unavailable/);
 });
