@@ -46,10 +46,7 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
   ]) {
     assert.match(
       chatRoute,
-      new RegExp(
-        `preflight\\.run\\([\\s\\S]{0,120}"${stage}"[\\s\\S]{0,500}required: false`,
-        "u",
-      ),
+      new RegExp(`preflight\\.run\\([\\s\\S]{0,120}"${stage}"[\\s\\S]{0,500}required: false`, "u"),
     );
   }
   assert.match(chatRoute, /\[chat\] preflight stage/u);
