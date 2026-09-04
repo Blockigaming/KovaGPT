@@ -96,6 +96,12 @@ test("Resend delivery reconciliation is signed, replay-safe, and suppression-fir
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.enqueue_tracked_email/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.dead_letter_tracked_email/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.defer_email_retry/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.reconcile_resend_webhook_events_for_send/,
+  );
+  assert.match(migration, /CREATE TRIGGER reconcile_resend_webhook_events_after_send/);
+  assert.match(migration, /last_error_code = 'email_send_log_not_found'/);
   assert.match(migration, /pgmq\.set_vt\(p_queue_name, p_message_id, p_lease_seconds\)/);
   assert.match(migration, /retry_after_until = greatest/);
   assert.match(migration, /pg_advisory_xact_lock/);
