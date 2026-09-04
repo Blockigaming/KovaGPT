@@ -121,7 +121,27 @@ CREATE INDEX IF NOT EXISTS project_files_status_idx
 
 REVOKE INSERT, UPDATE, DELETE ON public.project_files FROM authenticated;
 GRANT SELECT ON public.project_files TO authenticated;
+
+DROP POLICY IF EXISTS "files_select_members" ON public.project_files;
 DROP POLICY IF EXISTS "files_write_editors" ON public.project_files;
+DROP POLICY IF EXISTS "project_files_read" ON public.project_files;
+DROP POLICY IF EXISTS "project_files_write" ON public.project_files;
+DROP POLICY IF EXISTS "project_files_update" ON public.project_files;
+DROP POLICY IF EXISTS "project_files_delete" ON public.project_files;
+
+CREATE POLICY "files_select_members"
+ON public.project_files
+FOR SELECT
+TO authenticated
+USING (
+  status = 'ready'
+  AND EXISTS (
+    SELECT 1
+    FROM public.project_members AS pm
+    WHERE pm.project_id = project_files.project_id
+      AND pm.user_id = auth.uid()
+  )
+);
 
 CREATE OR REPLACE FUNCTION public.reserve_project_file_upload(
   p_user_id uuid,
@@ -244,7 +264,7 @@ BEGIN
   )
   VALUES (
     file_id, p_project_id, p_name, canonical_path, p_mime_type, p_size_bytes, p_kind,
-    p_user_id, p_user_id, 'pending', p_content_sha256, p_idempotency_key,
+    p_user_id, project_owner, 'pending', p_content_sha256, p_idempotency_key,
     p_attempt_id, now() + interval '2 minutes'
   )
   RETURNING * INTO existing;
@@ -367,8 +387,12 @@ USING (
   bucket_id = 'project-files'
   AND EXISTS (
     SELECT 1
-    FROM public.project_members AS pm
-    WHERE pm.project_id::text = (storage.foldername(name))[1]
-      AND pm.user_id = auth.uid()
+    FROM public.project_files AS pf
+    JOIN public.project_members AS pm
+      ON pm.project_id = pf.project_id
+     AND pm.user_id = auth.uid()
+    WHERE pf.storage_path = storage.objects.name
+      AND pf.status = 'ready'
+      AND pf.project_id::text = (storage.foldername(storage.objects.name))[1]
   )
 );
