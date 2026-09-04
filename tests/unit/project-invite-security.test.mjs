@@ -179,10 +179,17 @@ test("only authenticated and service roles receive invite RPC execution", async 
 });
 
 test("application routes resolve through the secure invitation facade", async () => {
-  const [tsconfig, facade, secureInvites] = await Promise.all([
+  const [tsconfig, facade, secureInvites, collaborationMigration] = await Promise.all([
     readFile(new URL("../../tsconfig.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/lib/projects-secure.facade.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/lib/project-invites.functions.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../../supabase/migrations/20260904210000_resend_webhook_integrity.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
   ]);
 
   assert.match(
@@ -192,8 +199,30 @@ test("application routes resolve through the secure invitation facade", async ()
   assert.match(facade, /from "\.\/project-invites\.functions"/u);
   assert.match(secureInvites, /"accept_project_invite"/u);
   assert.match(secureInvites, /"decline_project_invite"/u);
-  assert.match(secureInvites, /status: "pending"/u);
+  assert.match(secureInvites, /buildTransactionalEmail/u);
+  assert.match(secureInvites, /action: "project_invite_email"/u);
+  assert.match(secureInvites, /"create_project_invite_and_enqueue"/u);
   assert.match(secureInvites, /auto_accepted: false/u);
   assert.doesNotMatch(secureInvites, /auth\.admin\.listUsers|existingUserId/u);
   assert.doesNotMatch(secureInvites, /from\("project_members"\).*upsert/su);
+  assert.doesNotMatch(secureInvites, /from\("project_invites"\)[\s\S]*\.upsert/su);
+
+  assert.match(
+    collaborationMigration,
+    /CREATE OR REPLACE FUNCTION public\.create_project_invite_and_enqueue/u,
+  );
+  assert.match(collaborationMigration, /owner_id = p_actor_id/u);
+  assert.match(collaborationMigration, /already_project_member/u);
+  assert.match(
+    collaborationMigration,
+    /INSERT INTO public\.project_invites[\s\S]*public\.enqueue_tracked_email/u,
+  );
+  assert.match(
+    collaborationMigration,
+    /REVOKE ALL ON FUNCTION public\.create_project_invite_and_enqueue[\s\S]*FROM PUBLIC, anon, authenticated/u,
+  );
+  assert.match(
+    collaborationMigration,
+    /GRANT EXECUTE ON FUNCTION public\.create_project_invite_and_enqueue[\s\S]*TO service_role/u,
+  );
 });
