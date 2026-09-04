@@ -462,6 +462,7 @@ export const searchProject = createServerFn({ method: "GET" })
         .from("project_files")
         .select("id, name")
         .eq("project_id", data.project_id)
+        .eq("status", "ready")
         .ilike("name", like)
         .limit(20),
       context.supabase
