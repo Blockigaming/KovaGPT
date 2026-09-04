@@ -145,6 +145,8 @@ test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {
   assert.match(route, /getPendingActionStatus\(auth\.userId, id\)/);
   assert.match(card, /\/api\/chat\/confirm\?action_id=/);
   assert.match(card, /statusJson\.status === "confirmed"/);
+  assert.match(card, /json\.error_code === "completion_persistence_ambiguous"/);
+  assert.match(route, /error_code: result\.error_code/);
   assert.match(card, /status: "uncertain"/);
   assert.match(card, /Check Sent mail before sending again/);
   assert.match(store, /"failed" \| "uncertain"/);
@@ -169,6 +171,7 @@ test("confirmation results fail safely when final persistence is ambiguous", () 
 
   assert.match(executor, /Action already completed\./);
   assert.match(executor, /confirmationPersistError \|\| !confirmationPersisted/);
+  assert.match(executor, /error_code: "completion_persistence_ambiguous"/);
   assert.match(executor, /Google completed the action, but KovaGPT could not verify completion/);
   assert.match(executor, /Google could not confirm whether the action completed/);
   assert.doesNotMatch(executor, /return \{ ok: false, error: msg \}/);
