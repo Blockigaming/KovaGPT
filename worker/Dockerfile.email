@@ -1,0 +1,14 @@
+FROM node:24-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN groupadd --system --gid 10001 kova && \
+    useradd --system --uid 10001 --gid kova --home-dir /app --shell /usr/sbin/nologin kova
+
+COPY --chown=kova:kova worker ./worker
+USER kova
+EXPOSE 8789
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node worker/scripts/email-health-check.mjs
+
+CMD ["node", "worker/src/email-worker.mjs"]
