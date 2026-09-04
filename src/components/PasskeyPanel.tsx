@@ -248,11 +248,7 @@ export function PasskeyPanel() {
                                 onClick={() => void remove(passkey.id)}
                                 disabled={itemBusy}
                               >
-                                {itemBusy ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  "Remove"
-                                )}
+                                {itemBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remove"}
                               </Button>
                               <Button
                                 variant="ghost"
