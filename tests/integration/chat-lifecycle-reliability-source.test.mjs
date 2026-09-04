@@ -61,6 +61,11 @@ test("inline chat attachments consume upload quota but not durable storage quota
   assert.doesNotMatch(chatRoute, /STORAGE_LIMITS_BYTES/u);
 });
 
+test("main chat preserves the plan-limit dialog for authoritative 429 responses", () => {
+  assert.match(homeChat, /err\.status === 429 && \/limit\/i\.test\(raw\)/u);
+  assert.match(homeChat, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
+});
+
 test("all chat clients share strict terminal SSE consumption", () => {
   for (const source of [homeChat, projectChat]) {
     assert.match(source, /consumeChatSse\(/u);
