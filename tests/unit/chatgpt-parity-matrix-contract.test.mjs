@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const spec = readFileSync("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8");
+const authFixture = readFileSync("tests/e2e/authenticated-fixture.ts", "utf8");
 const modelSelectorSpec = readFileSync("tests/e2e/model-selector.spec.ts", "utf8");
 const browserConfig = readFileSync("playwright.browser.config.ts", "utf8");
 const goal = readFileSync("docs/release-reconciliation/chatgpt-parity-target.md", "utf8");
@@ -16,8 +17,8 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
   assert.match(spec, /signed-out shell/u);
   assert.match(spec, /signed-in shell/u);
   assert.match(spec, /installAuthenticatedFixture/u);
-  assert.match(spec, /page\.route\(supabaseRequestPattern/u);
-  assert.match(spec, /url\.pathname === "\/auth\/v1\/user"/u);
+  assert.match(authFixture, /page\.route\(supabaseRequestPattern/u);
+  assert.match(authFixture, /url\.pathname === "\/auth\/v1\/user"/u);
   assert.match(spec, /getByRole\("button", \{ name: "Account menu" \}\)/u);
   assert.doesNotMatch(spec, /KOVA_E2E_SIGNED_IN/u);
   assert.doesNotMatch(spec, /authenticated storage state/u);
@@ -26,8 +27,12 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
   }
 });
 
-test("required model-selector coverage cannot silently skip an absent control", () => {
-  assert.match(modelSelectorSpec, /primary chat composer must expose its truthful model selector/u);
+test("required model-selector coverage uses an isolated authenticated fixture and cannot skip", () => {
+  assert.match(
+    modelSelectorSpec,
+    /authenticated primary chat composer must expose its truthful model selector/u,
+  );
+  assert.match(modelSelectorSpec, /installAuthenticatedFixture\(page\)/u);
   assert.doesNotMatch(modelSelectorSpec, /testInfo\.skip/u);
   assert.doesNotMatch(modelSelectorSpec, /Model selector not present/u);
 });
