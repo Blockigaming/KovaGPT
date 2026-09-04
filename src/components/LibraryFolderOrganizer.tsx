@@ -41,6 +41,19 @@ function folderDepth(folderId: string, folders: LibraryFolder[]): number {
   return depth;
 }
 
+function folderPath(folder: LibraryFolder, folders: LibraryFolder[]): string {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  let current: LibraryFolder | undefined = folder;
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    names.unshift(current.name);
+    const parentId = current.parentId;
+    current = parentId ? folders.find((candidate) => candidate.id === parentId) : undefined;
+  }
+  return names.join(" / ");
+}
+
 function descendantIds(folderId: string, folders: LibraryFolder[]): string[] {
   const found = new Set([folderId]);
   let changed = true;
@@ -65,6 +78,7 @@ function errorMessage(error: unknown): string {
 export function LibraryFolderOrganizer({
   enabled,
   principalKey,
+  refreshKey,
   scope,
   selectedItemIds,
   onScopeChange,
@@ -73,6 +87,7 @@ export function LibraryFolderOrganizer({
 }: {
   enabled: boolean;
   principalKey: string;
+  refreshKey: number;
   scope: LibraryFolderScope;
   selectedItemIds: string[];
   onScopeChange: (scope: LibraryFolderScope) => void;
@@ -86,6 +101,7 @@ export function LibraryFolderOrganizer({
   const [busy, setBusy] = useState<"create" | "rename" | "delete" | "move" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<"create" | "rename" | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
   const [folderName, setFolderName] = useState("");
   const [deletePending, setDeletePending] = useState(false);
   const [moveTarget, setMoveTarget] = useState("root");
@@ -115,13 +131,14 @@ export function LibraryFolderOrganizer({
     setFoldersLoaded(false);
     setError(null);
     setEditor(null);
+    setEditorError(null);
     setDeletePending(false);
     setMoveTarget("root");
     if (enabled) void load();
     return () => {
       generationRef.current += 1;
     };
-  }, [enabled, load, principalKey]);
+  }, [enabled, load, principalKey, refreshKey]);
 
   useEffect(() => {
     if (
@@ -135,6 +152,16 @@ export function LibraryFolderOrganizer({
       onScopeChange("all");
     }
   }, [error, folders, foldersLoaded, loading, onScopeChange, scope]);
+
+  useEffect(() => {
+    if (
+      foldersLoaded &&
+      moveTarget !== "root" &&
+      !folders.some((folder) => folder.id === moveTarget)
+    ) {
+      setMoveTarget("root");
+    }
+  }, [folders, foldersLoaded, moveTarget]);
 
   const activeFolder =
     scope === "all" || scope === "unfiled"
@@ -153,20 +180,26 @@ export function LibraryFolderOrganizer({
 
   const submitEditor = async () => {
     const name = folderName.trim();
-    if (!name || busy) return;
+    if (!name || busy || loading) return;
+    const generation = ++generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    setLoading(false);
     setBusy(editor);
     setError(null);
+    setEditorError(null);
     try {
       if (editor === "create") {
         const created = await createLibraryFolder({
           name,
           parentId: activeFolder?.id ?? null,
         });
+        if (!isCurrent()) return;
         setFolders((current) => [...current, created]);
         onScopeChange(created.id);
         toast.success("Folder created.");
       } else if (editor === "rename" && activeFolder) {
         const renamed = await renameLibraryFolder({ id: activeFolder.id, name });
+        if (!isCurrent()) return;
         setFolders((current) =>
           current.map((folder) => (folder.id === renamed.id ? renamed : folder)),
         );
@@ -175,19 +208,23 @@ export function LibraryFolderOrganizer({
       setEditor(null);
       setFolderName("");
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      if (isCurrent()) setEditorError(errorMessage(mutationError));
     } finally {
-      setBusy(null);
+      if (isCurrent()) setBusy(null);
     }
   };
 
   const removeFolder = async () => {
-    if (!activeFolder || busy) return;
+    if (!activeFolder || busy || loading) return;
     const removedIds = descendantIds(activeFolder.id, folders);
+    const generation = ++generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    setLoading(false);
     setBusy("delete");
     setError(null);
     try {
       const result = await deleteLibraryFolder(activeFolder.id);
+      if (!isCurrent()) return;
       setFolders((current) => current.filter((folder) => !removedIds.includes(folder.id)));
       onFoldersDeleted(removedIds);
       onScopeChange("all");
@@ -199,30 +236,41 @@ export function LibraryFolderOrganizer({
           : "Folder removed.",
       );
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      if (isCurrent()) setError(errorMessage(mutationError));
     } finally {
-      setBusy(null);
-      setDeletePending(false);
+      if (isCurrent()) {
+        setBusy(null);
+        setDeletePending(false);
+      }
     }
   };
 
   const moveSelected = async () => {
-    if (busy || selectedItemIds.length === 0 || selectedItemIds.length > MAX_BULK_MOVE_ITEMS) {
+    if (
+      busy ||
+      loading ||
+      selectedItemIds.length === 0 ||
+      selectedItemIds.length > MAX_BULK_MOVE_ITEMS
+    ) {
       return;
     }
     const folderId = moveTarget === "root" ? null : moveTarget;
+    const generation = ++generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    setLoading(false);
     setBusy("move");
     setError(null);
     try {
       await moveLibraryItems({ itemIds: selectedItemIds, folderId });
+      if (!isCurrent()) return;
       onMoved(selectedItemIds, folderId);
       toast.success(
         `${selectedItemIds.length} item${selectedItemIds.length === 1 ? "" : "s"} moved.`,
       );
     } catch (mutationError) {
-      setError(errorMessage(mutationError));
+      if (isCurrent()) setError(errorMessage(mutationError));
     } finally {
-      setBusy(null);
+      if (isCurrent()) setBusy(null);
     }
   };
 
@@ -267,9 +315,10 @@ export function LibraryFolderOrganizer({
             size="sm"
             variant="outline"
             className="min-h-11"
-            disabled={Boolean(busy) || !canCreateChild}
+            disabled={Boolean(busy) || loading || !canCreateChild}
             onClick={() => {
               setFolderName("");
+              setEditorError(null);
               setEditor("create");
             }}
           >
@@ -282,9 +331,10 @@ export function LibraryFolderOrganizer({
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || loading}
                 onClick={() => {
                   setFolderName(activeFolder.name);
+                  setEditorError(null);
                   setEditor("rename");
                 }}
               >
@@ -295,7 +345,7 @@ export function LibraryFolderOrganizer({
                 size="sm"
                 variant="outline"
                 className="min-h-11 text-destructive"
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || loading}
                 onClick={() => setDeletePending(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -367,12 +417,12 @@ export function LibraryFolderOrganizer({
               className="kova-select mt-1 min-h-11 w-full"
               value={moveTarget}
               onChange={(event) => setMoveTarget(event.target.value)}
-              disabled={Boolean(busy)}
+              disabled={Boolean(busy) || loading}
             >
               <option value="root">Unfiled</option>
               {sortedFolders.map((folder) => (
                 <option key={folder.id} value={folder.id}>
-                  {folder.name}
+                  {folderPath(folder, folders)}
                 </option>
               ))}
             </select>
@@ -380,7 +430,9 @@ export function LibraryFolderOrganizer({
           <Button
             className="min-h-11"
             size="sm"
-            disabled={Boolean(busy) || selectedItemIds.length > MAX_BULK_MOVE_ITEMS}
+            disabled={
+              Boolean(busy) || loading || selectedItemIds.length > MAX_BULK_MOVE_ITEMS
+            }
             onClick={() => void moveSelected()}
           >
             {busy === "move" ? (
@@ -431,6 +483,11 @@ export function LibraryFolderOrganizer({
                   onChange={(event) => setFolderName(event.target.value)}
                 />
               </label>
+              {editorError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {editorError}
+                </p>
+              ) : null}
               <div className="flex justify-end gap-2">
                 <Button
                   type="button"
