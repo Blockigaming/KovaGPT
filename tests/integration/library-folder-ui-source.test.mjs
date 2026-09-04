@@ -89,7 +89,6 @@ test("Library invalidates stale item loads and distinguishes filter emptiness", 
   assert.match(library, /return folderItems[\s\S]*filter === "favorites"/);
 });
 
-
 test("page refresh cannot invalidate an active folder mutation", () => {
   assert.match(folders, /onBusyChange: \(busy: boolean\) => void/);
   assert.match(folders, /onBusyChange\(Boolean\(busy\)\)/);
