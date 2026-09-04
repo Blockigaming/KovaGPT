@@ -108,4 +108,6 @@ test("reliability and reconciliation contracts distinguish runtime and deploymen
   assert.match(source, /blocked_external_access/);
   assert.match(source, /blocked_runtime_dependency/);
   assert.match(source, /deferred_product/);
+  assert.match(source, /voice:\s*"deferred_product"/);
+  assert.doesNotMatch(source, /voice:\s*"implemented_source"/);
 });
