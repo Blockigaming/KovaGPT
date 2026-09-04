@@ -1175,11 +1175,7 @@ export const Route = createFileRoute("/api/chat")({
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
             const availableTools =
-              auth &&
-              usesExistingContext &&
-              !hasImages &&
-              m.id !== "instant" &&
-              lastText.length > 0
+              auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
                 ? await getAvailableGoogleTools(auth.userId).catch(() => [])
                 : [];
             const enableTools = availableTools.length > 0;
