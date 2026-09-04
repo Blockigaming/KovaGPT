@@ -225,7 +225,10 @@ BEGIN
   INTO current_count
   FROM public.project_files
   WHERE project_id = p_project_id
-    AND status IN ('pending', 'ready');
+    AND (
+      status = 'ready'
+      OR (status = 'pending' AND upload_lease_until > now())
+    );
 
   IF current_count >= p_file_cap THEN
     RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'project_file_limit_reached';
