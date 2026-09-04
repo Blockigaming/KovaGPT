@@ -64,8 +64,7 @@ function read(userKey: TimerUserKey): TimerItem[] {
             ...(item.fired === true ? { fired: true } : {}),
           },
         ];
-      })
-      .slice(0, MAX_TIMER_ITEMS);
+      });
   } catch {
     return [];
   }
@@ -78,7 +77,7 @@ function write(userKey: TimerUserKey, items: TimerItem[]): boolean {
   try {
     const storage = safeBrowserStorage("localStorage");
     if (!storage) return false;
-    storage.setItem(key, JSON.stringify(items.slice(0, MAX_TIMER_ITEMS)));
+    storage.setItem(key, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(EVT, { detail: { principal } }));
     return true;
   } catch {
