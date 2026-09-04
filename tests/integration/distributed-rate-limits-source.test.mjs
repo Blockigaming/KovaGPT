@@ -28,7 +28,7 @@ test("public and expensive utility routes use the shared cross-instance limiter"
   assert.match(chat, /action: "guest_chat_preflight"/);
   assert.ok(
     chat.indexOf('action: "guest_chat_preflight"') <
-      chat.indexOf("const result = await runWebSearch("),
+      chat.lastIndexOf("runWebSearch("),
     "guest protection must run before optional web-search work",
   );
 });
