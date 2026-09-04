@@ -53,3 +53,15 @@ test("deployed baseline evidence classifies observations truthfully", async () =
   assert.match(source, /reachability,/u);
   assert.doesNotMatch(source, /observed-failed-production-baseline/u);
 });
+
+test("dependency audit retries transient registry failures without weakening the gate", async () => {
+  const workflow = await readRootFile(".github/workflows/ci.yml");
+
+  assert.match(workflow, /for attempt in 1 2 3/u);
+  assert.match(workflow, /npm audit --audit-level=high --omit=dev/u);
+  assert.match(workflow, /if \[\[ "\$attempt" -eq 3 \]\]; then[\s\S]*?exit 1/u);
+  assert.doesNotMatch(
+    workflow,
+    /name: Dependency audit[\s\S]{0,160}continue-on-error:\s*true/u,
+  );
+});
