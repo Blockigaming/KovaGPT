@@ -12,6 +12,8 @@ const templates = [
   "reauthentication.tsx",
   "help-contact-autoreply.tsx",
   "help-contact-notification.tsx",
+  "project-invite.tsx",
+  "shared-chat.tsx",
 ];
 
 test("email brand system is light-default and dark-mode adaptive", async () => {
