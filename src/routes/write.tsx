@@ -55,6 +55,7 @@ function WritePage() {
   const [custom, setCustom] = useState("");
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
@@ -86,6 +87,7 @@ function WritePage() {
     setTone("professional");
     setCustom("");
     setDirty(false);
+    setAutosaveError(null);
     setDocumentPrincipal(null);
     if (!principal || !draftKey || !titleKey) return;
     try {
@@ -117,6 +119,7 @@ function WritePage() {
       setTone("professional");
       setCustom("");
       setDirty(false);
+      setAutosaveError(null);
       setDocumentPrincipal(principal);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -133,12 +136,15 @@ function WritePage() {
         return;
       try {
         const storage = safeBrowserStorage("localStorage");
-        if (!storage) return;
+        if (!storage) throw new Error("Browser storage is unavailable.");
         storage.setItem(draftKey, text);
         storage.setItem(titleKey, title);
         setDirty(false);
+        setAutosaveError(null);
       } catch {
-        // Ignore unavailable storage during draft persistence.
+        setAutosaveError(
+          "This draft could not be autosaved in this browser. Keep this tab open and copy or download your work.",
+        );
       }
     }, 400);
     return () => clearTimeout(id);
@@ -231,39 +237,57 @@ function WritePage() {
     if (!documentReady) return;
     const generation = storageGenerationRef.current;
     const requestPrincipal = principal;
-    await navigator.clipboard.writeText(text);
-    if (generation !== storageGenerationRef.current || requestPrincipal !== principalRef.current)
-      return;
-    setCopied(true);
-    toast.success("Copied");
-    setTimeout(() => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (generation !== storageGenerationRef.current || requestPrincipal !== principalRef.current)
+        return;
+      setCopied(true);
+      toast.success("Copied");
+      window.setTimeout(() => {
+        if (
+          generation === storageGenerationRef.current &&
+          requestPrincipal === principalRef.current
+        ) {
+          setCopied(false);
+        }
+      }, 1500);
+    } catch {
       if (
         generation === storageGenerationRef.current &&
         requestPrincipal === principalRef.current
       ) {
-        setCopied(false);
+        toast.error("Could not copy the document. Select the text and copy it manually.");
       }
-    }, 1500);
+    }
+  };
+
+  const downloadBlob = (blob: Blob, extension: string) => {
+    let url: string | null = null;
+    let anchor: HTMLAnchorElement | null = null;
+    try {
+      url = URL.createObjectURL(blob);
+      anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "document"}.${extension}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      const completedUrl = url;
+      url = null;
+      window.setTimeout(() => URL.revokeObjectURL(completedUrl), 1_000);
+    } finally {
+      anchor?.remove();
+      if (url) URL.revokeObjectURL(url);
+    }
   };
 
   const download = () => {
     if (!documentReady) return;
-    const blob = new Blob([`# ${title}\n\n${text}`], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "document"}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadBlob = (blob: Blob, extension: string) => {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "document"}.${extension}`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    try {
+      downloadBlob(new Blob([`# ${title}\n\n${text}`], { type: "text/markdown" }), "md");
+      toast.success("Markdown downloaded");
+    } catch {
+      toast.error("Markdown download failed");
+    }
   };
 
   const exportDocument = async (format: "docx" | "pdf" | "html") => {
@@ -276,13 +300,13 @@ function WritePage() {
         const { exportDocumentPdf } = await import("@/lib/writing-export/pdf");
         await exportDocumentPdf(title, text);
       } else {
-        const escaped = text
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;");
+        const escapeHtml = (value: string) =>
+          value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
         downloadBlob(
           new Blob(
-            [`<!doctype html><meta charset="utf-8"><title>${title}</title><pre>${escaped}</pre>`],
+            [
+              `<!doctype html><meta charset="utf-8"><title>${escapeHtml(title)}</title><pre>${escapeHtml(text)}</pre>`,
+            ],
             { type: "text/html" },
           ),
           "html",
@@ -296,23 +320,58 @@ function WritePage() {
 
   const saveVersion = () => {
     if (!versionsKey || !documentReady) return;
-    const storage = safeBrowserStorage("localStorage");
-    const existing = storage?.getItem(versionsKey);
-    const parsed = existing ? (JSON.parse(existing) as { title: string; text: string }[]) : [];
-    storage?.setItem(versionsKey, JSON.stringify([{ title, text }, ...parsed].slice(0, 20)));
-    toast.success("Document version saved");
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (!storage) throw new Error("Browser storage is unavailable.");
+      const existing = storage.getItem(versionsKey);
+      const parsed = existing ? (JSON.parse(existing) as unknown) : [];
+      const versions = Array.isArray(parsed)
+        ? parsed.filter(
+            (item): item is { title: string; text: string } =>
+              item !== null &&
+              typeof item === "object" &&
+              typeof item.title === "string" &&
+              typeof item.text === "string",
+          )
+        : [];
+      storage.setItem(versionsKey, JSON.stringify([{ title, text }, ...versions].slice(0, 20)));
+      toast.success("Document version saved");
+    } catch {
+      toast.error("Document version could not be saved in this browser");
+    }
   };
 
   const restoreLatestVersion = () => {
     if (!versionsKey || !documentReady) return;
-    const existing = safeBrowserStorage("localStorage")?.getItem(versionsKey);
-    const [latest] = existing ? (JSON.parse(existing) as { title: string; text: string }[]) : [];
-    if (!latest) return;
-    pushUndo(text);
-    setTitle(latest.title);
-    setText(latest.text);
-    setDirty(true);
-    toast.success("Version restored");
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (!storage) throw new Error("Browser storage is unavailable.");
+      const existing = storage.getItem(versionsKey);
+      if (!existing) {
+        toast.message("No saved document versions yet");
+        return;
+      }
+      const parsed = JSON.parse(existing) as unknown;
+      if (!Array.isArray(parsed)) throw new Error("Invalid document version history.");
+      const latest = parsed.find(
+        (item): item is { title: string; text: string } =>
+          item !== null &&
+          typeof item === "object" &&
+          typeof item.title === "string" &&
+          typeof item.text === "string",
+      );
+      if (!latest) {
+        toast.message("No saved document versions yet");
+        return;
+      }
+      pushUndo(text);
+      setTitle(latest.title);
+      setText(latest.text);
+      setDirty(true);
+      toast.success("Version restored");
+    } catch {
+      toast.error("Saved document versions could not be read");
+    }
   };
 
   const clearAll = () => {
@@ -362,9 +421,10 @@ function WritePage() {
 
   const actionButton = (action: Action, label: string, Icon: typeof Sparkles = Sparkles) => (
     <button
+      type="button"
       onClick={() => run(action)}
-      disabled={!!busy}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+      disabled={!!busy || !documentReady}
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
     >
       {busy === action ? (
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -377,16 +437,25 @@ function WritePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10">
+      <div
+        className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10"
+        aria-busy={!documentReady}
+      >
+        {!documentReady && (
+          <div role="status" className="mb-3 text-sm text-muted-foreground">
+            Loading document…
+          </div>
+        )}
         <div className="mb-4 flex items-center justify-between gap-3">
           <input
             value={visibleTitle}
+            disabled={!documentReady}
             onChange={(e) => {
               if (!documentReady) return;
               setTitle(e.target.value);
               setDirty(true);
             }}
-            className="min-w-0 flex-1 bg-transparent text-2xl font-semibold outline-none placeholder:text-muted-foreground sm:text-3xl"
+            className="min-h-11 min-w-0 flex-1 bg-transparent text-2xl font-semibold outline-none placeholder:text-muted-foreground sm:text-3xl"
             placeholder="Untitled document"
             aria-label="Document title"
           />
@@ -402,11 +471,12 @@ function WritePage() {
           {actionButton("expand", "Expand")}
           {actionButton("continue", "Continue")}
           {actionButton("outline", "Outline")}
-          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background pl-2 pr-1 py-0.5">
+          <div className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2 pr-1">
             <select
               value={tone}
+              disabled={!documentReady}
               onChange={(e) => setTone(e.target.value)}
-              className="bg-transparent text-xs outline-none"
+              className="min-h-11 bg-transparent text-xs outline-none"
               aria-label="Tone"
             >
               <option value="professional">Professional</option>
@@ -419,9 +489,10 @@ function WritePage() {
               <option value="concise">Concise</option>
             </select>
             <button
+              type="button"
               onClick={() => run("tone")}
-              disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              disabled={!!busy || !documentReady}
+              className="inline-flex min-h-11 items-center gap-1 rounded-full px-2 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
               {busy === "tone" ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -433,8 +504,9 @@ function WritePage() {
           </div>
           {undoStack.length > 0 && (
             <button
+              type="button"
               onClick={undo}
-              className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+              className="ml-auto inline-flex min-h-11 items-center text-xs text-muted-foreground hover:text-foreground"
             >
               Undo AI change
             </button>
@@ -444,14 +516,16 @@ function WritePage() {
         <div className="mb-3 flex items-center gap-2">
           <input
             value={custom}
+            disabled={!documentReady}
             onChange={(e) => setCustom(e.target.value)}
             placeholder="Custom instruction - e.g. 'rewrite as a cover letter'"
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+            className="min-h-11 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
           />
           <button
+            type="button"
             onClick={() => run("custom")}
-            disabled={!!busy || !custom.trim()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
+            disabled={!!busy || !custom.trim() || !documentReady}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
             {busy === "custom" ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -465,6 +539,7 @@ function WritePage() {
         <textarea
           ref={textareaRef}
           value={visibleText}
+          disabled={!documentReady}
           onChange={(e) => {
             if (!documentReady) return;
             setText(e.target.value);
@@ -473,55 +548,96 @@ function WritePage() {
           onSelect={captureSelection}
           onKeyUp={captureSelection}
           onMouseUp={captureSelection}
-          placeholder="Start writing… Highlight text to transform only that section. Autosaved locally."
+          placeholder="Start writing… Highlight text to transform only that section."
           className="min-h-[45vh] flex-1 w-full resize-none rounded-xl border border-border bg-background p-4 text-[15px] leading-relaxed outline-none focus:border-foreground/40 sm:p-6 sm:text-base sm:leading-8"
           spellCheck
           aria-label="Document content"
         />
+        <p
+          role={autosaveError ? "alert" : "status"}
+          className={`mt-2 text-xs ${autosaveError ? "text-destructive" : "text-muted-foreground"}`}
+        >
+          {autosaveError ??
+            (dirty
+              ? "Saving draft locally…"
+              : "Draft changes are saved locally in this browser when storage is available.")}
+        </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={copy}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            disabled={!documentReady || !text}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
             {copied ? "Copied" : "Copy"}
           </button>
           <button
+            type="button"
             onClick={download}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             <Download className="h-3 w-3" />
             Download .md
           </button>
           <button
+            type="button"
             onClick={save}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            disabled={saving || !documentReady}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             <Bookmark className={`h-3 w-3 ${saved ? "fill-current" : ""}`} />
             {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
           </button>
           <button
+            type="button"
             onClick={() => setClearOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            disabled={!documentReady || !text.trim()}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
           >
             <Eraser className="h-3 w-3" />
             Clear
           </button>
-          <button onClick={saveVersion} className="text-xs underline">
-            Document version history
+          <button
+            type="button"
+            onClick={saveVersion}
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+          >
+            Save version
           </button>
-          <button onClick={restoreLatestVersion} className="text-xs underline">
+          <button
+            type="button"
+            onClick={restoreLatestVersion}
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+          >
             Restore latest
           </button>
-          <button onClick={() => void exportDocument("docx")} className="text-xs underline">
+          <button
+            type="button"
+            onClick={() => void exportDocument("docx")}
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+          >
             Download DOCX
           </button>
-          <button onClick={() => void exportDocument("pdf")} className="text-xs underline">
+          <button
+            type="button"
+            onClick={() => void exportDocument("pdf")}
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+          >
             Download PDF
           </button>
-          <button onClick={() => void exportDocument("html")} className="text-xs underline">
+          <button
+            type="button"
+            onClick={() => void exportDocument("html")}
+            disabled={!documentReady}
+            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+          >
             Download HTML
           </button>
           <div className="ml-auto text-xs text-muted-foreground sm:hidden">

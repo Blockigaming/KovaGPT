@@ -3,6 +3,7 @@
 // map) plus a Copy button so the user can pull the text into their notes.
 import { Clock, MapPin, Copy, Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { ClockWidget } from "./ClockWidget";
 import { MapWidget } from "./MapWidget";
 import type { ChipKind } from "./info-chip-utils";
@@ -11,10 +12,14 @@ export function InfoChip({
   kind,
   children,
   rawText,
+  userKey,
+  principalResolved,
 }: {
   kind: ChipKind;
   children: ReactNode;
   rawText?: string;
+  userKey: string | null;
+  principalResolved: boolean;
 }) {
   const Icon = kind === "time" ? Clock : MapPin;
   const label = kind === "time" ? "Time" : "Location";
@@ -27,7 +32,7 @@ export function InfoChip({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* ignore */
+      toast.error("Couldn't copy this card. Check your browser's clipboard permission.");
     }
   };
 
@@ -39,10 +44,11 @@ export function InfoChip({
           <span>{label}</span>
         </div>
         <button
+          type="button"
           onClick={copy}
           title={copied ? "Copied" : "Copy"}
-          aria-label="Copy"
-          className="p-1.5 -mr-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition"
+          aria-label={copied ? "Copied" : "Copy card"}
+          className="-mr-1.5 flex min-h-11 min-w-11 items-center justify-center rounded-md text-neutral-400 transition hover:bg-white/10 hover:text-white"
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
         </button>
@@ -66,7 +72,7 @@ export function InfoChip({
 
       {kind === "location" && (
         <div className="px-4 pb-4">
-          <MapWidget height={180} />
+          <MapWidget height={180} userKey={userKey} principalResolved={principalResolved} />
         </div>
       )}
     </div>

@@ -1,4 +1,8 @@
-const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+const SUPPORTED_WRITE_TOOLS = new Set([
+  "gmail_create_draft",
+  "gmail_send",
+  "calendar_create_event",
+]);
 const HEADER_BREAK = /[\r\n]/;
 const EMAIL =
   /^(?=.{3,254}$)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?$/i;
@@ -139,20 +143,20 @@ function rfc3339Date(value, label) {
   return date;
 }
 
-function validateDraft(args) {
+function validateEmailEnvelope(args) {
   const to = recipientList(args.to, "To", true);
   const cc = recipientList(args.cc, "Cc");
   const bcc = recipientList(args.bcc, "Bcc");
   if (to.length + cc.length + bcc.length > MAX_RECIPIENTS) {
     throw new GoogleWriteValidationError(
-      `A draft can have no more than ${MAX_RECIPIENTS} total recipients.`,
+      `An email can have no more than ${MAX_RECIPIENTS} total recipients.`,
     );
   }
-  const subject = requiredString(args, "subject", "Draft subject", 300, {
+  const subject = requiredString(args, "subject", "Email subject", 300, {
     trim: true,
     header: true,
   });
-  const body = requiredString(args, "body", "Draft body", 50_000);
+  const body = requiredString(args, "body", "Email body", 50_000);
   return {
     to: to.join(", "),
     ...(cc.length ? { cc: cc.join(", ") } : {}),
@@ -195,10 +199,53 @@ function validateCalendarEvent(args) {
   };
 }
 
+export function foldEmailAddressHeader(name, value, maxLineLength = 78) {
+  if (
+    !["To", "Cc", "Bcc"].includes(name) ||
+    typeof value !== "string" ||
+    HEADER_BREAK.test(value)
+  ) {
+    throw new GoogleWriteValidationError("Invalid email header.");
+  }
+  if (!Number.isSafeInteger(maxLineLength) || maxLineLength < 20 || maxLineLength > 998) {
+    throw new TypeError("Invalid MIME line length.");
+  }
+  const addresses = value.split(", ").filter(Boolean);
+  if (addresses.length === 0) {
+    throw new GoogleWriteValidationError("Invalid email header.");
+  }
+  let current = `${name}: ${addresses[0]}`;
+  const lines = [];
+  for (const address of addresses.slice(1)) {
+    const addition = `, ${address}`;
+    if (current.length + addition.length <= maxLineLength) {
+      current += addition;
+    } else {
+      lines.push(`${current},`);
+      current = ` ${address}`;
+    }
+  }
+  lines.push(current);
+  if (lines.some((line) => line.length > 998)) {
+    throw new GoogleWriteValidationError("Email header is too long.");
+  }
+  return lines.join("\r\n");
+}
+
+export function encodeMimeTextBody(value) {
+  if (typeof value !== "string") {
+    throw new TypeError("MIME body must be a string.");
+  }
+  const encoded = Buffer.from(value, "utf8").toString("base64");
+  return encoded.match(/.{1,76}/g)?.join("\r\n") ?? "";
+}
+
 export function validateSupportedGoogleWrite(tool, input) {
   if (!SUPPORTED_WRITE_TOOLS.has(tool)) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  return tool === "gmail_create_draft" ? validateDraft(args) : validateCalendarEvent(args);
+  return tool === "calendar_create_event"
+    ? validateCalendarEvent(args)
+    : validateEmailEnvelope(args);
 }

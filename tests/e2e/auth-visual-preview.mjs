@@ -1,15 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  chmod,
-  copyFile,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-} from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 
@@ -198,13 +189,9 @@ try {
   // files, credentials, dependencies, build output, and prior test evidence.
   await copyTrackedWorkingTree();
 
-  await run(
-    npmCommand,
-    ["ci", "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline"],
-    {
-      cwd: fixtureRoot,
-    },
-  );
+  await run(npmCommand, ["ci", "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline"], {
+    cwd: fixtureRoot,
+  });
   await run(npmCommand, ["run", "build"], { cwd: fixtureRoot });
 
   const fingerprintAfterBuild = await fingerprint(candidateDist);
