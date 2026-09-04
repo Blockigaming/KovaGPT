@@ -12,7 +12,7 @@ export type LibraryItem = {
   file_name: string | null;
   file_type: string | null;
   file_size: number | null;
-  folder_id: string | null;
+  folder_id?: string | null;
   created_at: string;
 };
 
