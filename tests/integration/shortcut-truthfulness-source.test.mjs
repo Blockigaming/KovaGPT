@@ -52,7 +52,7 @@ test("Settings commits shortcut state only after persistence succeeds", () => {
 });
 
 test("shortcut controls expose loading state and 44px touch targets", () => {
-  assert.ok(shortcutPanel.includes('aria-busy={!ready}'));
+  assert.ok(shortcutPanel.includes("aria-busy={!ready}"));
   assert.match(shortcutPanel, /<p role="status"[\s\S]*?Loading shortcuts…/);
   assert.match(shortcutPanel, /disabled=\{!ready\}/);
   assert.ok((shortcutPanel.match(/min-h-11/g) ?? []).length >= 2);
