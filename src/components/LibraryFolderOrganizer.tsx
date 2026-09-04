@@ -21,7 +21,7 @@ import {
   moveLibraryItems,
   renameLibraryFolder,
   type LibraryFolder,
-} from "@/lib/library-folders.client";
+} from "@/lib/library-folders";
 
 export type LibraryFolderScope = "all" | "unfiled" | string;
 
