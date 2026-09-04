@@ -126,6 +126,7 @@ const SaveImageSchema = z.object({
   imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
+  source: z.enum(["images", "upload"]).default("images"),
   idempotencyKey: z.string().uuid().optional(),
 });
 
@@ -192,7 +193,7 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
         user_id: context.userId,
         title: data.title.slice(0, 200),
         item_type: "image",
-        source: "images",
+        source: data.source,
         content_text: data.prompt ?? null,
         file_url: path,
         file_name: fileName,
