@@ -1827,7 +1827,7 @@
       "order": 91,
       "filename": "20260903214500_work_sync_protection_hardening.sql",
       "timestamp": "20260903214500",
-      "sha256": "53969de4ad43c24b5c51417e36821debdc20fab26a1adfc233d1ea02dde197ae",
+      "sha256": "25d292ce34d2f27c2fc8959ce3efc8f3f0cfa5daca84eb6568eac9d2719b2768",
       "tables": [],
       "functions": [
         "work_sync_request_fingerprint",
