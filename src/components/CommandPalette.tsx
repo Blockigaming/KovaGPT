@@ -149,6 +149,8 @@ export function CommandPalette({
   conversations,
   archivedConversations,
   workspaceItems,
+  workspaceStatus = "ready",
+  retryWorkspaceSearch,
   onClose,
   onNewChat,
   onSelectChat,
@@ -162,6 +164,8 @@ export function CommandPalette({
   conversations: Conversation[];
   archivedConversations: Conversation[];
   workspaceItems: RecentItem[];
+  workspaceStatus?: "loading" | "ready" | "error";
+  retryWorkspaceSearch?: () => void;
   onClose: () => void;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
@@ -659,7 +663,36 @@ export function CommandPalette({
             );
           })}
 
-          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
+          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">
+            Workspace
+          </div>
+          {workspaceStatus === "loading" ? (
+            <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+              Searching workspace…
+            </p>
+          ) : null}
+          {workspaceStatus === "error" ? (
+            <div
+              role="alert"
+              className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-destructive"
+            >
+              <span>Workspace results are unavailable.</span>
+              {retryWorkspaceSearch ? (
+                <button
+                  type="button"
+                  className="min-h-11 rounded-lg border px-3 text-foreground hover:bg-accent"
+                  onClick={retryWorkspaceSearch}
+                >
+                  Retry
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {workspaceStatus === "ready" && visibleWorkspaceItems.length === 0 ? (
+            <p className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+              No workspace results
+            </p>
+          ) : null}
           {visibleWorkspaceItems.map((item, workspaceIndex) => {
             const index = workspaceStartIndex + workspaceIndex;
             return (
