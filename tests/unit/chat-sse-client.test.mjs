@@ -36,6 +36,40 @@ test("chat SSE accepts fragmented events only after a terminal DONE frame", asyn
   assert.equal(events[0].choices[0].delta.content, "hello");
 });
 
+test("chat SSE preserves typed provider error events", async () => {
+  const event = {
+    choices: [
+      {
+        index: 0,
+        delta: {
+          kind: "error",
+          error: "KovaGPT took too long to respond.",
+          code: "provider_timeout",
+          category: "model_timeout",
+          retryable: true,
+          status: 504,
+          request_id: "req_timeout",
+        },
+      },
+    ],
+  };
+  await assert.rejects(
+    consumeChatSse(
+      chunkedStream([`data: ${JSON.stringify(event)}\\n\\ndata: [DONE]\\n\\n`]),
+    ),
+    (error) => {
+      assert.ok(error instanceof ChatStreamError);
+      assert.equal(error.message, "KovaGPT took too long to respond.");
+      assert.equal(error.code, "provider_timeout");
+      assert.equal(error.category, "model_timeout");
+      assert.equal(error.retryable, true);
+      assert.equal(error.status, 504);
+      assert.equal(error.requestId, "req_timeout");
+      return true;
+    },
+  );
+});
+
 test("chat SSE rejects malformed JSON instead of reinserting it forever", async () => {
   let cancelled = false;
   const stream = new ReadableStream({
