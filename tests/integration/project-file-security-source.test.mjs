@@ -26,7 +26,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   ]) {
     assert.match(route, new RegExp(contract));
   }
-  assert.match(ui, /fetch\(\`\/api\/project-files\\\$\{search\}\`/);
+  assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
   assert.match(ui, /getFreshFileUrl/);
   assert.match(ui, /onError=\{\(\) => void refreshImageUrl\(f\)\}/);
