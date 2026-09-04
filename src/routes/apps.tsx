@@ -788,10 +788,10 @@ function AppsPage() {
   const recordActivity = useCallback(
     (app: string, action: string) => {
       if (!activityReady || !activityKey) return;
-      const next = [
-        { app, action, at: new Date().toISOString() },
-        ...activityRef.current,
-      ].slice(0, MAX_APP_ACTIVITY);
+      const next = [{ app, action, at: new Date().toISOString() }, ...activityRef.current].slice(
+        0,
+        MAX_APP_ACTIVITY,
+      );
       activityRef.current = next;
       setActivity(next);
       try {
