@@ -331,6 +331,7 @@ async function upload(request: Request): Promise<Response> {
       p_idempotency_key: metadata.idempotencyKey,
       p_attempt_id: attemptId,
       p_file_cap: authorization.fileCap,
+      p_storage_limit: authorization.storageLimit,
     } as never,
   );
   if (reservationError) return reservationFailure(reservationError);
@@ -338,7 +339,8 @@ async function upload(request: Request): Promise<Response> {
   if (
     !row ||
     row.project_id !== metadata.projectId ||
-    row.storage_owner_id !== authorization.ownerId
+    row.storage_owner_id !== authorization.ownerId ||
+    row.storage_charged !== (bytes.byteLength > 0)
   ) {
     return json({ error: "project_file_reservation_invalid" }, 503);
   }
@@ -351,68 +353,88 @@ async function upload(request: Request): Promise<Response> {
     return json({ error: "project_file_upload_in_progress" }, 409, { "Retry-After": "2" });
   }
 
-  const callerTier = await getCallerTier(auth);
-  const quota = await enforceQuota(auth, "uploads", DAILY_UPLOAD_LIMIT_BY_TIER[callerTier]);
-  if (quota) {
-    await setUploadState(auth, row.id, attemptId, "upload_failed", row.storage_charged);
-    return quota;
-  }
-
-  let storageCharged = row.storage_charged;
-  if (!storageCharged) {
-    const storage = await chargeProjectStorage(
-      auth,
-      authorization.ownerId,
-      bytes.byteLength,
-      authorization.storageLimit,
-    );
-    if (storage) {
-      await setUploadState(auth, row.id, attemptId, "upload_failed", false);
-      return storage;
-    }
-    storageCharged = bytes.byteLength > 0;
-    if (!(await setUploadState(auth, row.id, attemptId, "pending", storageCharged))) {
-      if (storageCharged) {
-        await releaseStorage(auth, authorization.ownerId, bytes.byteLength);
+  if (row.reservationCreated) {
+    const callerTier = await getCallerTier(auth);
+    const quota = await enforceQuota(auth, "uploads", DAILY_UPLOAD_LIMIT_BY_TIER[callerTier]);
+    if (quota) {
+      if (!(await abortProjectFileUpload(auth, row.id, attemptId))) {
+        return json({ error: "project_file_quota_recovery_failed" }, 503, {
+          "Retry-After": "5",
+        });
       }
-      return json({ error: "project_file_reservation_lost" }, 409);
+      return quota;
     }
   }
 
+  const temporaryPath =
+    `${metadata.projectId}/.uploads/${row.id}/${attemptId}.${inspected.extension}`;
   const stored = await auth.supabaseAdmin.storage
     .from("project-files")
-    .upload(row.storage_path, bytes, {
+    .upload(temporaryPath, bytes, {
       contentType: inspected.mimeType,
-      upsert: true,
+      upsert: false,
     });
   if (stored.error) {
-    const released =
-      !storageCharged || (await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
-    await setUploadState(
-      auth,
-      row.id,
-      attemptId,
-      released ? "upload_failed" : "cleanup_failed",
-      !released,
-    );
-    return json({ error: "project_file_storage_unavailable" }, 503, { "Retry-After": "30" });
+    const removed = await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
+    const clean = !removed.error || missingObject(removed.error);
+    if (row.reservationCreated && clean) {
+      if (await abortProjectFileUpload(auth, row.id, attemptId)) {
+        return json({ error: "project_file_storage_unavailable" }, 503, {
+          "Retry-After": "5",
+        });
+      }
+    }
+    await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+    return json({ error: "project_file_storage_unavailable" }, 503, {
+      "Retry-After": "30",
+    });
   }
 
-  if (!(await setUploadState(auth, row.id, attemptId, "ready", storageCharged))) {
-    const removed = await auth.supabaseAdmin.storage
-      .from("project-files")
-      .remove([row.storage_path]);
-    const released =
-      !storageCharged ||
-      (removed.error ? false : await releaseStorage(auth, authorization.ownerId, bytes.byteLength));
-    await setUploadState(
+  if (!(await setUploadState(auth, row.id, attemptId, "pending", row.storage_charged))) {
+    await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
+    return json({ error: "project_file_reservation_lost" }, 409);
+  }
+
+  const moved = await auth.supabaseAdmin.storage
+    .from("project-files")
+    .move(temporaryPath, row.storage_path);
+  if (moved.error) {
+    const canonicalMatches = await storedProjectFileMatches(
       auth,
-      row.id,
-      attemptId,
-      released ? "upload_failed" : "cleanup_failed",
-      !released,
+      row.storage_path,
+      bytes.byteLength,
+      digest,
     );
-    return json({ error: "project_file_finalize_unavailable" }, 503, { "Retry-After": "30" });
+    if (!canonicalMatches) {
+      await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+      return json({ error: "project_file_storage_finalize_failed" }, 503, {
+        "Retry-After": "30",
+      });
+    }
+    const removed = await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
+    if (removed.error && !missingObject(removed.error)) {
+      await setUploadState(auth, row.id, attemptId, "cleanup_failed", row.storage_charged);
+      return json({ error: "project_file_temp_cleanup_failed" }, 503, {
+        "Retry-After": "30",
+      });
+    }
+  }
+
+  if (!(await setUploadState(auth, row.id, attemptId, "ready", row.storage_charged))) {
+    const { data: current } = await auth.supabaseAdmin
+      .from("project_files")
+      .select("status,content_sha256,storage_path")
+      .eq("id", row.id)
+      .maybeSingle();
+    if (
+      current?.status !== "ready" ||
+      current.content_sha256 !== digest ||
+      current.storage_path !== row.storage_path
+    ) {
+      return json({ error: "project_file_finalize_unavailable" }, 503, {
+        "Retry-After": "5",
+      });
+    }
   }
 
   if (inspected.kind === "file") {
