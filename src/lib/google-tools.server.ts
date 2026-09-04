@@ -681,27 +681,28 @@ function validateSupportedWrite(tool: string, args: WriteArgs): WriteArgs {
 }
 
 /**
- * Build a short, human-readable summary + a redacted preview of the args so
- * the confirmation card can show the user exactly what will happen. We never
- * echo full recipient lists or full email bodies into the SSE stream - the
- * body preview is capped and long addresses are truncated.
+ * Build a short, human-readable summary and confirmation preview. Actions
+ * that send data outside KovaGPT expose the complete validated envelope so
+ * the approval card never hides a recipient or unsurfaced body content.
+ * Non-sending previews remain bounded.
  */
 export function summarizeWriteTool(
   tool: string,
   args: WriteArgs,
 ): { summary: string; preview: Record<string, unknown> } {
   if (tool === "gmail_create_draft" || tool === "gmail_send") {
-    const to = truncate(args.to, 120);
-    const subject = truncate(args.subject, 120);
-    const verb = tool === "gmail_send" ? "Send email to" : "Save draft to";
+    const sending = tool === "gmail_send";
+    const to = String(args.to ?? "");
+    const subject = String(args.subject ?? "");
+    const verb = sending ? "Send email to" : "Save draft to";
     return {
-      summary: `${verb} ${to || "(no recipient)"} - ${subject || "(no subject)"}`,
+      summary: `${verb} ${truncate(to, 120) || "(no recipient)"} - ${truncate(subject, 120) || "(no subject)"}`,
       preview: {
-        to,
-        cc: args.cc ? truncate(args.cc, 120) : undefined,
-        bcc: args.bcc ? truncate(args.bcc, 120) : undefined,
-        subject,
-        body_preview: truncate(args.body, 500),
+        to: sending ? to : truncate(to, 120),
+        cc: args.cc ? (sending ? String(args.cc) : truncate(args.cc, 120)) : undefined,
+        bcc: args.bcc ? (sending ? String(args.bcc) : truncate(args.bcc, 120)) : undefined,
+        subject: sending ? subject : truncate(subject, 120),
+        body_preview: sending ? String(args.body ?? "") : truncate(args.body, 500),
       },
     };
   }
