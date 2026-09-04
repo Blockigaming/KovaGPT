@@ -106,8 +106,7 @@ export function TimersWidget({
   useEffect(() => {
     if (!ready) return;
     const due = visibleItems.filter(
-      (timer) =>
-        !timer.fired && timer.fireAt <= now && !notifiedIdsRef.current.has(timer.id),
+      (timer) => !timer.fired && timer.fireAt <= now && !notifiedIdsRef.current.has(timer.id),
     );
     if (due.length === 0) return;
     const dueIds = new Set(due.map((timer) => timer.id));
@@ -123,9 +122,7 @@ export function TimersWidget({
     }
   }, [now, ready, userKey, visibleItems]);
 
-  const active = visibleItems
-    .filter((timer) => !timer.fired)
-    .sort((a, b) => a.fireAt - b.fireAt);
+  const active = visibleItems.filter((timer) => !timer.fired).sort((a, b) => a.fireAt - b.fireAt);
   const nextItem = active[0];
 
   const requestNotifPerm = () => {
