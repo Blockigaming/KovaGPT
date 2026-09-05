@@ -304,7 +304,10 @@ export function createWorkSandboxExecutor(
         timeoutMs: job.timeoutMs,
         maxBytes: PROTOCOL_BYTES,
       });
-      if (executed.code !== 0) fail("sandbox_execution_failed");
+      if (executed.code !== 0) {
+        const stage = executed.stderr.toString("utf8").trim();
+        fail(/^sandbox_execution_failed_[a-z_]+$/u.test(stage) ? stage : "sandbox_execution_failed");
+      }
       result = decode(executed.stdout, job);
     } catch (cause) {
       error = cause;
