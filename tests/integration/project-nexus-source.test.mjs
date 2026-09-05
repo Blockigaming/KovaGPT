@@ -17,7 +17,7 @@ test("Nexus documents connector truth and hides unsupported connection claims", 
   );
 });
 
-test("Agent Workspace is plan-gated, approval-aware, resumable and explicit", async () => {
+test("Agent Workspace is plan-gated, approval-aware, local-only and explicit", async () => {
   const [component, store, route] = await Promise.all([
     read("src/components/AgentWorkspace.tsx"),
     read("src/lib/work-store.ts"),
@@ -27,7 +27,10 @@ test("Agent Workspace is plan-gated, approval-aware, resumable and explicit", as
   assert.match(component, /Approval/);
   assert.match(component, /Continue in Chat/);
   assert.match(component, /No provider call was made/);
-  assert.match(component, /Schedule/);
+  assert.match(component, /Review scheduling/);
+  assert.match(component, /Saved plans/);
+  assert.match(component, /background execution and scheduling are unavailable/);
+  assert.doesNotMatch(component, /Execution history/);
   assert.match(store, /type AgentRunStatus/);
   assert.match(store, /"approval_needed"/);
   assert.match(route, /useServerFn\(listWorkRuns\)/);

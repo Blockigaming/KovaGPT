@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 90,
+  "migrationCount": 91,
   "tables": [
     "account_audit_entries",
     "account_export_jobs",
@@ -161,6 +161,7 @@
     "control_agent_job",
     "control_agent_job",
     "control_agent_job",
+    "control_disabled_agent_team_run",
     "copy_project_template",
     "create_chat_message_version",
     "create_library_folder",
@@ -975,6 +976,7 @@
     "execute on function public.control_agent_job(uuid, text) to authenticated",
     "execute on function public.control_agent_job(uuid, text) to authenticated, service_role",
     "execute on function public.control_agent_job(uuid,text) to authenticated",
+    "execute on function public.control_disabled_agent_team_run(uuid, text, uuid)\n  to authenticated",
     "execute on function public.copy_project_template(uuid,uuid,uuid,integer,integer) to service_role",
     "execute on function public.create_library_folder(uuid, text, uuid) to service_role",
     "execute on function public.create_project_template(uuid,uuid,text,text,jsonb) to service_role",
@@ -1185,6 +1187,7 @@
     "all on function public.control_agent_job(uuid, text)\n  from public, anon",
     "all on function public.control_agent_job(uuid, text) from public, anon, authenticated",
     "all on function public.control_agent_job(uuid,text) from public, anon",
+    "all on function public.control_disabled_agent_team_run(uuid, text, uuid)\n  from public, anon, service_role",
     "all on function public.copy_project_template(uuid,uuid,uuid,integer,integer) from public, anon, authenticated",
     "all on function public.create_library_folder(uuid, text, uuid)\n  from public, anon, authenticated",
     "all on function public.create_project_template(uuid,uuid,text,text,jsonb) from public, anon, authenticated",
@@ -1310,5 +1313,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "aeefdb49beaf8e616d5c1f406a4de119ea00b48e48f97b9446ec2c575784d6f5"
+  "sha256": "0d627c4649b14984d9270e0e099758ca29e68048706f4e6aae544cb0367df516"
 }

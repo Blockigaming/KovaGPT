@@ -26,16 +26,12 @@ function handlerSlice(source, method, nextMethod) {
   return source.slice(start, end > start ? end : undefined);
 }
 
-test("both agent routes use the shared bounded JSON ingress", () => {
+test("enabled agent controls use the shared bounded JSON ingress", () => {
   assert.doesNotMatch(runsSource, /request\.json\s*\(/);
   assert.doesNotMatch(teamsSource, /request\.json\s*\(/);
   assert.match(
     runsSource,
     /readAgentJsonRequest\(\s*request,\s*AGENT_RUN_CONTROL_BODY_LIMIT_BYTES,?\s*\)/,
-  );
-  assert.match(
-    teamsSource,
-    /readAgentJsonRequest\(\s*request,\s*AGENT_TEAM_CREATE_BODY_LIMIT_BYTES,?\s*\)/,
   );
   assert.match(
     teamsSource,
@@ -45,20 +41,18 @@ test("both agent routes use the shared bounded JSON ingress", () => {
   assert.match(ingressSource, /mediaType !== "application\/json"/);
 });
 
-test("team validation and RLS project authorization precede service-role creation", () => {
+test("team creation is hard-disabled and cannot leave permanently queued records", () => {
   const post = handlerSlice(teamsSource, "POST", "PATCH");
-  const parseAt = post.indexOf("body = parseAgentTeamCreatePayload(");
-  const graphAt = post.indexOf("validateTaskGraph(body.tasks)");
-  const authorizeAt = post.indexOf("body.projectId = await authorizeAgentProject({");
-  const createAt = post.indexOf("await createAgentTeamRun(auth, {");
+  const cancelAt = post.indexOf("await request.body?.cancel()");
+  const unavailableAt = post.indexOf('error: "agent_team_execution_unavailable"');
 
-  assert.ok(parseAt > 0, "strict payload parsing must exist");
-  assert.ok(graphAt > parseAt, "graph validation must follow bounded parsing");
-  assert.ok(authorizeAt > graphAt, "project authorization must follow graph validation");
-  assert.ok(createAt > authorizeAt, "authorization must precede service-role creation");
-  assert.match(post, /supabaseUser:\s*auth\.supabaseUser/);
-  assert.match(post, /projectId: body\.projectId/);
-  assert.doesNotMatch(post.slice(createAt), /projectId:\s*[^\n]*(request|url|searchParams)/);
+  assert.ok(cancelAt > 0, "disabled creation must drain the unread request body");
+  assert.ok(unavailableAt > cancelAt, "the unavailable response must follow body cancellation");
+  assert.doesNotMatch(post, /enforceLockdownCapability/);
+  assert.match(post, /status: 503/);
+  assert.match(post, /"Retry-After": "3600"/);
+  assert.doesNotMatch(teamsSource, /\bcreateAgentTeamRun\b/);
+  assert.doesNotMatch(teamsSource, /parseAgentTeamCreatePayload|authorizeAgentProject/);
 });
 
 test("authorization uses the verified bearer-scoped client added to the auth boundary", () => {
@@ -101,6 +95,8 @@ test("agent responses do not cache authenticated run data or errors", () => {
   assert.match(runsSource, /"Cache-Control": "no-store"/);
   assert.match(teamsSource, /"Cache-Control": "no-store"/);
   assert.match(runsSource, /RUN_CONTROL_ERRORS\.has\(message\)/);
-  assert.match(teamsSource, /TEAM_CREATE_ERRORS\.has\(message\)/);
   assert.match(teamsSource, /TEAM_CONTROL_ERRORS\.has\(message\)/);
+  assert.match(teamsSource, /TEAM_CONTROL_CONFLICTS\.has\(message\)/);
+  assert.match(teamsSource, /status: conflict \? 409/);
+  assert.match(teamsSource, /agent_team_execution_unavailable/);
 });

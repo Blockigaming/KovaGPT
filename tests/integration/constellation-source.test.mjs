@@ -26,10 +26,12 @@ test("sync policy applies bounded retry and deletion propagation", async () => {
   assert.match(sync, /retry_wait/);
 });
 test("Work exposes history but browser execution fails closed", async () => {
-  const [workspace, api, execution] = await Promise.all([
+  const [workspace, api, execution, teamApi, teamExecution] = await Promise.all([
     read("src/components/AgentWorkspace.tsx"),
     read("src/routes/api/agents/runs.ts"),
     read("src/agents/execution.server.ts"),
+    read("src/routes/api/agents/teams.ts"),
+    read("src/agents/team.server.ts"),
   ]);
   assert.match(workspace, /Secure browser runs unavailable/);
   assert.doesNotMatch(workspace, /authFetch\("\/api\/agents\/runs"|run queued/);
@@ -41,4 +43,17 @@ test("Work exposes history but browser execution fails closed", async () => {
   assert.doesNotMatch(api, /status: 202/);
   assert.match(execution, /Promise<never>/);
   assert.match(execution, /throw new Error\("browser_agent_unavailable"\)/);
+  assert.match(teamApi, /agent_team_execution_unavailable/);
+  assert.match(teamApi, /status: 503/);
+  assert.doesNotMatch(teamApi, /status: 202/);
+  const disabledTeamCreate = teamExecution.slice(
+    teamExecution.indexOf("export async function createAgentTeamRun"),
+    teamExecution.indexOf("export async function getAgentTeamRuns"),
+  );
+  assert.match(disabledTeamCreate, /Promise<never>/);
+  assert.match(disabledTeamCreate, /throw new Error\("agent_team_execution_unavailable"\)/);
+  assert.doesNotMatch(disabledTeamCreate, /\.from\("agent_runs"\)|status: "queued"/);
+  assert.match(teamExecution, /command !== "cancel" && command !== "deny"/);
+  assert.match(teamExecution, /rawUser\(caller\)\.rpc\("control_disabled_agent_team_run"/);
+  assert.doesNotMatch(teamExecution, /\.from\("agent_run_tasks"\)[\s\S]*?\.update\(/);
 });
