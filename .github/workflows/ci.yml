@@ -42,7 +42,10 @@ jobs:
           files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
           printf '%s\n' "$files"
 
-          if printf '%s\n' "$files" | grep -Ev '^(docs/|artifacts/)|\.md$' | grep -q .; then
+          # A single grep avoids SIGPIPE under pipefail on very large PRs. A
+          # grep -q consumer can otherwise exit before its producer finishes
+          # and incorrectly classify source changes as documentation-only.
+          if grep -Eqv '^(docs/|artifacts/)|\.md$' <<< "$files"; then
             echo "run_ci=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_ci=false" >> "$GITHUB_OUTPUT"
