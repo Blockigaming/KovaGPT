@@ -512,6 +512,7 @@
     "ai_usage_events_user_created_idx",
     "ai_usage_events_user_idempotency_idx",
     "app_notifications_owner_created_idx",
+    "canvas_comment_tombstones_document",
     "canvas_comment_tombstones_retention",
     "canvas_comments_document_created",
     "canvas_personal_identity",
@@ -1993,5 +1994,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "1273fdaa8efb0e64cb2612c50e8786620cfcfb9cb498fd38d43dfef769b73931"
+  "sha256": "86139d895af790b3e72d6f1defe2a254a082bdbe3c0c5fc9f4912fe691dc233b"
 }
