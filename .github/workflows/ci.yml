@@ -122,6 +122,10 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run release:bundle
 
+      - name: Install Playwright browsers
+        if: steps.scope.outputs.run_ci == 'true'
+        run: npx playwright install --with-deps chromium
+
       - name: Integration tests
         id: integration
         if: steps.scope.outputs.run_ci == 'true'
@@ -139,10 +143,6 @@ jobs:
           path: artifacts/ci/integration-tests.log
           if-no-files-found: error
           retention-days: 7
-
-      - name: Install Playwright browsers
-        if: steps.scope.outputs.run_ci == 'true'
-        run: npx playwright install --with-deps chromium
 
       - name: Read-only deployed baseline audit
         id: deployed_baseline

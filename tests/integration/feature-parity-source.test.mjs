@@ -32,28 +32,36 @@ test("temporary chat never persists an unsent draft", () => {
   );
 });
 
-test("feature matrix uses the required honest status vocabulary and covers core categories", () => {
-  for (const status of [
-    "Working and verified locally",
-    "Implemented; production configuration required",
-    "Partially implemented",
-    "Missing",
-    "Intentionally unavailable",
-  ]) {
-    assert.match(matrix, new RegExp(status));
+test("capability inventory separates source, test and deployment evidence for all core areas", async () => {
+  const audit = JSON.parse(await readFile("docs/product-parity/capability-audit.json", "utf8"));
+  assert.equal(audit.progressRecalculated, false);
+  assert.equal(audit.voiceAudioDictation, "intentionally_excluded");
+  assert.deepEqual(
+    audit.surfaces.map(({ id }) => id),
+    Array.from({ length: 27 }, (_, index) => String(index + 1).padStart(2, "0")),
+  );
+  for (const stage of ["Source", "Local", "Hosted CI/review", "Staging", "Production"]) {
+    assert.ok(matrix.includes(`| ${stage}`), `missing evidence stage: ${stage}`);
   }
-  for (const capability of [
-    "Normal chat",
-    "File uploads",
-    "Image generation",
-    "Web search",
-    "Projects",
-    "Scheduled tasks",
-    "Apps/connectors",
-    "Voice",
-    "Account deletion",
-    "Mobile accessibility",
-  ]) {
-    assert.match(matrix, new RegExp(capability));
+  for (const surface of audit.surfaces) {
+    assert.ok(matrix.includes(`${surface.id} — ${surface.area}`), surface.area);
+    assert.ok(
+      ["bounded_source", "partial_source", "pending_package"].includes(surface.sourceStatus),
+    );
+    for (const field of [
+      "implementedScope",
+      "boundary",
+      "localStatus",
+      "hostedStatus",
+      "stagingStatus",
+      "productionStatus",
+    ]) {
+      assert.equal(typeof surface[field], "string", `${surface.area}: ${field}`);
+      assert.ok(surface[field].trim(), `${surface.area}: empty ${field}`);
+    }
+    assert.ok(surface.sourceEvidence.length > 0, `${surface.area}: source evidence`);
+    assert.ok(surface.testEvidence.length > 0, `${surface.area}: test evidence`);
   }
+  assert.match(matrix, /not a deployment certificate/);
+  assert.match(matrix, /Source\/build\/CI success cannot prove deployed/);
 });
