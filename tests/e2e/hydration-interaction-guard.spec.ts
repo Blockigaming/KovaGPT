@@ -56,3 +56,40 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
     )
     .toEqual(["k", "o"]);
 });
+
+test("persisted theme does not mutate the server shell before hydration", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1440x900");
+
+  const hydrationErrors: string[] = [];
+  const captureHydrationError = (message: string) => {
+    if (/(?:hydration|#418|server rendered html|didn't match)/iu.test(message)) {
+      hydrationErrors.push(message);
+    }
+  };
+  page.on("pageerror", (error) => captureHydrationError(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") captureHydrationError(message.text());
+  });
+  await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
+
+  let releaseScripts!: () => void;
+  const scriptsReleased = new Promise<void>((resolve) => {
+    releaseScripts = resolve;
+  });
+  await page.route("**/*", async (route) => {
+    if (route.request().resourceType() === "script") await scriptsReleased;
+    await route.continue();
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const root = page.locator("html");
+  await expect(root).toHaveAttribute("data-kova-hydration", "pending");
+  await expect(root).not.toHaveClass(/\bdark\b/);
+
+  releaseScripts();
+  await waitForKovaHydration(page);
+  await expect(root).toHaveClass(/\bdark\b/);
+  expect(hydrationErrors).toEqual([]);
+});

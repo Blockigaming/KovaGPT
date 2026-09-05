@@ -16,24 +16,11 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
-
-const EARLY_THEME_BOOTSTRAP = `(() => {
-  try {
-    const mode = localStorage.getItem("kova-theme-mode") || "system";
-    const isDark =
-      mode === "dark" ||
-      (mode === "system" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    document.documentElement.classList.toggle("dark", isDark);
-  } catch {}
-})();`;
 
 const LOCALE_DOCUMENT_BOOTSTRAP = `(() => {
   const segment = location.pathname.split("/")[1];
@@ -266,7 +253,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{LOCALE_DOCUMENT_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
