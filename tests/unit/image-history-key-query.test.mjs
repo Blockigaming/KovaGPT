@@ -33,9 +33,7 @@ function record(userKey, id, createdAt) {
 // This fixture deliberately provides only the IndexedDB factory. Exact-key
 // queries must not require a separately installed IDBKeyRange global.
 function installDatabase(t, initial = []) {
-  const records = new Map(
-    initial.map((item) => [JSON.stringify([item.userKey, item.id]), item]),
-  );
+  const records = new Map(initial.map((item) => [JSON.stringify([item.userKey, item.id]), item]));
   const queries = [];
   let closed = 0;
   const database = {
@@ -60,17 +58,11 @@ function installDatabase(t, initial = []) {
             index(indexName) {
               assert.equal(indexName, "userKey");
               const read = (query, keysOnly) => {
-                assert.equal(
-                  typeof query,
-                  "string",
-                  "queries must retain an exact account key",
-                );
+                assert.equal(typeof query, "string", "queries must retain an exact account key");
                 queries.push(query);
                 const request = {};
                 queueMicrotask(() => {
-                  const matches = [...records.values()].filter(
-                    (item) => item.userKey === query,
-                  );
+                  const matches = [...records.values()].filter((item) => item.userKey === query);
                   request.result = keysOnly
                     ? matches.map((item) => [item.userKey, item.id])
                     : matches;
@@ -129,10 +121,7 @@ test("image history reads exact keys without a separate IDBKeyRange global", asy
 });
 
 test("image history prunes only the exact account without IDBKeyRange", async (t) => {
-  const database = installDatabase(t, [
-    record("alice", "old", 1),
-    record("bob", "new", 2),
-  ]);
+  const database = installDatabase(t, [record("alice", "old", 1), record("bob", "new", 2)]);
   t.mock.method(
     globalThis,
     "fetch",
@@ -143,10 +132,7 @@ test("image history prunes only the exact account without IDBKeyRange", async (t
     { id: "new", prompt: "new", createdAt: 3, imageUrl: "blob:test" },
     1,
   );
-  assert.deepEqual([...database.records.keys()].sort(), [
-    '["alice","new"]',
-    '["bob","new"]',
-  ]);
+  assert.deepEqual([...database.records.keys()].sort(), ['["alice","new"]', '["bob","new"]']);
   assert.deepEqual(database.queries, ["alice"]);
   assert.equal(database.closed(), 1);
 });
@@ -158,10 +144,7 @@ test("clearing history without IDBKeyRange deletes only the exact account", asyn
     record("alice-extra", "shared-id", 3),
   ]);
   await clearImageHistory("alice");
-  assert.deepEqual(
-    [...database.records.keys()],
-    ['["alice-extra","shared-id"]'],
-  );
+  assert.deepEqual([...database.records.keys()], ['["alice-extra","shared-id"]']);
   assert.deepEqual(database.queries, ["alice"]);
   assert.equal(database.closed(), 1);
 });
@@ -197,14 +180,8 @@ test("image history reads wait for queued writes and deletion stays account-scop
 test("unavailable image history is an explicit error rather than an empty success", async (t) => {
   replaceGlobal(t, "indexedDB", undefined);
   replaceGlobal(t, "IDBKeyRange", undefined);
-  await assert.rejects(
-    loadImageHistory("alice", 10),
-    /Persistent image history is unavailable/,
-  );
-  await assert.rejects(
-    clearImageHistory("alice"),
-    /Persistent image history is unavailable/,
-  );
+  await assert.rejects(loadImageHistory("alice", 10), /Persistent image history is unavailable/);
+  await assert.rejects(clearImageHistory("alice"), /Persistent image history is unavailable/);
   await assert.rejects(
     deleteImageHistoryItem("alice", "id"),
     /Persistent image history is unavailable/,
