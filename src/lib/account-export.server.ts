@@ -233,6 +233,16 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
   return { ready: !(await hasAccountExportCleanupWork(userId)) };
 }
 
+export async function hasAccountDeletionFence(userId: string): Promise<boolean> {
+  const result = await admin
+    .from("account_deletion_fences")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (result.error) throw exportError("account_export_fence_lookup_unavailable");
+  return result.data !== null;
+}
+
 /** Releases the export fence when account deletion leaves the Auth user active. */
 export async function releaseAccountExportDeletionFence(userId: string): Promise<void> {
   const released = await admin.rpc("cancel_account_export_account_deletion", {

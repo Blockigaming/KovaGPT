@@ -11,6 +11,7 @@ async function runDeletion({
   failExport = false,
   failBilling = false,
   failProjects = false,
+  existingFence = false,
   organizationFailure = null,
 } = {}) {
   const calls = [];
@@ -92,6 +93,7 @@ async function runDeletion({
       if (failExport) throw new Error("offline");
       return { ready: exportReady };
     },
+    hasAccountDeletionFence: async () => existingFence,
     deleteOwnedProjectsBeforeAccountDeletion: async () => {
       calls.push("project-cleanup");
       if (failProjects) throw new Error("project cleanup pending");
@@ -223,6 +225,12 @@ test("Project cleanup failure retains Auth, the fence, and all external connecti
     "upload-fence",
     "project-cleanup",
   ]);
+});
+
+test("a retry never releases a deletion fence left by prior destructive cleanup", async () => {
+  const result = await runDeletion({ existingFence: true, failPreflight: true });
+  assert.equal(result.response.status, 409);
+  assert.doesNotMatch(result.calls.join(","), /fence-release/u);
 });
 
 for (const status of [409, 503]) {

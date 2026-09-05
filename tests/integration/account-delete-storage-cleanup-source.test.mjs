@@ -13,6 +13,7 @@ test("account deletion finishes ordered Storage cleanup before Auth deletion", (
   assert.match(route, /account_storage_cleanup_pending/u);
   assert.match(route, /Retry-After": "5"/u);
   assert.match(route, /destructiveCleanupStarted = true/u);
+  assert.match(route, /hasAccountDeletionFence\(auth\.userId\)/u);
   assert.match(route, /deletionFailure && !destructiveCleanupStarted/u);
 });
 

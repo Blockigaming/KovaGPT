@@ -35,6 +35,8 @@ export function useCanvasCollaboration({
   const base = useRef<{ key: string; revision: number } | null>(null);
   const [retry, setRetry] = useState(0);
   const snapshot = stored?.key === key ? stored.snapshot : null;
+  const knownCommentIds = useRef<string[]>([]);
+  knownCommentIds.current = snapshot?.comments.map((comment) => comment.id) ?? [];
   const documentId = snapshot?.document.id ?? null;
   const parse = useCallback(
     (value: unknown) => {
@@ -82,7 +84,14 @@ export function useCanvasCollaboration({
     async (signal?: AbortSignal) => {
       if (!key || !actorId || !documentId) return;
       const generation = epoch.current;
-      const result = parse(await collaborationRequest(actorId, "get", { documentId }, signal));
+      const result = parse(
+        await collaborationRequest(
+          actorId,
+          "get",
+          { documentId, knownCommentIds: knownCommentIds.current },
+          signal,
+        ),
+      );
       if (epoch.current !== generation || keyRef.current !== key || signal?.aborted) return;
       if (base.current?.key === key && result.document.revision < base.current.revision) return;
       if (base.current?.key === key && result.document.revision > base.current.revision)
@@ -148,6 +157,7 @@ export function useCanvasCollaboration({
             documentId,
             expectedRevision: revision,
             content,
+            knownCommentIds: knownCommentIds.current,
           }),
         );
         if (epoch.current !== generation || keyRef.current !== key)
@@ -195,6 +205,7 @@ export function useCanvasCollaboration({
       await collaborationRequest(actorId, operation, {
         documentId: snapshot.document.id,
         expectedRevision: base.current.revision,
+        knownCommentIds: knownCommentIds.current,
         ...data,
       }),
     );
@@ -243,6 +254,7 @@ export function useCanvasCollaboration({
         documentId: snapshot.document.id,
         beforeId: last.id,
         beforeCreatedAt: last.created_at,
+        knownCommentIds: knownCommentIds.current,
       }),
     );
     if (epoch.current !== generation || keyRef.current !== key) return;
@@ -252,13 +264,11 @@ export function useCanvasCollaboration({
             key,
             snapshot: {
               ...previous.snapshot,
-              comments: [
-                ...previous.snapshot.comments,
-                ...result.comments.filter(
-                  (comment) =>
-                    !previous.snapshot.comments.some((existing) => existing.id === comment.id),
-                ),
-              ],
+              comments: mergeCanvasComments(
+                previous.snapshot.comments,
+                result.comments,
+                result.deletedCommentIds,
+              ),
             },
           }
         : previous,

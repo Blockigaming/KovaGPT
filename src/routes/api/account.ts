@@ -9,6 +9,7 @@ import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 import {
   cleanupAccountExportsBeforeAccountDeletion,
+  hasAccountDeletionFence,
   releaseAccountExportDeletionFence,
 } from "@/lib/account-export.server";
 import { prepareStripeAccountDeletion } from "@/lib/stripe-account-deletion-preflight.mjs";
@@ -73,7 +74,12 @@ export const Route = createFileRoute("/api/account")({
 
         let preparedBilling: Awaited<ReturnType<typeof prepareStripeAccountDeletion>> = [];
         let deletionFailure: Response | null = null;
-        let destructiveCleanupStarted = false;
+        let destructiveCleanupStarted: boolean;
+        try {
+          destructiveCleanupStarted = await hasAccountDeletionFence(auth.userId);
+        } catch {
+          return jsonError("Account deletion state could not be verified. Retry shortly.", 503);
+        }
         try {
           await prepareOrganizationAccountDeletion(auth.supabaseAdmin, auth.userId);
         } catch (error) {

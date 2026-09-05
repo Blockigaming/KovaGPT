@@ -200,6 +200,7 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
     const deleted = await as(db, owner, "delete_comment", {
       documentId: a.document.id,
       commentId: session,
+      knownCommentIds: [session],
     });
     assert.equal(deleted.comments.length, 0);
     assert.deepEqual(deleted.deletedCommentIds, [session]);
@@ -217,7 +218,10 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
       ).rows[0].n,
       1,
     );
-    const refreshed = await as(db, editor, "get", { documentId: a.document.id });
+    const refreshed = await as(db, editor, "get", {
+      documentId: a.document.id,
+      knownCommentIds: [session],
+    });
     assert.equal(refreshed.comments.length, 0);
     assert.deepEqual(refreshed.deletedCommentIds, [session]);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [editor]);
