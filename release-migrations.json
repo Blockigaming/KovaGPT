@@ -2232,7 +2232,7 @@
       "order": 108,
       "filename": "20260905000905_project_canvas_collaboration.sql",
       "timestamp": "20260905000905",
-      "sha256": "66a9aa7732fb145888ebc41183905d4847881e40062e4befbde513b0ab277378",
+      "sha256": "ca89128479c81024de8b199189a8a25f88cbc4e2ba14c0a6dca32bf6523c3dc5",
       "tables": [
         "canvas_documents",
         "canvas_revisions",
@@ -2262,6 +2262,7 @@
         "canvas_project_identity",
         "canvas_comments_document_created",
         "canvas_comment_tombstones_retention",
+        "canvas_comment_tombstones_document",
         "collaboration_presence_resource"
       ]
     },

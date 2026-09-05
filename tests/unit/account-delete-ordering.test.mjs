@@ -138,7 +138,7 @@ test("pending export cleanup leaves paid service and connectors intact", async (
   assert.deepEqual(result.calls, ["organization-preflight", "export-cleanup", "fence-release"]);
 });
 
-test("pending Storage cleanup leaves paid service and connectors intact", async () => {
+test("pending Storage cleanup keeps the account fenced and external services intact", async () => {
   const result = await runDeletion({ storageReady: false });
   assert.equal(result.response.status, 409);
   assert.deepEqual(result.calls, [
@@ -148,7 +148,6 @@ test("pending Storage cleanup leaves paid service and connectors intact", async 
     "upload-fence",
     "project-cleanup",
     "storage-cleanup",
-    "fence-release",
   ]);
 });
 
@@ -158,7 +157,7 @@ test("export cleanup failure releases the fence without external disconnections"
   assert.deepEqual(result.calls, ["organization-preflight", "export-cleanup", "fence-release"]);
 });
 
-test("billing failure after cleanup retains Auth and releases the export fence", async () => {
+test("billing failure after destructive cleanup retains Auth and the deletion fence", async () => {
   const result = await runDeletion({ failBilling: true });
   assert.equal(result.response.status, 502);
   assert.deepEqual(result.calls, [
@@ -169,7 +168,6 @@ test("billing failure after cleanup retains Auth and releases the export fence",
     "project-cleanup",
     "storage-cleanup",
     "billing-retire",
-    "fence-release",
   ]);
 });
 
@@ -215,7 +213,7 @@ test("a live upload blocks destructive Storage and billing cleanup", async () =>
   ]);
 });
 
-test("Project cleanup failure retains Auth and all external connections", async () => {
+test("Project cleanup failure retains Auth, the fence, and all external connections", async () => {
   const result = await runDeletion({ failProjects: true });
   assert.equal(result.response.status, 503);
   assert.deepEqual(result.calls, [
@@ -224,7 +222,6 @@ test("Project cleanup failure retains Auth and all external connections", async 
     "billing-preflight",
     "upload-fence",
     "project-cleanup",
-    "fence-release",
   ]);
 });
 

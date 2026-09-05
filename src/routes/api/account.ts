@@ -73,6 +73,7 @@ export const Route = createFileRoute("/api/account")({
 
         let preparedBilling: Awaited<ReturnType<typeof prepareStripeAccountDeletion>> = [];
         let deletionFailure: Response | null = null;
+        let destructiveCleanupStarted = false;
         try {
           await prepareOrganizationAccountDeletion(auth.supabaseAdmin, auth.userId);
         } catch (error) {
@@ -151,6 +152,9 @@ export const Route = createFileRoute("/api/account")({
             const uploadsReady = await prepareAccountStorageArtifactDeletion(auth.userId);
             let storageCleanup: { complete: boolean } = { complete: false };
             if (uploadsReady) {
+              // From this point onward, retries must resume behind the durable
+              // deletion fence: Project and Storage removal is irreversible.
+              destructiveCleanupStarted = true;
               const { deleteOwnedProjectsBeforeAccountDeletion } =
                 await import("@/lib/project-deletion.server");
               await deleteOwnedProjectsBeforeAccountDeletion({
@@ -280,10 +284,10 @@ export const Route = createFileRoute("/api/account")({
           }
         }
 
-        if (deletionFailure) {
+        if (deletionFailure && !destructiveCleanupStarted) {
           // cleanupAccountExportsBeforeAccountDeletion inserts a durable fence.
-          // The Auth user is still active on every failure above, so always
-          // remove that fence before returning and restore export availability.
+          // Before irreversible cleanup starts, remove it again so an intact
+          // account retains normal access and export availability.
           try {
             await releaseAccountExportDeletionFence(auth.userId);
           } catch (error) {
@@ -302,8 +306,9 @@ export const Route = createFileRoute("/api/account")({
               },
             );
           }
-          return deletionFailure;
         }
+
+        if (deletionFailure) return deletionFailure;
 
         return new Response(null, {
           status: 204,

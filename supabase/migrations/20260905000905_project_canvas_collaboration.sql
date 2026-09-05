@@ -38,6 +38,7 @@ CREATE TABLE public.canvas_comment_tombstones (
   deleted_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX canvas_comment_tombstones_retention ON public.canvas_comment_tombstones(deleted_at,id);
+CREATE INDEX canvas_comment_tombstones_document ON public.canvas_comment_tombstones(document_id,deleted_at,id);
 CREATE TABLE public.collaboration_presence (
   actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   session_id uuid NOT NULL,
@@ -314,7 +315,7 @@ BEGIN
  member_write:=kova_private.canvas_access(cid,true);
  RETURN jsonb_build_object('document',to_jsonb(doc),'canEdit',member_write,
    'canManageComments',coalesce(doc.private_owner_id=uid,false) OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid),
-   'deletedCommentIds',coalesce((SELECT jsonb_agg(id) FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NOT NULL),'[]'::jsonb),
+   'deletedCommentIds',coalesce((SELECT jsonb_agg(id) FROM public.canvas_comment_tombstones WHERE document_id=cid),'[]'::jsonb),
    'versions',coalesce((SELECT jsonb_agg(v ORDER BY revision DESC) FROM (SELECT revision,created_at FROM public.canvas_revisions WHERE document_id=cid ORDER BY revision DESC LIMIT 50) v),'[]'::jsonb),
    'comments',coalesce((SELECT jsonb_agg(c ORDER BY created_at DESC,id DESC) FROM (SELECT id,author_id,body,anchor,created_at FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NULL
      AND (p_data->>'beforeId' IS NULL OR (created_at,id)<((p_data->>'beforeCreatedAt')::timestamptz,(p_data->>'beforeId')::uuid))

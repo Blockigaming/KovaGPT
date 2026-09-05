@@ -197,11 +197,12 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
       as(db, viewer, "delete_comment", { documentId: a.document.id, commentId: session }),
       /access_denied/,
     );
-    assert.equal(
-      (await as(db, owner, "delete_comment", { documentId: a.document.id, commentId: session }))
-        .comments.length,
-      0,
-    );
+    const deleted = await as(db, owner, "delete_comment", {
+      documentId: a.document.id,
+      commentId: session,
+    });
+    assert.equal(deleted.comments.length, 0);
+    assert.deepEqual(deleted.deletedCommentIds, [session]);
     await assert.rejects(as(db, editor, "comment", request), /comment_id_conflict/);
     assert.equal(
       (await db.query("select count(*)::int n from public.canvas_comments where id=$1", [session]))
@@ -216,7 +217,9 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
       ).rows[0].n,
       1,
     );
-    assert.equal((await as(db, editor, "get", { documentId: a.document.id })).comments.length, 0);
+    const refreshed = await as(db, editor, "get", { documentId: a.document.id });
+    assert.equal(refreshed.comments.length, 0);
+    assert.deepEqual(refreshed.deletedCommentIds, [session]);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [editor]);
     await db.exec("set role authenticated");
     await assert.rejects(

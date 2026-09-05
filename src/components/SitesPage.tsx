@@ -70,6 +70,7 @@ function SitesContent({ userId }: { userId: string }) {
   const refresh = useCallback(
     async (id: string | null) => {
       const current = ++epoch.current;
+      setError(null);
       setWorkspace(null);
       setSelected(id);
       setVersion(null);
