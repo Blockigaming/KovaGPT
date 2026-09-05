@@ -273,7 +273,6 @@ export function createWorkSandboxExecutor(
           "--network=none",
           "--cap-drop=ALL",
           "--security-opt=no-new-privileges=true",
-          "--cgroupns=private",
           "--log-driver=none",
           "--memory=268435456",
           "--memory-swap=268435456",
