@@ -53,6 +53,9 @@ export const getGitHubManagement = createServerFn({ method: "GET" })
         .eq("owner_id", context.userId)
         .order("full_name"),
     ]);
+    if (accounts.error || installations.error || repositories.error) {
+      throw new Error("Unable to load GitHub management state");
+    }
     const rows = accounts.data ?? [],
       health = rows.some(
         (item: any) => item.status === "reauthorization_required" || item.status === "revoked",
@@ -119,7 +122,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
     const available = [...availableById.values()];
     for (const installation of available) {
       const token = await createInstallationToken(installation.id);
-      await (supabaseAdmin as any).from("github_installations").upsert(
+      const installationWrite = await (supabaseAdmin as any).from("github_installations").upsert(
         {
           id: installation.id,
           account_id: ownedById.get(Number(installation.id)),
@@ -134,6 +137,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
         },
         { onConflict: "owner_id,id" },
       );
+      if (installationWrite.error) throw new Error("Unable to save GitHub installation");
       const response = await fetch(
         `https://api.github.com/installation/repositories?per_page=100`,
         {
@@ -146,8 +150,8 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
       );
       if (!response.ok) throw new Error("Unable to load installation repositories");
       const payload = (await response.json()) as any;
-      for (const repo of payload.repositories ?? [])
-        await (supabaseAdmin as any).from("github_repositories").upsert(
+      for (const repo of payload.repositories ?? []) {
+        const repositoryWrite = await (supabaseAdmin as any).from("github_repositories").upsert(
           {
             id: repo.id,
             owner_id: context.userId,
@@ -163,6 +167,8 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
           },
           { onConflict: "owner_id,id" },
         );
+        if (repositoryWrite.error) throw new Error("Unable to save GitHub repository");
+      }
     }
     return { count: available.length };
   });
@@ -191,7 +197,7 @@ export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
     if (owned.error || owned.data.length !== data.repositoryIds.length)
       throw new Error("Repository grant verification failed");
     const now = new Date().toISOString();
-    await (supabaseAdmin as any)
+    const grantWrite = await (supabaseAdmin as any)
       .from("github_repositories")
       .update({
         explicitly_granted: data.granted,
@@ -200,17 +206,20 @@ export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
       })
       .eq("owner_id", context.userId)
       .in("id", data.repositoryIds);
+    if (grantWrite.error) throw new Error("Unable to update GitHub repository access");
     if (!data.granted) {
-      await (supabaseAdmin as any)
+      const selectionDelete = await (supabaseAdmin as any)
         .from("github_coding_selections")
         .delete()
         .eq("owner_id", context.userId)
         .in("repository_id", data.repositoryIds);
-      await (supabaseAdmin as any)
+      if (selectionDelete.error) throw new Error("Unable to remove GitHub coding selections");
+      const syncUpdate = await (supabaseAdmin as any)
         .from("github_sync_records")
         .update({ deletion_at: now })
         .eq("owner_id", context.userId)
         .in("repository_id", data.repositoryIds);
+      if (syncUpdate.error) throw new Error("Unable to update GitHub synced data access");
     }
     return { updated: data.repositoryIds.length };
   });
@@ -220,6 +229,9 @@ export const disconnectGitHub = createServerFn({ method: "POST" })
     z.object({ accountId: z.string().uuid(), removeData: z.boolean() }).parse(value),
   )
   .handler(async ({ data, context }) => {
+    // The UI intentionally withholds data removal until it can be scoped and
+    // committed atomically for one account. Never run the legacy owner-wide purge.
+    if (data.removeData) throw new Error("Account-scoped GitHub data removal is not available");
     const account = await (supabaseAdmin as any)
       .from("github_accounts")
       .select("id")
@@ -232,10 +244,5 @@ export const disconnectGitHub = createServerFn({ method: "POST" })
       p_remove_data: data.removeData,
     });
     if (disconnect.error) throw new Error("Unable to disconnect GitHub account");
-    if (data.removeData)
-      await (supabaseAdmin as any)
-        .from("github_sync_records")
-        .delete()
-        .eq("owner_id", context.userId);
     return { ok: true, remoteRevocation: "not_attempted" };
   });

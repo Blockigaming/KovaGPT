@@ -57,7 +57,7 @@ test("claimed legacy arguments are revalidated immediately before Google access"
   const executor = read("src/lib/google-tools.server.ts");
   const claim = executor.indexOf('.select("id, tool, args, result")');
   const revalidate = executor.indexOf("validateSupportedWrite(claimedTool,", claim);
-  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", revalidate);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, {", revalidate);
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
@@ -86,7 +86,7 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(definition, /confirm before anything is sent/);
 
   const claim = executor.indexOf("const claimedTool");
-  const token = executor.indexOf("getValidGoogleAccessToken(userId, stagedGoogleSub)", claim);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId, {", claim);
   const endpoint = executor.indexOf("${GMAIL}/users/me/messages/send", token);
   assert.ok(claim > -1 && token > claim && endpoint > token);
   assert.match(executor, /sending \? `\$\{GMAIL\}\/users\/me\/messages\/send`/);
@@ -96,10 +96,10 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
   assert.match(executor, /Content-Transfer-Encoding: base64/);
   assert.match(executor, /encodeMimeTextBody\(body\)/);
   assert.match(executor, /AbortSignal\.timeout\(GOOGLE_WRITE_TIMEOUT_MS\)/);
-  assert.match(executor, /gmail\.send/);
+  assert.match(executor, /googleToolCapability/);
   assert.match(
     executor,
-    /name === "gmail_create_draft" \? health\.has\.gmailWrite : health\.has\.gmail/,
+    /hasGoogleCapability\(health\.scopes, googleToolCapability\(tool\.function\.name\)\)/,
   );
 
   const summarizeStart = executor.indexOf("export function summarizeWriteTool");
@@ -118,17 +118,23 @@ test("confirmed writes stay bound to the staged Google account and use a recover
   const executor = read("src/lib/google-tools.server.ts");
   const oauth = read("src/lib/google-oauth.server.ts");
 
-  assert.match(executor, /result: \{ staged_google_sub: stagedGoogleSub \}/);
+  assert.match(executor, /result: stagedBinding/);
+  assert.match(executor, /staged_connection_id: connection\.id/);
+  assert.match(executor, /staged_grant_id: connection\.grant_id/);
   assert.match(executor, /processing_started_at: new Date\(\)\.toISOString\(\)/);
-  assert.match(executor, /getValidGoogleAccessToken\(userId, stagedGoogleSub\)/);
+  assert.match(
+    executor,
+    /getValidGoogleAccessToken\(userId, \{[\s\S]{0,250}connectionId: stagedConnectionId,[\s\S]{0,150}grantId: stagedGrantId/,
+  );
   assert.match(
     executor,
     /Date\.now\(\) - new Date\(startedAt\)\.getTime\(\) > STALE_PROCESSING_MS/,
   );
   assert.match(executor, /abandoned_processing/);
-  assert.match(oauth, /expectedGoogleSub && data\.google_sub !== expectedGoogleSub/);
-  assert.match(oauth, /refreshAccessToken\(userId, expectedGoogleSub\)/);
-  assert.match(oauth, /refreshUpdate\.eq\("google_sub", expectedGoogleSub\)/);
+  assert.match(oauth, /accountRuntime\(\)\.accessToken\(userId, binding\)/);
+  const runtime = read("src/lib/google-account-runtime.server.mjs");
+  assert.match(runtime, /owner\.sub !== conn\.google_sub/);
+  assert.match(runtime, /grantId: selected\.grantId \?\? conn\.grant_id/);
 });
 
 test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {

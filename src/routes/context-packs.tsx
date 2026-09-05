@@ -14,6 +14,7 @@ import {
   type ResearchTemplate,
 } from "@/lib/professional.functions";
 import { loadWorkTasks } from "@/lib/work-store";
+import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
 import {
   consumePrincipalHandoff,
   safeBrowserStorage,
@@ -45,6 +46,7 @@ type Candidate = {
 function ContextPacksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const navigate = useNavigate();
   const listPacks = useServerFn(listContextPacks),
@@ -148,6 +150,7 @@ function ContextPacksPage() {
     userKey,
   ]);
   const candidates = useMemo<Candidate[]>(() => {
+    void workRevision; // Invalidate the storage snapshot after a durable sync update.
     if (!dataReady) return [];
     return [
       ...loadConversations(userKey).map((c) => ({
@@ -218,7 +221,18 @@ function ContextPacksPage() {
           ),
       })),
     ].filter((item) => `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()));
-  }, [dataReady, library, memories, pending, projects, prompts, query, research, userKey]);
+  }, [
+    dataReady,
+    library,
+    memories,
+    pending,
+    projects,
+    prompts,
+    query,
+    research,
+    userKey,
+    workRevision,
+  ]);
   const submit = async () => {
     const items = candidates
       .filter((item) => selected.includes(item.key))

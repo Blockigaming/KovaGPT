@@ -36,6 +36,36 @@ test("chat SSE accepts fragmented events only after a terminal DONE frame", asyn
   assert.equal(events[0].choices[0].delta.content, "hello");
 });
 
+test("terminal DONE releases the reader without aborting pending server accounting", async () => {
+  let finishAccounting;
+  let status = "pending";
+  let cancelled = false;
+  const accounting = new Promise((resolve) => {
+    finishAccounting = resolve;
+  });
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      await accounting;
+      status = "completed";
+      controller.close();
+    },
+    cancel() {
+      cancelled = true;
+      status = "client_disconnected";
+    },
+  });
+
+  await consumeChatSse(stream, { idleTimeoutMs: 20 });
+  assert.equal(stream.locked, false);
+  assert.equal(cancelled, false);
+  assert.equal(status, "pending", "the UI need not wait for server accounting");
+  finishAccounting();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(status, "completed");
+  assert.equal(cancelled, false);
+});
+
 test("chat SSE accepts a generated-image frame above the legacy 2 MiB cap", async () => {
   const image = `data:image/png;base64,${"A".repeat(2 * 1024 * 1024 + 1)}`;
   const event = {

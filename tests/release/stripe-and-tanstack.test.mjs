@@ -18,7 +18,7 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
 
   assert.equal(pkg.dependencies.stripe, "22.6.0");
   assert.match(stripeSource, /apiVersion: "2026-08-26\.dahlia"/);
-  assert.match(stripeSource, /req\.text\(\)/);
+  assert.match(stripeSource, /readUtf8BodyBounded\(req, maxBodyBytes\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
   assert.match(checkoutSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
@@ -36,8 +36,8 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   );
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
   assert.match(hook, /processStripeEvent/);
-  assert.match(hook, /createStripeClient\(env\)\.subscriptions\.retrieve/);
-  assert.match(hook, /status: verificationFailure \? 400 : 503/);
+  assert.match(hook, /stripe\.subscriptions\.retrieve/);
+  assert.match(hook, /status: retryableFailure \? 503 : 400/);
   assert.match(hook, /"Retry-After": "5"/);
   assert.match(hook, /correlationId/);
   assert.doesNotMatch(hook, /console\.(log|error)/);

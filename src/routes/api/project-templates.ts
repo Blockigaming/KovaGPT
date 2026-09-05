@@ -101,7 +101,8 @@ export const Route = createFileRoute("/api/project-templates")({
               p_template_id: query.templateId,
               p_version: query.version,
             })
-          : await adminFor(auth).rpc("list_project_templates", {
+          : await adminFor(auth).rpc("list_project_templates_page", {
+              p_after_id: query.after,
               p_user_id: auth.userId,
               p_limit: query.limit,
             });

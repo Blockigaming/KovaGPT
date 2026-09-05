@@ -161,13 +161,15 @@ jobs:
         shell: bash
         env:
           KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
+          KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: ${{ vars.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           parameters_path="$RUNNER_TEMP/kova-production-plan.parameters.json"
           umask 077
-          PARAMETERS_PATH="$parameters_path" node <<'NODE'
-          const { createHash } = require("node:crypto");
-          const fs = require("fs");
+          PARAMETERS_PATH="$parameters_path" node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import fs from "node:fs";
+          import { validateProductionBillingParameters } from "./scripts/azure/production-billing-parameters.mjs";
           const raw = process.env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON;
           if (!raw) throw new Error("KOVA_PRODUCTION_BICEP_PARAMETERS_JSON is required");
           const document = JSON.parse(raw);
@@ -207,6 +209,11 @@ jobs:
               "The candidate publishable-key fingerprint does not match the protected production key",
             );
           }
+          Object.assign(document.parameters, validateProductionBillingParameters({
+            parameters: document.parameters,
+            provenance,
+            stripePublishableKey: process.env.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY || "",
+          }));
           fs.writeFileSync(process.env.PARAMETERS_PATH, `${JSON.stringify(document, null, 2)}\n`, {
             mode: 0o600,
           });

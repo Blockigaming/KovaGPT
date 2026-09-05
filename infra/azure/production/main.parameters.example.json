@@ -88,6 +88,27 @@
     },
     "budgetContactEmails": {
       "value": []
+    },
+    "stripeBillingRuntime": {
+      "value": "disabled"
+    },
+    "stripeLiveAccountId": {
+      "value": "acct_1UAeDgAEZlsb6DBY"
+    },
+    "stripeBillingPortalConfigurationId": {
+      "value": "bpc_1UB2ZxAEZlsb6DBYU3PoJJPU"
+    },
+    "stripeLiveApiKeySecretUri": {
+      "value": ""
+    },
+    "stripeLiveWebhookSecretUri": {
+      "value": ""
+    },
+    "stripeSandboxApiKeySecretUri": {
+      "value": ""
+    },
+    "stripeSandboxWebhookSecretUri": {
+      "value": ""
     }
   }
 }

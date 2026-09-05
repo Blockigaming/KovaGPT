@@ -1,10 +1,22 @@
+import { validWorkSession } from "./work-session.mjs";
 export const WORK_SYNC_MAX_BODY_BYTES = 128 * 1024;
 export const WORK_SYNC_MAX_PAYLOAD_BYTES = 96 * 1024;
+export const WORK_SYNC_MAX_PAYLOAD_DEPTH = 16;
 export const WORK_SYNC_MAX_CHANGES = 500;
+export const WORK_SYNC_READ_RATE_POLICY = Object.freeze({
+  action: "work_sync_read",
+  limit: 60,
+  windowSeconds: 60,
+});
+export const WORK_SYNC_MUTATION_RATE_POLICY = Object.freeze({
+  action: "work_sync_mutation",
+  limit: 12,
+  windowSeconds: 60,
+});
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const SAVED_KINDS = new Set(["task", "template", "agent_draft"]);
-const RECENT_TYPES = new Set(["run", "task", "template", "agent_draft"]);
+const SAVED_KINDS = new Set(["task", "template", "agent_draft", "session"]);
+const RECENT_TYPES = new Set(["run", "task", "template", "agent_draft", "session"]);
 
 export class WorkSyncInputError extends Error {
   constructor(code) {
@@ -47,6 +59,23 @@ function safePayload(value) {
   if (!text || new TextEncoder().encode(text).byteLength > WORK_SYNC_MAX_PAYLOAD_BYTES) {
     throw new WorkSyncInputError("work_sync_payload_too_large");
   }
+  const pending = [{ value, depth: 1 }];
+  while (pending.length > 0) {
+    const entry = pending.pop();
+    const isArray = Array.isArray(entry.value);
+    const isObject = isRecord(entry.value);
+    if (!isArray && !isObject) continue;
+    if (entry.depth > WORK_SYNC_MAX_PAYLOAD_DEPTH) {
+      throw new WorkSyncInputError("work_sync_payload_too_deep");
+    }
+    if (isArray) {
+      for (const child of entry.value) pending.push({ value: child, depth: entry.depth + 1 });
+    } else {
+      for (const child of Object.values(entry.value)) {
+        pending.push({ value: child, depth: entry.depth + 1 });
+      }
+    }
+  }
   return value;
 }
 
@@ -80,13 +109,16 @@ export function parseWorkSyncMutation(value) {
     ) {
       throw new WorkSyncInputError("work_sync_save_invalid");
     }
+    const payload = safePayload(value.payload);
+    if (value.kind === "session" && !validWorkSession(payload))
+      throw new WorkSyncInputError("work_sync_session_invalid");
     return {
       action: "save",
       mutationId,
       id: uuid(value.id, "work_sync_record_id_invalid"),
       kind: value.kind,
       title: title(value.title),
-      payload: safePayload(value.payload),
+      payload,
       expectedRevision: revision(value.expectedRevision),
     };
   }
@@ -159,6 +191,8 @@ export function parseWorkSyncQuery(urlValue) {
 }
 
 export function workSyncErrorStatus(code) {
+  if (code === "P0003") return 429;
+  if (code === "54000") return 409;
   if (code === "40001") return 409;
   if (code === "P0002") return 404;
   if (code === "22023" || code === "23514") return 400;

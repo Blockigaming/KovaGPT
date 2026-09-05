@@ -26,11 +26,13 @@ async function createDatabase() {
   await database.exec(`
     CREATE ROLE anon;
     CREATE ROLE authenticated;
-    CREATE ROLE service_role;
-    CREATE SCHEMA auth;
-    CREATE TABLE auth.users (id uuid PRIMARY KEY);
+    CREATE ROLE service_role BYPASSRLS;
+    CREATE SCHEMA auth; GRANT USAGE ON SCHEMA auth TO service_role;
+    CREATE TABLE auth.users (id uuid PRIMARY KEY, deleted_at timestamptz);
     CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
       $$ SELECT null::uuid $$;
+    CREATE TABLE public.account_deletion_fences (user_id uuid PRIMARY KEY);
+    GRANT SELECT ON public.account_deletion_fences TO service_role;
     CREATE TABLE public.projects (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       owner_id uuid NOT NULL REFERENCES auth.users(id),
@@ -54,7 +56,16 @@ async function createDatabase() {
     );
     INSERT INTO auth.users(id) VALUES ('${ownerId}'), ('${granteeId}'), ('${outsiderId}');
   `);
+  await database.exec(
+    await readFile("supabase/migrations/20260905001736_private_auth_identity_helpers.sql", "utf8"),
+  );
   await database.exec(await readFile(migrationPath, "utf8"));
+  await database.exec(
+    await readFile(
+      "supabase/migrations/20260905011123_project_template_management_pagination.sql",
+      "utf8",
+    ),
+  );
   return database;
 }
 
@@ -302,6 +313,104 @@ test("browser roles are read-only and all template functions are invoker/service
       assert.equal(row.prosecdef, false);
       assert.deepEqual(row.proconfig, ['search_path=""']);
     }
+  } finally {
+    await database.close();
+  }
+});
+
+test("service-only template sharing verifies recipients without Auth table access", async () => {
+  const database = await createDatabase();
+  try {
+    const template = await createTemplate(database);
+    await database.exec(
+      "grant insert on public.account_audit_entries to service_role; set role service_role",
+    );
+    const privilege = await database.query(
+      "select has_table_privilege(current_user,'auth.users','SELECT') allowed",
+    );
+    assert.equal(privilege.rows[0].allowed, false);
+    const shared = await database.query(
+      "select public.share_project_template($1,$2,$3,1,$4,false) result",
+      [ownerId, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", template.templateId, granteeId],
+    );
+    assert.ok(shared.rows[0].result);
+  } finally {
+    await database.close();
+  }
+});
+
+test("stable management pages include older owned grants and all currently received templates", async () => {
+  const database = await createDatabase();
+  const id = (index) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+  try {
+    await database.query(
+      `
+      insert into public.project_templates(id,owner_id,name,archived_at)
+      select ('00000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,
+        case when n<=75 then $1::uuid else $2::uuid end,'Template '||n,
+        case when n in (70,79) then now() else null end
+      from generate_series(1,81) n`,
+      [ownerId, granteeId],
+    );
+    await database.query(
+      `insert into public.project_template_versions(template_id,owner_id,version,snapshot,created_by)
+      select id,owner_id,1,$1,owner_id from public.project_templates`,
+      [snapshotV1],
+    );
+    await database.query(
+      `insert into public.project_template_grants(template_id,owner_id,grantee_user_id,can_copy,granted_by,revoked_at)
+      select id,owner_id,case when owner_id=$1 then $2::uuid else $1::uuid end,true,owner_id,
+        case when id=$3 then now() else null end
+      from public.project_templates where id<>$4`,
+      [ownerId, outsiderId, id(80), id(81)],
+    );
+    await database.exec("set role service_role");
+    const first = (
+      await database.query("select public.list_project_templates_page($1,null,50) result", [
+        ownerId,
+      ])
+    ).rows[0].result;
+    assert.equal(first.templates.length, 50);
+    assert.equal(first.hasMore, true);
+    assert.equal(first.nextCursor, id(50));
+    // A mutable updated_at sort would pull a later row ahead of an offset/cursor.
+    await database.query(
+      "update public.project_templates set updated_at=now()+interval '1 day' where id=$1",
+      [id(75)],
+    );
+    const second = (
+      await database.query("select public.list_project_templates_page($1,$2,50) result", [
+        ownerId,
+        first.nextCursor,
+      ])
+    ).rows[0].result;
+    assert.equal(second.hasMore, false);
+    assert.equal(second.nextCursor, null);
+    const all = [...first.templates, ...second.templates];
+    assert.deepEqual(
+      all.map((row) => row.id),
+      Array.from({ length: 78 }, (_, n) => id(n + 1)),
+    );
+    assert.equal(all.find((row) => row.id === id(75)).grants[0].granteeUserId, outsiderId);
+    assert.ok(all.find((row) => row.id === id(70)).archivedAt);
+    assert.deepEqual(all.find((row) => row.id === id(76)).grants, []);
+    assert.equal(
+      all.some((row) => "snapshot" in row),
+      false,
+    );
+    const acl = (
+      await database.query(`select
+      has_table_privilege(current_user,'auth.users','SELECT') auth_read,
+      has_function_privilege('authenticated','public.list_project_templates_page(uuid,uuid,integer)','EXECUTE') browser_execute`)
+    ).rows[0];
+    assert.deepEqual(acl, { auth_read: false, browser_execute: false });
+    await database.exec("reset role");
+    await database.query("insert into public.account_deletion_fences values ($1)", [ownerId]);
+    await database.exec("set role service_role");
+    await assert.rejects(
+      database.query("select public.list_project_templates_page($1,null,50)", [ownerId]),
+      /permission_denied/u,
+    );
   } finally {
     await database.close();
   }

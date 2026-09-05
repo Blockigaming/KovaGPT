@@ -20,7 +20,7 @@ function authorize(request: Request): boolean {
   const expected = configuredSecret();
   const supplied = bearerToken(request);
 
-  if (!expected || !supplied) return false;
+  if (!expected || expected.length < 32 || !supplied) return false;
 
   return timingSafeEqualText(supplied, expected);
 }
@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/internal/scheduled-execution")({
 
         try {
           const result = await runScheduledExecutionBatch({
-            limit: 10,
+            limit: 1,
           });
 
           return Response.json(

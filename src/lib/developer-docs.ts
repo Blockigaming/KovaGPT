@@ -7,12 +7,12 @@ export const DEVELOPER_DOCS = [
   [
     "authentication",
     "Authentication",
-    "KovaGPT application routes accept a signed-in user's bearer session over HTTPS; they are not a public API-key product.",
+    "Versioned API routes require a scoped developer key. Console routes use your verified signed-in session.",
   ],
   [
     "api-reference",
     "API reference",
-    "Review repository-registered application endpoints without assuming a versioned external API contract.",
+    "Use the versioned quote, model, Responses, image, and embedding endpoints described here.",
   ],
   [
     "models",

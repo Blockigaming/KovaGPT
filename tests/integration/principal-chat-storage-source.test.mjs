@@ -40,8 +40,11 @@ test("draft, pending-selection, archive, import, and export paths carry the curr
   assert.match(home, /saveDraft\(userKey, activeId, input\)/);
   assert.match(home, /loadPendingActive\(userKey\)/);
   assert.match(home, /clearPendingActive\(userKey\)/);
-  assert.match(home, /archiveConversation\(userKey, archived\)/);
-  assert.match(home, /removeArchivedConversation\(userKey, archived!\.id\)/);
+  const history = await read("src/lib/home-chat-history-actions.ts");
+  assert.match(home, /ownerId: userKey/);
+  assert.match(history, /archiveConversation\(context\.ownerId, chat\)/);
+  assert.match(history, /removeArchivedConversation\(context\.ownerId, chat\.id\)/);
+  assert.match(history, /if \(!context\.current\(\)\) return/);
   assert.doesNotMatch(
     home,
     /localStorage\.(?:getItem|setItem|removeItem)\("nova-gpt-pending-active"/,

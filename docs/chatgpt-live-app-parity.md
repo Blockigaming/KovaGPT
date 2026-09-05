@@ -1,34 +1,22 @@
-# Project Constellation live ChatGPT app parity
+# Apps and plugins: live-reference boundary
 
-## Verification result
+Re-audited **2026-09-05** against public official pages. `/apps` now redirects to the public [ChatGPT Plugins directory](https://chatgpt.com/plugins), which was readable in this audit. The previous July 27 proxy failure is historical evidence, not a current blanket internet blocker. The [official plugin guide](https://learn.chatgpt.com/docs/plugins) describes a universal directory with skills, connectors and optional tools/UI; capabilities and installation vary by surface and account.
 
-An official inventory verification was attempted on **2026-07-27 at 20:30:29 UTC** against the live ChatGPT Apps directory and OpenAI's Apps help article. Both official OpenAI endpoints were blocked by the execution environment's outbound proxy with HTTP 403. Search tooling was also unavailable. Consequently, the repository does **not** claim a verified official inventory count.
+This public read does **not** establish a complete authenticated plan/region/workspace inventory, exact OAuth scopes for every entry, operational permission grants or each provider's current installation state. Therefore `src/integrations/chatgpt-parity-manifest.ts` remains an unverified historical exact-inventory record with an empty activated collection. Its zero count means **no verified exact-parity entries**, not zero OpenAI plugins. Do not promote search results, marketing catalog names or the user's suggested-plugin list into supported entries.
 
-The exact-parity manifest therefore fails closed with **0 activated parity entries**, `lastVerifiedAt: null`, and status `official_directory_unavailable`. This is not a claim that ChatGPT has zero apps. It prevents a guessed or stale list from being labeled exact parity. Provider adapters built by Constellation are kept in the separate **Kova Extensions** provider list and do not inflate the parity count.
+## Kova source capabilities
 
-## Activation procedure
+| Surface                     | Implemented / pending source                                                                                                                                           | Honest operational boundary                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google                      | Immutable connection UUID/subject/grant generation, explicit account selection, OAuth custody/refresh/settlement, current read/write scopes, reconnect and revocation. | Real Google console credentials, consent and callbacks must be configured. A selected default cannot authorize a saved Task.                          |
+| GitHub and other connectors | Existing reviewed server adapters and configuration-driven capability declarations, current grants, scoped tool reads/writes and audit controls.                       | Inspect each adapter's declared support. Linking alone does not establish sync, research, write or interactive UI capability.                         |
+| Native event Tasks          | Verified Slack/GitHub signatures and Google OIDC/PubSub/watch/history source, durable event ingress and exact current grant revalidation.                              | Provider registration, callback proof and Gmail watch consent/readiness are necessary; no old event may trigger a newly consented task.               |
+| Developer MCP               | Stateless Streamable HTTP plus pending `39f69da6` OAuth and `42f59fe5` private text-file tools.                                                                        | Auth-code consent is scoped to the caller's developer project/budget. It never authorizes consumer Library/Projects or an installable ChatGPT widget. |
+| Reusable skills             | Separate autonomous package assigned after Custom Kovas.                                                                                                               | Connector installation and saved prompts alone are not installed skill/version resolution.                                                            |
+| Custom Kovas                | `2462f451` builder/directory/publication/moderation package pending integration in the audited snapshot.                                                               | Published knowledge is a consented immutable copy, not the creator's live private accounts or connectors.                                             |
 
-Before release, an operator with access to the official directory must:
+See [connector governance](../src/lib/connectors-catalog.ts), [Google tests](../tests/unit/google-multiaccount.test.mjs), [MCP tests](../tests/unit/developer-mcp.test.mjs) and the [pending-package ledger](remaining-chatgpt-gaps.md). All remain subject to final-head CI, matching migrations and live owner setup. No external provider was connected or modified by this audit.
 
-1. Capture the current directory inventory, plan/region visibility, public identifiers, and each official listing URL.
-2. Populate `CHATGPT_PARITY_APPS` only from those official records.
-3. Record the exact UTC verification timestamp and OpenAI source URL per entry.
-4. Run the manifest integrity tests and review changes against the previous snapshot.
-5. Activate only Kova adapters whose OAuth, retrieval/actions, health, refresh, disconnect, provider revocation, failure handling, and tests are all complete.
+## Exact inventory verification procedure
 
-## Kova Extensions implementation inventory
-
-This is deliberately **not** the ChatGPT parity collection.
-
-| Provider family | Services                                                    | State after credentials                                                                  | External requirement                                                        |
-| --------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Google          | Drive, Gmail, Calendar                                      | Operational in the existing Google implementation                                        | Google OAuth production credentials                                         |
-| Microsoft       | OneDrive, SharePoint, Outlook Mail, Outlook Calendar, Teams | Generic OAuth account linking becomes operational; service tools and sync remain blocked | Entra application, admin consent where required, Graph API approval         |
-| GitHub          | Repositories and organizations                              | OAuth account linking becomes operational                                                | GitHub OAuth/App approval; repository tool adapter remains required         |
-| Slack           | Workspace search and messaging scopes                       | OAuth account linking becomes operational                                                | Slack app review/install; Events and tool adapters remain required          |
-| Notion          | User-authorized workspace pages                             | OAuth account linking becomes operational                                                | Public Notion integration approval; page sync/tool adapter remains required |
-| Linear          | Workspace issues                                            | OAuth account linking becomes operational                                                | Linear OAuth application; GraphQL tool adapter remains required             |
-| Dropbox         | Files                                                       | OAuth account linking becomes operational                                                | Dropbox app approval; content/sync adapter remains required                 |
-| Box             | Files                                                       | OAuth account linking becomes operational                                                | Box application/enterprise consent; content/sync adapter remains required   |
-
-No provider in this table is called a complete connector merely because account linking is credential-ready.
+Read the current public directory and each official entry; record stable identifier, source URL, date, observed surface, connection type and documented plan/region/admin restrictions. Use an authorized account only when available and needed, without bypassing access controls. Keep unobserved variants unknown. Compare each documented capability to its actual Kova adapter and executable authorization tests. Only then update the exact-inventory source manifest. A complete count must have a complete captured source; route or catalog counts are never a product completion score.

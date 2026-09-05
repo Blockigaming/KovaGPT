@@ -25,7 +25,11 @@ test("temporary chat never persists an unsent draft", () => {
   assert.match(chat, /if \(tempChat \|\| !principalReady\) return;/);
   assert.match(chat, /clearDraft\(userKey, activeId\)/);
   assert.doesNotMatch(chat, /localStorage\.(?:getItem|setItem|removeItem)\(`kova-draft:/);
-  assert.match(chat, /Temporary chat enabled/);
+  assert.match(chat, /toast\.success\("Temporary chat on"/);
+  assert.match(
+    chat,
+    /No history or memory\. Profile, instructions, personality and connected apps stay off/,
+  );
 });
 
 test("feature matrix uses the required honest status vocabulary and covers core categories", () => {

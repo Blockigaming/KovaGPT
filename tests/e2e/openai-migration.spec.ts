@@ -15,12 +15,7 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
 }, testInfo) => {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (
-      message.type() === "error" &&
-      !message.text().startsWith("Failed to load resource:") &&
-      message.text() !==
-        "Potential permissions policy violation: payment is not allowed in this document."
-    )
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:"))
       errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
@@ -62,7 +57,7 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
   }
   const input = page.getByRole("textbox").first();
   await input.fill("Hello mocked runtime");
-  await page.getByRole("button", { name: /^send$/i }).click();
+  await page.getByTestId("send-button").click();
   await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible();
   await expect.poll(() => requests).toBe(1);
   await expect
@@ -100,7 +95,7 @@ test("kill-switch error is shown once without automatic retry or horizontal over
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox").first();
   await input.fill("Should be blocked");
-  await page.getByRole("button", { name: /^send$/i }).click();
+  await page.getByTestId("send-button").click();
   await expect(page.getByText(/temporarily disabled/i).first()).toBeVisible();
   await page.waitForTimeout(500);
   expect(requests).toBe(1);
@@ -123,8 +118,8 @@ test("Stop aborts a slow generation without duplicating the assistant message", 
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox").first();
   await input.fill("Stop this response");
-  await page.getByRole("button", { name: /^send$/i }).click();
-  const stop = page.getByRole("button", { name: /^stop$/i }).first();
+  await page.getByTestId("send-button").click();
+  const stop = page.getByTestId("stop-button").first();
   await expect(stop).toBeVisible({ timeout: 2_000 });
   await stop.click();
   await expect(stop).toHaveCount(0);

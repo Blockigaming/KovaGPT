@@ -14,6 +14,7 @@ const contract = {
   marker: "20260803120000-v1",
   migrationCount: files.length,
   tables: collect(/create\s+table(?:\s+if\s+not\s+exists)?\s+(?:public\.)?([\w"]+)/gi),
+  views: collect(/create\s+(?:or\s+replace\s+)?view\s+public\.([\w"]+)/gi),
   functions: collect(/create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([\w"]+)/gi),
   indexes: collect(/create\s+(?:unique\s+)?index(?:\s+if\s+not\s+exists)?\s+([\w"]+)/gi),
   policies: collect(/create\s+policy\s+"?([^"\n]+?)"?\s+on/gi),

@@ -19,6 +19,7 @@ import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/li
 import { loadWorkTasks } from "@/lib/work-store";
 import { listWorkspaceIntelligence, type WorkspaceSignal } from "@/lib/workspace.functions";
 import { TitanWorkspaceSystems } from "@/components/TitanWorkspaceSystems";
+import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
 
 const iconByKind = {
   project: FolderKanban,
@@ -209,6 +210,7 @@ function WorkspaceTimeline({ items }: { items: DashboardItem[] }) {
 export function WorkspaceIntelligence() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listWorkspaceIntelligence);
   const [remoteState, setRemoteState] = useState<{
@@ -255,6 +257,7 @@ export function WorkspaceIntelligence() {
     };
   }, [isLoaded, isSignedIn, list, principal]);
   const local = useMemo<DashboardItem[]>(() => {
+    void workRevision; // Invalidate the storage snapshot after a durable sync update.
     if (!isLoaded || !isSignedIn) return [];
     const work = loadWorkTasks(userKey)
       .filter((task) => task.status === "planning" || task.status === "paused")
@@ -278,7 +281,7 @@ export function WorkspaceIntelligence() {
         updatedAt: new Date(chat.updatedAt).toISOString(),
       }));
     return [...work, ...chats];
-  }, [isLoaded, isSignedIn, userKey]);
+  }, [isLoaded, isSignedIn, userKey, workRevision]);
   const combined = useMemo(
     () => [...local, ...remote].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
     [local, remote],

@@ -1,3 +1,4 @@
+import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -52,6 +53,11 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 
+const MemorySourcesDialog = lazy(() =>
+  import("./MemorySourcesDialog").then(({ MemorySourcesDialog }) => ({
+    default: MemorySourcesDialog,
+  })),
+);
 const ChatChart = lazy(() =>
   import("./ChatChart").then(({ ChatChart }) => ({ default: ChatChart })),
 );
@@ -168,6 +174,7 @@ function ChatMessageInner({
   principalResolved,
   chatId,
   temporary = false,
+  projectId,
   onReplaceContent,
 }: {
   message: Message;
@@ -183,6 +190,7 @@ function ChatMessageInner({
   chatId?: string | null;
   /** Temporary chats never persist edits or versions. */
   temporary?: boolean;
+  projectId?: string | null;
   /** Applies an accepted selection edit / restored version to this message. */
   onReplaceContent?: (messageId: string, nextContent: string) => void;
 }) {
@@ -245,6 +253,14 @@ function ChatMessageInner({
   } | null>(null);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [memoryOpenFor, setMemoryOpenFor] = useState<string | null>(null);
+  const memorySources =
+    principalResolved && !isUser
+      ? normalizeMemorySources(message.memorySources, userKey, temporary)
+      : undefined;
+  const memoryKey = `${principal}:${message.id}`;
+  const closeMemory = useCallback(() => setMemoryOpenFor(null), []);
+  useEffect(closeMemory, [closeMemory, principal, message.id]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const lastSelectionRef = useRef<string>("");
   const { isSignedIn } = useUser();
@@ -287,6 +303,7 @@ function ChatMessageInner({
       setSaved(false);
       setCopied(false);
       setEditorOpen(false);
+      setMemoryOpenFor(null);
       setMobileSheetOpen(false);
       cancelLongPress();
     };
@@ -593,6 +610,15 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
+              {memorySources && (
+                <button
+                  type="button"
+                  onClick={() => setMemoryOpenFor(memoryKey)}
+                  className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  Memory provided ({memorySources.sources.length})
+                </button>
+              )}
               <button
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
@@ -750,9 +776,15 @@ function ChatMessageInner({
             kind={artifactKind}
             onImprove={onFollowUp}
             initialMode={editorMode}
-            chatId={chatId ?? null}
-            messageId={message.id ?? null}
+            chatId={temporary ? null : (chatId ?? null)}
+            messageId={temporary ? null : (message.id ?? null)}
+            projectId={temporary ? null : (projectId ?? null)}
           />
+        </Suspense>
+      )}
+      {memorySources && memoryOpenFor === memoryKey && (
+        <Suspense fallback={null}>
+          <MemorySourcesDialog sources={memorySources} onClose={closeMemory} />
         </Suspense>
       )}
       {!isUser && (selectionOpen || versionsOpen) && (

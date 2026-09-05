@@ -53,6 +53,7 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
 test("paid billing remains reachable and every unavailable state has a truthful next action", () => {
   const settings = read("src/components/SettingsDialog.tsx");
   const billing = read("src/utils/payments.functions.ts");
+  const pricing = read("src/routes/pricing.tsx");
 
   assert.match(settings, /\{ v: "subscription", label: "Subscription"/);
   assert.doesNotMatch(
@@ -63,18 +64,30 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.match(settings, /Refresh billing status/);
   assert.match(settings, /Select Refresh billing status to retry/);
   assert.match(settings, /This shared plan is managed by the Family Sharing owner/);
+  assert.match(settings, /Your own .* subscription is still[\s\S]*billed and can be managed below/);
+  assert.match(settings, /billing conflict was detected/i);
   assert.match(settings, /No Stripe billing account is linked/);
+  assert.doesNotMatch(settings, /plan changes in the Stripe billing portal/);
+  assert.match(pricing, /If plan switching is supported/);
+  assert.match(pricing, /Available plan changes/);
   assert.match(settings, /parseAllowedBillingPortalUrl\(res\.url\)/);
   assert.match(settings, /createPortalSession\(\{ data: \{\} \}\)/);
+  assert.match(settings, /billingPortalAvailable/);
+  assert.match(settings, /self-service portal is not configured/);
   assert.doesNotMatch(settings, /window\.open\(/);
 
   const portal = billing.slice(billing.indexOf("export const createPortalSession"));
   assert.match(portal, /\.validator\(\(data: Record<string, never>\) => data\)/);
   assert.match(portal, /return_url: "https:\/\/kovagpt\.com\/"\s*,?/);
+  assert.match(portal, /configuration/);
+  assert.match(billing, /STRIPE_BILLING_PORTAL_CONFIGURATION_ID/);
   assert.doesNotMatch(portal, /data\.environment|data\.returnUrl/);
   assert.match(billing, /parseAllowedBillingPortalUrl\(portal\.url\)/);
   assert.match(billing, /existingError/);
-  assert.match(billing, /subscriptionError/);
+  assert.match(billing, /activeSubscriptionCount/);
+  assert.match(billing, /billingConflict/);
+  assert.match(billing, /effectiveTier/);
+  assert.match(billing, /summaryError/);
   assert.doesNotMatch(billing, /getStripeErrorMessage/);
   assert.doesNotMatch(billing, /return \{ error: error\./);
 });
@@ -90,6 +103,26 @@ test("data controls describe the available privacy surface truthfully", () => {
   assert.match(settings, /how chats may be processed by KovaGPT and its AI providers/);
   assert.doesNotMatch(settings, /removed model-improvement switch/i);
   assert.doesNotMatch(settings, /removed guest training and marketing switches/i);
+});
+
+test("settings does not expose local switches for unenforced email, family, or location behavior", () => {
+  const settings = read("src/components/SettingsDialog.tsx");
+  const mapWidget = read("src/components/MapWidget.tsx");
+
+  assert.match(settings, /Optional email preferences are unavailable/);
+  assert.match(settings, /Family controls are not available yet/);
+  assert.match(settings, /Device location is not requested/);
+  assert.doesNotMatch(settings, /title="Product updates"|title="Tips & guides"/);
+  assert.doesNotMatch(settings, /title="Family-safe mode"/);
+  assert.doesNotMatch(settings, /navigator\.geolocation|getCurrentPosition/);
+  assert.doesNotMatch(settings, /kova-safe-audience|kova-family-pin/);
+
+  assert.match(settings, /const controlId = useId\(\)/);
+  assert.match(settings, /<label htmlFor=\{controlId\}/);
+  assert.match(settings, /aria-describedby=\{hintId\}/);
+
+  assert.match(mapWidget, /Map previews are not available yet/);
+  assert.doesNotMatch(mapWidget, /localStorage|getItem\("kova-location"\)|<iframe/);
 });
 
 test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {

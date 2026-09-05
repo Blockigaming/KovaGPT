@@ -31,14 +31,13 @@ test("sensitive one-time workspace handoffs use session storage", async () => {
     assert.match(source, /safeBrowserStorage\("sessionStorage"\)/);
 });
 
-test("family PIN and image ingestion are hardened", async () => {
+test("unenforced family controls stay hidden and image ingestion is hardened", async () => {
   const [settings, images] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
     read("src/lib/library-images.functions.ts"),
   ]);
-  assert.match(settings, /PBKDF2/);
-  assert.match(settings, /iterations: 120_000/);
-  assert.doesNotMatch(settings, /setItem\("kova-family-pin", pin\)/);
+  assert.match(settings, /Family controls are not available yet/);
+  assert.doesNotMatch(settings, /kova-family-pin|kova-safe-audience|PBKDF2/);
   assert.match(images, /SAFE_IMAGE_TYPES/);
   assert.match(images, /hasImageSignature/);
   assert.match(images, /redirect: "manual"/);

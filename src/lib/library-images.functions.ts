@@ -1,7 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
+import {
+  assertLibrarySaveReplay,
+  librarySaveFingerprint,
+} from "@/lib/library-save-idempotency.mjs";
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { runtimeEnv } from "@/lib/runtime-env.server";
+import { publishLibraryImageBytes } from "@/lib/library-image-storage.server.mjs";
 
 const BUCKET = "library-images";
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -91,6 +100,7 @@ async function fetchRemoteImage(
       });
       // 3xx with a Location header: validate the next hop before following.
       if (res.status >= 300 && res.status < 400) {
+        void res.body?.cancel().catch(() => undefined);
         const loc = res.headers.get("location");
         if (!loc) return null;
         let next: URL;
@@ -106,14 +116,19 @@ async function fetchRemoteImage(
       }
       break;
     }
-    if (!res || !res.ok) return null;
+    if (!res || !res.ok) {
+      void res?.body?.cancel().catch(() => undefined);
+      return null;
+    }
     const contentType = (res.headers.get("content-type") ?? "")
       .split(";", 1)[0]
       .trim()
       .toLowerCase();
-    if (!SAFE_IMAGE_TYPES.has(contentType)) return null;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > MAX_BYTES) return null;
+    if (!SAFE_IMAGE_TYPES.has(contentType)) {
+      void res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const buf = await readResponseBytesBounded(res, MAX_BYTES);
     return hasImageSignature(buf, contentType) ? { bytes: buf, contentType } : null;
   } catch {
     return null;
@@ -121,7 +136,10 @@ async function fetchRemoteImage(
 }
 
 const SaveImageSchema = z.object({
-  imageUrl: z.string().min(1).max(2_500_000), // allow inline base64
+  expectedOwnerId: z.string().uuid().optional(),
+  idempotencyKey: z.string().uuid().optional(),
+  source: z.enum(["images", "upload"]).default("images"),
+  imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
 });
@@ -130,6 +148,8 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    if (data.expectedOwnerId && data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
     let payload: ReturnType<typeof decodeDataUrl>;
     if (data.imageUrl.startsWith("data:")) {
       payload = decodeDataUrl(data.imageUrl);
@@ -140,47 +160,53 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     if (!payload) throw new Error("Unsupported or invalid image");
     if (payload.bytes.byteLength > MAX_BYTES) throw new Error("Image too large");
 
-    const ext =
-      payload.contentType === "image/png"
-        ? "png"
-        : payload.contentType === "image/webp"
-          ? "webp"
-          : payload.contentType === "image/gif"
-            ? "gif"
-            : "jpg";
-    const fileName = `${crypto.randomUUID()}.${ext}`;
-    const path = `${context.userId}/${fileName}`;
-
-    const { error: upErr } = await context.supabase.storage
-      .from(BUCKET)
-      .upload(path, payload.bytes, { contentType: payload.contentType, upsert: false });
-    if (upErr) throw new Error(upErr.message);
-
-    const { data: row, error } = await context.supabase
-      .from("user_library_items")
-      .insert({
-        user_id: context.userId,
-        title: data.title.slice(0, 200),
-        item_type: "image",
-        source: "images",
-        content_text: data.prompt ?? null,
-        file_url: path,
-        file_name: fileName,
-        file_type: payload.contentType,
-        file_size: payload.bytes.byteLength,
-      })
-      .select("id")
-      .single();
-
-    if (error || !row) {
-      // best-effort cleanup of orphan upload
-      await context.supabase.storage.from(BUCKET).remove([path]);
+    const fingerprint = await librarySaveFingerprint(
       {
-        console.error("[serverfn]", error?.message);
-        throw new Error("Failed to save");
-      }
+        userId: context.userId,
+        title: data.title,
+        source: data.source,
+        prompt: data.prompt ?? null,
+        contentType: payload.contentType,
+      },
+      payload.bytes,
+    );
+    const itemId = data.idempotencyKey ?? crypto.randomUUID();
+    const findExisting = async () => {
+      const result = await context.supabase
+        .from("user_library_items")
+        .select("id, metadata, file_url")
+        .eq("id", itemId)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (result.error) throw new Error("Library save could not be checked. Please retry.");
+      return result.data;
+    };
+    const existing = await findExisting();
+    if (existing) {
+      const replay = assertLibrarySaveReplay(existing, fingerprint);
+      const active = await (
+        supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient
+      )
+        .rpc("read_library_image_upload", { p_owner: context.userId, p_id: itemId })
+        .abortSignal(AbortSignal.timeout(10000));
+      if (active.error || !active.data || active.data.storage_path !== existing.file_url)
+        throw new Error("Library save is incomplete. Please retry.");
+      return replay;
     }
-    return { id: row.id };
+    return publishLibraryImageBytes(
+      supabaseAdmin,
+      context.userId,
+      {
+        id: itemId,
+        bytes: payload.bytes,
+        contentType: payload.contentType,
+        fingerprint,
+        title: data.title,
+        prompt: data.prompt,
+        source: data.source,
+      },
+      { signal: AbortSignal.timeout(45000), supabaseUrl: runtimeEnv("SUPABASE_URL") ?? "" },
+    );
   });
 
 export const getLibraryImageUrl = createServerFn({ method: "POST" })
@@ -196,6 +222,13 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
     if (error || !row || row.item_type !== "image" || !row.file_url) {
       throw new Error("Image not found");
     }
+    const active = await (
+      supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient
+    )
+      .rpc("read_library_image_upload", { p_owner: context.userId, p_id: data.id })
+      .abortSignal(AbortSignal.timeout(10000));
+    if (active.error || !active.data || active.data.storage_path !== row.file_url)
+      throw new Error("Image not found");
     const { data: signed, error: sErr } = await context.supabase.storage
       .from(BUCKET)
       .createSignedUrl(row.file_url, 60);
@@ -205,25 +238,18 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
 
 export const deleteLibraryImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        expectedOwnerId: z.string().uuid(),
+        contentGeneration: z.string().uuid(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { data: row } = await context.supabase
-      .from("user_library_items")
-      .select("file_url, item_type")
-      .eq("id", data.id)
-      .eq("user_id", context.userId)
-      .single();
-    if (row?.item_type === "image" && row.file_url) {
-      await context.supabase.storage.from(BUCKET).remove([row.file_url]);
-    }
-    const { error } = await context.supabase
-      .from("user_library_items")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
-    if (error) {
-      console.error("[serverfn]", error.message);
-      throw new Error("Request failed. Please try again.");
-    }
-    return { ok: true };
+    if (data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
+    const { deleteLibraryItem } = await import("@/lib/library.functions");
+    return deleteLibraryItem({ data });
   });

@@ -73,6 +73,89 @@ export async function readUtf8BodyBounded(request, maxBytes) {
   }
 }
 
+// Remote bodies need a byte ceiling before buffering, even without a reliable
+// Content-Length. Cancellation is best effort and must not hold up the caller.
+export async function readResponseBytesBounded(
+  response,
+  maxBytes,
+  { signal, timeoutMs = 5_000 } = {},
+) {
+  if (
+    !Number.isSafeInteger(maxBytes) ||
+    maxBytes < 0 ||
+    !Number.isFinite(timeoutMs) ||
+    timeoutMs <= 0
+  ) {
+    throw new TypeError("Invalid response body limits");
+  }
+  let reader;
+  let timer;
+  let abort;
+  const cancel = (reason) => {
+    try {
+      Promise.resolve(reader ? reader.cancel(reason) : response.body?.cancel(reason)).catch(
+        () => undefined,
+      );
+    } catch {
+      /* best effort */
+    }
+  };
+  try {
+    const length = response.headers.get("content-length");
+    let declared = null;
+    if (length !== null) {
+      if (!/^(0|[1-9]\d*)$/.test(length) || !Number.isSafeInteger(Number(length))) {
+        throw new BodyReadError(502, "invalid_response_length");
+      }
+      declared = Number(length);
+      if (declared > maxBytes) throw new BodyReadError(413, "response_too_large");
+    }
+    if (signal?.aborted) throw signal.reason ?? new BodyReadError(499, "response_aborted");
+    if (!response.body) {
+      if (declared) throw new BodyReadError(502, "response_length_mismatch");
+      return new Uint8Array();
+    }
+    reader = response.body.getReader();
+    const deadline = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new BodyReadError(504, "response_timeout")), timeoutMs);
+      abort = () => reject(signal.reason ?? new BodyReadError(499, "response_aborted"));
+      signal?.addEventListener("abort", abort, { once: true });
+    });
+    const chunks = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await Promise.race([reader.read(), deadline]);
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new BodyReadError(502, "invalid_response_body");
+      if (value.byteLength > maxBytes - total) throw new BodyReadError(413, "response_too_large");
+      total += value.byteLength;
+      chunks.push(value);
+    }
+    const encoding = response.headers.get("content-encoding");
+    if ((!encoding || encoding === "identity") && declared !== null && total !== declared) {
+      throw new BodyReadError(502, "response_length_mismatch");
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes;
+  } catch (error) {
+    cancel(error);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    if (abort) signal?.removeEventListener("abort", abort);
+    try {
+      reader?.releaseLock();
+    } catch {
+      /* pending cancellation */
+    }
+  }
+}
+
 export function assertDatabaseSuccess(result, operation) {
   if (!result || result.error) throw new DurableBackendError(operation);
   return result.data;

@@ -7,10 +7,10 @@ import {
   CreditCard,
   FolderKanban,
   FolderOpen,
+  Globe,
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  Map,
   Blocks,
   MoreHorizontal,
   PanelLeft,
@@ -491,10 +491,12 @@ export function Sidebar({
             ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
+            {showSignedIn ? renderNavLink("/kovas", "Kovas", Blocks) : null}
+            {showSignedIn ? renderNavLink("/sites", "Sites", Globe) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Plugins", Blocks)}
             {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "Preview")}
+            {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
 
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(

@@ -40,12 +40,12 @@ test("readiness requires scheduler credentials and an AI provider", () => {
   assert.match(source, /missing_schedule_secret/);
   assert.match(source, /generation_disabled/);
   assert.match(source, /provider_not_configured/);
-  assert.match(source, /AZURE_OPENAI_ENDPOINT/);
-  assert.match(source, /OPENAI_API_KEY/);
+  assert.match(source, /validateAiProviderConfig/);
+  assert.match(source, /scheduled_task_runtime_ready/);
 });
 
 test("scheduled-task UI remains disabled until deployment wiring is proven", () => {
   const source = read("src/lib/scheduled-tasks.functions.ts");
 
-  assert.match(source, /scheduledExecutionAvailable = false/);
+  assert.match(source, /activeScheduledExecutionReadiness/);
 });

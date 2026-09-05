@@ -6,6 +6,7 @@ const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
 const index = await readFile("src/routes/index.tsx", "utf8");
+const temporaryControls = await readFile("src/components/TemporaryChatStartDialog.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const feedback = await readFile("src/lib/feedback.functions.ts", "utf8");
@@ -76,7 +77,10 @@ test("chat storage rejects malformed records and stays bounded", () => {
   assert.match(chatStore, /function isConversation/);
   assert.match(chatStore, /MAX_STORED_CONVERSATIONS = 500/);
   assert.match(chatStore, /MAX_MESSAGES_PER_CONVERSATION = 1_000/);
-  assert.match(chatStore, /Array\.isArray\(parsed\) \? boundConversations\(parsed\) : \[\]/);
+  assert.match(
+    chatStore,
+    /Array\.isArray\(parsed\) \? boundConversations\(parsed, userKey\) : \[\]/,
+  );
   assert.match(chatStore, /Storage can be unavailable or full/);
   assert.match(chatStore, /subscribeToConversationChanges/);
 });
@@ -129,7 +133,10 @@ test("temporary chat changes create a clean privacy boundary", () => {
     "the clean conversation boundary should be created before the privacy mode changes",
   );
   assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
-  assert.match(index, /aria-pressed=\{tempChat\}/);
+  assert.match(index, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
+  assert.match(index, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
+  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
   assert.match(index, /temporary: tempChat/);
   assert.match(
     index,

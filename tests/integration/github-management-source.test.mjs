@@ -57,3 +57,13 @@ test("Apps GitHub experience has truthful credential account installation and re
   ])
     assert.ok(ui.includes(value), value);
 });
+test("Apps GitHub selections cannot survive disconnecting their account", () => {
+  assert.match(
+    ui,
+    /setSelected\(\(current\) => current\.filter\(\(id\) => activeRepositoryIds\.has\(id\)\)\)/u,
+  );
+  assert.match(
+    ui,
+    /const accountId = disconnectAccount\.id;[\s\S]*setSelected\(\[\]\);[\s\S]*disconnect\(/u,
+  );
+});

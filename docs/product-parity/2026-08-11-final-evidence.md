@@ -1,4 +1,4 @@
-> **Historical dated evidence:** Current release authority is `docs/release-reconciliation/final-release-report.md`.
+> **Historical dated evidence:** This August 11 record is not a current readiness result. See [the September 5 source audit](chatgpt-surface-audit.md), [capability stages](capability-audit.json) and the exact final release report.
 
 # KovaGPT parity evidence — 2026-08-11
 
@@ -12,7 +12,7 @@ A simultaneous anonymous Chromium capture was attempted against both production 
 - **Apps and connectors:** the existing operational Google and GitHub directory is exposed in primary navigation. Unsupported connectors remain hidden rather than represented as working.
 - **Deep research:** the existing server-gated research planner is exposed; no capability is fabricated.
 - **Maps:** added a privacy education and product-decision surface. No map canvas, markers, directions, location request, or provider claim ships without a licensed provider and server privacy contract.
-- **Voice:** remains intentionally excluded pending explicit approval. Browser dictation remains separate.
+- **Voice:** remains intentionally excluded pending explicit approval. The current owner scope excludes dictation and audio as well; any older distinction is superseded.
 - **Images and existing Kova features:** preserved without destructive visual matching.
 - **Azure, Supabase, Stripe, authorization and provider runtime:** untouched.
 

@@ -40,6 +40,41 @@ param supabaseServiceRoleSecretUri string
 @secure()
 param kovaIpHashSecretUri string
 
+@description('Keep billing disabled until the reviewed migration, webhook drain, account provenance, trial policy, and smoke gates pass.')
+@allowed([
+  'disabled'
+  'durable'
+])
+param stripeBillingRuntime string = 'disabled'
+
+@description('Approved public Stripe account identity; secret and build-time keys require independent account matching.')
+@allowed([
+  'acct_1UAeDgAEZlsb6DBY'
+])
+param stripeLiveAccountId string = 'acct_1UAeDgAEZlsb6DBY'
+
+@description('Existing owner-approved Portal configuration. No Portal settings are changed by this template.')
+@allowed([
+  'bpc_1UB2ZxAEZlsb6DBYU3PoJJPU'
+])
+param stripeBillingPortalConfigurationId string = 'bpc_1UB2ZxAEZlsb6DBYU3PoJJPU'
+
+@description('Versioned existing Key Vault URI for STRIPE_LIVE_API_KEY; leave empty while unconfigured.')
+@secure()
+param stripeLiveApiKeySecretUri string = ''
+
+@description('Versioned existing Key Vault URI for PAYMENTS_LIVE_WEBHOOK_SECRET; leave empty while unconfigured.')
+@secure()
+param stripeLiveWebhookSecretUri string = ''
+
+@description('Optional versioned existing Key Vault URI for STRIPE_SANDBOX_API_KEY, required to retire historical sandbox Customers.')
+@secure()
+param stripeSandboxApiKeySecretUri string = ''
+
+@description('Optional versioned existing Key Vault URI for PAYMENTS_SANDBOX_WEBHOOK_SECRET.')
+@secure()
+param stripeSandboxWebhookSecretUri string = ''
+
 @description('Existing Azure OpenAI account name. The production identity receives only Cognitive Services OpenAI User on this resource.')
 param azureOpenAiAccountName string
 
@@ -116,6 +151,41 @@ param tags object = {
   managedBy: 'bicep'
   costCenter: 'kovagpt-production'
 }
+
+// App-local secret names only; existing Key Vault secret names/versions come
+// from protected parameters and are never guessed or created here.
+var stripeSecretSettings = [
+  {
+    name: 'stripe-live-api-key'
+    envName: 'STRIPE_LIVE_API_KEY'
+    uri: stripeLiveApiKeySecretUri
+  }
+  {
+    name: 'stripe-live-webhook'
+    envName: 'PAYMENTS_LIVE_WEBHOOK_SECRET'
+    uri: stripeLiveWebhookSecretUri
+  }
+  {
+    name: 'stripe-sandbox-key'
+    envName: 'STRIPE_SANDBOX_API_KEY'
+    uri: stripeSandboxApiKeySecretUri
+  }
+  {
+    name: 'stripe-test-webhook'
+    envName: 'PAYMENTS_SANDBOX_WEBHOOK_SECRET'
+    uri: stripeSandboxWebhookSecretUri
+  }
+]
+var configuredStripeSecrets = filter(stripeSecretSettings, setting => !empty(setting.uri))
+var stripeSecretReferences = [for setting in configuredStripeSecrets: {
+  name: setting.name
+  keyVaultUrl: setting.uri
+  identity: identity.id
+}]
+var stripeSecretEnvironment = [for setting in configuredStripeSecrets: {
+  name: setting.envName
+  secretRef: setting.name
+}]
 
 var webAppName = '${namePrefix}-web'
 var appInsightsName = '${namePrefix}-insights'
@@ -210,7 +280,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           identity: identity.id
         }
       ]
-      secrets: [
+      secrets: concat([
         {
           name: 'supabase-service-role-key'
           keyVaultUrl: supabaseServiceRoleSecretUri
@@ -221,7 +291,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             keyVaultUrl: kovaIpHashSecretUri
             identity: identity.id
           }
-      ]
+      ], stripeSecretReferences)
     }
     template: {
       containers: [
@@ -232,7 +302,19 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
-          env: [
+          env: concat([
+            {
+              name: 'STRIPE_BILLING_RUNTIME'
+              value: stripeBillingRuntime
+            }
+            {
+              name: 'STRIPE_LIVE_ACCOUNT_ID'
+              value: stripeLiveAccountId
+            }
+            {
+              name: 'STRIPE_BILLING_PORTAL_CONFIGURATION_ID'
+              value: stripeBillingPortalConfigurationId
+            }
             {
               name: 'NODE_ENV'
               value: 'production'
@@ -329,7 +411,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
-          ]
+          ], stripeSecretEnvironment)
           probes: [
             {
               type: 'Startup'

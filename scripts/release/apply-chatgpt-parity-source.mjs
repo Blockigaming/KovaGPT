@@ -18,9 +18,9 @@ const replacements = [
   {
     path: "src/components/ChatInput.tsx",
     before: `{COMPOSER_TOOLS.map(toolRow)}`,
-    after: `{COMPOSER_TOOLS.filter(
-          (tool) => tool.id !== "deep_research" || userTier !== "free",
-        ).map(toolRow)}`,
+    after: `{COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(
+          toolRow,
+        )}`,
   },
   {
     path: "src/components/ChatInput.tsx",
@@ -51,7 +51,8 @@ const replacements = [
   {
     path: "src/routes/index.tsx",
     before: `. Chats may be reviewed and used to improve our AI models.{" "}`,
-    after: `. Chats may be processed by configured AI providers and reviewed when needed for safety, support, or reliability.{" "}`,
+    after: `. Chats may be processed by configured AI providers and reviewed when needed for
+                safety, support, or reliability.{" "}`,
   },
   {
     path: "src/components/Sidebar.tsx",
