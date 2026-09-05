@@ -1,10 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 const observedAt = "2026-09-05T12:00:00.000Z";
 async function setup(page: import("@playwright/test").Page) {
   const origins = await installAuthenticatedFixture(page);
   await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
   return origins;
+}
+async function fillQuery(input: Locator, value: string) {
+  // The server-backed welcome dialog can take focus during the first fill.
+  // Let the authenticated fixture close it, then verify setup before searching.
+  await expect(async () => {
+    await input.fill(value);
+    await expect(input).toHaveValue(value, { timeout: 500 });
+  }).toPass({ timeout: 5_000 });
 }
 test("image discovery contacts no image host until the explicit private-load action", async ({
   page,
@@ -46,7 +54,7 @@ test("image discovery contacts no image host until the explicit private-load act
   });
   await page.goto("/discovery");
   await page.getByRole("button", { name: "Images", exact: true }).click();
-  await page.getByLabel("Describe the image or product you want to find").fill("red coat");
+  await fillQuery(page.getByLabel("Describe the image or product you want to find"), "red coat");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("heading", { name: "A red coat" })).toBeVisible();
   expect(images).toBe(0);
@@ -122,7 +130,7 @@ test("shopping compares exact source variants and keeps missing merchant currenc
   });
   await page.goto("/discovery");
   await page.getByRole("button", { name: "Shopping", exact: true }).click();
-  await page.getByLabel("Describe the image or product you want to find").fill("coat");
+  await fillQuery(page.getByLabel("Describe the image or product you want to find"), "coat");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Coat merchant" })).toBeVisible();
   expect(checks).toBe(0);
@@ -160,7 +168,7 @@ test("local search shares only manually entered location and a disabled deployme
   await expect(
     page.getByRole("status").filter({ hasText: "Live discovery is not available here yet." }),
   ).toBeVisible();
-  await page.getByLabel("What are you looking for?").fill("quiet cafes");
+  await fillQuery(page.getByLabel("What are you looking for?"), "quiet cafes");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Oslo");
   await expect(page.getByRole("button", { name: "Search", exact: true })).toBeDisabled();
   const handoff = page.getByRole("link", {
@@ -206,7 +214,7 @@ test("late discovery response after sign-out cannot restore prior queries or sou
   await page.goto("/discovery");
   await expect(page.getByLabel("What are you looking for?")).toBeVisible();
   await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
-  await page.getByLabel("What are you looking for?").fill("private search");
+  await fillQuery(page.getByLabel("What are you looking for?"), "private search");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   const origin = [...origins][0];
@@ -257,7 +265,7 @@ test("device privacy reset clears queries and aborts a late request for the capt
   await page.goto("/maps");
   await expect(page.getByLabel("What are you looking for?")).toBeVisible();
   await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
-  await page.getByLabel("What are you looking for?").fill("private cafe");
+  await fillQuery(page.getByLabel("What are you looking for?"), "private cafe");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Private place");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
