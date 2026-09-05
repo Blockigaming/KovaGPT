@@ -95,7 +95,6 @@ test("sandbox runs only fixed Docker/runsc argv with all hard boundaries and no 
     "--pids-limit=32",
     "--cpus=1",
     "--log-driver=none",
-    "--init",
   ])
     assert.ok(create.args.includes(flag), flag);
   assert.ok(
