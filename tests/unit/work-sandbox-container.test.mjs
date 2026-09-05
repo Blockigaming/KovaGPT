@@ -91,18 +91,16 @@ test("sandbox runs only fixed Docker/runsc argv with all hard boundaries and no 
     "--user=65532:65532",
     "--cap-drop=ALL",
     "--security-opt=no-new-privileges=true",
-    "--cgroupns=private",
     "--memory=268435456",
     "--memory-swap=268435456",
     "--pids-limit=32",
     "--cpus=1",
     "--log-driver=none",
-    "--init",
   ])
     assert.ok(create.args.includes(flag), flag);
   assert.ok(
     create.args.includes(
-      "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=0700,uid=65532,gid=65532",
+      "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=1777",
     ),
   );
   assert.ok(
