@@ -16,23 +16,45 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
 
-const EARLY_THEME_BOOTSTRAP = `(() => {
+// The blocking script runs after the render-blocking app stylesheet, before UI
+// markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
+// applyThemeMode restores them atomically after setting the hydrated root class.
+const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
+  let mode = "system";
   try {
-    const mode = localStorage.getItem("kova-theme-mode") || "system";
-    const isDark =
-      mode === "dark" ||
-      (mode === "system" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    document.documentElement.classList.toggle("dark", isDark);
+    const stored = localStorage.getItem("kova-theme-mode");
+    if (stored === "light" || stored === "dark") mode = stored;
   } catch {}
+  if (!(mode === "dark" || (mode === "system" &&
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
+
+  const changed = [];
+  const visit = (rules) => {
+    for (const rule of rules) {
+      if (typeof rule.selectorText === "string") {
+        const original = rule.selectorText;
+        const selected = original.replace(/\.dark(?![\w\\-])/g, ":root");
+        if (selected !== original) {
+          changed.push([rule, original]);
+          rule.selectorText = selected;
+        }
+      }
+      if (rule.cssRules) visit(rule.cssRules);
+    }
+  };
+  window.__kovaRestoreThemeSelectors = () => {
+    for (const [rule, original] of changed) rule.selectorText = original;
+    delete window.__kovaRestoreThemeSelectors;
+  };
+  for (const sheet of document.styleSheets) {
+    try { visit(sheet.cssRules); } catch {}
+  }
 })();`;
 
 const LOCALE_DOCUMENT_BOOTSTRAP = `(() => {
@@ -265,9 +287,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
+        <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>
-        <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{LOCALE_DOCUMENT_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>

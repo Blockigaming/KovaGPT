@@ -17,10 +17,10 @@ test("connected apps and scheduled tasks expose truthful signed-out states", asy
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Scheduled Tasks Status" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible();
   await expect(page.getByText("Sign in to review task history")).toBeVisible();
   await expect(
-    page.getByText("Background execution is unavailable in this deployment."),
+    page.getByText("Sign in to review your saved tasks and background execution availability."),
   ).toBeVisible();
   await expect(page.getByText(/will run once|runner is fully enabled/i)).toHaveCount(0);
 
