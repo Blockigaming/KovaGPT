@@ -73,6 +73,7 @@ export const listMyLibrary = createServerFn({ method: "GET" })
   });
 
 const SaveSchema = z.object({
+  expectedOwnerId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(200),
   item_type: ItemTypeEnum,
@@ -88,6 +89,8 @@ export const saveToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    if (data.expectedOwnerId && data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
     const values = {
       user_id: context.userId,
       title: data.title,
