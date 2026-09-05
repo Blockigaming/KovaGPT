@@ -34,7 +34,9 @@ test("model selector opens (bottom sheet on touch, popover on desktop)", async (
     await expect(dialog).toBeVisible({ timeout: 3000 });
     await expect(dialog.locator('[data-testid^="model-option-"]').first()).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
+    // Focus restoration completes when the Radix exit animation unmounts the
+    // dialog, not as soon as its data-state changes to closed.
+    await expect(dialog).toHaveCount(0);
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(trigger).toBeFocused();
   }
