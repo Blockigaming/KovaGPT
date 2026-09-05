@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { spawnSync } from "node:child_process";
 
 const read = (path) => readFile(path, "utf8");
 
@@ -12,6 +13,13 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
   assert.doesNotMatch(workflow, /paths(?:-ignore)?:/u);
   assert.match(workflow, /name: Classify changed files/u);
+  assert.match(workflow, /grep -Eqv/);
+  assert.doesNotMatch(workflow, /grep -Ev[^\n]*\|\s*grep -q/u);
+  assert.match(workflow, /name: Repository formatting audit/u);
+  assert.doesNotMatch(
+    workflow,
+    /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/u,
+  );
   assert.match(workflow, /run_database: \$\{\{ steps\.scope\.outputs\.run_database \}\}/u);
   assert.match(
     workflow,
@@ -64,4 +72,23 @@ test("production Azure deployment is manual and confirmation-gated", async () =>
   assert.match(workflow, /vars\.KOVA_DEV_FORBIDDEN_SUPABASE_PROJECT_REFS/u);
   assert.match(workflow, /dev deployment cannot target a forbidden Supabase project/u);
   assert.doesNotMatch(workflow, /KOVA_PRODUCTION_SUPABASE/u);
+});
+
+test("large PR classification preserves the isolated database gate under pipefail", async () => {
+  const workflow = await read(".github/workflows/ci.yml");
+  const line = workflow
+    .split("\n")
+    .find((value) => value.includes("if grep -Eq '") && value.includes("supabase/migrations/"));
+  assert.ok(line);
+  const paths = [
+    "supabase/migrations/20260905033500_library_image_storage_quota.sql",
+    ...Array.from({ length: 20000 }, (_, i) => `src/generated/long-comparison-path-${i}.ts`),
+  ];
+  const result = spawnSync(
+    "bash",
+    ["-euo", "pipefail", "-c", `files=$(cat)\n${line} printf database; else exit 9; fi`],
+    { input: paths.join("\n"), encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "database");
 });

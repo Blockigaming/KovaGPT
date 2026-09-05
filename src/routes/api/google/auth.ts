@@ -1,7 +1,7 @@
 // Start Google OAuth flow. Requires a signed-in KovaGPT user.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { buildGoogleAuthUrl } from "@/lib/google-oauth.server";
+import { buildGoogleAuthUrl, beginGoogleOAuth } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
@@ -22,7 +22,8 @@ export const Route = createFileRoute("/api/google/auth")({
         if (
           !process.env.GOOGLE_OAUTH_CLIENT_ID ||
           !process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-          !process.env.GOOGLE_REDIRECT_URI
+          !process.env.GOOGLE_REDIRECT_URI ||
+          !process.env.CONNECTOR_ENCRYPTION_KEY
         ) {
           return Response.json({ error: "Google OAuth is not configured" }, { status: 503 });
         }
@@ -59,7 +60,14 @@ export const Route = createFileRoute("/api/google/auth")({
             .replace(/\+/g, "-")
             .replace(/\//g, "_")
             .replace(/=+$/, "");
-          const url = buildGoogleAuthUrl({ request, state, codeChallenge });
+          const connectionId = new URL(request.url).searchParams.get("connectionId") ?? undefined;
+          const attempt = await beginGoogleOAuth(auth.userId, nonce, connectionId);
+          const url = buildGoogleAuthUrl({
+            request,
+            state,
+            codeChallenge,
+            loginHint: attempt.loginHint ?? undefined,
+          });
           return Response.json(
             { url },
             {

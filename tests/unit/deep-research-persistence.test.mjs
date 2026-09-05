@@ -44,3 +44,39 @@ test("chat sends temporary semantics and omits unowned research chat relations",
   assert.match(index, /temporary: tempChat/);
   assert.match(index, /chatId: activeTool === "deep_research" \? undefined : nextConvId/);
 });
+
+test("failed and canceled research always persist a truthful terminal state", () => {
+  const source = read("src/lib/ai/deep-research.server.ts");
+  const run = source.slice(source.indexOf("export async function runDeepResearch"));
+  const catchBlock = run.slice(run.lastIndexOf("} catch (error) {"));
+
+  assert.match(catchBlock, /opts\.signal\?\.aborted/);
+  assert.match(catchBlock, /error\.name === "AbortError"/);
+  assert.match(catchBlock, /const status = canceled \? "canceled" : "failed"/);
+  assert.match(catchBlock, /await persistTerminalResearchRun\(opts\.persistence, runId/);
+  assert.match(catchBlock, /completed_at: completedAt/);
+  assert.match(catchBlock, /Research was canceled by the user/);
+  assert.match(catchBlock, /search or the AI provider failed/);
+  assert.match(catchBlock, /throw error/);
+});
+
+test("research persistence checks resolved database errors and protects durable completion", () => {
+  const source = read("src/lib/ai/deep-research.server.ts");
+  const update = source.slice(
+    source.indexOf("async function updateResearchRun"),
+    source.indexOf("async function persistTerminalResearchRun"),
+  );
+  const terminalHelper = source.slice(
+    source.indexOf("async function persistTerminalResearchRun"),
+    source.indexOf("async function insertResearchEvidence"),
+  );
+  const run = source.slice(source.indexOf("export async function runDeepResearch"));
+
+  assert.match(update, /const \{ error \} = await persistence\.supabase/);
+  assert.match(update, /if \(error\)[\s\S]{0,180}return false/);
+  assert.equal((terminalHelper.match(/updateResearchRun\(/g) ?? []).length, 2);
+  assert.match(run, /const completionPersisted = await persistTerminalResearchRun/);
+  assert.match(run, /if \(!completionPersisted\)/);
+  assert.match(run, /completion progress delivery failed/);
+  assert.match(run, /terminal state could not be persisted/);
+});

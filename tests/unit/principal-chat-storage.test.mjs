@@ -14,6 +14,7 @@ import {
   pendingActiveStorageKey,
   saveArchivedConversations,
   saveConversations,
+  persistTemporaryConversation,
   saveDraft,
   savePendingActive,
 } from "../../src/lib/chat-store.ts";
@@ -186,4 +187,42 @@ test("every principal receives distinct deterministic storage keys", () => {
   assert.equal(new Set(principals.map(archivedConversationStorageKey)).size, principals.length);
   assert.equal(new Set(principals.map((value) => draftStorageKey(value, "chat"))).size, 3);
   assert.equal(new Set(principals.map(pendingActiveStorageKey)).size, principals.length);
+});
+
+test("temporary conversion persists a memory boundary and excludes other private chats", async () => {
+  const active = { ...conversation("temporary"), temporary: true, temporaryContext: "clean" };
+  const other = { ...conversation("other-private"), temporary: true };
+  const regular = conversation("regular");
+  const converted = await persistTemporaryConversation("account-a", active, [
+    active,
+    other,
+    regular,
+  ]);
+  assert.ok(converted);
+  assert.deepEqual(
+    converted.map((item) => item.id),
+    ["temporary", "regular"],
+  );
+  assert.equal(converted[0].temporary, false);
+  assert.equal(converted[0].temporaryContext, undefined);
+  assert.equal(converted[0].memoryStartIndex, active.messages.length);
+  assert.deepEqual(converted[0].messages, active.messages);
+  assert.equal(active.temporary, true);
+  assert.equal(loadConversations("account-a")[0].memoryStartIndex, active.messages.length);
+  assert.deepEqual(loadConversations("account-b"), []);
+});
+
+test("temporary conversion reports storage failure without changing the private conversation", async () => {
+  const active = { ...conversation("temporary"), temporary: true };
+  const setItem = storage.setItem;
+  storage.setItem = () => {
+    throw new Error("quota exceeded");
+  };
+  try {
+    assert.equal(await persistTemporaryConversation("account-a", active, [active]), null);
+    assert.equal(active.temporary, true);
+    assert.equal(active.memoryStartIndex, undefined);
+  } finally {
+    storage.setItem = setItem;
+  }
 });

@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      billing_plan_tiers: {
+        Row: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Insert: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Update: {
+          environment?: string;
+          lookup_key?: string;
+          stripe_price_id?: string;
+          tier?: string;
+        };
+        Relationships: [];
+      };
       ai_generation_events: {
         Row: {
           actual_cost_usd: number | null;
@@ -763,21 +784,66 @@ export type Database = {
       };
       processed_stripe_events: {
         Row: {
+          checkout_session_id: string | null;
+          completed_at: string | null;
+          correlation_id: string | null;
+          customer_id: string | null;
           environment: string;
+          event_created_at: string | null;
           event_id: string;
+          invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          object_id: string | null;
+          observation_sequence: number | null;
+          outcome: string;
+          payload_hash: string | null;
           processed_at: string;
+          processing_status: string;
+          retryable: boolean;
+          subscription_id: string | null;
           type: string;
         };
         Insert: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment: string;
+          event_created_at?: string | null;
           event_id: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type: string;
         };
         Update: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment?: string;
+          event_created_at?: string | null;
           event_id?: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          processing_status?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type?: string;
         };
         Relationships: [];
@@ -903,39 +969,117 @@ export type Database = {
           },
         ];
       };
+      project_deletion_jobs: {
+        Row: {
+          attempt_count: number;
+          attempt_id: string | null;
+          completed_at: string | null;
+          last_error_code: string | null;
+          lease_until: string | null;
+          owner_id: string;
+          project_id: string;
+          requested_at: string;
+          started_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          attempt_id?: string | null;
+          completed_at?: string | null;
+          last_error_code?: string | null;
+          lease_until?: string | null;
+          owner_id: string;
+          project_id: string;
+          requested_at?: string;
+          started_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          attempt_id?: string | null;
+          completed_at?: string | null;
+          last_error_code?: string | null;
+          lease_until?: string | null;
+          owner_id?: string;
+          project_id?: string;
+          requested_at?: string;
+          started_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       project_files: {
         Row: {
+          content_sha256: string | null;
           created_at: string;
+          delete_attempt_id: string | null;
+          delete_lease_until: string | null;
           id: string;
+          idempotency_key: string | null;
           kind: string;
           mime_type: string | null;
           name: string;
           project_id: string;
           size_bytes: number;
+          status: string;
+          account_cleanup_user_id: string | null;
+          storage_charged: boolean;
+          storage_owner_id: string | null;
           storage_path: string;
-          uploaded_by: string;
+          updated_at: string;
+          upload_attempt_id: string | null;
+          upload_lease_until: string | null;
+          upload_quota_acquired: boolean;
+          uploaded_by: string | null;
         };
         Insert: {
+          content_sha256?: string | null;
           created_at?: string;
+          delete_attempt_id?: string | null;
+          delete_lease_until?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           kind?: string;
           mime_type?: string | null;
           name: string;
           project_id: string;
           size_bytes?: number;
+          status?: string;
+          account_cleanup_user_id?: string | null;
+          storage_charged?: boolean;
+          storage_owner_id?: string | null;
           storage_path: string;
-          uploaded_by: string;
+          updated_at?: string;
+          upload_attempt_id?: string | null;
+          upload_lease_until?: string | null;
+          upload_quota_acquired?: boolean;
+          uploaded_by?: string | null;
         };
         Update: {
+          content_sha256?: string | null;
           created_at?: string;
+          delete_attempt_id?: string | null;
+          delete_lease_until?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           kind?: string;
           mime_type?: string | null;
           name?: string;
           project_id?: string;
           size_bytes?: number;
+          status?: string;
+          account_cleanup_user_id?: string | null;
+          storage_charged?: boolean;
+          storage_owner_id?: string | null;
           storage_path?: string;
-          uploaded_by?: string;
+          updated_at?: string;
+          upload_attempt_id?: string | null;
+          upload_lease_until?: string | null;
+          upload_quota_acquired?: boolean;
+          uploaded_by?: string | null;
         };
         Relationships: [
           {
@@ -1136,6 +1280,7 @@ export type Database = {
           archived_at: string | null;
           color: string | null;
           created_at: string;
+          deletion_requested_at: string | null;
           description: string | null;
           id: string;
           name: string;
@@ -1148,6 +1293,7 @@ export type Database = {
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;
+          deletion_requested_at?: string | null;
           description?: string | null;
           id?: string;
           name: string;
@@ -1160,6 +1306,7 @@ export type Database = {
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;
+          deletion_requested_at?: string | null;
           description?: string | null;
           id?: string;
           name?: string;
@@ -1257,6 +1404,186 @@ export type Database = {
         };
         Relationships: [];
       };
+      stripe_checkout_attempts: {
+        Row: {
+          created_at: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          outcome: string;
+          stripe_session_id: string | null;
+          trial_eligible: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          idempotency_expires_at: string;
+          idempotency_key: string;
+          session_expires_at: string;
+          stripe_price_id: string;
+          outcome?: string;
+          stripe_session_id?: string | null;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          idempotency_expires_at?: string;
+          idempotency_key?: string;
+          session_expires_at?: string;
+          stripe_price_id?: string;
+          outcome?: string;
+          stripe_session_id?: string | null;
+          trial_eligible?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      stripe_event_processing_claims: {
+        Row: {
+          checkout_session_id: string | null;
+          correlation_id: string | null;
+          created_at: string;
+          customer_id: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          object_id: string | null;
+          observation_sequence: number | null;
+          outcome: string;
+          subscription_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment: string;
+          event_created_at: string;
+          event_id: string;
+          event_type: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          created_at?: string;
+          customer_id?: string | null;
+          environment?: string;
+          event_created_at?: string;
+          event_id?: string;
+          event_type?: string;
+          invoice_id?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          object_id?: string | null;
+          observation_sequence?: number | null;
+          outcome?: string;
+          subscription_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_subscription_sync_state: {
+        Row: {
+          active_event_id: string | null;
+          active_lease_expires_at: string | null;
+          active_lease_token: string | null;
+          active_observation_sequence: number | null;
+          applied_observation_sequence: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment: string;
+          stripe_subscription_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_event_id?: string | null;
+          active_lease_expires_at?: string | null;
+          active_lease_token?: string | null;
+          active_observation_sequence?: number | null;
+          applied_observation_sequence?: number;
+          environment?: string;
+          stripe_subscription_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_customer_creation_requests: {
+        Row: {
+          environment: string;
+          user_id: string;
+          request_id: string;
+          state: string;
+          requested_at: string;
+        };
+        Insert: {
+          environment: string;
+          user_id: string;
+          request_id?: string;
+          state?: string;
+          requested_at?: string;
+        };
+        Update: {
+          environment?: string;
+          user_id?: string;
+          request_id?: string;
+          state?: string;
+          requested_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_customer_mappings: {
+        Row: {
+          created_at: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          stripe_customer_id?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null;
@@ -1267,6 +1594,7 @@ export type Database = {
           id: string;
           last_stripe_event_created_at: string | null;
           last_stripe_event_id: string | null;
+          last_stripe_observation_sequence: number | null;
           price_id: string;
           product_id: string;
           status: string;
@@ -1284,6 +1612,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id: string;
           product_id: string;
           status?: string;
@@ -1301,6 +1630,7 @@ export type Database = {
           id?: string;
           last_stripe_event_created_at?: string | null;
           last_stripe_event_id?: string | null;
+          last_stripe_observation_sequence?: number | null;
           price_id?: string;
           product_id?: string;
           status?: string;
@@ -1591,6 +1921,45 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_or_repair_family_group: { Args: { p_owner_id: string; p_name: string }; Returns: string };
+      accept_family_invite_atomic: { Args: { p_user_id: string; p_token: string }; Returns: string };
+      control_disabled_browser_run: {
+        Args: { p_run_id: string; p_command: string; p_approval_id?: string | null };
+        Returns: Json;
+      };
+
+      claim_stripe_customer_creation: {
+        Args: { _user_id: string; _environment: string };
+        Returns: Json;
+      };
+      complete_stripe_customer_creation: {
+        Args: { _user_id: string; _environment: string; _request_id: string; _customer_id: string };
+        Returns: string;
+      };
+      prepare_stripe_account_deletion: { Args: { _user_id: string }; Returns: Json };
+      mark_stripe_checkout_attempt: {
+        Args: {
+          _user_id: string;
+          _environment: string;
+          _idempotency_key: string;
+          _outcome: string;
+          _session_id?: string | null;
+        };
+        Returns: boolean;
+      };
+      abort_project_file_upload: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: Json;
+      };
+      acquire_project_file_upload_quota: {
+        Args: {
+          p_attempt_id: string;
+          p_daily_limit: number;
+          p_file_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
       acquire_ai_generation: {
         Args: {
           p_context_trimmed: boolean;
@@ -1625,6 +1994,64 @@ export type Database = {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
       };
+      begin_stripe_event: {
+        Args: {
+          _checkout_session_id?: string;
+          _correlation_id?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_created_at: string;
+          _event_id: string;
+          _event_type: string;
+          _invoice_id?: string;
+          _lease_seconds?: number;
+          _object_id?: string;
+          _outcome: string;
+          _subscription_id?: string;
+        };
+        Returns: Json;
+      };
+      claim_stripe_checkout_attempt: {
+        Args: {
+          _environment: string;
+          _price_id: string;
+          _trial_eligible: boolean;
+          _user_id: string;
+        };
+        Returns: Json;
+      };
+      complete_stripe_event: {
+        Args: {
+          _apply_subscription: boolean;
+          _cancel_at_period_end?: boolean;
+          _current_period_end?: string;
+          _current_period_start?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_id: string;
+          _lease_token: string;
+          _observation_sequence: number;
+          _price_id?: string;
+          _product_id?: string;
+          _status?: string;
+        };
+        Returns: Json;
+      };
+      current_effective_plan_tier: { Args: never; Returns: string };
+      current_subscription_summary: { Args: never; Returns: Json };
+      current_user_plan_tier: { Args: never; Returns: string };
+      claim_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      claim_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      claim_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: Json;
+      };
       delete_email: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -1633,6 +2060,19 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string };
         Returns: number;
+      };
+      fail_project_deletion: {
+        Args: {
+          p_attempt_id: string;
+          p_error_code: string;
+          p_project_id: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
+      fail_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: boolean;
       };
       family_owner_of: { Args: { _user_id: string }; Returns: string };
       finalize_ai_generation: {
@@ -1649,6 +2089,23 @@ export type Database = {
           p_tools: Json;
         };
         Returns: boolean;
+      };
+      finalize_project_deletion: {
+        Args: {
+          p_attempt_id: string;
+          p_project_id: string;
+          p_user_id: string;
+          p_retained_paths?: string[];
+        };
+        Returns: Json;
+      };
+      finalize_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string; p_storage_removed?: boolean };
+        Returns: Json;
+      };
+      finalize_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string; p_storage_removed?: boolean };
+        Returns: Json;
       };
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string };
@@ -1839,6 +2296,77 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      lock_project_for_file_operation: {
+        Args: { p_file_id: string };
+        Returns: string;
+      };
+      release_project_storage_bytes: {
+        Args: { p_bytes: number; p_user_id: string };
+        Returns: number;
+      };
+      renew_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      reserve_project_file_upload: {
+        Args: {
+          p_attempt_id: string;
+          p_content_sha256: string;
+          p_extension: string;
+          p_file_cap: number;
+          p_idempotency_key: string;
+          p_kind: string;
+          p_mime_type: string;
+          p_name: string;
+          p_project_id: string;
+          p_size_bytes: number;
+          p_storage_limit: number;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      renew_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: boolean;
+      };
+      restore_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string };
+        Returns: boolean;
+      };
+      set_project_file_upload_state: {
+        Args: { p_attempt_id: string; p_file_id: string; p_status: string };
+        Returns: boolean;
+      };
+      claim_project_storage_source_cleanup: {
+        Args: {
+          p_paths: string[];
+          p_project_id?: string | null;
+          p_account_id?: string | null;
+          p_file_ids?: string[];
+        };
+        Returns: string[];
+      };
+      settle_account_project_storage_charges: {
+        Args: { p_paths: string[] };
+        Returns: boolean;
+      };
+      list_account_project_storage_objects: {
+        Args: { p_owner_id: string | null; p_limit?: number };
+        Returns: { name: string; owner_id: string | null }[];
+      };
+      claim_account_project_file_cleanup: {
+        Args: { p_user_id: string; p_file_id: string; p_attempt_id: string };
+        Returns: Json;
+      };
+      finalize_account_project_file_cleanup: {
+        Args: {
+          p_user_id: string;
+          p_file_id: string;
+          p_attempt_id: string;
+          p_storage_removed?: boolean;
+        };
+        Returns: Json;
+      };
       save_writing_document: {
         Args: {
           p_content: string;
@@ -1879,7 +2407,10 @@ export type Database = {
         };
         Returns: boolean;
       };
+      billing_user_plan_tier: { Args: { _user_id: string }; Returns: string };
+      effective_user_plan_tier: { Args: { _user_id: string }; Returns: string };
       user_plan_tier: { Args: { _user_id: string }; Returns: string };
+      user_subscription_summary: { Args: { _user_id: string }; Returns: Json };
     };
     Enums: {
       project_role: "owner" | "editor" | "viewer";

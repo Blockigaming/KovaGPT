@@ -1,27 +1,26 @@
 declare module "@/lib/webhook-reliability.mjs" {
   export class WebhookProcessingError extends Error {
+    constructor(code: string, status?: number, cause?: unknown);
     code: string;
     status: number;
   }
 
+  export function invoiceSubscriptionId(invoice: unknown): string | null;
+
   export function processStripeEvent(input: {
     supabase: unknown;
-    event: unknown;
+    event: {
+      id: string;
+      created: number;
+      type: string;
+      data: { object: unknown };
+    };
     environment: "live" | "sandbox";
-    resolvePriceId: (item: {
-      price?: {
-        lookup_key?: string | null;
-        metadata?: { kova_plan?: string };
-        id?: string;
-      } | null;
-    }) => string | undefined;
-    retrieveSubscription: (subscriptionId: string) => Promise<unknown>;
+    resolvePriceId: (item: unknown) => string | undefined | Promise<string | undefined>;
+    retrieveSubscription: (id: string) => Promise<unknown>;
+    billingOutcome?: (type: string) => string;
     correlationId?: string | null;
-  }): Promise<{ duplicate: boolean; applied: boolean }>;
-
-  export function billingOutcome(type: string): string;
-
-  export function stripeSubscriptionId(event: unknown): string | null;
+  }): Promise<{ duplicate: boolean; orphaned: boolean }>;
 
   export function processGitHubDelivery(input: {
     supabase: unknown;

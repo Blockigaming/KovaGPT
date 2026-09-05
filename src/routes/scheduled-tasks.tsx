@@ -5,7 +5,6 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import {
   listScheduledTasks,
-  createScheduledTask,
   updateScheduledTask,
   deleteScheduledTask,
   isScheduledTasksEligible,
@@ -28,6 +27,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
+import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";
+import { ScheduledTaskCopies } from "@/components/ScheduledTaskCopies";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import {
   browserStoragePrincipal,
@@ -44,8 +45,7 @@ export const Route = createFileRoute("/scheduled-tasks")({
       { title: "KovaGPT Tasks" },
       {
         name: "description",
-        content:
-          "Review historical scheduled-task status. Background execution is unavailable in this deployment.",
+        content: "Manage saved tasks, schedules, connected event filters, and run history.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -71,6 +71,8 @@ function ScheduledTasksPage() {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
+  const mutations = useRef(new Map<string, { revision: number; mutationId: string }>());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("all");
@@ -83,7 +85,6 @@ function ScheduledTasksPage() {
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
 
   const list = useServerFn(listScheduledTasks);
-  const create = useServerFn(createScheduledTask);
   const update = useServerFn(updateScheduledTask);
   const remove = useServerFn(deleteScheduledTask);
   const checkEligible = useServerFn(isScheduledTasksEligible);
@@ -95,6 +96,8 @@ function ScheduledTasksPage() {
     setDataGeneration(generation);
     setPlan("loading");
     setTasks([]);
+    setEditor(null);
+    mutations.current.clear();
     setLoading(false);
     setCreating(false);
     setLoadError(null);
@@ -114,7 +117,7 @@ function ScheduledTasksPage() {
       return;
     }
     let cancel = false;
-    checkEligible({})
+    checkEligible({ data: { expectedUserId: userKey! } })
       .then((r) => {
         if (cancel || generationRef.current !== generation || principalRef.current !== principal)
           return;
@@ -133,15 +136,16 @@ function ScheduledTasksPage() {
     return () => {
       cancel = true;
     };
-  }, [checkEligible, isSignedIn, lifecycleVersion, principal]);
+  }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
   const loadTasks = useCallback(async () => {
-    if (!dataReady || dataGeneration !== generationRef.current || plan !== "paid") return;
+    if (!dataReady || dataGeneration !== generationRef.current || !["paid", "free"].includes(plan))
+      return;
     const generation = generationRef.current;
     setLoading(true);
     setLoadError(null);
     try {
-      const next = await list({});
+      const next = await list({ data: { expectedUserId: userKey! } });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks(next);
     } catch (error) {
@@ -154,7 +158,7 @@ function ScheduledTasksPage() {
         setLoading(false);
       }
     }
-  }, [dataGeneration, dataReady, list, plan, principal]);
+  }, [dataGeneration, dataReady, list, plan, principal, userKey]);
 
   useEffect(() => {
     void loadTasks();
@@ -223,7 +227,7 @@ function ScheduledTasksPage() {
 
   const visiblePlan: PlanState = dataReady ? plan : "loading";
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
       !dataReady ||
@@ -233,40 +237,31 @@ function ScheduledTasksPage() {
       !when
     )
       return;
-    const generation = generationRef.current;
-    setCreating(true);
-    try {
-      const iso = new Date(when).toISOString();
-      const row = await create({
-        data: { title: title.trim(), prompt: prompt.trim(), run_at: iso, repeat },
-      });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      setTasks((t) => [...t, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
-      setTitle("");
-      setPrompt("");
-      setWhen("");
-      setRepeat("none");
-      toast.success("Task scheduled");
-    } catch (err) {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        toast.error(err instanceof Error ? err.message : "Failed to schedule task");
-      }
-    } finally {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        setCreating(false);
-      }
-    }
+    setEditor("new");
   };
-
   const createAutomation = async (draft: AutomationDraft) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
-    const generation = generationRef.current;
-    const row = await create({
-      data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },
-    });
-    if (generation !== generationRef.current || principalRef.current !== principal) return;
-    setTasks((current) => [...current, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
-    toast.success("Automation scheduled");
+    setTitle(draft.title);
+    setPrompt(draft.prompt);
+    setRepeat(draft.repeat);
+    const date = new Date(draft.runAt);
+    setWhen(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setEditor("new");
+  };
+  const identity = (task: ScheduledTask, action: string) => {
+    const key = task.id + ":" + action;
+    const saved = mutations.current.get(key);
+    const operation =
+      saved?.revision === task.revision
+        ? saved
+        : { revision: task.revision, mutationId: crypto.randomUUID() };
+    mutations.current.set(key, operation);
+    return {
+      expectedUserId: userKey!,
+      id: task.id,
+      mutationId: operation.mutationId,
+      expectedRevision: operation.revision,
+    };
   };
 
   const togglePause = async (t: ScheduledTask) => {
@@ -274,7 +269,7 @@ function ScheduledTasksPage() {
     const generation = generationRef.current;
     const next = t.status === "paused" ? "scheduled" : "paused";
     try {
-      const updated = await update({ data: { id: t.id, status: next } });
+      const updated = await update({ data: { ...identity(t, next), status: next } });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((arr) => arr.map((x) => (x.id === t.id ? updated : x)));
     } catch (e) {
@@ -287,8 +282,12 @@ function ScheduledTasksPage() {
   const del = async (t: ScheduledTask) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
+    if (
+      !window.confirm("Delete this task and its run history? Pending copy offers will be revoked.")
+    )
+      return;
     try {
-      await remove({ data: { id: t.id } });
+      await remove({ data: identity(t, "delete") });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((arr) => arr.filter((x) => x.id !== t.id));
     } catch (e) {
@@ -302,7 +301,9 @@ function ScheduledTasksPage() {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
     try {
-      const updated = await update({ data: { id: task.id, status: "scheduled" } });
+      const updated = await update({
+        data: { ...identity(task, "retry"), status: "scheduled", retry: true },
+      });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
       toast.success("Task queued to retry");
@@ -326,9 +327,7 @@ function ScheduledTasksPage() {
 
           <div className="flex items-center gap-3 mb-2">
             <Calendar className="w-6 h-6" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight">
-              Scheduled Tasks Status
-            </h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">Tasks</h1>
           </div>
           <p className="text-sm text-muted-foreground mb-8">
             Review scheduled work and its real execution status. New tasks are available only when a
@@ -344,7 +343,7 @@ function ScheduledTasksPage() {
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Sign in to review task history</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Background execution is unavailable in this deployment.
+                Sign in to review your saved tasks and background execution availability.
               </p>
               <Link
                 to="/"
@@ -358,10 +357,12 @@ function ScheduledTasksPage() {
           {visiblePlan === "free" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Scheduled execution is unavailable</div>
+              <div className="font-medium mb-1">
+                Running tasks requires an active Plus or Pro plan
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
-                This deployment has no background runner. Upgrading will not enable scheduled
-                execution.
+                Your existing history and pause/delete controls remain available below. A plan alone
+                does not activate an unconfigured background runner.
               </p>
               <Link
                 to="/"
@@ -390,22 +391,24 @@ function ScheduledTasksPage() {
             </div>
           )}
 
-          {visiblePlan === "paid" && (
+          {(visiblePlan === "paid" || visiblePlan === "free") && (
             <>
               {!executionAvailable ? (
                 <div
                   className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
                   role="status"
+                  aria-label="Scheduled Tasks Status"
                 >
                   <div className="font-medium">Scheduled execution is not available yet</div>
                   <p className="mt-1 text-muted-foreground">
-                    This deployment does not have a background task runner. KovaGPT will not accept
+                    Background execution is not ready in this deployment. KovaGPT will not accept
                     new tasks or claim that saved tasks will run. You can still review, pause, or
-                    delete previously saved tasks below.
+                    delete previously saved tasks below. Upgrading will not enable scheduled
+                    execution until this deployment is ready.
                   </p>
                 </div>
               ) : null}
-              {executionAvailable ? (
+              {executionAvailable && visiblePlan === "paid" ? (
                 <div className="mb-4 flex justify-end">
                   <button
                     type="button"
@@ -421,7 +424,7 @@ function ScheduledTasksPage() {
                 onOpenChange={setBuilderOpen}
                 onCreate={createAutomation}
               />
-              {executionAvailable ? (
+              {executionAvailable && visiblePlan === "paid" ? (
                 <form
                   onSubmit={submit}
                   className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
@@ -492,6 +495,26 @@ function ScheduledTasksPage() {
                 </form>
               ) : null}
 
+              {userKey && (
+                <ScheduledTaskCopies
+                  key={principal ?? userKey}
+                  tasks={tasks}
+                  userKey={userKey}
+                  eligible={visiblePlan === "paid"}
+                  onChanged={() => void loadTasks()}
+                />
+              )}
+              {editor && userKey && (
+                <ScheduledTaskEditor
+                  key={`${principal}:${editor === "new" ? "new" : editor.id + ":" + editor.revision}`}
+                  userKey={userKey}
+                  task={editor === "new" ? undefined : editor}
+                  draft={editor === "new" ? { title, prompt, localTime: when, repeat } : undefined}
+                  executionAvailable={executionAvailable && visiblePlan === "paid"}
+                  onClose={() => setEditor(null)}
+                  onSaved={() => void loadTasks()}
+                />
+              )}
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 className="font-display text-lg font-semibold">Your scheduled tasks</h2>
@@ -572,8 +595,9 @@ function ScheduledTasksPage() {
                   </div>
                   <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Use the form above to have KovaGPT run a prompt for you at a specific time -
-                    once, or on a repeating schedule.
+                    {executionAvailable
+                      ? "Use the form above to schedule a one-time or repeating prompt."
+                      : "No historical task records are available for this account."}
                   </p>
                 </div>
               ) : visibleTasks.length === 0 ? (
@@ -597,7 +621,13 @@ function ScheduledTasksPage() {
                           {t.next_run_at
                             ? `Next ${new Date(t.next_run_at).toLocaleString()}`
                             : `Originally ${new Date(t.run_at).toLocaleString()}`}{" "}
-                          · {t.repeat === "none" ? "Once" : t.repeat}
+                          ·{" "}
+                          {t.trigger_mode === "event"
+                            ? "Matching connected events"
+                            : t.repeat === "none"
+                              ? "Once"
+                              : t.repeat}{" "}
+                          · {t.timezone}
                           <span className="ml-1 px-1.5 py-0.5 rounded bg-accent/60">
                             {t.status}
                           </span>
@@ -613,6 +643,12 @@ function ScheduledTasksPage() {
                         ) : null}
                       </div>
                       <div className="flex items-center gap-1">
+                        <button
+                          className="rounded border border-border px-3 py-2 text-sm"
+                          onClick={() => setEditor(t)}
+                        >
+                          Settings and history
+                        </button>
                         {t.status === "failed" ? (
                           <button
                             onClick={() => retry(t)}
@@ -624,19 +660,21 @@ function ScheduledTasksPage() {
                             <RotateCcw className="h-4 w-4" />
                           </button>
                         ) : null}
-                        <button
-                          onClick={() => togglePause(t)}
-                          disabled={t.status === "paused" && !executionAvailable}
-                          className="p-2 rounded-md hover:bg-accent transition"
-                          aria-label={t.status === "paused" ? "Resume" : "Pause"}
-                          title={t.status === "paused" ? "Resume" : "Pause"}
-                        >
-                          {t.status === "paused" ? (
-                            <Play className="w-4 h-4" />
-                          ) : (
-                            <Pause className="w-4 h-4" />
-                          )}
-                        </button>
+                        {["scheduled", "running", "paused"].includes(t.status) ? (
+                          <button
+                            onClick={() => togglePause(t)}
+                            disabled={t.status === "paused" && !executionAvailable}
+                            className="p-2 rounded-md hover:bg-accent transition"
+                            aria-label={t.status === "paused" ? "Resume" : "Pause"}
+                            title={t.status === "paused" ? "Resume" : "Pause"}
+                          >
+                            {t.status === "paused" ? (
+                              <Play className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )}
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => del(t)}
                           className="p-2 rounded-md hover:bg-destructive/10 text-destructive transition"

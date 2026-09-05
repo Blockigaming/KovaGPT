@@ -53,6 +53,7 @@ export type ChatAttachment =
     };
 
 export type NormalizedChatPayload = {
+  kova?: { id: string; versionId?: string };
   messages: Array<{
     role: "user" | "assistant";
     content: string;
@@ -63,9 +64,13 @@ export type NormalizedChatPayload = {
   timezone?: string;
   locale?: string;
   chatId?: string;
+  memoryStartIndex?: number;
+  historyOffset?: number;
+  summaryProof?: { id: string; start: number; count: number; digest: string };
   personality?: string;
   projectId?: string;
   temporary?: boolean;
+  temporaryContext?: "clean" | "personalized";
   clientTool?: ChatClientTool;
 };
 

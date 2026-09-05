@@ -1,3 +1,4 @@
+import { MEMORY_SOURCES_CHANGED_EVENT } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -112,6 +113,7 @@ function MemoryPage() {
         ),
       );
       setEditing(null);
+      window.dispatchEvent(new Event(MEMORY_SOURCES_CHANGED_EVENT));
       toast.success("Memory updated");
     } catch (e) {
       if (currentUserKeyRef.current === operationUserKey) {
@@ -125,6 +127,7 @@ function MemoryPage() {
       await remove({ data: { id: item.id, source: item.source } });
       if (currentUserKeyRef.current !== operationUserKey) return;
       setItems((all) => all.filter((value) => memoryRecordKey(value) !== memoryRecordKey(item)));
+      window.dispatchEvent(new Event(MEMORY_SOURCES_CHANGED_EVENT));
       toast.success("Memory deleted");
     } catch (e) {
       if (currentUserKeyRef.current === operationUserKey) {

@@ -1,6 +1,17 @@
 export const WORK_SYNC_MAX_BODY_BYTES: number;
 export const WORK_SYNC_MAX_PAYLOAD_BYTES: number;
+export const WORK_SYNC_MAX_PAYLOAD_DEPTH: 16;
 export const WORK_SYNC_MAX_CHANGES: number;
+export const WORK_SYNC_READ_RATE_POLICY: Readonly<{
+  action: "work_sync_read";
+  limit: 60;
+  windowSeconds: 60;
+}>;
+export const WORK_SYNC_MUTATION_RATE_POLICY: Readonly<{
+  action: "work_sync_mutation";
+  limit: 12;
+  windowSeconds: 60;
+}>;
 
 export class WorkSyncInputError extends Error {
   code: string;
@@ -12,7 +23,7 @@ export type WorkSyncMutation =
       action: "save";
       mutationId: string;
       id: string;
-      kind: "task" | "template" | "agent_draft";
+      kind: "task" | "template" | "agent_draft" | "session";
       title: string;
       payload: Record<string, unknown>;
       expectedRevision: number;
@@ -26,7 +37,7 @@ export type WorkSyncMutation =
   | {
       action: "recent";
       mutationId: string;
-      resourceType: "run" | "task" | "template" | "agent_draft";
+      resourceType: "run" | "task" | "template" | "agent_draft" | "session";
       resourceId: string;
       pin: "keep" | "pin" | "unpin" | "forget";
       expectedRevision: number | null;

@@ -25,3 +25,13 @@ test("notification UI loads server truth and exposes search, filters, read, and 
   ])
     assert.ok(route.includes(contract), contract);
 });
+
+test("notification UI clears and generation-guards data across principal changes", () => {
+  assert.match(route, /const principalId = isLoaded && isSignedIn/);
+  assert.match(route, /const generationRef = useRef\(0\)/);
+  assert.match(route, /generation !== generationRef\.current/);
+  assert.match(route, /activePrincipalRef\.current !== expectedPrincipal/);
+  assert.match(route, /setItems\(\[\]\)/);
+  assert.match(route, /itemsOwner === principalId/);
+  assert.match(route, /principalPending \|\| loading/);
+});

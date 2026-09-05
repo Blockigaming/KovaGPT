@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
       // Production deploys the generated Nitro Cloudflare module. Browser CI
       // uses Nitro's in-process Node preview to avoid Wrangler's dev-only proxy.
       nitro({
+        // Keep build intermediates local even when isolated worktrees share dependencies.
+        buildDir: path.resolve(configDir, ".nitro"),
         preset: useNodeBrowserPreview ? "node-server" : "cloudflare-module",
         output: {
           dir: "dist",
@@ -52,6 +54,7 @@ export default defineConfig(({ mode }) => {
         entities: path.resolve(configDir, "node_modules/entities"),
       },
     },
+    worker: { format: "es" },
     build: {
       manifest: true,
       rollupOptions: {

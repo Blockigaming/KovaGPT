@@ -54,8 +54,8 @@ test("browser agents fail closed while legacy controls remain owner scoped", asy
   ]);
   for (const tier of ["plus", "pro", "business", "enterprise"])
     assert.match(execution, new RegExp(`${tier}:`));
-  assert.match(execution, /command === "cancel"/);
-  assert.match(execution, /status: "denied"/);
+  assert.match(execution, /supabaseUser\.rpc\("control_disabled_browser_run"/);
+  assert.match(execution, /p_approval_id: approvalId \?\? null/);
   assert.match(execution, /command === "resume"[\s\S]+browser_agent_unavailable/);
   assert.match(api, /browser_agent_unavailable/);
   assert.match(api, /status: 503/);

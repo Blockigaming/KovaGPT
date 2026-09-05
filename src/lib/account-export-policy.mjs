@@ -2,8 +2,23 @@ export const ACCOUNT_EXPORT_FORMAT = "kovagpt-account-export";
 export const ACCOUNT_EXPORT_VERSION = 1;
 export const ACCOUNT_EXPORT_MAX_BYTES = 50 * 1024 * 1024;
 export const ACCOUNT_EXPORT_PAGE_SIZE = 500;
+export const ACCOUNT_EXPORT_RATE_LIMIT = Object.freeze({
+  action: "account_data_export",
+  limit: 2,
+  windowSeconds: 3_600,
+});
+export const ACCOUNT_EXPORT_COOLDOWN_SECONDS = 12 * 60 * 60;
 
 export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
+  ["chat_history_records", "owner_id"],
+  ["custom_kova_export_rows", "owner_id"],
+  ["custom_kova_versions", "owner_id"],
+  ["custom_kova_link_grants", "user_id"],
+  ["custom_kova_mutations", "owner_id"],
+  ["custom_kova_reports", "reporter_id"],
+  ["custom_kova_moderation_events", "actor_id"],
+  ["google_connection_export_rows", "user_id"],
+  ["google_connection_preferences", "user_id"],
   ["ai_generation_events", "user_id"],
   ["ai_usage_events", "user_id"],
   ["account_audit_entries", "user_id"],
@@ -29,6 +44,9 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["chat_branches", "owner_id"],
   ["chat_custom_rules", "owner_id"],
   ["chat_memories", "user_id"],
+  ["chat_context_summaries", "user_id"],
+  ["trusted_contact_export_rows", "user_id"],
+  ["trusted_contact_blocks", "user_id"],
   ["chat_message_versions", "owner_id"],
   ["chat_pinned_files", "owner_id"],
   ["chat_share_links", "user_id"],
@@ -38,6 +56,14 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["daily_usage", "user_id"],
   ["deep_research_evidence", "user_id"],
   ["deep_research_runs", "user_id"],
+  ["developer_account_export_records", "owner_id"],
+  ["developer_funding_export_records", "owner_id"],
+  ["developer_pricing_draft_export_rows", "owner_id"],
+  ["developer_pricing_event_export_rows", "owner_id"],
+  ["developer_file_export_records", "owner_id"],
+  ["mcp_oauth_grant_export_rows", "owner_id"],
+  ["mcp_oauth_client_export_rows", "owner_id"],
+  ["discovery_usage_export_records", "user_id"],
   ["feedback_submissions", "owner_id"],
   ["financial_accounts", "user_id"],
   ["financial_connections", "owner_id"],
@@ -59,11 +85,25 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["integration_linked_accounts", "owner_id"],
   ["integration_sync_jobs", "owner_id"],
   ["knowledge_relationships", "owner_id"],
+  ["kova_sites", "owner_id"],
+  ["kova_site_versions", "owner_id"],
+  ["kova_site_files", "owner_id"],
+  ["kova_site_aliases", "owner_id"],
+  ["kova_site_viewers", "owner_id"],
   ["library_folders", "user_id"],
+  ["library_file_uploads", "owner_id"],
+  ["library_file_versions", "owner_id"],
+  ["library_file_replacements", "owner_id"],
+  ["library_text_versions", "owner_id"],
   ["notification_deliveries", "user_id"],
   ["notification_preferences", "user_id"],
   ["onboarding_progress", "user_id"],
   ["operational_events", "owner_id"],
+  ["organizations", "created_by"],
+  ["organization_members", "user_id"],
+  ["organization_scim_user_export_rows", "user_id"],
+  ["organization_invitations", "recipient_user_id"],
+  ["organization_audit_events", "actor_user_id"],
   ["pending_tool_actions", "user_id"],
   ["plaid_items", "user_id"],
   ["prompt_evaluations", "user_id"],
@@ -76,6 +116,8 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["research_templates", "user_id"],
   ["safety_reports", "reporter_id"],
   ["scheduled_task_runs", "user_id"],
+  ["scheduled_task_account_export", "user_id"],
+  ["scheduled_task_event_source_export_rows", "user_id"],
   ["scheduled_tasks", "user_id"],
   ["subscriptions", "user_id"],
   ["support_tickets", "owner_id"],
@@ -84,6 +126,13 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["user_preferences", "user_id"],
   ["user_storage", "user_id"],
   ["work_recent_items", "owner_id"],
+  ["web_push_preferences", "user_id"],
+  ["web_push_subscription_export_rows", "user_id"],
+  ["work_execution_runs", "owner_id"],
+  ["work_browser_sessions", "owner_id"],
+  ["study_set_export_rows", "owner_id"],
+  ["work_execution_events", "owner_id"],
+  ["work_execution_outputs", "owner_id"],
   ["work_saved_records", "owner_id"],
   ["writing_document_versions", "owner_id"],
   ["writing_documents", "owner_id"],
@@ -115,6 +164,22 @@ export function isUuid(value) {
   );
 }
 
+export function accountExportCooldownRetryAfter(requestedAt, now = Date.now()) {
+  if (typeof requestedAt !== "string" || !Number.isFinite(now)) {
+    throw new Error("account_export_job_invalid");
+  }
+  const requestedAtMs = Date.parse(requestedAt);
+  if (!Number.isFinite(requestedAtMs)) throw new Error("account_export_job_invalid");
+  const remainingMs = ACCOUNT_EXPORT_COOLDOWN_SECONDS * 1_000 - (now - requestedAtMs);
+  return Math.max(0, Math.ceil(remainingMs / 1_000));
+}
+
+export function accountExportJobCooldownRetryAfter(job, now = Date.now()) {
+  if (!isRecord(job)) throw new Error("account_export_job_invalid");
+  if (job.status === "failed" && job.failureCode === "account_export_audit_failed") return 0;
+  return accountExportCooldownRetryAfter(job.requestedAt, now);
+}
+
 export function sanitizeAccountExportValue(value, depth = 0) {
   if (depth > 24) throw new Error("account_export_nesting_exceeded");
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -142,7 +207,7 @@ export function accountExportStoragePath(userId, jobId, artifactId) {
 }
 
 export function serializeAccountExport(value) {
-  const text = `${JSON.stringify(sanitizeAccountExportValue(value), null, 2)}\n`;
+  const text = `${JSON.stringify(sanitizeAccountExportValue(value))}\n`;
   const bytes = new TextEncoder().encode(text);
   if (bytes.byteLength > ACCOUNT_EXPORT_MAX_BYTES) {
     throw new Error("account_export_too_large");
@@ -160,6 +225,7 @@ export function publicAccountExportJob(value, now = new Date()) {
     expiresAt !== null &&
     Number.isFinite(Date.parse(expiresAt)) &&
     Date.parse(expiresAt) > now.getTime();
+  const cleanupPending = value.status === "canceled" && typeof value.storage_path === "string";
   return {
     id: value.id,
     status: downloadable || value.status !== "complete" ? value.status : "expired",
@@ -175,5 +241,6 @@ export function publicAccountExportJob(value, now = new Date()) {
         ? value.failure_code
         : null,
     downloadable,
+    cleanupPending,
   };
 }

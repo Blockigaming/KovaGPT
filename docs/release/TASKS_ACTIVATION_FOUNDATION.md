@@ -1,0 +1,39 @@
+# Tasks source and activation boundary
+
+This package replaces the hardcoded execution prohibition with verified runtime readiness. Repository code is complete for time schedules, explicit saved context, personal connected reads, and independent recipient copies. Live scheduling and native provider callbacks remain disabled until the operator completes the configuration and policy gates below. No provider, database, scheduler, or billing configuration is changed by this source package.
+
+## Behavior
+
+- Create, list, inspect history, edit, pause, resume, retry and delete use the authenticated account and exact task revision. Mutations have durable request receipts; uncertain replies can retry the identical request. Editing saves a paused task that requires explicit execution consent to resume.
+- A task uses an anchored IANA timezone and local time. A daylight-saving gap moves forward by the offset change; a repeated local time uses the later standard-time occurrence. Monthly schedules retain the original day and clamp only months that lack that day. The UI explains these choices before consent.
+- Time schedules and event triggers are mutually exclusive. An event task may have up to three explicit Gmail, Slack or GitHub filters. Events require a verified native adapter, current immutable grant and timestamps after both task and connection consent. Delivery keys survive payload expiry so old events cannot silently become new runs.
+- Saved chat excerpts are explicit bounded snapshots, with capture time and optional source chat ID. Library and indexed Project text require current ownership/membership when read. They do not imply synchronization with browser chat history. Connected reads require an explicit 30-day Tasks approval for one personal connection, provider identity, grant generation and scope set; default account changes do not change task authority.
+- Slack private channels are classified through `conversations.info`; a C-prefixed private channel still requires `groups:read` and `groups:history`. Every awaited provider operation rechecks current grant and Lockdown before another private read. Generic workspace connections remain unsupported until an authoritative organization binding exists.
+- Share-copy offers target a verified existing account. A recipient accepts an independent paused copy of prompt and time settings; source credentials, connected grants, event triggers, context attachments and execution consent never transfer. The sender can revoke a pending offer, and the recipient may decline it.
+- Leases, bounded retries and idempotent settlement remain in use. Expired worker leases recover under owner locks. Current runtime policy, plan, account deletion fence, permissions and grants are checked after claim and before provider dispatch and result publication. Notifications contain generic completion text; private results remain in Tasks.
+
+## Limits and accounting
+
+The runtime policy bounds logical runs per account per UTC day (default 20), with one claimed execution per invocation, a 120-second lease and a bounded 50-second context/provider operation. Consumer Plus/Pro admission uses the ordinary model policy and existing consumer accounting, a maximum 1,800 output tokens, a 16,000 estimated input-token ceiling and the configured per-request cost ceiling. Unknown provider usage is conservatively reserved; a canceled request before dispatch records zero usage.
+
+The database bounds stored tasks to 200 per account, active background approvals to 20 (1,000 lifetime rows), pending copy offers to 20 sent and 100 received, and events to 100 pending/running and 10,000 retained delivery tombstones per account. Active plan limits still apply. Recipient and sender copy capacity checks run under the relevant account locks. Lists use stable pagination where they may exceed a page; failed pages do not return a false complete list.
+
+## Required operator activation
+
+1. Review and deploy the source migrations through the separately approved production migration process after the isolated upgrade/role checks pass. This document does not authorize live DDL.
+2. Configure the existing consumer AI provider and accounting values, review the Tasks execution/cost policy, configure a scheduler secret of at least 32 characters, and set the matching `KOVA_TASK_POLICY_VERSION`.
+3. Explicitly approve the disabled `scheduled_task_runtime` row, enabled event provider set and daily limit. Install an authenticated recurring invocation of the internal scheduled-execution route. A fresh authenticated scheduler heartbeat and matching policy are mandatory; a secret alone never enables execution.
+4. For native events, deploy the separate signed-ingress package and register the provider callback configuration. Its service-only `scheduled_task_event_grant_ready(uuid)` gate must prove current provider registration and callback readiness. Gmail additionally requires the user to initialize a history baseline and explicitly consent to a current native watch. No source-normalized event or unverified email address is enough.
+5. Each user reviews an active personal OAuth connection and explicitly grants Tasks the shown scopes, chooses context/resources and consents to execution. Reconnection, revocation, expired access, Lockdown, stopped native watches and account deletion must deny further reads and execution.
+
+Native event ingress is implemented in the companion package, which supplies `pumpScheduledTaskEvents({signal,limit})` and `TaskGmailEventSource({grantId,userId})`. The authenticated scheduler invokes the bounded native-event pump before claiming one task. Gmail event-source controls appear beside the selected Gmail approval. The database readiness requirement remains unsatisfied until the corresponding operator configuration and native callback evidence are present.
+
+## Export contract
+
+`public.scheduled_task_account_export` is a service-only security-invoker view with columns `user_id`, stable text `id`, `kind` and `data`. Filter `user_id` to the deleting/exporting account and paginate by `id`. It covers both copy-offer sides, safe approval metadata and allowlisted event data. It excludes portable connection authority, grant generation, provider account identifiers, raw signed callbacks, callback secrets and another copy party's identity. Existing safe task/run export mappings still provide the task prompt, saved context and result history. Account deletion must remove approval/event/copy/receipt metadata through the existing account-scoped deletion process before Auth retirement.
+
+## Verification
+
+Actual-role PGlite regressions run the migration under `service_role` without SELECT access to `auth.users`, including runtime disable-after-claim, policy drift, DST, copy consent stripping, immutable grant changes, current Lockdown, event timestamp/deduplication, lease recovery, capacity receipt replay and safe export. Worker tests execute the real transpiled adapter with controlled accounting/provider boundaries. Server tests reject cross-account inputs for all 14 entry points. Two Chromium tests exercise exact request retry, account switching and stale connected-resource responses through the real React editor. Hosted isolated PostgreSQL, production build and CI remain the final integrated-tree authority.
+
+Sources: [Tasks behavior](https://learn.chatgpt.com/docs/automations), [PostgreSQL gap and fold resolution](https://www.postgresql.org/docs/current/datetime-invalid-input.html), [Slack signing](https://docs.slack.dev/authentication/verifying-requests-from-slack/), [GitHub signing](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries), [Gmail push](https://developers.google.com/workspace/gmail/api/guides/push), [Pub/Sub authenticated push](https://docs.cloud.google.com/pubsub/docs/authenticate-push-subscriptions).

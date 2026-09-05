@@ -127,6 +127,11 @@ export function ToolConfirmCard({
         <Icon className="h-4 w-4 text-primary" />
         <span>{meta.label}</span>
       </div>
+      {typeof preview.google_account === "string" && preview.google_account.length <= 320 ? (
+        <p className="mt-2 break-all text-xs text-muted-foreground">
+          Google account: {preview.google_account}
+        </p>
+      ) : null}
       <div className="mt-1 text-foreground">{confirm.summary}</div>
       {Boolean(
         preview.to || preview.subject || preview.body_preview || preview.start || preview.location,

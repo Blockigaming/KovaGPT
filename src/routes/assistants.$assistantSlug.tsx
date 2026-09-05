@@ -1,8 +1,14 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { resolveAssistantState } from "@/lib/public-assistants";
 import { PublicPageView } from "@/components/public/PublicSite";
 export const Route = createFileRoute("/assistants/$assistantSlug")({
   loader: ({ params }) => {
+    if (
+      /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu.test(
+        params.assistantSlug,
+      )
+    )
+      throw redirect({ to: "/kovas" as never, search: { id: params.assistantSlug } as never });
     const result = resolveAssistantState(params.assistantSlug);
     if (result.state === "not_found") throw notFound();
     return result;

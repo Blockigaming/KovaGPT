@@ -1,3 +1,5 @@
+import { requestAccountDeletion } from "@/lib/account-deletion-client";
+import { PwaSettings } from "@/components/PwaSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -56,7 +58,7 @@ import {
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -80,17 +82,14 @@ import {
 import {
   loadPrincipalStoredRecord,
   savePrincipalStoredRecord,
-  LOCATION_KEY_BASE,
-  LOCATION_STORAGE_CHANGED_EVENT,
   WORKSPACE_DEFAULTS_KEY_BASE,
 } from "@/lib/settings-storage";
 import {
   browserStoragePrincipal,
-  clearPrincipalBrowserStorage,
-  dispatchPrincipalBrowserStorageCleared,
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
+import { resetPrincipalDeviceData } from "@/lib/principal-device-reset.mjs";
 import {
   allowMemoryWrites,
   blockMemoryWrites,
@@ -276,6 +275,50 @@ export function SettingsDialog({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
+  const deletionOperationRef = useRef(0);
+  const [deletionStatus, setDeletionStatus] = useState<{
+    ownerId: string;
+    state: "active" | "deleting" | "unknown";
+  } | null>(null);
+  const deletionPending = deletionStatus?.ownerId === userKey && deletionStatus.state !== "active";
+  useEffect(() => {
+    deletionOperationRef.current++;
+    setDeletionStatus(null);
+    setDeleteAccountBusy(false);
+    setDeleteAccountOpen(false);
+    setDeleteConfirmation("");
+  }, [userKey]);
+  useEffect(() => {
+    if (!open || !isLoaded || !userKey) return;
+    const lifetime = new AbortController();
+    const operation = deletionOperationRef.current;
+    void requestAccountDeletion(userKey, "GET", lifetime.signal)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("account_deletion_status_unavailable");
+        const result = (await response.json()) as { state?: string };
+        if (
+          !lifetime.signal.aborted &&
+          operation === deletionOperationRef.current &&
+          currentAuthUserKeyRef.current === userKey
+        )
+          setDeletionStatus({
+            ownerId: userKey,
+            state:
+              result.state === "active"
+                ? "active"
+                : result.state === "deleting"
+                  ? "deleting"
+                  : "unknown",
+          });
+      })
+      .catch(() => {
+        /* A failed status read never claims deletion was rolled back. */
+      });
+    return () => lifetime.abort();
+  }, [open, isLoaded, userKey]);
+
+  const [localResetBusy, setLocalResetBusy] = useState(false);
+  const localResetBusyRef = useRef(false);
   const [clearMemoryConfirmOpen, setClearMemoryConfirmOpen] = useState(false);
   const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
@@ -325,7 +368,8 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   const handleManageBilling = async () => {
-    if (portalLoading || !subSummary?.hasBillingAccount) return;
+    if (portalLoading || !subSummary?.hasBillingAccount || !subSummary.billingPortalAvailable)
+      return;
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
@@ -358,12 +402,17 @@ export function SettingsDialog({
     }
   };
 
-  const clearLocalBrowserData = (
+  const clearLocalBrowserData = async (
     targetUserKey: string | null | undefined = isLoaded ? userKey : undefined,
   ) => {
-    const result = clearPrincipalBrowserStorage(targetUserKey);
+    const result = await resetPrincipalDeviceData(targetUserKey);
     if (!result.resolved) return result;
-    const failureCount = result.local.failures.length + result.session.failures.length;
+    const failureCount =
+      result.local.failures.length +
+      result.session.failures.length +
+      result.imageHistory.failures.length +
+      result.chatHistory.failures.length +
+      result.pwa.failures.length;
     if (failureCount > 0) {
       console.warn("[local-data] Account-local browser cleanup was incomplete", {
         failureCount,
@@ -373,31 +422,52 @@ export function SettingsDialog({
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== "DELETE" || deleteAccountBusy) return;
-    const deletionUserKey = isLoaded ? userKey : undefined;
+    if (deleteConfirmation !== "DELETE" || deleteAccountBusy || !isLoaded || !userKey) return;
+    const deletionUserKey = userKey;
+    const operation = ++deletionOperationRef.current;
+    const currentDeletion = () =>
+      currentAuthUserKeyRef.current === deletionUserKey &&
+      deletionOperationRef.current === operation;
     setDeleteAccountBusy(true);
     let response: Response;
     try {
-      response = await authFetch("/api/account", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmation: deleteConfirmation }),
-      });
+      response = await requestAccountDeletion(deletionUserKey, "DELETE");
     } catch (error) {
       console.error("[account-delete] request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
-      toast.error("Account deletion could not be completed. Your account remains active.");
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) {
+        setDeletionStatus({ ownerId: deletionUserKey, state: "unknown" });
+        toast.error(
+          "Deletion may have started. Retry to check its status and continue cleanup; completed cleanup cannot be undone.",
+        );
+        setDeleteAccountBusy(false);
+      }
       return;
     }
 
     if (!response.ok) {
       const result = (await response.json().catch(() => null)) as {
         error?: string;
+        state?: string;
       } | null;
-      toast.error(result?.error || "Account deletion failed. Your account remains active.");
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) {
+        setDeletionStatus({
+          ownerId: deletionUserKey,
+          state:
+            result?.state === "active"
+              ? "active"
+              : result?.state === "deleting"
+                ? "deleting"
+                : "unknown",
+        });
+        toast.error(
+          response.status === 401
+            ? "Your sign-in is no longer valid. Deletion may have completed. Sign in again only if the account still exists to check its status; completed cleanup cannot be undone."
+            : result?.error || "Deletion status is uncertain. Retry to continue cleanup.",
+        );
+        setDeleteAccountBusy(false);
+      }
       return;
     }
 
@@ -406,17 +476,18 @@ export function SettingsDialog({
     // be reported as though the account remains active.
     let localCleanupIncomplete: boolean;
     try {
-      const cleanupResult = clearLocalBrowserData(deletionUserKey);
-      if (cleanupResult.resolved) {
-        dispatchPrincipalBrowserStorageCleared(deletionUserKey);
-      }
+      const cleanupResult = await clearLocalBrowserData(deletionUserKey);
       if (currentAuthUserKeyRef.current === deletionUserKey) {
         onClearAll();
         setDeleteAccountOpen(false);
         onOpenChange(false);
       }
       const cleanupFailureCount =
-        cleanupResult.local.failures.length + cleanupResult.session.failures.length;
+        cleanupResult.local.failures.length +
+        cleanupResult.session.failures.length +
+        cleanupResult.imageHistory.failures.length +
+        cleanupResult.chatHistory.failures.length +
+        cleanupResult.pwa.failures.length;
       localCleanupIncomplete = !cleanupResult.resolved || cleanupFailureCount > 0;
     } catch (error) {
       localCleanupIncomplete = true;
@@ -442,7 +513,7 @@ export function SettingsDialog({
         error: error instanceof Error ? error.name : "unknown_error",
       });
     } finally {
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) setDeleteAccountBusy(false);
     }
   };
 
@@ -495,10 +566,12 @@ export function SettingsDialog({
         data: { environment: getStripeEnvironment() },
       });
       setSubSummary(summary);
-      if (summary.tier === "free") {
+      if (summary.billingConflict) {
+        toast.error("A billing conflict needs support review.");
+      } else if (summary.effectiveTier === "free") {
         toast.message("No active subscription found on this account.");
       } else {
-        toast.success(`${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
+        toast.success(`${summary.effectiveTier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
       }
     } catch {
       setSubSummary(null);
@@ -511,8 +584,14 @@ export function SettingsDialog({
     }
   };
 
-  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
-  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
+  const familyTierUpgrade =
+    !!subSummary &&
+    !subSummary.billingConflict &&
+    tierRank(subSummary.effectiveTier) > tierRank(subSummary.tier);
+  const inheritedSubscription = familyTierUpgrade && subSummary.activeSubscriptionCount === 0;
+  const ownSubscriptionWithFamilyUpgrade =
+    familyTierUpgrade && subSummary.activeSubscriptionCount > 0;
+  const displayedSubscriptionTier = subSummary?.effectiveTier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
@@ -928,6 +1007,11 @@ export function SettingsDialog({
                       <div className="text-xs text-destructive mt-1">
                         Billing details unavailable.
                       </div>
+                    ) : subSummary?.billingConflict ? (
+                      <div className="text-xs text-destructive mt-1" role="alert">
+                        Multiple or unrecognized active subscriptions were detected. Contact
+                        support@kovagpt.com to review the billing records.
+                      </div>
                     ) : displayedSubscriptionTier ? (
                       <div className="text-xs text-muted-foreground mt-1">
                         You're on the{" "}
@@ -937,13 +1021,19 @@ export function SettingsDialog({
                             ? "Plus"
                             : "Pro"}{" "}
                         plan
-                        {inheritedSubscription ? " through Family Sharing" : ""}
+                        {familyTierUpgrade ? " through Family Sharing" : ""}
                         {subSummary?.trialing ? " (free trial)" : ""}
                         {subSummary?.status === "past_due" ? " - payment past due" : ""}
                         {subSummary?.status === "unpaid" ? " - payment failed" : ""}
                         {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
                       </div>
                     ) : null}
+                    {ownSubscriptionWithFamilyUpgrade && (
+                      <div className="text-[11px] text-muted-foreground mt-1">
+                        Your own {subSummary?.tier === "pro" ? "Pro" : "Plus"} subscription is still
+                        billed and can be managed below.
+                      </div>
+                    )}
                     {subSummary?.currentPeriodEnd && !inheritedSubscription && (
                       <div className="text-[11px] text-muted-foreground mt-1">
                         {subSummary.trialing
@@ -957,6 +1047,7 @@ export function SettingsDialog({
                   {!subscriptionLoading &&
                     !subscriptionError &&
                     displayedSubscriptionTier === "free" &&
+                    !subSummary?.billingConflict &&
                     !subSummary?.hasBillingAccount && (
                       <Link
                         to="/pricing"
@@ -1026,6 +1117,7 @@ export function SettingsDialog({
                         subscriptionLoading ||
                         !!subscriptionError ||
                         !subSummary?.hasBillingAccount ||
+                        !subSummary.billingPortalAvailable ||
                         inheritedSubscription
                       }
                       aria-describedby="billing-management-status"
@@ -1052,11 +1144,15 @@ export function SettingsDialog({
                       ? subscriptionError
                       : subscriptionLoading
                         ? "Checking the billing account linked to this KovaGPT account."
-                        : inheritedSubscription
-                          ? "This shared plan is managed by the Family Sharing owner."
-                          : subSummary?.hasBillingAccount
-                            ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
-                            : "No Stripe billing account is linked to this KovaGPT account."}
+                        : subSummary?.billingConflict
+                          ? "A billing conflict was detected. Contact support@kovagpt.com so the subscriptions can be reconciled."
+                          : inheritedSubscription
+                            ? "This shared plan is managed by the Family Sharing owner."
+                            : subSummary?.hasBillingAccount && subSummary.billingPortalAvailable
+                              ? "Manage payment methods, invoices, account details, and cancellation in the Stripe billing portal."
+                              : subSummary?.hasBillingAccount
+                                ? "A Stripe billing account is linked, but the self-service portal is not configured. Contact support@kovagpt.com for billing help."
+                                : "No Stripe billing account is linked to this KovaGPT account."}
                   </p>
                 </div>
 
@@ -1066,8 +1162,9 @@ export function SettingsDialog({
                     <div className="rounded-lg border border-border p-4 space-y-2">
                       <div className="text-sm font-medium">Cancel subscription</div>
                       <p className="text-xs text-muted-foreground">
-                        You can cancel from the Stripe billing portal above. After canceling, you'll
-                        keep access to your current plan until the end of the billing period.
+                        {subSummary.billingPortalAvailable
+                          ? "You can cancel from the Stripe billing portal above. After canceling, you’ll keep access to your current plan until the end of the billing period."
+                          : "The self-service billing portal is not configured. Contact support@kovagpt.com for cancellation or other billing help."}
                       </p>
                     </div>
                   )}
@@ -1174,37 +1271,40 @@ export function SettingsDialog({
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
                 <h3 className="text-sm font-semibold">Notifications</h3>
-                <ToggleRow
-                  title="Account & security emails"
-                  hint="Sign-in alerts, verification, and important account changes. Cannot be turned off for security."
-                  checked={true}
-                  onCheckedChange={() => toast.message("Security emails are always on.")}
-                />
-                <ToggleRow
-                  title="Product updates"
-                  hint="Occasional emails about new features and improvements."
-                  checked={settings.notifyProduct ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyProduct: v })}
-                />
-                <ToggleRow
-                  title="Tips & guides"
-                  hint="Helpful tips on getting more out of KovaGPT."
-                  checked={settings.notifyEmail ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyEmail: v })}
-                />
+                <PwaSettings ownerId={isLoaded ? userKey : null} />
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">
+                  <div>
+                    <p className="text-sm font-medium">Account &amp; security emails</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sign-in alerts, verification, and important account changes cannot be turned
+                      off for security.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                    Always on
+                  </span>
+                </div>
+                <div className="rounded-lg border border-dashed border-border p-4" role="note">
+                  <p className="text-sm font-medium">Optional email preferences are unavailable</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Product-update and tips controls are not connected to the delivery service yet,
+                    so KovaGPT does not show switches that would have no effect. Use the unsubscribe
+                    link in an optional email or contact support for help.
+                  </p>
+                  <Link
+                    to="/contact-support"
+                    onClick={() => onOpenChange(false)}
+                    className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline"
+                  >
+                    Contact support
+                  </Link>
+                </div>
               </TabsContent>
 
               {/* PARENTAL */}
               <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
                 <h3 className="text-sm font-semibold">Parental controls</h3>
-                <ToggleRow
-                  title="Family-safe mode"
-                  hint="Filters mature content and enforces stricter safety guidelines."
-                  checked={settings.parentalMode ?? false}
-                  onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
-                />
-                <FamilySafeAudience />
-                <FamilyPinPanel />
+                <FamilyControlsUnavailable />
                 <p className="text-xs text-muted-foreground">
                   For full device-level parental controls (screen time, app restrictions), use your
                   device's built-in settings.
@@ -1227,16 +1327,21 @@ export function SettingsDialog({
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Your approximate coordinates can be stored in this browser and used to show an
-                    OpenStreetMap map in location cards. They are optional and are not included in
-                    chat requests.
+                    Location-based personalization is not connected to chat or Maps yet.
                   </p>
                 </div>
-                <LocationPanel userKey={userKey} principalResolved={isLoaded} />
+                <LocationControlsUnavailable />
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
               <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+                <Link
+                  to="/trusted-contacts"
+                  onClick={() => onOpenChange(false)}
+                  className="block rounded-lg border p-4 text-sm hover:bg-accent"
+                >
+                  Manage voluntary trusted contacts
+                </Link>
                 <div className="rounded-lg border border-border p-4">
                   <div className="text-sm font-medium">Signed in as</div>
                   <div className="text-sm text-muted-foreground mt-1">
@@ -1325,8 +1430,13 @@ export function SettingsDialog({
                         loadArchivedConversations(userKey),
                         imported.archivedConversations,
                       );
-                      saveConversations(userKey, conversations);
-                      saveArchivedConversations(userKey, archived);
+                      if (
+                        !(await saveConversations(userKey, conversations)) ||
+                        !(await saveArchivedConversations(userKey, archived))
+                      )
+                        throw new Error(
+                          "Chat import could not be saved. Check chat sync and retry.",
+                        );
                       window.dispatchEvent(new Event("kova:conversations-imported"));
                       toast.success(
                         `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
@@ -1345,12 +1455,16 @@ export function SettingsDialog({
                   onAction={() => importFileRef.current?.click()}
                 />
                 <SecurityRow
-                  title="Delete account"
-                  body="Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
-                  actionLabel="Delete account"
+                  title={deletionPending ? "Account deletion pending" : "Delete account"}
+                  body={
+                    deletionPending
+                      ? "Deletion has started or its outcome is still being verified. Completed cleanup cannot be undone. Retry to finish removing private data and the sign-in account."
+                      : "Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
+                  }
+                  actionLabel={deletionPending ? "Retry deletion" : "Delete account"}
                   danger
                   onAction={() => {
-                    setDeleteConfirmation("");
+                    setDeleteConfirmation(deletionPending ? "DELETE" : "");
                     setDeleteAccountOpen(true);
                   }}
                 />
@@ -1362,35 +1476,54 @@ export function SettingsDialog({
                 <div className="rounded-xl border border-border bg-card/60 p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
-                    Resets chats, drafts, handoffs, work data, and account preferences stored for
-                    this KovaGPT profile on this browser. Ownerless private data, including
-                    transitional values from older versions, is also removed so another profile
-                    cannot receive it. Other profiles' scoped data, device-wide display preferences,
-                    and cloud data are preserved.
+                    Resets chats, drafts, handoffs, work data, image history, and account
+                    preferences stored for this KovaGPT profile on this browser. Ownerless private
+                    data, including transitional values from older versions, is also removed so
+                    another profile cannot receive it. Other profiles' scoped data, device-wide
+                    display preferences, and cloud data are preserved.
                   </p>
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      const result = clearLocalBrowserData();
-                      if (!result.resolved) {
-                        toast.error("Account data is still loading. Try again in a moment.");
-                        return;
-                      }
-                      dispatchPrincipalBrowserStorageCleared(userKey);
-                      onChange(DEFAULT_SETTINGS);
-                      onClearAll();
-                      const failureCount =
-                        result.local.failures.length + result.session.failures.length;
-                      if (failureCount > 0) {
+                    disabled={localResetBusy || deleteAccountBusy}
+                    onClick={async () => {
+                      if (localResetBusyRef.current) return;
+                      const resetUserKey = currentAuthUserKeyRef.current;
+                      localResetBusyRef.current = true;
+                      setLocalResetBusy(true);
+                      try {
+                        const result = await clearLocalBrowserData(resetUserKey);
+                        if (!result.resolved) {
+                          toast.error("Account data is still loading. Try again in a moment.");
+                          return;
+                        }
+                        if (currentAuthUserKeyRef.current === resetUserKey) {
+                          onChange(DEFAULT_SETTINGS);
+                          onClearAll();
+                        }
+                        const failureCount =
+                          result.local.failures.length +
+                          result.session.failures.length +
+                          result.imageHistory.failures.length +
+                          result.chatHistory.failures.length +
+                          result.pwa.failures.length;
+                        if (failureCount > 0) {
+                          toast.warning(
+                            "Some local data could not be reset. Reload and try again.",
+                          );
+                        } else {
+                          toast.success("This profile's local browser data was reset.");
+                        }
+                      } catch {
                         toast.warning("Some local data could not be reset. Reload and try again.");
-                      } else {
-                        toast.success("This profile's local browser data was reset.");
+                      } finally {
+                        localResetBusyRef.current = false;
+                        setLocalResetBusy(false);
                       }
                     }}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Reset this profile's local data
+                    {localResetBusy ? "Resetting…" : "Reset this profile's local data"}
                   </Button>
                 </div>
               </TabsContent>
@@ -1515,11 +1648,13 @@ export function SettingsDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deletionPending ? "Continue account deletion" : "Delete your account permanently?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This cancels active subscriptions, disconnects stored credentials, and deletes your
-              sign-in account and associated cloud records. Legally required billing, security, and
-              backup records may be retained. This action cannot be undone. Type DELETE to continue.
+              {deletionPending
+                ? "Deletion is pending or awaiting verification. Retry continues the same irreversible cleanup. Closing this dialog does not cancel deletion."
+                : "This cancels active subscriptions, disconnects stored credentials, and deletes your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained. This action cannot be undone. Type DELETE to continue."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Input
@@ -1531,13 +1666,19 @@ export function SettingsDialog({
             disabled={deleteAccountBusy}
           />
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAccountBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteAccountBusy}>
+              {deletionPending ? "Close" : "Cancel"}
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={handleDeleteAccount}
               disabled={deleteConfirmation !== "DELETE" || deleteAccountBusy}
             >
-              {deleteAccountBusy ? "Deleting…" : "Delete account"}
+              {deleteAccountBusy
+                ? "Deleting…"
+                : deletionPending
+                  ? "Retry deletion"
+                  : "Delete account"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1601,13 +1742,26 @@ function ToggleRow({
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
+  const controlId = useId();
+  const hintId = hint ? `${controlId}-hint` : undefined;
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium">{title}</div>
-        {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
+        <label htmlFor={controlId} className="text-sm font-medium">
+          {title}
+        </label>
+        {hint && (
+          <div id={hintId} className="text-xs text-muted-foreground mt-0.5">
+            {hint}
+          </div>
+        )}
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Switch
+        id={controlId}
+        aria-describedby={hintId}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+      />
     </div>
   );
 }
@@ -1712,8 +1866,10 @@ function LibraryItemViewer({
 }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgErr, setImgErr] = useState<string | null>(null);
+  const [imgRetry, setImgRetry] = useState(0);
   const itemId = item?.id;
   const itemType = item?.item_type;
+  useEffect(() => setImgRetry(0), [itemId]);
   useEffect(() => {
     let cancelled = false;
     setImgUrl(null);
@@ -1731,7 +1887,7 @@ function LibraryItemViewer({
     return () => {
       cancelled = true;
     };
-  }, [itemId, itemType]);
+  }, [imgRetry, itemId, itemType]);
 
   const isImage = item?.item_type === "image";
   return (
@@ -1752,6 +1908,10 @@ function LibraryItemViewer({
                 src={imgUrl}
                 alt={item?.title ?? ""}
                 className="max-h-[55vh] mx-auto rounded-lg"
+                onError={() => {
+                  if (imgRetry < 2) setImgRetry((attempt) => attempt + 1);
+                  else setImgErr("Image preview unavailable. Close and reopen this item to retry.");
+                }}
               />
             ) : (
               <div className="text-sm text-muted-foreground">Loading image…</div>
@@ -1799,6 +1959,17 @@ function LibraryItemViewer({
 }
 
 function LibraryPanel() {
+  const { user } = useUser();
+  return <LibraryPanelForOwner key={user?.id ?? "guest"} ownerId={user?.id ?? null} />;
+}
+function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const [items, setItems] = useState<LibItem[]>([]);
   const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>(
     [],
@@ -1819,6 +1990,7 @@ function LibraryPanel() {
         (await import("@/lib/shared-chats.functions")).listSharedWithMe(),
         (await import("@/lib/shared-chats.functions")).listMySharedChats(),
       ]);
+      if (!active.current) return;
       setItems(lib);
       setShared(inbox);
       setMine(mineShares);
@@ -1836,7 +2008,18 @@ function LibraryPanel() {
   const remove = async (id: string) => {
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
-      await deleteLibraryItem({ data: { id } });
+      const item = items.find((value) => value.id === id);
+      if (!item || !ownerId || !active.current) return;
+      await deleteLibraryItem({
+        data: {
+          id,
+          expectedOwnerId: ownerId,
+          generation: item.original_generation,
+          contentGeneration: item.content_generation,
+          revision: item.content_revision,
+        },
+      });
+      if (!active.current) return;
       setItems((prev) => prev.filter((i) => i.id !== id));
       setViewing((v) => (v?.id === id ? null : v));
       toast.success("Deleted.");
@@ -2166,15 +2349,25 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
                 size="sm"
                 variant="ghost"
                 className="rounded-full"
-                onClick={() => {
-                  saveConversations(
-                    userKey,
-                    mergeConversations(loadConversations(userKey), [chat]),
-                  );
-                  saveArchivedConversations(
-                    userKey,
-                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
-                  );
+                onClick={async () => {
+                  if (
+                    !(await saveConversations(
+                      userKey,
+                      mergeConversations(loadConversations(userKey), [chat]),
+                    ))
+                  ) {
+                    toast.error("Could not restore chat.");
+                    return;
+                  }
+                  if (
+                    !(await saveArchivedConversations(
+                      userKey,
+                      loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                    ))
+                  ) {
+                    toast.error("Could not update archive.");
+                    return;
+                  }
                   setRevision((value) => value + 1);
                   window.dispatchEvent(new Event("kova:conversations-imported"));
                   toast.success("Chat restored");
@@ -2187,12 +2380,17 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
                 variant="ghost"
                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                 aria-label={`Delete archived chat ${chat.title}`}
-                onClick={() => {
+                onClick={async () => {
                   if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
-                  saveArchivedConversations(
-                    userKey,
-                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
-                  );
+                  if (
+                    !(await saveArchivedConversations(
+                      userKey,
+                      loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                    ))
+                  ) {
+                    toast.error("Could not delete archived chat.");
+                    return;
+                  }
                   setRevision((value) => value + 1);
                   toast.success("Archived chat deleted");
                 }}
@@ -2209,259 +2407,16 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
   );
 }
 
-// ---------- Family-safe audience + PIN ----------
+// ---------- Family safety availability ----------
 
-type SafeAudience = "myself" | "child" | "none";
-
-function FamilySafeAudience() {
-  const [aud, setAud] = useState<SafeAudience>(() => {
-    if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
-  });
-  const set = (v: SafeAudience) => {
-    setAud(v);
-    try {
-      localStorage.setItem("kova-safe-audience", v);
-    } catch {
-      /* ignore */
-    }
-  };
-  const opts: { v: SafeAudience; label: string; hint: string }[] = [
-    {
-      v: "myself",
-      label: "Myself",
-      hint: "I'm using Family-safe mode for me.",
-    },
-    {
-      v: "child",
-      label: "My child",
-      hint: "A child uses this device - enable a PIN below to lock changes.",
-    },
-    {
-      v: "none",
-      label: "None of the above",
-      hint: "Don't apply Family-safe defaults.",
-    },
-  ];
+function FamilyControlsUnavailable() {
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">Who is this for?</div>
-      <div className="grid gap-2">
-        {opts.map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            onClick={() => set(o.v)}
-            className={`text-left rounded-lg border p-3 transition ${
-              aud === o.v ? "border-foreground bg-accent" : "border-border hover:bg-accent/50"
-            }`}
-          >
-            <div className="text-sm font-medium">{o.label}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{o.hint}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FamilyPinPanel() {
-  const [aud, setAud] = useState<SafeAudience>(() => {
-    if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
-  });
-  const [hasPin, setHasPin] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("kova-family-pin");
-  });
-  const [pin, setPin] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [current, setCurrent] = useState("");
-
-  useEffect(() => {
-    const sync = () => {
-      setAud((localStorage.getItem("kova-safe-audience") as SafeAudience) || "none");
-      setHasPin(!!localStorage.getItem("kova-family-pin"));
-    };
-    window.addEventListener("storage", sync);
-    const id = window.setInterval(sync, 800);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.clearInterval(id);
-    };
-  }, []);
-
-  if (aud === "none") return null;
-
-  const hashPin = async (value: string, salt?: string) => {
-    const actualSalt =
-      salt ??
-      Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join("");
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(value),
-      "PBKDF2",
-      false,
-      ["deriveBits"],
-    );
-    const bits = await crypto.subtle.deriveBits(
-      {
-        name: "PBKDF2",
-        hash: "SHA-256",
-        salt: new TextEncoder().encode(actualSalt),
-        iterations: 120_000,
-      },
-      key,
-      256,
-    );
-    const hash = Array.from(new Uint8Array(bits), (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
-    return `v2$${actualSalt}$${hash}`;
-  };
-
-  const verifyPin = async (value: string, stored: string) => {
-    if (!stored.startsWith("v2$")) return value === stored;
-    const [, salt] = stored.split("$");
-    return (await hashPin(value, salt)) === stored;
-  };
-
-  const savePin = async () => {
-    if (!/^\d{4,8}$/.test(pin)) {
-      toast.error("PIN must be 4-8 digits.");
-      return;
-    }
-    if (pin !== confirm) {
-      toast.error("PINs don't match.");
-      return;
-    }
-    try {
-      localStorage.setItem("kova-family-pin", await hashPin(pin));
-      setHasPin(true);
-      setPin("");
-      setConfirm("");
-      toast.success("Family Center PIN set.");
-    } catch {
-      toast.error("Couldn't save PIN");
-    }
-  };
-
-  const changePin = async () => {
-    const saved = localStorage.getItem("kova-family-pin") || "";
-    if (!(await verifyPin(current, saved))) {
-      toast.error("Current PIN is incorrect.");
-      return;
-    }
-    if (!/^\d{4,8}$/.test(pin)) {
-      toast.error("New PIN must be 4-8 digits.");
-      return;
-    }
-    if (pin !== confirm) {
-      toast.error("PINs don't match.");
-      return;
-    }
-    try {
-      localStorage.setItem("kova-family-pin", await hashPin(pin));
-      setCurrent("");
-      setPin("");
-      setConfirm("");
-      toast.success("PIN updated.");
-    } catch {
-      toast.error("Couldn't update PIN");
-    }
-  };
-
-  const removePin = async () => {
-    const saved = localStorage.getItem("kova-family-pin") || "";
-    if (!(await verifyPin(current, saved))) {
-      toast.error("Current PIN is incorrect.");
-      return;
-    }
-    try {
-      localStorage.removeItem("kova-family-pin");
-      setHasPin(false);
-      setCurrent("");
-      toast.success("PIN removed.");
-    } catch {
-      toast.error("Couldn't remove PIN");
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-border p-4 space-y-3">
-      <div>
-        <div className="text-sm font-medium">Family Center PIN</div>
-        <div className="text-xs text-muted-foreground mt-0.5">
-          A PIN prevents changes to Family-safe mode and parental controls without your permission.
-        </div>
-      </div>
-      {!hasPin ? (
-        <div className="grid sm:grid-cols-2 gap-2">
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="New PIN (4-8 digits)"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Confirm PIN"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
-          />
-          <div className="sm:col-span-2">
-            <Button size="sm" onClick={savePin}>
-              Set PIN
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-3 gap-2">
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Current PIN"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="New PIN"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-          />
-          <Input
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={8}
-            placeholder="Confirm new PIN"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
-          />
-          <div className="sm:col-span-3 flex gap-2">
-            <Button size="sm" onClick={changePin}>
-              Update PIN
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-              onClick={removePin}
-            >
-              Remove PIN
-            </Button>
-          </div>
-        </div>
-      )}
+    <div className="rounded-lg border border-dashed border-border p-4" role="note">
+      <p className="text-sm font-medium">Family controls are not available yet</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        KovaGPT does not currently enforce an account-level family content policy or a PIN lock. Use
+        your device and network parental controls in the meantime.
+      </p>
     </div>
   );
 }
@@ -2522,22 +2477,30 @@ function ShortcutsEditor({
       if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
-      // Ignore lone modifiers.
+      // Ignore lone modifiers until the user presses a complete binding.
       if (["Shift", "Control", "Meta", "Alt"].includes(e.key)) return;
-      const parts: string[] = [];
-      if (e.metaKey || e.ctrlKey) parts.push("Mod");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      parts.push(key);
-      const combo = parts.join("+");
+      setRecordingId(null);
       const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
       if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const combo = mod.shortcutComboFromKeyboardEvent(e);
+      if (!combo) {
+        toast.error("That key can't be used for a shortcut.");
+        return;
+      }
+      const conflict = visibleList.find(
+        (shortcut) => shortcut.id !== recordingId && shortcut.combo === combo,
+      );
+      if (conflict) {
+        toast.error(`That shortcut is already assigned to ${conflict.label}.`);
+        return;
+      }
       const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      if (!mod.saveShortcuts(userKey, next)) {
+        toast.error("Shortcut couldn't be saved in this browser.");
+        return;
+      }
       setList(next);
-      mod.saveShortcuts(userKey, next);
-      setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
@@ -2549,34 +2512,44 @@ function ShortcutsEditor({
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");
     if (!ready) return;
-    mod.resetShortcuts(userKey);
+    if (!mod.resetShortcuts(userKey)) {
+      toast.error("Shortcuts couldn't be reset in this browser.");
+      return;
+    }
     setList(mod.DEFAULT_SHORTCUTS);
     toast.success("Shortcuts reset");
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" aria-busy={!ready}>
       <div className="rounded-lg border border-border divide-y divide-border">
-        {visibleList.map((s) => (
-          <ShortcutRow
-            key={s.id}
-            id={s.id}
-            label={s.label}
-            description={s.description}
-            combo={s.combo}
-            recording={recordingId === s.id}
-            onRecord={() => setRecordingId(s.id)}
-            onCancel={() => setRecordingId(null)}
-          />
-        ))}
+        {ready ? (
+          visibleList.map((s) => (
+            <ShortcutRow
+              key={s.id}
+              id={s.id}
+              label={s.label}
+              description={s.description}
+              combo={s.combo}
+              recording={recordingId === s.id}
+              onRecord={() => setRecordingId(s.id)}
+              onCancel={() => setRecordingId(null)}
+            />
+          ))
+        ) : (
+          <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+            Loading shortcuts…
+          </p>
+        )}
       </div>
       <div>
-        <Button size="sm" variant="outline" onClick={reset}>
+        <Button size="sm" variant="outline" className="min-h-11" disabled={!ready} onClick={reset}>
           Reset to defaults
         </Button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl elsewhere.
+        Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl
+        elsewhere.
       </p>
     </div>
   );
@@ -2616,8 +2589,11 @@ function ShortcutRow({
         <div className="text-xs text-muted-foreground">{description}</div>
       </div>
       <button
+        type="button"
+        aria-label={`${recording ? "Stop recording" : "Change"} shortcut for ${label}`}
+        aria-pressed={recording}
         onClick={recording ? onCancel : onRecord}
-        className={`text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
+        className={`min-h-11 text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
           recording
             ? "border-primary bg-primary/10 text-primary animate-pulse"
             : "border-border hover:bg-accent"
@@ -2629,117 +2605,21 @@ function ShortcutRow({
   );
 }
 
-// ---------- Location panel ----------
+// ---------- Location availability ----------
 
-type StoredLocation = {
-  enabled: boolean;
-  lat?: number;
-  lon?: number;
-  label?: string;
-  savedAt?: number;
-};
-
-function LocationPanel({
-  userKey,
-  principalResolved,
-}: {
-  userKey: string | null;
-  principalResolved: boolean;
-}) {
-  const [loc, setLoc] = useState<StoredLocation>({ enabled: false });
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!principalResolved) {
-      setLoc({ enabled: false });
-      return;
-    }
-    const stored = loadPrincipalStoredRecord(LOCATION_KEY_BASE, userKey, {
-      migrateLegacyGuest: userKey === null,
-    });
-    setLoc(
-      stored && typeof stored.enabled === "boolean"
-        ? {
-            enabled: stored.enabled,
-            lat: typeof stored.lat === "number" ? stored.lat : undefined,
-            lon: typeof stored.lon === "number" ? stored.lon : undefined,
-            label: typeof stored.label === "string" ? stored.label : undefined,
-            savedAt: typeof stored.savedAt === "number" ? stored.savedAt : undefined,
-          }
-        : { enabled: false },
-    );
-  }, [principalResolved, userKey]);
-
-  const persist = (next: StoredLocation): boolean => {
-    if (!principalResolved) {
-      toast.error("Location settings are still loading.");
-      return false;
-    }
-    try {
-      savePrincipalStoredRecord(LOCATION_KEY_BASE, userKey, next);
-      setLoc(next);
-      window.dispatchEvent(new Event(LOCATION_STORAGE_CHANGED_EVENT));
-      return true;
-    } catch {
-      toast.error("Location could not be saved in this browser.");
-      return false;
-    }
-  };
-
-  const enable = async () => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("Location not available in this browser.");
-      return;
-    }
-    setBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setBusy(false);
-        const saved = persist({
-          enabled: true,
-          lat: Math.round(pos.coords.latitude * 100) / 100,
-          lon: Math.round(pos.coords.longitude * 100) / 100,
-          savedAt: Date.now(),
-        });
-        if (saved) toast.success("Location saved");
-      },
-      (err) => {
-        setBusy(false);
-        toast.error(
-          err.code === err.PERMISSION_DENIED ? "Permission denied" : "Couldn't get location",
-        );
-      },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
-    );
-  };
-
-  const disable = () => persist({ enabled: false });
-
+function LocationControlsUnavailable() {
   return (
-    <div className="space-y-3">
-      <ToggleRow
-        title="Use my approximate location"
-        hint="KovaGPT stores only a coarse latitude/longitude in this browser. You can turn this off anytime."
-        checked={loc.enabled}
-        onCheckedChange={(v) => (v ? enable() : disable())}
-      />
-      {loc.enabled && loc.lat != null && loc.lon != null && (
-        <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground space-y-1">
-          <div>
-            Saved: {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
-          </div>
-          {loc.savedAt && <div>Updated {new Date(loc.savedAt).toLocaleString()}</div>}
-          <div className="pt-1">
-            <Button size="sm" variant="outline" onClick={enable} disabled={busy}>
-              Refresh
-            </Button>
-          </div>
+    <div className="rounded-lg border border-dashed border-border p-4" role="note">
+      <div className="flex gap-3">
+        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-medium">Device location is not requested</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            KovaGPT will not request, save, or send your device coordinates from Settings. You can
+            still type a city or place into chat when location context is useful.
+          </p>
         </div>
-      )}
-      <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, the coarse coordinates are used only to render an
-        OpenStreetMap location card in this browser; they are not added to chat requests.
-      </p>
+      </div>
     </div>
   );
 }

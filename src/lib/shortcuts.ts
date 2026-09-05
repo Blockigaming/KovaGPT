@@ -71,7 +71,74 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
 ];
 
 const KEY_BASE = "kova-shortcuts";
+const MAX_STORED_COMBO_LENGTH = 80;
+const KNOWN_SHORTCUT_IDS = new Set<ShortcutId>(DEFAULT_SHORTCUTS.map((shortcut) => shortcut.id));
 type ShortcutUserKey = string | null | undefined;
+type StoredShortcut = Pick<Shortcut, "id" | "combo">;
+
+const MODIFIER_KEYS = new Set(["Mod", "Shift", "Alt", "Ctrl"]);
+const KEYBOARD_MODIFIER_KEYS = new Set(["Shift", "Control", "Meta", "Alt"]);
+
+function normalizedShortcutKey(key: string): string {
+  if (key === " ") return "Space";
+  if (key === "+") return "Plus";
+  return key.length === 1 ? key.toUpperCase() : key;
+}
+
+function normalizeShortcutCombo(combo: string): string {
+  const parts = combo.split("+");
+  const key = parts.pop();
+  return key ? [...parts, normalizedShortcutKey(key)].join("+") : combo;
+}
+
+function isValidShortcutCombo(value: unknown): value is string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > MAX_STORED_COMBO_LENGTH ||
+    value !== value.trim()
+  ) {
+    return false;
+  }
+
+  const parts = value.split("+");
+  if (parts.some((part) => !part)) return false;
+  const key = parts.at(-1);
+  if (!key || MODIFIER_KEYS.has(key) || KEYBOARD_MODIFIER_KEYS.has(key)) return false;
+  const modifiers = parts.slice(0, -1);
+  return (
+    modifiers.every((modifier) => MODIFIER_KEYS.has(modifier)) &&
+    new Set(modifiers).size === modifiers.length
+  );
+}
+
+function isStoredShortcut(value: unknown): value is StoredShortcut {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { id?: unknown; combo?: unknown };
+  return (
+    typeof candidate.id === "string" &&
+    KNOWN_SHORTCUT_IDS.has(candidate.id as ShortcutId) &&
+    isValidShortcutCombo(candidate.combo)
+  );
+}
+
+export function shortcutComboFromKeyboardEvent(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
+): string | null {
+  if (KEYBOARD_MODIFIER_KEYS.has(event.key)) return null;
+
+  const mac = isMac();
+  if (!mac && event.metaKey) return null;
+
+  const parts: string[] = [];
+  if (mac ? event.metaKey : event.ctrlKey) parts.push("Mod");
+  if (mac && event.ctrlKey) parts.push("Ctrl");
+  if (event.shiftKey) parts.push("Shift");
+  if (event.altKey) parts.push("Alt");
+  parts.push(normalizedShortcutKey(event.key));
+  const combo = parts.join("+");
+  return isValidShortcutCombo(combo) ? combo : null;
+}
 
 export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
@@ -79,40 +146,60 @@ export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
   try {
     const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return DEFAULT_SHORTCUTS;
-    const saved = JSON.parse(raw) as Partial<Shortcut>[];
-    return DEFAULT_SHORTCUTS.map((d) => {
-      const found = saved.find((s) => s.id === d.id);
-      return found?.combo ? { ...d, combo: found.combo } : d;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_SHORTCUTS;
+    const saved = parsed.filter(isStoredShortcut);
+    const resolved = DEFAULT_SHORTCUTS.map((shortcut) => {
+      const found = saved.find((candidate) => candidate.id === shortcut.id);
+      return found ? { ...shortcut, combo: normalizeShortcutCombo(found.combo) } : shortcut;
     });
+    return new Set(resolved.map(({ combo }) => combo)).size === resolved.length
+      ? resolved
+      : DEFAULT_SHORTCUTS;
   } catch {
     return DEFAULT_SHORTCUTS;
   }
 }
 
-export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]) {
+export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]): boolean {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
   const principal = browserStoragePrincipal(userKey);
-  if (!key || !principal) return;
+  const storage = safeBrowserStorage("localStorage");
+  if (!key || !principal || !storage) return false;
+
+  const saved: StoredShortcut[] = list.map(({ id, combo }) => ({
+    id,
+    combo: normalizeShortcutCombo(combo),
+  }));
+  if (
+    saved.length !== DEFAULT_SHORTCUTS.length ||
+    !saved.every(isStoredShortcut) ||
+    new Set(saved.map(({ id }) => id)).size !== saved.length ||
+    new Set(saved.map(({ combo }) => combo)).size !== saved.length
+  ) {
+    return false;
+  }
+
   try {
-    safeBrowserStorage("localStorage")?.setItem(
-      key,
-      JSON.stringify(list.map((s) => ({ id: s.id, combo: s.combo }))),
-    );
+    storage.setItem(key, JSON.stringify(saved));
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
-export function resetShortcuts(userKey: ShortcutUserKey) {
+export function resetShortcuts(userKey: ShortcutUserKey): boolean {
   const key = principalScopedStorageKey(KEY_BASE, userKey);
   const principal = browserStoragePrincipal(userKey);
-  if (!key || !principal) return;
+  const storage = safeBrowserStorage("localStorage");
+  if (!key || !principal || !storage) return false;
   try {
-    safeBrowserStorage("localStorage")?.removeItem(key);
+    storage.removeItem(key);
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
@@ -135,19 +222,20 @@ export function displayCombo(combo: string): string {
 }
 
 function matches(e: KeyboardEvent, combo: string): boolean {
-  const parts = combo.split("+").map((p) => p.trim());
-  const key = parts[parts.length - 1].toLowerCase();
+  const parts = combo.split("+");
+  const key = parts.at(-1)?.toLowerCase();
   const needMod = parts.includes("Mod");
   const needShift = parts.includes("Shift");
   const needAlt = parts.includes("Alt");
   const needCtrl = parts.includes("Ctrl");
-  const mod = isMac() ? e.metaKey : e.ctrlKey;
-  if (needMod !== mod) return false;
+  const mac = isMac();
+
+  if (!key) return false;
+  if (e.metaKey !== (mac && needMod)) return false;
+  if (e.ctrlKey !== ((!mac && needMod) || needCtrl)) return false;
   if (needShift !== e.shiftKey) return false;
   if (needAlt !== e.altKey) return false;
-  // "Ctrl" as an explicit part means Ctrl on both platforms.
-  if (needCtrl && !e.ctrlKey) return false;
-  return e.key.toLowerCase() === key;
+  return normalizedShortcutKey(e.key).toLowerCase() === key;
 }
 
 export type ShortcutHandlers = Partial<Record<ShortcutId, () => void>>;
