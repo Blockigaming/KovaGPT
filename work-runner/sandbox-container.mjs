@@ -266,7 +266,6 @@ export function createWorkSandboxExecutor(
           `com.kova.expires=${Date.now() + job.timeoutMs + 10000}`,
           "--pull=never",
           "--runtime=runsc",
-          "--init",
           "--interactive",
           "--read-only",
           "--user=65532:65532",
