@@ -5,6 +5,11 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - .github/workflows/candidate-source-evidence.yml
+  push:
+    branches:
+      - codex/integrate-automatic-i-20260904
+    paths:
+      - .github/workflows/candidate-source-evidence.yml
   workflow_dispatch:
 
 permissions:
@@ -49,23 +54,15 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Classify one-time validation tooling capture
-        id: tooling
-        shell: bash
-        run: |
-          if [[ "$(git log -1 --format=%s)" == "ci: restore integration gates and capture pinned validation tooling" ]]; then
-            echo "capture=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up validation Node
-        if: steps.tooling.outputs.capture == 'true'
+        if: github.event_name == 'push'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
 
       - name: Prepare pinned offline validation dependencies
-        if: steps.tooling.outputs.capture == 'true'
+        if: github.event_name == 'push'
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/candidate-validation/browsers
         shell: bash
@@ -82,7 +79,7 @@ jobs:
           sha256sum validation-tooling.tar.gz > SHA256SUMS
 
       - name: Upload one-time pinned validation tooling
-        if: steps.tooling.outputs.capture == 'true'
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: candidate-validation-${{ github.event.pull_request.head.sha || github.sha }}
