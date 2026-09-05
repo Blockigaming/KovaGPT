@@ -284,7 +284,7 @@ export function createWorkSandboxExecutor(
           "--ulimit=fsize=8388608:8388608",
           "--shm-size=8388608",
           "--stop-timeout=0",
-          "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=0700,uid=65532,gid=65532",
+          "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=1777",
           "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=8388608,mode=1777",
           "--workdir=/job",
           "--entrypoint=/usr/local/bin/python3",
