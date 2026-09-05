@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { authFetch } from "@/lib/auth-fetch";
+import { imageApiRequest } from "@/lib/image-api-client";
+import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
@@ -367,6 +368,8 @@ function ImagesPage() {
   }, []);
   const openHelp = () => navigate({ to: "/help" as never });
 
+  const [editSelection, setEditSelection] = useState<ImageEditSelection>(null);
+  const [aspectRatio, setAspectRatio] = useState<"1:1" | "2:3" | "3:2">("1:1");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -404,7 +407,9 @@ function ImagesPage() {
     for (const objectUrl of historyObjectUrlsRef.current) URL.revokeObjectURL(objectUrl);
     historyObjectUrlsRef.current.clear();
     setLoading(false);
+    setSavingImage(false);
     setPrompt("");
+    setEditSelection(null);
     setError(null);
     setResult(null);
     setResultPrompt("");
@@ -432,7 +437,9 @@ function ImagesPage() {
     generationControllerRef.current = null;
     submittingRef.current = false;
     setLoading(false);
+    setSavingImage(false);
     setPrompt("");
+    setEditSelection(null);
     setError(null);
     setResult(null);
     setResultPrompt("");
@@ -495,25 +502,30 @@ function ImagesPage() {
   }
 
   async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
-    if (!isSignedIn) {
+    if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
+    const ownerId = userKey;
+    const generation = generationRef.current;
     setSavingImage(true);
     try {
       const imageUrl = await imageUrlForLibrary(item.imageUrl);
+      if (generation !== generationRef.current) return;
       await saveImage({
         data: {
+          expectedOwnerId: ownerId,
           title: item.prompt.slice(0, 100) || "Generated image",
           prompt: item.prompt,
           imageUrl,
         },
       });
-      toast.success("Saved to Library");
+      if (generation === generationRef.current) toast.success("Saved to Library");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save image");
+      if (generation === generationRef.current)
+        toast.error(error instanceof Error ? error.message : "Could not save image");
     } finally {
-      setSavingImage(false);
+      if (generation === generationRef.current) setSavingImage(false);
     }
   }
 
@@ -559,7 +571,7 @@ function ImagesPage() {
   async function generate(p: string) {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
-    if (!isSignedIn) {
+    if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
@@ -571,17 +583,22 @@ function ImagesPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authFetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed }),
-        signal: controller.signal,
-      });
-      const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
-      if (!contentType.includes("application/json")) {
-        throw new Error("Image service returned an invalid response");
-      }
-      const data = (await res.json()) as { error?: unknown; imageUrl?: unknown };
+      const { response: res, body: data } = await imageApiRequest(
+        userKey!,
+        "/api/generate-image",
+        controller.signal,
+        {
+          prompt: trimmed,
+          aspectRatio,
+          ...(editSelection
+            ? {
+                operation: "edit",
+                parentImageId: editSelection.source.id,
+                ...(editSelection.mask ? { maskAssetId: editSelection.mask.id } : {}),
+              }
+            : {}),
+        },
+      );
       if (generation !== generationRef.current || controller.signal.aborted) return;
       if (!res.ok) {
         const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
@@ -692,7 +709,9 @@ function ImagesPage() {
                 <input
                   ref={inputRef}
                   value={prompt}
-                  aria-label="Describe the image to generate"
+                  aria-label={
+                    editSelection ? "Describe the image edit" : "Describe the image to generate"
+                  }
                   maxLength={2000}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(event) => {
@@ -700,7 +719,9 @@ function ImagesPage() {
                       event.preventDefault();
                     }
                   }}
-                  placeholder="Describe a new image"
+                  placeholder={
+                    editSelection ? "Describe the change to your image" : "Describe a new image"
+                  }
                   spellCheck={false}
                   autoComplete="off"
                   className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
@@ -709,7 +730,7 @@ function ImagesPage() {
                   type="submit"
                   disabled={!prompt.trim() || loading}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
-                  aria-label="Generate"
+                  aria-label={editSelection ? "Create edited image" : "Generate"}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
@@ -719,6 +740,29 @@ function ImagesPage() {
                 </button>
               </div>
             </form>
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              Output shape
+              <select
+                aria-label="Output image shape"
+                value={aspectRatio}
+                onChange={(event) => setAspectRatio(event.target.value as typeof aspectRatio)}
+                disabled={loading}
+                className="rounded border bg-background p-2"
+              >
+                <option value="1:1">Square 1:1</option>
+                <option value="2:3">Portrait 2:3</option>
+                <option value="3:2">Landscape 3:2</option>
+              </select>
+            </label>
+            {isSignedIn && userKey && (
+              <ImageEditControls
+                key={userKey}
+                ownerId={userKey}
+                disabled={loading}
+                value={editSelection}
+                onChange={setEditSelection}
+              />
+            )}
 
             {/* Create an image */}
             <section className="mt-10">

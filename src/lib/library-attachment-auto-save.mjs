@@ -1,9 +1,15 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function createLibraryAttachmentAutoSaver({ getScope, saveImage, saveText, onError }) {
+export function createLibraryAttachmentAutoSaver({
+  getScope,
+  saveImage,
+  saveText,
+  saveDocument,
+  onError,
+}) {
   const pending = new Set();
   const completed = new Set();
-  async function save(attachment, scope = getScope()) {
+  async function save(attachment, scope = getScope(), originalFile) {
     if (
       getScope() !== scope ||
       !scope.enabled ||
@@ -18,7 +24,10 @@ export function createLibraryAttachmentAutoSaver({ getScope, saveImage, saveText
     if (pending.has(key) || completed.has(key)) return;
     pending.add(key);
     try {
-      if (attachment.kind === "image") {
+      if (originalFile) {
+        if (!saveDocument) throw new Error("Original file saving is unavailable");
+        await saveDocument(originalFile, attachment, scope);
+      } else if (attachment.kind === "image") {
         await saveImage({
           data: {
             imageUrl: attachment.dataUrl,
@@ -44,7 +53,8 @@ export function createLibraryAttachmentAutoSaver({ getScope, saveImage, saveText
       completed.add(key);
       if (completed.size > 256) completed.delete(completed.values().next().value);
     } catch {
-      if (getScope() === scope) onError(attachment.name, () => save(attachment, scope));
+      if (getScope() === scope)
+        onError(originalFile?.name ?? attachment.name, () => save(attachment, scope, originalFile));
     } finally {
       pending.delete(key);
     }

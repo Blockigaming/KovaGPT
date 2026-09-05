@@ -1,6 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { z } from "zod";
 import {
   assertLibrarySaveReplay,
@@ -18,6 +18,13 @@ export type LibraryItem = {
   file_type: string | null;
   file_size: number | null;
   folder_id?: string | null;
+  work_output?: boolean;
+  original_generation?: string;
+  content_revision?: number;
+  content_generation?: string;
+  content_excerpt?: string | null;
+  text_available?: boolean;
+  content_loaded?: boolean;
   created_at: string;
 };
 
@@ -35,10 +42,10 @@ const SourceEnum = z.enum(["chat", "images", "upload", "manual", "other"]);
 export const listMyLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<LibraryItem[]> => {
-    const { data, error } = await context.supabase
+    const { data, error } = await (context.supabase as SupabaseClient)
       .from("user_library_items")
       .select(
-        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, folder_id, created_at",
+        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, folder_id, metadata, content_generation, content_revision, created_at",
       )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
@@ -47,7 +54,22 @@ export const listMyLibrary = createServerFn({ method: "GET" })
       console.error("[listMyLibrary]", error.message);
       throw new Error("Library could not be loaded. Check your connection and try again.");
     }
-    return (data ?? []) as LibraryItem[];
+    return (data ?? []).map(({ metadata, ...item }) => ({
+      ...item,
+      original_generation:
+        metadata &&
+        typeof metadata === "object" &&
+        !Array.isArray(metadata) &&
+        metadata.file_bucket === "library-files" &&
+        typeof metadata.storage_generation === "string"
+          ? metadata.storage_generation
+          : undefined,
+      work_output:
+        metadata !== null &&
+        typeof metadata === "object" &&
+        !Array.isArray(metadata) &&
+        metadata.work_output === true,
+    })) as LibraryItem[];
   });
 
 const SaveSchema = z.object({
@@ -111,12 +133,24 @@ export const saveToLibrary = createServerFn({ method: "POST" })
 
 export const deleteLibraryItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        expectedOwnerId: z.string().uuid().optional(),
+        generation: z.string().uuid().optional(),
+        contentGeneration: z.string().uuid().optional(),
+        revision: z.number().int().positive().optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    if (data.expectedOwnerId && data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
     // If the item is an image with a stored object, remove it from the private bucket first.
-    const { data: row, error: lookupError } = await context.supabase
+    const { data: row, error: lookupError } = await (context.supabase as SupabaseClient)
       .from("user_library_items")
-      .select("item_type, file_url")
+      .select("item_type, file_url, metadata, content_generation")
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .maybeSingle();
@@ -124,10 +158,75 @@ export const deleteLibraryItem = createServerFn({ method: "POST" })
       console.error("[serverfn]", lookupError.message);
       throw new Error("Request failed. Please try again.");
     }
-    if (row?.item_type === "image" && row.file_url) {
-      await removePrivateLibraryImage(row.file_url, (paths) =>
-        context.supabase.storage.from("library-images").remove(paths),
+    if (
+      row?.metadata &&
+      typeof row.metadata === "object" &&
+      !Array.isArray(row.metadata) &&
+      row.metadata.file_bucket === "library-files"
+    ) {
+      if (
+        !data.generation ||
+        data.expectedOwnerId !== context.userId ||
+        row.metadata.storage_generation !== data.generation
+      )
+        throw new Error("Refresh Library before deleting this original file.");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { deleteOriginalLibraryDocument } =
+        await import("@/lib/library-original-files.server.mjs");
+      return deleteOriginalLibraryDocument(
+        supabaseAdmin,
+        context.userId,
+        data.id,
+        data.generation,
+        AbortSignal.timeout(40000),
       );
+    }
+    if (
+      row &&
+      row.file_url === null &&
+      row.item_type !== "image" &&
+      !(
+        row.metadata &&
+        typeof row.metadata === "object" &&
+        !Array.isArray(row.metadata) &&
+        row.metadata.work_output === true
+      )
+    ) {
+      if (data.expectedOwnerId !== context.userId || !data.contentGeneration || !data.revision)
+        throw new Error("Refresh Library before deleting this item.");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const result = await (supabaseAdmin as SupabaseClient)
+        .rpc("delete_library_text", {
+          p_owner: context.userId,
+          p_item: data.id,
+          p_generation: data.contentGeneration,
+          p_revision: data.revision,
+        })
+        .abortSignal(AbortSignal.timeout(15000));
+      if (result.error || result.data !== true)
+        throw new Error("This item changed. Refresh before deleting.");
+      return { ok: true };
+    }
+    if (row?.item_type === "image" && row.file_url && !/^https?:/u.test(row.file_url)) {
+      if (
+        data.expectedOwnerId !== context.userId ||
+        !data.contentGeneration ||
+        data.contentGeneration !== row.content_generation
+      )
+        throw new Error("Refresh Library before deleting this image.");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { deletePrivateLibraryImage } = await import("@/lib/library-image-storage.server.mjs");
+      if (
+        !(await deletePrivateLibraryImage(
+          supabaseAdmin,
+          context.userId,
+          data.id,
+          data.contentGeneration,
+          AbortSignal.timeout(40000),
+        ))
+      )
+        throw new Error("Image cleanup is pending. Please retry.");
+      return { ok: true };
     }
     const { error } = await context.supabase
       .from("user_library_items")

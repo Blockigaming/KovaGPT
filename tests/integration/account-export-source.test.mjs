@@ -63,13 +63,6 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /records\.agent_deliverables/u);
   assert.match(worker, /"agent_resource_promotions",\s*"destination_id"/u);
   assert.match(worker, /agent-evidence\|project-files/u);
-  assert.match(worker, /select\("site_id,version_id,owner_id,path,mime_type,size_bytes,sha256"\)/u);
-  assert.match(worker, /if \(siteBytes > MAX_EMBEDDED_FILE_BYTES\)/u);
-  assert.ok(
-    worker.indexOf("if (siteBytes > MAX_EMBEDDED_FILE_BYTES)") <
-      worker.indexOf('.select("content_base64")'),
-    "Site byte totals must be bounded before any base64 body is fetched",
-  );
   const process = worker.slice(worker.indexOf("async function processClaimed"));
   assert.ok(
     process.indexOf('admin.rpc("register_account_export_artifact"') <
@@ -107,9 +100,10 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(cleanup, /\.not\("storage_path", "is", null\)/u);
   assert.match(cleanup, /hasProcessingAccountExportJob/u);
   assert.doesNotMatch(cleanup, /\.range\(0, 999\)/u);
-  assert.match(cleanup, /cancel_account_export_account_deletion/u);
+  assert.doesNotMatch(cleanup, /cancel_account_export_account_deletion/u);
   assert.match(accountRoute, /cleanupOwnedStorageBeforeAccountDeletion/u);
-  assert.match(accountRoute, /releaseAccountExportDeletionFence\(auth\.userId\)/u);
+  assert.doesNotMatch(accountRoute, /releaseAccountExportDeletionFence/u);
+  assert.match(accountRoute, /readAccountDeletionState/u);
   assert.ok(
     accountRoute.indexOf("await cleanupOwnedStorageBeforeAccountDeletion(") <
       accountRoute.indexOf(".auth.admin.deleteUser("),

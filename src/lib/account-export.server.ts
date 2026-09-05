@@ -1,9 +1,11 @@
+import { validOriginalPath } from "./library-original-policy.mjs";
 import { Buffer } from "node:buffer";
 import { createHash, randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   ACCOUNT_EXPORT_DIRECT_TABLES,
   ACCOUNT_EXPORT_FORMAT,
+  ACCOUNT_EXPORT_MAX_BYTES,
   ACCOUNT_EXPORT_PAGE_SIZE,
   ACCOUNT_EXPORT_PROJECT_TABLES,
   ACCOUNT_EXPORT_VERSION,
@@ -24,7 +26,12 @@ import {
   type StorageReferenceRow,
 } from "@/lib/project-file-storage-policy.mjs";
 
-import { readAccountExportRows } from "@/lib/account-export-pagination.mjs";
+import {
+  readAccountExportRows,
+  createAccountExportReadBudget,
+  type AccountExportReadBudget,
+} from "@/lib/account-export-pagination.mjs";
+import { readAccountExportSiteFiles } from "@/lib/account-export-sites.mjs";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
@@ -207,7 +214,15 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
   const fenced = await admin.rpc("begin_account_export_account_deletion", {
     p_user_id: userId,
   });
-  if (fenced.error) throw exportError("account_export_cleanup_unavailable");
+  if (fenced.error) {
+    const message =
+      typeof fenced.error === "object" && "message" in fenced.error
+        ? String(fenced.error.message)
+        : "";
+    if (message.includes("developer_payment_reconciliation_pending"))
+      throw exportError("developer_payment_reconciliation_pending");
+    throw exportError("account_export_cleanup_unavailable");
+  }
 
   if (await hasProcessingAccountExportJob(userId)) return { ready: false };
   await sweepRetiredAccountExportArtifacts(userId);
@@ -231,24 +246,6 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
 
   if (await hasProcessingAccountExportJob(userId)) return { ready: false };
   return { ready: !(await hasAccountExportCleanupWork(userId)) };
-}
-
-export async function hasAccountDeletionFence(userId: string): Promise<boolean> {
-  const result = await admin
-    .from("account_deletion_fences")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (result.error) throw exportError("account_export_fence_lookup_unavailable");
-  return result.data !== null;
-}
-
-/** Releases the export fence when account deletion leaves the Auth user active. */
-export async function releaseAccountExportDeletionFence(userId: string): Promise<void> {
-  const released = await admin.rpc("cancel_account_export_account_deletion", {
-    p_user_id: userId,
-  });
-  if (released.error) throw exportError("account_export_fence_release_unavailable");
 }
 
 async function assertClaimStillOwnsUpload(
@@ -277,16 +274,27 @@ async function assertClaimStillOwnsUpload(
   }
 }
 
-async function readAllWhere(table: string, column: string, value: unknown): Promise<ExportRow[]> {
+async function readAllWhere(
+  budget: AccountExportReadBudget,
+  table: string,
+  column: string,
+  value: unknown,
+): Promise<ExportRow[]> {
   return readAccountExportRows(
     () => admin.from(table).select("*").eq(column, value),
     table,
     ACCOUNT_EXPORT_PAGE_SIZE,
     MAX_ROWS,
+    budget,
   );
 }
 
-async function readAllIn(table: string, column: string, values: unknown[]): Promise<ExportRow[]> {
+async function readAllIn(
+  budget: AccountExportReadBudget,
+  table: string,
+  column: string,
+  values: unknown[],
+): Promise<ExportRow[]> {
   const uniqueValues = [...new Set(values)];
   const rows: ExportRow[] = [];
   for (let batchStart = 0; batchStart < uniqueValues.length; batchStart += 100) {
@@ -296,6 +304,7 @@ async function readAllIn(table: string, column: string, values: unknown[]): Prom
       table,
       ACCOUNT_EXPORT_PAGE_SIZE,
       MAX_ROWS - rows.length,
+      budget,
     );
     for (const row of batchRows) rows.push(row);
   }
@@ -316,47 +325,45 @@ function uniqueRows(rows: ExportRow[]): ExportRow[] {
   });
 }
 
-async function collectDirectRecords(userId: string): Promise<Record<string, ExportRow[]>> {
+async function collectDirectRecords(
+  budget: AccountExportReadBudget,
+  userId: string,
+): Promise<Record<string, ExportRow[]>> {
   const records: Record<string, ExportRow[]> = {};
   for (let offset = 0; offset < ACCOUNT_EXPORT_DIRECT_TABLES.length; offset += 8) {
-    const batch = ACCOUNT_EXPORT_DIRECT_TABLES.slice(offset, offset + 8);
+    // Site snapshots contain large base64 bodies. Their dedicated collector
+    // reserves the remaining account byte budget before selecting any body.
+    const batch = ACCOUNT_EXPORT_DIRECT_TABLES.slice(offset, offset + 8).filter(
+      ([table]) => table !== "kova_site_files",
+    );
     const results = await Promise.all(
       batch.map(async ([table, ownerColumn]) => ({
         table,
-        rows: await readAllWhere(table, ownerColumn, userId),
+        rows: await readAllWhere(budget, table, ownerColumn, userId),
       })),
     );
     for (const result of results) records[result.table] = result.rows;
   }
-  // Site bodies can be gigabytes in aggregate. Read only bounded metadata here;
-  // collectFiles checks the cumulative decoded size before fetching any body.
-  records.kova_site_files = await readAccountExportRows(
-    () =>
-      admin
-        .from("kova_site_files")
-        .select("site_id,version_id,owner_id,path,mime_type,size_bytes,sha256")
-        .eq("owner_id", userId),
-    "kova_site_files",
-    ACCOUNT_EXPORT_PAGE_SIZE,
-    MAX_ROWS,
-  );
   // Include both sides of the user's invitation/audit history without exporting
   // unrelated tenant members, provider configuration, or domain proof tokens.
   records.organization_invitations = uniqueRows([
     ...(records.organization_invitations ?? []),
-    ...(await readAllWhere("organization_invitations", "invited_by", userId)),
+    ...(await readAllWhere(budget, "organization_invitations", "invited_by", userId)),
   ]);
   records.organization_audit_events = uniqueRows([
     ...(records.organization_audit_events ?? []),
-    ...(await readAllWhere("organization_audit_events", "subject_user_id", userId)),
+    ...(await readAllWhere(budget, "organization_audit_events", "subject_user_id", userId)),
   ]);
   return records;
 }
 
-async function collectProjectRecords(userId: string): Promise<Record<string, ExportRow[]>> {
-  const ownedProjects = await readAllWhere("projects", "owner_id", userId);
-  const memberships = await readAllWhere("project_members", "user_id", userId);
-  const authoredComments = await readAllWhere("project_comments", "author_id", userId);
+async function collectProjectRecords(
+  budget: AccountExportReadBudget,
+  userId: string,
+): Promise<Record<string, ExportRow[]>> {
+  const ownedProjects = await readAllWhere(budget, "projects", "owner_id", userId);
+  const memberships = await readAllWhere(budget, "project_members", "user_id", userId);
+  const authoredComments = await readAllWhere(budget, "project_comments", "author_id", userId);
   const projectIds = ids(ownedProjects);
   const result: Record<string, ExportRow[]> = {
     projects: ownedProjects,
@@ -365,22 +372,23 @@ async function collectProjectRecords(userId: string): Promise<Record<string, Exp
   };
   await Promise.all(
     ACCOUNT_EXPORT_PROJECT_TABLES.map(async (table) => {
-      result[table] = await readAllIn(table, "project_id", projectIds);
+      result[table] = await readAllIn(budget, table, "project_id", projectIds);
     }),
   );
   const fileIds = ids(result.project_files ?? []);
-  result.project_file_chunks = await readAllIn("project_file_chunks", "file_id", fileIds);
-  const privateCanvas = await readAllWhere("canvas_documents", "private_owner_id", userId);
-  const projectCanvas = await readAllIn("canvas_documents", "project_id", projectIds);
+  result.project_file_chunks = await readAllIn(budget, "project_file_chunks", "file_id", fileIds);
+  const privateCanvas = await readAllWhere(budget, "canvas_documents", "private_owner_id", userId);
+  const projectCanvas = await readAllIn(budget, "canvas_documents", "project_id", projectIds);
   const canvasDocuments = uniqueRows([...privateCanvas, ...projectCanvas]);
   const canvasIds = ids(canvasDocuments);
   result.canvas_documents = canvasDocuments;
-  result.canvas_revisions = await readAllIn("canvas_revisions", "document_id", canvasIds);
-  result.canvas_comments = await readAllIn("canvas_comments", "document_id", canvasIds);
+  result.canvas_revisions = await readAllIn(budget, "canvas_revisions", "document_id", canvasIds);
+  result.canvas_comments = await readAllIn(budget, "canvas_comments", "document_id", canvasIds);
   // Export only the author's comments in other Projects they can still access.
   // Never widen this to full documents or other members' private content.
-  const authoredCanvasComments = await readAllWhere("canvas_comments", "author_id", userId);
+  const authoredCanvasComments = await readAllWhere(budget, "canvas_comments", "author_id", userId);
   const commentDocuments = await readAllIn(
+    budget,
     "canvas_documents",
     "id",
     ids(authoredCanvasComments, "document_id"),
@@ -401,25 +409,30 @@ async function collectProjectRecords(userId: string): Promise<Record<string, Exp
   return result;
 }
 
-async function collectFamilyRecords(userId: string): Promise<Record<string, ExportRow[]>> {
-  const owned = await readAllWhere("family_groups", "owner_id", userId);
-  const memberships = await readAllWhere("family_members", "user_id", userId);
+async function collectFamilyRecords(
+  budget: AccountExportReadBudget,
+  userId: string,
+): Promise<Record<string, ExportRow[]>> {
+  const owned = await readAllWhere(budget, "family_groups", "owner_id", userId);
+  const memberships = await readAllWhere(budget, "family_members", "user_id", userId);
   const ownedGroupIds = ids(owned);
   return {
     family_groups: owned,
     family_memberships: memberships,
-    family_members: await readAllIn("family_members", "group_id", ownedGroupIds),
-    family_invites: await readAllIn("family_invites", "group_id", ownedGroupIds),
+    family_members: await readAllIn(budget, "family_members", "group_id", ownedGroupIds),
+    family_invites: await readAllIn(budget, "family_invites", "group_id", ownedGroupIds),
   };
 }
 
 async function collectRelatedRecords(
+  budget: AccountExportReadBudget,
   userId: string,
   direct: Record<string, ExportRow[]>,
 ): Promise<Record<string, ExportRow[]>> {
-  const ownedShares = await readAllWhere("shared_chats", "owner_user_id", userId);
-  const receivedShares = await readAllWhere("shared_chats", "recipient_user_id", userId);
+  const ownedShares = await readAllWhere(budget, "shared_chats", "owner_user_id", userId);
+  const receivedShares = await readAllWhere(budget, "shared_chats", "recipient_user_id", userId);
   const receivedTemplateGrants = await readAllWhere(
+    budget,
     "project_template_grants",
     "grantee_user_id",
     userId,
@@ -432,8 +445,9 @@ async function collectRelatedRecords(
       ...(direct.project_template_grants ?? []),
       ...receivedTemplateGrants,
     ]),
-    agent_job_events: await readAllIn("agent_job_events", "job_id", jobIds),
+    agent_job_events: await readAllIn(budget, "agent_job_events", "job_id", jobIds),
     integration_webhook_subscriptions: await readAllIn(
+      budget,
       "integration_webhook_subscriptions",
       "linked_account_id",
       linkedAccountIds,
@@ -473,7 +487,10 @@ async function embedFile(
   };
 }
 
-async function collectFiles(records: Record<string, ExportRow[]>): Promise<EmbeddedFile[]> {
+async function collectFiles(
+  budget: AccountExportReadBudget,
+  records: Record<string, ExportRow[]>,
+): Promise<EmbeddedFile[]> {
   const candidates = new Map<string, { bucket: string; path: string; type: string | null }>();
   // Reservation/deletion metadata is still exported above, but its bytes may
   // not exist. Undefined keeps compatibility with rows predating the lifecycle.
@@ -482,13 +499,14 @@ async function collectFiles(records: Record<string, ExportRow[]>): Promise<Embed
   );
   const projectFileIds = ids(projectFileRows);
   const promotionRows = (
-    await readAllIn("agent_resource_promotions", "destination_id", projectFileIds)
+    await readAllIn(budget, "agent_resource_promotions", "destination_id", projectFileIds)
   ).filter(
     (row) =>
       row.destination_type === "project_file" &&
       projectFileIds.includes(String(row.destination_id)),
   );
   const deliverableRows = await readAllIn(
+    budget,
     "agent_deliverables",
     "id",
     ids(promotionRows, "deliverable_id"),
@@ -538,11 +556,23 @@ async function collectFiles(records: Record<string, ExportRow[]>): Promise<Embed
   for (const row of records.user_library_items ?? []) {
     if (typeof row.file_url !== "string" || !row.file_url) continue;
     try {
-      const source = /^(?:agent-evidence|project-files):/u.test(row.file_url)
-        ? parseAgentStorageReference(row.file_url)
-        : /^[a-z][a-z0-9+.-]*:/iu.test(row.file_url)
-          ? null
-          : { bucket: "library-images", ...validateStorageObjectPath(row.file_url) };
+      const original =
+        row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+          ? (row.metadata as Record<string, unknown>)
+          : null;
+      if (
+        original?.file_bucket === "library-files" &&
+        !validOriginalPath(row.user_id, original.storage_generation, row.file_url)
+      )
+        throw exportError("account_export_file_reference_invalid");
+      const source =
+        original?.file_bucket === "library-files"
+          ? { bucket: "library-files", ...validateStorageObjectPath(row.file_url) }
+          : /^(?:agent-evidence|project-files):/u.test(row.file_url)
+            ? parseAgentStorageReference(row.file_url)
+            : /^[a-z][a-z0-9+.-]*:/iu.test(row.file_url)
+              ? null
+              : { bucket: "library-images", ...validateStorageObjectPath(row.file_url) };
       if (!source) continue;
       candidates.set(`${source.bucket}:${source.path}`, {
         bucket: source.bucket,
@@ -554,52 +584,19 @@ async function collectFiles(records: Record<string, ExportRow[]>): Promise<Embed
     }
   }
 
+  for (const row of records.library_file_versions ?? []) {
+    if (row.state !== "ready" || row.delete_requested === true) continue;
+    if (!validOriginalPath(row.owner_id, row.generation, row.storage_path))
+      throw exportError("account_export_file_reference_invalid");
+    const path = String(row.storage_path);
+    candidates.set(`library-files:${path}`, {
+      bucket: "library-files",
+      path,
+      type: typeof row.mime_type === "string" ? row.mime_type : null,
+    });
+  }
   const embedded: EmbeddedFile[] = [];
   let total = 0;
-  const siteRows = records.kova_site_files ?? [];
-  const siteBytes = siteRows.reduce((sum, row) => {
-    if (!Number.isSafeInteger(row.size_bytes) || Number(row.size_bytes) < 0) {
-      throw exportError("account_export_file_reference_invalid");
-    }
-    return sum + Number(row.size_bytes);
-  }, 0);
-  if (siteBytes > MAX_EMBEDDED_FILE_BYTES) throw exportError("account_export_too_large");
-  for (const row of siteRows) {
-    if (
-      typeof row.site_id !== "string" ||
-      typeof row.version_id !== "string" ||
-      typeof row.path !== "string" ||
-      typeof row.sha256 !== "string"
-    ) {
-      throw exportError("account_export_file_reference_invalid");
-    }
-    const body = await admin
-      .from("kova_site_files")
-      .select("content_base64")
-      .eq("owner_id", row.owner_id)
-      .eq("version_id", row.version_id)
-      .eq("path", row.path)
-      .maybeSingle();
-    if (body.error || !body.data || typeof body.data.content_base64 !== "string") {
-      throw exportError("account_export_file_unavailable");
-    }
-    const bytes = Buffer.from(body.data.content_base64, "base64");
-    if (
-      bytes.byteLength !== row.size_bytes ||
-      createHash("sha256").update(bytes).digest("hex") !== row.sha256
-    ) {
-      throw exportError("account_export_file_reference_invalid");
-    }
-    embedded.push({
-      bucket: "kova-sites",
-      path: `${row.site_id}/${row.version_id}/${row.path}`,
-      contentType: typeof row.mime_type === "string" ? row.mime_type : null,
-      sizeBytes: bytes.byteLength,
-      sha256: row.sha256,
-      base64: body.data.content_base64,
-    });
-    total += bytes.byteLength;
-  }
   for (const candidate of candidates.values()) {
     const file = await embedFile(
       candidate.bucket,
@@ -614,20 +611,27 @@ async function collectFiles(records: Record<string, ExportRow[]>): Promise<Embed
 }
 
 export async function buildAccountExport(userId: string, jobId: string) {
+  const budget = createAccountExportReadBudget(ACCOUNT_EXPORT_MAX_BYTES);
   const authResult = await admin.auth.admin.getUserById(userId);
   if (authResult.error || !authResult.data.user)
     throw exportError("account_export_user_unavailable");
 
-  const direct = await collectDirectRecords(userId);
+  const direct = await collectDirectRecords(budget, userId);
   const [project, family, related] = await Promise.all([
-    collectProjectRecords(userId),
-    collectFamilyRecords(userId),
-    collectRelatedRecords(userId, direct),
+    collectProjectRecords(budget, userId),
+    collectFamilyRecords(budget, userId),
+    collectRelatedRecords(budget, userId, direct),
   ]);
-  const records = { ...direct, ...project, ...family, ...related };
-  const files = await collectFiles(records);
+  const records = {
+    ...direct,
+    ...project,
+    ...family,
+    ...related,
+    kova_site_files: [] as ExportRow[],
+  };
+  const files = await collectFiles(budget, records);
   const generatedAt = new Date().toISOString();
-  return serializeAccountExport({
+  const value = {
     format: ACCOUNT_EXPORT_FORMAT,
     version: ACCOUNT_EXPORT_VERSION,
     exportId: jobId,
@@ -639,7 +643,10 @@ export async function buildAccountExport(userId: string, jobId: string) {
       "OAuth credentials, access tokens, refresh tokens, secrets, and private moderation notes are intentionally excluded.",
       "The export reflects records available while the job ran; changes made during processing can appear in a later export.",
     ],
-  });
+  };
+  const remainingBytes = ACCOUNT_EXPORT_MAX_BYTES - serializeAccountExport(value).bytes.byteLength;
+  records.kova_site_files = await readAccountExportSiteFiles(admin, userId, remainingBytes);
+  return serializeAccountExport(value);
 }
 
 async function processClaimed(job: ClaimedAccountExport, workerId: string) {

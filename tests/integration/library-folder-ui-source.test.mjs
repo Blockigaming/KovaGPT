@@ -13,7 +13,10 @@ const [library, folders, client, functions, supabaseTypes] = await Promise.all([
 
 test("Library loads folder membership and scopes visible items", () => {
   assert.match(functions, /folder_id/);
-  assert.match(functions, /file_size, folder_id, created_at/);
+  assert.match(
+    functions,
+    /file_size, folder_id, metadata, content_generation, content_revision, created_at/,
+  );
   assert.match(supabaseTypes, /library_folders: \{/);
   assert.match(supabaseTypes, /folder_id: string \| null/);
   assert.match(supabaseTypes, /user_library_items_folder_id_fkey/);

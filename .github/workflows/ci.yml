@@ -52,7 +52,7 @@ jobs:
             echo "Documentation-only change: expensive CI stages are not required."
           fi
 
-          if printf '%s\n' "$files" | grep -Eq '^(supabase/migrations/|tests/fixtures/production-migration-history-20260904/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$|scripts/release/upgrade-database[^/]*\.(mjs|sql)$)'; then
+          if grep -Eq '^(supabase/migrations/|tests/fixtures/production-migration-history-20260904/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$|scripts/release/upgrade-database[^/]*\.(mjs|sql)$)' <<< "$files"; then
             echo "run_database=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_database=false" >> "$GITHUB_OUTPUT"

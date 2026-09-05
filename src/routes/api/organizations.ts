@@ -129,6 +129,15 @@ export const Route = createFileRoute("/api/organizations")({
         const blocked = await rate(auth.userId, false);
         if (blocked) return blocked;
         try {
+          if (process.env.KOVA_ORGANIZATION_SCIM_ENABLED === "true") {
+            const reconciled = await boundedRpc(
+              auth.supabaseAdmin as unknown as Admin,
+              request,
+              "reconcile_organization_scim_membership",
+              { p_user: auth.userId },
+            );
+            if (reconciled.error) return fail(reconciled.error);
+          }
           const query = parseOrganizationQuery(request.url);
           const result = await boundedRpc(
             auth.supabaseAdmin as unknown as Admin,
@@ -172,6 +181,15 @@ export const Route = createFileRoute("/api/organizations")({
           if (input.action === "close" && !availability.canClose)
             return json({ error: "organization_closure_policy_not_active" }, 503);
           const admin = auth.supabaseAdmin as unknown as Admin;
+          if (process.env.KOVA_ORGANIZATION_SCIM_ENABLED === "true") {
+            const reconciled = await boundedRpc(
+              admin,
+              request,
+              "reconcile_organization_scim_membership",
+              { p_user: auth.userId },
+            );
+            if (reconciled.error) return fail(reconciled.error);
+          }
           if (input.action === "verifyDomain" || input.action === "configureSso") {
             const read = await boundedRpc(admin, request, "read_organization_workspace", {
               p_actor_user_id: auth.userId,

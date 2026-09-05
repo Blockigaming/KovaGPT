@@ -367,10 +367,37 @@ async function upload(request: Request): Promise<Response> {
 
   let metadata;
   let bytes;
-  let inspected;
   try {
     metadata = uploadMetadata(request);
     bytes = await readProjectFileBody(request);
+  } catch (error) {
+    return inputError(error);
+  }
+
+  return publishProjectFileBytes(auth, metadata, bytes);
+}
+
+/** Shared by authenticated uploads and verified Work output publication. */
+export async function publishProjectFileBytes(
+  auth: AuthedCaller,
+  metadata: {
+    projectId: string;
+    fileName: string;
+    requestedKind: "file" | "image";
+    idempotencyKey: string;
+  },
+  bytes: Uint8Array,
+  verifyStoredDigest = false,
+  publishReady?: (fileId: string, attemptId: string) => Promise<boolean>,
+): Promise<Response> {
+  const banned = await assertNotBanned(auth);
+  if (banned) return banned;
+  const enabled = await assertFeatureEnabled(auth, "uploads");
+  if (enabled) return enabled;
+  let inspected;
+  try {
+    normalizeProjectFileIdentity(metadata.projectId);
+    normalizeProjectFileIdentity(metadata.idempotencyKey);
     inspected = inspectProjectFile({
       bytes,
       fileName: metadata.fileName,
@@ -379,7 +406,6 @@ async function upload(request: Request): Promise<Response> {
   } catch (error) {
     return inputError(error);
   }
-
   const authorization = await projectUploadAuthorization(auth, metadata.projectId);
   if (authorization instanceof Response) return authorization;
 
@@ -425,7 +451,21 @@ async function upload(request: Request): Promise<Response> {
   ) {
     return json({ error: "project_file_reservation_invalid" }, 503);
   }
-  if (row.status === "ready") return json({ file: row, idempotent: true });
+  if (row.status === "ready") {
+    if (verifyStoredDigest) {
+      const existing = await auth.supabaseAdmin.storage
+        .from("project-files")
+        .download(row.storage_path);
+      if (
+        existing.error ||
+        !existing.data ||
+        existing.data.size !== bytes.byteLength ||
+        (await sha256Hex(new Uint8Array(await existing.data.arrayBuffer()))) !== digest
+      )
+        return json({ error: "project_file_storage_verification_failed" }, 503);
+    }
+    return json({ file: row, idempotent: true });
+  }
   if (row.inProgress) {
     return json({ error: "project_file_upload_in_progress" }, 409, { "Retry-After": "2" });
   }
@@ -516,9 +556,25 @@ async function upload(request: Request): Promise<Response> {
       await setUploadState(auth, row.id, attemptId, "cleanup_failed");
       return json({ error: "project_file_storage_unavailable" }, 503, { "Retry-After": "30" });
     }
+    if (verifyStoredDigest) {
+      const verification = await auth.supabaseAdmin.storage
+        .from("project-files")
+        .download(row.storage_path);
+      if (
+        verification.error ||
+        !verification.data ||
+        verification.data.size !== bytes.byteLength ||
+        (await sha256Hex(new Uint8Array(await verification.data.arrayBuffer()))) !== digest
+      ) {
+        await setUploadState(auth, row.id, attemptId, "cleanup_failed");
+        return json({ error: "project_file_storage_verification_failed" }, 503);
+      }
+    }
     // The ready-state transaction settles the generation under the same
     // account-deletion lock; a fenced or retired attempt cannot publish.
-    published = await setUploadState(auth, row.id, attemptId, "ready");
+    published = publishReady
+      ? await publishReady(row.id, attemptId)
+      : await setUploadState(auth, row.id, attemptId, "ready");
     if (!published) {
       const { data: current } = await auth.supabaseAdmin
         .from("project_files")

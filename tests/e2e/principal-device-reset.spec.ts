@@ -40,32 +40,23 @@ async function seedImageHistory(page: Page) {
 }
 
 async function imageOwners(page: Page) {
-  for (;;) {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("kovagpt-image-history", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     try {
-      return await page.evaluate(async () => {
-        const database = await new Promise<IDBDatabase>((resolve, reject) => {
-          const request = indexedDB.open("kovagpt-image-history", 1);
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
-        });
-        try {
-          const request = database.transaction("images", "readonly").objectStore("images").getAll();
-          const rows = await new Promise<Array<{ userKey: string }>>((resolve, reject) => {
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-          });
-          return rows.map((row) => row.userKey).sort();
-        } finally {
-          database.close();
-        }
+      const request = database.transaction("images", "readonly").objectStore("images").getAll();
+      const rows = await new Promise<Array<{ userKey: string }>>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
       });
-    } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("Execution context was destroyed")) {
-        throw error;
-      }
-      await page.waitForLoadState("domcontentloaded");
+      return rows.map((row) => row.userKey).sort();
+    } finally {
+      database.close();
     }
-  }
+  });
 }
 
 for (const path of ["/", "/apps"]) {
@@ -107,11 +98,23 @@ test("successful account deletion also removes IndexedDB image history from Chat
   await page.getByRole("button", { name: "Delete account", exact: true }).click();
   const confirmation = page.getByRole("alertdialog", { name: "Delete your account permanently?" });
   await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");
-  await confirmation.getByRole("button", { name: "Delete account", exact: true }).click();
-  await expect.poll(() => imageOwners(page)).toEqual([otherOwner]);
-  expect(deletionRequests).toBe(1);
-  // Sign-out navigates after the success toast; persisted bytes must stay removed
-  // across that navigation, irrespective of the transient toast lifetime.
-  await expect(confirmation).toBeHidden();
-  expect(await imageOwners(page)).toEqual([otherOwner]);
+  // Observe the same origin's durable database from a page without application
+  // navigation. Signing out destroys the deleting page's evaluation context.
+  const storagePage = await page.context().newPage();
+  await storagePage.route("**/__device-storage-probe", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Storage probe</title>",
+    }),
+  );
+  await storagePage.goto(new URL("/__device-storage-probe", page.url()).href);
+  try {
+    await confirmation.getByRole("button", { name: "Delete account", exact: true }).click();
+    await expect.poll(() => imageOwners(storagePage)).toEqual([otherOwner]);
+    expect(deletionRequests).toBe(1);
+    await expect(confirmation).toBeHidden();
+    expect(await imageOwners(storagePage)).toEqual([otherOwner]);
+  } finally {
+    await storagePage.close();
+  }
 });

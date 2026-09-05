@@ -10,7 +10,7 @@ export type StorageArtifactReservation = {
   generation: string;
   ownerId: string;
   requesterId: string;
-  bucket: "library-images" | "project-files";
+  bucket: "library-images" | "project-files" | "library-files";
   path: string;
 };
 const admin = supabaseAdmin as unknown as StorageArtifactClient;
@@ -21,7 +21,9 @@ function validArtifact(value: StorageArtifactReservation): boolean {
     UUID.test(value.generation) &&
     UUID.test(value.ownerId) &&
     UUID.test(value.requesterId) &&
-    (value.bucket === "library-images" || value.bucket === "project-files") &&
+    (value.bucket === "library-images" ||
+      value.bucket === "project-files" ||
+      value.bucket === "library-files") &&
     value.path.length <= 512 &&
     /^[A-Za-z0-9_./-]+$/u.test(value.path) &&
     value.path.split("/").every((part) => part !== "" && part !== "." && part !== "..") &&
@@ -30,7 +32,11 @@ function validArtifact(value: StorageArtifactReservation): boolean {
     (value.bucket !== "library-images" ||
       (value.ownerId === value.requesterId &&
         value.path.startsWith(`${value.ownerId}/${value.generation}.`) &&
-        /\.(?:png|jpg|jpeg|webp|gif)$/u.test(value.path)))
+        /\.(?:png|jpg|jpeg|webp|gif)$/u.test(value.path))) &&
+    (value.bucket !== "library-files" ||
+      (value.ownerId === value.requesterId &&
+        value.path.startsWith(`${value.ownerId}/${value.generation}.`) &&
+        /\.(?:pdf|docx|xlsx|pptx)$/u.test(value.path)))
   );
 }
 
@@ -164,6 +170,21 @@ export async function prepareAccountStorageArtifactDeletion(
   if (typeof before !== "boolean") throw new Error("account_storage_artifact_unavailable");
   await sweepAccountStorageArtifacts(userId, client);
   const after = await rpc(client, "prepare_account_storage_artifact_deletion", args);
+  if (typeof after !== "boolean") throw new Error("account_storage_artifact_unavailable");
+  return after;
+}
+
+/** Retire original-file publications, sweep their objects, then release metadata and quota. */
+export async function prepareLibraryOriginalDeletion(
+  userId: string,
+  client = admin,
+): Promise<boolean> {
+  if (!UUID.test(userId)) throw new Error("account_storage_artifact_invalid");
+  const args = { p_owner: userId };
+  const before = await rpc(client, "prepare_library_file_account_deletion", args);
+  if (typeof before !== "boolean") throw new Error("account_storage_artifact_unavailable");
+  await sweepAccountStorageArtifacts(userId, client);
+  const after = await rpc(client, "prepare_library_file_account_deletion", args);
   if (typeof after !== "boolean") throw new Error("account_storage_artifact_unavailable");
   return after;
 }

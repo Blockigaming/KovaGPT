@@ -17,5 +17,14 @@ export function createLibraryAttachmentAutoSaver(options: {
       idempotencyKey: string;
     };
   }) => Promise<unknown>;
+  saveDocument?: (
+    file: File,
+    attachment: PendingAttachment,
+    scope: AttachmentSaveScope,
+  ) => Promise<unknown>;
   onError: (name: string, retry: () => Promise<void>) => void;
-}): (attachment: PendingAttachment, scope?: AttachmentSaveScope) => Promise<void>;
+}): (
+  attachment: PendingAttachment,
+  scope?: AttachmentSaveScope,
+  originalFile?: File,
+) => Promise<void>;

@@ -37,7 +37,7 @@ test("cleanup copy names ownerless purging and account deletion surfaces partial
   );
   assert.match(
     settingsSource,
-    /const cleanupFailureCount =[\s\S]{0,260}!cleanupResult\.resolved \|\| cleanupFailureCount > 0/,
+    /cleanupResult\.chatHistory\.failures\.length \+\s*cleanupResult\.pwa\.failures\.length;\s*localCleanupIncomplete = !cleanupResult\.resolved \|\| cleanupFailureCount > 0/,
   );
   assert.match(
     settingsSource,

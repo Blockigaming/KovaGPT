@@ -70,16 +70,16 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.doesNotMatch(page, /title: active\.title\.slice\(0, 120\)/);
   assert.match(
     page,
-    /persistTemporaryConversation\(userKey, active, conversations\);\s+if \(!nextConversations\)/,
+    /persistTemporaryConversation\(userKey, active, conversations\);\s+if \(generation !== storageGenerationRef.current\) return;\s+if \(!nextConversations\)/,
   );
   assert.match(
     chatStore,
-    /return saveConversations\(userKey, nextConversations\) \? nextConversations : null/,
+    /return \(await saveConversations\(userKey, nextConversations\)\) \? nextConversations : null/,
   );
   assert.match(page, /This chat could not be saved/);
   const conversionStart = page.indexOf("const saveTemporaryChat");
   const conversionBoundary = page.indexOf(
-    "const nextConversations = persistTemporaryConversation",
+    "const nextConversations = await persistTemporaryConversation",
     conversionStart,
   );
   const retryCancellation = page.indexOf(

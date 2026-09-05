@@ -1,3 +1,4 @@
+import { prepareLibraryImageAccountDeletion } from "./library-image-storage.server.mjs";
 import { transferRetainedAccountSource } from "./account-retained-source-transfer.server.ts";
 import { claimProjectStorageSourceCleanup } from "./project-storage-references.server.ts";
 import {
@@ -624,6 +625,17 @@ export async function cleanupOwnedStorageBeforeAccountDeletion(
     return { complete: false, removed: projectRemoved + evidence.removed };
   }
 
+  const originals = await clearStoragePrefix(client.storage.from("library-files"), userId, options);
+  if (!originals.complete)
+    return { complete: false, removed: projectRemoved + evidence.removed + originals.removed };
+
+  const imagesReady = await prepareLibraryImageAccountDeletion(
+    client,
+    userId,
+    AbortSignal.timeout(40000),
+  );
+  if (!imagesReady)
+    return { complete: false, removed: projectRemoved + evidence.removed + originals.removed };
   const library = await clearStoragePrefix(
     client.storage.from(LIBRARY_IMAGE_BUCKET),
     userId,
@@ -631,6 +643,6 @@ export async function cleanupOwnedStorageBeforeAccountDeletion(
   );
   return {
     complete: library.complete,
-    removed: projectRemoved + evidence.removed + library.removed,
+    removed: projectRemoved + evidence.removed + originals.removed + library.removed,
   };
 }

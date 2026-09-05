@@ -18,7 +18,7 @@ test("scheduled execution uses the existing AI provider", () => {
   const source = read("src/lib/scheduled-execution.server.ts");
 
   assert.match(source, /chatCompletions/);
-  assert.match(source, /chatModel\("balanced"\)/);
+  assert.match(source, /modelForPolicy\("normal"\)/);
   assert.match(source, /AiProviderError/);
   assert.doesNotMatch(source, /OPENAI_API_KEY/);
   assert.doesNotMatch(source, /AZURE_OPENAI_API_KEY/);
@@ -27,7 +27,7 @@ test("scheduled execution uses the existing AI provider", () => {
 test("execution produces durable run and notification evidence", () => {
   const source = read("src/lib/scheduled-execution.server.ts");
 
-  assert.match(source, /scheduled_task_runs/);
+  assert.match(source, /begin_scheduled_task_run/);
   assert.match(source, /settle_scheduled_task_success/);
   assert.match(source, /settle_scheduled_task_failure/);
 
@@ -54,5 +54,5 @@ test("failure handling is classified and bounded by database settlement", () => 
 test("scheduled-task UI remains fail closed until worker ingress is deployed", () => {
   const source = read("src/lib/scheduled-tasks.functions.ts");
 
-  assert.match(source, /scheduledExecutionAvailable = false/);
+  assert.match(source, /activeScheduledExecutionReadiness/);
 });

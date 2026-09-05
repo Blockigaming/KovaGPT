@@ -66,3 +66,7 @@ export function createChatHistoryPayload(
     messages: Array<Pick<import("./chat-store.ts").Message, "role" | "content" | "attachments">>;
   }
 >;
+
+export function chatRequestProfile(
+  settings: import("../components/SettingsDialog").Settings,
+): Record<string, unknown>;

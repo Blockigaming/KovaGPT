@@ -197,33 +197,18 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
       as(db, viewer, "delete_comment", { documentId: a.document.id, commentId: session }),
       /access_denied/,
     );
-    const deleted = await as(db, owner, "delete_comment", {
-      documentId: a.document.id,
-      commentId: session,
-      knownCommentIds: [session],
-    });
-    assert.equal(deleted.comments.length, 0);
-    assert.deepEqual(deleted.deletedCommentIds, [session]);
-    await assert.rejects(as(db, editor, "comment", request), /comment_id_conflict/);
     assert.equal(
-      (await db.query("select count(*)::int n from public.canvas_comments where id=$1", [session]))
-        .rows[0].n,
+      (await as(db, owner, "delete_comment", { documentId: a.document.id, commentId: session }))
+        .comments.length,
       0,
     );
+    await assert.rejects(as(db, editor, "comment", request), /comment_id_conflict/);
     assert.equal(
-      (
-        await db.query("select count(*)::int n from public.canvas_comment_tombstones where id=$1", [
-          session,
-        ])
-      ).rows[0].n,
-      1,
+      (await db.query("select body,anchor from public.canvas_comments where id=$1", [session]))
+        .rows[0].body,
+      "[deleted]",
     );
-    const refreshed = await as(db, editor, "get", {
-      documentId: a.document.id,
-      knownCommentIds: [session],
-    });
-    assert.equal(refreshed.comments.length, 0);
-    assert.deepEqual(refreshed.deletedCommentIds, [session]);
+    assert.equal((await as(db, editor, "get", { documentId: a.document.id })).comments.length, 0);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [editor]);
     await db.exec("set role authenticated");
     await assert.rejects(
@@ -391,5 +376,75 @@ test("Canvas history preserves empty and long complete documents and respects de
     await db.exec("reset role");
   } finally {
     await db.close();
+  }
+});
+
+test("Canvas deletion releases active capacity and compaction fences old retries", async () => {
+  const db = await fixture();
+  try {
+    const opened = await as(db, owner, "open", personal);
+    const documentId = opened.document.id;
+    await db.query(
+      `insert into public.canvas_comments(id,document_id,author_id,body,deleted_at)
+      select gen_random_uuid(),$1,$2,'[deleted]',now() from generate_series(1,499)`,
+      [documentId, owner],
+    );
+    const request = {
+      documentId,
+      expectedRevision: opened.document.revision,
+      commentId: session,
+      body: "Still has capacity",
+      commentEpoch: 0,
+    };
+    assert.equal((await as(db, owner, "comment", request)).comments.length, 1);
+    const deleted = await as(db, owner, "delete_comment", { documentId, commentId: session });
+    assert.equal(deleted.document.comment_epoch, 1);
+    assert.deepEqual(deleted.deletedCommentIds, []);
+    assert.equal(
+      (await db.query("select count(*)::int n from public.canvas_comments")).rows[0].n,
+      0,
+    );
+    await assert.rejects(as(db, owner, "comment", request), /comment_epoch_conflict/);
+    const next = await as(db, owner, "comment", { ...request, commentId: editor, commentEpoch: 1 });
+    assert.equal(next.comments.length, 1);
+    await db.query(
+      `insert into public.canvas_comments(id,document_id,author_id,body)
+      select gen_random_uuid(),$1,$2,'Active' from generate_series(1,499)`,
+      [documentId, owner],
+    );
+    await assert.rejects(
+      as(db, owner, "comment", { ...request, commentId: viewer, commentEpoch: 1 }),
+      /comment_limit/,
+    );
+    await as(db, owner, "delete_comment", { documentId, commentId: editor });
+    assert.equal(
+      (await as(db, owner, "comment", { ...request, commentId: viewer, commentEpoch: 1 })).comments
+        .length,
+      100,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Project writes reject permission changes at the serialized mutation boundary", async () => {
+  for (const operation of ["project_comment", "note_save"]) {
+    const db = await fixture();
+    try {
+      // PGlite has one connection. This controlled permission change makes the
+      // pre-lock check succeed and the post-lock check fail deterministically.
+      await db.exec(`create sequence permission_checks;
+        create or replace function public.can_edit_project(p uuid,u uuid) returns boolean
+        language sql volatile security definer as $$select nextval('permission_checks')=1$$;`);
+      const data =
+        operation === "project_comment"
+          ? { projectId: project, commentId: session, body: "Revoked editor", mentions: [] }
+          : { projectId: project, expectedRevision: 0, content: "Revoked editor" };
+      await assert.rejects(as(db, editor, operation, data), /access_denied/);
+      const table = operation === "project_comment" ? "project_comments" : "project_notes";
+      assert.equal((await db.query(`select count(*)::int n from public.${table}`)).rows[0].n, 0);
+    } finally {
+      await db.close();
+    }
   }
 });

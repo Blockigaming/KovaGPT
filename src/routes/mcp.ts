@@ -1,23 +1,13 @@
+import { mcpOAuthPreflight } from "@/lib/pricing/mcp-oauth.server";
 import { createFileRoute } from "@tanstack/react-router";
-
-function unavailableResponse() {
-  return Response.json(
-    {
-      error: "external_connection_unavailable",
-      message: "KovaGPT does not currently expose a remote MCP connection.",
-    },
-    {
-      status: 501,
-      headers: { "Cache-Control": "no-store" },
-    },
-  );
-}
+import { handleDeveloperMcp } from "@/lib/pricing/developer-mcp.server";
 
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      GET: async () => unavailableResponse(),
-      POST: async () => unavailableResponse(),
+      OPTIONS: () => mcpOAuthPreflight(),
+      GET: async ({ request }) => handleDeveloperMcp(request),
+      POST: async ({ request }) => handleDeveloperMcp(request),
     },
   },
 });

@@ -99,7 +99,11 @@ test("composer assigns IDs at file selection and passes its captured privacy sco
   const route = readFileSync("src/routes/index.tsx", "utf8");
   assert.equal((composer.match(/clientId: crypto.randomUUID\(\)/g) || []).length, 2);
   assert.equal(
-    (composer.match(/attachmentAutoSave.save\(completed, readScope\)/g) || []).length,
+    (
+      composer.match(
+        /attachmentAutoSave.save\(completed, readScope(?:, isDocument \? f : undefined)?\)/g,
+      ) || []
+    ).length,
     2,
   );
   assert.equal(

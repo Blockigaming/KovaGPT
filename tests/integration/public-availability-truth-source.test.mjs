@@ -17,20 +17,29 @@ test("external assistant and developer surfaces do not publish unfinished integr
   assert.match(connect, /not\s+an installable MCP server/);
   assert.doesNotMatch(connect, /claude mcp add|create-connector=true|New plugin dialog/);
 
-  assert.match(mcp, /status: 501/);
-  assert.match(mcp, /POST: async \(\) => unavailableResponse\(\)/);
-  assert.match(mcp, /Cache-Control.*no-store/);
+  assert.match(mcp, /handleDeveloperMcp/);
+  const developerRuntime = read("src/lib/pricing/developer-platform.server.ts");
+  assert.match(developerRuntime, /KOVA_DEVELOPER_API_ENABLED/);
+  assert.match(developerRuntime, /KOVA_DEVELOPER_BILLING_ENABLED/);
+  assert.match(developerRuntime, /developer_platform_disabled/);
+  assert.match(developerRuntime, /authenticateDeveloper/);
   assert.doesNotMatch(mcp, /listTools/);
 
-  assert.match(oauthResource, /status: 404/);
-  assert.match(oauthResource, /does not currently expose an OAuth-protected MCP resource/);
-  assert.doesNotMatch(oauthResource, /authorization_servers|resolveBackendUrl/);
+  assert.match(oauthResource, /mcpOAuthMetadata\(true\)/);
+  const oauthRuntime = read("src/lib/pricing/mcp-oauth.server.ts");
+  assert.match(oauthRuntime, /KOVA_MCP_OAUTH_ENABLED/);
+  assert.match(oauthRuntime, /external_connection_unavailable/);
+  assert.doesNotMatch(oauthResource, /resolveBackendUrl/);
 
-  assert.match(developers, /A public developer platform is not available yet/);
-  assert.match(developers, /does not currently issue public API keys/);
+  assert.match(
+    developers,
+    /Paid execution requires an enabled, funded account and current pricing/,
+  );
+  assert.match(developers, /No official SDK is published yet/);
   assert.match(developers, /noindex, nofollow/);
   assert.match(developerDoc, /throw notFound\(\)/);
-  assert.doesNotMatch(developerDoc, /DEVELOPER_DOC_BY_SLUG|Production checklist/);
+  assert.match(developerDoc, /DEVELOPER_DOC_BY_SLUG/);
+  assert.match(developerDoc, /Browser OAuth discovery\s+is available only when/);
 });
 
 test("draft review pages cannot be returned through the generic public route", () => {

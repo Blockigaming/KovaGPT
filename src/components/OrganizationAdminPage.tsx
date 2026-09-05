@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
+import { OrganizationScimControls } from "@/components/OrganizationScimControls";
 import { Input } from "@/components/ui/input";
 import {
   organizationErrorMessage,
@@ -630,6 +631,11 @@ function OrganizationContent({ userId }: { userId: string }) {
                       <Button disabled={busy}>Save draft</Button>
                     </form>
                   </section>
+                  <OrganizationScimControls
+                    key={`${userId}:${org.id}`}
+                    userId={userId}
+                    organizationId={org.id}
+                  />
                   {index.canClose && (
                     <details className="rounded-xl border border-destructive/30 p-4">
                       <summary className="cursor-pointer text-sm font-medium">

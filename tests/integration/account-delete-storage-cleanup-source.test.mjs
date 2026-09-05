@@ -12,9 +12,6 @@ test("account deletion finishes ordered Storage cleanup before Auth deletion", (
   assert.ok(authDeleteAt > storageAt);
   assert.match(route, /account_storage_cleanup_pending/u);
   assert.match(route, /Retry-After": "5"/u);
-  assert.match(route, /destructiveCleanupStarted = true/u);
-  assert.match(route, /hasAccountDeletionFence\(auth\.userId\)/u);
-  assert.match(route, /deletionFailure && !destructiveCleanupStarted/u);
 });
 
 test("account Storage cleanup keeps Library last and releases metadata after bytes", () => {

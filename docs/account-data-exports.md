@@ -64,3 +64,17 @@ API cannot address require provider reconciliation; no Storage metadata is delet
 Retryable export/file cleanup completes before billing cancellation and connector purges.
 A cleanup `409` leaves those external services connected; partial private-file cleanup can
 still have occurred as part of the explicitly requested, retryable deletion workflow.
+
+The first deletion fence is irreversible: its existing triggers already erase memory/search
+content. Confirmed `DELETE` first performs organization-owner and pending developer-payment
+checks in the same transaction that inserts the fence. A failed preflight rolls that whole
+transaction back. The fence's non-null `started_at` survives every later error/retry, and old
+cancellation RPCs cannot remove it. Only the final Auth foreign-key cascade removes it.
+
+`GET /api/account` reports the verified caller's `active`, `deleting`, or `deleted` state;
+GET and DELETE require `X-Kova-Expected-User` to match the bearer principal. Settings uses
+captured credentials and a bounded response, displays pending/unknown outcomes truthfully,
+and lets the owner retry the same cleanup. An existing deletion skips fresh organization
+admission. A failed or lost final Auth response is reconciled against durable state before
+reporting completion. A later invalid session is not treated as proof that deletion finished.
+No failure response promises rollback or re-enables account exports after partial erasure.

@@ -30,6 +30,9 @@ function load(file, artifacts = {}) {
     "@/lib/safe-image-url": { MAX_SAFE_IMAGE_DATA_URL_CHARS: 12_000_000 },
     "@/lib/library-save-idempotency.mjs": idempotency,
     "@/lib/endpoint-reliability.mjs": { readResponseBytesBounded },
+    "@/integrations/supabase/client.server": { supabaseAdmin: {} },
+    "@/lib/runtime-env.server": { runtimeEnv: () => "https://fixture.supabase.co" },
+    "@/lib/library-image-storage.server.mjs": artifacts,
     "@/lib/account-storage-artifacts.server": {
       reserveAccountStorageArtifact: async () => {},
       settleAccountStorageArtifact: async () => true,
@@ -49,6 +52,7 @@ function load(file, artifacts = {}) {
       },
       console: { error() {} },
       crypto,
+      AbortSignal,
       atob,
       Uint8Array,
       TextDecoder,
@@ -160,115 +164,28 @@ test("text autosave retries return the same row and reject same-key changed cont
   );
 });
 
-test("concurrent identical image saves retain one metadata row and only its object", async () => {
-  const { saveImageToLibrary } = load("src/lib/library-images.functions.ts");
-  const db = database({ concurrent: true });
-  const results = await Promise.all([
-    saveImageToLibrary({ data: imageData(), context: context(db) }),
-    saveImageToLibrary({ data: imageData(), context: context(db) }),
-  ]);
-  assert.equal(results[0].id, results[1].id);
-  assert.equal(db.rows.size, 1);
-  assert.equal(db.objects.size, 1);
-  assert.equal(db.removed.length, 1);
-  assert.ok(db.objects.has([...db.rows.values()][0].file_url));
-});
-
-test("same-key different image bytes cannot overwrite the winning object", async () => {
-  const { saveImageToLibrary } = load("src/lib/library-images.functions.ts");
-  const db = database({ concurrent: true });
-  const results = await Promise.allSettled([
-    saveImageToLibrary({ data: imageData(1), context: context(db) }),
-    saveImageToLibrary({ data: imageData(2), context: context(db) }),
-  ]);
-  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
-  assert.equal(db.rows.size, 1);
-  assert.equal(db.objects.size, 1);
-  assert.match(
-    results.find((result) => result.status === "rejected").reason.message,
-    /different Library item/,
-  );
-});
-
-test("an ambiguous successful metadata response never deletes its referenced image", async () => {
-  const { saveImageToLibrary } = load("src/lib/library-images.functions.ts");
-  const db = database({ ambiguous: true });
-  assert.equal((await saveImageToLibrary({ data: imageData(), context: context(db) })).id, key);
-  assert.equal(db.rows.size, 1);
-  assert.equal(db.objects.size, 1);
-  assert.equal(db.removed.length, 0);
-});
-
-test("Library generation is reserved before upload, then metadata is published before settlement", async () => {
-  const db = database();
-  const events = [];
-  let reserved;
+test("image entry validates bytes and binds the verified owner before the quota publisher", async () => {
+  const published = [];
   const { saveImageToLibrary } = load("src/lib/library-images.functions.ts", {
-    reserveAccountStorageArtifact: async (value) => {
-      assert.equal(db.objects.size, 0);
-      assert.equal(db.rows.size, 0);
-      reserved = value;
-      events.push("reserve");
-    },
-    settleAccountStorageArtifact: async (artifact) => {
-      assert.equal(artifact.generation, reserved.generation);
-      assert.equal(artifact.ownerId, reserved.ownerId);
-      assert.equal(artifact.path, reserved.path);
-      assert.equal(db.objects.size, 1);
-      assert.equal(db.rows.size, 1);
-      events.push("settle");
-      return true;
+    publishLibraryImageBytes: async (_admin, owner, input, options) => {
+      published.push({ owner, input, options });
+      return { id: input.id };
     },
   });
-  await saveImageToLibrary({ data: imageData(), context: context(db) });
-  assert.deepEqual(events, ["reserve", "settle"]);
-  assert.equal(reserved.path, `owner/${reserved.generation}.png`);
-});
-
-test("a refused generation cannot publish bytes or metadata, and post-insert refusal compensates only that attempt", async () => {
   const db = database();
-  const blocked = load("src/lib/library-images.functions.ts", {
-    reserveAccountStorageArtifact: async () => {
-      throw new Error("deleting");
-    },
-  }).saveImageToLibrary;
-  await assert.rejects(blocked({ data: imageData(), context: context(db) }), /deleting/);
-  assert.equal(db.objects.size, 0);
-  assert.equal(db.rows.size, 0);
-  const retired = [];
-  const refused = load("src/lib/library-images.functions.ts", {
-    settleAccountStorageArtifact: async () => false,
-    retireAccountStorageArtifact: async (id) => retired.push(id),
-  }).saveImageToLibrary;
-  await assert.rejects(
-    refused({ data: imageData(), context: context(db) }),
-    /could not be completed/,
-  );
-  assert.equal(db.objects.size, 0);
-  assert.equal(db.rows.size, 0);
-  assert.ok(retired.length >= 1);
-});
-
-test("ambiguous settlement preserves its object and replays settlement before confirming success", async () => {
-  const db = database();
-  let attempts = 0;
-  const retired = [];
-  const { saveImageToLibrary } = load("src/lib/library-images.functions.ts", {
-    settleAccountStorageArtifact: async () => {
-      attempts++;
-      if (attempts === 1) throw new Error("response lost");
-      return true;
-    },
-    retireAccountStorageArtifact: async (id) => retired.push(id),
-  });
-  await assert.rejects(
-    saveImageToLibrary({ data: imageData(), context: context(db) }),
-    /response lost/,
-  );
-  assert.equal(db.objects.size, 1);
-  assert.equal(db.rows.size, 1);
-  assert.ok(retired.length >= 1);
   assert.equal((await saveImageToLibrary({ data: imageData(), context: context(db) })).id, key);
-  assert.equal(attempts, 2);
-  assert.equal(db.objects.size, 1);
+  assert.equal(published.length, 1);
+  assert.equal(published[0].owner, "owner");
+  assert.equal(published[0].input.bytes.length, 9);
+  assert.equal(published[0].input.contentType, "image/png");
+  assert.match(published[0].input.fingerprint, /^[0-9a-f]{64}$/);
+  assert.equal(db.objects.size, 0, "the authenticated client cannot upload directly");
+  await assert.rejects(
+    saveImageToLibrary({
+      data: { ...imageData(), imageUrl: "data:image/png;base64,AQID" },
+      context: context(db),
+    }),
+    /invalid image/,
+  );
+  assert.equal(published.length, 1);
 });

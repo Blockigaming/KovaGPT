@@ -56,11 +56,13 @@ test("MCP validates Supabase bearer tokens and uses the real user id for created
 
 test("image generation validates n before quota and supports exactly one image", () => {
   const route = read("src/routes/api/generate-image.ts");
-  const workflow = read("src/lib/multimodal/image-workflows.server.ts");
+  const workflow =
+    read("src/lib/multimodal/image-request-policy.mjs") +
+    read("src/lib/multimodal/image-request-policy.d.mts");
   assert.ok(route.indexOf("normalizeImageSettings(parsed)") < route.indexOf("enforceQuota("));
   assert.match(workflow, /n:\s*1;/);
   assert.match(workflow, /input\.n !== undefined && input\.n !== 1/);
-  assert.match(workflow, /KovaGPT currently supports one image per request/);
+  assert.match(workflow, /One image is supported per request/);
   assert.match(workflow, /n:\s*1,/);
 });
 
@@ -132,7 +134,9 @@ test("upload quotas follow the signed-in tier and reject invalid sizes before ch
   assert.match(modes, /free: 3,\s*plus: 50,\s*pro: 200,/);
   const imageSize = composer.indexOf("f.size > MAX_IMAGE_FILE_BYTES");
   const imageCharge = composer.indexOf("tryUseUpload(uploadLimit)");
-  const textSize = composer.indexOf("f.size > MAX_TEXT_FILE_BYTES");
+  const textSize = composer.indexOf(
+    "f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)",
+  );
   const textCharge = composer.indexOf("tryUseUpload(uploadLimit)", imageCharge + 1);
   assert.ok(imageSize > -1 && imageSize < imageCharge);
   assert.ok(textSize > -1 && textSize < textCharge);
@@ -150,7 +154,11 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   const product = read("src/lib/product-completeness.server.ts");
   const notifications = read("src/routes/notifications.tsx");
   const parity = read("docs/chatgpt-feature-parity.md");
-  assert.match(server, /scheduledExecutionAvailable = false/);
+  assert.match(server, /activeScheduledExecutionReadiness\(\)/);
+  assert.match(
+    read("src/lib/scheduled-execution-readiness.server.ts"),
+    /scheduled_task_runtime_ready/,
+  );
   assert.match(route, /Scheduled Tasks Status/);
   assert.match(route, /Upgrading will not enable scheduled/);
   assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);

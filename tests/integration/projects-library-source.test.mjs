@@ -101,7 +101,7 @@ test("library workspace supports filters, sorting, view preference, safe actions
   );
   assert.match(
     library,
-    /storageTotal !== null\s+\? `Known file storage: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
+    /storageTotal !== null\s+\? `Loaded file sizes: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
   );
   assert.doesNotMatch(library, /Storage totals require backend usage records/);
 });

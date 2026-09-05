@@ -1,5 +1,12 @@
 import { normalizeMemorySources, type MemorySources } from "./memory-sources.mjs";
 import type { ModeId } from "./modes";
+import {
+  chatHistoryView,
+  canWriteChatHistory,
+  chatHistorySnapshot,
+  invalidateChatHistorySnapshot,
+  CHAT_HISTORY_CHANGED_EVENT,
+} from "./chat-history-bridge.ts";
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
@@ -276,6 +283,8 @@ export function pendingActiveStorageKey(userKey: ChatStorageUserKey): string {
 
 export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
+  const synced = chatHistoryView(userKey);
+  if (synced?.ready) return synced.active;
   try {
     const raw = readWithGuestLegacyMigration(
       userKey,
@@ -290,8 +299,21 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   }
 }
 
-export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]): boolean {
+export function saveConversations(
+  userKey: ChatStorageUserKey,
+  convs: Conversation[],
+  options?: { snapshot: number },
+): boolean | Promise<boolean> {
   if (typeof window === "undefined") return false;
+  if (!canWriteChatHistory(userKey)) return false;
+  if (options && options.snapshot !== chatHistorySnapshot(userKey)) return false;
+  if (!options) invalidateChatHistorySnapshot(userKey);
+  const synced = chatHistoryView(userKey);
+  if (synced) {
+    if (!synced.ready || !synced.writable) return false;
+    synced.markDirty();
+    return synced.write(convs, false, Boolean(options));
+  }
   try {
     localStorage.setItem(
       conversationStorageKey(userKey),
@@ -307,11 +329,11 @@ export function saveConversations(userKey: ChatStorageUserKey, convs: Conversati
 }
 
 /** Persist an explicit temporary-to-regular conversion before updating the UI. */
-export function persistTemporaryConversation(
+export async function persistTemporaryConversation(
   userKey: ChatStorageUserKey,
   active: Conversation,
   conversations: Conversation[],
-): Conversation[] | null {
+): Promise<Conversation[] | null> {
   if (!active.temporary || !conversations.some((conversation) => conversation.id === active.id)) {
     return null;
   }
@@ -325,10 +347,11 @@ export function persistTemporaryConversation(
   const nextConversations = conversations
     .map((conversation) => (conversation.id === active.id ? converted : conversation))
     .filter((conversation) => !conversation.temporary);
-  return saveConversations(userKey, nextConversations) ? nextConversations : null;
+  return (await saveConversations(userKey, nextConversations)) ? nextConversations : null;
 }
 
 export function clearConversations(userKey: ChatStorageUserKey) {
+  if (chatHistoryView(userKey)) return saveConversations(userKey, []);
   if (typeof window === "undefined") return;
   localStorage.removeItem(conversationStorageKey(userKey));
   if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
@@ -336,6 +359,8 @@ export function clearConversations(userKey: ChatStorageUserKey) {
 
 export function loadArchivedConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
+  const synced = chatHistoryView(userKey);
+  if (synced?.ready) return synced.archived;
   try {
     const raw = readWithGuestLegacyMigration(
       userKey,
@@ -353,24 +378,37 @@ export function archiveConversation(userKey: ChatStorageUserKey, conversation: C
   const next = [
     conversation,
     ...loadArchivedConversations(userKey).filter((item) => item.id !== conversation.id),
-  ].slice(0, 200);
-  saveArchivedConversations(userKey, next);
+  ];
+  return saveArchivedConversations(userKey, next);
 }
 
 export function saveArchivedConversations(
   userKey: ChatStorageUserKey,
   conversations: Conversation[],
-) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(
-    archivedConversationStorageKey(userKey),
-    JSON.stringify(sanitizeArchivedConversations(conversations.slice(0, 500), userKey)),
-  );
-  if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
+): boolean | Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (!canWriteChatHistory(userKey)) return false;
+  invalidateChatHistorySnapshot(userKey);
+  const synced = chatHistoryView(userKey);
+  if (synced) {
+    if (!synced.ready || !synced.writable) return false;
+    synced.markDirty();
+    return synced.write(conversations, true);
+  }
+  try {
+    localStorage.setItem(
+      archivedConversationStorageKey(userKey),
+      JSON.stringify(sanitizeArchivedConversations(conversations.slice(0, 500), userKey)),
+    );
+    if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function removeArchivedConversation(userKey: ChatStorageUserKey, id: string) {
-  saveArchivedConversations(
+  return saveArchivedConversations(
     userKey,
     loadArchivedConversations(userKey).filter((item) => item.id !== id),
   );
@@ -476,7 +514,16 @@ export function subscribeToConversationChanges(
     if (event.key === key) listener(loadConversations(userKey));
   };
   window.addEventListener("storage", handle);
-  return () => window.removeEventListener("storage", handle);
+  const cloud = (event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.ownerId === userKey && detail.source === "cloud")
+      listener(loadConversations(userKey));
+  };
+  window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, cloud);
+  return () => {
+    window.removeEventListener("storage", handle);
+    window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, cloud);
+  };
 }
 
 /** Create a persisted, independent branch without mutating its source conversation. */

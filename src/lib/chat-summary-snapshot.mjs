@@ -251,3 +251,30 @@ export async function createChatHistoryPayload(messages, memoryStartIndex = 0, o
   }
   return payload;
 }
+
+/** Build the optional profile only when the caller permits personalized context. */
+export function chatRequestProfile(settings) {
+  return {
+    name: settings.displayName,
+    pronouns: settings.preferredPronouns,
+    email: settings.email,
+    phone: settings.phone,
+    address: [
+      settings.addressLine1,
+      settings.addressLine2,
+      settings.city,
+      settings.region,
+      settings.postalCode,
+      settings.country,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    extraFacts: settings.extraFacts,
+    customInstructions: settings.customInstructions,
+    mood: settings.mood,
+    responseLength: settings.responseLength,
+    language: settings.language,
+    rememberAcross: settings.rememberAcross,
+    webSearch: settings.webSearch,
+  };
+}

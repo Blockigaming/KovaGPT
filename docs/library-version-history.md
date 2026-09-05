@@ -1,0 +1,25 @@
+# Library browsing and version history
+
+Library lists 50 saved items per request using owner-scoped keyset pagination. Load more reaches additional matching items. Search runs against complete saved text and metadata in the database, including older items not yet loaded; server ordering supports newest, oldest, name and size. Folder/type/favorite filters are part of each page query. A cursor belongs to its query/filter/order. Refresh includes newly created items. Local chats and planning Work items retain their existing browser-scoped views.
+
+List pages contain metadata and a 320-character preview, not full private bodies. Preview and reuse actions fetch the exact selected item identity and revision before opening its content. Account changes, browser-data clearing and unmount cancel pending page/body requests and prevent late completions from restoring old content. Full bodies are not cached with list pages. Context Pack bulk reuse loads at most 20 selected bodies per action. File-size totals describe loaded items rather than account quota usage.
+
+## Supported replacement types
+
+- Original PDF, DOCX, XLSX and PPTX files: choose a replacement of up to 10 MiB. The browser extracts bounded text, then the server verifies and publishes the new original and text atomically. The logical Library ID, title and folder remain stable. Each earlier original retains its immutable path, digest, filename and downloadable bytes.
+- Saved text without a managed file URL: edit or read an older revision and save it as a new current version. New text is limited to 300,000 UTF-8 bytes. Historical bodies accepted by the earlier 300,000-character save contract are preserved up to 1.2 MB UTF-8 rather than silently truncated.
+- Images and Work outputs: their existing generation/edit/output lifecycle remains authoritative. Library does not replace image URLs or rewrite Work output provenance.
+
+Up to 50 versions are retained per supported item. Reaching the limit does not delete old versions; save a new Library item or download the retained versions. Original files and text versions have named downloads. Account export includes ready historical originals and owner-scoped version metadata/text, under the existing cumulative account-export budget. Large accounts may exceed that budget; individual version downloads remain available.
+
+## Integrity, quota and deletion
+
+Original replacement uses a separate pending ledger bound to the expected current generation. Successful settlement transfers the previous immutable current record into history and updates the existing Library row in one transaction. A lost response can be retried without another charge. A conflicting current generation, revoked account or failed stored-byte verification prevents settlement. Each retained original stays charged until its Storage object is confirmed removed. Failed input bodies expire through the durable cleanup worker; an operational ceiling bounds replacement-attempt receipts per account.
+
+Current saved text and retained text history both count toward account storage. The migration counts legacy current body bytes without copying or deleting their content, including already over-quota accounts. A narrow database trigger uses the canonical effective plan to account for current-body deltas on every normal write and deletion. Original extracted text and service-owned Work metadata are exempt because their managed artifact lifecycle already accounts for those outputs. New direct writes cannot pretend to be these managed records. Current text is never charged twice during a replacement: its previous charge transfers to history while the new current bytes are added atomically. A smaller replacement can succeed at the quota boundary.
+
+Text commands bind an immutable item generation plus the displayed revision, preventing a delayed command from modifying a recreated ID. Direct browser updates cannot bypass versioned content replacement. Title and folder changes keep their ordinary RLS permissions. Deleting an item retires all original generations, revokes version reads immediately and schedules retryable Storage removal. Current text and history quota are released exactly once. Account deletion waits for active replacement leases, drains all generations, and purges current/history/retry metadata before Auth deletion.
+
+## Verification
+
+Actual-role SQL tests cover generation CAS, lost replies, immutable old bytes, failure and account-deletion ordering, combined current/history quota, legacy multibyte preservation, recreated-ID rejection, RLS/direct-write denial and complete 230-item pagination/search. Runtime tests exercise bounded API requests, exact principal/revision inputs, no-store metadata pages, private-error redaction and stale body handoff rejection. Export tests embed retained originals and reject invalid owner/generation paths before Storage reads. These are repository changes; no live migrations or Storage operations are performed during source validation.

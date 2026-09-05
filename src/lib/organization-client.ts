@@ -52,7 +52,7 @@ export async function organizationRequest<T>(
   userId: string,
   path: string,
   signal: AbortSignal,
-  body?: OrganizationMutation,
+  body?: OrganizationMutation | Record<string, unknown>,
 ): Promise<T> {
   signal.throwIfAborted();
   const { data, error } = await supabase.auth.getSession();

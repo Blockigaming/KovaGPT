@@ -112,10 +112,13 @@ function SitesContent({ userId }: { userId: string }) {
     setNotice(null);
     setRetry(null);
     try {
-      await siteRequest(userId, "/api/sites", controller.current.signal, body);
+      const result = (await siteRequest(userId, "/api/sites", controller.current.signal, body)) as {
+        result?: { siteId?: string };
+      };
       if (controller.current.signal.aborted) return;
+      if (typeof result.result?.siteId !== "string") throw new Error("site_response_invalid");
       setNotice("Site changes saved.");
-      await refresh(body.action === "delete" ? null : body.siteId);
+      await refresh(body.action === "delete" ? null : result.result.siteId);
     } catch (cause) {
       if (controller.current.signal.aborted) return;
       setError(siteError(cause));

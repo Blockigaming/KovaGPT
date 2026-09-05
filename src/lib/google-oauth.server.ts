@@ -1,3 +1,4 @@
+import { createGoogleOAuthSettlement } from "@/lib/google-oauth-settlement.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 // Per-user Google OAuth token management. Server-only.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -108,7 +109,7 @@ export function buildGoogleAuthUrl(opts: {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export type GoogleTokenResponse = {
+type TokenResponse = {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
@@ -120,7 +121,7 @@ export async function exchangeCodeForTokens(
   code: string,
   request: Request,
   codeVerifier: string,
-): Promise<GoogleTokenResponse> {
+): Promise<TokenResponse> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -142,25 +143,7 @@ export async function exchangeCodeForTokens(
     new TextDecoder("utf-8", { fatal: true }).decode(
       await readResponseBytesBounded(res, 64 * 1024),
     ),
-  ) as GoogleTokenResponse;
-}
-
-/** Revoke an exchanged grant that could not be durably attached to an account. */
-export async function revokeUnstoredGoogleTokens(tokens: GoogleTokenResponse): Promise<void> {
-  const token = tokens.refresh_token || tokens.access_token;
-  if (!token) return;
-  try {
-    await fetch("https://oauth2.googleapis.com/revoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-      signal: AbortSignal.timeout(5000),
-      redirect: "error",
-    });
-  } catch {
-    // Completion remains failed; never persist credentials merely because the
-    // provider's best-effort revocation endpoint is temporarily unavailable.
-  }
+  ) as TokenResponse;
 }
 
 export async function googleVault(
@@ -225,17 +208,77 @@ export function googleOAuthConfigured(): boolean {
   );
 }
 export async function beginGoogleOAuth(userId: string, attemptId: string, connectionId?: string) {
+  await runGoogleOAuthCleanup().catch(() => {});
   parseGoogleBinding({ connectionId });
   return (await googleVault(userId, "begin_oauth", { attemptId, connectionId })) as {
     loginHint?: string | null;
   };
 }
-export async function storeGoogleTokens(
-  userId: string,
-  tokens: GoogleTokenResponse,
-  attemptId: string,
+async function oauthSettlementRpc(
+  userId: string | null,
+  operation: string,
+  data: Record<string, unknown>,
 ) {
-  return accountRuntime().store(userId, tokens, attemptId);
+  const result = await (
+    admin() as unknown as {
+      rpc(
+        name: string,
+        args: Record<string, unknown>,
+      ): { abortSignal(signal: AbortSignal): Promise<{ data: unknown; error: unknown }> };
+    }
+  )
+    .rpc("google_oauth_exchange_rpc", { p_user_id: userId, p_operation: operation, p_data: data })
+    .abortSignal(AbortSignal.timeout(10000));
+  if (result.error) throw new Error("google_oauth_settlement_unavailable");
+  return result.data;
+}
+async function refreshStagedGoogleToken(refreshToken: string) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(10000),
+  });
+  const value = JSON.parse(
+    new TextDecoder("utf-8", { fatal: true }).decode(
+      await readResponseBytesBounded(response, 64 * 1024, { timeoutMs: 5000 }),
+    ),
+  );
+  if (!response.ok)
+    throw new Error(
+      response.status === 400 && value?.error === "invalid_grant"
+        ? "google_staged_refresh_invalid"
+        : "google_recovery_unavailable",
+    );
+  return value;
+}
+function oauthSettlement() {
+  return createGoogleOAuthSettlement({
+    rpc: oauthSettlementRpc,
+    exchange: exchangeCodeForTokens,
+    identity: accountRuntime().identity,
+    refresh: refreshStagedGoogleToken,
+    encrypt: encryptGoogleToken,
+    decrypt: decryptGoogleToken,
+  });
+}
+export async function finishGoogleOAuth(
+  userId: string,
+  attemptId: string,
+  code: string,
+  request: Request,
+  verifier: string,
+) {
+  return oauthSettlement().finish(userId, attemptId, code, request, verifier);
+}
+export async function runGoogleOAuthCleanup() {
+  return oauthSettlement().cleanup();
 }
 export async function getGoogleConnection(userId: string, connectionId?: string) {
   return accountRuntime().connection(userId, { connectionId });

@@ -8,6 +8,7 @@ CREATE TABLE public.canvas_documents (
   message_id text NOT NULL CHECK (char_length(message_id) BETWEEN 1 AND 256),
   content text NOT NULL CHECK (char_length(content) <= 200000),
   revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+  comment_epoch integer NOT NULL DEFAULT 0 CHECK (comment_epoch >= 0),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK ((private_owner_id IS NULL) <> (project_id IS NULL))
 );
@@ -30,15 +31,6 @@ CREATE TABLE public.canvas_comments (
   deleted_at timestamptz
 );
 CREATE INDEX canvas_comments_document_created ON public.canvas_comments(document_id, created_at, id);
--- Keep compact deletion receipts separate from active comment capacity. They
--- reject delayed retries without retaining deleted bodies or anchors forever.
-CREATE TABLE public.canvas_comment_tombstones (
-  id uuid PRIMARY KEY,
-  document_id uuid NOT NULL REFERENCES public.canvas_documents(id) ON DELETE CASCADE,
-  deleted_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX canvas_comment_tombstones_retention ON public.canvas_comment_tombstones(deleted_at,id);
-CREATE INDEX canvas_comment_tombstones_document ON public.canvas_comment_tombstones(document_id,deleted_at,id);
 CREATE TABLE public.collaboration_presence (
   actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   session_id uuid NOT NULL,
@@ -67,7 +59,6 @@ GRANT EXECUTE ON FUNCTION kova_private.canvas_access(uuid,boolean) TO authentica
 ALTER TABLE public.canvas_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.canvas_revisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.canvas_comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.canvas_comment_tombstones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collaboration_presence ENABLE ROW LEVEL SECURITY;
 CREATE POLICY canvas_read ON public.canvas_documents FOR SELECT TO authenticated USING (kova_private.canvas_access(id,false));
 CREATE POLICY canvas_revision_read ON public.canvas_revisions FOR SELECT TO authenticated USING (kova_private.canvas_access(document_id,false));
@@ -78,9 +69,9 @@ CREATE POLICY collaboration_presence_read ON public.collaboration_presence FOR S
     (resource_kind='project' AND public.is_project_member(resource_id,auth.uid()))
   )
 );
-REVOKE ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence TO authenticated;
-GRANT ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence TO service_role;
+GRANT ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence TO service_role;
 
 -- Canvas accepts complete documents up to 200k characters, including clearing
 -- a document. Keep the existing personal history readable by legacy clients.
@@ -212,12 +203,10 @@ BEGIN
      content_value:=btrim(p_data->>'body');
      IF content_value IS NULL OR char_length(content_value) NOT BETWEEN 1 AND 4000 THEN RAISE EXCEPTION 'collaboration_invalid_input' USING ERRCODE='22023'; END IF;
      SELECT * INTO comment_value FROM public.canvas_comments WHERE id=(p_data->>'commentId')::uuid;
-     IF EXISTS(SELECT 1 FROM public.canvas_comment_tombstones WHERE id=(p_data->>'commentId')::uuid) THEN
-       RAISE EXCEPTION 'comment_id_conflict' USING ERRCODE='40001';
-     ELSIF comment_value.id IS NOT NULL THEN
+     IF comment_value.id IS NOT NULL THEN
        IF comment_value.deleted_at IS NOT NULL OR comment_value.document_id<>cid OR comment_value.author_id<>uid OR comment_value.body<>content_value OR (comment_value.anchor->>'start') IS DISTINCT FROM (p_data->>'start') OR (comment_value.anchor->>'end') IS DISTINCT FROM (p_data->>'end') THEN RAISE EXCEPTION 'comment_id_conflict' USING ERRCODE='40001'; END IF;
      ELSE
-       DELETE FROM public.canvas_comment_tombstones WHERE id IN (SELECT id FROM public.canvas_comment_tombstones WHERE deleted_at<now()-interval '90 days' ORDER BY deleted_at,id LIMIT 100);
+       IF coalesce((p_data->>'commentEpoch')::integer,0)<>doc.comment_epoch THEN RAISE EXCEPTION 'comment_epoch_conflict' USING ERRCODE='40001'; END IF;
        IF (SELECT count(*) FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NULL)>=500 THEN RAISE EXCEPTION 'comment_limit' USING ERRCODE='54000'; END IF;
        start_value:=(p_data->>'start')::integer; end_value:=(p_data->>'end')::integer;
        IF start_value IS NOT NULL OR end_value IS NOT NULL THEN
@@ -233,12 +222,15 @@ BEGIN
          VALUES((p_data->>'commentId')::uuid,cid,uid,content_value,anchor_value);
      END IF;
    ELSIF p_operation='delete_comment' THEN
-     INSERT INTO public.canvas_comment_tombstones(id,document_id)
-       SELECT c.id,c.document_id FROM public.canvas_comments c WHERE c.id=(p_data->>'commentId')::uuid AND c.document_id=cid
-       AND (c.author_id=uid OR doc.private_owner_id=uid OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid))
-       ON CONFLICT(id) DO NOTHING;
+     UPDATE public.canvas_comments c SET deleted_at=coalesce(deleted_at,now()),body='[deleted]',anchor=NULL WHERE c.id=(p_data->>'commentId')::uuid AND c.document_id=cid
+       AND (c.author_id=uid OR doc.private_owner_id=uid OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid));
      IF NOT FOUND THEN RAISE EXCEPTION 'collaboration_access_denied' USING ERRCODE='42501'; END IF;
-     DELETE FROM public.canvas_comments WHERE id=(p_data->>'commentId')::uuid AND document_id=cid;
+     -- A generation boundary invalidates both ancient retries and cached pages
+     -- before redacted identifiers are retired. At most 499 tombstones remain.
+     IF (SELECT count(*) FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NOT NULL)>=500 THEN
+       DELETE FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NOT NULL;
+       UPDATE public.canvas_documents SET comment_epoch=comment_epoch+1,updated_at=now() WHERE id=cid RETURNING * INTO doc;
+     END IF;
    END IF;
  ELSIF p_operation IN ('presence','leave') THEN
    session_value:=(p_data->>'sessionId')::uuid; cid:=(p_data->>'resourceId')::uuid;
@@ -296,6 +288,7 @@ BEGIN
    pid:=(p_data->>'projectId')::uuid;
    IF NOT public.is_project_member(pid,uid) OR (p_operation='note_save' AND NOT public.can_edit_project(pid,uid)) THEN RAISE EXCEPTION 'collaboration_access_denied' USING ERRCODE='42501'; END IF;
    PERFORM pg_advisory_xact_lock(hashtextextended('collab-notes:'||pid::text,0));
+   IF NOT public.is_project_member(pid,uid) OR (p_operation='note_save' AND NOT public.can_edit_project(pid,uid)) THEN RAISE EXCEPTION 'collaboration_access_denied' USING ERRCODE='42501'; END IF;
    SELECT * INTO note_value FROM public.project_notes WHERE project_id=pid FOR UPDATE;
    IF p_operation='note_save' THEN
      content_value:=p_data->>'content'; version_value:=(p_data->>'expectedRevision')::integer;
@@ -315,8 +308,7 @@ BEGIN
  member_write:=kova_private.canvas_access(cid,true);
  RETURN jsonb_build_object('document',to_jsonb(doc),'canEdit',member_write,
    'canManageComments',coalesce(doc.private_owner_id=uid,false) OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid),
-   'deletedCommentIds',coalesce((SELECT jsonb_agg(t.id) FROM public.canvas_comment_tombstones t WHERE t.document_id=cid AND t.id IN
-     (SELECT value::uuid FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_data->'knownCommentIds')='array' AND jsonb_array_length(p_data->'knownCommentIds')<=500 THEN p_data->'knownCommentIds' ELSE '[]'::jsonb END))),'[]'::jsonb),
+   'deletedCommentIds',coalesce((SELECT jsonb_agg(id) FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NOT NULL),'[]'::jsonb),
    'versions',coalesce((SELECT jsonb_agg(v ORDER BY revision DESC) FROM (SELECT revision,created_at FROM public.canvas_revisions WHERE document_id=cid ORDER BY revision DESC LIMIT 50) v),'[]'::jsonb),
    'comments',coalesce((SELECT jsonb_agg(c ORDER BY created_at DESC,id DESC) FROM (SELECT id,author_id,body,anchor,created_at FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NULL
      AND (p_data->>'beforeId' IS NULL OR (created_at,id)<((p_data->>'beforeCreatedAt')::timestamptz,(p_data->>'beforeId')::uuid))

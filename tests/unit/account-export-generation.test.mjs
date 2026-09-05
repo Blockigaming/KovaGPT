@@ -85,7 +85,7 @@ async function loadWorker(admin) {
     'import { supabaseAdmin } from "@/integrations/supabase/client.server";',
     'const supabaseAdmin = globalThis[Symbol.for("account-export-generation-test")];',
   );
-  source = source.replaceAll(/"@\/lib\/([^"\n]+)"/gu, (_, path) =>
+  source = source.replaceAll(/"(?:@\/lib\/|\.\/)([^"\n]+)"/gu, (_, path) =>
     JSON.stringify(new URL(`../../src/lib/${path}`, import.meta.url).href),
   );
   globalThis[Symbol.for("account-export-generation-test")] = admin;
@@ -311,6 +311,9 @@ test("the real worker registers before upload and a resumed stale worker preserv
           select() {
             return query;
           },
+          order() {
+            return query;
+          },
           eq(column, value) {
             filters.push([column, value]);
             return query;
@@ -390,7 +393,12 @@ test("the real worker registers before upload and a resumed stale worker preserv
     };
     const worker = await loadWorker(admin);
     const running = worker.runAccountExportBatch({ workerId, limit: 1 });
-    const oldPath = await entered;
+    const oldPath = await Promise.race([
+      entered,
+      running.then(() => {
+        throw new Error("export worker finished before reaching the upload barrier");
+      }),
+    ]);
     await db.exec(
       "update public.account_export_jobs set lease_expires_at=now()-interval '1 second'",
     );
@@ -429,6 +437,9 @@ test("exports retain reservation metadata but embed only ready or legacy Project
     from(table) {
       const query = {
         select() {
+          return query;
+        },
+        order() {
           return query;
         },
         eq() {

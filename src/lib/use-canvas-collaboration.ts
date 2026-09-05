@@ -5,7 +5,7 @@ import {
   useCollaborationPresence,
   type CanvasSnapshot,
 } from "./collaboration";
-import { CollaborationError, mergeCanvasComments } from "./collaboration-client.mjs";
+import { CollaborationError, mergeCanvasSnapshot } from "./collaboration-client.mjs";
 
 export function useCanvasCollaboration({
   open,
@@ -35,8 +35,6 @@ export function useCanvasCollaboration({
   const base = useRef<{ key: string; revision: number } | null>(null);
   const [retry, setRetry] = useState(0);
   const snapshot = stored?.key === key ? stored.snapshot : null;
-  const knownCommentIds = useRef<string[]>([]);
-  knownCommentIds.current = snapshot?.comments.map((comment) => comment.id) ?? [];
   const documentId = snapshot?.document.id ?? null;
   const parse = useCallback(
     (value: unknown) => {
@@ -84,33 +82,15 @@ export function useCanvasCollaboration({
     async (signal?: AbortSignal) => {
       if (!key || !actorId || !documentId) return;
       const generation = epoch.current;
-      const result = parse(
-        await collaborationRequest(
-          actorId,
-          "get",
-          { documentId, knownCommentIds: knownCommentIds.current },
-          signal,
-        ),
-      );
+      const result = parse(await collaborationRequest(actorId, "get", { documentId }, signal));
       if (epoch.current !== generation || keyRef.current !== key || signal?.aborted) return;
       if (base.current?.key === key && result.document.revision < base.current.revision) return;
       if (base.current?.key === key && result.document.revision > base.current.revision)
         setConflictKey(key);
-      setStored((previous) =>
-        previous?.key === key && previous.snapshot.document.revision > result.document.revision
-          ? previous
-          : {
-              key,
-              snapshot: {
-                ...result,
-                comments: mergeCanvasComments(
-                  previous?.key === key ? previous.snapshot.comments : [],
-                  result.comments,
-                  result.deletedCommentIds,
-                ),
-              },
-            },
-      );
+      setStored((previous) => ({
+        key,
+        snapshot: mergeCanvasSnapshot(previous?.key === key ? previous.snapshot : null, result),
+      }));
     },
     [key, actorId, documentId, parse],
   );
@@ -157,27 +137,15 @@ export function useCanvasCollaboration({
             documentId,
             expectedRevision: revision,
             content,
-            knownCommentIds: knownCommentIds.current,
           }),
         );
         if (epoch.current !== generation || keyRef.current !== key)
           throw new CollaborationError("cancelled");
         base.current = { key, revision: result.document.revision };
-        setStored((previous) =>
-          previous?.key === key && previous.snapshot.document.revision > result.document.revision
-            ? previous
-            : {
-                key,
-                snapshot: {
-                  ...result,
-                  comments: mergeCanvasComments(
-                    previous?.key === key ? previous.snapshot.comments : [],
-                    result.comments,
-                    result.deletedCommentIds,
-                  ),
-                },
-              },
-        );
+        setStored((previous) => ({
+          key,
+          snapshot: mergeCanvasSnapshot(previous?.key === key ? previous.snapshot : null, result),
+        }));
         setFailure(null);
       } catch (error) {
         if (
@@ -205,27 +173,16 @@ export function useCanvasCollaboration({
       await collaborationRequest(actorId, operation, {
         documentId: snapshot.document.id,
         expectedRevision: base.current.revision,
-        knownCommentIds: knownCommentIds.current,
+        commentEpoch: snapshot.document.comment_epoch,
         ...data,
       }),
     );
     if (epoch.current !== generation || keyRef.current !== key)
       throw new CollaborationError("cancelled");
-    setStored((previous) =>
-      previous?.key === key && previous.snapshot.document.revision > result.document.revision
-        ? previous
-        : {
-            key,
-            snapshot: {
-              ...result,
-              comments: mergeCanvasComments(
-                previous?.key === key ? previous.snapshot.comments : [],
-                result.comments,
-                result.deletedCommentIds,
-              ),
-            },
-          },
-    );
+    setStored((previous) => ({
+      key,
+      snapshot: mergeCanvasSnapshot(previous?.key === key ? previous.snapshot : null, result),
+    }));
   };
   const versionContent = async (revision: number) => {
     if (!key || !actorId || !snapshot) throw new CollaborationError("42501");
@@ -254,25 +211,17 @@ export function useCanvasCollaboration({
         documentId: snapshot.document.id,
         beforeId: last.id,
         beforeCreatedAt: last.created_at,
-        knownCommentIds: knownCommentIds.current,
       }),
     );
     if (epoch.current !== generation || keyRef.current !== key) return;
-    setStored((previous) =>
-      previous?.key === key
-        ? {
-            key,
-            snapshot: {
-              ...previous.snapshot,
-              comments: mergeCanvasComments(
-                previous.snapshot.comments,
-                result.comments,
-                result.deletedCommentIds,
-              ),
-            },
-          }
-        : previous,
-    );
+    if (result.document.comment_epoch !== snapshot.document.comment_epoch) {
+      await refresh();
+      return;
+    }
+    setStored((previous) => ({
+      key,
+      snapshot: mergeCanvasSnapshot(previous?.key === key ? previous.snapshot : null, result),
+    }));
   };
   return {
     snapshot,

@@ -63,11 +63,14 @@ test("staging builds receive and validate staging browser credentials before Vit
   assert.ok(validation >= 0 && build > validation);
 });
 
-test("unpublished OAuth discovery does not expose a misleading protected resource", () => {
-  assert.match(oauthDiscoveryRoute, /external_connection_unavailable/);
-  assert.match(oauthDiscoveryRoute, /status: 404/);
-  assert.match(oauthDiscoveryRoute, /Cache-Control.*no-store/);
-  assert.doesNotMatch(oauthDiscoveryRoute, /authorization_servers|resolveBackendUrl/);
+test("OAuth discovery uses the configured issuer and stays unavailable until explicitly enabled", () => {
+  assert.match(oauthDiscoveryRoute, /mcpOAuthMetadata\(true\)/);
+  const runtime = readFileSync("src/lib/pricing/mcp-oauth.server.ts", "utf8");
+  assert.match(runtime, /KOVA_MCP_ISSUER/);
+  assert.match(runtime, /KOVA_MCP_OAUTH_ENABLED/);
+  assert.match(runtime, /external_connection_unavailable/);
+  assert.match(runtime, /"Cache-Control": "no-store"/);
+  assert.doesNotMatch(oauthDiscoveryRoute, /resolveBackendUrl/);
 });
 
 test("OAuth consent is Kova-owned and no checked-in Lovable MCP manifest is required", () => {

@@ -197,3 +197,21 @@ export function mergeCanvasComments(previous, incoming, deletedIds) {
     .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))
     .slice(0, 500);
 }
+
+/** Compaction retires deleted IDs, so earlier pages and mutation retries must
+ * not cross that boundary. Within an epoch, retain observed deletion notices. */
+export function mergeCanvasSnapshot(previous, incoming) {
+  if (!previous) return incoming;
+  const before = previous.document.comment_epoch ?? 0;
+  const after = incoming.document.comment_epoch ?? 0;
+  if (before > after || previous.document.revision > incoming.document.revision) return previous;
+  if (before !== after) return incoming;
+  const deletedCommentIds = [
+    ...new Set([...previous.deletedCommentIds, ...incoming.deletedCommentIds]),
+  ];
+  return {
+    ...incoming,
+    deletedCommentIds,
+    comments: mergeCanvasComments(previous.comments, incoming.comments, deletedCommentIds),
+  };
+}

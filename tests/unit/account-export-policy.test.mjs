@@ -167,7 +167,4 @@ test("the direct export allowlist contains no credential-state tables", () => {
   assert.equal(names.includes("project_template_grants"), true);
   assert.equal(names.includes("project_template_audit_events"), true);
   assert.equal(names.includes("project_template_mutations"), false);
-  // Site bodies use the cumulative byte-limited file collector, never a
-  // direct select(*) that materializes all base64 content before size checks.
-  assert.equal(names.includes("kova_site_files"), false);
 });

@@ -20,6 +20,9 @@ export async function prepareOrganizationAccountDeletion(
   const result = await (admin.rpc as Rpc).call(admin, "prepare_org_account_deletion", {
     p_user_id: userId,
   });
+  if (result.error?.message === "developer_payment_reconciliation_pending") {
+    throw new OrganizationAccountDeletionError(409, "developer_payment_reconciliation_pending");
+  }
   if (result.error?.message === "organization_ownership_transfer_required") {
     throw new OrganizationAccountDeletionError(409, "organization_ownership_transfer_required");
   }

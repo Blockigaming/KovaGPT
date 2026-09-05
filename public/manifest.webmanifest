@@ -20,5 +20,16 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "id": "/",
+  "share_target": {
+    "action": "/share-inbox",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

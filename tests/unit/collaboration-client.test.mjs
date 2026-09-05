@@ -5,6 +5,7 @@ import {
   createCollaborationClient,
   createCollaborationLifecycle,
   mergeCanvasComments,
+  mergeCanvasSnapshot,
   resolveCommentAnchor,
 } from "../../src/lib/collaboration-client.mjs";
 const config = { url: "https://project.supabase.co", publishableKey: "public-test-key" };
@@ -245,4 +246,23 @@ test("presence limits and transient heartbeat failures do not block canonical re
   await l.c.fire(15000);
   assert.equal(l.events.refresh, 2);
   l.stop();
+});
+
+test("comment compaction discards old caches and delayed pages cannot resurrect deleted text", () => {
+  const comment = { id: "old", created_at: "2026-01-01", body: "private deleted text" };
+  const before = {
+    document: { revision: 1, comment_epoch: 0 },
+    comments: [comment],
+    deletedCommentIds: [],
+  };
+  const compacted = {
+    document: { revision: 1, comment_epoch: 1 },
+    comments: [],
+    deletedCommentIds: [],
+  };
+  assert.deepEqual(mergeCanvasSnapshot(before, compacted), compacted);
+  assert.deepEqual(mergeCanvasSnapshot(compacted, before), compacted);
+  const deleted = { ...before, comments: [], deletedCommentIds: ["old"] };
+  assert.deepEqual(mergeCanvasSnapshot(deleted, before).comments, []);
+  assert.deepEqual(mergeCanvasSnapshot(deleted, before).deletedCommentIds, ["old"]);
 });

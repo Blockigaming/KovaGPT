@@ -13,6 +13,7 @@ function load(path, dependencies) {
     {
       exports,
       AbortController,
+      AbortSignal,
       Response,
       URL,
       setTimeout,
@@ -29,6 +30,7 @@ const {
   reserveAccountStorageArtifact,
   settleAccountStorageArtifact,
   prepareAccountStorageArtifactDeletion,
+  prepareLibraryOriginalDeletion,
   sweepAccountStorageArtifacts,
 } = load("src/lib/account-storage-artifacts.server.ts", {
   "@/integrations/supabase/client.server": { supabaseAdmin: {} },
@@ -188,6 +190,8 @@ function handler(secret, sweep) {
     "@/lib/http-security.server": { timingSafeEqualText: (left, right) => left === right },
     "@/lib/runtime-env.server": { runtimeEnv: () => secret },
     "@/lib/account-storage-artifacts.server": { sweepAccountStorageArtifacts: sweep },
+    "@/lib/library-image-storage.server.mjs": { sweepLibraryImageUploads: async () => 0 },
+    "@/integrations/supabase/client.server": { supabaseAdmin: {} },
   }).Route.server.handlers.POST;
 }
 
@@ -218,4 +222,30 @@ test("cleanup endpoint requires its own secret and accepts no caller-selected sc
     assert.equal(response.headers.get("cache-control"), "no-store");
   }
   assert.equal(calls, 1);
+});
+
+test("original file reservations require exact owner/generation document paths and participate in repeated cleanup", async () => {
+  const file = { ...artifact, bucket: "library-files", path: `${USER}/${GENERATION}.pdf` };
+  const client = clientFor(() => true);
+  await reserveAccountStorageArtifact(file, client);
+  for (const change of [
+    { requesterId: OTHER },
+    { path: `${OTHER}/${GENERATION}.pdf` },
+    { path: `${USER}/${GENERATION}.html` },
+  ])
+    await assert.rejects(reserveAccountStorageArtifact({ ...file, ...change }, client), /invalid/);
+  let prepared = 0;
+  const cleanup = clientFor((name) =>
+    name === "prepare_library_file_account_deletion"
+      ? ++prepared > 1
+      : name === "claim_account_storage_artifact_cleanup"
+        ? [{ ...retired, bucket: "library-files", storage_path: file.path }]
+        : true,
+  );
+  assert.equal(await prepareLibraryOriginalDeletion(USER, cleanup), true);
+  assert.ok(
+    cleanup.events.some(
+      (event) => event.bucket === "library-files" && event.paths[0] === file.path,
+    ),
+  );
 });

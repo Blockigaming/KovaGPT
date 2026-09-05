@@ -1,3 +1,4 @@
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
 
@@ -190,6 +191,16 @@ function azureDeploymentForModel(modelId: string, capability?: ProviderCapabilit
   }
 
   const deepModel = modelForPolicy("deep").id;
+  // A server-resolved deployment may pass through another trusted facade. Keep
+  // configured aliases stable; otherwise a deep alias would fall back to CHAT.
+  if (
+    [
+      "AZURE_OPENAI_DEPLOYMENT_CHAT",
+      "AZURE_OPENAI_DEPLOYMENT_THINKING",
+      "AZURE_OPENAI_DEPLOYMENT_DEEP",
+    ].some((name) => env(name) === modelId)
+  )
+    return modelId;
   const thinkingModel = modelForPolicy("thinking").id;
   if (modelId === deepModel) return env("AZURE_OPENAI_DEPLOYMENT_DEEP") ?? modelId;
   if (modelId === thinkingModel) return env("AZURE_OPENAI_DEPLOYMENT_THINKING") ?? modelId;
@@ -436,6 +447,7 @@ async function providerFetch(
   capability: ProviderCapability,
   body: JsonObject,
   init?: RequestInit,
+  images?: { image: ProviderImageInput; mask?: ProviderImageInput },
 ): Promise<Response> {
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
@@ -462,6 +474,25 @@ async function providerFetch(
 
   try {
     const headers = await providerHeaders(deadline.signal);
+    const requestHeaders = new Headers({
+      ...Object.fromEntries(new Headers(init?.headers).entries()),
+      ...headers,
+    });
+    let encodedBody: string | FormData = JSON.stringify(requestBody);
+    if (images) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries(requestBody))
+        if (value !== undefined) form.set(key, String(value));
+      for (const [name, image] of Object.entries(images))
+        if (image)
+          form.set(
+            name,
+            new Blob([image.bytes as BlobPart], { type: image.contentType }),
+            `${name}.${image.contentType === "image/jpeg" ? "jpg" : image.contentType.slice(6)}`,
+          );
+      requestHeaders.delete("content-type");
+      encodedBody = form;
+    }
     const response = await meterProviderRequest({
       provider: target.provider,
       capability,
@@ -475,11 +506,8 @@ async function providerFetch(
             ...init,
             method: "POST",
             redirect: "error",
-            headers: {
-              ...Object.fromEntries(new Headers(init?.headers).entries()),
-              ...headers,
-            },
-            body: JSON.stringify(requestBody),
+            headers: requestHeaders,
+            body: encodedBody,
           },
           deadline,
           (outcome) => {
@@ -541,6 +569,11 @@ export function providerErrorResponse(error: unknown, fallbackStatus = 502): Res
     },
     { status: envelope.status || fallbackStatus, headers: NO_STORE_HEADERS },
   );
+}
+
+/** Versioned developer ingress uses the native, metered Responses contract. */
+export async function developerResponses(body: JsonObject, init?: RequestInit): Promise<Response> {
+  return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
 export async function chatCompletions(body: JsonObject, init?: RequestInit): Promise<Response> {
@@ -699,11 +732,15 @@ async function responsesJsonToChatJson(response: Response): Promise<Response> {
   );
 }
 
-async function bufferSuccessfulProviderResponse(response: Response): Promise<Response> {
+async function bufferSuccessfulProviderResponse(
+  response: Response,
+  maxBytes = 2 * 1024 * 1024,
+  signal?: AbortSignal,
+): Promise<Response> {
   if (!response.ok || !response.body) return response;
   try {
-    const body = await response.arrayBuffer();
-    return new Response(body, {
+    const body = await readResponseBytesBounded(response, maxBytes, { signal, timeoutMs: 45_000 });
+    return new Response(body as BodyInit, {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
@@ -716,6 +753,56 @@ async function bufferSuccessfulProviderResponse(response: Response): Promise<Res
 export async function imageGenerations(body: JsonObject, init?: RequestInit): Promise<Response> {
   return bufferSuccessfulProviderResponse(
     await providerFetch("/images/generations", "image_generation", body, init),
+    12 * 1024 * 1024,
+    init?.signal ?? undefined,
+  );
+}
+export type ProviderImageInput = {
+  bytes: Uint8Array;
+  contentType: "image/png" | "image/jpeg" | "image/webp";
+};
+export async function imageEdits(
+  body: JsonObject,
+  images: { image: ProviderImageInput; mask?: ProviderImageInput },
+  init?: RequestInit,
+): Promise<Response> {
+  if (runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") !== "true")
+    throw new AiProviderError({
+      error: "Image editing is not enabled.",
+      code: "provider_unavailable",
+      retryable: false,
+      status: 503,
+    });
+  if (
+    !images ||
+    !images.image ||
+    Object.keys(images).some((name) => name !== "image" && name !== "mask")
+  )
+    throw new AiProviderError({
+      error: "Invalid source image.",
+      code: "provider_bad_response",
+      retryable: false,
+      status: 400,
+    });
+  for (const [name, image] of Object.entries(images))
+    if (
+      image &&
+      (!(image.bytes instanceof Uint8Array) ||
+        image.bytes.length < 12 ||
+        image.bytes.length > (name === "mask" ? 4 : 8) * 1024 * 1024 ||
+        !["image/png", "image/jpeg", "image/webp"].includes(image.contentType) ||
+        (name === "mask" && image.contentType !== "image/png"))
+    )
+      throw new AiProviderError({
+        error: "Invalid source image.",
+        code: "provider_bad_response",
+        retryable: false,
+        status: 400,
+      });
+  return bufferSuccessfulProviderResponse(
+    await providerFetch("/images/edits", "image_generation", body, init, images),
+    12 * 1024 * 1024,
+    init?.signal ?? undefined,
   );
 }
 

@@ -1,3 +1,4 @@
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { supabase, getSupabaseClientConfigStatus } from "@/integrations/supabase/client";
 import {
   loadWorkSessions,
@@ -95,8 +96,12 @@ export async function requestWorkSync(
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  const text = await response.text();
-  if (text.length > 8 * 1024 * 1024) throw new Error("work_sync_response_too_large");
+  const bytes = await readResponseBytesBounded(response, 8 * 1024 * 1024, {
+    signal: combined,
+    timeoutMs: 15000,
+  });
+  if (combined.aborted) throw new Error("work_sync_request_canceled");
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   let payload: unknown;
   try {
     payload = JSON.parse(text);

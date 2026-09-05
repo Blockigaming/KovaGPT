@@ -3,6 +3,12 @@ import { useLocation } from "@tanstack/react-router";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
 import { WorkSyncRuntime } from "@/components/WorkSyncStatus";
+const PwaRuntime = lazy(() =>
+  import("@/components/PwaRuntime").then((module) => ({ default: module.PwaRuntime })),
+);
+const ChatHistoryRuntime = lazy(() =>
+  import("./ChatHistorySync").then((m) => ({ default: m.ChatHistorySyncRuntime })),
+);
 
 const DeveloperConsole = import.meta.env.DEV
   ? lazy(() =>
@@ -44,6 +50,10 @@ export function PlatformRuntime() {
   return (
     <>
       <WorkSyncRuntime />
+      <Suspense fallback={null}>
+        <ChatHistoryRuntime />
+        <PwaRuntime />
+      </Suspense>
       {DeveloperConsole ? (
         <Suspense fallback={null}>
           <DeveloperConsole />

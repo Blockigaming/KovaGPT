@@ -142,6 +142,9 @@ begin
   return true;
 end $$;
 
+alter table public.developer_api_requests add column terminal_outcome text check(terminal_outcome in ('settled','released')),
+  add column terminal_result jsonb;
+
 create function public.finish_developer_billing(p_request uuid,p_lease uuid,p_outcome text,p_result jsonb default '{}'::jsonb)
 returns boolean language plpgsql security invoker set search_path='' as $$
 declare r public.developer_api_requests%rowtype; available numeric; charge numeric; cost numeric; margin numeric;
@@ -149,7 +152,10 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('developer_billing',0));
   select * into r from public.developer_api_requests where id=p_request and lease_token=p_lease for update;
   if not found then return false; end if;
-  if r.settlement_state in ('settled','rejected') then return true; end if;
+  if p_result is null or jsonb_typeof(p_result)<>'object' or pg_column_size(p_result)>65536 then return false;end if;
+  if r.settlement_state in ('settled','rejected') then
+    return coalesce(r.terminal_outcome=p_outcome and r.terminal_result=p_result,false);
+  end if;
   if p_outcome='uncertain' then
     if r.settlement_state not in ('dispatched','uncertain','reconciliation_required') then return false; end if;
     update public.developer_api_requests set settlement_state='uncertain' where id=r.id;
@@ -182,7 +188,8 @@ begin
     total_variable_cost=cost,gross_profit=charge-cost,gross_margin_percentage=case when margin>=-9 then margin else null end,below_margin_floor=coalesce(margin<coalesce((r.accepted_public_price->>'marginFloor')::numeric,.5),false),
     margin_failure_cause=case when margin<coalesce((r.accepted_public_price->>'marginFloor')::numeric,.5) then 'authoritative_usage_variance' else null end,
     authoritative_usage=p_result->'usage',provider_response_id=left(p_result->>'providerResponseId',200),
-    cost_breakdown=coalesce(p_result->'costBreakdown',cost_breakdown),settled_at=now(),lease_expires_at=null where id=r.id;
+    cost_breakdown=coalesce(p_result->'costBreakdown',cost_breakdown),terminal_outcome=p_outcome,terminal_result=p_result,
+    settled_at=now(),lease_expires_at=null where id=r.id;
   if margin<coalesce((r.accepted_public_price->>'marginFloor')::numeric,.5) then
     insert into public.developer_billing_alerts(request_id,reason) values(r.id,'margin_below_floor') on conflict do nothing;
     insert into public.api_emergency_controls(scope_type,scope_id,reason)

@@ -116,6 +116,8 @@ function ArtifactEditorSession({
   const lastScheduledValueRef = useRef(initialContent);
   const autosaveGenerationRef = useRef(0);
   const localEditRevisionRef = useRef(0);
+  const [acknowledgedEditRevision, setAcknowledgedEditRevision] = useState(0);
+  const pendingAutosavesRef = useRef(0);
   const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const [autosaveRetryNonce, setAutosaveRetryNonce] = useState(0);
   const { isSignedIn, user } = useUser();
@@ -151,6 +153,7 @@ function ArtifactEditorSession({
     autosaveGenerationRef.current += 1;
     if (open) {
       localEditRevisionRef.current = 0;
+      setAcknowledgedEditRevision(0);
       lastRecordedValueRef.current = initialContent;
       lastScheduledValueRef.current = initialContent;
       setValue(initialContent);
@@ -210,7 +213,10 @@ function ArtifactEditorSession({
         ...current.filter((row) => !row.durable),
       ].slice(0, 50),
     );
-    if (canApplyLoadedArtifactHistory(0, localEditRevisionRef.current)) {
+    if (
+      canApplyLoadedArtifactHistory(acknowledgedEditRevision, localEditRevisionRef.current) &&
+      pendingAutosavesRef.current === 0
+    ) {
       const content = adoptRemote();
       if (content !== null) {
         lastRecordedValueRef.current = content;
@@ -219,7 +225,7 @@ function ArtifactEditorSession({
         setSaveState("saved");
       }
     }
-  }, [open, remoteSnapshot, adoptRemote, value]);
+  }, [open, remoteSnapshot, adoptRemote, value, acknowledgedEditRevision]);
 
   useEffect(() => {
     if (!open) return;
@@ -253,6 +259,39 @@ function ArtifactEditorSession({
     setSaveState("unsaved");
   };
 
+  const exportActorRef = useRef(userKey);
+  exportActorRef.current = userKey;
+  useEffect(
+    () => () => {
+      autosaveGenerationRef.current += 1;
+    },
+    [],
+  );
+  const [exportFormat, setExportFormat] = useState<"source" | "pdf" | "docx" | "xlsx" | "pptx">(
+    "source",
+  );
+  const [exporting, setExporting] = useState(false);
+  const exportOffice = async () => {
+    if (!open || exporting || exportFormat === "source") return;
+    const generation = autosaveGenerationRef.current;
+    const actor = userKey;
+    const current = () =>
+      generation === autosaveGenerationRef.current && actor === exportActorRef.current;
+    setExporting(true);
+    try {
+      const { downloadDocument } = await import("@/lib/writing-export/export");
+      if (current() && (await downloadDocument(exportFormat, artifactTitle, value, current)))
+        toast.success("Document exported");
+    } catch (error) {
+      if (current()) toast.error(error instanceof Error ? error.message : "Document export failed");
+    } finally {
+      if (current()) setExporting(false);
+    }
+  };
+  useEffect(() => {
+    setExporting(false);
+  }, [open, userKey, initialContent]);
+
   const exportDocument = () => {
     const extension = kind === "writing" ? "md" : kind === "website" ? "html" : "txt";
     const blob = new Blob([value], { type: "text/plain;charset=utf-8" });
@@ -279,6 +318,7 @@ function ArtifactEditorSession({
       return;
     let cancelled = false;
     const snapshot = value;
+    const editRevision = localEditRevisionRef.current;
     const generation = autosaveGenerationRef.current;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
@@ -292,16 +332,22 @@ function ArtifactEditorSession({
           try {
             // The queue orders this device's writes; the database CAS also
             // rejects an older snapshot from another editor or device.
-            await autosaveQueueRef.current.enqueue(() => {
-              if (autosaveGenerationRef.current !== generation)
-                throw new Error("This editing session changed.");
-              return saveVersionFn(snapshot);
-            });
+            pendingAutosavesRef.current += 1;
+            await autosaveQueueRef.current
+              .enqueue(() => {
+                if (autosaveGenerationRef.current !== generation)
+                  throw new Error("This editing session changed.");
+                return saveVersionFn(snapshot);
+              })
+              .finally(() => {
+                pendingAutosavesRef.current -= 1;
+              });
             // A later edit cancels this effect's UI work, but it does not
             // cancel an already-started server write. Preserve that successful
             // durable value for failure recovery within the same artifact.
             if (autosaveGenerationRef.current === generation) {
               lastRecordedValueRef.current = snapshot;
+              setAcknowledgedEditRevision(editRevision);
             }
             durable = true;
             if (!cancelled) setHistoryError(null);
@@ -853,6 +899,7 @@ function ArtifactEditorSession({
                   if (content !== null) {
                     autosaveGenerationRef.current += 1;
                     localEditRevisionRef.current = 0;
+                    setAcknowledgedEditRevision(0);
                     lastRecordedValueRef.current = content;
                     lastScheduledValueRef.current = content;
                     setValue(content);
@@ -923,9 +970,28 @@ function ArtifactEditorSession({
             )}
             {copied ? "Copied" : "Copy edited"}
           </button>
+          {kind === "writing" && (
+            <select
+              aria-label="Export document format"
+              value={exportFormat}
+              onChange={(event) => setExportFormat(event.target.value as typeof exportFormat)}
+              className="text-xs px-2 py-1.5 rounded border border-border bg-background"
+            >
+              <option value="source">Markdown</option>
+              <option value="pdf">PDF</option>
+              <option value="docx">Word DOCX</option>
+              <option value="xlsx">Excel XLSX</option>
+              <option value="pptx">PowerPoint PPTX</option>
+            </select>
+          )}
           <button
-            onClick={exportDocument}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
+            onClick={() =>
+              kind === "writing" && exportFormat !== "source"
+                ? void exportOffice()
+                : exportDocument()
+            }
+            disabled={exporting}
+            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50"
           >
             <Download className="mr-1 inline h-3.5 w-3.5" /> Export
           </button>

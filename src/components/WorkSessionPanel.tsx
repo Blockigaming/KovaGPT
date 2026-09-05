@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
 import { loadWorkSessions, saveWorkSessions } from "@/lib/work-store";
 import { readWorkSyncState } from "@/lib/work-sync-state";
+import { WorkExecutionPanel } from "@/components/WorkExecutionPanel";
 import {
   createWorkSession,
   updateWorkSession,
@@ -18,7 +19,7 @@ import {
 } from "@/lib/principal-browser-storage.mjs";
 
 type Draft = { objective: string; context: string; plan: string[] };
-/** Planning data only. This panel never starts or claims an execution job. */
+/** Saved planning remains separate from explicitly submitted execution. */
 export function WorkSessionPanel({
   ownerId,
   prepared,
@@ -402,6 +403,20 @@ export function WorkSessionPanel({
             </ol>
           </details>
         </div>
+      )}
+      {ownerId && !edit && (!selected || revision > 0) && (
+        <WorkExecutionPanel
+          key={`${ownerId}:${generation.current}:${selected?.id ?? "new"}:${revision}`}
+          ownerId={ownerId}
+          initialObjective={selected?.objective ?? ""}
+          source="work"
+          session={selected ? { id: selected.id, revision } : null}
+        />
+      )}
+      {ownerId && selected && !revision && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Save this plan to your account before submitting it for execution.
+        </p>
       )}
     </section>
   );

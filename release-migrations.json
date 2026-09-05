@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 119,
-  "latest": "20260905011123_project_template_management_pagination.sql",
+  "count": 140,
+  "latest": "20260905035000_developer_private_files.sql",
   "migrations": [
     {
       "order": 1,
@@ -2232,25 +2232,18 @@
       "order": 108,
       "filename": "20260905000905_project_canvas_collaboration.sql",
       "timestamp": "20260905000905",
-      "sha256": "3c7463e7a9dd5d99a77e3521a377ddbdb816f639cb3a499697a2a2ee29bf16b2",
+      "sha256": "5b6ae37ebf0edf38aca1f8c89cba1ccb8beaaf090c8494aa04996a0f47314a34",
       "tables": [
         "canvas_documents",
         "canvas_revisions",
         "canvas_comments",
-        "canvas_comment_tombstones",
         "collaboration_presence"
       ],
       "functions": ["kova_private"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "canvas_documents",
-        "canvas_revisions",
-        "canvas_comments",
-        "canvas_comment_tombstones",
-        "collaboration_presence"
-      ],
+      "rls": ["canvas_documents", "canvas_revisions", "canvas_comments", "collaboration_presence"],
       "policies": [
         "canvas_read",
         "canvas_revision_read",
@@ -2261,8 +2254,6 @@
         "canvas_personal_identity",
         "canvas_project_identity",
         "canvas_comments_document_created",
-        "canvas_comment_tombstones_retention",
-        "canvas_comment_tombstones_document",
         "collaboration_presence_resource"
       ]
     },
@@ -2377,6 +2368,34 @@
     },
     {
       "order": 115,
+      "filename": "20260905002615_unified_work_execution_protocol.sql",
+      "timestamp": "20260905002615",
+      "sha256": "39b33292df7317a15b7973c9196d218980b5b2e686211bfc992285318dea444d",
+      "tables": [
+        "work_execution_runs",
+        "work_execution_events",
+        "work_execution_receipts",
+        "work_execution_outputs"
+      ],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "work_execution_runs",
+        "work_execution_events",
+        "work_execution_receipts",
+        "work_execution_outputs"
+      ],
+      "policies": [
+        "work_execution_owner_read",
+        "work_execution_event_owner_read",
+        "work_output_owner_read"
+      ],
+      "indexes": ["work_execution_owner_updated_idx", "work_execution_dispatch_idx"]
+    },
+    {
+      "order": 116,
       "filename": "20260905002934_account_retained_source_transfer.sql",
       "timestamp": "20260905002934",
       "sha256": "1948c4ffc702244f240a3e70abe5a7322f5dded140f7a74ecb8abca7a0e08711",
@@ -2390,10 +2409,10 @@
       "indexes": ["project_storage_source_transfers_source_idx"]
     },
     {
-      "order": 116,
+      "order": 117,
       "filename": "20260905004111_developer_billing_runtime.sql",
       "timestamp": "20260905004111",
-      "sha256": "9634d2e9e704a01c2dab0bb37691e80c523ec71e0508c6e12759f3b5fb06c308",
+      "sha256": "6e4ddfd64784155cd1cfe0a203eaceb164039390fcf90169806ba00a10d627dc",
       "tables": [
         "developer_billing_keys",
         "developer_billing_limits",
@@ -2418,10 +2437,10 @@
       ]
     },
     {
-      "order": 117,
+      "order": 118,
       "filename": "20260905004839_kova_sites_lifecycle.sql",
       "timestamp": "20260905004839",
-      "sha256": "6f7b44366e8911bc44aca21732517740bfe3927ad05c28d1abfd274cac840454",
+      "sha256": "76f1c531157e9caae6f2081e265e125b3d81b8b6eb23779ddf444994697da2d1",
       "tables": [
         "kova_sites",
         "kova_site_versions",
@@ -2441,7 +2460,56 @@
       "indexes": ["kova_sites_owner_idx", "kova_site_access_expiry_idx"]
     },
     {
-      "order": 118,
+      "order": 119,
+      "filename": "20260905005111_scheduled_tasks_activation_foundation.sql",
+      "timestamp": "20260905005111",
+      "sha256": "33f7264b2f01279b246b24d2de208428bfbdf5c627fe36de130ee81fbb359d4a",
+      "tables": [
+        "scheduled_task_runtime",
+        "scheduled_task_connection_grants",
+        "scheduled_task_events",
+        "scheduled_task_copy_offers",
+        "scheduled_task_mutation_receipts"
+      ],
+      "functions": [
+        "claim_due_scheduled_tasks",
+        "recover_expired_scheduled_task_leases",
+        "settle_scheduled_task_success",
+        "settle_scheduled_task_failure"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [
+        "scheduled_tasks_current_owner",
+        "scheduled_task_copy_participant",
+        "scheduled_task_grant_owner",
+        "scheduled_task_event_owner",
+        "task_account_fence_read"
+      ],
+      "indexes": [
+        "scheduled_task_grants_user",
+        "scheduled_task_events_due",
+        "scheduled_task_copies_recipient"
+      ]
+    },
+    {
+      "order": 120,
+      "filename": "20260905005310_work_accounting_reconciliation.sql",
+      "timestamp": "20260905005310",
+      "sha256": "eddd3caa63401723a24f9f1b99ddc9f20eae88729f5f09b7091bfd97fc059ed1",
+      "tables": ["work_accounting_settlements"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["work_accounting_settlements"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 121,
       "filename": "20260905005417_google_multiaccount_lifecycle.sql",
       "timestamp": "20260905005417",
       "sha256": "f255ce1982f740949916d53c3659fd8367b7702f2fb39ed354de50a64a1f6733",
@@ -2455,7 +2523,21 @@
       "indexes": ["google_connections_owner", "google_oauth_attempts_owner_expiry"]
     },
     {
-      "order": 119,
+      "order": 122,
+      "filename": "20260905005610_developer_platform_identity.sql",
+      "timestamp": "20260905005610",
+      "sha256": "937cf8d5d2be9e88972dda6f1d506fdaf426d291a75d5bc63513a1117ca7c510",
+      "tables": ["developer_account_owners", "developer_projects"],
+      "functions": ["dispatch_developer_billing"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_account_owners", "developer_projects"],
+      "policies": [],
+      "indexes": ["developer_accounts_owner_idx"]
+    },
+    {
+      "order": 123,
       "filename": "20260905011123_project_template_management_pagination.sql",
       "timestamp": "20260905011123",
       "sha256": "6dfaaea2ebadf7f21dda9f0f41c6db90e9bb721606ca0e5167bf9111d36e7ce7",
@@ -2467,6 +2549,303 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 124,
+      "filename": "20260905011300_private_library_original_files.sql",
+      "timestamp": "20260905011300",
+      "sha256": "dd3f0aa6c70d7b6c71b767684a28e2e069bdea10a0a49a68a0795f50d4ab1ed7",
+      "tables": ["library_file_uploads"],
+      "functions": ["reserve_account_storage_artifact", "record_account_storage_artifact_cleanup"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["library_file_uploads"],
+      "policies": [],
+      "indexes": ["library_file_uploads_owner"]
+    },
+    {
+      "order": 125,
+      "filename": "20260905011420_developer_owner_export.sql",
+      "timestamp": "20260905011420",
+      "sha256": "28422709288ea7f1ec36ba03da1230eccadc287b86f456bdf4ef4bfd990f908a",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 126,
+      "filename": "20260905013000_developer_prepaid_funding.sql",
+      "timestamp": "20260905013000",
+      "sha256": "0cc6b0ed717a3e25241fb098917d849b96d8ca6e0528f4b86bcbf60c13ce5a34",
+      "tables": [
+        "developer_credit_offers",
+        "developer_funding_attempts",
+        "developer_funding_receipts",
+        "developer_funding_events"
+      ],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "developer_credit_offers",
+        "developer_funding_attempts",
+        "developer_funding_receipts",
+        "developer_funding_events"
+      ],
+      "policies": [],
+      "indexes": ["developer_funding_pending_idx", "developer_funding_account_history_idx"]
+    },
+    {
+      "order": 127,
+      "filename": "20260905013636_scheduled_task_verified_event_ingress.sql",
+      "timestamp": "20260905013636",
+      "sha256": "da896731bb978b40a158b9d0bc8b61208461a9cd4197020793b6095f22f98a96",
+      "tables": [
+        "scheduled_task_event_provider_readiness",
+        "scheduled_task_event_inbox",
+        "scheduled_task_gmail_cursors"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "scheduled_task_event_provider_readiness",
+        "scheduled_task_event_inbox",
+        "scheduled_task_gmail_cursors"
+      ],
+      "policies": [],
+      "indexes": ["scheduled_task_event_inbox_due", "scheduled_task_gmail_email"]
+    },
+    {
+      "order": 128,
+      "filename": "20260905020833_sites_export_and_erasure.sql",
+      "timestamp": "20260905020833",
+      "sha256": "2363834365593bdb313ccd11c1c7edb62d75bf8676315c6c3b7fc29c97e44dd3",
+      "tables": [],
+      "functions": ["mutate_kova_site", "cleanup_kova_site_versions"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["kova_site_retirements_site_pending_idx", "kova_sites_deleted_idx"]
+    },
+    {
+      "order": 129,
+      "filename": "20260905021737_google_oauth_exchange_settlement.sql",
+      "timestamp": "20260905021737",
+      "sha256": "d2f59137928d0ddcb9c6163a38c9325a991243478260c4b8247e43e142ec5d11",
+      "tables": ["google_oauth_exchange_receipts", "google_oauth_subject_cleanup"],
+      "functions": ["google_connection_rpc"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["google_oauth_exchange_receipts", "google_oauth_subject_cleanup"],
+      "policies": [],
+      "indexes": ["google_oauth_exchange_cleanup"]
+    },
+    {
+      "order": 130,
+      "filename": "20260905022817_pricing_administration.sql",
+      "timestamp": "20260905022817",
+      "sha256": "3cb50e2a40f885fbdd1eba98f2be58cb0eb98d823b990b6a395c86fedd4d5e31",
+      "tables": ["developer_pricing_drafts", "developer_pricing_administration_events"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_pricing_drafts", "developer_pricing_administration_events"],
+      "policies": [],
+      "indexes": ["developer_pricing_drafts_updated_idx"]
+    },
+    {
+      "order": 131,
+      "filename": "20260905023609_chat_history_sync.sql",
+      "timestamp": "20260905023609",
+      "sha256": "d54a33aaef573075d52c77a3c94732ad4300a981fdecc06dce1976f1b797e242",
+      "tables": ["chat_history_counters", "chat_history_records", "chat_history_mutations"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["chat_history_counters", "chat_history_records", "chat_history_mutations"],
+      "policies": ["chat_history_owner_read"],
+      "indexes": ["chat_history_owner_cursor_idx"]
+    },
+    {
+      "order": 132,
+      "filename": "20260905023630_pwa_push_subscription_lifecycle.sql",
+      "timestamp": "20260905023630",
+      "sha256": "bb30932dc286706cb8c0369fece9b31478c2c27f76288e27d361c804d6ba461e",
+      "tables": ["web_push_runtime", "web_push_preferences", "web_push_subscriptions"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["web_push_runtime", "web_push_preferences", "web_push_subscriptions"],
+      "policies": [],
+      "indexes": ["web_push_active_endpoint", "web_push_owner", "web_push_delivery_due"]
+    },
+    {
+      "order": 133,
+      "filename": "20260905024500_private_study_progress.sql",
+      "timestamp": "20260905024500",
+      "sha256": "3d3844c07bbfd5f6477ae9adec3754f1142e0d69ecb72f5cda4a96cdf1c16928",
+      "tables": ["study_sets", "study_write_windows"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["study_sets", "study_write_windows"],
+      "policies": ["study_sets_owner_read"],
+      "indexes": ["study_sets_owner_idx", "study_sets_retired_idx"]
+    },
+    {
+      "order": 134,
+      "filename": "20260905030947_irreversible_account_deletion.sql",
+      "timestamp": "20260905030947",
+      "sha256": "f29466776b99a5c8661de1b8a7ac1d82c11afe2ff4feaa9dc1033d74cf161e29",
+      "tables": [],
+      "functions": ["cancel_account_export_account_deletion"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 135,
+      "filename": "20260905031000_library_content_versions.sql",
+      "timestamp": "20260905031000",
+      "sha256": "1ef0c7375c618516934bd1b8eb7ca0ff01ce11ba390ed909f39e060b012be025",
+      "tables": ["library_file_versions", "library_file_replacements", "library_text_versions"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["library_file_versions", "library_file_replacements", "library_text_versions"],
+      "policies": [],
+      "indexes": [
+        "library_file_versions_owner_item",
+        "library_file_replacements_owner_item",
+        "library_text_versions_owner_item",
+        "user_library_items_owner_recent_page",
+        "user_library_items_owner_name_page",
+        "user_library_items_owner_size_page"
+      ]
+    },
+    {
+      "order": 136,
+      "filename": "20260905032524_organization_scim_provisioning.sql",
+      "timestamp": "20260905032524",
+      "sha256": "43d12070aeaad75652ca6a85729e7f40672154f6aef2c4786853f75030cc6f0d",
+      "tables": [
+        "organization_scim_configs",
+        "organization_scim_users",
+        "organization_scim_groups",
+        "organization_scim_group_members"
+      ],
+      "functions": ["kova_private"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": [
+        "organization_scim_provider_enabled",
+        "organization_scim_user_external",
+        "organization_scim_user_name",
+        "organization_scim_bound_identity",
+        "organization_scim_user_account",
+        "organization_scim_group_external"
+      ]
+    },
+    {
+      "order": 137,
+      "filename": "20260905032714_developer_mcp_oauth.sql",
+      "timestamp": "20260905032714",
+      "sha256": "8d6ff77a8d09e8ae7320d54cdaf6683a964fea22f8ba521a7e94574c11078d21",
+      "tables": [
+        "mcp_oauth_clients",
+        "mcp_oauth_requests",
+        "mcp_oauth_grants",
+        "mcp_oauth_codes",
+        "mcp_oauth_tokens"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "mcp_oauth_clients",
+        "mcp_oauth_requests",
+        "mcp_oauth_grants",
+        "mcp_oauth_codes",
+        "mcp_oauth_tokens"
+      ],
+      "policies": [],
+      "indexes": [
+        "mcp_requests_expiry_idx",
+        "mcp_grants_owner_idx",
+        "mcp_grants_client_idx",
+        "mcp_tokens_grant_idx",
+        "mcp_tokens_expiry_idx"
+      ]
+    },
+    {
+      "order": 138,
+      "filename": "20260905033500_library_image_storage_quota.sql",
+      "timestamp": "20260905033500",
+      "sha256": "26187e62e670c1bc3fdaeb518cced84a7ea6fb35ba572ceaaecb7143f463890d",
+      "tables": ["library_image_uploads"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["library_image_uploads"],
+      "policies": [],
+      "indexes": [
+        "library_image_active_item_idx",
+        "library_image_owner_idx",
+        "library_image_cleanup_idx"
+      ]
+    },
+    {
+      "order": 139,
+      "filename": "20260905034000_work_browser_takeover.sql",
+      "timestamp": "20260905034000",
+      "sha256": "ba24b2113aabdeb77b65dfb01236105f394c381299490e9aee9216fbb5fff6c1",
+      "tables": ["work_browser_sessions"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["work_browser_sessions"],
+      "policies": ["work_browser_owner_read"],
+      "indexes": ["work_browser_one_live_run"]
+    },
+    {
+      "order": 140,
+      "filename": "20260905035000_developer_private_files.sql",
+      "timestamp": "20260905035000",
+      "sha256": "ac366d1300c541ee5a21e0a931f3ae5aada6e8af38707f1415c7c993f2d770e3",
+      "tables": ["developer_files"],
+      "functions": ["manage_developer_workspace"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["developer_files"],
+      "policies": [],
+      "indexes": ["developer_files_owner_idx", "developer_files_expiry_idx"]
     }
   ]
 }

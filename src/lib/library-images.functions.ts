@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
-import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
 import {
@@ -9,11 +8,9 @@ import {
   librarySaveFingerprint,
 } from "@/lib/library-save-idempotency.mjs";
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
-import {
-  reserveAccountStorageArtifact,
-  settleAccountStorageArtifact,
-  retireAccountStorageArtifact,
-} from "@/lib/account-storage-artifacts.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { runtimeEnv } from "@/lib/runtime-env.server";
+import { publishLibraryImageBytes } from "@/lib/library-image-storage.server.mjs";
 
 const BUCKET = "library-images";
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -139,6 +136,7 @@ async function fetchRemoteImage(
 }
 
 const SaveImageSchema = z.object({
+  expectedOwnerId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid().optional(),
   source: z.enum(["images", "upload"]).default("images"),
   imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
@@ -150,6 +148,8 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    if (data.expectedOwnerId && data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
     let payload: ReturnType<typeof decodeDataUrl>;
     if (data.imageUrl.startsWith("data:")) {
       payload = decodeDataUrl(data.imageUrl);
@@ -181,118 +181,32 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
       if (result.error) throw new Error("Library save could not be checked. Please retry.");
       return result.data;
     };
-    const finishSaved = async (saved: {
-      id: string;
-      metadata: unknown;
-      file_url: string | null;
-    }) => {
-      const result = assertLibrarySaveReplay(saved, fingerprint);
-      const generation = (saved.metadata as { storage_generation?: unknown } | null)
-        ?.storage_generation;
-      if (typeof generation !== "string" || !saved.file_url)
-        throw new Error("Library save is incomplete. Please retry.");
-      const artifact = {
-        generation,
-        ownerId: context.userId,
-        requesterId: context.userId,
-        bucket: BUCKET,
-        path: saved.file_url,
-      } as const;
-      let allowed: boolean;
-      try {
-        allowed = await settleAccountStorageArtifact(artifact);
-      } catch (error) {
-        // A lost response may have published successfully. Retirement only
-        // affects pending generations; never erase a possibly published save.
-        await retireAccountStorageArtifact(artifact).catch(() => undefined);
-        throw error;
-      }
-      if (!allowed) {
-        await retireAccountStorageArtifact(artifact);
-        const removed = await context.supabase.storage.from(BUCKET).remove([saved.file_url]);
-        if (!removed.error) {
-          await context.supabase
-            .from("user_library_items")
-            .delete()
-            .eq("id", saved.id)
-            .eq("user_id", context.userId)
-            .eq("file_url", saved.file_url);
-        }
-        throw new Error("Library save could not be completed. Please retry.");
-      }
-      return result;
-    };
     const existing = await findExisting();
-    if (existing) return finishSaved(existing);
-
-    const ext =
-      payload.contentType === "image/png"
-        ? "png"
-        : payload.contentType === "image/webp"
-          ? "webp"
-          : payload.contentType === "image/gif"
-            ? "gif"
-            : "jpg";
-    const generation = crypto.randomUUID();
-    const fileName = `${generation}.${ext}`;
-    const path = `${context.userId}/${fileName}`;
-
-    const artifact = {
-      generation,
-      ownerId: context.userId,
-      requesterId: context.userId,
-      bucket: BUCKET,
-      path,
-    } as const;
-    await reserveAccountStorageArtifact(artifact);
-    try {
-      const { error: upErr } = await context.supabase.storage
-        .from(BUCKET)
-        .upload(path, payload.bytes, { contentType: payload.contentType, upsert: false });
-      if (upErr) throw new Error(upErr.message);
-
-      const { data: row, error } = await context.supabase
-        .from("user_library_items")
-        .insert({
-          id: itemId,
-          metadata: { library_save_fingerprint: fingerprint, storage_generation: generation },
-          user_id: context.userId,
-          title: data.title.slice(0, 200),
-          item_type: "image",
-          source: data.source,
-          content_text: data.prompt ?? null,
-          file_url: path,
-          file_name: fileName,
-          file_type: payload.contentType,
-          file_size: payload.bytes.byteLength,
-        })
-        .select("id")
-        .single();
-
-      if (error || !row) {
-        // Each attempt has its own immutable path. A concurrent winning save
-        // cannot reference this losing attempt, so cleanup never deletes it.
-        const concurrent = await findExisting();
-        // An ambiguous response may belong to our own successful insert.
-        if (concurrent?.file_url !== path) {
-          await retireAccountStorageArtifact(artifact);
-          await context.supabase.storage.from(BUCKET).remove([path]);
-        }
-        if (concurrent) return await finishSaved(concurrent);
-        console.error("[serverfn]", error?.message);
-        throw new Error("Failed to save");
-      }
-      return await finishSaved({
-        id: row.id,
-        file_url: path,
-        metadata: { library_save_fingerprint: fingerprint, storage_generation: generation },
-      });
-    } catch (error) {
-      // The durable record survives Auth deletion and covers late Storage
-      // commits even when an upload/metadata response was lost.
-      await retireAccountStorageArtifact(artifact).catch(() => undefined);
-      throw error;
+    if (existing) {
+      const replay = assertLibrarySaveReplay(existing, fingerprint);
+      const active = await (
+        supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient
+      )
+        .rpc("read_library_image_upload", { p_owner: context.userId, p_id: itemId })
+        .abortSignal(AbortSignal.timeout(10000));
+      if (active.error || !active.data || active.data.storage_path !== existing.file_url)
+        throw new Error("Library save is incomplete. Please retry.");
+      return replay;
     }
+    return publishLibraryImageBytes(
+      supabaseAdmin,
+      context.userId,
+      {
+        id: itemId,
+        bytes: payload.bytes,
+        contentType: payload.contentType,
+        fingerprint,
+        title: data.title,
+        prompt: data.prompt,
+        source: data.source,
+      },
+      { signal: AbortSignal.timeout(45000), supabaseUrl: runtimeEnv("SUPABASE_URL") ?? "" },
+    );
   });
 
 export const getLibraryImageUrl = createServerFn({ method: "POST" })
@@ -308,6 +222,13 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
     if (error || !row || row.item_type !== "image" || !row.file_url) {
       throw new Error("Image not found");
     }
+    const active = await (
+      supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient
+    )
+      .rpc("read_library_image_upload", { p_owner: context.userId, p_id: data.id })
+      .abortSignal(AbortSignal.timeout(10000));
+    if (active.error || !active.data || active.data.storage_path !== row.file_url)
+      throw new Error("Image not found");
     const { data: signed, error: sErr } = await context.supabase.storage
       .from(BUCKET)
       .createSignedUrl(row.file_url, 60);
@@ -317,31 +238,18 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
 
 export const deleteLibraryImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        expectedOwnerId: z.string().uuid(),
+        contentGeneration: z.string().uuid(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { data: row, error: lookupError } = await context.supabase
-      .from("user_library_items")
-      .select("file_url, item_type")
-      .eq("id", data.id)
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (lookupError) {
-      console.error("[serverfn]", lookupError.message);
-      throw new Error("Request failed. Please try again.");
-    }
-    if (row?.item_type === "image" && row.file_url) {
-      await removePrivateLibraryImage(row.file_url, (paths) =>
-        context.supabase.storage.from(BUCKET).remove(paths),
-      );
-    }
-    const { error } = await context.supabase
-      .from("user_library_items")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
-    if (error) {
-      console.error("[serverfn]", error.message);
-      throw new Error("Request failed. Please try again.");
-    }
-    return { ok: true };
+    if (data.expectedOwnerId !== context.userId)
+      throw new Error("Your account changed. Please try again.");
+    const { deleteLibraryItem } = await import("@/lib/library.functions");
+    return deleteLibraryItem({ data });
   });

@@ -25,7 +25,7 @@ export function CanvasComments({
 }) {
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
-  const attempt = useRef<{ key: string; id: string } | null>(null);
+  const attempt = useRef<{ key: string; id: string; commentEpoch: number } | null>(null);
   const run = async (action: () => Promise<void>) => {
     if (pending) return;
     setPending(true);
@@ -67,9 +67,14 @@ export function CanvasComments({
                 const range = selection();
                 const key = JSON.stringify([draft.trim(), range, snapshot.document.revision]);
                 if (attempt.current?.key !== key)
-                  attempt.current = { key, id: crypto.randomUUID() };
+                  attempt.current = {
+                    key,
+                    id: crypto.randomUUID(),
+                    commentEpoch: snapshot.document.comment_epoch,
+                  };
                 await onComment({
                   commentId: attempt.current.id,
+                  commentEpoch: attempt.current.commentEpoch,
                   body: draft.trim(),
                   ...(range ?? {}),
                 });

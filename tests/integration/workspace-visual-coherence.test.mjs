@@ -28,8 +28,11 @@ test("apps and plugins use one name and one truthful signed-out action", () => {
   assert.doesNotMatch(routes.apps, /aria-busy=\{!isLoaded \|\| undefined\}/);
 });
 
-test("Library reserves controls for real content and presents honest empty states", () => {
-  assert.match(routes.library, /items\.length > 0 && !loadError \? \(/);
+test("Library preserves search and pagination controls and presents honest empty states", () => {
+  assert.match(routes.library, /\(isSignedIn \|\| items\.length > 0\) && !loadError \? \(/);
+  assert.match(routes.library, /nextPage && !loadError && \(/);
+  assert.match(routes.library, /onClick=\{\(\) => void load\(true\)\}/);
+  assert.match(routes.library, /Load more saved items/);
   assert.match(routes.library, /Nothing saved in this browser/);
   assert.match(routes.library, /Saved in this browser/);
   assert.match(routes.library, /role="group"\s+aria-label="Library filters"/);
@@ -59,7 +62,7 @@ test("Library preview owns modal focus and mutation errors stay actionable", () 
     routes.library,
     /Some selected items could not be deleted\. Review your Library and try again\./,
   );
-  assert.doesNotMatch(routes.library, /toast\.error\([^\n]*\.message/);
+  assert.doesNotMatch(routes.library, /toast\.error\([^;]*\.message/);
 });
 
 test("Images gives every repeated control a single contextual accessible name", () => {

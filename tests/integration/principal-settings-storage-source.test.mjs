@@ -73,7 +73,7 @@ test("account, memory, and local-device deletion keep their storage scopes disti
   );
   assert.match(
     settings,
-    /const handleDeleteAccount = async \(\) => \{[\s\S]{0,180}const deletionUserKey = isLoaded \? userKey : undefined[\s\S]{0,1800}const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]{0,360}currentAuthUserKeyRef\.current === deletionUserKey[\s\S]{0,100}onClearAll\(\);\s*setDeleteAccountOpen/,
+    /const handleDeleteAccount = async \(\) => \{[\s\S]{0,180}const deletionUserKey = userKey[\s\S]{0,2600}const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]{0,360}currentAuthUserKeyRef\.current === deletionUserKey[\s\S]{0,100}onClearAll\(\);\s*setDeleteAccountOpen/,
   );
   assert.match(
     settings,

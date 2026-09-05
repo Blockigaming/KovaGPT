@@ -43,3 +43,11 @@ export function mergeCanvasComments<T extends { id: string; created_at: string }
   incoming: T[],
   deletedIds: string[],
 ): T[];
+
+export function mergeCanvasSnapshot<
+  T extends {
+    document: { revision: number; comment_epoch?: number };
+    comments: Array<{ id: string; created_at: string }>;
+    deletedCommentIds: string[];
+  },
+>(previous: T | null, incoming: T): T;

@@ -1,3 +1,5 @@
+import { requestAccountDeletion } from "@/lib/account-deletion-client";
+import { PwaSettings } from "@/components/PwaSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -273,6 +275,48 @@ export function SettingsDialog({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
+  const deletionOperationRef = useRef(0);
+  const [deletionStatus, setDeletionStatus] = useState<{
+    ownerId: string;
+    state: "active" | "deleting" | "unknown";
+  } | null>(null);
+  const deletionPending = deletionStatus?.ownerId === userKey && deletionStatus.state !== "active";
+  useEffect(() => {
+    deletionOperationRef.current++;
+    setDeletionStatus(null);
+    setDeleteAccountBusy(false);
+    setDeleteAccountOpen(false);
+    setDeleteConfirmation("");
+  }, [userKey]);
+  useEffect(() => {
+    if (!open || !isLoaded || !userKey) return;
+    const lifetime = new AbortController();
+    const operation = deletionOperationRef.current;
+    void requestAccountDeletion(userKey, "GET", lifetime.signal)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("account_deletion_status_unavailable");
+        const result = (await response.json()) as { state?: string };
+        if (
+          !lifetime.signal.aborted &&
+          operation === deletionOperationRef.current &&
+          currentAuthUserKeyRef.current === userKey
+        )
+          setDeletionStatus({
+            ownerId: userKey,
+            state:
+              result.state === "active"
+                ? "active"
+                : result.state === "deleting"
+                  ? "deleting"
+                  : "unknown",
+          });
+      })
+      .catch(() => {
+        /* A failed status read never claims deletion was rolled back. */
+      });
+    return () => lifetime.abort();
+  }, [open, isLoaded, userKey]);
+
   const [localResetBusy, setLocalResetBusy] = useState(false);
   const localResetBusyRef = useRef(false);
   const [clearMemoryConfirmOpen, setClearMemoryConfirmOpen] = useState(false);
@@ -366,7 +410,9 @@ export function SettingsDialog({
     const failureCount =
       result.local.failures.length +
       result.session.failures.length +
-      result.imageHistory.failures.length;
+      result.imageHistory.failures.length +
+      result.chatHistory.failures.length +
+      result.pwa.failures.length;
     if (failureCount > 0) {
       console.warn("[local-data] Account-local browser cleanup was incomplete", {
         failureCount,
@@ -376,31 +422,52 @@ export function SettingsDialog({
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== "DELETE" || deleteAccountBusy) return;
-    const deletionUserKey = isLoaded ? userKey : undefined;
+    if (deleteConfirmation !== "DELETE" || deleteAccountBusy || !isLoaded || !userKey) return;
+    const deletionUserKey = userKey;
+    const operation = ++deletionOperationRef.current;
+    const currentDeletion = () =>
+      currentAuthUserKeyRef.current === deletionUserKey &&
+      deletionOperationRef.current === operation;
     setDeleteAccountBusy(true);
     let response: Response;
     try {
-      response = await authFetch("/api/account", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmation: deleteConfirmation }),
-      });
+      response = await requestAccountDeletion(deletionUserKey, "DELETE");
     } catch (error) {
       console.error("[account-delete] request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
-      toast.error("Account deletion could not be completed. Your account remains active.");
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) {
+        setDeletionStatus({ ownerId: deletionUserKey, state: "unknown" });
+        toast.error(
+          "Deletion may have started. Retry to check its status and continue cleanup; completed cleanup cannot be undone.",
+        );
+        setDeleteAccountBusy(false);
+      }
       return;
     }
 
     if (!response.ok) {
       const result = (await response.json().catch(() => null)) as {
         error?: string;
+        state?: string;
       } | null;
-      toast.error(result?.error || "Account deletion failed. Your account remains active.");
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) {
+        setDeletionStatus({
+          ownerId: deletionUserKey,
+          state:
+            result?.state === "active"
+              ? "active"
+              : result?.state === "deleting"
+                ? "deleting"
+                : "unknown",
+        });
+        toast.error(
+          response.status === 401
+            ? "Your sign-in is no longer valid. Deletion may have completed. Sign in again only if the account still exists to check its status; completed cleanup cannot be undone."
+            : result?.error || "Deletion status is uncertain. Retry to continue cleanup.",
+        );
+        setDeleteAccountBusy(false);
+      }
       return;
     }
 
@@ -418,7 +485,9 @@ export function SettingsDialog({
       const cleanupFailureCount =
         cleanupResult.local.failures.length +
         cleanupResult.session.failures.length +
-        cleanupResult.imageHistory.failures.length;
+        cleanupResult.imageHistory.failures.length +
+        cleanupResult.chatHistory.failures.length +
+        cleanupResult.pwa.failures.length;
       localCleanupIncomplete = !cleanupResult.resolved || cleanupFailureCount > 0;
     } catch (error) {
       localCleanupIncomplete = true;
@@ -444,7 +513,7 @@ export function SettingsDialog({
         error: error instanceof Error ? error.name : "unknown_error",
       });
     } finally {
-      setDeleteAccountBusy(false);
+      if (currentDeletion()) setDeleteAccountBusy(false);
     }
   };
 
@@ -1202,6 +1271,7 @@ export function SettingsDialog({
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
                 <h3 className="text-sm font-semibold">Notifications</h3>
+                <PwaSettings ownerId={isLoaded ? userKey : null} />
                 <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">
                   <div>
                     <p className="text-sm font-medium">Account &amp; security emails</p>
@@ -1360,8 +1430,13 @@ export function SettingsDialog({
                         loadArchivedConversations(userKey),
                         imported.archivedConversations,
                       );
-                      saveConversations(userKey, conversations);
-                      saveArchivedConversations(userKey, archived);
+                      if (
+                        !(await saveConversations(userKey, conversations)) ||
+                        !(await saveArchivedConversations(userKey, archived))
+                      )
+                        throw new Error(
+                          "Chat import could not be saved. Check chat sync and retry.",
+                        );
                       window.dispatchEvent(new Event("kova:conversations-imported"));
                       toast.success(
                         `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
@@ -1380,12 +1455,16 @@ export function SettingsDialog({
                   onAction={() => importFileRef.current?.click()}
                 />
                 <SecurityRow
-                  title="Delete account"
-                  body="Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
-                  actionLabel="Delete account"
+                  title={deletionPending ? "Account deletion pending" : "Delete account"}
+                  body={
+                    deletionPending
+                      ? "Deletion has started or its outcome is still being verified. Completed cleanup cannot be undone. Retry to finish removing private data and the sign-in account."
+                      : "Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
+                  }
+                  actionLabel={deletionPending ? "Retry deletion" : "Delete account"}
                   danger
                   onAction={() => {
-                    setDeleteConfirmation("");
+                    setDeleteConfirmation(deletionPending ? "DELETE" : "");
                     setDeleteAccountOpen(true);
                   }}
                 />
@@ -1425,7 +1504,9 @@ export function SettingsDialog({
                         const failureCount =
                           result.local.failures.length +
                           result.session.failures.length +
-                          result.imageHistory.failures.length;
+                          result.imageHistory.failures.length +
+                          result.chatHistory.failures.length +
+                          result.pwa.failures.length;
                         if (failureCount > 0) {
                           toast.warning(
                             "Some local data could not be reset. Reload and try again.",
@@ -1567,11 +1648,13 @@ export function SettingsDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deletionPending ? "Continue account deletion" : "Delete your account permanently?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This cancels active subscriptions, disconnects stored credentials, and deletes your
-              sign-in account and associated cloud records. Legally required billing, security, and
-              backup records may be retained. This action cannot be undone. Type DELETE to continue.
+              {deletionPending
+                ? "Deletion is pending or awaiting verification. Retry continues the same irreversible cleanup. Closing this dialog does not cancel deletion."
+                : "This cancels active subscriptions, disconnects stored credentials, and deletes your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained. This action cannot be undone. Type DELETE to continue."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Input
@@ -1583,13 +1666,19 @@ export function SettingsDialog({
             disabled={deleteAccountBusy}
           />
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAccountBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteAccountBusy}>
+              {deletionPending ? "Close" : "Cancel"}
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={handleDeleteAccount}
               disabled={deleteConfirmation !== "DELETE" || deleteAccountBusy}
             >
-              {deleteAccountBusy ? "Deleting…" : "Delete account"}
+              {deleteAccountBusy
+                ? "Deleting…"
+                : deletionPending
+                  ? "Retry deletion"
+                  : "Delete account"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1870,6 +1959,17 @@ function LibraryItemViewer({
 }
 
 function LibraryPanel() {
+  const { user } = useUser();
+  return <LibraryPanelForOwner key={user?.id ?? "guest"} ownerId={user?.id ?? null} />;
+}
+function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const [items, setItems] = useState<LibItem[]>([]);
   const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>(
     [],
@@ -1890,6 +1990,7 @@ function LibraryPanel() {
         (await import("@/lib/shared-chats.functions")).listSharedWithMe(),
         (await import("@/lib/shared-chats.functions")).listMySharedChats(),
       ]);
+      if (!active.current) return;
       setItems(lib);
       setShared(inbox);
       setMine(mineShares);
@@ -1907,7 +2008,18 @@ function LibraryPanel() {
   const remove = async (id: string) => {
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
-      await deleteLibraryItem({ data: { id } });
+      const item = items.find((value) => value.id === id);
+      if (!item || !ownerId || !active.current) return;
+      await deleteLibraryItem({
+        data: {
+          id,
+          expectedOwnerId: ownerId,
+          generation: item.original_generation,
+          contentGeneration: item.content_generation,
+          revision: item.content_revision,
+        },
+      });
+      if (!active.current) return;
       setItems((prev) => prev.filter((i) => i.id !== id));
       setViewing((v) => (v?.id === id ? null : v));
       toast.success("Deleted.");
@@ -2237,15 +2349,25 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
                 size="sm"
                 variant="ghost"
                 className="rounded-full"
-                onClick={() => {
-                  saveConversations(
-                    userKey,
-                    mergeConversations(loadConversations(userKey), [chat]),
-                  );
-                  saveArchivedConversations(
-                    userKey,
-                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
-                  );
+                onClick={async () => {
+                  if (
+                    !(await saveConversations(
+                      userKey,
+                      mergeConversations(loadConversations(userKey), [chat]),
+                    ))
+                  ) {
+                    toast.error("Could not restore chat.");
+                    return;
+                  }
+                  if (
+                    !(await saveArchivedConversations(
+                      userKey,
+                      loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                    ))
+                  ) {
+                    toast.error("Could not update archive.");
+                    return;
+                  }
                   setRevision((value) => value + 1);
                   window.dispatchEvent(new Event("kova:conversations-imported"));
                   toast.success("Chat restored");
@@ -2258,12 +2380,17 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
                 variant="ghost"
                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                 aria-label={`Delete archived chat ${chat.title}`}
-                onClick={() => {
+                onClick={async () => {
                   if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
-                  saveArchivedConversations(
-                    userKey,
-                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
-                  );
+                  if (
+                    !(await saveArchivedConversations(
+                      userKey,
+                      loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                    ))
+                  ) {
+                    toast.error("Could not delete archived chat.");
+                    return;
+                  }
                   setRevision((value) => value + 1);
                   toast.success("Archived chat deleted");
                 }}

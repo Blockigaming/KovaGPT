@@ -132,6 +132,8 @@ function promotionFixture({
 }
 
 function accountClient({
+  originalPaths = [],
+  originalRemoveError = false,
   projectRows = [],
   promotions = [],
   deliverables = [],
@@ -184,6 +186,10 @@ function accountClient({
         .concat([`${USER_ID}/unpromoted.json`]),
       { onRemove: () => events.push("agent-evidence") },
     ),
+    "library-files": mockBucket(originalPaths, {
+      removeError: originalRemoveError,
+      onRemove: () => events.push("library-files"),
+    }),
     "library-images": mockBucket([`${USER_ID}/saved.png`], {
       onRemove: () => events.push("library-images"),
     }),
@@ -200,38 +206,52 @@ function accountClient({
         return buckets[bucket];
       },
     },
-    async rpc(name, args) {
-      if (name === "claim_project_storage_source_cleanup") return { data: [], error: null };
-      if (name === "claim_account_retained_source_transfer")
-        return { data: { state: "busy" }, error: null };
-      if (name === "claim_account_project_file_cleanup") {
-        events.push("project-claim");
-        if (lifecycleBusy) return { data: { state: "busy" }, error: null };
-        const row = rows.find((entry) => entry.id === args.p_file_id);
-        row.delete_attempt_id ??= args.p_attempt_id;
-        return { data: { ...row, state: "claimed" }, error: null };
+    rpc(name, args) {
+      if (
+        name === "prepare_library_image_account_deletion" ||
+        name === "claim_library_image_cleanup"
+      ) {
+        const result = {
+          data: name === "prepare_library_image_account_deletion" ? true : [],
+          error: null,
+        };
+        const response = Promise.resolve(result);
+        response.abortSignal = () => response;
+        return response;
       }
-      if (name === "finalize_account_project_file_cleanup") {
-        events.push("project-finalize");
-        if (lifecycleFinalizeError) return { data: null, error: { message: "finalize failed" } };
-        rows = rows.filter((entry) => entry.id !== args.p_file_id);
-        return { data: { deleted: true }, error: null };
-      }
-      if (name === "settle_account_project_storage_charges") return { data: true, error: null };
-      const { p_owner_id: userId, p_limit: limit } = args;
-      assert.equal(name, "list_account_project_storage_objects");
-      events.push("project-ownership");
-      if (ownershipLookupError) return { data: null, error: { message: "lookup failed" } };
-      return {
-        data: ownedObjects
-          .filter(
-            (entry) =>
-              entry.owner_id === userId && buckets["project-files"].objects.has(entry.name),
-          )
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .slice(0, limit),
-        error: null,
-      };
+      return (async () => {
+        if (name === "claim_project_storage_source_cleanup") return { data: [], error: null };
+        if (name === "claim_account_retained_source_transfer")
+          return { data: { state: "busy" }, error: null };
+        if (name === "claim_account_project_file_cleanup") {
+          events.push("project-claim");
+          if (lifecycleBusy) return { data: { state: "busy" }, error: null };
+          const row = rows.find((entry) => entry.id === args.p_file_id);
+          row.delete_attempt_id ??= args.p_attempt_id;
+          return { data: { ...row, state: "claimed" }, error: null };
+        }
+        if (name === "finalize_account_project_file_cleanup") {
+          events.push("project-finalize");
+          if (lifecycleFinalizeError) return { data: null, error: { message: "finalize failed" } };
+          rows = rows.filter((entry) => entry.id !== args.p_file_id);
+          return { data: { deleted: true }, error: null };
+        }
+        if (name === "settle_account_project_storage_charges") return { data: true, error: null };
+        const { p_owner_id: userId, p_limit: limit } = args;
+        assert.equal(name, "list_account_project_storage_objects");
+        events.push("project-ownership");
+        if (ownershipLookupError) return { data: null, error: { message: "lookup failed" } };
+        return {
+          data: ownedObjects
+            .filter(
+              (entry) =>
+                entry.owner_id === userId && buckets["project-files"].objects.has(entry.name),
+            )
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .slice(0, limit),
+          error: null,
+        };
+      })();
     },
     from(table) {
       const source =
@@ -867,4 +887,20 @@ test("retained-source cleanup processes at most two verified transfers before a 
   assert.equal(calls.length, 3);
   assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
   assert.equal(client.buckets["project-files"].objects.size, 3);
+});
+
+test("original document account cleanup removes only the owner prefix and blocks later deletion after a failed removal", async () => {
+  const events = [],
+    own = `${USER_ID}/original.pdf`,
+    other = `${OTHER_USER_ID}/other.pdf`;
+  const client = accountClient({ originalPaths: [own, other], events });
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.deepEqual([...client.buckets["library-files"].objects], [other]);
+  assert.ok(events.indexOf("library-files") < events.indexOf("library-images"));
+  const blocked = accountClient({ originalPaths: [own], originalRemoveError: true });
+  await assert.rejects(
+    cleanupOwnedStorageBeforeAccountDeletion(blocked, USER_ID),
+    /account_storage_remove_failed/,
+  );
+  assert.equal(blocked.buckets["library-images"].objects.size, 1);
 });

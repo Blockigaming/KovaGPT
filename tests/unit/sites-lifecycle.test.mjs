@@ -6,10 +6,12 @@ import { inspectSiteFiles, sha256 } from "../../src/lib/sites-policy.mjs";
 const OWNER = "123e4567-e89b-42d3-a456-426614174000",
   VIEWER = "423e4567-e89b-42d3-a456-426614174000",
   STRANGER = "523e4567-e89b-42d3-a456-426614174000";
-const SITE = "623e4567-e89b-42d3-a456-426614174000",
-  VERSION = "723e4567-e89b-42d3-a456-426614174000";
+const SITE_REQUEST = "623e4567-e89b-42d3-a456-426614174000",
+  VERSION_REQUEST = "723e4567-e89b-42d3-a456-426614174000";
 async function fixture() {
   const db = new PGlite();
+  db.siteId = SITE_REQUEST;
+  db.versionId = VERSION_REQUEST;
   try {
     await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;CREATE SCHEMA kova_private;
  CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,email_confirmed_at timestamptz,deleted_at timestamptz,banned_until timestamptz,is_anonymous boolean DEFAULT false);
@@ -41,6 +43,15 @@ async function fixture() {
         "utf8",
       ),
     );
+    await db.exec(
+      await readFile(
+        new URL(
+          "../../supabase/migrations/20260905020833_sites_export_and_erasure.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
     return db;
   } catch (e) {
     await db.close();
@@ -67,7 +78,18 @@ async function mutate(
   revision,
   { owner = OWNER, mutation = crypto.randomUUID(), limit = 10000000 } = {},
 ) {
-  return rpc(db, "mutate_kova_site", [owner, SITE, mutation, revision, action, payload, limit]);
+  const result = await rpc(db, "mutate_kova_site", [
+    owner,
+    db.siteId,
+    mutation,
+    revision,
+    action,
+    payload,
+    limit,
+  ]);
+  if (action === "create") db.siteId = result.siteId;
+  if (action === "saveVersion") db.versionId = result.versionId;
+  return result;
 }
 async function prepared(db) {
   await mutate(db, "create", { title: "Example", slug: "example" }, 0);
@@ -76,14 +98,14 @@ async function prepared(db) {
     { path: "app.js", base64: btoa("window.loaded=true") },
   ]);
   delete inspected.bytes;
-  await mutate(db, "saveVersion", { versionId: VERSION, ...inspected }, 1);
+  await mutate(db, "saveVersion", { versionId: db.versionId, ...inspected }, 1);
   return inspected;
 }
 async function ticket(db, user = VIEWER, preview = null) {
   const token = crypto.randomUUID();
-  await rpc(db, "issue_kova_site_ticket", [user, SITE, await sha256(token), user, preview]);
+  await rpc(db, "issue_kova_site_ticket", [user, db.siteId, await sha256(token), user, preview]);
   const session = crypto.randomUUID();
-  await rpc(db, "redeem_kova_site_ticket", [SITE, await sha256(token), await sha256(session)]);
+  await rpc(db, "redeem_kova_site_ticket", [db.siteId, await sha256(token), await sha256(session)]);
   return sha256(session);
 }
 
@@ -97,26 +119,26 @@ test("private Sites require current named viewer grants and unpublished versions
       false,
     );
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", null]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", null]),
       null,
     );
-    await assert.rejects(rpc(db, "read_kova_sites", [STRANGER, SITE, null]), /not_found/);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "private" }, 2);
+    await assert.rejects(rpc(db, "read_kova_sites", [STRANGER, db.siteId, null]), /not_found/);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "private" }, 2);
     await assert.rejects(ticket(db), /access_denied/);
     await mutate(db, "grantViewer", { email: "viewer@example.com" }, 3);
     assert.equal(
-      (await rpc(db, "read_kova_sites", [OWNER, SITE, null])).viewers[0].viewer_label,
+      (await rpc(db, "read_kova_sites", [OWNER, db.siteId, null])).viewers[0].viewer_label,
       "viewer@example.com",
     );
     const session = await ticket(db);
     assert.equal(
-      (await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session])).type,
+      (await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session])).type,
       "text/html",
     );
-    await assert.rejects(ticket(db, VIEWER, VERSION), /access_denied/);
+    await assert.rejects(ticket(db, VIEWER, db.versionId), /access_denied/);
     await mutate(db, "revokeViewer", { viewerId: VIEWER }, 4);
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session]),
       null,
     );
     await db.exec("SET ROLE authenticated");
@@ -133,37 +155,37 @@ test("immutable versions charge exactly once and publication receipts invalidate
     const inspected = await prepared(db);
     const used = (await db.query("SELECT bytes_used FROM public.user_storage")).rows[0].bytes_used;
     const receipt = crypto.randomUUID();
-    await mutate(db, "publish", { versionId: VERSION, visibility: "public" }, 2, {
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "public" }, 2, {
       mutation: receipt,
     });
     assert.equal(
       await rpc(db, "verify_kova_site_publication", [
         OWNER,
-        SITE,
-        VERSION,
+        db.siteId,
+        db.versionId,
         receipt,
         inspected.manifestSha256,
       ]),
       true,
     );
-    assert.ok(await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", null]));
+    assert.ok(await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", null]));
     await assert.rejects(
       db.query("UPDATE public.kova_site_files SET content_base64='eA=='"),
       /immutable/,
     );
-    await assert.rejects(mutate(db, "retireVersion", { versionId: VERSION }, 3), /published/);
+    await assert.rejects(mutate(db, "retireVersion", { versionId: db.versionId }, 3), /published/);
     await mutate(db, "unpublish", {}, 3);
     assert.equal(
       await rpc(db, "verify_kova_site_publication", [
         OWNER,
-        SITE,
-        VERSION,
+        db.siteId,
+        db.versionId,
         receipt,
         inspected.manifestSha256,
       ]),
       false,
     );
-    await mutate(db, "retireVersion", { versionId: VERSION }, 4);
+    await mutate(db, "retireVersion", { versionId: db.versionId }, 4);
     assert.equal(
       (await db.query("SELECT bytes_used FROM public.user_storage")).rows[0].bytes_used,
       used,
@@ -174,27 +196,116 @@ test("immutable versions charge exactly once and publication receipts invalidate
       (await db.query("SELECT bytes_used FROM public.user_storage")).rows[0].bytes_used,
       0,
     );
-    assert.equal(
-      (await db.query("SELECT count(*)::int n FROM public.kova_site_retirements")).rows[0].n,
-      0,
-    );
   } finally {
     await db.close();
   }
 });
 
-test("cleanup finishes deleted Site metadata even when no versions exist", async () => {
+test("deleted Sites purge personal metadata after bounded retirement and never reuse caller-selected identities", async () => {
   const db = await fixture();
   try {
-    await mutate(db, "create", { title: "Empty", slug: "empty-site" }, 0);
-    await mutate(db, "delete", {}, 1);
-    assert.equal((await db.query("SELECT count(*)::int n FROM public.kova_sites")).rows[0].n, 1);
-    await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]);
-    assert.equal((await db.query("SELECT count(*)::int n FROM public.kova_sites")).rows[0].n, 0);
+    const snapshot = await prepared(db);
+    for (let i = 0; i < 6; i++)
+      await mutate(db, "saveVersion", { versionId: VERSION_REQUEST, ...snapshot }, i + 2);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "public" }, 8);
+    await mutate(
+      db,
+      "rename",
+      { title: "Private customer title", slug: "private-customer-alias" },
+      9,
+    );
+    const session = await ticket(db, OWNER);
+    const oldSite = db.siteId;
+    const mutation = crypto.randomUUID();
+    const deleted = await mutate(db, "delete", {}, 10, { mutation });
     assert.equal(
-      (await db.query("SELECT count(*)::int n FROM public.kova_site_aliases")).rows[0].n,
+      await rpc(db, "read_kova_site_asset", [oldSite, "example", "index.html", session]),
+      null,
+    );
+    assert.equal(await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]), 5);
+    assert.equal(
+      (await db.query("SELECT count(*)::int n FROM kova_sites WHERE id=$1", [oldSite])).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("SELECT count(*)::int n FROM kova_site_retirements")).rows[0].n,
+      2,
+    );
+    assert.equal(await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]), 2);
+    for (const table of [
+      "kova_sites",
+      "kova_site_versions",
+      "kova_site_files",
+      "kova_site_aliases",
+      "kova_site_viewers",
+      "kova_site_access_sessions",
+      "kova_site_retirements",
+    ])
+      assert.equal((await db.query(`SELECT count(*)::int n FROM ${table}`)).rows[0].n, 0, table);
+    assert.equal(
+      (await db.query("SELECT bytes_used FROM user_storage WHERE user_id=$1", [OWNER])).rows[0]
+        .bytes_used,
       0,
     );
+    assert.deepEqual(
+      await mutate(db, "delete", {}, 10, { mutation }),
+      deleted,
+      "receipt replay cannot recreate metadata",
+    );
+    assert.equal(await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]), 0);
+    const recreated = await rpc(db, "mutate_kova_site", [
+      STRANGER,
+      oldSite,
+      crypto.randomUUID(),
+      0,
+      "create",
+      { title: "Another owner", slug: "example" },
+      1000000,
+    ]);
+    assert.notEqual(
+      recreated.siteId,
+      oldSite,
+      "a new caller cannot claim a retired public hostname",
+    );
+    assert.equal(
+      await rpc(db, "read_kova_site_asset", [oldSite, "example", "index.html", session]),
+      null,
+    );
+    await db.exec("UPDATE kova_site_receipts SET created_at=now()-interval '9 days'");
+    await rpc(db, "cleanup_kova_site_versions", [null, 5]);
+    assert.equal((await db.query("SELECT count(*)::int n FROM kova_site_receipts")).rows[0].n, 0);
+  } finally {
+    await db.close();
+  }
+});
+
+test("legacy settled retirements release no quota again and empty deleted Sites are finalized", async () => {
+  const db = await fixture();
+  try {
+    await mutate(db, "create", { title: "Empty private title", slug: "empty-site" }, 0);
+    await mutate(db, "delete", {}, 1);
+    await db.query("INSERT INTO user_storage(user_id,bytes_used) VALUES($1,500)", [OWNER]);
+    await db.query(
+      "INSERT INTO kova_site_retirements(version_id,owner_id,size_bytes,settled_at) VALUES($1,$2,100,now())",
+      [VERSION_REQUEST, OWNER],
+    );
+    assert.equal(await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]), 0);
+    assert.equal((await db.query("SELECT count(*)::int n FROM kova_sites")).rows[0].n, 0);
+    assert.equal(
+      (await db.query("SELECT count(*)::int n FROM kova_site_retirements")).rows[0].n,
+      0,
+    );
+    assert.equal(
+      (await db.query("SELECT bytes_used FROM user_storage WHERE user_id=$1", [OWNER])).rows[0]
+        .bytes_used,
+      500,
+    );
+    await db.exec("SET ROLE authenticated");
+    await assert.rejects(
+      db.query("SELECT * FROM kova_site_file_export_metadata"),
+      /permission denied/,
+    );
+    await db.exec("RESET ROLE");
   } finally {
     await db.close();
   }
@@ -206,7 +317,7 @@ test("snapshot save receipts survive ambiguous retries and reject changed payloa
     await mutate(db, "create", { title: "Example", slug: "example" }, 0);
     const files = await inspectSiteFiles([{ path: "index.html", base64: btoa("hello") }]);
     delete files.bytes;
-    const payload = { versionId: VERSION, ...files },
+    const payload = { versionId: db.versionId, ...files },
       mutation = crypto.randomUUID();
     const first = await mutate(db, "saveVersion", payload, 1, { mutation });
     assert.deepEqual(await mutate(db, "saveVersion", payload, 1, { mutation }), first);
@@ -235,15 +346,20 @@ test("renames preserve accessible redirects and account fences immediately revok
   const db = await fixture();
   try {
     await prepared(db);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "public" }, 2);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "public" }, 2);
     await mutate(db, "rename", { title: "Renamed", slug: "renamed-site" }, 3);
-    assert.deepEqual(await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", null]), {
-      redirectSlug: "renamed-site",
-    });
-    assert.ok(await rpc(db, "read_kova_site_asset", [SITE, "renamed-site", "index.html", null]));
+    assert.deepEqual(
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", null]),
+      {
+        redirectSlug: "renamed-site",
+      },
+    );
+    assert.ok(
+      await rpc(db, "read_kova_site_asset", [db.siteId, "renamed-site", "index.html", null]),
+    );
     await db.query("INSERT INTO public.account_deletion_fences VALUES($1)", [OWNER]);
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "renamed-site", "index.html", null]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "renamed-site", "index.html", null]),
       null,
     );
     await assert.rejects(
@@ -272,21 +388,21 @@ test("access tickets redeem once, bind one Site and epoch, and recheck current b
   const db = await fixture();
   try {
     await prepared(db);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "private" }, 2);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "private" }, 2);
     await mutate(db, "grantViewer", { email: "viewer@example.com" }, 3);
     const hash = "a".repeat(64);
-    await rpc(db, "issue_kova_site_ticket", [VIEWER, SITE, hash, VIEWER, null]);
+    await rpc(db, "issue_kova_site_ticket", [VIEWER, db.siteId, hash, VIEWER, null]);
     assert.equal(
       await rpc(db, "redeem_kova_site_ticket", [crypto.randomUUID(), hash, "b".repeat(64)]),
       null,
     );
-    assert.ok(await rpc(db, "redeem_kova_site_ticket", [SITE, hash, "b".repeat(64)]));
-    assert.equal(await rpc(db, "redeem_kova_site_ticket", [SITE, hash, "c".repeat(64)]), null);
+    assert.ok(await rpc(db, "redeem_kova_site_ticket", [db.siteId, hash, "b".repeat(64)]));
+    assert.equal(await rpc(db, "redeem_kova_site_ticket", [db.siteId, hash, "c".repeat(64)]), null);
     await db.query("UPDATE auth.users SET banned_until=now()+interval '1 day' WHERE id=$1", [
       VIEWER,
     ]);
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", "b".repeat(64)]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", "b".repeat(64)]),
       null,
     );
   } finally {
@@ -298,13 +414,13 @@ test("revoking the issuing Auth session denies fresh private reads and ticket re
   const db = await fixture();
   try {
     await prepared(db);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "private" }, 2);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "private" }, 2);
     await mutate(db, "grantViewer", { email: "viewer@example.com" }, 3);
     const session = await ticket(db),
       pending = "f".repeat(64);
-    await rpc(db, "issue_kova_site_ticket", [VIEWER, SITE, pending, VIEWER, null]);
+    await rpc(db, "issue_kova_site_ticket", [VIEWER, db.siteId, pending, VIEWER, null]);
     await assert.rejects(
-      rpc(db, "issue_kova_site_ticket", [VIEWER, SITE, "e".repeat(64), OWNER, null]),
+      rpc(db, "issue_kova_site_ticket", [VIEWER, db.siteId, "e".repeat(64), OWNER, null]),
       /access_denied/,
     );
     assert.equal(
@@ -317,10 +433,13 @@ test("revoking the issuing Auth session denies fresh private reads and ticket re
     );
     await db.query("DELETE FROM auth.sessions WHERE id=$1", [VIEWER]);
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session]),
       null,
     );
-    assert.equal(await rpc(db, "redeem_kova_site_ticket", [SITE, pending, "d".repeat(64)]), null);
+    assert.equal(
+      await rpc(db, "redeem_kova_site_ticket", [db.siteId, pending, "d".repeat(64)]),
+      null,
+    );
     assert.equal(await rpc(db, "check_kova_site_auth_session", [VIEWER, VIEWER]), false);
   } finally {
     await db.close();
@@ -331,24 +450,26 @@ test("stale or expired private cookies fall back only to the current public publ
   const db = await fixture();
   try {
     await prepared(db);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "private" }, 2);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "private" }, 2);
     await mutate(db, "grantViewer", { email: "viewer@example.com" }, 3);
     const session = await ticket(db);
-    await mutate(db, "publish", { versionId: VERSION, visibility: "public" }, 4);
+    await mutate(db, "publish", { versionId: db.versionId, visibility: "public" }, 4);
     assert.equal(
-      (await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session])).versionId,
-      VERSION,
+      (await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session]))
+        .versionId,
+      db.versionId,
     );
     await db.exec(
       "UPDATE public.kova_site_access_sessions SET expires_at=now()-interval '1 second'",
     );
     assert.equal(
-      (await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session])).versionId,
-      VERSION,
+      (await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session]))
+        .versionId,
+      db.versionId,
     );
     await mutate(db, "unpublish", {}, 5);
     assert.equal(
-      await rpc(db, "read_kova_site_asset", [SITE, "example", "index.html", session]),
+      await rpc(db, "read_kova_site_asset", [db.siteId, "example", "index.html", session]),
       null,
     );
   } finally {

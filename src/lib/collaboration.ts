@@ -29,6 +29,7 @@ const CanvasSnapshot = z.object({
     message_id: z.string(),
     content: z.string().max(400000),
     revision: z.number().int().positive(),
+    comment_epoch: z.number().int().nonnegative().default(0),
     updated_at: z.string(),
   }),
   canEdit: z.boolean(),

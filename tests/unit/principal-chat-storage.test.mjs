@@ -189,11 +189,15 @@ test("every principal receives distinct deterministic storage keys", () => {
   assert.equal(new Set(principals.map(pendingActiveStorageKey)).size, principals.length);
 });
 
-test("temporary conversion persists a memory boundary and excludes other private chats", () => {
+test("temporary conversion persists a memory boundary and excludes other private chats", async () => {
   const active = { ...conversation("temporary"), temporary: true, temporaryContext: "clean" };
   const other = { ...conversation("other-private"), temporary: true };
   const regular = conversation("regular");
-  const converted = persistTemporaryConversation("account-a", active, [active, other, regular]);
+  const converted = await persistTemporaryConversation("account-a", active, [
+    active,
+    other,
+    regular,
+  ]);
   assert.ok(converted);
   assert.deepEqual(
     converted.map((item) => item.id),
@@ -208,14 +212,14 @@ test("temporary conversion persists a memory boundary and excludes other private
   assert.deepEqual(loadConversations("account-b"), []);
 });
 
-test("temporary conversion reports storage failure without changing the private conversation", () => {
+test("temporary conversion reports storage failure without changing the private conversation", async () => {
   const active = { ...conversation("temporary"), temporary: true };
   const setItem = storage.setItem;
   storage.setItem = () => {
     throw new Error("quota exceeded");
   };
   try {
-    assert.equal(persistTemporaryConversation("account-a", active, [active]), null);
+    assert.equal(await persistTemporaryConversation("account-a", active, [active]), null);
     assert.equal(active.temporary, true);
     assert.equal(active.memoryStartIndex, undefined);
   } finally {

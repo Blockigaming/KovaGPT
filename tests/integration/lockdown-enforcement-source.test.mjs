@@ -59,8 +59,8 @@ test("OAuth callbacks re-check the account after state validation and before exc
   before(
     google.slice(google.indexOf("const userId = await verifyState(state)")),
     "assertLockdownAllows(",
-    "exchangeCodeForTokens(",
-    "Google OAuth callback",
+    "finishGoogleOAuth(",
+    "Google OAuth callback before claimed credential exchange",
   );
 });
 

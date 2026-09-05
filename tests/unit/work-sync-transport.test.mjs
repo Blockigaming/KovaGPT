@@ -13,7 +13,7 @@ const compiled = ts
   .outputText.replace(/^import[\s\S]*?from ["'][^"']+["'];\n/gm, "");
 let getSession = async () => ({ data: { session: null } });
 globalThis.__kovaWorkSyncTransportTest = { auth: { getSession: () => getSession() } };
-const boundary = "const supabase = globalThis.__kovaWorkSyncTransportTest;\n";
+const boundary = `import {readResponseBytesBounded} from ${JSON.stringify(new URL("../../src/lib/endpoint-reliability.mjs", import.meta.url).href)};\nconst supabase = globalThis.__kovaWorkSyncTransportTest;\n`;
 const { requestWorkSync } = await import(
   `data:text/javascript;base64,${Buffer.from(boundary + compiled).toString("base64")}`
 );
@@ -69,6 +69,68 @@ test("transport forwards the expected bearer and immutable body without caching"
       await requestWorkSync(userId, "/api/work/sync", new AbortController().signal, body),
       { result: { ok: true } },
     );
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("sync aborts oversized byte streams before buffering the whole response", async () => {
+  const original = globalThis.fetch;
+  let cancelled = false,
+    pulls = 0;
+  getSession = async () => ({
+    data: { session: { user: { id: userId }, access_token: "captured-token" } },
+  });
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        pull(controller) {
+          pulls++;
+          controller.enqueue(new Uint8Array(1024 * 1024).fill(32));
+        },
+        cancel() {
+          cancelled = true;
+        },
+      }),
+    );
+  try {
+    await assert.rejects(
+      requestWorkSync(userId, "/api/work/sync", new AbortController().signal),
+      /response_too_large/,
+    );
+    assert.equal(cancelled, true);
+    assert.ok(pulls <= 10);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("a deferred response cannot return private payload after the captured view is aborted", async () => {
+  const original = globalThis.fetch,
+    controller = new AbortController();
+  let finishFetch, started;
+  const fetching = new Promise((resolve) => {
+    started = resolve;
+  });
+  getSession = async () => ({
+    data: { session: { user: { id: userId }, access_token: "captured-token" } },
+  });
+  globalThis.fetch = async (path, init) => {
+    assert.equal(init.headers.Authorization, "Bearer captured-token");
+    started();
+    return new Promise((resolve) => {
+      finishFetch = resolve;
+    });
+  };
+  try {
+    const result = requestWorkSync(userId, "/api/work/execution", controller.signal);
+    await fetching;
+    controller.abort(new Error("view_cleared"));
+    getSession = async () => ({
+      data: { session: { user: { id: otherId }, access_token: "new-token" } },
+    });
+    finishFetch(Response.json({ private: "old owner payload" }));
+    await assert.rejects(result, /view_cleared|aborted|canceled/);
   } finally {
     globalThis.fetch = original;
   }

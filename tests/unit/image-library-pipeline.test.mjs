@@ -130,13 +130,29 @@ test("Images and Library routes retain the durable image-pipeline wiring", async
   assert.doesNotMatch(library, /src=\{item\.file_url!?\}/);
   assert.doesNotMatch(library, /src=\{visiblePreviewItem\.file_url!?\}/);
 
-  for (const source of [libraryFunctions, imageFunctions]) {
-    const removeAt = source.indexOf("await removePrivateLibraryImage");
-    const deleteAt = source.indexOf('.from("user_library_items")', removeAt);
-    assert.ok(
-      removeAt >= 0 && deleteAt > removeAt,
-      "Storage removal must precede metadata deletion",
-    );
-    assert.match(source, /if \(lookupError\)/u);
-  }
+  assert.match(libraryFunctions, /deletePrivateLibraryImage/u);
+  assert.match(libraryFunctions, /if \(lookupError\)/u);
+  assert.match(imageFunctions, /return deleteLibraryItem\(\{ data \}\)/u);
+  const storage = await readFile("src/lib/library-image-storage.server.mjs", "utf8");
+  const removal = storage.slice(
+    storage.indexOf("async function removeRecorded"),
+    storage.indexOf("export async function deletePrivateLibraryImage"),
+  );
+  assert.ok(
+    removal.indexOf(".remove([row.storage_path])") <
+      removal.indexOf('"record_library_image_cleanup"'),
+  );
+  assert.match(removal, /if \(removed.error\) throw failure\(\)/u);
+  const migration = await readFile(
+    "supabase/migrations/20260905033500_library_image_storage_quota.sql",
+    "utf8",
+  );
+  const settlement = migration.slice(
+    migration.indexOf("CREATE FUNCTION public.record_library_image_cleanup"),
+    migration.indexOf("CREATE FUNCTION public.claim_library_image_cleanup"),
+  );
+  assert.ok(
+    settlement.indexOf("EXISTS(SELECT 1 FROM storage.objects") <
+      settlement.indexOf("DELETE FROM public.user_library_items"),
+  );
 });

@@ -1,7 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
-import { readAccountExportRows } from "../../src/lib/account-export-pagination.mjs";
+import {
+  readAccountExportRows,
+  createAccountExportReadBudget,
+} from "../../src/lib/account-export-pagination.mjs";
+
+test("large Work and document pages share a cumulative byte cap and stop every reader after rejection", async () => {
+  const budget = createAccountExportReadBudget(2 * 1024 * 1024);
+  const calls = [];
+  const query = (table) => () => ({
+    order() {
+      return this;
+    },
+    async range(from, to) {
+      calls.push({ table, from, to });
+      return {
+        data: Array.from({ length: to - from + 1 }, (_, i) => ({
+          id: from + i,
+          state: "a".repeat(256 * 1024),
+        })),
+        error: null,
+      };
+    },
+  });
+  await assert.rejects(
+    readAccountExportRows(query("work_execution_runs"), "work_execution_runs", 500, 100000, budget),
+    /too_large/,
+  );
+  assert.deepEqual(calls, [{ table: "work_execution_runs", from: 0, to: 7 }]);
+  await assert.rejects(
+    readAccountExportRows(query("canvas_documents"), "canvas_documents", 500, 100000, budget),
+    /too_large/,
+  );
+  assert.equal(
+    calls.length,
+    1,
+    "another collector must not fetch after the shared allocation budget is exhausted",
+  );
+});
 
 test("real PostgREST queries preserve every row across stable composite-key pages", async () => {
   const source = Array.from({ length: 1001 }, (_, index) => ({
@@ -90,9 +127,11 @@ test("later-page failures and null data cannot produce a successful partial expo
   }
 });
 
-test("Google preferences and Site children export through their complete actual primary keys", async () => {
+test("Google preferences, Site children and Work events export through their complete actual primary keys", async () => {
   const keys = {
     google_connection_preferences: ["user_id"],
+    work_execution_events: ["run_id", "revision"],
+    scheduled_task_event_source_export_rows: ["grant_id"],
     kova_site_files: ["version_id", "path"],
     kova_site_aliases: ["site_id", "slug"],
     kova_site_viewers: ["site_id", "viewer_id"],

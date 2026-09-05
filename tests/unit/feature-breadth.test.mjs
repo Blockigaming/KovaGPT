@@ -66,5 +66,6 @@ test("Automation Builder creates through the real scheduled-task flow", () => {
   assert.match(builder, /Scheduled Task history/);
   assert.match(builder, /never\s+claimed/);
   assert.match(tasks, /createAutomation/);
-  assert.match(tasks, /await create\(/);
+  assert.match(tasks, /setEditor\("new"\)/);
+  assert.match(read("src/components/ScheduledTaskEditor.tsx"), /await create\(/);
 });

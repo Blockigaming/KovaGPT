@@ -100,7 +100,9 @@ test("all three scope budgets prevent concurrent overspend and require explicit 
     assert.equal(attempts.filter((x) => x.status === "fulfilled").length, 1);
     assert.match(attempts.find((x) => x.status === "rejected").reason.message, /budget_exceeded/);
     const r = attempts.find((x) => x.status === "fulfilled").value;
-    await finish(db, r, "released");
+    assert.equal(await finish(db, r, "released"), true);
+    assert.equal(await finish(db, r, "released"), true);
+    assert.equal(await finish(db, r, "settled"), false);
     await db.exec(`delete from developer_billing_limits where scope_type='project'`);
     await assert.rejects(admit(db, "missing"), /limits_unconfigured/);
     assert.deepEqual(await balance(db), { available: 100, reserved: 0 });
@@ -124,7 +126,24 @@ test("settlement conserves balances, returns unused hold, and is terminal/idempo
       ledger.rows.reduce((sum, row) => sum + row.amount, 0),
       -10,
     );
-    await finish(db, r, "released");
+    assert.equal(await finish(db, r, "released"), false);
+    assert.equal(await finish(db, r, "settled", 11), false);
+    assert.equal(await finish(db, r, "settled", 10, 5), false);
+    for (const patch of [{ usage: { input_tokens: 11 } }, { providerResponseId: "resp_other" }]) {
+      const result = await db.query("select finish_developer_billing($1,$2,'settled',$3) ok", [
+        r.request_id,
+        r.lease_token,
+        {
+          finalCustomerCharge: 10,
+          actualTotalVariableCost: 4,
+          finalUpstreamCost: 4,
+          usage: { input_tokens: 10 },
+          providerResponseId: "resp_test",
+          ...patch,
+        },
+      ]);
+      assert.equal(result.rows[0].ok, false);
+    }
     assert.deepEqual(await balance(db), { available: 90, reserved: 0 });
     await assert.rejects(db.query("delete from developer_credit_ledger"), /immutable/);
   } finally {

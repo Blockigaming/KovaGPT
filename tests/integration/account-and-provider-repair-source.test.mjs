@@ -17,8 +17,9 @@ test("account deletion is authenticated, explicit, billing-safe, and server exec
   assert.match(account, /retireStripeCustomerForAccountDeletion\(billing\)/);
   assert.match(billingDeletion, /subscriptions\.cancel/);
   assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
-  assert.match(account, /account was not deleted/);
-  assert.match(settings, /authFetch\("\/api\/account"/);
+  assert.match(account, /irreversible/);
+  assert.doesNotMatch(account, /releaseAccountExportDeletionFence/);
+  assert.match(settings, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
   assert.match(settings, /deleteConfirmation !== "DELETE"/);
   assert.match(settings, /setDeleteAccountOpen\(true\)/);
 });
@@ -38,7 +39,12 @@ test("writing validates bounded input and provider availability before charging 
 });
 
 test("image and payment webhook parse failures return truthful bounded errors", () => {
-  assert.match(image, /return jsonError\("Invalid JSON\.", 400\)/);
+  assert.match(image, /readResponseBytesBounded\([\s\S]{0,150}16 \* 1024/u);
+  assert.match(image, /throw new ImageInputError\("Invalid image request JSON\."\)/u);
+  assert.match(
+    image,
+    /error instanceof ImageInputError\) return json\(\{ error: error\.message \}, error\.status\)/u,
+  );
   assert.match(stripe, /maxBodyBytes = 2 \* 1024 \* 1024/);
   assert.match(paymentWebhook, /invalid_environment/);
   assert.doesNotMatch(paymentWebhook, /received: true, ignored: "invalid env"/);

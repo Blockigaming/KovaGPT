@@ -24,12 +24,14 @@ import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-aut
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
+
+const ComposerPasteOffer = lazy(() => import("@/components/ComposerPasteOffer"));
 
 export type PendingAttachment = {
   clientId?: string;
@@ -165,6 +167,35 @@ export function ChatInput({
   const attachmentAutoSave = useLibraryAttachmentAutoSave(
     saveAttachmentsToLibrary && isLoaded && !disabled,
     user?.id ?? null,
+  );
+  const pasteGenerationRef = useRef(0);
+  const [pasteOffer, setPasteOffer] = useState<{
+    text: string;
+    original: string;
+    start: number;
+    end: number;
+    attachedId?: string;
+  } | null>(null);
+  const composerStateRef = useRef({ value, attachments });
+  composerStateRef.current = { value, attachments };
+  useEffect(() => {
+    setPasteOffer(null);
+  }, [attachmentAutoSave.scope]);
+  useEffect(() => {
+    if (
+      pasteOffer?.attachedId &&
+      !attachments.some((item) => item.clientId === pasteOffer.attachedId)
+    )
+      setPasteOffer(null);
+  }, [attachments, pasteOffer]);
+  const documentReadsRef = useRef(new Set<AbortController>());
+  const documentReadIdsRef = useRef(new Map<string, AbortController>());
+  useEffect(
+    () => () => {
+      for (const controller of documentReadsRef.current) controller.abort();
+      documentReadsRef.current.clear();
+    },
+    [attachmentAutoSave.scope],
   );
   const attachmentScopeRef = useRef(attachmentAutoSave.scope);
   attachmentScopeRef.current = attachmentAutoSave.scope;
@@ -313,7 +344,8 @@ export function ChatInput({
       const isTextLike =
         f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
-      if (!isImage && !isTextLike) {
+      const isDocument = /\.(pdf|docx|xlsx|pptx)$/i.test(f.name);
+      if (!isImage && !isTextLike && !isDocument) {
         const failed: PendingAttachment = {
           kind: "image",
           dataUrl: "",
@@ -394,7 +426,7 @@ export function ChatInput({
         }
         onAttachmentsChange(nextAttachments);
       } else {
-        if (f.size > MAX_TEXT_FILE_BYTES) {
+        if (f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)) {
           nextAttachments = [
             ...nextAttachments,
             {
@@ -404,7 +436,9 @@ export function ChatInput({
               size: f.size,
               fileType: f.type || "text/plain",
               status: "failed",
-              error: "Text file is larger than 256 KB",
+              error: isDocument
+                ? "Document is larger than 10 MB"
+                : "Text file is larger than 256 KB",
             },
           ];
           setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
@@ -428,17 +462,48 @@ export function ChatInput({
         onAttachmentsChange(nextAttachments);
         setUploadAnnouncement(`Reading ${f.name}`);
         try {
-          const textContent = await f.text();
+          let textContent: string;
+          let extractionNote = "";
+          if (isDocument) {
+            const controller = new AbortController();
+            documentReadsRef.current.add(controller);
+            documentReadIdsRef.current.set(uploading.clientId!, controller);
+            try {
+              const { extractDocumentFile } = await import("@/lib/document-extraction/client");
+              if (!currentRead()) return;
+              const result = await extractDocumentFile(f, controller.signal);
+              if (controller.signal.aborted) return;
+              textContent = result.text;
+              extractionNote = result.note;
+            } finally {
+              documentReadsRef.current.delete(controller);
+              documentReadIdsRef.current.delete(uploading.clientId!);
+            }
+          } else textContent = await f.text();
           if (!currentRead()) return;
-          const completed: PendingAttachment = { ...uploading, textContent, status: "complete" };
+          const completed: PendingAttachment = {
+            ...uploading,
+            textContent,
+            status: "complete",
+            ...(isDocument
+              ? {
+                  name: `${f.name}.extracted.txt`,
+                  fileType: "text/plain",
+                  size: new TextEncoder().encode(textContent).length,
+                }
+              : {}),
+          };
+          if (extractionNote) toast.message(extractionNote);
+
           nextAttachments = nextAttachments.map((attachment) =>
             attachment === uploading ? completed : attachment,
           );
-          void attachmentAutoSave.save(completed, readScope);
+          void attachmentAutoSave.save(completed, readScope, isDocument ? f : undefined);
           seen.add(duplicateKey);
           setUploadAnnouncement(`${f.name} ready for analysis`);
         } catch (error) {
-          if (!currentRead()) return;
+          if (!currentRead() || (error instanceof DOMException && error.name === "AbortError"))
+            return;
           nextAttachments = nextAttachments.map((attachment) =>
             attachment === uploading
               ? {
@@ -456,6 +521,12 @@ export function ChatInput({
     if (nextAttachments !== attachments) onAttachmentsChange(nextAttachments);
   }
 
+  const removeAttachment = (index: number) => {
+    const id = attachments[index]?.clientId;
+    if (id) documentReadIdsRef.current.get(id)?.abort();
+    onAttachmentsChange(attachments.filter((_, position) => position !== index));
+  };
+
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
@@ -463,11 +534,76 @@ export function ChatInput({
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const generation = ++pasteGenerationRef.current;
     const files = Array.from(e.clipboardData.files || []);
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      const plain = e.clipboardData.getData("text/plain");
+      const html = e.clipboardData.getData("text/html");
+      if (disabled || (plain.length <= 10_000 && !html)) return;
+      e.preventDefault();
+      const scope = attachmentScopeRef.current;
+      const original = value,
+        start = ref.current?.selectionStart ?? value.length,
+        end = ref.current?.selectionEnd ?? value.length;
+      try {
+        const { prepareComposerPaste } = await import("@/lib/composer-paste");
+        const text = prepareComposerPaste(plain, html);
+        if (attachmentScopeRef.current !== scope || generation !== pasteGenerationRef.current)
+          return;
+        setPasteOffer({ text, original, start, end });
+      } catch (error) {
+        if (attachmentScopeRef.current === scope)
+          toast.error(error instanceof Error ? error.message : "Paste could not be prepared.");
+      }
+      return;
+    }
     e.preventDefault();
     if (disabled || !showAddMenu) return;
     await addFiles(files);
+  };
+
+  const attachPaste = () => {
+    if (!pasteOffer || disabled || !showAddMenu || attachments.length >= 2) {
+      toast.error("Remove an attachment before attaching pasted text.");
+      return;
+    }
+    if (!tryUseUpload(DAILY_UPLOAD_LIMIT_BY_TIER[userTier])) {
+      onUploadLimit?.();
+      return;
+    }
+    const id = crypto.randomUUID();
+    onAttachmentsChange([
+      ...attachments,
+      {
+        clientId: id,
+        source: "file_upload",
+        kind: "text_file",
+        dataUrl: "",
+        textContent: pasteOffer.text,
+        name: "Pasted-text.md",
+        fileType: "text/markdown",
+        size: new TextEncoder().encode(pasteOffer.text).length,
+        status: "complete",
+      },
+    ]);
+    setPasteOffer({ ...pasteOffer, attachedId: id });
+  };
+  const pasteIntoMessage = () => {
+    if (!pasteOffer || disabled) return;
+    const current = composerStateRef.current;
+    if (pasteOffer.attachedId)
+      onAttachmentsChange(
+        current.attachments.filter((item) => item.clientId !== pasteOffer.attachedId),
+      );
+    onChange(
+      current.value === pasteOffer.original
+        ? current.value.slice(0, pasteOffer.start) +
+            pasteOffer.text +
+            current.value.slice(pasteOffer.end)
+        : current.value + (current.value ? "\n\n" : "") + pasteOffer.text,
+    );
+    setPasteOffer(null);
+    ref.current?.focus();
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -754,6 +890,17 @@ export function ChatInput({
       onDragOver={handleDragOver}
     >
       <div className="mx-auto max-w-[48rem]">
+        {pasteOffer && (
+          <Suspense fallback={null}>
+            <ComposerPasteOffer
+              text={pasteOffer.text}
+              attached={Boolean(pasteOffer.attachedId)}
+              onAttach={attachPaste}
+              onPaste={pasteIntoMessage}
+              onCancel={() => setPasteOffer(null)}
+            />
+          </Suspense>
+        )}
         {!online ? (
           <p role="status" className="pb-2 text-center text-xs text-destructive">
             Reconnect to send
@@ -815,7 +962,7 @@ export function ChatInput({
                     <button
                       type="button"
                       onClick={() => {
-                        onAttachmentsChange(attachments.filter((_, j) => j !== i));
+                        removeAttachment(i);
                         fileRef.current?.click();
                       }}
                       className="absolute bottom-5 left-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 hover:bg-background"
@@ -827,7 +974,7 @@ export function ChatInput({
                   ) : null}
                   <button
                     type="button"
-                    onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}
+                    onClick={() => removeAttachment(i)}
                     className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/85 hover:bg-background"
                     aria-label={`Remove ${a.name}`}
                   >
@@ -864,7 +1011,7 @@ export function ChatInput({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+                accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
                 className="hidden"
                 onChange={onFileChange}

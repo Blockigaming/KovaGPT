@@ -12,7 +12,7 @@ test("durable versions require a signed-in user plus chat and message ids", () =
 });
 
 test("an entry is labelled saved only after the server write resolves", () => {
-  assert.match(editor, /await autosaveQueueRef\.current\.enqueue/u);
+  assert.match(editor, /await autosaveQueueRef\.current\s*\.enqueue/u);
   assert.match(editor, /saveVersionFn\(snapshot\)/u);
   assert.match(editor, /durable = true;/);
   assert.match(editor, /label: durable \? "Saved to this chat" : "Session only"/);
@@ -47,14 +47,11 @@ test("Canvas never edits, exports, or saves a silently truncated document", () =
 
 test("reopening Canvas applies the accepted durable edit without racing a new local edit", () => {
   assert.match(editor, /const remoteSnapshot = collaboration.snapshot/);
-  assert.match(editor, /canApplyLoadedArtifactHistory\(0, localEditRevisionRef\.current\)/);
-  assert.doesNotMatch(
-    editor.slice(
-      editor.indexOf("const remoteSnapshot"),
-      editor.indexOf("useEffect(() => {", editor.indexOf("const remoteSnapshot") + 1),
-    ),
-    /value === lastRecordedValueRef\.current/,
+  assert.match(
+    editor,
+    /canApplyLoadedArtifactHistory\(acknowledgedEditRevision, localEditRevisionRef\.current\) &&\s*pendingAutosavesRef\.current === 0/,
   );
+  assert.match(editor, /setAcknowledgedEditRevision\(editRevision\)/);
   assert.match(editor, /const content = adoptRemote\(\)/);
   assert.match(editor, /lastRecordedValueRef\.current = content/);
   assert.match(editor, /localEditRevisionRef\.current \+= 1/u);
@@ -74,7 +71,7 @@ test("Canvas debounce survives its saving-state render and records the exact edi
   assert.match(autosave, /content: snapshot/);
   assert.match(
     autosave,
-    /await autosaveQueueRef\.current\.enqueue[\s\S]{0,900}lastRecordedValueRef\.current = snapshot/,
+    /await autosaveQueueRef\.current\s*\.enqueue[\s\S]{0,1200}lastRecordedValueRef\.current = snapshot/,
   );
   assert.doesNotMatch(dependencies, /saveState/);
   assert.match(editor, /setSaveState\(durable \? "saved" : "session_only"\)/);
@@ -85,7 +82,7 @@ test("Canvas serializes accepted autosaves so an older request cannot win", () =
   assert.match(editor, /createSerializedWriteQueue\(\)/u);
   assert.match(
     editor,
-    /autosaveQueueRef\.current\.enqueue\(\(\) =>[\s\S]{0,300}saveVersionFn\(snapshot\)/u,
+    /autosaveQueueRef\.current\s*\.enqueue\(\(\) =>[\s\S]{0,300}saveVersionFn\(snapshot\)/u,
   );
 });
 
@@ -93,9 +90,9 @@ test("Canvas queues a revert behind an in-flight edit", () => {
   assert.match(editor, /const lastScheduledValueRef = useRef\(initialContent\)/u);
   assert.match(editor, /value === lastScheduledValueRef\.current/u);
   const scheduledAt = editor.indexOf("lastScheduledValueRef.current = snapshot;");
-  const queuedAt = editor.indexOf("autosaveQueueRef.current.enqueue", scheduledAt);
+  const queuedAt = editor.slice(scheduledAt).search(/autosaveQueueRef\.current\s*\.enqueue/u);
   assert.ok(scheduledAt >= 0);
-  assert.ok(queuedAt > scheduledAt);
+  assert.ok(queuedAt > 0);
   const autosaveStart = editor.indexOf("useEffect(() => {", editor.indexOf("exportDocument"));
   const debounceStart = editor.indexOf("const timer =", autosaveStart);
   assert.doesNotMatch(

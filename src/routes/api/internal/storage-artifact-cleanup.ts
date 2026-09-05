@@ -29,7 +29,18 @@ export const Route = createFileRoute("/api/internal/storage-artifact-cleanup")({
         }
         try {
           return Response.json(
-            { ok: true, swept: await sweepAccountStorageArtifacts() },
+            {
+              ok: true,
+              swept:
+                (await sweepAccountStorageArtifacts()) +
+                (await (
+                  await import("@/lib/library-image-storage.server.mjs")
+                ).sweepLibraryImageUploads(
+                  (await import("@/integrations/supabase/client.server")).supabaseAdmin,
+                  undefined,
+                  AbortSignal.timeout(45000),
+                )),
+            },
             { headers },
           );
         } catch {
