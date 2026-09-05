@@ -9,7 +9,11 @@ import {
 
 function replaceGlobal(t, name, value) {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
-  Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+  Object.defineProperty(globalThis, name, {
+    configurable: true,
+    writable: true,
+    value,
+  });
   t.after(() => {
     if (descriptor) Object.defineProperty(globalThis, name, descriptor);
     else delete globalThis[name];
@@ -103,7 +107,10 @@ test("image history reads exact keys without a separate IDBKeyRange global", asy
   ]);
   const items = await loadImageHistory("alice", 1);
   try {
-    assert.deepEqual(items.map((item) => item.id), ["newer"]);
+    assert.deepEqual(
+      items.map((item) => item.id),
+      ["newer"],
+    );
     assert.equal(items[0].objectUrl, true);
     assert.match(items[0].imageUrl, /^blob:/);
     assert.deepEqual(database.queries, ["alice"]);
@@ -158,7 +165,10 @@ test("image history reads wait for queued writes and deletion stays account-scop
   finishFetch(new Response(new Blob(["saved"], { type: "image/png" })));
   const [, items] = await Promise.all([pendingWrite, pendingRead]);
   try {
-    assert.deepEqual(items.map((item) => item.id), ["same-id"]);
+    assert.deepEqual(
+      items.map((item) => item.id),
+      ["same-id"],
+    );
     await deleteImageHistoryItem("alice", "same-id");
     assert.deepEqual([...database.records.keys()], ['["bob","same-id"]']);
     assert.equal(database.closed(), 3);
