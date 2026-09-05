@@ -30,6 +30,7 @@ export function createLibraryAttachmentAutoSaver({
       } else if (attachment.kind === "image") {
         await saveImage({
           data: {
+            expectedOwnerId: scope.principal,
             imageUrl: attachment.dataUrl,
             title: attachment.name.slice(0, 200),
             source: "upload",
@@ -39,6 +40,7 @@ export function createLibraryAttachmentAutoSaver({
       } else {
         await saveText({
           data: {
+            expectedOwnerId: scope.principal,
             title: attachment.name.slice(0, 200),
             item_type: "upload",
             source: "upload",
