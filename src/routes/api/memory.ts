@@ -19,6 +19,15 @@ import {
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { modelForRole } from "@/lib/ai/model-router.server";
 import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
+import { parseChatSummarySnapshot } from "@/lib/chat-summary-policy.server.mjs";
+import {
+  beginChatMemoryWrite,
+  chatSummariesEnabled,
+  deleteChatMemory,
+  persistChatMemory,
+  queueChatSummary,
+  readChatSummaryDescriptor,
+} from "@/lib/chat-summary.server";
 
 const MEMORY_LIMITS = {
   plus: { returned: 12, stored: 250 },
@@ -104,6 +113,23 @@ export const Route = createFileRoute("/api/memory")({
         if (authorized instanceof Response) return authorized;
 
         try {
+          const contextChatId = new URL(request.url).searchParams.get("contextChatId");
+          if (contextChatId !== null) {
+            if (
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+                contextChatId,
+              )
+            )
+              return jsonError("Invalid chat ID.", 400);
+            return Response.json(
+              await readChatSummaryDescriptor(
+                authorized.auth.supabaseAdmin,
+                authorized.auth.userId,
+                contextChatId,
+              ),
+              { headers: { "Cache-Control": "no-store" } },
+            );
+          }
           const returned =
             authorized.tier === "pro" ? MEMORY_LIMITS.pro.returned : MEMORY_LIMITS.plus.returned;
           const result = await tbl(authorized.auth)
@@ -139,6 +165,19 @@ export const Route = createFileRoute("/api/memory")({
         const authorized = await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
 
+        // Capture the durable privacy epoch before any request-body/provider
+        // work. A DELETE on another device invalidates both queued summaries
+        // and the final cross-chat memory write from this admitted request.
+        let memoryEpoch: number;
+        try {
+          memoryEpoch = await beginChatMemoryWrite(
+            authorized.auth.supabaseAdmin,
+            authorized.auth.userId,
+          );
+        } catch {
+          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+        }
+
         let raw: string;
         try {
           raw = await readUtf8BodyBounded(request, REQUEST_LIMITS.maxBodyBytes);
@@ -152,6 +191,40 @@ export const Route = createFileRoute("/api/memory")({
         }
         const parsed = parseMemoryPayload(raw);
         if (!parsed.ok) return jsonError(parsed.error, parsed.status);
+        const body = JSON.parse(raw) as { contextSummary?: unknown; contextOnly?: unknown };
+        if (body.contextOnly !== undefined && typeof body.contextOnly !== "boolean")
+          return jsonError("Invalid payload.", 400);
+
+        // Admission runs inside the client's existing memory-write barrier.
+        // Privacy deletion drains this POST before removing pending summaries.
+        if (chatSummariesEnabled()) {
+          const contextSummary = body.contextSummary;
+          if (contextSummary !== undefined && contextSummary !== null) {
+            const snapshot = parseChatSummarySnapshot(contextSummary);
+            if (
+              !snapshot ||
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+                parsed.value.chatId,
+              )
+            ) {
+              return jsonError("Invalid conversation summary payload.", 400);
+            }
+            try {
+              await queueChatSummary(
+                authorized.auth.supabaseAdmin,
+                authorized.auth.userId,
+                memoryEpoch,
+                parsed.value.chatId,
+                snapshot,
+              );
+            } catch {
+              return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+            }
+          }
+        }
+
+        if (body.contextOnly === true)
+          return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 
         const missingProvider = missingAiProviderResponse();
         if (missingProvider) return missingProvider;
@@ -178,9 +251,7 @@ export const Route = createFileRoute("/api/memory")({
           const memoryCap = MEMORY_LIMITS.plus.stored;
           await persistMemorySafely({
             upsert: async () =>
-              await tbl(authorized.auth).upsert(row, {
-                onConflict: "user_id,chat_id",
-              }),
+              await persistChatMemory(authorized.auth.supabaseAdmin, memoryEpoch, row),
             listOverflow:
               authorized.tier === "plus"
                 ? async () =>
@@ -221,9 +292,9 @@ export const Route = createFileRoute("/api/memory")({
         }
 
         try {
-          let query = tbl(caller.auth).delete().eq("user_id", caller.auth.userId);
-          if (chatId) query = query.eq("chat_id", chatId);
-          assertDatabaseSuccess(await query, "memory_delete");
+          // Advance the durable privacy epoch and remove both memory stores in
+          // one transaction. Legacy text chat IDs remain supported by the RPC.
+          await deleteChatMemory(caller.auth.supabaseAdmin, caller.auth.userId, chatId);
           return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
           console.error("[memory] delete failed", error);

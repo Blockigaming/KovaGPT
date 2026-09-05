@@ -36,6 +36,26 @@ import {
   type LibraryFolderScope,
 } from "@/components/LibraryFolderOrganizer";
 
+function savedWorkLibraryItems(userKey: string | null): LibItem[] {
+  return loadWorkTasks(userKey).map((task): LibItem => ({
+    id: `work:${task.id}`,
+    title: task.objective,
+    item_type: "other",
+    source: "other",
+    content_text: [
+      task.context,
+      ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    file_url: null,
+    file_name: null,
+    file_type: "application/x-kova-work",
+    file_size: null,
+    created_at: new Date(task.updatedAt).toISOString(),
+  }));
+}
+
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
   head: () => ({
@@ -62,6 +82,7 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
+import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
 import { isPrivateLibraryImagePath, resolveLibraryImageUrl } from "@/lib/library-image-url";
 import { observeLibraryImageApproach, queueLibraryImageSigning } from "@/lib/library-image-loading";
 import { safeImageUrl } from "@/lib/safe-image-url";
@@ -274,6 +295,7 @@ function LibraryImageDownloadAction({ item }: { item: LibItem }) {
 function LibraryPage() {
   const { isSignedIn, isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
+  const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const favoritesKey = isLoaded ? principalScopedStorageKey(FAVORITES_KEY, userKey) : null;
   const principalRef = useRef(principal);
@@ -412,23 +434,7 @@ function LibraryPage() {
         file_size: null,
         created_at: new Date(chat.updatedAt).toISOString(),
       })),
-      ...loadWorkTasks(userKey).map((task): LibItem => ({
-        id: `work:${task.id}`,
-        title: task.objective,
-        item_type: "other",
-        source: "other",
-        content_text: [
-          task.context,
-          ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        file_url: null,
-        file_name: null,
-        file_type: "application/x-kova-work",
-        file_size: null,
-        created_at: new Date(task.updatedAt).toISOString(),
-      })),
+      ...savedWorkLibraryItems(userKey),
     ];
     if (!isSignedIn) {
       if (isCurrent()) {
@@ -468,6 +474,14 @@ function LibraryPage() {
       if (isCurrent()) setLoading(false);
     }
   }, [isLoaded, isSignedIn, principal, setItems, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded || !principalReady) return;
+    setItems((current) => [
+      ...current.filter((item) => !item.id.startsWith("work:")),
+      ...savedWorkLibraryItems(userKey),
+    ]);
+  }, [isLoaded, principalReady, setItems, userKey, workRevision]);
 
   const refreshLibrary = useCallback(() => {
     if (folderBusy) return;
@@ -589,11 +603,17 @@ function LibraryPage() {
       return;
     }
     if (id.startsWith("work:")) {
-      saveWorkTasks(
-        userKey,
-        loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
-      );
-      toast.success("Work item deleted.");
+      try {
+        saveWorkTasks(
+          userKey,
+          loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
+        );
+        toast.success("Work item deleted.");
+      } catch {
+        if (!isCurrent()) return;
+        setItems(existing);
+        toast.error("Work item could not be deleted. Retry Work sync and try again.");
+      }
       return;
     }
     if (!isSignedIn) {

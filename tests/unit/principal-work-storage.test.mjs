@@ -53,7 +53,7 @@ class MemoryStorage {
 }
 
 const storage = new MemoryStorage();
-Object.defineProperty(globalThis, "window", { configurable: true, value: {} });
+Object.defineProperty(globalThis, "window", { configurable: true, value: new EventTarget() });
 Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
 
 const workTask = (id) => ({
@@ -170,7 +170,10 @@ test("signed-in principals never read or claim ownerless legacy work", () => {
     storage.reads = [];
 
     assert.deepEqual(record.load("account-a"), []);
-    assert.deepEqual(storage.reads, [record.scopedKey("account-a")]);
+    assert.deepEqual(storage.reads, [
+      "kova-work-sync-v1:user:account-a",
+      record.scopedKey("account-a"),
+    ]);
     assert.equal(storage.peek(record.legacyKey), raw);
     assert.equal(storage.peek(record.scopedKey("account-a")), null);
   }

@@ -323,7 +323,8 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   const handleManageBilling = async () => {
-    if (portalLoading || !subSummary?.hasBillingAccount) return;
+    if (portalLoading || !subSummary?.hasBillingAccount || !subSummary.billingPortalAvailable)
+      return;
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
@@ -493,10 +494,12 @@ export function SettingsDialog({
         data: { environment: getStripeEnvironment() },
       });
       setSubSummary(summary);
-      if (summary.tier === "free") {
+      if (summary.billingConflict) {
+        toast.error("A billing conflict needs support review.");
+      } else if (summary.effectiveTier === "free") {
         toast.message("No active subscription found on this account.");
       } else {
-        toast.success(`${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
+        toast.success(`${summary.effectiveTier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
       }
     } catch {
       setSubSummary(null);
@@ -509,8 +512,14 @@ export function SettingsDialog({
     }
   };
 
-  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
-  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
+  const familyTierUpgrade =
+    !!subSummary &&
+    !subSummary.billingConflict &&
+    tierRank(subSummary.effectiveTier) > tierRank(subSummary.tier);
+  const inheritedSubscription = familyTierUpgrade && subSummary.activeSubscriptionCount === 0;
+  const ownSubscriptionWithFamilyUpgrade =
+    familyTierUpgrade && subSummary.activeSubscriptionCount > 0;
+  const displayedSubscriptionTier = subSummary?.effectiveTier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
@@ -926,6 +935,11 @@ export function SettingsDialog({
                       <div className="text-xs text-destructive mt-1">
                         Billing details unavailable.
                       </div>
+                    ) : subSummary?.billingConflict ? (
+                      <div className="text-xs text-destructive mt-1" role="alert">
+                        Multiple or unrecognized active subscriptions were detected. Contact
+                        support@kovagpt.com to review the billing records.
+                      </div>
                     ) : displayedSubscriptionTier ? (
                       <div className="text-xs text-muted-foreground mt-1">
                         You're on the{" "}
@@ -935,13 +949,19 @@ export function SettingsDialog({
                             ? "Plus"
                             : "Pro"}{" "}
                         plan
-                        {inheritedSubscription ? " through Family Sharing" : ""}
+                        {familyTierUpgrade ? " through Family Sharing" : ""}
                         {subSummary?.trialing ? " (free trial)" : ""}
                         {subSummary?.status === "past_due" ? " - payment past due" : ""}
                         {subSummary?.status === "unpaid" ? " - payment failed" : ""}
                         {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
                       </div>
                     ) : null}
+                    {ownSubscriptionWithFamilyUpgrade && (
+                      <div className="text-[11px] text-muted-foreground mt-1">
+                        Your own {subSummary?.tier === "pro" ? "Pro" : "Plus"} subscription is still
+                        billed and can be managed below.
+                      </div>
+                    )}
                     {subSummary?.currentPeriodEnd && !inheritedSubscription && (
                       <div className="text-[11px] text-muted-foreground mt-1">
                         {subSummary.trialing
@@ -955,6 +975,7 @@ export function SettingsDialog({
                   {!subscriptionLoading &&
                     !subscriptionError &&
                     displayedSubscriptionTier === "free" &&
+                    !subSummary?.billingConflict &&
                     !subSummary?.hasBillingAccount && (
                       <Link
                         to="/pricing"
@@ -1024,6 +1045,7 @@ export function SettingsDialog({
                         subscriptionLoading ||
                         !!subscriptionError ||
                         !subSummary?.hasBillingAccount ||
+                        !subSummary.billingPortalAvailable ||
                         inheritedSubscription
                       }
                       aria-describedby="billing-management-status"
@@ -1050,11 +1072,15 @@ export function SettingsDialog({
                       ? subscriptionError
                       : subscriptionLoading
                         ? "Checking the billing account linked to this KovaGPT account."
-                        : inheritedSubscription
-                          ? "This shared plan is managed by the Family Sharing owner."
-                          : subSummary?.hasBillingAccount
-                            ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
-                            : "No Stripe billing account is linked to this KovaGPT account."}
+                        : subSummary?.billingConflict
+                          ? "A billing conflict was detected. Contact support@kovagpt.com so the subscriptions can be reconciled."
+                          : inheritedSubscription
+                            ? "This shared plan is managed by the Family Sharing owner."
+                            : subSummary?.hasBillingAccount && subSummary.billingPortalAvailable
+                              ? "Manage payment methods, invoices, account details, and cancellation in the Stripe billing portal."
+                              : subSummary?.hasBillingAccount
+                                ? "A Stripe billing account is linked, but the self-service portal is not configured. Contact support@kovagpt.com for billing help."
+                                : "No Stripe billing account is linked to this KovaGPT account."}
                   </p>
                 </div>
 
@@ -1064,8 +1090,9 @@ export function SettingsDialog({
                     <div className="rounded-lg border border-border p-4 space-y-2">
                       <div className="text-sm font-medium">Cancel subscription</div>
                       <p className="text-xs text-muted-foreground">
-                        You can cancel from the Stripe billing portal above. After canceling, you'll
-                        keep access to your current plan until the end of the billing period.
+                        {subSummary.billingPortalAvailable
+                          ? "You can cancel from the Stripe billing portal above. After canceling, you’ll keep access to your current plan until the end of the billing period."
+                          : "The self-service billing portal is not configured. Contact support@kovagpt.com for cancellation or other billing help."}
                       </p>
                     </div>
                   )}
@@ -2296,22 +2323,30 @@ function ShortcutsEditor({
       if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
-      // Ignore lone modifiers.
+      // Ignore lone modifiers until the user presses a complete binding.
       if (["Shift", "Control", "Meta", "Alt"].includes(e.key)) return;
-      const parts: string[] = [];
-      if (e.metaKey || e.ctrlKey) parts.push("Mod");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      parts.push(key);
-      const combo = parts.join("+");
+      setRecordingId(null);
       const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
       if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const combo = mod.shortcutComboFromKeyboardEvent(e);
+      if (!combo) {
+        toast.error("That key can't be used for a shortcut.");
+        return;
+      }
+      const conflict = visibleList.find(
+        (shortcut) => shortcut.id !== recordingId && shortcut.combo === combo,
+      );
+      if (conflict) {
+        toast.error(`That shortcut is already assigned to ${conflict.label}.`);
+        return;
+      }
       const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      if (!mod.saveShortcuts(userKey, next)) {
+        toast.error("Shortcut couldn't be saved in this browser.");
+        return;
+      }
       setList(next);
-      mod.saveShortcuts(userKey, next);
-      setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
@@ -2323,34 +2358,44 @@ function ShortcutsEditor({
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");
     if (!ready) return;
-    mod.resetShortcuts(userKey);
+    if (!mod.resetShortcuts(userKey)) {
+      toast.error("Shortcuts couldn't be reset in this browser.");
+      return;
+    }
     setList(mod.DEFAULT_SHORTCUTS);
     toast.success("Shortcuts reset");
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" aria-busy={!ready}>
       <div className="rounded-lg border border-border divide-y divide-border">
-        {visibleList.map((s) => (
-          <ShortcutRow
-            key={s.id}
-            id={s.id}
-            label={s.label}
-            description={s.description}
-            combo={s.combo}
-            recording={recordingId === s.id}
-            onRecord={() => setRecordingId(s.id)}
-            onCancel={() => setRecordingId(null)}
-          />
-        ))}
+        {ready ? (
+          visibleList.map((s) => (
+            <ShortcutRow
+              key={s.id}
+              id={s.id}
+              label={s.label}
+              description={s.description}
+              combo={s.combo}
+              recording={recordingId === s.id}
+              onRecord={() => setRecordingId(s.id)}
+              onCancel={() => setRecordingId(null)}
+            />
+          ))
+        ) : (
+          <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+            Loading shortcuts…
+          </p>
+        )}
       </div>
       <div>
-        <Button size="sm" variant="outline" onClick={reset}>
+        <Button size="sm" variant="outline" className="min-h-11" disabled={!ready} onClick={reset}>
           Reset to defaults
         </Button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl elsewhere.
+        Shortcuts stay in this browser when storage is available. "Mod" is ⌘ on macOS, Ctrl
+        elsewhere.
       </p>
     </div>
   );
@@ -2390,8 +2435,11 @@ function ShortcutRow({
         <div className="text-xs text-muted-foreground">{description}</div>
       </div>
       <button
+        type="button"
+        aria-label={`${recording ? "Stop recording" : "Change"} shortcut for ${label}`}
+        aria-pressed={recording}
         onClick={recording ? onCancel : onRecord}
-        className={`text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
+        className={`min-h-11 text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
           recording
             ? "border-primary bg-primary/10 text-primary animate-pulse"
             : "border-border hover:bg-accent"

@@ -2,12 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-test("agent state changes are compare-and-set and do not report false success", async () => {
+test("agent controls use the transactional caller-scoped routine and reject false success", async () => {
   const source = await read("src/agents/execution.server.ts");
-  assert.match(source, /\.eq\("status", safeRun\.status\)/);
-  assert.match(source, /transitionError \|\| !transitioned/);
-  assert.match(source, /agent_run_state_changed/);
-  assert.match(source, /eventError/);
+  const migration = await read(
+    "supabase/migrations/20260905001247_legacy_browser_atomic_controls.sql",
+  );
+  assert.match(source, /supabaseUser\.rpc\("control_disabled_browser_run"/);
+  assert.match(source, /if \(!data\) throw new Error\("agent_control_unavailable"\)/);
+  assert.match(migration, /owner_id=principal FOR UPDATE/);
+  assert.match(migration, /INSERT INTO public\.agent_run_events/);
+  assert.match(migration, /FOREIGN KEY\(approval_id,owner_id\)/);
 });
 test("knowledge decisions reject missing or cross-owner rows and graph avoids unsupported controls", async () => {
   const server = await read("src/lib/knowledge-provenance.functions.ts");

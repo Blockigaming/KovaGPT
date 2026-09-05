@@ -93,8 +93,10 @@ test("only the latest user turn can carry provider-bound attachments", () => {
   assert.match(chat, /const currentAttachments = lastUser\?\.attachments \?\? \[\]/);
   assert.ok(chat.indexOf("const currentAttachments") < chat.indexOf("missingAiProviderResponse()"));
 
-  assert.match(mainChat, /\.\.\.priorMessages\.map\(\(message\) => \(\{/);
-  assert.match(mainChat, /attachments: userMsg\.attachments/);
+  assert.match(mainChat, /chatRequestMessages\(priorMessages, userMsg\)/);
+  const store = read("src/lib/chat-store.ts");
+  assert.match(store, /previous\.map\(\(\{ role, content \}\) => \(\{ role, content \}\)\)/);
+  assert.match(store, /attachments: latest\.attachments/);
   assert.doesNotMatch(mainChat, /\[\.\.\.priorMessages, userMsg\]\.map/);
 
   assert.match(

@@ -48,6 +48,7 @@ const CLIENT_TOOLS = new Set([
   "file_analysis",
 ]);
 const RESPONSE_LENGTHS = new Set(["short", "medium", "long"]);
+const TEMPORARY_CONTEXTS = new Set(["clean", "personalized"]);
 
 const USER_STRING_LIMITS = Object.freeze({
   name: 200,
@@ -134,6 +135,20 @@ function normalizeClientTool(value) {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "string" || !CLIENT_TOOLS.has(value)) {
     invalid("invalid_client_tool", "Invalid chat tool.");
+  }
+  return value;
+}
+
+function normalizeTemporaryContext(value, temporary) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || !TEMPORARY_CONTEXTS.has(value)) {
+    invalid("invalid_temporary_context", "Invalid temporary chat context.");
+  }
+  if (temporary !== true) {
+    invalid(
+      "temporary_context_requires_temporary_chat",
+      "Temporary chat context requires temporary mode.",
+    );
   }
   return value;
 }
@@ -318,7 +333,42 @@ export function normalizeChatPayload(value) {
     multiline: true,
   });
   const projectId = optionalUuid(value.projectId, "project_id");
+  const memoryStartIndex = value.memoryStartIndex;
+  const historyOffset = value.historyOffset ?? 0;
+  if (!Number.isSafeInteger(historyOffset) || historyOffset < 0 || historyOffset > 1000000)
+    invalid("invalid_history_offset");
+  if (
+    memoryStartIndex !== undefined &&
+    (!Number.isSafeInteger(memoryStartIndex) ||
+      memoryStartIndex < 0 ||
+      memoryStartIndex > historyOffset + messages.length)
+  ) {
+    invalid("invalid_memory_start_index", "Invalid conversation memory boundary.");
+  }
+  if (value.summaryProof !== undefined) {
+    const proof = value.summaryProof;
+    if (
+      !isRecord(proof) ||
+      typeof proof.id !== "string" ||
+      !UUID_PATTERN.test(proof.id) ||
+      !Number.isSafeInteger(proof.start) ||
+      proof.start < 0 ||
+      !Number.isSafeInteger(proof.count) ||
+      proof.count < 4 ||
+      proof.start + proof.count > historyOffset + messages.length ||
+      typeof proof.digest !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(proof.digest)
+    )
+      invalid("invalid_summary_proof");
+    payload.summaryProof = {
+      id: proof.id,
+      start: proof.start,
+      count: proof.count,
+      digest: proof.digest,
+    };
+  }
   const temporary = optionalBoolean(value.temporary, "temporary");
+  const temporaryContext = normalizeTemporaryContext(value.temporaryContext, temporary);
   const clientTool = normalizeClientTool(value.clientTool);
 
   if (mode !== undefined) payload.mode = mode;
@@ -326,9 +376,12 @@ export function normalizeChatPayload(value) {
   if (timezone !== undefined) payload.timezone = timezone;
   if (locale !== undefined) payload.locale = locale;
   if (chatId !== undefined) payload.chatId = chatId;
+  if (memoryStartIndex !== undefined) payload.memoryStartIndex = memoryStartIndex;
+  if (value.historyOffset !== undefined) payload.historyOffset = historyOffset;
   if (personality !== undefined) payload.personality = personality;
   if (projectId !== undefined) payload.projectId = projectId;
   if (temporary !== undefined) payload.temporary = temporary;
+  if (temporaryContext !== undefined) payload.temporaryContext = temporaryContext;
   if (clientTool !== undefined) payload.clientTool = clientTool;
   return payload;
 }

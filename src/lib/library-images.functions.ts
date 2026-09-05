@@ -4,6 +4,16 @@ import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { MAX_SAFE_IMAGE_DATA_URL_CHARS } from "@/lib/safe-image-url";
 import { z } from "zod";
+import {
+  assertLibrarySaveReplay,
+  librarySaveFingerprint,
+} from "@/lib/library-save-idempotency.mjs";
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
+import {
+  reserveAccountStorageArtifact,
+  settleAccountStorageArtifact,
+  retireAccountStorageArtifact,
+} from "@/lib/account-storage-artifacts.server";
 
 const BUCKET = "library-images";
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -93,6 +103,7 @@ async function fetchRemoteImage(
       });
       // 3xx with a Location header: validate the next hop before following.
       if (res.status >= 300 && res.status < 400) {
+        void res.body?.cancel().catch(() => undefined);
         const loc = res.headers.get("location");
         if (!loc) return null;
         let next: URL;
@@ -108,14 +119,19 @@ async function fetchRemoteImage(
       }
       break;
     }
-    if (!res || !res.ok) return null;
+    if (!res || !res.ok) {
+      void res?.body?.cancel().catch(() => undefined);
+      return null;
+    }
     const contentType = (res.headers.get("content-type") ?? "")
       .split(";", 1)[0]
       .trim()
       .toLowerCase();
-    if (!SAFE_IMAGE_TYPES.has(contentType)) return null;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > MAX_BYTES) return null;
+    if (!SAFE_IMAGE_TYPES.has(contentType)) {
+      void res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const buf = await readResponseBytesBounded(res, MAX_BYTES);
     return hasImageSignature(buf, contentType) ? { bytes: buf, contentType } : null;
   } catch {
     return null;
@@ -123,6 +139,8 @@ async function fetchRemoteImage(
 }
 
 const SaveImageSchema = z.object({
+  idempotencyKey: z.string().uuid().optional(),
+  source: z.enum(["images", "upload"]).default("images"),
   imageUrl: z.string().min(1).max(MAX_SAFE_IMAGE_DATA_URL_CHARS),
   title: z.string().trim().min(1).max(200),
   prompt: z.string().max(2000).optional(),
@@ -142,6 +160,71 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     if (!payload) throw new Error("Unsupported or invalid image");
     if (payload.bytes.byteLength > MAX_BYTES) throw new Error("Image too large");
 
+    const fingerprint = await librarySaveFingerprint(
+      {
+        userId: context.userId,
+        title: data.title,
+        source: data.source,
+        prompt: data.prompt ?? null,
+        contentType: payload.contentType,
+      },
+      payload.bytes,
+    );
+    const itemId = data.idempotencyKey ?? crypto.randomUUID();
+    const findExisting = async () => {
+      const result = await context.supabase
+        .from("user_library_items")
+        .select("id, metadata, file_url")
+        .eq("id", itemId)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (result.error) throw new Error("Library save could not be checked. Please retry.");
+      return result.data;
+    };
+    const finishSaved = async (saved: {
+      id: string;
+      metadata: unknown;
+      file_url: string | null;
+    }) => {
+      const result = assertLibrarySaveReplay(saved, fingerprint);
+      const generation = (saved.metadata as { storage_generation?: unknown } | null)
+        ?.storage_generation;
+      if (typeof generation !== "string" || !saved.file_url)
+        throw new Error("Library save is incomplete. Please retry.");
+      const artifact = {
+        generation,
+        ownerId: context.userId,
+        requesterId: context.userId,
+        bucket: BUCKET,
+        path: saved.file_url,
+      } as const;
+      let allowed: boolean;
+      try {
+        allowed = await settleAccountStorageArtifact(artifact);
+      } catch (error) {
+        // A lost response may have published successfully. Retirement only
+        // affects pending generations; never erase a possibly published save.
+        await retireAccountStorageArtifact(artifact).catch(() => undefined);
+        throw error;
+      }
+      if (!allowed) {
+        await retireAccountStorageArtifact(artifact);
+        const removed = await context.supabase.storage.from(BUCKET).remove([saved.file_url]);
+        if (!removed.error) {
+          await context.supabase
+            .from("user_library_items")
+            .delete()
+            .eq("id", saved.id)
+            .eq("user_id", context.userId)
+            .eq("file_url", saved.file_url);
+        }
+        throw new Error("Library save could not be completed. Please retry.");
+      }
+      return result;
+    };
+    const existing = await findExisting();
+    if (existing) return finishSaved(existing);
+
     const ext =
       payload.contentType === "image/png"
         ? "png"
@@ -150,39 +233,66 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
           : payload.contentType === "image/gif"
             ? "gif"
             : "jpg";
-    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const generation = crypto.randomUUID();
+    const fileName = `${generation}.${ext}`;
     const path = `${context.userId}/${fileName}`;
 
-    const { error: upErr } = await context.supabase.storage
-      .from(BUCKET)
-      .upload(path, payload.bytes, { contentType: payload.contentType, upsert: false });
-    if (upErr) throw new Error(upErr.message);
+    const artifact = {
+      generation,
+      ownerId: context.userId,
+      requesterId: context.userId,
+      bucket: BUCKET,
+      path,
+    } as const;
+    await reserveAccountStorageArtifact(artifact);
+    try {
+      const { error: upErr } = await context.supabase.storage
+        .from(BUCKET)
+        .upload(path, payload.bytes, { contentType: payload.contentType, upsert: false });
+      if (upErr) throw new Error(upErr.message);
 
-    const { data: row, error } = await context.supabase
-      .from("user_library_items")
-      .insert({
-        user_id: context.userId,
-        title: data.title.slice(0, 200),
-        item_type: "image",
-        source: "images",
-        content_text: data.prompt ?? null,
-        file_url: path,
-        file_name: fileName,
-        file_type: payload.contentType,
-        file_size: payload.bytes.byteLength,
-      })
-      .select("id")
-      .single();
+      const { data: row, error } = await context.supabase
+        .from("user_library_items")
+        .insert({
+          id: itemId,
+          metadata: { library_save_fingerprint: fingerprint, storage_generation: generation },
+          user_id: context.userId,
+          title: data.title.slice(0, 200),
+          item_type: "image",
+          source: data.source,
+          content_text: data.prompt ?? null,
+          file_url: path,
+          file_name: fileName,
+          file_type: payload.contentType,
+          file_size: payload.bytes.byteLength,
+        })
+        .select("id")
+        .single();
 
-    if (error || !row) {
-      // best-effort cleanup of orphan upload
-      await context.supabase.storage.from(BUCKET).remove([path]);
-      {
+      if (error || !row) {
+        // Each attempt has its own immutable path. A concurrent winning save
+        // cannot reference this losing attempt, so cleanup never deletes it.
+        const concurrent = await findExisting();
+        // An ambiguous response may belong to our own successful insert.
+        if (concurrent?.file_url !== path) {
+          await retireAccountStorageArtifact(artifact);
+          await context.supabase.storage.from(BUCKET).remove([path]);
+        }
+        if (concurrent) return await finishSaved(concurrent);
         console.error("[serverfn]", error?.message);
         throw new Error("Failed to save");
       }
+      return await finishSaved({
+        id: row.id,
+        file_url: path,
+        metadata: { library_save_fingerprint: fingerprint, storage_generation: generation },
+      });
+    } catch (error) {
+      // The durable record survives Auth deletion and covers late Storage
+      // commits even when an upload/metadata response was lost.
+      await retireAccountStorageArtifact(artifact).catch(() => undefined);
+      throw error;
     }
-    return { id: row.id };
   });
 
 export const getLibraryImageUrl = createServerFn({ method: "POST" })

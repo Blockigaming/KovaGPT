@@ -136,6 +136,8 @@ function accountClient({
   promotions = [],
   deliverables = [],
   projectRemoveError = false,
+  lifecycleBusy = false,
+  lifecycleFinalizeError = false,
   ownedObjects = [],
   ownershipLookupError = false,
   stickyProjectStorage = false,
@@ -189,12 +191,32 @@ function accountClient({
 
   return {
     buckets,
+    simulateAuthDeletion(userId) {
+      deliverables = deliverables.filter((row) => row.owner_id !== userId);
+      promotions = promotions.filter((row) => row.owner_id !== userId);
+    },
     storage: {
       from(bucket) {
         return buckets[bucket];
       },
     },
-    async rpc(name, { p_owner_id: userId, p_limit: limit }) {
+    async rpc(name, args) {
+      if (name === "claim_project_storage_source_cleanup") return { data: [], error: null };
+      if (name === "claim_account_project_file_cleanup") {
+        events.push("project-claim");
+        if (lifecycleBusy) return { data: { state: "busy" }, error: null };
+        const row = rows.find((entry) => entry.id === args.p_file_id);
+        row.delete_attempt_id ??= args.p_attempt_id;
+        return { data: { ...row, state: "claimed" }, error: null };
+      }
+      if (name === "finalize_account_project_file_cleanup") {
+        events.push("project-finalize");
+        if (lifecycleFinalizeError) return { data: null, error: { message: "finalize failed" } };
+        rows = rows.filter((entry) => entry.id !== args.p_file_id);
+        return { data: { deleted: true }, error: null };
+      }
+      if (name === "settle_account_project_storage_charges") return { data: true, error: null };
+      const { p_owner_id: userId, p_limit: limit } = args;
       assert.equal(name, "list_account_project_storage_objects");
       events.push("project-ownership");
       if (ownershipLookupError) return { data: null, error: { message: "lookup failed" } };
@@ -656,6 +678,7 @@ test("deleting the last promoted Project reference collects its preserved source
   });
   assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
   assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
+  client.simulateAuthDeletion(USER_ID);
   assert.equal(
     (await cleanupOwnedStorageBeforeAccountDeletion(client, OTHER_USER_ID)).complete,
     true,
@@ -703,9 +726,108 @@ test("deleting one promoted destination preserves a source needed by another pro
   });
   assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
   assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
+  client.simulateAuthDeletion(USER_ID);
   assert.equal(
     (await cleanupOwnedStorageBeforeAccountDeletion(client, OTHER_USER_ID)).complete,
     true,
   );
   assert.equal(client.buckets["project-files"].objects.has(sourcePath), false);
+});
+
+test("deleting the final Project reference preserves a collaborator's surviving Work deliverable", async () => {
+  const sourcePath = `${OTHER_PROJECT_ID}/retained-work.txt`;
+  const fixture = promotionFixture({
+    fileId: FILE_ID,
+    projectId: PROJECT_ID,
+    ownerId: OTHER_USER_ID,
+    storageReference: `project-files:${sourcePath}`,
+  });
+  const client = accountClient({
+    promotions: [fixture.promotion],
+    deliverables: [fixture.deliverable],
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: PROJECT_ID,
+        storage_path: sourcePath,
+        uploaded_by: OTHER_USER_ID,
+        project_owner_id: USER_ID,
+        kind: "agent-deliverable",
+      },
+    ],
+  });
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.equal(client.buckets["project-files"].objects.has(sourcePath), true);
+});
+
+test("lifecycle account cleanup reserves before Storage and finalizes instead of direct metadata deletion", async () => {
+  const events = [];
+  const client = accountClient({
+    events,
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: OTHER_PROJECT_ID,
+        project_owner_id: OTHER_USER_ID,
+        uploaded_by: USER_ID,
+        storage_path: `${OTHER_PROJECT_ID}/lifecycle.txt`,
+        kind: "file",
+        status: "ready",
+      },
+    ],
+  });
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.ok(events.indexOf("project-claim") < events.indexOf("project-files"));
+  assert.ok(events.indexOf("project-files") < events.indexOf("project-finalize"));
+  assert.ok(events.indexOf("project-finalize") < events.indexOf("library-images"));
+  assert.equal(events.includes("project-metadata"), false);
+});
+
+test("busy lifecycle rows leave canonical bytes and Library untouched", async () => {
+  const path = `${PROJECT_ID}/active.txt`;
+  const client = accountClient({
+    lifecycleBusy: true,
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: PROJECT_ID,
+        project_owner_id: USER_ID,
+        uploaded_by: USER_ID,
+        storage_path: path,
+        kind: "file",
+        status: "pending",
+      },
+    ],
+  });
+  assert.deepEqual(await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID), {
+    complete: false,
+    removed: 0,
+  });
+  assert.equal(client.buckets["project-files"].objects.has(path), true);
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+});
+
+test("failed lifecycle finalization preserves a retryable claim and leaves Library untouched", async () => {
+  const events = [];
+  const client = accountClient({
+    events,
+    lifecycleFinalizeError: true,
+    projectRows: [
+      {
+        id: FILE_ID,
+        project_id: PROJECT_ID,
+        project_owner_id: USER_ID,
+        uploaded_by: USER_ID,
+        storage_path: `${PROJECT_ID}/retry.txt`,
+        kind: "file",
+        status: "ready",
+      },
+    ],
+  });
+  await assert.rejects(
+    () => cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID),
+    /metadata_cleanup_failed/u,
+  );
+  assert.equal(events.includes("project-metadata"), false);
+  assert.equal(client.buckets["library-images"].objects.size, 1);
 });

@@ -21,6 +21,9 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
+import { WorkSessionPanel } from "@/components/WorkSessionPanel";
+import { WorkSyncStatus } from "@/components/WorkSyncStatus";
+import { recordWorkRecent } from "@/lib/work-sync-client";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import {
@@ -183,9 +186,16 @@ function WorkRoute() {
       setSelected(id);
       setDetail(null);
       setError(null);
+      if (userKey) {
+        try {
+          recordWorkRecent(userKey, "run", id);
+        } catch {
+          /* Viewing history does not require a Recent write. */
+        }
+      }
       void loadDetail(id);
     },
-    [loadDetail],
+    [loadDetail, userKey],
   );
   const loadRuns = useCallback(async () => {
     const requestId = ++runRequestId.current;
@@ -231,178 +241,181 @@ function WorkRoute() {
   }
   return (
     <AppShell>
-      <main
-        className="mx-auto flex h-[calc(100dvh-1rem)] w-full max-w-[1600px] gap-3 p-3"
-        aria-label="Work center"
-      >
-        <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 md:block">
-          <div className="mb-3 flex items-center justify-between px-2">
-            <h1 className="text-xl font-semibold">Work</h1>
-            <RealtimeReadiness resource="Work" />
-            <button onClick={() => void loadRuns()} aria-label="Refresh runs">
-              <RefreshCw className="h-4 w-4" />
-            </button>
-          </div>
-          {runs.map((run) => (
-            <button
-              key={run.id}
-              onClick={() => selectRun(run.id)}
-              className={`mb-2 w-full rounded-2xl border p-3 text-left ${selected === run.id ? "border-primary bg-primary/5" : ""}`}
-            >
-              <span className="flex items-center gap-2 text-sm font-medium capitalize">
-                <i
-                  className={`h-2 w-2 rounded-full ${statusTone[run.status] ?? "bg-muted-foreground"}`}
-                />
-                {run.kind} run
-              </span>
-              <span className="mt-1 block text-xs capitalize text-muted-foreground">
-                {factualStatus(run)}
-              </span>
-              <time className="text-xs text-muted-foreground">
-                {new Date(run.createdAt).toLocaleString()}
-              </time>
-            </button>
-          ))}
-        </aside>
-        <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
-          {preparedDraft ? (
-            <div className="h-full overflow-y-auto p-5 sm:p-8">
-              <div className="mx-auto max-w-3xl">
-                <p className="text-sm font-medium text-muted-foreground">Prepared Work draft</p>
-                <h1 className="mt-2 text-2xl font-semibold">{preparedDraft.objective}</h1>
-                <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  This draft was recovered, but no background run has started. Work execution is
-                  unavailable; continue in chat to work through the plan now.
-                </p>
-                <section className="mt-6" aria-labelledby="prepared-plan-title">
-                  <h2 id="prepared-plan-title" className="font-semibold">
-                    Prepared plan
-                  </h2>
-                  <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-                    {preparedDraft.plan.map((step, index) => (
-                      <li key={`${index}-${step}`}>{step}</li>
-                    ))}
-                  </ol>
-                </section>
-                <details className="mt-6 rounded-xl border border-border p-4">
-                  <summary className="cursor-pointer font-medium">Attached context</summary>
-                  <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">
-                    {preparedDraft.context || "No additional context was provided."}
-                  </pre>
-                </details>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={continuePreparedDraftInChat}
-                    className="min-h-11 rounded-xl bg-foreground px-4 text-sm font-medium text-background"
-                  >
-                    Continue in chat
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDraftState({ principal, draft: null })}
-                    className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium"
-                  >
-                    View historical runs
-                  </button>
+      <main className="mx-auto w-full max-w-[1600px] p-3" aria-label="Work center">
+        <WorkSyncStatus />
+        {isLoaded && (
+          <WorkSessionPanel key={principal} ownerId={userKey} prepared={preparedDraft} />
+        )}
+        <div className="flex h-[calc(100dvh-12rem)] min-h-[32rem] gap-3">
+          <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 md:block">
+            <div className="mb-3 flex items-center justify-between px-2">
+              <h1 className="text-xl font-semibold">Work</h1>
+              <RealtimeReadiness resource="Work" />
+              <button onClick={() => void loadRuns()} aria-label="Refresh runs">
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
+            {runs.map((run) => (
+              <button
+                key={run.id}
+                onClick={() => selectRun(run.id)}
+                className={`mb-2 w-full rounded-2xl border p-3 text-left ${selected === run.id ? "border-primary bg-primary/5" : ""}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-medium capitalize">
+                  <i
+                    className={`h-2 w-2 rounded-full ${statusTone[run.status] ?? "bg-muted-foreground"}`}
+                  />
+                  {run.kind} run
+                </span>
+                <span className="mt-1 block text-xs capitalize text-muted-foreground">
+                  {factualStatus(run)}
+                </span>
+                <time className="text-xs text-muted-foreground">
+                  {new Date(run.createdAt).toLocaleString()}
+                </time>
+              </button>
+            ))}
+          </aside>
+          <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
+            {preparedDraft ? (
+              <div className="h-full overflow-y-auto p-5 sm:p-8">
+                <div className="mx-auto max-w-3xl">
+                  <p className="text-sm font-medium text-muted-foreground">Prepared Work draft</p>
+                  <h1 className="mt-2 text-2xl font-semibold">{preparedDraft.objective}</h1>
+                  <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                    This draft was recovered, but no background run has started. Work execution is
+                    unavailable; continue in chat to work through the plan now.
+                  </p>
+                  <section className="mt-6" aria-labelledby="prepared-plan-title">
+                    <h2 id="prepared-plan-title" className="font-semibold">
+                      Prepared plan
+                    </h2>
+                    <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                      {preparedDraft.plan.map((step, index) => (
+                        <li key={`${index}-${step}`}>{step}</li>
+                      ))}
+                    </ol>
+                  </section>
+                  <details className="mt-6 rounded-xl border border-border p-4">
+                    <summary className="cursor-pointer font-medium">Attached context</summary>
+                    <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">
+                      {preparedDraft.context || "No additional context was provided."}
+                    </pre>
+                  </details>
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={continuePreparedDraftInChat}
+                      className="min-h-11 rounded-xl bg-foreground px-4 text-sm font-medium text-background"
+                    >
+                      Continue in chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDraftState({ principal, draft: null })}
+                      className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium"
+                    >
+                      View historical runs
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : loading ? (
-            <div className="grid h-full place-items-center" role="status">
-              <Loader2 className="animate-spin" />
-              <span className="sr-only">Loading Work</span>
-            </div>
-          ) : error && !detail ? (
-            <ErrorState
-              title="Work unavailable"
-              description={error}
-              onRetry={() => void loadRuns()}
-            />
-          ) : !detail ? (
-            <EmptyState
-              icon={Activity}
-              title="No Work runs"
-              description="Agent execution is unavailable. Historical records will appear here when present."
-            />
-          ) : (
-            <>
-              <header className="border-b p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <i
-                        className={`h-2.5 w-2.5 rounded-full ${statusTone[detail.run.status] ?? "bg-muted-foreground"}`}
-                      />
-                      <h2 className="font-semibold capitalize">{detail.run.kind} run</h2>
+            ) : loading ? (
+              <div className="grid h-full place-items-center" role="status">
+                <Loader2 className="animate-spin" />
+                <span className="sr-only">Loading Work</span>
+              </div>
+            ) : error && !detail ? (
+              <ErrorState
+                title="Work unavailable"
+                description={error}
+                onRetry={() => void loadRuns()}
+              />
+            ) : !detail ? (
+              <EmptyState
+                icon={Activity}
+                title="No Work runs"
+                description="Agent execution is unavailable. Historical records will appear here when present."
+              />
+            ) : (
+              <>
+                <header className="border-b p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <i
+                          className={`h-2.5 w-2.5 rounded-full ${statusTone[detail.run.status] ?? "bg-muted-foreground"}`}
+                        />
+                        <h2 className="font-semibold capitalize">{detail.run.kind} run</h2>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                        {factualStatus(detail.run)} · {detail.events.length} recorded events
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-                      {factualStatus(detail.run)} · {detail.events.length} recorded events
-                    </p>
+                    <div className="flex gap-2">
+                      {!terminal.has(detail.run.status) && (
+                        <button
+                          onClick={() => void cancelRun()}
+                          className="work-action text-destructive"
+                        >
+                          <Square />
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    {!terminal.has(detail.run.status) && (
-                      <button
-                        onClick={() => void cancelRun()}
-                        className="work-action text-destructive"
-                      >
-                        <Square />
-                        Cancel
-                      </button>
+                  <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                    Agent execution is unavailable. Historical records remain readable; active
+                    legacy runs can only be cancelled.
+                  </p>
+                  <select
+                    className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
+                    value={selected ?? ""}
+                    onChange={(e) => selectRun(e.target.value)}
+                  >
+                    {runs.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.kind} · {factualStatus(r)}
+                      </option>
+                    ))}
+                  </select>
+                  <nav className="mt-4 flex gap-1 overflow-x-auto" aria-label="Work views">
+                    {(["graph", "timeline", "evidence", "deliverables", "approvals"] as const).map(
+                      (value) => (
+                        <button
+                          key={value}
+                          onClick={() => setTab(value)}
+                          className={`min-h-10 shrink-0 rounded-full px-4 text-sm capitalize ${tab === value ? "bg-foreground text-background" : "hover:bg-muted"}`}
+                        >
+                          {value}
+                          {value === "approvals" &&
+                          detail.approvals.some((a) => a.status === "pending")
+                            ? " •"
+                            : ""}
+                        </button>
+                      ),
                     )}
-                  </div>
+                  </nav>
+                </header>
+                <div className="h-[calc(100%-10.5rem)] overflow-y-auto p-4">
+                  {tab === "graph" && <DependencyGraph detail={detail} />}{" "}
+                  {tab === "timeline" && <Timeline detail={detail} />}{" "}
+                  {tab === "evidence" && <Evidence detail={detail} />}{" "}
+                  {tab === "deliverables" && (
+                    <Deliverables items={detail.deliverables} refresh={loadDetail} />
+                  )}{" "}
+                  {tab === "approvals" && <Approvals detail={detail} refresh={loadDetail} />}
                 </div>
-                <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  Agent execution is unavailable. Historical records remain readable; active legacy
-                  runs can only be cancelled.
-                </p>
-                <select
-                  className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
-                  value={selected ?? ""}
-                  onChange={(e) => selectRun(e.target.value)}
-                >
-                  {runs.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.kind} · {factualStatus(r)}
-                    </option>
-                  ))}
-                </select>
-                <nav className="mt-4 flex gap-1 overflow-x-auto" aria-label="Work views">
-                  {(["graph", "timeline", "evidence", "deliverables", "approvals"] as const).map(
-                    (value) => (
-                      <button
-                        key={value}
-                        onClick={() => setTab(value)}
-                        className={`min-h-10 shrink-0 rounded-full px-4 text-sm capitalize ${tab === value ? "bg-foreground text-background" : "hover:bg-muted"}`}
-                      >
-                        {value}
-                        {value === "approvals" &&
-                        detail.approvals.some((a) => a.status === "pending")
-                          ? " •"
-                          : ""}
-                      </button>
-                    ),
-                  )}
-                </nav>
-              </header>
-              <div className="h-[calc(100%-10.5rem)] overflow-y-auto p-4">
-                {tab === "graph" && <DependencyGraph detail={detail} />}{" "}
-                {tab === "timeline" && <Timeline detail={detail} />}{" "}
-                {tab === "evidence" && <Evidence detail={detail} />}{" "}
-                {tab === "deliverables" && (
-                  <Deliverables items={detail.deliverables} refresh={loadDetail} />
-                )}{" "}
-                {tab === "approvals" && <Approvals detail={detail} refresh={loadDetail} />}
-              </div>
-            </>
-          )}
-        </section>
-        <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 xl:block">
-          <RelatedWorkspaceItems
-            kinds={["project", "context_pack", "file", "artifact", "research", "memory"]}
-            title="Recent context for Work"
-          />
-        </aside>
+              </>
+            )}
+          </section>
+          <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 xl:block">
+            <RelatedWorkspaceItems
+              kinds={["project", "context_pack", "file", "artifact", "research", "memory"]}
+              title="Recent context for Work"
+            />
+          </aside>
+        </div>
       </main>
     </AppShell>
   );

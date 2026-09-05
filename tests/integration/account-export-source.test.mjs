@@ -65,22 +65,17 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /agent-evidence\|project-files/u);
   const process = worker.slice(worker.indexOf("async function processClaimed"));
   assert.ok(
-    process.indexOf("assertClaimStillOwnsUpload(job, workerId)") <
-      process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)"),
-    "the current lease must be verified before clearing stale retry artifacts",
+    process.indexOf('admin.rpc("register_account_export_artifact"') <
+      process.indexOf(".upload(path, artifact.bytes"),
+    "the durable generation cleanup obligation must exist before external upload",
   );
-  assert.ok(
-    process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)") <
-      process.indexOf("const path = accountExportStoragePath"),
-    "stale artifacts must be cleared before a retry creates a new path",
+  assert.doesNotMatch(
+    process.slice(0, process.indexOf("export async function sweepRetiredAccountExportArtifacts")),
+    /clearAccountExportArtifacts\(job\.user_id, job\.id\)/u,
+    "a stale worker must never clear another generation's prefix",
   );
-  assert.ok(
-    process.lastIndexOf(
-      "assertClaimStillOwnsUpload(job, workerId)",
-      process.indexOf("const path = accountExportStoragePath"),
-    ) > process.indexOf("clearAccountExportArtifacts(job.user_id, job.id)"),
-    "cleanup latency must be followed by another lease check at the upload boundary",
-  );
+  assert.match(worker, /p_generation: job\.upload_generation/u);
+  assert.match(worker, /await sweepRetiredAccountExportArtifacts\(\)/u);
   assert.match(worker, /storage[\s\S]*\.remove\(\[uploadedPath\]\)/u);
 });
 

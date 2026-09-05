@@ -47,7 +47,12 @@ export function parseAgentStorageReference(value) {
  * project-files references.
  */
 export function resolveProjectFileStorage(row, association = null) {
-  if (!row || !validUuid(row.id) || !validUuid(row.project_id) || !validUuid(row.uploaded_by)) {
+  if (
+    !row ||
+    !validUuid(row.id) ||
+    !validUuid(row.project_id) ||
+    (row.uploaded_by !== null && !validUuid(row.uploaded_by))
+  ) {
     throw invalid();
   }
   const stored = validateStorageObjectPath(row.storage_path);

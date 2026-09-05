@@ -138,17 +138,17 @@ test("every still-active subscription blocks a second Checkout session", async (
     payments.indexOf("export const createPortalSession"),
   );
   assert.match(checkout, /\.select\("status, current_period_end"\)/u);
-  assert.match(checkout, /const stillActive = hasStillActiveSubscription\(subscriptions\)/u);
-  assert.match(checkout, /if \(stillActive\)/u);
+  assert.match(checkout, /if \(hasStillActiveSubscription\(subscriptionHistory \?\? \[\]\)\)/u);
   assert.doesNotMatch(checkout, /!existing\.cancel_at_period_end/u);
   assert.doesNotMatch(checkout, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
-  assert.match(checkout, /subscriptions\.length === 0/u);
+  assert.match(checkout, /\(subscriptionHistory \?\? \[\]\)\.length === 0/u);
   assert.ok(
-    checkout.indexOf("if (stillActive)") < checkout.indexOf("stripe.prices.list"),
+    checkout.indexOf("if (hasStillActiveSubscription(") < checkout.indexOf("stripe.prices.list"),
     "the current-subscription guard must run before Stripe Checkout work",
   );
   assert.ok(
-    checkout.indexOf("if (stillActive)") < checkout.indexOf("stripe.checkout.sessions.create"),
+    checkout.indexOf("if (hasStillActiveSubscription(") <
+      checkout.indexOf("resolveDurableCheckoutSession({"),
     "the current-subscription guard must run before Checkout session creation",
   );
 });
@@ -202,14 +202,14 @@ test("subscription summary prefers an older active row over a newer expired row"
 
   const summary = payments.slice(payments.indexOf("export const getSubscriptionSummary"));
   assert.doesNotMatch(summary, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
-  assert.match(summary, /selectSubscriptionSummaryRow\(subscriptions, now\)/u);
-  assert.match(summary, /hasVerifiedSubscriptionAccess\(row, now\)/u);
+  assert.match(summary, /"user_subscription_summary"/u);
 
   const portal = payments.slice(
     payments.indexOf("export const createPortalSession"),
     payments.indexOf("export type SubscriptionSummary"),
   );
   assert.match(portal, /selectSubscriptionSummaryRow\(rows \?\? \[\]\)/u);
-  assert.match(portal, /customer: sub\.stripe_customer_id/u);
+  assert.match(portal, /customer: mapping\.stripe_customer_id/u);
+  assert.match(portal, /sub\.stripe_customer_id !== mapping\.stripe_customer_id/u);
   assert.doesNotMatch(portal, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
 });

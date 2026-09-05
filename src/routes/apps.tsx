@@ -108,6 +108,59 @@ type ConnState =
   | "syncing"
   | "temporarily_unavailable";
 
+type AppActivity = { app: string; action: string; at: string };
+const MAX_APP_ACTIVITY = 50;
+
+function parseAppActivity(raw: string | null): AppActivity[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const activity: AppActivity[] = [];
+    for (const candidate of parsed) {
+      if (activity.length >= MAX_APP_ACTIVITY) break;
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+      const entry = candidate as Record<string, unknown>;
+      if (
+        typeof entry.app !== "string" ||
+        entry.app.length === 0 ||
+        entry.app.length > 120 ||
+        typeof entry.action !== "string" ||
+        entry.action.length === 0 ||
+        entry.action.length > 240 ||
+        typeof entry.at !== "string" ||
+        !Number.isFinite(Date.parse(entry.at))
+      ) {
+        continue;
+      }
+      activity.push({ app: entry.app, action: entry.action, at: entry.at });
+    }
+    return activity;
+  } catch {
+    return [];
+  }
+}
+
+function parseGitHubAuthorizationUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.username !== "" ||
+      url.password !== "" ||
+      url.port !== "" ||
+      url.hostname !== "github.com" ||
+      url.pathname !== "/login/oauth/authorize"
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function AppLogo({ domain, label }: { domain: string; label: string }) {
   // Locally rendered brand mark using the domain's own favicon as a fallback.
   // Avoids Logo.dev entirely.
@@ -320,15 +373,19 @@ function GitHubManager() {
     refresh = useServerFn(refreshGitHubInstallations),
     grants = useServerFn(updateGitHubRepositoryGrants),
     disconnect = useServerFn(disconnectGitHub);
-  const [data, setData] = useState<GitHubManagement | null>(null),
-    [busy, setBusy] = useState(false),
-    [search, setSearch] = useState(""),
-    [selected, setSelected] = useState<number[]>([]);
+  const [data, setData] = useState<GitHubManagement | null>(null);
+  const [busyAction, setBusyAction] = useState<
+    "connect" | "refresh" | "grant" | "disconnect" | null
+  >(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<number[]>([]);
   const [loadError, setLoadError] = useState(false);
-  const reload = useCallback(() => {
-    setLoadError(false);
-    return load()
-      .then((next) => {
+  const busy = busyAction !== null;
+  const reload = useCallback(
+    async (showError = true): Promise<boolean> => {
+      setLoadError(false);
+      try {
+        const next = await load();
         const activeAccountIds = new Set(
           next.accounts
             .filter((account) => ["connected", "degraded"].includes(account.status))
@@ -349,12 +406,15 @@ function GitHubManager() {
         );
         setSelected((current) => current.filter((id) => activeRepositoryIds.has(id)));
         setData(next);
-      })
-      .catch(() => {
+        return true;
+      } catch {
         setLoadError(true);
-        toast.error("GitHub status unavailable");
-      });
-  }, [load]);
+        if (showError) toast.error("GitHub status unavailable");
+        return false;
+      }
+    },
+    [load],
+  );
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [disconnectAccount, setDisconnectAccount] = useState<{
     id: string;
@@ -370,7 +430,7 @@ function GitHubManager() {
         <p className="mt-1 text-sm text-muted-foreground">
           Your connection was not changed. Try loading its status again.
         </p>
-        <Button variant="outline" className="mt-4" onClick={() => void reload()}>
+        <Button variant="outline" className="mt-4 min-h-11" onClick={() => void reload()}>
           Try again
         </Button>
       </section>
@@ -399,12 +459,42 @@ function GitHubManager() {
       repo.full_name.toLowerCase().includes(search.trim().toLowerCase()),
   );
   async function connect() {
-    const response = await authFetch("/api/github/auth");
-    const result = await response.json();
-    if (result.url) location.assign(result.url);
-    else toast.error(result.error ?? "GitHub is unavailable");
+    if (busy) return;
+    setBusyAction("connect");
+    try {
+      const response = await authFetch("/api/github/auth");
+      const result = (await response.json().catch(() => null)) as {
+        url?: unknown;
+      } | null;
+      const authorizationUrl = parseGitHubAuthorizationUrl(result?.url);
+      if (!response.ok || !authorizationUrl) throw new Error("github_authorization_unavailable");
+      location.assign(authorizationUrl);
+    } catch {
+      toast.error("GitHub authorization could not be started. Try again.");
+    } finally {
+      setBusyAction(null);
+    }
   }
+
+  async function refreshInstallations() {
+    if (busy) return;
+    setBusyAction("refresh");
+    try {
+      await refresh();
+      if (await reload(false)) {
+        toast.success("GitHub installations refreshed.");
+      } else {
+        toast.warning("Installations refreshed, but their current status could not be loaded.");
+      }
+    } catch {
+      toast.error("GitHub installations could not be refreshed. Try again.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function update(granted: boolean) {
+    if (busy) return;
     if (!granted) {
       setRevokeOpen(true);
       return;
@@ -412,7 +502,8 @@ function GitHubManager() {
     await applyGrantUpdate(true);
   }
   async function applyGrantUpdate(granted: boolean) {
-    setBusy(true);
+    if (busy) return;
+    setBusyAction("grant");
     try {
       await grants({
         data: {
@@ -422,15 +513,44 @@ function GitHubManager() {
         },
       });
       setSelected([]);
-      await reload();
+      if (!(await reload(false))) {
+        toast.warning("Repository access changed, but its current status could not be loaded.");
+      }
     } catch {
       toast.error("Repository access could not be updated");
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
+
+  async function performDisconnect() {
+    if (!disconnectAccount || busy) return;
+    const accountId = disconnectAccount.id;
+    setSelected([]);
+    setBusyAction("disconnect");
+    try {
+      await disconnect({ data: { accountId, removeData: false } });
+      setDisconnectAccount(null);
+      if (await reload(false)) {
+        toast.success("GitHub disconnected.");
+      } else {
+        toast.warning("GitHub disconnected, but its current status could not be loaded.");
+      }
+    } catch {
+      setDisconnectAccount(null);
+      const statusLoaded = await reload(false);
+      toast.error(
+        statusLoaded
+          ? "The disconnect outcome could not be confirmed. Review the current GitHub status before retrying."
+          : "The disconnect outcome and current GitHub status could not be confirmed. Reload before retrying.",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   return (
-    <section className="kova-card p-5" aria-labelledby="github-manager">
+    <section className="kova-card p-5" aria-labelledby="github-manager" aria-busy={busy}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <Github className="h-9 w-9" />
@@ -449,17 +569,19 @@ function GitHubManager() {
           </span>
         ) : !activeAccounts.length ? (
           <button
-            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background"
+            disabled={busy}
+            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void connect()}
           >
-            Connect GitHub
+            {busyAction === "connect" ? "Connecting…" : "Connect GitHub"}
           </button>
         ) : (
           <button
-            className="min-h-11 rounded-full border px-3 text-sm"
-            onClick={() => void refresh().then(reload)}
+            disabled={busy}
+            className="min-h-11 rounded-full border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => void refreshInstallations()}
           >
-            Refresh installations
+            {busyAction === "refresh" ? "Refreshing…" : "Refresh installations"}
           </button>
         )}
       </div>
@@ -493,6 +615,7 @@ function GitHubManager() {
             {isActive ? (
               <button
                 type="button"
+                disabled={busy}
                 className="min-h-11 rounded-full border px-3 text-sm text-destructive"
                 onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
                 aria-label={`Disconnect GitHub account @${account.login}`}
@@ -502,6 +625,7 @@ function GitHubManager() {
             ) : (
               <button
                 type="button"
+                disabled={busy}
                 className="min-h-11 rounded-full border px-3 text-sm"
                 onClick={() => void connect()}
                 aria-label={`Reconnect GitHub account @${account.login}`}
@@ -539,26 +663,20 @@ function GitHubManager() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setDisconnectAccount(null)}>
-              Cancel
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => setDisconnectAccount(null)}
+            >
+              {busyAction === "disconnect" ? "Close" : "Cancel"}
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (!disconnectAccount) return;
-                const accountId = disconnectAccount.id;
-                setDisconnectAccount(null);
-                setSelected([]);
-                setBusy(true);
-                void disconnect({
-                  data: { accountId, removeData: false },
-                })
-                  .then(reload)
-                  .catch(() => toast.error("GitHub account could not be disconnected"))
-                  .finally(() => setBusy(false));
-              }}
+              className="min-h-11"
+              disabled={busy}
+              onClick={() => void performDisconnect()}
             >
-              Disconnect account
+              {busyAction === "disconnect" ? "Disconnecting…" : "Disconnect account"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -603,18 +721,22 @@ function GitHubManager() {
           <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
             {repos.map((repo) => (
               <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${repo.full_name}`}
-                  checked={selected.includes(repo.id)}
-                  onChange={() =>
-                    setSelected((current) =>
-                      current.includes(repo.id)
-                        ? current.filter((id) => id !== repo.id)
-                        : [...current, repo.id],
-                    )
-                  }
-                />
+                <label className="flex min-h-11 min-w-11 items-center justify-center">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    disabled={busy}
+                    aria-label={`Select ${repo.full_name}`}
+                    checked={selected.includes(repo.id)}
+                    onChange={() =>
+                      setSelected((current) =>
+                        current.includes(repo.id)
+                          ? current.filter((id) => id !== repo.id)
+                          : [...current, repo.id],
+                      )
+                    }
+                  />
+                </label>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{repo.full_name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -651,8 +773,10 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
-  const [activity, setActivity] = useState<{ app: string; action: string; at: string }[]>([]);
+  const [activity, setActivity] = useState<AppActivity[]>([]);
+  const activityRef = useRef<AppActivity[]>([]);
   const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
+  const [activityPersistenceError, setActivityPersistenceError] = useState(false);
   const activityReady = principal !== null && activityPrincipal === principal;
   const visibleActivity = activityReady ? activity : [];
   const visibleGoogleStatus = activityReady ? googleStatus : null;
@@ -662,19 +786,29 @@ function AppsPage() {
   useEffect(() => {
     generationRef.current += 1;
     setQuery("");
+    activityRef.current = [];
     setActivity([]);
     setActivityPrincipal(null);
+    setActivityPersistenceError(false);
     setGoogleStatus(null);
     setGoogleLoading(true);
     setSelectedApp(null);
     setConnecting({});
     setFailed({});
     if (!principal || !activityKey) return;
+    let storedActivity: AppActivity[] = [];
     try {
-      setActivity(JSON.parse(safeBrowserStorage("localStorage")?.getItem(activityKey) ?? "[]"));
+      const storage = safeBrowserStorage("localStorage");
+      if (storage) {
+        storedActivity = parseAppActivity(storage.getItem(activityKey));
+      } else {
+        setActivityPersistenceError(true);
+      }
     } catch {
-      setActivity([]);
+      setActivityPersistenceError(true);
     }
+    activityRef.current = storedActivity;
+    setActivity(storedActivity);
     setActivityPrincipal(principal);
   }, [activityKey, principal]);
 
@@ -683,8 +817,10 @@ function AppsPage() {
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       generationRef.current += 1;
+      activityRef.current = [];
       setActivity([]);
       setActivityPrincipal(principal);
+      setActivityPersistenceError(false);
       setGoogleStatus(null);
       setGoogleLoading(true);
       setSelectedApp(null);
@@ -700,11 +836,20 @@ function AppsPage() {
   const recordActivity = useCallback(
     (app: string, action: string) => {
       if (!activityReady || !activityKey) return;
-      setActivity((current) => {
-        const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
-        safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
-        return next;
-      });
+      const next = [{ app, action, at: new Date().toISOString() }, ...activityRef.current].slice(
+        0,
+        MAX_APP_ACTIVITY,
+      );
+      activityRef.current = next;
+      setActivity(next);
+      try {
+        const storage = safeBrowserStorage("localStorage");
+        if (!storage) throw new Error("browser_storage_unavailable");
+        storage.setItem(activityKey, JSON.stringify(next));
+        setActivityPersistenceError(false);
+      } catch {
+        setActivityPersistenceError(true);
+      }
     },
     [activityKey, activityReady],
   );
@@ -987,6 +1132,12 @@ function AppsPage() {
           titleId="apps-title"
           description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
+        {activityPersistenceError && (
+          <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm">
+            Recent connection activity could not be saved in this browser and will be lost when you
+            leave or reload this page.
+          </p>
+        )}
         {!isLoaded ? (
           <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
             <h2 id="apps-loading-title" className="sr-only">
@@ -1027,7 +1178,7 @@ function AppsPage() {
               />
             </label>
 
-            <GitHubManager />
+            <GitHubManager key={principal ?? "unresolved"} />
 
             {filtered.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">

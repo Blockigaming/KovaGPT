@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { removePrivateLibraryImage } from "@/lib/library-storage-policy";
 import { z } from "zod";
+import {
+  assertLibrarySaveReplay,
+  librarySaveFingerprint,
+} from "@/lib/library-save-idempotency.mjs";
 
 export type LibraryItem = {
   id: string;
@@ -47,10 +51,11 @@ export const listMyLibrary = createServerFn({ method: "GET" })
   });
 
 const SaveSchema = z.object({
+  idempotencyKey: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(200),
   item_type: ItemTypeEnum,
   source: SourceEnum.default("manual"),
-  content_text: z.string().max(200_000).optional().nullable(),
+  content_text: z.string().max(300_000).optional().nullable(),
   file_url: z.string().url().max(2000).optional().nullable(),
   file_name: z.string().max(300).optional().nullable(),
   file_type: z.string().max(100).optional().nullable(),
@@ -61,22 +66,43 @@ export const saveToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const values = {
+      user_id: context.userId,
+      title: data.title,
+      item_type: data.item_type,
+      source: data.source,
+      content_text: data.content_text ?? null,
+      file_url: data.file_url ?? null,
+      file_name: data.file_name ?? null,
+      file_type: data.file_type ?? null,
+      file_size: data.file_size ?? null,
+    };
+    const fingerprint = await librarySaveFingerprint(values);
+    const findExisting = async () => {
+      if (!data.idempotencyKey) return null;
+      const result = await context.supabase
+        .from("user_library_items")
+        .select("id, metadata")
+        .eq("id", data.idempotencyKey)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (result.error) throw new Error("Library save could not be checked. Please retry.");
+      return result.data;
+    };
+    const existing = await findExisting();
+    if (existing) return assertLibrarySaveReplay(existing, fingerprint);
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({
-        user_id: context.userId,
-        title: data.title,
-        item_type: data.item_type,
-        source: data.source,
-        content_text: data.content_text ?? null,
-        file_url: data.file_url ?? null,
-        file_name: data.file_name ?? null,
-        file_type: data.file_type ?? null,
-        file_size: data.file_size ?? null,
+        ...values,
+        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
+        metadata: { library_save_fingerprint: fingerprint },
       })
       .select("id")
       .single();
     if (error || !row) {
+      const concurrent = await findExisting();
+      if (concurrent) return assertLibrarySaveReplay(concurrent, fingerprint);
       console.error("[serverfn]", error?.message);
       throw new Error("Failed to save");
     }

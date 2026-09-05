@@ -318,7 +318,7 @@ begin
     end if;
     return v_receipt.result;
   end if;
-  if not exists (select 1 from auth.users where id = p_grantee_user_id) then
+  if not kova_private.auth_user_exists(p_grantee_user_id) then
     raise exception 'project_template_grantee_not_found' using errcode = 'P0002';
   end if;
   select * into v_template from public.project_templates

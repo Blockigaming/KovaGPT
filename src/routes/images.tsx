@@ -11,6 +11,7 @@ import {
   type ImageHistoryItem,
 } from "@/lib/image-history";
 import { safeImageUrl } from "@/lib/safe-image-url";
+import { createImageHistoryLoadGuard } from "@/lib/image-history-load";
 import {
   PanelLeft,
   ArrowUp,
@@ -399,9 +400,11 @@ function ImagesPage() {
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
   const lightboxReturnToPromptRef = useRef(false);
   const historyObjectUrlsRef = useRef(new Set<string>());
+  const historyLoadGuardRef = useRef(createImageHistoryLoadGuard());
 
   useEffect(() => {
-    let cancelled = false;
+    const historyLoadGuard = historyLoadGuardRef.current;
+    historyLoadGuard.invalidate();
     const historyObjectUrls = historyObjectUrlsRef.current;
     for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
     historyObjectUrls.clear();
@@ -421,18 +424,17 @@ function ImagesPage() {
     setLimitMessage(undefined);
     setHistory([]);
     if (isLoaded && isSignedIn && userKey) {
-      void loadHistory(userKey).then((items) => {
-        const objectUrls = items.filter((item) => item.objectUrl).map((item) => item.imageUrl);
-        if (cancelled) {
-          for (const objectUrl of objectUrls) URL.revokeObjectURL(objectUrl);
-          return;
-        }
-        for (const objectUrl of objectUrls) historyObjectUrls.add(objectUrl);
-        setHistory(items);
-      });
+      void historyLoadGuard.load(
+        () => loadHistory(userKey),
+        (items) => {
+          const objectUrls = items.filter((item) => item.objectUrl).map((item) => item.imageUrl);
+          for (const objectUrl of objectUrls) historyObjectUrls.add(objectUrl);
+          setHistory(items);
+        },
+      );
     }
     return () => {
-      cancelled = true;
+      historyLoadGuard.invalidate();
       generationControllerRef.current?.abort();
       for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
       historyObjectUrls.clear();
@@ -969,6 +971,7 @@ function ImagesPage() {
         initialTab={settingsTab}
         returnFocusTarget={settingsReturnFocusRef.current}
         onClearAll={() => {
+          historyLoadGuardRef.current.invalidate();
           if (userKey) {
             clearLegacyHistory(userKey);
             void clearImageHistory(userKey).catch(() => {
@@ -978,6 +981,7 @@ function ImagesPage() {
           for (const objectUrl of historyObjectUrlsRef.current) URL.revokeObjectURL(objectUrl);
           historyObjectUrlsRef.current.clear();
           setHistory([]);
+          setLightbox(null);
         }}
       />
 

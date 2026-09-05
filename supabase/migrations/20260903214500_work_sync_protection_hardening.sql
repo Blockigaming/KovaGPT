@@ -94,16 +94,19 @@ create index work_sync_mutations_owner_created_idx
   on public.work_sync_mutations (owner_id, created_at);
 
 -- A Work tombstone needs only identity, kind, revision, clock and deletion
--- time. Remove bodies retained by the original migration before validating the
+-- time. Remove bodies retained by the original migration before enforcing the
 -- depth and account-export bounds below.
 update public.work_saved_records
 set title = 'Deleted Work item',
     payload = '{}'::jsonb
 where deleted_at is not null;
 
+-- Legacy active payloads may exceed the new nesting limit. Preserve them on
+-- upgrade while enforcing the check for every new or changed row. Validation
+-- of existing rows requires a separate, reviewed data remediation.
 alter table public.work_saved_records
   add constraint work_saved_records_payload_depth_check
-    check (public.work_sync_payload_depth_allowed(payload, 16)),
+    check (public.work_sync_payload_depth_allowed(payload, 16)) not valid,
   add constraint work_saved_records_deleted_body_check
     check (
       deleted_at is null

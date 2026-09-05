@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 93,
-  "latest": "20260904225602_account_project_storage_discovery.sql",
+  "count": 111,
+  "latest": "20260905002230_retained_work_source_read_access.sql",
   "migrations": [
     {
       "order": 1,
@@ -1560,7 +1560,7 @@
       "order": 78,
       "filename": "20260823220701_day15_chat_workspace_production_contract.sql",
       "timestamp": "20260823220701",
-      "sha256": "987bf661430f519aa033c87a5a077ed0d0cc7cdbf80d57b48dfd9f8dabf7c525",
+      "sha256": "7da5cc005386d55c5310dfa14ac8e8103a2be2f1dbafb514c234994f32c2af82",
       "tables": [
         "chat_branches",
         "chat_custom_rules",
@@ -1827,7 +1827,7 @@
       "order": 91,
       "filename": "20260903214500_work_sync_protection_hardening.sql",
       "timestamp": "20260903214500",
-      "sha256": "25d292ce34d2f27c2fc8959ce3efc8f3f0cfa5daca84eb6568eac9d2719b2768",
+      "sha256": "49beb15d9fc16cd72593bdf16b338a496fb3431bc8fa9539b4a6ff92d40e123b",
       "tables": [],
       "functions": [
         "work_sync_request_fingerprint",
@@ -1849,7 +1849,7 @@
       "order": 92,
       "filename": "20260903220000_project_templates.sql",
       "timestamp": "20260903220000",
-      "sha256": "f803e1e3d692d64e56cab79e7145e9b35de61cf06aa5ac36ce1523f5291eca76",
+      "sha256": "2b5069471896a1323adbd42320d5db9e30288f847049dff8dc529431a72400fb",
       "tables": [
         "project_templates",
         "project_template_versions",
@@ -1898,6 +1898,75 @@
     },
     {
       "order": 93,
+      "filename": "20260904100000_agent_team_atomic_terminal_controls.sql",
+      "timestamp": "20260904100000",
+      "sha256": "360c154d5e91fe68fea30ca7abebc16ad598ae25054d087b2be4dc70b93c637c",
+      "tables": [],
+      "functions": ["control_disabled_agent_team_run"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 94,
+      "filename": "20260904200000_project_file_upload_integrity.sql",
+      "timestamp": "20260904200000",
+      "sha256": "75fbebf9f08d0573f648345360443f1c1c8ac22cee5e7c7cc25b66030eadb505",
+      "tables": [],
+      "functions": [
+        "lock_project_for_file_operation",
+        "reserve_project_file_upload",
+        "acquire_project_file_upload_quota",
+        "set_project_file_upload_state",
+        "abort_project_file_upload",
+        "claim_stale_project_file_cleanup",
+        "renew_stale_project_file_cleanup",
+        "fail_stale_project_file_cleanup",
+        "finalize_stale_project_file_cleanup",
+        "claim_project_file_delete",
+        "restore_project_file_delete",
+        "finalize_project_file_delete",
+        "release_project_storage_bytes"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": ["files_select_members", "project_files_read"],
+      "indexes": [
+        "project_files_project_storage_unique",
+        "project_files_upload_idempotency_unique",
+        "project_files_status_idx"
+      ]
+    },
+    {
+      "order": 95,
+      "filename": "20260904210000_project_deletion_storage_integrity.sql",
+      "timestamp": "20260904210000",
+      "sha256": "4ed7c1f33084d143ad1bf81b488d272ccc9de05e492816c74cb6f642aeb0c795",
+      "tables": ["project_deletion_jobs"],
+      "functions": [
+        "project_deletion_project_write_fence",
+        "project_deletion_child_write_fence",
+        "project_file_deletion_fence",
+        "claim_project_deletion",
+        "renew_project_deletion",
+        "fail_project_deletion",
+        "project_storage_first_delete_guard",
+        "finalize_project_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_deletion_jobs"],
+      "policies": [],
+      "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
+    },
+    {
+      "order": 96,
       "filename": "20260904225602_account_project_storage_discovery.sql",
       "timestamp": "20260904225602",
       "sha256": "d0eff32b3d42fbff00297bbf8986bd4d5eec40af35d5b24644ab15a83abaa26b",
@@ -1908,6 +1977,315 @@
       "reversible": false,
       "rls": [],
       "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 97,
+      "filename": "20260904225916_account_export_generation_outbox.sql",
+      "timestamp": "20260904225916",
+      "sha256": "5f698e73756dfaaf5d1112cec9e115e4e48075f7c14759e0ae65f4d675392f1c",
+      "tables": ["account_export_artifacts"],
+      "functions": [
+        "kova_private",
+        "register_account_export_artifact",
+        "claim_account_export_jobs",
+        "settle_account_export_success",
+        "settle_account_export_failure",
+        "claim_account_export_artifact_cleanup"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["account_export_artifacts"],
+      "policies": [],
+      "indexes": [
+        "account_export_artifacts_cleanup_idx",
+        "account_export_artifacts_user_idx",
+        "account_export_artifacts_job_idx"
+      ]
+    },
+    {
+      "order": 98,
+      "filename": "20260904230329_production_privilege_lineage_reconciliation.sql",
+      "timestamp": "20260904230329",
+      "sha256": "fa68fc4d3b731e9b5d04980dbb655c7c7258aebfd8f926be57bb6c74bc1947b1",
+      "tables": [],
+      "functions": ["kova_private", "user_plan_tier"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["%I"],
+      "indexes": []
+    },
+    {
+      "order": 99,
+      "filename": "20260904230332_canonical_chat_workspace_lineage_reconciliation.sql",
+      "timestamp": "20260904230332",
+      "sha256": "44bb822403d1213a6a90df6dd4afbcc5efd3e0216069d193edbf8a949371a449",
+      "tables": [],
+      "functions": [
+        "utf16_code_unit_length",
+        "create_chat_message_version",
+        "kova_record_message_version",
+        "kova_accept_message_version",
+        "kova_create_chat_branch",
+        "kova_activate_chat_branch",
+        "kova_update_chat_branch_messages",
+        "accept_chat_message_version",
+        "activate_chat_branch",
+        "create_chat_branch",
+        "create_chat_branch",
+        "save_chat_custom_rules",
+        "delete_chat_custom_rules",
+        "pin_chat_source",
+        "unpin_chat_source",
+        "get_chat_context_bundle",
+        "get_chat_workspace_state",
+        "validate_chat_message_version_branch"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 100,
+      "filename": "20260904231210_stripe_customer_identity_and_completion.sql",
+      "timestamp": "20260904231210",
+      "sha256": "e18199eeb5710a6ce14b6e24006d9de3a9bfe4d86b469d2bcbb95e5aa2833742",
+      "tables": [
+        "stripe_customer_mappings",
+        "account_deletion_fences",
+        "stripe_customer_creation_requests"
+      ],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "stripe_customer_mappings",
+        "account_deletion_fences",
+        "stripe_customer_creation_requests"
+      ],
+      "policies": ["stripe_customer_mappings_deny_clients"],
+      "indexes": []
+    },
+    {
+      "order": 101,
+      "filename": "20260904231213_billing_plan_tier_and_atomic_stripe_events.sql",
+      "timestamp": "20260904231213",
+      "sha256": "224240168c4f6752f691c8e50b4669b2caeac408094af6024a6eefc0ed7c6541",
+      "tables": [
+        "billing_plan_tiers",
+        "stripe_subscription_sync_state",
+        "stripe_checkout_attempts",
+        "stripe_event_processing_claims"
+      ],
+      "functions": [
+        "normalize_legacy_live_subscription_price",
+        "billing_user_plan_tier",
+        "user_plan_tier",
+        "effective_user_plan_tier",
+        "current_user_plan_tier",
+        "current_effective_plan_tier",
+        "user_subscription_summary",
+        "current_subscription_summary",
+        "begin_stripe_event",
+        "complete_stripe_event",
+        "claim_stripe_checkout_attempt",
+        "mark_stripe_checkout_attempt"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "billing_plan_tiers",
+        "stripe_subscription_sync_state",
+        "stripe_checkout_attempts",
+        "stripe_event_processing_claims"
+      ],
+      "policies": [
+        "Billing plan tiers deny client access",
+        "Stripe subscription sync state denies clients",
+        "Stripe checkout attempts deny clients",
+        "Stripe event processing claims deny clients"
+      ],
+      "indexes": []
+    },
+    {
+      "order": 102,
+      "filename": "20260904231310_account_project_file_lifecycle.sql",
+      "timestamp": "20260904231310",
+      "sha256": "05ec9b5c1b9ceca5452f5ad97c4fd95599d674bb4e91c69cd7c5f84cc0ec9576",
+      "tables": ["project_storage_retained_charges"],
+      "functions": [
+        "settle_project_source_storage_charge",
+        "claim_account_project_file_cleanup",
+        "finalize_account_project_file_cleanup",
+        "project_file_account_write_fence",
+        "list_account_project_storage_objects",
+        "settle_account_project_storage_charges"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_storage_retained_charges"],
+      "policies": [],
+      "indexes": ["project_storage_retained_charges_path_idx", "project_files_account_cleanup_idx"]
+    },
+    {
+      "order": 103,
+      "filename": "20260904232923_account_storage_generation_outbox.sql",
+      "timestamp": "20260904232923",
+      "sha256": "63aae1a331978b519135b8c11ba6a6964568b8cb8af1476dee61b4a30097bb6a",
+      "tables": ["account_storage_artifacts"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["account_storage_artifacts"],
+      "policies": [],
+      "indexes": [
+        "account_storage_artifacts_pending_idx",
+        "account_storage_artifacts_cleanup_idx",
+        "account_storage_artifacts_owner_idx",
+        "account_storage_artifacts_requester_idx"
+      ]
+    },
+    {
+      "order": 104,
+      "filename": "20260904233022_durable_chat_context_summaries.sql",
+      "timestamp": "20260904233022",
+      "sha256": "d11d770e3f91fd249e2eec8d1d6daaafc8d80c888354a3646392fc475bd33e38",
+      "tables": ["chat_memory_write_epochs", "chat_context_summaries"],
+      "functions": [
+        "begin_chat_memory_write",
+        "delete_chat_memory",
+        "persist_chat_memory",
+        "kova_private",
+        "queue_chat_context_summary",
+        "purge_expired_chat_context_inputs",
+        "claim_chat_context_summaries",
+        "settle_chat_context_summary"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["chat_memory_write_epochs", "chat_context_summaries"],
+      "policies": ["chat_context_summary_owner_read"],
+      "indexes": ["chat_context_summary_due_idx"]
+    },
+    {
+      "order": 105,
+      "filename": "20260904234409_project_storage_source_retirement.sql",
+      "timestamp": "20260904234409",
+      "sha256": "6cb08c8db39bd23ce5f3ced12b2a38f3cc75eb1e9ca5ca5f55e031bb90cf3e21",
+      "tables": [
+        "project_storage_source_provenance",
+        "project_storage_source_access",
+        "project_storage_source_retirements"
+      ],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "project_storage_source_provenance",
+        "project_storage_source_retirements",
+        "project_storage_source_access"
+      ],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 106,
+      "filename": "20260904235854_semantic_workspace_search.sql",
+      "timestamp": "20260904235854",
+      "sha256": "a5bdea89928df34738649496441d9e24454f03852dabf1d4ca1394600e474fa0",
+      "tables": ["workspace_search_index"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["workspace_search_index"],
+      "policies": ["workspace_search_current_access"],
+      "indexes": ["workspace_search_owner_idx", "workspace_search_due_idx"]
+    },
+    {
+      "order": 107,
+      "filename": "20260904235937_work_session_sync.sql",
+      "timestamp": "20260904235937",
+      "sha256": "70b4564e0645906026f4cca32ffa29c2978a6a75667c6bf4f3a7899a43937418",
+      "tables": [],
+      "functions": ["validate_work_session", "upsert_work_saved_record", "mutate_work_recent_item"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 108,
+      "filename": "20260905001217_family_atomic_membership.sql",
+      "timestamp": "20260905001217",
+      "sha256": "c4baf51ba59323b22b15acfabd4608887118539c9128545b77f7e59faaa80e13",
+      "tables": [],
+      "functions": ["enforce_family_member_cap"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 109,
+      "filename": "20260905001247_legacy_browser_atomic_controls.sql",
+      "timestamp": "20260905001247",
+      "sha256": "8b2f7518844fb5f5228d18b2c292b8c7bf778fad43ba8b8a2b87985db6db87a4",
+      "tables": ["agent_run_approval_bindings"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["agent_run_approval_bindings"],
+      "policies": [],
+      "indexes": [
+        "agent_runs_id_owner_control_key",
+        "integration_approvals_id_owner_control_key",
+        "agent_run_approval_bindings_run_idx"
+      ]
+    },
+    {
+      "order": 110,
+      "filename": "20260905001736_private_auth_identity_helpers.sql",
+      "timestamp": "20260905001736",
+      "sha256": "b9005dcfee8279ebe3b1c23b80254099526088c610cad015a6070506dc6ca9ff",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 111,
+      "filename": "20260905002230_retained_work_source_read_access.sql",
+      "timestamp": "20260905002230",
+      "sha256": "9343fbf3ec082eb8102d1c2ddea79d15c51362067d1c7294837ed6c3692414a2",
+      "tables": [],
+      "functions": ["kova_private"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["project_files_retained_work_read"],
       "indexes": []
     }
   ]

@@ -81,6 +81,7 @@ export type ClaimedAccountExport = {
   id: string;
   user_id: string;
   attempts: number;
+  upload_generation: string;
   status: "processing";
 };
 
@@ -207,6 +208,7 @@ export async function cleanupAccountExportsBeforeAccountDeletion(
   if (fenced.error) throw exportError("account_export_cleanup_unavailable");
 
   if (await hasProcessingAccountExportJob(userId)) return { ready: false };
+  await sweepRetiredAccountExportArtifacts(userId);
 
   // Clean a bounded page on each retry. Historical rows whose artifacts were
   // already finalized do not block deletion, and rows with artifacts advance
@@ -243,7 +245,7 @@ async function assertClaimStillOwnsUpload(
 ): Promise<void> {
   const state = await admin
     .from("account_export_jobs")
-    .select("status,worker_id,lease_expires_at")
+    .select("status,worker_id,lease_expires_at,upload_generation")
     .eq("id", job.id)
     .eq("user_id", job.user_id)
     .maybeSingle();
@@ -255,6 +257,7 @@ async function assertClaimStillOwnsUpload(
   if (
     state.data.status !== "processing" ||
     state.data.worker_id !== workerId ||
+    state.data.upload_generation !== job.upload_generation ||
     !Number.isFinite(lease) ||
     lease <= Date.now()
   ) {
@@ -422,7 +425,11 @@ async function embedFile(
 
 async function collectFiles(records: Record<string, ExportRow[]>): Promise<EmbeddedFile[]> {
   const candidates = new Map<string, { bucket: string; path: string; type: string | null }>();
-  const projectFileRows = records.project_files ?? [];
+  // Reservation/deletion metadata is still exported above, but its bytes may
+  // not exist. Undefined keeps compatibility with rows predating the lifecycle.
+  const projectFileRows = (records.project_files ?? []).filter(
+    (row) => row.status === undefined || row.status === "ready",
+  );
   const projectFileIds = ids(projectFileRows);
   const promotionRows = (
     await readAllIn("agent_resource_promotions", "destination_id", projectFileIds)
@@ -545,33 +552,35 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
   let uploadedPath: string | null = null;
   try {
     const artifact = await buildAccountExport(job.user_id, job.id);
-    // The claim is checked immediately before the first write. Account
-    // deletion/cancellation leaves worker_id in place as a barrier until this
-    // worker acknowledges that it can no longer upload.
+    // A preflight lease check alone cannot fence an external request that
+    // resumes after cancellation. Register the unique generation/path durably
+    // before the first Storage write; its cleanup obligation survives Auth
+    // cascade and remains sweepable even after a previous delete saw nothing.
     await assertClaimStillOwnsUpload(job, workerId);
-    // A previous attempt may have uploaded successfully before settlement and
-    // then failed to remove that unreferenced object. Clear the job prefix
-    // while this lease is still verified so retries cannot accumulate private
-    // account snapshots.
-    await clearAccountExportArtifacts(job.user_id, job.id);
-    // Prefix cleanup can involve multiple Storage round trips. Recheck the
-    // lease at the final write boundary so cleanup latency cannot let an
-    // expired or canceled worker upload a new artifact.
-    await assertClaimStillOwnsUpload(job, workerId);
-    const path = accountExportStoragePath(job.user_id, job.id, randomUUID());
+    const path = accountExportStoragePath(job.user_id, job.id, job.upload_generation);
+    const registered = await admin.rpc("register_account_export_artifact", {
+      p_job_id: job.id,
+      p_worker_id: workerId,
+      p_generation: job.upload_generation,
+    });
+    if (registered.error || registered.data !== path) {
+      throw exportError("account_export_lease_lost");
+    }
+    // Keep the path even when the network result is an error: the provider may
+    // still finish that request. Every cleanup only touches this generation.
+    uploadedPath = path;
     const upload = await admin.storage.from(EXPORT_BUCKET).upload(path, artifact.bytes, {
       contentType: "application/json",
       upsert: false,
     });
     if (upload.error) throw exportError("account_export_storage_unavailable");
-    uploadedPath = path;
-
     const settled = await admin.rpc("settle_account_export_success", {
       p_job_id: job.id,
       p_worker_id: workerId,
       p_storage_path: path,
       p_content_sha256: createHash("sha256").update(artifact.bytes).digest("hex"),
       p_size_bytes: artifact.bytes.byteLength,
+      p_generation: job.upload_generation,
     });
     if (settled.error || settled.data !== true)
       throw exportError("account_export_settlement_failed");
@@ -579,8 +588,12 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
   } catch (error) {
     let cleanupFailed = false;
     if (uploadedPath) {
-      const removed = await admin.storage.from(EXPORT_BUCKET).remove([uploadedPath]);
-      cleanupFailed = Boolean(removed.error);
+      try {
+        const removed = await admin.storage.from(EXPORT_BUCKET).remove([uploadedPath]);
+        cleanupFailed = Boolean(removed.error);
+      } catch {
+        cleanupFailed = true;
+      }
     }
     const code = cleanupFailed ? "account_export_storage_unavailable" : errorCode(error);
     const retryable = new Set([
@@ -594,7 +607,11 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
       p_worker_id: workerId,
       p_failure_code: code,
       p_retryable: retryable,
+      p_generation: job.upload_generation,
     });
+    if (settled.data === "superseded" && !settled.error) {
+      return { id: job.id, status: "superseded" as const };
+    }
     if (settled.error || (settled.data !== "queued" && settled.data !== "failed")) {
       throw exportError("account_export_failure_settlement_failed");
     }
@@ -603,6 +620,35 @@ async function processClaimed(job: ClaimedAccountExport, workerId: string) {
       status: settled.data === "queued" ? ("retry" as const) : ("failed" as const),
     };
   }
+}
+
+/** Retry retained cleanup obligations even after their user/job has disappeared. */
+export async function sweepRetiredAccountExportArtifacts(userId?: string): Promise<number> {
+  const claimed = await admin.rpc("claim_account_export_artifact_cleanup", {
+    p_limit: MAX_DELETION_CLEANUPS_PER_REQUEST,
+    p_user_id: userId ?? null,
+  });
+  if (claimed.error || !Array.isArray(claimed.data)) {
+    throw exportError("account_export_cleanup_unavailable");
+  }
+  let cleaned = 0;
+  for (const value of claimed.data as ExportRow[]) {
+    if (
+      typeof value.user_id !== "string" ||
+      typeof value.job_id !== "string" ||
+      typeof value.generation !== "string" ||
+      value.state !== "retired" ||
+      (userId !== undefined && value.user_id !== userId) ||
+      value.storage_path !== accountExportStoragePath(value.user_id, value.job_id, value.generation)
+    ) {
+      throw exportError("account_export_artifact_name_invalid");
+    }
+    const removed = await admin.storage.from(EXPORT_BUCKET).remove([value.storage_path as string]);
+    if (removed.error) throw exportError("account_export_storage_unavailable");
+    // Do not delete or finalize this row: a paused upload can still arrive.
+    cleaned += 1;
+  }
+  return cleaned;
 }
 
 export async function cleanupExpiredAccountExports(limit = 20): Promise<number> {
@@ -637,6 +683,7 @@ export async function cleanupExpiredAccountExports(limit = 20): Promise<number> 
 export async function runAccountExportBatch(options?: { workerId?: string; limit?: number }) {
   const workerId = options?.workerId ?? `account-export-${randomUUID()}`;
   const limit = Math.max(1, Math.min(options?.limit ?? 2, 5));
+  await sweepRetiredAccountExportArtifacts();
   await cleanupExpiredAccountExports();
   const claimed = await admin.rpc("claim_account_export_jobs", {
     p_worker_id: workerId,
@@ -648,7 +695,12 @@ export async function runAccountExportBatch(options?: { workerId?: string; limit
   }
   const jobs = (claimed.data as unknown[]).map((value) => {
     const row = sanitizeAccountExportValue(value) as ClaimedAccountExport;
-    if (!row || typeof row.id !== "string" || typeof row.user_id !== "string") {
+    if (
+      !row ||
+      typeof row.id !== "string" ||
+      typeof row.user_id !== "string" ||
+      typeof row.upload_generation !== "string"
+    ) {
       throw exportError("account_export_claim_invalid");
     }
     return row;
@@ -660,6 +712,7 @@ export async function runAccountExportBatch(options?: { workerId?: string; limit
     complete: results.filter((entry) => entry.status === "complete").length,
     failed: results.filter((entry) => entry.status === "failed").length,
     retry: results.filter((entry) => entry.status === "retry").length,
+    superseded: results.filter((entry) => entry.status === "superseded").length,
     results,
   };
 }

@@ -26,9 +26,9 @@ async function createDatabase() {
   await database.exec(`
     CREATE ROLE anon;
     CREATE ROLE authenticated;
-    CREATE ROLE service_role;
-    CREATE SCHEMA auth;
-    CREATE TABLE auth.users (id uuid PRIMARY KEY);
+    CREATE ROLE service_role BYPASSRLS;
+    CREATE SCHEMA auth; GRANT USAGE ON SCHEMA auth TO service_role;
+    CREATE TABLE auth.users (id uuid PRIMARY KEY, deleted_at timestamptz);
     CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
       $$ SELECT null::uuid $$;
     CREATE TABLE public.projects (
@@ -54,6 +54,9 @@ async function createDatabase() {
     );
     INSERT INTO auth.users(id) VALUES ('${ownerId}'), ('${granteeId}'), ('${outsiderId}');
   `);
+  await database.exec(
+    await readFile("supabase/migrations/20260905001736_private_auth_identity_helpers.sql", "utf8"),
+  );
   await database.exec(await readFile(migrationPath, "utf8"));
   return database;
 }
@@ -302,6 +305,27 @@ test("browser roles are read-only and all template functions are invoker/service
       assert.equal(row.prosecdef, false);
       assert.deepEqual(row.proconfig, ['search_path=""']);
     }
+  } finally {
+    await database.close();
+  }
+});
+
+test("service-only template sharing verifies recipients without Auth table access", async () => {
+  const database = await createDatabase();
+  try {
+    const template = await createTemplate(database);
+    await database.exec(
+      "grant insert on public.account_audit_entries to service_role; set role service_role",
+    );
+    const privilege = await database.query(
+      "select has_table_privilege(current_user,'auth.users','SELECT') allowed",
+    );
+    assert.equal(privilege.rows[0].allowed, false);
+    const shared = await database.query(
+      "select public.share_project_template($1,$2,$3,1,$4,false) result",
+      [ownerId, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", template.templateId, granteeId],
+    );
+    assert.ok(shared.rows[0].result);
   } finally {
     await database.close();
   }

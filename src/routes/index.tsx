@@ -1,3 +1,5 @@
+import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
+import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
@@ -15,8 +17,6 @@ import { SignUpPrompt } from "@/components/SignUpPrompt";
 import {
   PanelLeft,
   Search,
-  MessageSquareDashed,
-  Check,
   Share2,
   Download,
   Sliders,
@@ -58,12 +58,27 @@ const ShareChatDialog = lazy(() =>
 const ChatWorkspaceDialog = lazy(() =>
   import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
 );
+const loadTemporaryChatControls = () => import("@/components/TemporaryChatStartDialog");
+const TemporaryChatStartDialog = lazy(() =>
+  loadTemporaryChatControls().then((m) => ({
+    default: m.TemporaryChatStartDialog,
+  })),
+);
+const TemporaryChatToggle = lazy(() =>
+  loadTemporaryChatControls().then((m) => ({
+    default: m.TemporaryChatToggle,
+  })),
+);
+const TemporaryChatBanner = lazy(() =>
+  loadTemporaryChatControls().then((m) => ({
+    default: m.TemporaryChatBanner,
+  })),
+);
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import {
   blockMemoryWrites,
   configureMemoryWrites,
-  enqueueMemoryWrite,
   isMemoryWriteBlocked,
   memoryWriteBlockStorageKey,
 } from "@/lib/memory-write-coordinator.mjs";
@@ -82,6 +97,7 @@ import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
   type Message,
+  type TemporaryChatContext,
   deriveTitle,
   branchConversation,
   chatStoragePrincipal,
@@ -94,6 +110,7 @@ import {
   loadPendingActive,
   newId,
   saveConversations,
+  persistTemporaryConversation,
   saveDraft,
   archiveConversation,
   removeArchivedConversation,
@@ -166,17 +183,6 @@ const EMPTY_STATE_STARTERS = [
   },
 ] as const;
 
-// Some environments report non-canonical locales (e.g. "en-US@posix"), which the
-// API rejects. Fall back to a canonical tag instead of failing the request.
-function safeLocale(): string {
-  const raw = typeof navigator !== "undefined" ? navigator.language : "en-US";
-  try {
-    return Intl.getCanonicalLocales(raw)[0] ?? "en-US";
-  } catch {
-    return "en-US";
-  }
-}
-
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { tier } = useTier();
@@ -212,6 +218,8 @@ function KovaGPT() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamAnnouncement, setStreamAnnouncement] = useState("");
   const [tempChat, setTempChat] = useState(false);
+  const [tempChatContext, setTempChatContext] = useState<TemporaryChatContext>("clean");
+  const [tempChatStartOpen, setTempChatStartOpen] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const commandReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -391,6 +399,7 @@ function KovaGPT() {
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
+  const retryGenerationRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -404,6 +413,10 @@ function KovaGPT() {
       storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsPrincipal(null);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       return;
     }
     storageGenerationRef.current += 1;
@@ -415,6 +428,10 @@ function KovaGPT() {
       retryTimerRef.current = null;
     }
     setIsStreaming(false);
+    setTempChat(false);
+    setTempChatContext("clean");
+    setTempChatStartOpen(false);
+    setTempChatConfirmed(false);
     setActiveId(null);
     setInput("");
     setAttachments([]);
@@ -507,6 +524,10 @@ function KovaGPT() {
       setCommandOpen(false);
       setCommandQuery("");
       setIsStreaming(false);
+      setTempChat(false);
+      setTempChatContext("clean");
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(false);
       setRecentLibraryFiles([]);
       setRecentLibraryLoading(false);
       setRecentLibraryError(null);
@@ -623,6 +644,7 @@ function KovaGPT() {
     [conversations, activeId],
   );
   const activeTemporary = active ? Boolean(active.temporary) : null;
+  const activeTemporaryContext = active?.temporary ? (active.temporaryContext ?? "clean") : null;
   const historyConversations = useMemo(
     () => conversations.filter((conversation) => !conversation.temporary),
     [conversations],
@@ -632,7 +654,8 @@ function KovaGPT() {
 
   useEffect(() => {
     if (activeTemporary !== null) setTempChat(activeTemporary);
-  }, [activeTemporary]);
+    if (activeTemporaryContext !== null) setTempChatContext(activeTemporaryContext);
+  }, [activeTemporary, activeTemporaryContext]);
 
   // Branch rows are keyed by the family's root conversation, so a branched chat
   // and its original share one durable branch tree.
@@ -759,40 +782,17 @@ function KovaGPT() {
       tier === "free"
     )
       return;
-    if (!active || active.temporary || active.messages.length < 4) return;
-    const handle = setTimeout(() => {
-      const payload = {
-        chatId: active.id,
-        title: active.title.slice(0, 120),
-        memoryEnabled: true,
-        temporary: false,
-        // The memory endpoint intentionally accepts only the latest bounded window.
-        messages: active.messages
-          .slice(-30)
-          .map((message) => ({ role: message.role, content: message.content.slice(0, 2000) })),
-      };
-      void enqueueMemoryWrite({
-        principal: userKey,
-        run: async () => {
-          const response = await authFetch("/api/memory", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!response.ok) {
-            void response.body?.cancel().catch(() => undefined);
-            throw new Error("memory_write_failed");
-          }
-        },
-      }).catch(() => {
-        /* Saved memory is best-effort; foreground chat must remain usable. */
-      });
-    }, 4000);
-    return () => clearTimeout(handle);
+    if (!active || active.temporary) return;
+    const controller = new AbortController();
+    void import("@/lib/chat-summary-snapshot.mjs")
+      .then(({ scheduleMemoryWrites }) => scheduleMemoryWrites(active, userKey, controller.signal))
+      .catch(() => undefined);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     active?.id,
     active?.messages.length,
+    active?.memoryStartIndex,
     isStreaming,
     isSignedIn,
     settings.rememberAcross,
@@ -822,39 +822,77 @@ function KovaGPT() {
     setEditingMessage(null);
   }, [setConversations]);
 
+  const startTemporaryChat = useCallback(
+    (context: TemporaryChatContext) => {
+      try {
+        clearDraft(userKey, activeId);
+      } catch {
+        /* Storage may be unavailable; temporary input still stays in memory only. */
+      }
+      // Persisted and temporary turns must never share one conversation.
+      newChat();
+      setTempChatContext(context);
+      setTempChat(true);
+      setTempChatStartOpen(false);
+      setTempChatConfirmed(true);
+      window.setTimeout(() => setTempChatConfirmed(false), 1400);
+      toast.success("Temporary chat on", {
+        description:
+          context === "personalized"
+            ? "No history or new memory. Your enabled context and connected apps may be used."
+            : "No history or memory. Profile, instructions, personality and connected apps stay off.",
+      });
+    },
+    [activeId, newChat, userKey],
+  );
+
   const setTemporaryChatEnabled = useCallback(
     (enabled: boolean) => {
       if (enabled === tempChat) return;
-
       if (enabled) {
-        try {
-          clearDraft(userKey, activeId);
-        } catch {
-          /* Storage may be unavailable; temporary input still stays in memory only. */
-        }
+        setTempChatStartOpen(true);
+        return;
       }
 
       // Persisted and temporary turns must never share one conversation.
       newChat();
       setTempChat(enabled);
-
-      if (enabled) {
-        setTempChatConfirmed(true);
-        window.setTimeout(() => setTempChatConfirmed(false), 1400);
-        toast.success("Temporary chat enabled", {
-          description:
-            "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings.",
-        });
-      } else {
-        toast.message("Temporary chat disabled", {
-          description: settings.rememberAcross
-            ? "New chats will be saved on this device and may use saved memory."
-            : "New chats will be saved on this device. Saved memory remains off.",
-        });
-      }
+      setTempChatContext("clean");
+      toast.message("Temporary chat off", {
+        description: settings.rememberAcross
+          ? "New chats save on this device and may use saved memory."
+          : "New chats save on this device. Saved memory stays off.",
+      });
     },
-    [activeId, newChat, settings.rememberAcross, tempChat, userKey],
+    [newChat, settings.rememberAcross, tempChat],
   );
+
+  const saveTemporaryChat = useCallback(() => {
+    if (!active?.temporary || isStreaming) return;
+    // A scheduled retry still carries the immutable temporary-context closure.
+    // Cancel it before conversion so no old temporary turn can land past the
+    // new memory boundary and later be persisted as regular-chat memory.
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    const nextConversations = persistTemporaryConversation(userKey, active, conversations);
+    if (!nextConversations) {
+      toast.error("This chat could not be saved", {
+        description: "Storage is unavailable or full. Free space and retry.",
+      });
+      return;
+    }
+    // Invalidate both queued retries and already-rendered Retry toast actions.
+    // A callback created in temporary mode must never edit the converted chat.
+    retryGenerationRef.current += 1;
+    setConversations(nextConversations);
+    setTempChat(false);
+    setTempChatContext("clean");
+    toast.success("Chat saved to history", {
+      description: "Regular chat continues. Earlier temporary turns stay out of memory.",
+    });
+  }, [active, conversations, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback(() => {
     commandReturnFocusRef.current =
@@ -969,8 +1007,10 @@ function KovaGPT() {
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
       const requestGeneration = storageGenerationRef.current;
+      const requestRetryGeneration = retryGenerationRef.current;
       const requestPrincipal = storagePrincipal;
       const isCurrentRequest = () =>
+        requestRetryGeneration === retryGenerationRef.current &&
         requestGeneration === storageGenerationRef.current &&
         requestPrincipal === storagePrincipalRef.current;
 
@@ -1039,6 +1079,7 @@ function KovaGPT() {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
+            temporaryContext: tempChat ? tempChatContext : undefined,
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
@@ -1048,6 +1089,10 @@ function KovaGPT() {
             ? {
                 ...c,
                 messages: [...priorMessages, userMsg, assistantMsg],
+                memoryStartIndex:
+                  typeof c.memoryStartIndex === "number"
+                    ? Math.min(Math.max(0, c.memoryStartIndex), priorMessages.length)
+                    : undefined,
                 updatedAt: Date.now(),
               }
             : c,
@@ -1104,17 +1149,21 @@ function KovaGPT() {
       let assembledReply = "";
 
       try {
-        const payloadMessages = [
-          ...priorMessages.map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+        const { createChatHistoryPayload, fetchForPrincipal } =
+          await import("@/lib/chat-summary-snapshot.mjs");
+        const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
+          fetchForPrincipal(userKey, input, init);
+        const historyPayload = await createChatHistoryPayload(
+          chatRequestMessages(priorMessages, userMsg),
+          Math.min(existingConversation?.memoryStartIndex ?? 0, priorMessages.length),
           {
-            role: userMsg.role,
-            content: userMsg.content,
-            attachments: userMsg.attachments,
+            principal: userKey,
+            chatId: nextConvId,
+            temporary: tempChat,
+            memoryEnabled: settings.rememberAcross,
+            signal: controller.signal,
           },
-        ];
+        );
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
@@ -1123,7 +1172,7 @@ function KovaGPT() {
             "Idempotency-Key": userMsg.id,
           },
           body: JSON.stringify({
-            messages: payloadMessages,
+            ...historyPayload,
             mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
             // Main-chat ids are device-local until a user-owned memory row
@@ -1131,39 +1180,42 @@ function KovaGPT() {
             // service-role Deep Research write.
             chatId: activeTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
-            user: tempChat
-              ? undefined
-              : {
-                  name: settings.displayName,
-                  pronouns: settings.preferredPronouns,
-                  email: settings.email,
-                  phone: settings.phone,
-                  address: [
-                    settings.addressLine1,
-                    settings.addressLine2,
-                    settings.city,
-                    settings.region,
-                    settings.postalCode,
-                    settings.country,
-                  ]
-                    .filter(Boolean)
-                    .join(", "),
-                  extraFacts: settings.extraFacts,
-                  customInstructions: settings.customInstructions,
-                  mood: settings.mood,
-                  responseLength: settings.responseLength,
-                  language: settings.language,
-                  rememberAcross: settings.rememberAcross,
-                  webSearch: settings.webSearch,
-                },
+            temporaryContext: tempChat ? tempChatContext : undefined,
+            user:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : {
+                    name: settings.displayName,
+                    pronouns: settings.preferredPronouns,
+                    email: settings.email,
+                    phone: settings.phone,
+                    address: [
+                      settings.addressLine1,
+                      settings.addressLine2,
+                      settings.city,
+                      settings.region,
+                      settings.postalCode,
+                      settings.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", "),
+                    extraFacts: settings.extraFacts,
+                    customInstructions: settings.customInstructions,
+                    mood: settings.mood,
+                    responseLength: settings.responseLength,
+                    language: settings.language,
+                    rememberAcross: settings.rememberAcross,
+                    webSearch: settings.webSearch,
+                  },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality: tempChat
-              ? undefined
-              : personalityToInstruction(
-                  loadPersonality(isLoaded ? userKey : undefined),
-                  isLoaded ? userKey : undefined,
-                ) || undefined,
+            personality:
+              tempChat && tempChatContext === "clean"
+                ? undefined
+                : personalityToInstruction(
+                    loadPersonality(isLoaded ? userKey : undefined),
+                    isLoaded ? userKey : undefined,
+                  ) || undefined,
           }),
           signal: controller.signal,
         });
@@ -1176,6 +1228,14 @@ function KovaGPT() {
           throw await chatResponseError(resp, "Request failed");
         }
 
+        const receiveMemorySources = createMemorySourceUpdater(
+          userKey,
+          tempChat,
+          nextConvId,
+          assistantMsg.id,
+          isCurrentRequest,
+          setConversations,
+        );
         await consumeChatSse(resp.body, {
           signal: controller.signal,
           onEvent: (parsed) => {
@@ -1187,6 +1247,7 @@ function KovaGPT() {
                 choices?: Array<{ delta?: Record<string, unknown> }>;
               }
             ).choices?.[0]?.delta;
+            receiveMemorySources(delta);
             if (delta?.kind === "image_pending") {
               markPendingImage();
             }
@@ -1353,6 +1414,12 @@ function KovaGPT() {
             action: {
               label: "Retry",
               onClick: () => {
+                if (
+                  !isCurrentRequest() ||
+                  activeIdRef.current !== nextConvId ||
+                  inFlightRef.current
+                )
+                  return;
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === nextConvId
@@ -1392,6 +1459,7 @@ function KovaGPT() {
       settings,
       selectedTool,
       tempChat,
+      tempChatContext,
       editingMessage,
       principalReady,
       setConversations,
@@ -1648,22 +1716,13 @@ function KovaGPT() {
               </button>
             )}
             {isLoaded && isSignedIn && (
-              <button
-                onClick={() => setTemporaryChatEnabled(!tempChat)}
-                aria-label={tempChat ? "Turn off temporary chat" : "Start temporary chat"}
-                aria-pressed={tempChat}
-                title={tempChat ? "Temporary chat on" : "Start temporary chat"}
-                className={`relative shrink-0 p-2 rounded-lg transition ${
-                  tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
-                }`}
-              >
-                <MessageSquareDashed className="w-5 h-5" />
-                {tempChatConfirmed && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-primary drop-shadow" />
-                  </span>
-                )}
-              </button>
+              <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
+                <TemporaryChatToggle
+                  enabled={tempChat}
+                  confirmed={tempChatConfirmed}
+                  onToggle={() => setTemporaryChatEnabled(!tempChat)}
+                />
+              </Suspense>
             )}
             {!isLoaded ? null : isSignedIn ? (
               <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
@@ -1685,22 +1744,15 @@ function KovaGPT() {
         </header>
 
         {tempChat && (
-          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
-            <div className="flex min-w-0 items-center gap-2">
-              <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span>
-                Temporary chat is on. It is not saved to history and does not use or update saved
-                memory, profile details, custom instructions, or personality settings.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setTemporaryChatEnabled(false)}
-              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
-            >
-              Turn off
-            </button>
-          </div>
+          <Suspense fallback={null}>
+            <TemporaryChatBanner
+              tempChatContext={tempChatContext}
+              canSave={Boolean(active?.temporary && active.messages.length > 0)}
+              isStreaming={isStreaming}
+              onSave={saveTemporaryChat}
+              onTurnOff={() => setTemporaryChatEnabled(false)}
+            />
+          </Suspense>
         )}
 
         {!active || active.messages.length === 0 ? (
@@ -1732,6 +1784,7 @@ function KovaGPT() {
                   onStop={stop}
                   isStreaming={isStreaming}
                   disabled={!principalReady}
+                  saveAttachmentsToLibrary={principalReady && !tempChat}
                   attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
@@ -2075,6 +2128,7 @@ function KovaGPT() {
                 onStop={stop}
                 isStreaming={isStreaming}
                 disabled={!principalReady}
+                saveAttachmentsToLibrary={principalReady && !tempChat}
                 attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}
@@ -2134,6 +2188,14 @@ function KovaGPT() {
         )}
 
         <OnboardingDialog />
+
+        {tempChatStartOpen && (
+          <TemporaryChatStartDialog
+            open={tempChatStartOpen}
+            onOpenChange={setTempChatStartOpen}
+            onStart={startTemporaryChat}
+          />
+        )}
 
         {workspaceOpen && (
           <ChatWorkspaceDialog

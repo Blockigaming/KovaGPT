@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
+import { createStripeClient } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
 import { disconnectAllGitHub } from "@/lib/github-oauth.server";
 import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
@@ -11,9 +11,11 @@ import {
   cleanupAccountExportsBeforeAccountDeletion,
   releaseAccountExportDeletionFence,
 } from "@/lib/account-export.server";
+import { prepareStripeAccountDeletion } from "@/lib/stripe-account-deletion-preflight.mjs";
+import { retireStripeCustomerForAccountDeletion } from "@/lib/stripe-account-deletion.mjs";
 import { cleanupOwnedStorageBeforeAccountDeletion } from "@/lib/account-storage-cleanup.server";
+import { prepareAccountStorageArtifactDeletion } from "@/lib/account-storage-artifacts.server";
 
-const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
 
 function jsonError(error: string, status: number) {
@@ -64,84 +66,7 @@ export const Route = createFileRoute("/api/account")({
           return jsonError("Type DELETE to confirm account deletion.", 400);
         }
 
-        // Stop paid service before deleting the auth user. If billing cannot be
-        // verified or canceled, keep the account intact so no one can be billed
-        // after losing access to the billing portal.
-        const { data: subscriptions, error: subscriptionError } = await auth.supabaseAdmin
-          .from("subscriptions")
-          .select("stripe_subscription_id, status, environment")
-          .eq("user_id", auth.userId);
-        if (subscriptionError) {
-          return jsonError("Billing status could not be verified. Please try again.", 503);
-        }
-        for (const subscription of subscriptions ?? []) {
-          if (TERMINAL_SUBSCRIPTION_STATES.has(subscription.status)) continue;
-          if (!subscription.stripe_subscription_id) continue;
-          const environment: StripeEnv = subscription.environment === "live" ? "live" : "sandbox";
-          try {
-            await createStripeClient(environment).subscriptions.cancel(
-              subscription.stripe_subscription_id,
-            );
-          } catch (error) {
-            console.error("[account-delete] subscription cancellation failed", {
-              environment,
-              error: error instanceof Error ? error.name : "unknown_error",
-            });
-            return jsonError(
-              "Your subscription could not be canceled, so your account was not deleted. Manage billing or contact support.",
-              502,
-            );
-          }
-        }
-
-        try {
-          await disconnectAllFinance(auth);
-        } catch (error) {
-          console.error("[account-delete] financial connection removal failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
-          });
-          return jsonError(
-            "Financial connections could not be removed, so your account was not deleted. Please try again or contact support.",
-            502,
-          );
-        }
-
-        try {
-          await disconnectGoogle(auth.userId);
-        } catch (error) {
-          console.error("[account-delete] Google token purge failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
-          });
-          return jsonError(
-            "Google credentials could not be removed, so your account was not deleted. Please try again.",
-            503,
-          );
-        }
-
-        try {
-          await disconnectAllGitHub(auth.userId);
-        } catch (error) {
-          console.error("[account-delete] GitHub credential purge failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
-          });
-          return jsonError(
-            "GitHub credentials could not be removed, so your account was not deleted. Please try again.",
-            503,
-          );
-        }
-
-        try {
-          await disconnectAllOAuth(auth.userId);
-        } catch (error) {
-          console.error("[account-delete] linked account disconnection failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
-          });
-          return jsonError(
-            "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
-            503,
-          );
-        }
-
+        let preparedBilling: Awaited<ReturnType<typeof prepareStripeAccountDeletion>> = [];
         let deletionFailure: Response | null = null;
         try {
           const exportCleanup = await cleanupAccountExportsBeforeAccountDeletion(auth.userId);
@@ -175,6 +100,23 @@ export const Route = createFileRoute("/api/account")({
           );
         }
 
+        // Fence first, then snapshot mappings: a prior authenticated Checkout
+        // cannot introduce an unregistered Customer after this preflight.
+        if (!deletionFailure) {
+          try {
+            preparedBilling = await prepareStripeAccountDeletion({
+              supabase: auth.supabaseAdmin,
+              userId: auth.userId,
+              createStripeClient,
+            });
+          } catch {
+            deletionFailure = jsonError(
+              "Billing deletion is still being verified. Retry Checkout or contact support before deleting the account.",
+              409,
+            );
+          }
+        }
+
         // Supabase Auth refuses to delete users who still own Storage objects.
         // Project files and agent evidence must be exhausted before Library
         // images begin so another bucket cannot strand an active account whose
@@ -182,10 +124,20 @@ export const Route = createFileRoute("/api/account")({
         // retryable; metadata is released only after its Storage object.
         if (!deletionFailure) {
           try {
-            const storageCleanup = await cleanupOwnedStorageBeforeAccountDeletion(
-              auth.supabaseAdmin,
-              auth.userId,
-            );
+            const uploadsReady = await prepareAccountStorageArtifactDeletion(auth.userId);
+            let storageCleanup: { complete: boolean } = { complete: false };
+            if (uploadsReady) {
+              const { deleteOwnedProjectsBeforeAccountDeletion } =
+                await import("@/lib/project-deletion.server");
+              await deleteOwnedProjectsBeforeAccountDeletion({
+                admin: auth.supabaseAdmin,
+                userId: auth.userId,
+              });
+              storageCleanup = await cleanupOwnedStorageBeforeAccountDeletion(
+                auth.supabaseAdmin,
+                auth.userId,
+              );
+            }
             if (!storageCleanup.complete) {
               deletionFailure = Response.json(
                 {
@@ -208,6 +160,75 @@ export const Route = createFileRoute("/api/account")({
               503,
             );
           }
+        }
+
+        // Finish retryable export/file cleanup before canceling paid service
+        // or disconnecting integrations. A cleanup 409 must not strip an
+        // otherwise-active account of subscriptions and connected accounts.
+        if (!deletionFailure) {
+          const removeExternalServices = async (): Promise<Response | null> => {
+            for (const billing of preparedBilling) {
+              try {
+                await retireStripeCustomerForAccountDeletion(billing);
+              } catch {
+                return jsonError(
+                  "Billing could not be retired, so your account was not deleted. Retry shortly or contact support.",
+                  502,
+                );
+              }
+            }
+
+            try {
+              await disconnectAllFinance(auth);
+            } catch (error) {
+              console.error("[account-delete] financial connection removal failed", {
+                error: error instanceof Error ? error.name : "unknown_error",
+              });
+              return jsonError(
+                "Financial connections could not be removed, so your account was not deleted. Please try again or contact support.",
+                502,
+              );
+            }
+
+            try {
+              await disconnectGoogle(auth.userId);
+            } catch (error) {
+              console.error("[account-delete] Google token purge failed", {
+                error: error instanceof Error ? error.name : "unknown_error",
+              });
+              return jsonError(
+                "Google credentials could not be removed, so your account was not deleted. Please try again.",
+                503,
+              );
+            }
+
+            try {
+              await disconnectAllGitHub(auth.userId);
+            } catch (error) {
+              console.error("[account-delete] GitHub credential purge failed", {
+                error: error instanceof Error ? error.name : "unknown_error",
+              });
+              return jsonError(
+                "GitHub credentials could not be removed, so your account was not deleted. Please try again.",
+                503,
+              );
+            }
+
+            try {
+              await disconnectAllOAuth(auth.userId);
+            } catch (error) {
+              console.error("[account-delete] linked account disconnection failed", {
+                error: error instanceof Error ? error.name : "unknown_error",
+              });
+              return jsonError(
+                "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
+                503,
+              );
+            }
+
+            return null;
+          };
+          deletionFailure = await removeExternalServices();
         }
 
         if (!deletionFailure) {

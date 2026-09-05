@@ -49,7 +49,7 @@ jobs:
             echo "Documentation-only change: expensive CI stages are not required."
           fi
 
-          if printf '%s\n' "$files" | grep -Eq '^(supabase/migrations/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(supabase/migrations/|tests/fixtures/production-migration-history-20260904/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$|scripts/release/upgrade-database[^/]*\.(mjs|sql)$)'; then
             echo "run_database=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_database=false" >> "$GITHUB_OUTPUT"
@@ -70,9 +70,8 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run format:check:changed
 
-      - name: Legacy repository formatting audit
+      - name: Repository formatting audit
         if: steps.scope.outputs.run_ci == 'true'
-        continue-on-error: true
         run: npm run format:check
 
       - name: Lint
@@ -89,7 +88,20 @@ jobs:
 
       - name: Dependency audit
         if: steps.scope.outputs.run_ci == 'true'
-        run: npm audit --audit-level=high --omit=dev
+        shell: bash
+        run: |
+          set -u
+          for attempt in 1 2 3; do
+            if timeout --signal=TERM --kill-after=10s 210s npm audit --audit-level=high --omit=dev; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "::error::Dependency audit failed after 3 attempts."
+              exit 1
+            fi
+            echo "::warning::Dependency audit attempt ${attempt} failed; retrying."
+            sleep "$((attempt * 5))"
+          done
 
       - name: Unit tests
         if: steps.scope.outputs.run_ci == 'true'
@@ -129,13 +141,47 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npx playwright install --with-deps chromium
 
+      - name: Read-only deployed baseline audit
+        id: deployed_baseline
+        if: steps.scope.outputs.run_ci == 'true'
+        continue-on-error: true
+        run: npm run test:deployed-baseline:audit
+
+      - name: Report deployed baseline audit blocker
+        if: steps.scope.outputs.run_ci == 'true' && steps.deployed_baseline.outcome == 'failure'
+        run: echo "::warning::The observational deployed-baseline audit could not produce accepted evidence; strict candidate gates will continue."
+
+      - name: Upload deployed baseline evidence
+        if: always() && steps.deployed_baseline.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: deployed-baseline-${{ github.sha }}
+          path: artifacts/ui-audit/deployed-baseline
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:a11y
 
       - name: Visual checks
+        id: candidate_visual
         if: steps.scope.outputs.run_ci == 'true'
+        env:
+          KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: artifacts/ui-audit/candidate-visual
+          PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:visual
+
+      - name: Upload rendered candidate visual evidence
+        if: always() && steps.candidate_visual.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-visual-${{ github.sha }}
+          path: artifacts/ui-audit/candidate-visual/*.png
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Browser smoke checks
         if: steps.scope.outputs.run_ci == 'true'
@@ -157,6 +203,7 @@ jobs:
           path: |
             test-results
             playwright-report
+            tests/e2e/*-snapshots
           if-no-files-found: ignore
 
   browser:
@@ -300,4 +347,13 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run release:db:isolated
+      - name: Rehearse upgrade from captured production history
+        run: npm run release:db:upgrade
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
+      - name: Upload upgrade rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: database-upgrade-evidence
+          path: artifacts/release/upgrade-*
+          if-no-files-found: ignore

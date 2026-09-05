@@ -302,7 +302,7 @@ function ScheduledTasksPage() {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
     try {
-      const updated = await update({ data: { id: task.id, status: "scheduled" } });
+      const updated = await update({ data: { id: task.id, status: "scheduled", retry: true } });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
       toast.success("Task queued to retry");

@@ -1,6 +1,7 @@
 -- Day 15: canonical source-of-truth for the chat workspace tables.
 -- Idempotent and non-destructive against production, where these tables already
--- exist with exactly this owner_id-scoped shape.
+-- exist with the canonical owner_id/instruction/active shape. This source-only
+-- history entry must also replay over the reviewed production lineage.
 
 -- Reconciliation guard: earlier drafts created development-only variants of these
 -- tables keyed by user_id. Those variants are empty; production is unaffected
@@ -60,17 +61,17 @@ do $$
 begin
   if not exists (select 1 from pg_constraint where conname='chat_branches_chat_id_length' and conrelid='public.chat_branches'::regclass) then
     alter table public.chat_branches add constraint chat_branches_chat_id_length
-      check (char_length(chat_id) between 1 and 128);
+      check (char_length(chat_id) between 1 and 256);
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_branches_label_length' and conrelid='public.chat_branches'::regclass) then
     alter table public.chat_branches add constraint chat_branches_label_length
-      check (label is null or char_length(label) between 1 and 120);
+      check (label is null or char_length(label) <= 120);
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_branches_from_message_ids_length' and conrelid='public.chat_branches'::regclass) then
     alter table public.chat_branches add constraint chat_branches_from_message_ids_length
       check (
-        (branch_from_parent_message_id is null or char_length(branch_from_parent_message_id) between 1 and 256)
-        and (branch_from_message_id is null or char_length(branch_from_message_id) between 1 and 256)
+        (branch_from_parent_message_id is null or char_length(branch_from_parent_message_id) <= 256)
+        and (branch_from_message_id is null or char_length(branch_from_message_id) <= 256)
       );
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_branches_from_message_index_range' and conrelid='public.chat_branches'::regclass) then
@@ -184,7 +185,7 @@ begin
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_custom_rules_chat_id_length' and conrelid='public.chat_custom_rules'::regclass) then
     alter table public.chat_custom_rules add constraint chat_custom_rules_chat_id_length
-      check (char_length(chat_id) between 1 and 128);
+      check (char_length(chat_id) between 1 and 256);
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_custom_rules_instructions_length' and conrelid='public.chat_custom_rules'::regclass) then
     alter table public.chat_custom_rules add constraint chat_custom_rules_instructions_length
@@ -242,17 +243,21 @@ begin
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_message_versions_source_allowed' and conrelid='public.chat_message_versions'::regclass) then
     alter table public.chat_message_versions add constraint chat_message_versions_source_allowed
-      check (source in ('original','inline_edit','branch_edit','regeneration'));
+      check (source in ('original','inline_edit','branch_edit','regeneration','retry'));
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_message_versions_ids_length' and conrelid='public.chat_message_versions'::regclass) then
     alter table public.chat_message_versions add constraint chat_message_versions_ids_length
-      check (char_length(chat_id) between 1 and 128 and char_length(message_id) between 1 and 256);
+      check (char_length(chat_id) between 1 and 256 and char_length(message_id) between 1 and 256);
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_message_versions_content_length' and conrelid='public.chat_message_versions'::regclass) then
     alter table public.chat_message_versions add constraint chat_message_versions_content_length
       check (char_length(content) <= 131072 and (original_content is null or char_length(original_content) <= 131072));
   end if;
-  if not exists (select 1 from pg_constraint where conname='chat_message_versions_edit_instruction_length' and conrelid='public.chat_message_versions'::regclass) then
+  -- Production already uses instruction; do not require or create the retired
+  -- development-only column solely to validate a compatibility constraint.
+  if exists (select 1 from information_schema.columns where table_schema='public'
+    and table_name='chat_message_versions' and column_name='edit_instruction')
+    and not exists (select 1 from pg_constraint where conname='chat_message_versions_edit_instruction_length' and conrelid='public.chat_message_versions'::regclass) then
     alter table public.chat_message_versions add constraint chat_message_versions_edit_instruction_length
       check (edit_instruction is null or char_length(edit_instruction) <= 4000);
   end if;
@@ -305,7 +310,7 @@ do $$
 begin
   if not exists (select 1 from pg_constraint where conname='chat_pinned_files_chat_id_length' and conrelid='public.chat_pinned_files'::regclass) then
     alter table public.chat_pinned_files add constraint chat_pinned_files_chat_id_length
-      check (char_length(chat_id) between 1 and 128);
+      check (char_length(chat_id) between 1 and 256);
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_pinned_files_source_type_allowed' and conrelid='public.chat_pinned_files'::regclass) then
     alter table public.chat_pinned_files add constraint chat_pinned_files_source_type_allowed
@@ -313,7 +318,7 @@ begin
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_pinned_files_status_allowed' and conrelid='public.chat_pinned_files'::regclass) then
     alter table public.chat_pinned_files add constraint chat_pinned_files_status_allowed
-      check (status in ('ready','indexing','failed','deleted','permission_lost'));
+      check (status in ('ready','active','indexing','failed','deleted','permission_lost'));
   end if;
   if not exists (select 1 from pg_constraint where conname='chat_pinned_files_source_project_coherence' and conrelid='public.chat_pinned_files'::regclass) then
     alter table public.chat_pinned_files add constraint chat_pinned_files_source_project_coherence

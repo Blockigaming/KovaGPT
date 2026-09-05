@@ -60,6 +60,7 @@ import {
 } from "@/lib/projects.functions";
 import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.functions";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { ProjectTemplatesDialog } from "@/components/ProjectTemplatesDialog";
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsRoute,
@@ -89,6 +90,7 @@ function ProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,6 +103,7 @@ function ProjectsPage() {
   });
   const [showArchived, setShowArchived] = useState(false);
   const [deletingProject, setDeletingProject] = useState<ProjectSummary | null>(null);
+  const [deletingProjectIds, setDeletingProjectIds] = useState<Set<string>>(() => new Set());
   const [resolvedUserKey, setResolvedUserKey] = useState<string | null>(null);
   const currentUserKeyRef = useRef(userKey);
   const refreshSequenceRef = useRef(0);
@@ -191,16 +194,29 @@ function ProjectsPage() {
   }
   async function handleDelete(p: ProjectSummary) {
     const operationUserKey = userKey;
-    const prev = projects;
-    setProjects((cur) => cur.filter((x) => x.id !== p.id));
+    const toastId = toast.loading("Deleting the project and its stored files…");
+    setDeletingProjectIds((current) => new Set(current).add(p.id));
     try {
       await fnDelete({ data: { id: p.id } });
       if (currentUserKeyRef.current !== operationUserKey) return;
-      toast.success("Project deleted");
+      setProjects((current) => current.filter((project) => project.id !== p.id));
+      toast.success("Project deleted", { id: toastId });
     } catch (e) {
       if (currentUserKeyRef.current !== operationUserKey) return;
-      setProjects(prev);
-      toast.error(e instanceof Error ? e.message : "Failed to delete");
+      toast.error(e instanceof Error ? e.message : "Failed to delete", { id: toastId });
+      // Cleanup is resumable. Reload the durable project state instead of
+      // pretending an interrupted Storage deletion succeeded.
+      await refresh();
+    } finally {
+      if (currentUserKeyRef.current !== operationUserKey) {
+        toast.dismiss(toastId);
+      } else {
+        setDeletingProjectIds((current) => {
+          const next = new Set(current);
+          next.delete(p.id);
+          return next;
+        });
+      }
     }
   }
   function openRename(p: ProjectSummary) {
@@ -272,6 +288,7 @@ function ProjectsPage() {
     setShowArchived(false);
     setDropProjectId(null);
     setCreateOpen(false);
+    setTemplatesOpen(false);
     setName("");
     setDescription("");
     setBusy(false);
@@ -281,6 +298,7 @@ function ProjectsPage() {
     setRenameDesc("");
     setRenameBusy(false);
     setDeletingProject(null);
+    setDeletingProjectIds(new Set());
 
     if (!isSignedIn || !userKey) {
       setResolvedUserKey(null);
@@ -321,6 +339,7 @@ function ProjectsPage() {
           updated_at: new Date().toISOString(),
           pinned_at: null,
           archived_at: null,
+          deletion_requested_at: null,
         },
         ...prev.filter((p) => p.id !== id),
       ]);
@@ -430,13 +449,22 @@ function ProjectsPage() {
           description="Shared workspaces for your chats, files, instructions, and team."
           actions={
             isSignedIn && !isLoading ? (
-              <Button
-                onClick={() => setCreateOpen(true)}
-                className="hidden min-h-11 lg:inline-flex"
-              >
-                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                New project
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => setTemplatesOpen(true)}
+                >
+                  Templates
+                </Button>
+                <Button
+                  onClick={() => setCreateOpen(true)}
+                  className="hidden min-h-11 lg:inline-flex"
+                >
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  New project
+                </Button>
+              </div>
             ) : null
           }
         />
@@ -558,7 +586,9 @@ function ProjectsPage() {
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div
+                aria-busy={deletingProjectIds.has(p.id) || undefined}
                 onDragOver={(event) => {
+                  if (p.deletion_requested_at || deletingProjectIds.has(p.id)) return;
                   if (!event.dataTransfer.types.includes("application/x-kova-project-chat")) return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
@@ -571,7 +601,13 @@ function ProjectsPage() {
                   event.preventDefault();
                   setDropProjectId(null);
                   const chatId = event.dataTransfer.getData("application/x-kova-project-chat");
-                  if (!chatId || p.role === "viewer") return;
+                  if (
+                    !chatId ||
+                    p.role === "viewer" ||
+                    p.deletion_requested_at ||
+                    deletingProjectIds.has(p.id)
+                  )
+                    return;
                   try {
                     await fnMoveChat({ data: { chat_id: chatId, project_id: p.id } });
                     setProjects((current) =>
@@ -591,6 +627,8 @@ function ProjectsPage() {
                   }
                 }}
                 className={`${dropProjectId === p.id ? "ring-2 ring-primary bg-primary/5" : ""} ${
+                  p.deletion_requested_at ? "border-destructive/40" : ""
+                } ${
                   view === "list"
                     ? "relative kova-row items-center gap-3 group"
                     : "relative kova-card block p-4 group"
@@ -613,6 +651,22 @@ function ProjectsPage() {
                     </span>
                   </div>
                   <div className="font-semibold truncate pr-8">{p.name}</div>
+                  {(p.deletion_requested_at || deletingProjectIds.has(p.id)) && (
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      className="mt-1 flex items-center gap-1.5 text-xs font-medium text-destructive"
+                    >
+                      {deletingProjectIds.has(p.id) ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          Deleting stored files…
+                        </>
+                      ) : (
+                        "Deletion incomplete — retry cleanup"
+                      )}
+                    </p>
+                  )}
                   {(p.description || p.instructions_preview) && (
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                       {p.description || p.instructions_preview}
@@ -644,7 +698,14 @@ function ProjectsPage() {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => togglePin(p)} disabled={p.role === "viewer"}>
+                      <DropdownMenuItem
+                        onClick={() => togglePin(p)}
+                        disabled={
+                          p.role === "viewer" ||
+                          Boolean(p.deletion_requested_at) ||
+                          deletingProjectIds.has(p.id)
+                        }
+                      >
                         {p.pinned_at ? (
                           <>
                             <PinOff className="w-4 h-4 mr-2" />
@@ -659,18 +720,29 @@ function ProjectsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => openRename(p)}
-                        disabled={p.role === "viewer"}
+                        disabled={
+                          p.role === "viewer" ||
+                          Boolean(p.deletion_requested_at) ||
+                          deletingProjectIds.has(p.id)
+                        }
                       >
                         <Pencil className="w-4 h-4 mr-2" />
                         Rename
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(p)}>
+                      <DropdownMenuItem
+                        onClick={() => handleDuplicate(p)}
+                        disabled={Boolean(p.deletion_requested_at) || deletingProjectIds.has(p.id)}
+                      >
                         <CopyIcon className="w-4 h-4 mr-2" />
                         Duplicate
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => toggleArchive(p)}
-                        disabled={p.role !== "owner"}
+                        disabled={
+                          p.role !== "owner" ||
+                          Boolean(p.deletion_requested_at) ||
+                          deletingProjectIds.has(p.id)
+                        }
                       >
                         {p.archived_at ? (
                           <>
@@ -687,11 +759,11 @@ function ProjectsPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => setDeletingProject(p)}
-                        disabled={p.role !== "owner"}
+                        disabled={p.role !== "owner" || deletingProjectIds.has(p.id)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
+                        {p.deletion_requested_at ? "Retry deletion" : "Delete"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -871,6 +943,20 @@ function ProjectsPage() {
         </DialogContent>
       </Dialog>
 
+      {isSignedIn && userKey && (
+        <ProjectTemplatesDialog
+          key={userKey}
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          userId={userKey}
+          onCopied={(projectId) => {
+            setTemplatesOpen(false);
+            void refresh();
+            void navigate({ to: "/projects/$projectId", params: { projectId } });
+          }}
+        />
+      )}
+
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -954,11 +1040,13 @@ function ProjectsPage() {
         onOpenChange={(open) => !open && setDeletingProject(null)}
         title="Delete this project?"
         description={
-          deletingProject
-            ? `“${deletingProject.name}” and its project content will be permanently deleted.`
-            : "This project will be permanently deleted."
+          deletingProject?.deletion_requested_at
+            ? `Cleanup for “${deletingProject.name}” did not finish. Retry the bounded stored-file cleanup, then permanently delete its chats, tasks, notes, and memberships.`
+            : deletingProject
+              ? `“${deletingProject.name}”, its stored file copies, chats, tasks, notes, and memberships will be permanently deleted.`
+              : "This project and its stored file copies will be permanently deleted."
         }
-        confirmLabel="Delete project"
+        confirmLabel={deletingProject?.deletion_requested_at ? "Retry deletion" : "Delete project"}
         destructive
         onConfirm={() => {
           const project = deletingProject;

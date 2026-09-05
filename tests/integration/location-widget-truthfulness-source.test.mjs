@@ -48,7 +48,10 @@ test("location and copy controls expose truthful availability and failure states
 
 test("production response paths do not allow an unused map-frame origin", () => {
   for (const source of [start, server]) {
-    assert.match(source, /frame-src https:\/\/js\.stripe\.com https:\/\/hooks\.stripe\.com/);
+    assert.match(
+      source,
+      /frame-src[^"\n]*https:\/\/js\.stripe\.com[^"\n]*https:\/\/hooks\.stripe\.com/,
+    );
     assert.doesNotMatch(source, /openstreetmap/);
   }
 });

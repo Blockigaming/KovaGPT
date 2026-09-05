@@ -63,9 +63,13 @@ export type NormalizedChatPayload = {
   timezone?: string;
   locale?: string;
   chatId?: string;
+  memoryStartIndex?: number;
+  historyOffset?: number;
+  summaryProof?: { id: string; start: number; count: number; digest: string };
   personality?: string;
   projectId?: string;
   temporary?: boolean;
+  temporaryContext?: "clean" | "personalized";
   clientTool?: ChatClientTool;
 };
 

@@ -35,6 +35,7 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["chat_branches", "owner_id"],
   ["chat_custom_rules", "owner_id"],
   ["chat_memories", "user_id"],
+  ["chat_context_summaries", "user_id"],
   ["chat_message_versions", "owner_id"],
   ["chat_pinned_files", "owner_id"],
   ["chat_share_links", "user_id"],

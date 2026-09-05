@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
+import { WorkSyncRuntime } from "@/components/WorkSyncStatus";
 
 const DeveloperConsole = import.meta.env.DEV
   ? lazy(() =>
@@ -40,9 +41,14 @@ export function PlatformRuntime() {
       flush();
     };
   }, []);
-  return DeveloperConsole ? (
-    <Suspense fallback={null}>
-      <DeveloperConsole />
-    </Suspense>
-  ) : null;
+  return (
+    <>
+      <WorkSyncRuntime />
+      {DeveloperConsole ? (
+        <Suspense fallback={null}>
+          <DeveloperConsole />
+        </Suspense>
+      ) : null}
+    </>
+  );
 }

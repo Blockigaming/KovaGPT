@@ -1,3 +1,4 @@
+import { claimProjectStorageSourceCleanup } from "./project-storage-references.server.ts";
 import {
   AGENT_EVIDENCE_BUCKET,
   PROJECT_FILE_BUCKET,
@@ -34,6 +35,8 @@ type ProjectFileRow = {
   storage_path?: unknown;
   uploaded_by?: unknown;
   kind?: unknown;
+  status?: unknown;
+  delete_attempt_id?: unknown;
 };
 type ProjectFileQueryResult = {
   data: ProjectFileRow[] | null;
@@ -52,13 +55,7 @@ type ProjectFileQuery = {
 type AccountStorageClient = {
   storage: { from(bucket: string): StorageBucket };
   from(table: string): unknown;
-  rpc(
-    name: "list_account_project_storage_objects",
-    args: { p_owner_id: string; p_limit: number },
-  ): PromiseLike<{
-    data: Array<{ name: unknown; owner_id: unknown }> | null;
-    error: StorageError | null;
-  }>;
+  rpc: unknown;
 };
 
 type AssociationQuery = {
@@ -74,6 +71,21 @@ type AssociationQuery = {
     error: StorageError | null;
   }>;
 };
+
+async function storageRpc(
+  client: AccountStorageClient,
+  name: string,
+  args: Record<string, unknown>,
+) {
+  if (typeof client.rpc !== "function")
+    throw cleanupError("account_project_storage_rpc_unavailable");
+  return (
+    client.rpc as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown; error: StorageError | null }>
+  ).call(client, name, args);
+}
 
 function projectFiles(client: AccountStorageClient): ProjectFileQuery {
   return client.from("project_files") as ProjectFileQuery;
@@ -167,7 +179,7 @@ async function externallyReferencedProjectObjects(
     "project_files",
     "storage_path",
     entries.filter((entry) => entry.bucket === PROJECT_FILE_BUCKET).map((entry) => entry.path),
-    "id,project_id,storage_path,uploaded_by,kind",
+    "id,project_id,storage_path,uploaded_by,kind,status,delete_attempt_id",
   );
   const candidateIds = candidates.map((row) => row.id);
   // A row outside the current page may still disappear later in this deletion.
@@ -188,6 +200,28 @@ async function externallyReferencedProjectObjects(
   );
   const associations = await loadProjectFileAssociations(client, remaining);
   const referenced = new Set<string>();
+  // A Work deliverable remains a live owner of these bytes after its Project
+  // FK is set null. Only this account's deliverables disappear with Auth.
+  const survivingDeliverables = await readAssociatedRows(
+    client,
+    "agent_deliverables",
+    "storage_reference",
+    entries
+      .filter((entry) => entry.bucket === PROJECT_FILE_BUCKET)
+      .map((entry) => `${PROJECT_FILE_BUCKET}:${entry.path}`),
+    "id,owner_id,storage_reference,status",
+  );
+  for (const deliverable of survivingDeliverables) {
+    if (deliverable.owner_id === userId || deliverable.status === "deleted") continue;
+    if (
+      typeof deliverable.owner_id !== "string" ||
+      !UUID.test(deliverable.owner_id) ||
+      typeof deliverable.storage_reference !== "string"
+    ) {
+      throw cleanupError("account_project_storage_reference_invalid");
+    }
+    referenced.add(deliverable.storage_reference);
+  }
   for (const row of remaining) {
     try {
       const source = resolveProjectFileStorage(
@@ -218,7 +252,7 @@ async function cleanupUnregisteredOwnedProjectObjects(
   let removed = 0;
   let lastFingerprint: string | null = null;
   for (let batch = 0; batch <= maxRemoveBatches; batch += 1) {
-    const listed = await client.rpc("list_account_project_storage_objects", {
+    const listed = await storageRpc(client, "list_account_project_storage_objects", {
       p_owner_id: userId,
       p_limit: STORAGE_BATCH_SIZE,
     });
@@ -229,7 +263,7 @@ async function cleanupUnregisteredOwnedProjectObjects(
     if (batch === maxRemoveBatches) return { complete: false, removed };
     const entries = listed.data.map((row) => {
       try {
-        if (row.owner_id !== userId) throw new Error("owner_mismatch");
+        if (row.owner_id !== userId && row.owner_id !== null) throw new Error("owner_mismatch");
         const { path, parts } = validateStorageObjectPath(row.name);
         if (!UUID.test(parts[0] ?? "")) throw new Error("project_prefix_invalid");
         return { bucket: PROJECT_FILE_BUCKET, path };
@@ -238,9 +272,11 @@ async function cleanupUnregisteredOwnedProjectObjects(
       }
     });
     const referenced = await externallyReferencedProjectObjects(client, entries, new Set(), userId);
-    const paths = entries
+    const candidates = entries
       .filter((entry) => !referenced.has(`${entry.bucket}:${entry.path}`))
       .map((entry) => entry.path);
+    const retained = await claimProjectStorageSourceCleanup(client, null, candidates, [], userId);
+    const paths = candidates.filter((path) => !retained.has(path));
     if (paths.length === 0) {
       // Auth cannot delete an owner while Storage still belongs to them. Keep
       // the account and all surviving Project dependencies intact.
@@ -252,6 +288,11 @@ async function cleanupUnregisteredOwnedProjectObjects(
     }
     const result = await client.storage.from(PROJECT_FILE_BUCKET).remove(paths);
     if (result.error) throw cleanupError("account_project_storage_remove_failed");
+    const settled = await storageRpc(client, "settle_account_project_storage_charges", {
+      p_paths: paths,
+    });
+    if (settled.error || settled.data !== true)
+      throw cleanupError("account_project_storage_settlement_failed");
     removed += paths.length;
     lastFingerprint = fingerprint;
   }
@@ -379,7 +420,7 @@ async function cleanupOwnedProjectFiles(
 
   for (let batch = 0; batch < maxRemoveBatches; batch += 1) {
     let listed = await projectFiles(client)
-      .select("id,project_id,storage_path,uploaded_by,kind")
+      .select("id,project_id,storage_path,uploaded_by,kind,status,delete_attempt_id")
       .eq("uploaded_by", userId)
       .order("id", { ascending: true })
       .limit(STORAGE_BATCH_SIZE);
@@ -392,7 +433,9 @@ async function cleanupOwnedProjectFiles(
     // Storage paths that identify them.
     if (listed.data.length === 0) {
       listed = await projectFiles(client)
-        .select("id,project_id,storage_path,uploaded_by,kind,projects!inner(owner_id)")
+        .select(
+          "id,project_id,storage_path,uploaded_by,kind,status,delete_attempt_id,projects!inner(owner_id)",
+        )
         .eq("projects.owner_id", userId)
         .order("id", { ascending: true })
         .limit(STORAGE_BATCH_SIZE);
@@ -401,6 +444,41 @@ async function cleanupOwnedProjectFiles(
       }
     }
     if (listed.data.length === 0) return { complete: true, removed };
+
+    // Claim every lifecycle row before removing bytes. A failed/active claim
+    // leaves the remaining metadata and quota intact for a bounded retry.
+    const claims = new Map<string, string>();
+    for (const row of listed.data) {
+      if (row.status === undefined) continue;
+      const claimed = await storageRpc(client, "claim_account_project_file_cleanup", {
+        p_user_id: userId,
+        p_file_id: row.id,
+        p_attempt_id: crypto.randomUUID(),
+      });
+      const value =
+        claimed.data && typeof claimed.data === "object" && !Array.isArray(claimed.data)
+          ? (claimed.data as Record<string, unknown>)
+          : null;
+      if (claimed.error || !value) throw cleanupError("account_project_storage_claim_failed");
+      if (value.state === "busy") return { complete: false, removed };
+      if (
+        value.state !== "claimed" ||
+        value.id !== row.id ||
+        value.storage_path !== row.storage_path ||
+        typeof value.delete_attempt_id !== "string"
+      ) {
+        throw cleanupError("account_project_storage_claim_invalid");
+      }
+      claims.set(String(row.id), value.delete_attempt_id);
+      // Attempt-specific objects are not canonical metadata paths, but are
+      // durable under the reserved file folder and must be removed first.
+      const { purgeProjectUploadAttemptFolder } = await import("./project-deletion-policy.mjs");
+      await purgeProjectUploadAttemptFolder({
+        storage: client.storage.from(PROJECT_FILE_BUCKET) as never,
+        projectId: String(row.project_id),
+        fileId: String(row.id),
+      });
+    }
 
     const associations = await loadProjectFileAssociations(client, listed.data);
     let entries: Array<ReturnType<typeof resolveProjectFileStorage>>;
@@ -421,6 +499,14 @@ async function cleanupOwnedProjectFiles(
       deletingIds,
       userId,
     );
+    const retained = await claimProjectStorageSourceCleanup(
+      client,
+      null,
+      entries.filter((entry) => entry.bucket === PROJECT_FILE_BUCKET).map((entry) => entry.path),
+      [...deletingIds],
+      userId,
+    );
+    retained.forEach((path) => externallyReferenced.add(`${PROJECT_FILE_BUCKET}:${path}`));
     const byBucket = new Map<string, string[]>();
     for (const entry of entries) {
       // Project source bytes are collectible when their final live reference
@@ -443,18 +529,38 @@ async function cleanupOwnedProjectFiles(
 
     // Storage must be gone before metadata is released. Removing these rows
     // makes the next bounded account-deletion retry advance to a new page.
-    const deleted = await projectFiles(client)
-      .delete()
-      .in(
-        "id",
-        entries.map((entry) => entry.id),
-      );
-    if (deleted.error) throw cleanupError("account_project_metadata_cleanup_failed");
+    const legacyIds = entries.filter((entry) => !claims.has(entry.id)).map((entry) => entry.id);
+    if (legacyIds.length > 0) {
+      const deleted = await projectFiles(client).delete().in("id", legacyIds);
+      if (deleted.error) throw cleanupError("account_project_metadata_cleanup_failed");
+    }
+    for (const [fileId, attemptId] of claims) {
+      const finalized = await storageRpc(client, "finalize_account_project_file_cleanup", {
+        p_user_id: userId,
+        p_file_id: fileId,
+        p_attempt_id: attemptId,
+        p_storage_removed: entries.some(
+          (entry) =>
+            entry.id === fileId &&
+            entry.bucket === PROJECT_FILE_BUCKET &&
+            !externallyReferenced.has(`${entry.bucket}:${entry.path}`),
+        ),
+      });
+      if (
+        finalized.error ||
+        !finalized.data ||
+        typeof finalized.data !== "object" ||
+        !("deleted" in finalized.data) ||
+        finalized.data.deleted !== true
+      ) {
+        throw cleanupError("account_project_metadata_cleanup_failed");
+      }
+    }
     removed += entries.length;
   }
 
   const remaining = await projectFiles(client)
-    .select("id,project_id,storage_path,uploaded_by,kind")
+    .select("id,project_id,storage_path,uploaded_by,kind,status,delete_attempt_id")
     .eq("uploaded_by", userId)
     .order("id", { ascending: true })
     .limit(1);
@@ -463,7 +569,9 @@ async function cleanupOwnedProjectFiles(
   }
   if (remaining.data.length > 0) return { complete: false, removed };
   const ownedProjectRemaining = await projectFiles(client)
-    .select("id,project_id,storage_path,uploaded_by,kind,projects!inner(owner_id)")
+    .select(
+      "id,project_id,storage_path,uploaded_by,kind,status,delete_attempt_id,projects!inner(owner_id)",
+    )
     .eq("projects.owner_id", userId)
     .order("id", { ascending: true })
     .limit(1);

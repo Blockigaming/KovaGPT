@@ -4,7 +4,7 @@ export const PROJECT_FILE_BUCKET: "project-files";
 export type StorageReferenceRow = {
   id: string;
   project_id: string;
-  uploaded_by: string;
+  uploaded_by: string | null;
   storage_path: string;
   kind?: string | null;
 };

@@ -82,13 +82,25 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm run azure:validate
 
+      - name: Compile production Bicep without Azure sign-in
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          az bicep build \
+            --file infra/azure/production/main.bicep \
+            --outfile "$RUNNER_TEMP/kova-production-template.json"
+
       - name: Production build
         if: steps.scope.outputs.run == 'true'
         run: KOVA_BROWSER_PREVIEW=node npm run build
 
       - name: Docker image build
         if: steps.scope.outputs.run == 'true'
-        run: npm run container:build
+        run: |
+          KOVA_CI_SOURCE_SHA="$(git rev-parse HEAD)"
+          KOVA_CI_SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+          docker build -t kovagpt-web:azure-dev \
+            --build-arg KOVA_SOURCE_SHA="$KOVA_CI_SOURCE_SHA" \
+            --build-arg KOVA_SOURCE_TREE="$KOVA_CI_SOURCE_TREE" .
 
       - name: Container startup
         if: steps.scope.outputs.run == 'true'
@@ -111,6 +123,21 @@ jobs:
       - name: Health smoke test
         if: steps.scope.outputs.run == 'true'
         run: npm run container:smoke
+
+      - name: Record verified CI image and source evidence
+        if: steps.scope.outputs.run == 'true'
+        run: node scripts/azure/ci-container-evidence.mjs
+
+      - name: Retain review candidate image
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-container-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            artifacts/ci-container/kovagpt-ci-image.tar.gz
+            artifacts/ci-container/evidence.json
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Container shutdown
         if: always() && steps.scope.outputs.run == 'true'

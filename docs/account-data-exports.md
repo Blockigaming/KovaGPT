@@ -12,7 +12,7 @@ recipient's export. Idempotency receipts remain operational records and are excl
 1. An authenticated same-site `POST /api/account/export` request creates at most one queued job for the account and records the request in `account_audit_entries`.
 2. A trusted scheduler calls `POST /api/internal/account-exports` with `Authorization: Bearer <secret>`. The route accepts `ACCOUNT_EXPORT_WORKER_SECRET`, falling back to the existing `CRON_SECRET`.
 3. The worker leases a small batch with `claim_account_export_jobs`, reads only owner-authorized records, strips credential material and private moderation notes, and creates a bounded JSON artifact.
-4. The artifact is written to the private `account-exports` Storage bucket. Completion is settled only when the same worker still owns an unexpired lease.
+4. Before Storage I/O, the worker registers its unique claim generation and artifact path in a service-only durable cleanup outbox. The artifact is written to the private `account-exports` bucket. Completion requires the same generation, an unexpired lease, and no account-deletion fence.
 5. `GET /api/account/export?download=1` returns a five-minute signed URL only to the authenticated owner of a completed, unexpired job.
 6. Artifacts expire after seven days. Cleanup deletes the object before marking the job expired. Cancellation likewise deletes any completed object before clearing its storage reference.
 
@@ -26,7 +26,8 @@ OAuth state, access and refresh tokens, encrypted credentials, passwords, author
 
 Source completion is not production completion. Before enabling the UI:
 
-- apply `20260903203000_account_data_exports.sql` through the guarded migration workflow;
+- apply all account-export migrations, including `20260904225916_account_export_generation_outbox.sql`, through the guarded migration workflow;
+- stop and drain workers running older code before applying the generation protocol; old in-flight uploads were not registered in the outbox and cannot be retroactively guaranteed by this migration;
 - configure a high-entropy worker secret through the approved production secret store, or reuse the deployed `CRON_SECRET`;
 - schedule the internal route frequently enough to meet the published delivery expectation;
 - verify the bucket is private and browser roles cannot list or mutate it;
@@ -35,3 +36,31 @@ Source completion is not production completion. Before enabling the UI:
 - never log signed URLs, artifact bodies, credentials, or raw database errors.
 
 Until those checks pass on the exact deployed revision, the capability must remain classified as requiring production configuration and verification.
+
+## Delayed uploads and account deletion
+
+A database lease check cannot make a network upload atomic with account deletion. Each
+attempt therefore gets a new UUID generation and registers its exact Storage path before
+sending bytes. Settlement checks that generation; a reclaimed worker with the same worker
+name cannot settle or delete a newer attempt. Workers remove only their own attempt path.
+
+`account_export_artifacts` has no cascading foreign keys. On cancellation, expiration,
+reclaim, or Auth/job deletion, the generation becomes retired. A bounded, fairly ordered
+sweep in the existing export worker deletes retired paths through the Storage API and retries
+every 15 minutes (subject to scheduler cadence and backlog). Successful or empty deletion
+does **not** remove the obligation: a paused external upload may finish afterwards. Rows
+retain only UUIDs, paths, timestamps, and counters, never export contents or credentials.
+These operational deletion identifiers must not be pruned without a separately proven
+provider request-lifetime guarantee. Scheduler health and retained cleanup backlog need
+monitoring even when no users have queued exports.
+
+Deletion still waits for live worker leases and verifies current bucket contents before
+Auth removal; expired/crashed workers cannot block account deletion indefinitely. Retained
+obligations allow eventual removal after a late upload even when Auth and job rows no
+longer exist. This is an **eventual external cleanup** guarantee, not a claim that private
+bytes can never briefly reappear after deletion. Provider-only orphan bytes that the Storage
+API cannot address require provider reconciliation; no Storage metadata is deleted by SQL.
+
+Retryable export/file cleanup completes before billing cancellation and connector purges.
+A cleanup `409` leaves those external services connected; partial private-file cleanup can
+still have occurred as part of the explicitly requested, retryable deletion workflow.

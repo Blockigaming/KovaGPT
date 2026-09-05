@@ -9,5 +9,7 @@
 export const PUBLIC_BACKEND_URL = "https://mfbycmbjygcfkrsuepxf.supabase.co";
 export const PUBLIC_BACKEND_KEY = "sb_publishable_3_JjqZc2hdxn2Q0xAWwMOw_EaZsryWw";
 export const PUBLIC_BACKEND_PROJECT_ID = "mfbycmbjygcfkrsuepxf";
-export const PUBLIC_PAYMENTS_CLIENT_TOKEN =
-  "pk_live_51TW1VcAHcChSIaIorYfT0qVyPHNE8XNhavohT2Rz2ripwYcPkZfmXBAWmhvuBb3UNxP66vntf5TIvgb9wjtjQvCJ009mu2Yl5z";
+// Billing has no committed publishable-key fallback. The image build must use
+// a public key from the same approved account as its runtime server key.
+export const PUBLIC_STRIPE_ACCOUNT_ID = "acct_1UAeDgAEZlsb6DBY";
+export const PUBLIC_PAYMENTS_CLIENT_TOKEN = "";

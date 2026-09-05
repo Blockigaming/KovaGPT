@@ -67,6 +67,7 @@ import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-imag
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
+import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
@@ -108,12 +109,17 @@ import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
+import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
+import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
+import { Route as ApiInternalStorageArtifactCleanupRouteImport } from './routes/api/internal/storage-artifact-cleanup'
+import { Route as ApiInternalWorkspaceSearchRouteImport } from './routes/api/internal/workspace-search'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
+import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -412,6 +418,11 @@ const ApiMemoryRoute = ApiMemoryRouteImport.update({
   path: '/api/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
+  id: '/api/project-files',
+  path: '/api/project-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
   id: '/api/project-suggest',
   path: '/api/project-suggest',
@@ -621,10 +632,34 @@ const ApiInternalAccountExportsRoute =
     path: '/api/internal/account-exports',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalChatSummariesRoute =
+  ApiInternalChatSummariesRouteImport.update({
+    id: '/api/internal/chat-summaries',
+    path: '/api/internal/chat-summaries',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalReceiptMaintenanceRoute =
+  ApiInternalReceiptMaintenanceRouteImport.update({
+    id: '/api/internal/receipt-maintenance',
+    path: '/api/internal/receipt-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
     path: '/api/internal/scheduled-execution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalStorageArtifactCleanupRoute =
+  ApiInternalStorageArtifactCleanupRouteImport.update({
+    id: '/api/internal/storage-artifact-cleanup',
+    path: '/api/internal/storage-artifact-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalWorkspaceSearchRoute =
+  ApiInternalWorkspaceSearchRouteImport.update({
+    id: '/api/internal/workspace-search',
+    path: '/api/internal/workspace-search',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiLibraryBulkMoveRoute = ApiLibraryBulkMoveRouteImport.update({
@@ -650,6 +685,11 @@ const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
 const ApiWorkSyncRoute = ApiWorkSyncRouteImport.update({
   id: '/api/work/sync',
   path: '/api/work/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkspaceSearchRoute = ApiWorkspaceSearchRouteImport.update({
+  id: '/api/workspace/search',
+  path: '/api/workspace/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIntegrationsOauthDisconnectRoute =
@@ -742,6 +782,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -783,12 +824,17 @@ export interface FileRoutesByFullPath {
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -854,6 +900,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -895,12 +942,17 @@ export interface FileRoutesByTo {
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -967,6 +1019,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -1008,12 +1061,17 @@ export interface FileRoutesById {
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1081,6 +1139,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1122,12 +1181,17 @@ export interface FileRouteTypes {
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
+    | '/api/workspace/search'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1193,6 +1257,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1234,12 +1299,17 @@ export interface FileRouteTypes {
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
+    | '/api/workspace/search'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1305,6 +1375,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1346,12 +1417,17 @@ export interface FileRouteTypes {
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
     | '/api/library/folders'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
+    | '/api/workspace/search'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -1418,6 +1494,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
   ApiReadyzRoute: typeof ApiReadyzRoute
@@ -1455,12 +1532,17 @@ export interface RootRouteChildren {
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
+  ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
+  ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
+  ApiInternalStorageArtifactCleanupRoute: typeof ApiInternalStorageArtifactCleanupRoute
+  ApiInternalWorkspaceSearchRoute: typeof ApiInternalWorkspaceSearchRoute
   ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
+  ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1875,6 +1957,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/project-files': {
+      id: '/api/project-files'
+      path: '/api/project-files'
+      fullPath: '/api/project-files'
+      preLoaderRoute: typeof ApiProjectFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/project-suggest': {
       id: '/api/project-suggest'
       path: '/api/project-suggest'
@@ -2162,11 +2251,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalAccountExportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/chat-summaries': {
+      id: '/api/internal/chat-summaries'
+      path: '/api/internal/chat-summaries'
+      fullPath: '/api/internal/chat-summaries'
+      preLoaderRoute: typeof ApiInternalChatSummariesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/receipt-maintenance': {
+      id: '/api/internal/receipt-maintenance'
+      path: '/api/internal/receipt-maintenance'
+      fullPath: '/api/internal/receipt-maintenance'
+      preLoaderRoute: typeof ApiInternalReceiptMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/scheduled-execution': {
       id: '/api/internal/scheduled-execution'
       path: '/api/internal/scheduled-execution'
       fullPath: '/api/internal/scheduled-execution'
       preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/storage-artifact-cleanup': {
+      id: '/api/internal/storage-artifact-cleanup'
+      path: '/api/internal/storage-artifact-cleanup'
+      fullPath: '/api/internal/storage-artifact-cleanup'
+      preLoaderRoute: typeof ApiInternalStorageArtifactCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/workspace-search': {
+      id: '/api/internal/workspace-search'
+      path: '/api/internal/workspace-search'
+      fullPath: '/api/internal/workspace-search'
+      preLoaderRoute: typeof ApiInternalWorkspaceSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/library/bulk-move': {
@@ -2202,6 +2319,13 @@ declare module '@tanstack/react-router' {
       path: '/api/work/sync'
       fullPath: '/api/work/sync'
       preLoaderRoute: typeof ApiWorkSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workspace/search': {
+      id: '/api/workspace/search'
+      path: '/api/workspace/search'
+      fullPath: '/api/workspace/search'
+      preLoaderRoute: typeof ApiWorkspaceSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/disconnect': {
@@ -2360,6 +2484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
+  ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
   ApiReadyzRoute: ApiReadyzRoute,
@@ -2397,12 +2522,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
+  ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
+  ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
+  ApiInternalStorageArtifactCleanupRoute:
+    ApiInternalStorageArtifactCleanupRoute,
+  ApiInternalWorkspaceSearchRoute: ApiInternalWorkspaceSearchRoute,
   ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiWorkSyncRoute: ApiWorkSyncRoute,
+  ApiWorkspaceSearchRoute: ApiWorkspaceSearchRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

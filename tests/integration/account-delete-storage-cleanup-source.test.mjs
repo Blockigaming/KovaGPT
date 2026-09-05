@@ -23,7 +23,7 @@ test("account Storage cleanup keeps Library last and releases metadata after byt
   assert.ok(libraryAt > evidenceAt);
 
   const storageRemoveAt = cleanup.indexOf("client.storage.from(bucket).remove(paths)");
-  const metadataDeleteAt = cleanup.indexOf("projectFiles(client)\n      .delete()");
+  const metadataDeleteAt = cleanup.indexOf("projectFiles(client).delete().in");
   assert.ok(storageRemoveAt > 0);
   assert.ok(metadataDeleteAt > storageRemoveAt);
   assert.doesNotMatch(cleanup, /MAX_STORAGE_ENTRIES|entry_limit_exceeded/u);

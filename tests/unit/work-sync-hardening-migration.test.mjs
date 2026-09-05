@@ -474,3 +474,45 @@ test("hardening helpers and replacement RPCs remain invoker-only and service-onl
     await database.close();
   }
 });
+
+test("depth hardening preserves a legacy deep active record while rejecting new deep writes", async () => {
+  const database = await createBaseDatabase();
+  try {
+    const payload = nestedContainers(17);
+    await database.query(
+      `select public.upsert_work_saved_record($1,$2,$3,'task','Legacy deep record',$4,0)`,
+      [userId, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", recordId, payload],
+    );
+    await database.exec(hardeningMigration);
+    const saved = await database.query(
+      "select payload from public.work_saved_records where id=$1",
+      [recordId],
+    );
+    assert.deepEqual(saved.rows[0].payload, payload);
+    const constraint = await database.query(
+      "select convalidated from pg_constraint where conname='work_saved_records_payload_depth_check'",
+    );
+    assert.equal(constraint.rows[0].convalidated, false);
+    await expectDatabaseError(
+      () =>
+        database.query(
+          `insert into public.work_saved_records(owner_id,id,kind,title,payload,revision,sync_version) values ($1,$2,'task','Too deep',$3,1,1)`,
+          [userId, "99999999-9999-4999-8999-999999999999", payload],
+        ),
+      "23514",
+      /work_saved_records_payload_depth_check/u,
+    );
+    await database.query("select public.delete_work_saved_record($1,$2,$3,1)", [
+      userId,
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      recordId,
+    ]);
+    const deleted = await database.query(
+      "select payload,deleted_at is not null deleted from public.work_saved_records where id=$1",
+      [recordId],
+    );
+    assert.deepEqual(deleted.rows, [{ payload: {}, deleted: true }]);
+  } finally {
+    await database.close();
+  }
+});

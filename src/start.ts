@@ -10,7 +10,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Location is an explicit, user-triggered feature in Settings and Summary.
   // Voice and dictation are intentionally absent, so microphone access is denied.
-  "Permissions-Policy": "camera=(self), geolocation=(self), microphone=(), payment=(self)",
+  "Permissions-Policy":
+    'camera=(self), geolocation=(self), microphone=(), payment=(self "https://checkout.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://link.com" "https://*.link.com")',
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy": [
     "default-src 'self'",
@@ -18,12 +19,12 @@ const SECURITY_HEADERS: Record<string, string> = {
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self' https://checkout.stripe.com",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+    "script-src 'self' 'unsafe-inline' https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
-    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com",
+    "frame-src https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com",
     "worker-src 'self' blob:",
     "media-src 'self' blob:",
     "upgrade-insecure-requests",

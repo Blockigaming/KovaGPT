@@ -23,7 +23,7 @@ export type WorkSyncMutation =
       action: "save";
       mutationId: string;
       id: string;
-      kind: "task" | "template" | "agent_draft";
+      kind: "task" | "template" | "agent_draft" | "session";
       title: string;
       payload: Record<string, unknown>;
       expectedRevision: number;
@@ -37,7 +37,7 @@ export type WorkSyncMutation =
   | {
       action: "recent";
       mutationId: string;
-      resourceType: "run" | "task" | "template" | "agent_draft";
+      resourceType: "run" | "task" | "template" | "agent_draft" | "session";
       resourceId: string;
       pin: "keep" | "pin" | "unpin" | "forget";
       expectedRevision: number | null;

@@ -1,3 +1,4 @@
+import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
@@ -575,6 +576,10 @@ export const Route = createFileRoute("/api/chat")({
               personality,
               projectId,
               temporary,
+              temporaryContext,
+              memoryStartIndex,
+              historyOffset,
+              summaryProof,
               clientTool,
             } = ingress;
             // Lockdown Mode is a server-enforced account boundary. Explicit
@@ -635,12 +640,15 @@ export const Route = createFileRoute("/api/chat")({
                 )!;
               }
             }
-            // Temporary Chat is a clean-room request: even a custom client
-            // cannot combine `temporary: true` with profile or personality
-            // fields and have those values reach the model prompt.
-            const personalContext = temporary ? undefined : user;
+            // Temporary chats never write history or memory. At creation, the
+            // user may explicitly opt into existing personalization; omission
+            // remains clean-room behavior for older and custom clients.
+            const temporaryUsesExistingContext =
+              temporary === true && temporaryContext === "personalized";
+            const usesExistingContext = !temporary || temporaryUsesExistingContext;
+            const personalContext = usesExistingContext ? user : undefined;
             const personalityBlock =
-              !temporary && personality
+              usesExistingContext && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
                 : "";
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
@@ -877,13 +885,10 @@ export const Route = createFileRoute("/api/chat")({
               });
             }
 
-            // COST: only send the last ~12 turns to the model. Adaptive memory +
-            // cross-chat summaries (below) carry forward standing rules and
-            // long-term context, so we don't need to resend the full transcript
-            // on every call. The latest user message is always preserved.
-            // INTENTIONAL-DEFERRED(summarization): a future durable summary worker can
-            // background summary pass and store it in chat_memories instead of
-            // sending raw turns.
+            // Keep the latest 12 messages. The optional durable same-chat summary
+            // below can retain earlier context only after its exact eligible
+            // prefix is verified against this request. Existing cross-chat memory
+            // remains a separate, consent-bound source.
             const HISTORY_TURNS = 12;
             const trimmedMessages =
               messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
@@ -1007,14 +1012,15 @@ export const Route = createFileRoute("/api/chat")({
 
             // Cross-chat memory: for Plus+ signed-in users, inject short
             // summaries of their recent past chats so KovaGPT can recall
-            // context across conversations. Consent is opt-in and Temporary
-            // Chat never reaches the memory table.
+            // context across conversations. Consent is opt-in. A personalized
+            // Temporary Chat may read existing memory but never writes it.
             let memoryBlock = "";
+            const memorySourceRefs: MemorySourceRef[] = [];
             if (
               auth &&
               (callerTier === "plus" || callerTier === "pro") &&
               personalContext?.rememberAcross === true &&
-              !temporary
+              usesExistingContext
             ) {
               try {
                 const memoryResult = await preflight.run(
@@ -1026,7 +1032,7 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     )
                       .from("chat_memories")
-                      .select("title, summary, updated_at")
+                      .select("id, title, summary, updated_at")
                       .eq("user_id", auth.userId)
                       .order("updated_at", { ascending: false })
                       .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
@@ -1034,20 +1040,22 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const memRows = memoryResult?.data;
                 if (Array.isArray(memRows) && memRows.length > 0) {
-                  const memories = (memRows as { title?: string | null; summary: string }[]).map(
-                    (r, i): KovaMemory => ({
-                      id: `chat-memory-${i + 1}`,
-                      userId: auth.userId,
-                      content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
-                      category: "personal_context",
-                    }),
-                  );
-                  memoryBlock = formatMemoryBlock(
-                    selectRelevantMemories(memories, lastText, {
-                      enabled: personalContext.rememberAcross === true,
-                      temporary: Boolean(temporary),
-                      maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
-                    }),
+                  const memories = (
+                    memRows as { id: string; title?: string | null; summary: string }[]
+                  ).map((r): KovaMemory => ({
+                    id: r.id,
+                    userId: auth.userId,
+                    content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
+                    category: "personal_context",
+                  }));
+                  const selectedMemories = selectRelevantMemories(memories, lastText, {
+                    enabled: personalContext.rememberAcross === true,
+                    temporary: !usesExistingContext,
+                    maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
+                  });
+                  memoryBlock = formatMemoryBlock(selectedMemories);
+                  memorySourceRefs.push(
+                    ...selectedMemories.map(({ id }) => ({ kind: "chat_memory" as const, id })),
                   );
                 }
               } catch (error) {
@@ -1060,11 +1068,58 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            // Same-chat summaries have a separate opt-in deployment gate. Never
+            // read Temporary turns or pre-conversion history; older clients
+            // without an explicit privacy boundary retain the recent-turn path.
+            let conversationSummary:
+              import("@/lib/chat-summary-policy.server.mjs").SummaryContext | null = null;
+            if (
+              auth &&
+              chatId &&
+              !temporary &&
+              memoryStartIndex !== undefined &&
+              (callerTier === "plus" || callerTier === "pro") &&
+              personalContext?.rememberAcross === true
+            ) {
+              const { buildChatSummaryContext } = await import("@/lib/chat-summary.server");
+              conversationSummary =
+                (await preflight.run(
+                  "conversation_summary",
+                  (signal) =>
+                    buildChatSummaryContext(
+                      auth.supabaseAdmin,
+                      {
+                        userId: auth.userId,
+                        chatId,
+                        messages,
+                        memoryStartIndex,
+                        historyOffset,
+                        summaryProof,
+                        temporary: Boolean(temporary),
+                        memoryEnabled: personalContext.rememberAcross === true,
+                      },
+                      signal,
+                    ),
+                  { required: false },
+                )) ?? null;
+              if (conversationSummary) {
+                memorySourceRefs.push({
+                  kind: "conversation_summary",
+                  id: conversationSummary.source.id,
+                });
+              }
+            }
+
             // Project workspace context: only for signed-in members of `projectId`.
             // Injects project instructions, project memory, and top-k retrieved
             // knowledge-base chunks matched against the user's last message.
             let projectBlock = "";
-            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            if (
+              auth &&
+              usesExistingContext &&
+              typeof projectId === "string" &&
+              /^[0-9a-f-]{36}$/i.test(projectId)
+            ) {
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
@@ -1109,13 +1164,14 @@ export const Route = createFileRoute("/api/chat")({
                       () =>
                         admin
                           .from("project_memory")
-                          .select("content")
+                          .select("id, content")
                           .eq("project_id", projectId)
                           .order("created_at", { ascending: false })
                           .limit(20),
                       { required: false },
                     );
-                    const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
+                    const memRows =
+                      (memRes?.data as Array<{ id: string; content: string }> | null) ?? [];
                     if (memRows.length > 0) {
                       parts.push(
                         "Project memory (facts the user has saved about this project - honor them):\n" +
@@ -1164,6 +1220,13 @@ export const Route = createFileRoute("/api/chat")({
                       "\n\n--- PROJECT CONTEXT ---\n" +
                       parts.join("\n\n") +
                       "\n--- END PROJECT CONTEXT ---";
+                    memorySourceRefs.push(
+                      ...memRows.map(({ id }) => ({
+                        kind: "project_memory" as const,
+                        id,
+                        projectId,
+                      })),
+                    );
                   }
                 }
               } catch (error) {
@@ -1236,6 +1299,7 @@ export const Route = createFileRoute("/api/chat")({
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
                     memoryBlock +
+                    (conversationSummary?.block ?? "") +
                     projectBlock +
                     chatWorkspaceBlock +
                     webBlock +
@@ -1272,7 +1336,7 @@ export const Route = createFileRoute("/api/chat")({
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
             const availableTools =
-              auth && !hasImages && m.id !== "instant" && lastText.length > 0
+              auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getAvailableGoogleTools(auth.userId),
@@ -1473,6 +1537,17 @@ export const Route = createFileRoute("/api/chat")({
                     const enc = new TextEncoder();
                     const stream = new ReadableStream({
                       start(controller) {
+                        controller.enqueue(
+                          enc.encode(
+                            sseEvent(
+                              memorySourcesDelta(
+                                auth?.userId ?? null,
+                                memorySourceRefs,
+                                Boolean(temporary),
+                              ),
+                            ),
+                          ),
+                        );
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -1886,6 +1961,17 @@ export const Route = createFileRoute("/api/chat")({
             };
             const stream = new ReadableStream({
               async start(controller) {
+                controller.enqueue(
+                  enc.encode(
+                    sseEvent(
+                      memorySourcesDelta(
+                        auth?.userId ?? null,
+                        memorySourceRefs,
+                        Boolean(temporary),
+                      ),
+                    ),
+                  ),
+                );
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(

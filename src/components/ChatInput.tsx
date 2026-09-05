@@ -20,6 +20,7 @@ import {
 
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
@@ -31,6 +32,8 @@ import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes"
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
 export type PendingAttachment = {
+  clientId?: string;
+  source?: "file_upload" | "library";
   kind: "image" | "text_file" | "library_file";
   dataUrl: string;
   textContent?: string;
@@ -104,6 +107,7 @@ export function ChatInput({
 
   disabled = false,
   showAddMenu = true,
+  saveAttachmentsToLibrary = false,
   attachments,
   onAttachmentsChange,
   mode,
@@ -134,6 +138,8 @@ export function ChatInput({
   disabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
   showAddMenu?: boolean;
+  /** Only persistent, authenticated chat may automatically retain uploads. */
+  saveAttachmentsToLibrary?: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
   mode?: ModeId;
@@ -155,7 +161,13 @@ export function ChatInput({
   surface?: "empty" | "conversation";
 }) {
   const { isDesktop, interaction } = useLayout();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const attachmentAutoSave = useLibraryAttachmentAutoSave(
+    saveAttachmentsToLibrary && isLoaded && !disabled,
+    user?.id ?? null,
+  );
+  const attachmentScopeRef = useRef(attachmentAutoSave.scope);
+  attachmentScopeRef.current = attachmentAutoSave.scope;
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const effectiveSendOnEnter = sendOnEnter ?? sharedSendOnEnter;
   const isMobileLayout = !isDesktop;
@@ -279,6 +291,8 @@ export function ChatInput({
 
   async function addFiles(files: File[]) {
     if (disabled || !showAddMenu || files.length === 0) return;
+    const readScope = attachmentAutoSave.scope;
+    const currentRead = () => attachmentScopeRef.current === readScope;
     const availableSlots = Math.max(0, 2 - attachments.length);
     if (availableSlots === 0) {
       setUploadAnnouncement("Remove an attachment before adding another.");
@@ -341,6 +355,8 @@ export function ChatInput({
           break;
         }
         const uploading: PendingAttachment = {
+          clientId: crypto.randomUUID(),
+          source: "file_upload",
           kind: "image",
           dataUrl: "",
           name: f.name,
@@ -357,12 +373,14 @@ export function ChatInput({
             r.onerror = () => rej(new Error("Could not read image"));
             r.readAsDataURL(f);
           });
-          nextAttachments = nextAttachments.map((a) =>
-            a === uploading ? { ...uploading, dataUrl, status: "complete" as const } : a,
-          );
+          if (!currentRead()) return;
+          const completed: PendingAttachment = { ...uploading, dataUrl, status: "complete" };
+          nextAttachments = nextAttachments.map((a) => (a === uploading ? completed : a));
+          void attachmentAutoSave.save(completed, readScope);
           seen.add(duplicateKey);
           setUploadAnnouncement(`${f.name} attached`);
         } catch (error) {
+          if (!currentRead()) return;
           nextAttachments = nextAttachments.map((a) =>
             a === uploading
               ? {
@@ -397,6 +415,8 @@ export function ChatInput({
           break;
         }
         const uploading: PendingAttachment = {
+          clientId: crypto.randomUUID(),
+          source: "file_upload",
           kind: "text_file",
           dataUrl: "",
           name: f.name,
@@ -409,14 +429,16 @@ export function ChatInput({
         setUploadAnnouncement(`Reading ${f.name}`);
         try {
           const textContent = await f.text();
+          if (!currentRead()) return;
+          const completed: PendingAttachment = { ...uploading, textContent, status: "complete" };
           nextAttachments = nextAttachments.map((attachment) =>
-            attachment === uploading
-              ? { ...uploading, textContent, status: "complete" as const }
-              : attachment,
+            attachment === uploading ? completed : attachment,
           );
+          void attachmentAutoSave.save(completed, readScope);
           seen.add(duplicateKey);
           setUploadAnnouncement(`${f.name} ready for analysis`);
         } catch (error) {
+          if (!currentRead()) return;
           nextAttachments = nextAttachments.map((attachment) =>
             attachment === uploading
               ? {
