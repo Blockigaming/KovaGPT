@@ -59,6 +59,7 @@ export type ProjectTemplateMutation =
 export function parseProjectTemplateMutation(value: unknown): ProjectTemplateMutation;
 export function parseProjectTemplateQuery(urlValue: URL | string): {
   templateId: string | null;
+  after: string | null;
   version: number | null;
   limit: number;
 };

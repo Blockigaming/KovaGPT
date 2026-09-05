@@ -40,6 +40,7 @@ import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as ModesRouteImport } from './routes/modes'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OmegaRouteImport } from './routes/omega'
+import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProjectsRouteImport } from './routes/projects'
@@ -50,10 +51,12 @@ import { Route as ResearchPlannerRouteImport } from './routes/research-planner'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SitesRouteImport } from './routes/sites'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TrustedContactsRouteImport } from './routes/trusted-contacts'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as WriteRouteImport } from './routes/write'
@@ -67,11 +70,14 @@ import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-imag
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
+import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
 import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
+import { Route as ApiSitesRouteImport } from './routes/api/sites'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
+import { Route as ApiTrustedContactsRouteImport } from './routes/api/trusted-contacts'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
@@ -89,6 +95,7 @@ import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callba
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
+import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
@@ -106,12 +113,15 @@ import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callb
 import { Route as ApiGoogleDisconnectRouteImport } from './routes/api/google/disconnect'
 import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
+import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
+import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
 import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
+import { Route as ApiInternalSiteMaintenanceRouteImport } from './routes/api/internal/site-maintenance'
 import { Route as ApiInternalStorageArtifactCleanupRouteImport } from './routes/api/internal/storage-artifact-cleanup'
 import { Route as ApiInternalWorkspaceSearchRouteImport } from './routes/api/internal/workspace-search'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
@@ -281,6 +291,11 @@ const OmegaRoute = OmegaRouteImport.update({
   path: '/omega',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrganizationRoute = OrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -331,6 +346,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitesRoute = SitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatusRoute = StatusRouteImport.update({
   id: '/status',
   path: '/status',
@@ -349,6 +369,11 @@ const SummaryRoute = SummaryRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustedContactsRoute = TrustedContactsRouteImport.update({
+  id: '/trusted-contacts',
+  path: '/trusted-contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -418,6 +443,11 @@ const ApiMemoryRoute = ApiMemoryRouteImport.update({
   path: '/api/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrganizationsRoute = ApiOrganizationsRouteImport.update({
+  id: '/api/organizations',
+  path: '/api/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
   id: '/api/project-files',
   path: '/api/project-files',
@@ -438,9 +468,19 @@ const ApiReadyzRoute = ApiReadyzRouteImport.update({
   path: '/api/readyz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSitesRoute = ApiSitesRouteImport.update({
+  id: '/api/sites',
+  path: '/api/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTrustedContactsRoute = ApiTrustedContactsRouteImport.update({
+  id: '/api/trusted-contacts',
+  path: '/api/trusted-contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVersionRoute = ApiVersionRouteImport.update({
@@ -531,6 +571,12 @@ const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
   path: '/api/admin/ai-usage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeveloperBillingRoute =
+  ApiAdminDeveloperBillingRouteImport.update({
+    id: '/api/admin/developer-billing',
+    path: '/api/admin/developer-billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   id: '/api/admin/diagnostics',
   path: '/api/admin/diagnostics',
@@ -616,6 +662,11 @@ const ApiGoogleGmailRoute = ApiGoogleGmailRouteImport.update({
   path: '/api/google/gmail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleSelectRoute = ApiGoogleSelectRouteImport.update({
+  id: '/api/google/select',
+  path: '/api/google/select',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGoogleStatusRoute = ApiGoogleStatusRouteImport.update({
   id: '/api/google/status',
   path: '/api/google/status',
@@ -638,6 +689,12 @@ const ApiInternalChatSummariesRoute =
     path: '/api/internal/chat-summaries',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalDeveloperBillingRoute =
+  ApiInternalDeveloperBillingRouteImport.update({
+    id: '/api/internal/developer-billing',
+    path: '/api/internal/developer-billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalReceiptMaintenanceRoute =
   ApiInternalReceiptMaintenanceRouteImport.update({
     id: '/api/internal/receipt-maintenance',
@@ -648,6 +705,12 @@ const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
     path: '/api/internal/scheduled-execution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalSiteMaintenanceRoute =
+  ApiInternalSiteMaintenanceRouteImport.update({
+    id: '/api/internal/site-maintenance',
+    path: '/api/internal/site-maintenance',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiInternalStorageArtifactCleanupRoute =
@@ -755,6 +818,7 @@ export interface FileRoutesByFullPath {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -765,10 +829,12 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
@@ -782,11 +848,14 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -804,6 +873,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -821,12 +891,15 @@ export interface FileRoutesByFullPath {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
@@ -873,6 +946,7 @@ export interface FileRoutesByTo {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -883,10 +957,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
@@ -900,11 +976,14 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -922,6 +1001,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -939,12 +1019,15 @@ export interface FileRoutesByTo {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
@@ -992,6 +1075,7 @@ export interface FileRoutesById {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -1002,10 +1086,12 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
@@ -1019,11 +1105,14 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -1041,6 +1130,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -1058,12 +1148,15 @@ export interface FileRoutesById {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
@@ -1112,6 +1205,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1122,10 +1216,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
@@ -1139,11 +1235,14 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1161,6 +1260,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1178,12 +1278,15 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
     | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
@@ -1230,6 +1333,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1240,10 +1344,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
@@ -1257,11 +1363,14 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1279,6 +1388,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1296,12 +1406,15 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
     | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
@@ -1348,6 +1461,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1358,10 +1472,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
@@ -1375,11 +1491,14 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1397,6 +1516,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1414,12 +1534,15 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
     | '/api/internal/workspace-search'
     | '/api/library/bulk-move'
@@ -1467,6 +1590,7 @@ export interface RootRouteChildren {
   ModesRoute: typeof ModesRoute
   NotificationsRoute: typeof NotificationsRoute
   OmegaRoute: typeof OmegaRoute
+  OrganizationRoute: typeof OrganizationRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
@@ -1477,10 +1601,12 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SitesRoute: typeof SitesRoute
   StatusRoute: typeof StatusRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
   SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
+  TrustedContactsRoute: typeof TrustedContactsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
@@ -1494,11 +1620,14 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiOrganizationsRoute: typeof ApiOrganizationsRoute
   ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
   ApiReadyzRoute: typeof ApiReadyzRoute
+  ApiSitesRoute: typeof ApiSitesRoute
   ApiTitleRoute: typeof ApiTitleRoute
+  ApiTrustedContactsRoute: typeof ApiTrustedContactsRoute
   ApiVersionRoute: typeof ApiVersionRoute
   ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
@@ -1513,6 +1642,7 @@ export interface RootRouteChildren {
   DevelopersIndexRoute: typeof DevelopersIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
+  ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
@@ -1529,12 +1659,15 @@ export interface RootRouteChildren {
   ApiGoogleDisconnectRoute: typeof ApiGoogleDisconnectRoute
   ApiGoogleDriveRoute: typeof ApiGoogleDriveRoute
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
+  ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
+  ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
   ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
+  ApiInternalSiteMaintenanceRoute: typeof ApiInternalSiteMaintenanceRoute
   ApiInternalStorageArtifactCleanupRoute: typeof ApiInternalStorageArtifactCleanupRoute
   ApiInternalWorkspaceSearchRoute: typeof ApiInternalWorkspaceSearchRoute
   ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
@@ -1768,6 +1901,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OmegaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/organization': {
+      id: '/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof OrganizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
@@ -1838,6 +1978,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sites': {
+      id: '/sites'
+      path: '/sites'
+      fullPath: '/sites'
+      preLoaderRoute: typeof SitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/status': {
       id: '/status'
       path: '/status'
@@ -1864,6 +2011,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trusted-contacts': {
+      id: '/trusted-contacts'
+      path: '/trusted-contacts'
+      fullPath: '/trusted-contacts'
+      preLoaderRoute: typeof TrustedContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unsubscribe': {
@@ -1957,6 +2111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organizations': {
+      id: '/api/organizations'
+      path: '/api/organizations'
+      fullPath: '/api/organizations'
+      preLoaderRoute: typeof ApiOrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/project-files': {
       id: '/api/project-files'
       path: '/api/project-files'
@@ -1985,11 +2146,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiReadyzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sites': {
+      id: '/api/sites'
+      path: '/api/sites'
+      fullPath: '/api/sites'
+      preLoaderRoute: typeof ApiSitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
       fullPath: '/api/title'
       preLoaderRoute: typeof ApiTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trusted-contacts': {
+      id: '/api/trusted-contacts'
+      path: '/api/trusted-contacts'
+      fullPath: '/api/trusted-contacts'
+      preLoaderRoute: typeof ApiTrustedContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/version': {
@@ -2111,6 +2286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminAiUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/developer-billing': {
+      id: '/api/admin/developer-billing'
+      path: '/api/admin/developer-billing'
+      fullPath: '/api/admin/developer-billing'
+      preLoaderRoute: typeof ApiAdminDeveloperBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/diagnostics': {
       id: '/api/admin/diagnostics'
       path: '/api/admin/diagnostics'
@@ -2230,6 +2412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleGmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google/select': {
+      id: '/api/google/select'
+      path: '/api/google/select'
+      fullPath: '/api/google/select'
+      preLoaderRoute: typeof ApiGoogleSelectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/google/status': {
       id: '/api/google/status'
       path: '/api/google/status'
@@ -2258,6 +2447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalChatSummariesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/developer-billing': {
+      id: '/api/internal/developer-billing'
+      path: '/api/internal/developer-billing'
+      fullPath: '/api/internal/developer-billing'
+      preLoaderRoute: typeof ApiInternalDeveloperBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/receipt-maintenance': {
       id: '/api/internal/receipt-maintenance'
       path: '/api/internal/receipt-maintenance'
@@ -2270,6 +2466,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/scheduled-execution'
       fullPath: '/api/internal/scheduled-execution'
       preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/site-maintenance': {
+      id: '/api/internal/site-maintenance'
+      path: '/api/internal/site-maintenance'
+      fullPath: '/api/internal/site-maintenance'
+      preLoaderRoute: typeof ApiInternalSiteMaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/storage-artifact-cleanup': {
@@ -2456,6 +2659,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModesRoute: ModesRoute,
   NotificationsRoute: NotificationsRoute,
   OmegaRoute: OmegaRoute,
+  OrganizationRoute: OrganizationRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
@@ -2466,10 +2670,12 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SitesRoute: SitesRoute,
   StatusRoute: StatusRoute,
   StudyAssistantRoute: StudyAssistantRoute,
   SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
+  TrustedContactsRoute: TrustedContactsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
@@ -2484,11 +2690,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
+  ApiOrganizationsRoute: ApiOrganizationsRoute,
   ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
   ApiReadyzRoute: ApiReadyzRoute,
+  ApiSitesRoute: ApiSitesRoute,
   ApiTitleRoute: ApiTitleRoute,
+  ApiTrustedContactsRoute: ApiTrustedContactsRoute,
   ApiVersionRoute: ApiVersionRoute,
   ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
@@ -2503,6 +2712,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersIndexRoute: DevelopersIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
+  ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
@@ -2519,12 +2729,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleDisconnectRoute: ApiGoogleDisconnectRoute,
   ApiGoogleDriveRoute: ApiGoogleDriveRoute,
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
+  ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
+  ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,
   ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
+  ApiInternalSiteMaintenanceRoute: ApiInternalSiteMaintenanceRoute,
   ApiInternalStorageArtifactCleanupRoute:
     ApiInternalStorageArtifactCleanupRoute,
   ApiInternalWorkspaceSearchRoute: ApiInternalWorkspaceSearchRoute,

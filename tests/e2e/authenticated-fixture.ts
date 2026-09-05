@@ -20,6 +20,13 @@ const e2eUser = {
 };
 
 export async function installAuthenticatedFixture(page: Page) {
+  // This fixture exercises the returning-user shell. Server-function onboarding
+  // can arrive after hydration; dismiss that separate flow through its real UI
+  // without issuing a save/skip request or hiding background accessibility bugs.
+  const welcomeDialog = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  await page.addLocatorHandler(welcomeDialog, async () => {
+    await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
+  });
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
       localStorage.clear();

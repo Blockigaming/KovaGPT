@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { createStripeClient } from "@/lib/stripe.server";
-import { disconnectGoogle } from "@/lib/google-oauth.server";
+import { disconnectAllGoogle } from "@/lib/google-oauth.server";
 import { disconnectAllGitHub } from "@/lib/github-oauth.server";
 import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 import { disconnectAllFinance } from "@/finances/plaid.server";
@@ -15,6 +15,11 @@ import { prepareStripeAccountDeletion } from "@/lib/stripe-account-deletion-pref
 import { retireStripeCustomerForAccountDeletion } from "@/lib/stripe-account-deletion.mjs";
 import { cleanupOwnedStorageBeforeAccountDeletion } from "@/lib/account-storage-cleanup.server";
 import { prepareAccountStorageArtifactDeletion } from "@/lib/account-storage-artifacts.server";
+
+import {
+  prepareOrganizationAccountDeletion,
+  OrganizationAccountDeletionError,
+} from "@/lib/organization-account-deletion.server";
 
 const MAX_DELETE_BODY_BYTES = 1_024;
 
@@ -69,35 +74,54 @@ export const Route = createFileRoute("/api/account")({
         let preparedBilling: Awaited<ReturnType<typeof prepareStripeAccountDeletion>> = [];
         let deletionFailure: Response | null = null;
         try {
-          const exportCleanup = await cleanupAccountExportsBeforeAccountDeletion(auth.userId);
-          if (!exportCleanup.ready) {
+          await prepareOrganizationAccountDeletion(auth.supabaseAdmin, auth.userId);
+        } catch (error) {
+          const transferRequired =
+            error instanceof OrganizationAccountDeletionError && error.status === 409;
+          deletionFailure = Response.json(
+            {
+              error: transferRequired
+                ? "Transfer organization ownership to another active owner before deleting your account."
+                : "Organization ownership could not be verified. Your account was not deleted; retry shortly.",
+              code: transferRequired
+                ? "organization_ownership_transfer_required"
+                : "organization_deletion_preflight_unavailable",
+            },
+            { status: transferRequired ? 409 : 503, headers: { "Cache-Control": "no-store" } },
+          );
+        }
+        if (!deletionFailure) {
+          try {
+            const exportCleanup = await cleanupAccountExportsBeforeAccountDeletion(auth.userId);
+            if (!exportCleanup.ready) {
+              deletionFailure = Response.json(
+                {
+                  error:
+                    "Account export cleanup is still in progress. Your account was not deleted; retry shortly.",
+                  code: "account_export_cleanup_pending",
+                },
+                {
+                  status: 409,
+                  headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                },
+              );
+            }
+          } catch (error) {
+            console.error("[account-delete] account export cleanup failed", {
+              error: error instanceof Error ? error.name : "unknown_error",
+            });
             deletionFailure = Response.json(
               {
                 error:
-                  "Account export cleanup is still in progress. Your account was not deleted; retry shortly.",
-                code: "account_export_cleanup_pending",
+                  "Private export data could not be removed, so your account was not deleted. Retry shortly.",
+                code: "account_export_cleanup_failed",
               },
               {
-                status: 409,
+                status: 503,
                 headers: { "Cache-Control": "no-store", "Retry-After": "5" },
               },
             );
           }
-        } catch (error) {
-          console.error("[account-delete] account export cleanup failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
-          });
-          deletionFailure = Response.json(
-            {
-              error:
-                "Private export data could not be removed, so your account was not deleted. Retry shortly.",
-              code: "account_export_cleanup_failed",
-            },
-            {
-              status: 503,
-              headers: { "Cache-Control": "no-store", "Retry-After": "5" },
-            },
-          );
         }
 
         // Fence first, then snapshot mappings: a prior authenticated Checkout
@@ -191,7 +215,7 @@ export const Route = createFileRoute("/api/account")({
             }
 
             try {
-              await disconnectGoogle(auth.userId);
+              await disconnectAllGoogle(auth.userId);
             } catch (error) {
               console.error("[account-delete] Google token purge failed", {
                 error: error instanceof Error ? error.name : "unknown_error",

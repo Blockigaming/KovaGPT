@@ -11,9 +11,23 @@ async function runDeletion({
   failExport = false,
   failBilling = false,
   failProjects = false,
+  organizationFailure = null,
 } = {}) {
   const calls = [];
+  class OrganizationAccountDeletionError extends Error {
+    constructor(status, code) {
+      super(code);
+      this.status = status;
+      this.code = code;
+    }
+  }
   const mock = {
+    OrganizationAccountDeletionError,
+    prepareOrganizationAccountDeletion: async () => {
+      calls.push("organization-preflight");
+      if (organizationFailure)
+        throw new OrganizationAccountDeletionError(organizationFailure, "private detail");
+    },
     createFileRoute: () => (config) => config,
     requireUser: async () => ({
       userId: "11111111-1111-4111-8111-111111111111",
@@ -67,7 +81,7 @@ async function runDeletion({
       return uploadsReady;
     },
     disconnectAllFinance: async () => calls.push("finance-disconnect"),
-    disconnectGoogle: async () => calls.push("google-disconnect"),
+    disconnectAllGoogle: async () => calls.push("google-disconnect"),
     disconnectAllGitHub: async () => calls.push("github-disconnect"),
     disconnectAllOAuth: async () => calls.push("oauth-disconnect"),
     isCrossSiteMutation: () => false,
@@ -121,13 +135,14 @@ async function runDeletion({
 test("pending export cleanup leaves paid service and connectors intact", async () => {
   const result = await runDeletion({ exportReady: false });
   assert.equal(result.response.status, 409);
-  assert.deepEqual(result.calls, ["export-cleanup", "fence-release"]);
+  assert.deepEqual(result.calls, ["organization-preflight", "export-cleanup", "fence-release"]);
 });
 
 test("pending Storage cleanup leaves paid service and connectors intact", async () => {
   const result = await runDeletion({ storageReady: false });
   assert.equal(result.response.status, 409);
   assert.deepEqual(result.calls, [
+    "organization-preflight",
     "export-cleanup",
     "billing-preflight",
     "upload-fence",
@@ -140,13 +155,14 @@ test("pending Storage cleanup leaves paid service and connectors intact", async 
 test("export cleanup failure releases the fence without external disconnections", async () => {
   const result = await runDeletion({ failExport: true });
   assert.equal(result.response.status, 503);
-  assert.deepEqual(result.calls, ["export-cleanup", "fence-release"]);
+  assert.deepEqual(result.calls, ["organization-preflight", "export-cleanup", "fence-release"]);
 });
 
 test("billing failure after cleanup retains Auth and releases the export fence", async () => {
   const result = await runDeletion({ failBilling: true });
   assert.equal(result.response.status, 502);
   assert.deepEqual(result.calls, [
+    "organization-preflight",
     "export-cleanup",
     "billing-preflight",
     "upload-fence",
@@ -161,6 +177,7 @@ test("successful deletion cleans private files then external services then Auth"
   const result = await runDeletion();
   assert.equal(result.response.status, 204);
   assert.deepEqual(result.calls, [
+    "organization-preflight",
     "export-cleanup",
     "billing-preflight",
     "upload-fence",
@@ -178,13 +195,19 @@ test("successful deletion cleans private files then external services then Auth"
 test("ambiguous billing preflight leaves all private files and external services intact", async () => {
   const result = await runDeletion({ failPreflight: true });
   assert.equal(result.response.status, 409);
-  assert.deepEqual(result.calls, ["export-cleanup", "billing-preflight", "fence-release"]);
+  assert.deepEqual(result.calls, [
+    "organization-preflight",
+    "export-cleanup",
+    "billing-preflight",
+    "fence-release",
+  ]);
 });
 
 test("a live upload blocks destructive Storage and billing cleanup", async () => {
   const result = await runDeletion({ uploadsReady: false });
   assert.equal(result.response.status, 409);
   assert.deepEqual(result.calls, [
+    "organization-preflight",
     "export-cleanup",
     "billing-preflight",
     "upload-fence",
@@ -196,6 +219,7 @@ test("Project cleanup failure retains Auth and all external connections", async 
   const result = await runDeletion({ failProjects: true });
   assert.equal(result.response.status, 503);
   assert.deepEqual(result.calls, [
+    "organization-preflight",
     "export-cleanup",
     "billing-preflight",
     "upload-fence",
@@ -203,3 +227,12 @@ test("Project cleanup failure retains Auth and all external connections", async 
     "fence-release",
   ]);
 });
+
+for (const status of [409, 503]) {
+  test(`organization preflight ${status} prevents export/file/billing destruction`, async () => {
+    const result = await runDeletion({ organizationFailure: status });
+    assert.equal(result.response.status, status);
+    assert.deepEqual(result.calls, ["organization-preflight", "fence-release"]);
+    assert.doesNotMatch(await result.response.text(), /private detail/);
+  });
+}

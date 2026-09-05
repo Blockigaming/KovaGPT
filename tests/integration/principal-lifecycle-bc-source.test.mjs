@@ -22,22 +22,22 @@ test("mounted AgentWorkspace invalidates stale generations after principal clean
   );
   assert.match(
     settingsSource,
-    /dispatchPrincipalBrowserStorageCleared\(userKey\);[\s\S]{0,160}onChange\(DEFAULT_SETTINGS\);[\s\S]{0,80}onClearAll\(\)/,
+    /currentAuthUserKeyRef\.current === resetUserKey[\s\S]{0,160}onChange\(DEFAULT_SETTINGS\);[\s\S]{0,80}onClearAll\(\)/,
   );
 });
 
 test("cleanup copy names ownerless purging and account deletion surfaces partial cleanup", () => {
   assert.match(
     settingsSource,
-    /Ownerless private data,[\s\S]{0,100}transitional values from older versions,[\s\S]{0,100}another profile/,
+    /Ownerless\s+private\s+data,[\s\S]{0,100}transitional values from older versions,[\s\S]{0,100}another profile/,
   );
   assert.match(
     settingsSource,
-    /Other profiles' scoped data,[\s\S]{0,100}device-wide display preferences,[\s\S]{0,80}cloud data are preserved/,
+    /Other profiles' scoped data,[\s\S]{0,100}device-wide\s+display\s+preferences,[\s\S]{0,80}cloud data are preserved/,
   );
   assert.match(
     settingsSource,
-    /const cleanupFailureCount =[\s\S]{0,180}!cleanupResult\.resolved \|\| cleanupFailureCount > 0/,
+    /const cleanupFailureCount =[\s\S]{0,260}!cleanupResult\.resolved \|\| cleanupFailureCount > 0/,
   );
   assert.match(
     settingsSource,

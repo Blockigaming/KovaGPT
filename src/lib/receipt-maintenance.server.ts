@@ -27,6 +27,7 @@ export async function runReceiptMaintenanceBatch(
   for (const [key, rpc] of [
     ["work", "purge_work_sync_receipts"],
     ["projectTemplates", "purge_project_template_mutation_receipts"],
+    ["organizations", "purge_organization_mutation_receipts"],
   ]) {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;

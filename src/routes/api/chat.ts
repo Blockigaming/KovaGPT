@@ -15,7 +15,7 @@ import {
   optionalUser,
 } from "@/lib/api-auth.server";
 import {
-  getAvailableGoogleTools,
+  getGoogleToolContext,
   TOOL_ACTIVITY,
   WRITE_TOOL_NAMES,
   runGoogleTool,
@@ -1335,14 +1335,16 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
-            const availableTools =
+            const googleContext =
               auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
                 ? ((await preflight.run(
                     "connector_tools",
-                    () => getAvailableGoogleTools(auth.userId),
+                    () => getGoogleToolContext(auth.userId),
                     { required: false },
-                  )) ?? [])
-                : [];
+                  )) ?? null)
+                : null;
+            const availableTools = googleContext?.tools ?? [];
+            const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
             const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
@@ -1664,6 +1666,7 @@ export const Route = createFileRoute("/api/chat")({
                           auth!.userId,
                           tc.function.name,
                           parsedArgs,
+                          googleBinding,
                         );
                         pendingConfirms.push({
                           id: staged.id,
@@ -1691,7 +1694,12 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(auth!.userId, tc.function.name, parsedArgs);
+                      const out = await runGoogleTool(
+                        auth!.userId,
+                        tc.function.name,
+                        parsedArgs,
+                        googleBinding,
+                      );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };

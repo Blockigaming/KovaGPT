@@ -85,7 +85,7 @@ test("connector and remote-download boundaries enforce Lockdown Mode", async () 
   before(
     files.googleStatus,
     "enforceLockdownCapability(",
-    "getGoogleConnectionHealth(",
+    "getGoogleAccountsHealth(",
     "Google connection status",
   );
   before(

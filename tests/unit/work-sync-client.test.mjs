@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as sync from "../../src/lib/work-sync-state.ts";
+import { createWorkSession } from "../../src/lib/work-session.mjs";
 const owner = "11111111-1111-4111-8111-111111111111";
 const otherOwner = "99999999-9999-4999-8999-999999999999";
 const id = "22222222-2222-4222-8222-222222222222";
@@ -293,4 +294,56 @@ test("a stale receipt cannot revert a newer remote revision", () => {
   state = sync.settleWorkMutation(state, id, mutation, ack(1, 1));
   assert.equal(sync.visibleWorkRecords(state, "task")[0].objective, "newer remote");
   assert.equal(state.records[id].revision, 2);
+});
+
+test("a fresh device pulls session recents and saved records across the durable cursor", async () => {
+  const session = createWorkSession({
+    objective: "Prepare launch",
+    plan: ["Review release evidence"],
+  });
+  const savedSession = {
+    id: session.id,
+    kind: "session",
+    title: session.objective,
+    payload: session,
+    revision: 1,
+    syncVersion: 1,
+    deletedAt: null,
+  };
+  const recentSession = {
+    resourceType: "session",
+    resourceId: session.id,
+    pinnedAt: date,
+    lastOpenedAt: date,
+    revision: 1,
+    syncVersion: 2,
+    deletedAt: null,
+  };
+  const calls = [];
+  const h = harness(
+    initial(),
+    async (path) => {
+      calls.push(path);
+      return calls.length === 1
+        ? page([savedSession], [recentSession], 2, 3)
+        : page([record(task(), 1, 3)], [], 3);
+    },
+    true,
+  );
+  await sync.synchronizeWorkTurn(h.options);
+  assert.match(calls[0], /cursor=0/);
+  assert.match(calls[1], /cursor=2/);
+  assert.equal(h.state.cursor, 3);
+  assert.deepEqual(sync.visibleWorkRecords(h.state, "session"), [session]);
+  assert.deepEqual(sync.visibleWorkRecords(h.state, "task"), [task()]);
+  assert.deepEqual(h.state.recents[`recent:session:${session.id}`], recentSession);
+  assert.equal(h.state.pending[session.id], undefined);
+  assert.throws(
+    () =>
+      sync.applyWorkSyncPage(
+        initial(),
+        page([], [{ ...recentSession, resourceType: "unknown" }], 2),
+      ),
+    /recent_invalid/,
+  );
 });

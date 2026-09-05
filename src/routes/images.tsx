@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
 import {
-  clearImageHistory,
   deleteImageHistoryItem,
   loadImageHistory,
   persistImageHistoryItem,
@@ -12,6 +11,10 @@ import {
 } from "@/lib/image-history";
 import { safeImageUrl } from "@/lib/safe-image-url";
 import { createImageHistoryLoadGuard } from "@/lib/image-history-load";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 import {
   PanelLeft,
   ArrowUp,
@@ -307,16 +310,6 @@ function takeLegacyHistory(userKey: string): ImageHistoryItem[] {
   }
 }
 
-function clearLegacyHistory(userKey: string | null) {
-  if (!userKey || typeof window === "undefined") return;
-  try {
-    if (userKey) localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
-    localStorage.removeItem(LEGACY_HISTORY_KEY_PREFIX + userKey);
-  } catch {
-    /*ignore*/
-  }
-}
-
 async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
   const legacy = takeLegacyHistory(userKey);
   const migrationResults = await Promise.allSettled(
@@ -401,6 +394,32 @@ function ImagesPage() {
   const lightboxReturnToPromptRef = useRef(false);
   const historyObjectUrlsRef = useRef(new Set<string>());
   const historyLoadGuardRef = useRef(createImageHistoryLoadGuard());
+
+  const resetVisibleImageData = useCallback(() => {
+    historyLoadGuardRef.current.invalidate();
+    generationRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    submittingRef.current = false;
+    for (const objectUrl of historyObjectUrlsRef.current) URL.revokeObjectURL(objectUrl);
+    historyObjectUrlsRef.current.clear();
+    setLoading(false);
+    setPrompt("");
+    setError(null);
+    setResult(null);
+    setResultPrompt("");
+    setHistory([]);
+    setLightbox(null);
+  }, []);
+
+  useEffect(() => {
+    const onReset = (event: Event) => {
+      if (isLoaded && isPrincipalBrowserStorageClearedEvent(event, userKey))
+        resetVisibleImageData();
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, onReset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, onReset);
+  }, [isLoaded, userKey, resetVisibleImageData]);
 
   useEffect(() => {
     const historyLoadGuard = historyLoadGuardRef.current;
@@ -970,19 +989,7 @@ function ImagesPage() {
         onChange={setSettings}
         initialTab={settingsTab}
         returnFocusTarget={settingsReturnFocusRef.current}
-        onClearAll={() => {
-          historyLoadGuardRef.current.invalidate();
-          if (userKey) {
-            clearLegacyHistory(userKey);
-            void clearImageHistory(userKey).catch(() => {
-              toast.error("Browser image history could not be cleared.");
-            });
-          }
-          for (const objectUrl of historyObjectUrlsRef.current) URL.revokeObjectURL(objectUrl);
-          historyObjectUrlsRef.current.clear();
-          setHistory([]);
-          setLightbox(null);
-        }}
+        onClearAll={resetVisibleImageData}
       />
 
       <LoginPromptDialog

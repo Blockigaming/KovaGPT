@@ -24,6 +24,8 @@ import {
   type StorageReferenceRow,
 } from "@/lib/project-file-storage-policy.mjs";
 
+import { readAccountExportRows } from "@/lib/account-export-pagination.mjs";
+
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
 const MAX_EMBEDDED_FILE_BYTES = 32 * 1024 * 1024;
@@ -266,38 +268,26 @@ async function assertClaimStillOwnsUpload(
 }
 
 async function readAllWhere(table: string, column: string, value: unknown): Promise<ExportRow[]> {
-  const rows: ExportRow[] = [];
-  for (let offset = 0; offset < MAX_ROWS; offset += ACCOUNT_EXPORT_PAGE_SIZE) {
-    const result = await admin
-      .from(table)
-      .select("*")
-      .eq(column, value)
-      .range(offset, offset + ACCOUNT_EXPORT_PAGE_SIZE - 1);
-    if (result.error) throw exportError("account_export_database_unavailable");
-    const page = result.data ?? [];
-    rows.push(...page);
-    if (page.length < ACCOUNT_EXPORT_PAGE_SIZE) return rows;
-  }
-  throw exportError("account_export_row_limit_exceeded");
+  return readAccountExportRows(
+    () => admin.from(table).select("*").eq(column, value),
+    table,
+    ACCOUNT_EXPORT_PAGE_SIZE,
+    MAX_ROWS,
+  );
 }
 
 async function readAllIn(table: string, column: string, values: unknown[]): Promise<ExportRow[]> {
-  if (values.length === 0) return [];
+  const uniqueValues = [...new Set(values)];
   const rows: ExportRow[] = [];
-  for (let batchStart = 0; batchStart < values.length; batchStart += 100) {
-    const batch = values.slice(batchStart, batchStart + 100);
-    for (let offset = 0; offset < MAX_ROWS; offset += ACCOUNT_EXPORT_PAGE_SIZE) {
-      const result = await admin
-        .from(table)
-        .select("*")
-        .in(column, batch)
-        .range(offset, offset + ACCOUNT_EXPORT_PAGE_SIZE - 1);
-      if (result.error) throw exportError("account_export_database_unavailable");
-      const page = result.data ?? [];
-      rows.push(...page);
-      if (rows.length > MAX_ROWS) throw exportError("account_export_row_limit_exceeded");
-      if (page.length < ACCOUNT_EXPORT_PAGE_SIZE) break;
-    }
+  for (let batchStart = 0; batchStart < uniqueValues.length; batchStart += 100) {
+    const batch = uniqueValues.slice(batchStart, batchStart + 100);
+    const batchRows = await readAccountExportRows(
+      () => admin.from(table).select("*").in(column, batch),
+      table,
+      ACCOUNT_EXPORT_PAGE_SIZE,
+      MAX_ROWS - rows.length,
+    );
+    for (const row of batchRows) rows.push(row);
   }
   return rows;
 }
@@ -328,6 +318,16 @@ async function collectDirectRecords(userId: string): Promise<Record<string, Expo
     );
     for (const result of results) records[result.table] = result.rows;
   }
+  // Include both sides of the user's invitation/audit history without exporting
+  // unrelated tenant members, provider configuration, or domain proof tokens.
+  records.organization_invitations = uniqueRows([
+    ...(records.organization_invitations ?? []),
+    ...(await readAllWhere("organization_invitations", "invited_by", userId)),
+  ]);
+  records.organization_audit_events = uniqueRows([
+    ...(records.organization_audit_events ?? []),
+    ...(await readAllWhere("organization_audit_events", "subject_user_id", userId)),
+  ]);
   return records;
 }
 
@@ -348,6 +348,34 @@ async function collectProjectRecords(userId: string): Promise<Record<string, Exp
   );
   const fileIds = ids(result.project_files ?? []);
   result.project_file_chunks = await readAllIn("project_file_chunks", "file_id", fileIds);
+  const privateCanvas = await readAllWhere("canvas_documents", "private_owner_id", userId);
+  const projectCanvas = await readAllIn("canvas_documents", "project_id", projectIds);
+  const canvasDocuments = uniqueRows([...privateCanvas, ...projectCanvas]);
+  const canvasIds = ids(canvasDocuments);
+  result.canvas_documents = canvasDocuments;
+  result.canvas_revisions = await readAllIn("canvas_revisions", "document_id", canvasIds);
+  result.canvas_comments = await readAllIn("canvas_comments", "document_id", canvasIds);
+  // Export only the author's comments in other Projects they can still access.
+  // Never widen this to full documents or other members' private content.
+  const authoredCanvasComments = await readAllWhere("canvas_comments", "author_id", userId);
+  const commentDocuments = await readAllIn(
+    "canvas_documents",
+    "id",
+    ids(authoredCanvasComments, "document_id"),
+  );
+  const currentProjects = new Set([...projectIds, ...ids(memberships, "project_id")]);
+  const accessibleDocuments = new Set(
+    ids(
+      commentDocuments.filter(
+        (row) =>
+          row.private_owner_id === userId ||
+          (typeof row.project_id === "string" && currentProjects.has(row.project_id)),
+      ),
+    ),
+  );
+  result.canvas_comments_authored = authoredCanvasComments.filter(
+    (row) => typeof row.document_id === "string" && accessibleDocuments.has(row.document_id),
+  );
   return result;
 }
 

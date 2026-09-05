@@ -318,6 +318,9 @@ test("the real worker registers before upload and a resumed stale worker preserv
           lt() {
             return query;
           },
+          order() {
+            return query;
+          },
           limit() {
             return query;
           },
@@ -434,6 +437,9 @@ test("exports retain reservation metadata but embed only ready or legacy Project
         in() {
           return query;
         },
+        order() {
+          return query;
+        },
         async range() {
           return {
             data:
@@ -470,4 +476,172 @@ test("exports retain reservation metadata but embed only ready or legacy Project
     rows.slice(0, 2).map((row) => ({ bucket: "project-files", path: row.storage_path })),
   );
   assert.equal(artifact.files.length, 2);
+});
+
+test("personal organization exports include both invitation/audit roles without unrelated tenant records", async () => {
+  const another = "22222222-2222-4222-8222-222222222222";
+  const org = "33333333-3333-4333-8333-333333333333";
+  const data = {
+    organizations: [
+      { id: org, created_by: userId, name: "Owned" },
+      { id: another, created_by: another },
+    ],
+    organization_members: [
+      { organization_id: org, user_id: userId },
+      { organization_id: org, user_id: another },
+    ],
+    organization_invitations: [
+      { id: "sent", invited_by: userId, recipient_user_id: another },
+      { id: "received", invited_by: another, recipient_user_id: userId },
+      { id: "private", invited_by: another, recipient_user_id: another },
+    ],
+    organization_audit_events: [
+      { id: 1, actor_user_id: userId, subject_user_id: userId },
+      { id: 2, actor_user_id: another, subject_user_id: userId },
+      { id: 3, actor_user_id: another, subject_user_id: another },
+    ],
+  };
+  const ordered = new Set();
+  const admin = {
+    auth: { admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) } },
+    from(table) {
+      let rows = data[table] ?? [];
+      const query = {
+        select() {
+          return query;
+        },
+        eq(column, value) {
+          rows = rows.filter((row) => row[column] === value);
+          return query;
+        },
+        in(column, values) {
+          rows = rows.filter((row) => values.includes(row[column]));
+          return query;
+        },
+        order() {
+          ordered.add(table);
+          return query;
+        },
+        async range(from, through) {
+          return { data: rows.slice(from, through + 1), error: null };
+        },
+      };
+      return query;
+    },
+    storage: { from: () => assert.fail("No organization content download is authorized") },
+  };
+  const worker = await loadWorker(admin);
+  const artifact = JSON.parse((await worker.buildAccountExport(userId, org)).text);
+  assert.deepEqual(artifact.records.organization_invitations.map((row) => row.id).sort(), [
+    "received",
+    "sent",
+  ]);
+  assert.deepEqual(
+    artifact.records.organization_audit_events.map((row) => row.id),
+    [1, 2],
+  );
+  assert.equal(artifact.records.organization_members.length, 1);
+  assert.equal(artifact.records.organizations.length, 1);
+  assert.equal(artifact.records.organization_domains, undefined);
+  assert.equal(artifact.records.organization_sso_connections, undefined);
+  for (const table of Object.keys(data)) assert.ok(ordered.has(table), table);
+});
+
+test("Canvas export keeps private and owned Project content without widening collaborator access", async () => {
+  const data = {
+    projects: [{ id: "owned", owner_id: userId }],
+    project_members: [{ project_id: "shared", user_id: userId }],
+    canvas_documents: [
+      { id: "private", private_owner_id: userId, project_id: null, content: "personal" },
+      { id: "owned-doc", private_owner_id: null, project_id: "owned", content: "owned project" },
+      { id: "shared-doc", private_owner_id: null, project_id: "shared", content: "shared project" },
+      {
+        id: "revoked-doc",
+        private_owner_id: null,
+        project_id: "revoked",
+        content: "revoked content",
+      },
+      {
+        id: "foreign-private",
+        private_owner_id: "another",
+        project_id: null,
+        content: "foreign secret",
+      },
+    ],
+    canvas_revisions: [
+      { document_id: "private", revision: 1, content: "earlier personal" },
+      { document_id: "shared-doc", revision: 1, content: "shared earlier" },
+    ],
+    canvas_comments: [
+      { id: "own", document_id: "private", author_id: userId, body: "mine" },
+      { id: "project", document_id: "owned-doc", author_id: "another", body: "project comment" },
+      { id: "shared-own", document_id: "shared-doc", author_id: userId, body: "my shared comment" },
+      {
+        id: "shared-other",
+        document_id: "shared-doc",
+        author_id: "another",
+        body: "other shared comment",
+      },
+      { id: "revoked", document_id: "revoked-doc", author_id: userId, body: "now inaccessible" },
+      {
+        id: "forged",
+        document_id: "foreign-private",
+        author_id: userId,
+        body: "must not widen access",
+      },
+    ],
+    collaboration_presence: [{ id: "ephemeral", user_id: userId }],
+  };
+  const admin = {
+    auth: { admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) } },
+    from(table) {
+      let rows = data[table] ?? [];
+      const query = {
+        select() {
+          return query;
+        },
+        eq(column, value) {
+          rows = rows.filter((row) => row[column] === value);
+          return query;
+        },
+        in(column, values) {
+          rows = rows.filter((row) => values.includes(row[column]));
+          return query;
+        },
+        order() {
+          return query;
+        },
+        async range(from, through) {
+          return { data: rows.slice(from, through + 1), error: null };
+        },
+      };
+      return query;
+    },
+    storage: { from: () => assert.fail("Canvas text export requires no Storage download") },
+  };
+  const worker = await loadWorker(admin);
+  const result = JSON.parse(
+    (await worker.buildAccountExport(userId, "44444444-4444-4444-8444-444444444444")).text,
+  ).records;
+  assert.deepEqual(
+    result.canvas_documents.map((row) => row.id),
+    ["private", "owned-doc"],
+  );
+  assert.deepEqual(
+    result.canvas_revisions.map((row) => row.content),
+    ["earlier personal"],
+  );
+  assert.deepEqual(
+    result.canvas_comments.map((row) => row.id),
+    ["own", "project"],
+  );
+  assert.deepEqual(
+    result.canvas_comments_authored.map((row) => row.id),
+    ["own", "shared-own"],
+  );
+  assert.equal(result.collaboration_presence, undefined);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /foreign secret|now inaccessible|other shared comment/,
+  );
 });

@@ -13,7 +13,7 @@ test("durable versions require a signed-in user plus chat and message ids", () =
 
 test("an entry is labelled saved only after the server write resolves", () => {
   assert.match(editor, /await autosaveQueueRef\.current\.enqueue/u);
-  assert.match(editor, /saveVersionFn\(\{/u);
+  assert.match(editor, /saveVersionFn\(snapshot\)/u);
   assert.match(editor, /durable = true;/);
   assert.match(editor, /label: durable \? "Saved to this chat" : "Session only"/);
   // Unsaved entries carry an explicit badge.
@@ -46,11 +46,11 @@ test("Canvas never edits, exports, or saves a silently truncated document", () =
 });
 
 test("reopening Canvas applies the accepted durable edit without racing a new local edit", () => {
-  assert.match(editor, /const accepted = rows\.find\(\(row\) => row\.accepted\)/);
-  assert.match(
-    editor,
-    /canApplyLoadedArtifactHistory\([\s\S]{0,160}localEditRevisionRef\.current[\s\S]{0,160}lastRecordedValueRef\.current = accepted\.content/,
-  );
+  assert.match(editor, /const remoteSnapshot = collaboration.snapshot/);
+  assert.match(editor, /canApplyLoadedArtifactHistory\(0, localEditRevisionRef\.current\)/);
+  assert.match(editor, /value === lastRecordedValueRef\.current/);
+  assert.match(editor, /const content = adoptRemote\(\)/);
+  assert.match(editor, /lastRecordedValueRef\.current = content/);
   assert.match(editor, /localEditRevisionRef\.current \+= 1/u);
 });
 
@@ -79,7 +79,7 @@ test("Canvas serializes accepted autosaves so an older request cannot win", () =
   assert.match(editor, /createSerializedWriteQueue\(\)/u);
   assert.match(
     editor,
-    /autosaveQueueRef\.current\.enqueue\(\(\) =>[\s\S]{0,300}saveVersionFn\(\{/u,
+    /autosaveQueueRef\.current\.enqueue\(\(\) =>[\s\S]{0,300}saveVersionFn\(snapshot\)/u,
   );
 });
 
@@ -110,4 +110,22 @@ test("Canvas Improve uses a real text selection and refuses an empty request", (
   assert.match(editor, /textareaRef\.current\?\.selectionEnd/);
   assert.match(editor, /end > start \? value\.slice\(start, end\) : value/);
   assert.match(editor, /if \(!trimmed\)/);
+});
+
+test("Canvas session identity and generation fence late history responses", () => {
+  const hook = readFileSync("src/lib/use-canvas-collaboration.ts", "utf8");
+  assert.match(
+    editor,
+    /key=\{JSON\.stringify\(\[user\?\.id, props\.chatId, props\.messageId, props\.projectId\]\)\}/,
+  );
+  assert.match(editor, /if \(!props\.open\) return null/);
+  const version = hook.slice(
+    hook.indexOf("const versionContent"),
+    hook.indexOf("const olderComments"),
+  );
+  assert.match(version, /epoch\.current !== generation/);
+  assert.match(
+    editor,
+    /const generation = autosaveGenerationRef\.current;[\s\S]{0,500}collaboration\.versionContent[\s\S]{0,200}autosaveGenerationRef\.current !== generation/,
+  );
 });

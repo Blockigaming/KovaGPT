@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 112,
-  "latest": "20260905002934_account_retained_source_transfer.sql",
+  "count": 119,
+  "latest": "20260905011123_project_template_management_pagination.sql",
   "migrations": [
     {
       "order": 1,
@@ -2230,6 +2230,35 @@
     },
     {
       "order": 108,
+      "filename": "20260905000905_project_canvas_collaboration.sql",
+      "timestamp": "20260905000905",
+      "sha256": "d472de10523e8b7d57a3f31190d31d5d5e91d7a45ef6d977270e5068d6d19a04",
+      "tables": [
+        "canvas_documents",
+        "canvas_revisions",
+        "canvas_comments",
+        "collaboration_presence"
+      ],
+      "functions": ["kova_private"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["canvas_documents", "canvas_revisions", "canvas_comments", "collaboration_presence"],
+      "policies": [
+        "canvas_read",
+        "canvas_revision_read",
+        "canvas_comment_read",
+        "collaboration_presence_read"
+      ],
+      "indexes": [
+        "canvas_personal_identity",
+        "canvas_project_identity",
+        "canvas_comments_document_created",
+        "collaboration_presence_resource"
+      ]
+    },
+    {
+      "order": 109,
       "filename": "20260905001217_family_atomic_membership.sql",
       "timestamp": "20260905001217",
       "sha256": "c4baf51ba59323b22b15acfabd4608887118539c9128545b77f7e59faaa80e13",
@@ -2243,7 +2272,7 @@
       "indexes": []
     },
     {
-      "order": 109,
+      "order": 110,
       "filename": "20260905001247_legacy_browser_atomic_controls.sql",
       "timestamp": "20260905001247",
       "sha256": "8b2f7518844fb5f5228d18b2c292b8c7bf778fad43ba8b8a2b87985db6db87a4",
@@ -2261,7 +2290,42 @@
       ]
     },
     {
-      "order": 110,
+      "order": 111,
+      "filename": "20260905001454_organization_administration_foundation.sql",
+      "timestamp": "20260905001454",
+      "sha256": "de3a35f78d678f53baed39413029dfc8ad8deee8a21e8e59eec777dad9f7fbab",
+      "tables": [
+        "organizations",
+        "organization_members",
+        "organization_invitations",
+        "organization_domains",
+        "organization_sso_connections",
+        "organization_audit_events",
+        "organization_mutation_receipts"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [
+        "organizations_current_member",
+        "organization_members_current_member",
+        "organization_invitations_target",
+        "organization_domains_owner",
+        "organization_sso_owner",
+        "organization_audit_admin"
+      ],
+      "indexes": [
+        "organization_members_user_active",
+        "organization_invitation_pending",
+        "organization_invitation_recipient",
+        "organization_domain_verified_unique",
+        "organization_audit_page"
+      ]
+    },
+    {
+      "order": 112,
       "filename": "20260905001736_private_auth_identity_helpers.sql",
       "timestamp": "20260905001736",
       "sha256": "b9005dcfee8279ebe3b1c23b80254099526088c610cad015a6070506dc6ca9ff",
@@ -2275,7 +2339,21 @@
       "indexes": []
     },
     {
-      "order": 111,
+      "order": 113,
+      "filename": "20260905002122_trusted_contact_lifecycle.sql",
+      "timestamp": "20260905002122",
+      "sha256": "bdbfe46e20bc79c6d3b8e61afc84001a0e23a85326cc15a8367e878b41e81dee",
+      "tables": ["trusted_contacts", "trusted_contact_blocks"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["trusted_contacts", "trusted_contact_blocks"],
+      "policies": ["trusted_contacts_parties", "trusted_contact_blocks_own"],
+      "indexes": ["trusted_contacts_inviter_idx", "trusted_contacts_recipient_idx"]
+    },
+    {
+      "order": 114,
       "filename": "20260905002230_retained_work_source_read_access.sql",
       "timestamp": "20260905002230",
       "sha256": "9343fbf3ec082eb8102d1c2ddea79d15c51362067d1c7294837ed6c3692414a2",
@@ -2289,7 +2367,7 @@
       "indexes": []
     },
     {
-      "order": 112,
+      "order": 115,
       "filename": "20260905002934_account_retained_source_transfer.sql",
       "timestamp": "20260905002934",
       "sha256": "1948c4ffc702244f240a3e70abe5a7322f5dded140f7a74ecb8abca7a0e08711",
@@ -2301,6 +2379,85 @@
       "rls": ["project_storage_source_transfers"],
       "policies": [],
       "indexes": ["project_storage_source_transfers_source_idx"]
+    },
+    {
+      "order": 116,
+      "filename": "20260905004111_developer_billing_runtime.sql",
+      "timestamp": "20260905004111",
+      "sha256": "9634d2e9e704a01c2dab0bb37691e80c523ec71e0508c6e12759f3b5fb06c308",
+      "tables": [
+        "developer_billing_keys",
+        "developer_billing_limits",
+        "developer_billing_alerts",
+        "developer_billing_alert_deliveries"
+      ],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "developer_billing_keys",
+        "developer_billing_limits",
+        "developer_billing_alerts",
+        "developer_billing_alert_deliveries"
+      ],
+      "policies": [],
+      "indexes": [
+        "developer_requests_scope_budget_idx",
+        "developer_requests_lease_idx",
+        "developer_credit_terminal_once_idx"
+      ]
+    },
+    {
+      "order": 117,
+      "filename": "20260905004839_kova_sites_lifecycle.sql",
+      "timestamp": "20260905004839",
+      "sha256": "76f1c531157e9caae6f2081e265e125b3d81b8b6eb23779ddf444994697da2d1",
+      "tables": [
+        "kova_sites",
+        "kova_site_versions",
+        "kova_site_files",
+        "kova_site_aliases",
+        "kova_site_viewers",
+        "kova_site_receipts",
+        "kova_site_retirements",
+        "kova_site_access_sessions"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["kova_sites_owner_idx", "kova_site_access_expiry_idx"]
+    },
+    {
+      "order": 118,
+      "filename": "20260905005417_google_multiaccount_lifecycle.sql",
+      "timestamp": "20260905005417",
+      "sha256": "f255ce1982f740949916d53c3659fd8367b7702f2fb39ed354de50a64a1f6733",
+      "tables": ["google_connection_preferences", "google_oauth_attempts"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["google_connection_preferences", "google_oauth_attempts"],
+      "policies": [],
+      "indexes": ["google_connections_owner", "google_oauth_attempts_owner_expiry"]
+    },
+    {
+      "order": 119,
+      "filename": "20260905011123_project_template_management_pagination.sql",
+      "timestamp": "20260905011123",
+      "sha256": "6dfaaea2ebadf7f21dda9f0f41c6db90e9bb721606ca0e5167bf9111d36e7ce7",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

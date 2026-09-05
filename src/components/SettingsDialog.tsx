@@ -84,11 +84,10 @@ import {
 } from "@/lib/settings-storage";
 import {
   browserStoragePrincipal,
-  clearPrincipalBrowserStorage,
-  dispatchPrincipalBrowserStorageCleared,
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
+import { resetPrincipalDeviceData } from "@/lib/principal-device-reset.mjs";
 import {
   allowMemoryWrites,
   blockMemoryWrites,
@@ -274,6 +273,8 @@ export function SettingsDialog({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
+  const [localResetBusy, setLocalResetBusy] = useState(false);
+  const localResetBusyRef = useRef(false);
   const [clearMemoryConfirmOpen, setClearMemoryConfirmOpen] = useState(false);
   const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
@@ -357,12 +358,15 @@ export function SettingsDialog({
     }
   };
 
-  const clearLocalBrowserData = (
+  const clearLocalBrowserData = async (
     targetUserKey: string | null | undefined = isLoaded ? userKey : undefined,
   ) => {
-    const result = clearPrincipalBrowserStorage(targetUserKey);
+    const result = await resetPrincipalDeviceData(targetUserKey);
     if (!result.resolved) return result;
-    const failureCount = result.local.failures.length + result.session.failures.length;
+    const failureCount =
+      result.local.failures.length +
+      result.session.failures.length +
+      result.imageHistory.failures.length;
     if (failureCount > 0) {
       console.warn("[local-data] Account-local browser cleanup was incomplete", {
         failureCount,
@@ -405,17 +409,16 @@ export function SettingsDialog({
     // be reported as though the account remains active.
     let localCleanupIncomplete: boolean;
     try {
-      const cleanupResult = clearLocalBrowserData(deletionUserKey);
-      if (cleanupResult.resolved) {
-        dispatchPrincipalBrowserStorageCleared(deletionUserKey);
-      }
+      const cleanupResult = await clearLocalBrowserData(deletionUserKey);
       if (currentAuthUserKeyRef.current === deletionUserKey) {
         onClearAll();
         setDeleteAccountOpen(false);
         onOpenChange(false);
       }
       const cleanupFailureCount =
-        cleanupResult.local.failures.length + cleanupResult.session.failures.length;
+        cleanupResult.local.failures.length +
+        cleanupResult.session.failures.length +
+        cleanupResult.imageHistory.failures.length;
       localCleanupIncomplete = !cleanupResult.resolved || cleanupFailureCount > 0;
     } catch (error) {
       localCleanupIncomplete = true;
@@ -1262,6 +1265,13 @@ export function SettingsDialog({
 
               {/* SAFETY & SECURITY */}
               <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+                <Link
+                  to="/trusted-contacts"
+                  onClick={() => onOpenChange(false)}
+                  className="block rounded-lg border p-4 text-sm hover:bg-accent"
+                >
+                  Manage voluntary trusted contacts
+                </Link>
                 <div className="rounded-lg border border-border p-4">
                   <div className="text-sm font-medium">Signed in as</div>
                   <div className="text-sm text-muted-foreground mt-1">
@@ -1387,35 +1397,52 @@ export function SettingsDialog({
                 <div className="rounded-xl border border-border bg-card/60 p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
-                    Resets chats, drafts, handoffs, work data, and account preferences stored for
-                    this KovaGPT profile on this browser. Ownerless private data, including
-                    transitional values from older versions, is also removed so another profile
-                    cannot receive it. Other profiles' scoped data, device-wide display preferences,
-                    and cloud data are preserved.
+                    Resets chats, drafts, handoffs, work data, image history, and account
+                    preferences stored for this KovaGPT profile on this browser. Ownerless private
+                    data, including transitional values from older versions, is also removed so
+                    another profile cannot receive it. Other profiles' scoped data, device-wide
+                    display preferences, and cloud data are preserved.
                   </p>
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      const result = clearLocalBrowserData();
-                      if (!result.resolved) {
-                        toast.error("Account data is still loading. Try again in a moment.");
-                        return;
-                      }
-                      dispatchPrincipalBrowserStorageCleared(userKey);
-                      onChange(DEFAULT_SETTINGS);
-                      onClearAll();
-                      const failureCount =
-                        result.local.failures.length + result.session.failures.length;
-                      if (failureCount > 0) {
+                    disabled={localResetBusy || deleteAccountBusy}
+                    onClick={async () => {
+                      if (localResetBusyRef.current) return;
+                      const resetUserKey = currentAuthUserKeyRef.current;
+                      localResetBusyRef.current = true;
+                      setLocalResetBusy(true);
+                      try {
+                        const result = await clearLocalBrowserData(resetUserKey);
+                        if (!result.resolved) {
+                          toast.error("Account data is still loading. Try again in a moment.");
+                          return;
+                        }
+                        if (currentAuthUserKeyRef.current === resetUserKey) {
+                          onChange(DEFAULT_SETTINGS);
+                          onClearAll();
+                        }
+                        const failureCount =
+                          result.local.failures.length +
+                          result.session.failures.length +
+                          result.imageHistory.failures.length;
+                        if (failureCount > 0) {
+                          toast.warning(
+                            "Some local data could not be reset. Reload and try again.",
+                          );
+                        } else {
+                          toast.success("This profile's local browser data was reset.");
+                        }
+                      } catch {
                         toast.warning("Some local data could not be reset. Reload and try again.");
-                      } else {
-                        toast.success("This profile's local browser data was reset.");
+                      } finally {
+                        localResetBusyRef.current = false;
+                        setLocalResetBusy(false);
                       }
                     }}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Reset this profile's local data
+                    {localResetBusy ? "Resetting…" : "Reset this profile's local data"}
                   </Button>
                 </div>
               </TabsContent>

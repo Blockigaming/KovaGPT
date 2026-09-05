@@ -45,6 +45,7 @@ import {
   getGoogleStatus,
   startGoogleConnect,
   disconnectGoogleAccount,
+  selectGoogleAccount,
   type GoogleStatus,
 } from "@/lib/google-client";
 import {
@@ -298,7 +299,7 @@ function AppCard({
         <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
       </SignInButton>
     );
-  } else if (state === "connecting") {
+  } else if (state === "connecting" || state === "syncing") {
     action = (
       <button
         disabled
@@ -772,6 +773,9 @@ function AppsPage() {
   const [failed, setFailed] = useState<Record<string, true>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const googleBusyRef = useRef(false);
+  const googleRequestRef = useRef(0);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
   const [activity, setActivity] = useState<AppActivity[]>([]);
   const activityRef = useRef<AppActivity[]>([]);
@@ -785,6 +789,9 @@ function AppsPage() {
 
   useEffect(() => {
     generationRef.current += 1;
+    googleRequestRef.current += 1;
+    googleBusyRef.current = false;
+    setGoogleBusy(false);
     setQuery("");
     activityRef.current = [];
     setActivity([]);
@@ -817,6 +824,9 @@ function AppsPage() {
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       generationRef.current += 1;
+      googleRequestRef.current += 1;
+      googleBusyRef.current = false;
+      setGoogleBusy(false);
       activityRef.current = [];
       setActivity([]);
       setActivityPrincipal(principal);
@@ -855,22 +865,24 @@ function AppsPage() {
   );
 
   const refreshGoogle = useCallback(async () => {
-    if (!isLoaded || !principal) return;
+    if (!isLoaded || !principal || !userKey) return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
+    const requestId = ++googleRequestRef.current;
+    const isCurrent = () =>
+      generation === generationRef.current &&
+      principalRef.current === requestPrincipal &&
+      requestId === googleRequestRef.current;
+    setGoogleLoading(true);
     try {
-      const s = await getGoogleStatus();
-      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
-      setGoogleStatus(s);
+      const status = await getGoogleStatus(userKey);
+      if (isCurrent()) setGoogleStatus(status);
     } catch {
-      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
-      setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
+      if (isCurrent()) setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
     } finally {
-      if (generation === generationRef.current && principalRef.current === requestPrincipal) {
-        setGoogleLoading(false);
-      }
+      if (isCurrent()) setGoogleLoading(false);
     }
-  }, [isLoaded, principal]);
+  }, [isLoaded, principal, userKey]);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -912,46 +924,105 @@ function AppsPage() {
 
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
-  const handleConnect = async (item: ConnectorItem) => {
-    if (!activityReady || !principal) return;
+  const connectGoogle = async (connectionId?: string, itemId = "google") => {
+    if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
-    if (isGoogleId(item.id)) {
-      setConnecting((c) => ({ ...c, [item.id]: true }));
-      try {
-        await startGoogleConnect();
-      } catch (e) {
-        if (generation !== generationRef.current || principalRef.current !== requestPrincipal)
-          return;
-        setConnecting((c) => {
-          const n = { ...c };
-          delete n[item.id];
-          return n;
-        });
-        setFailed((f) => ({ ...f, [item.id]: true }));
-        toast.error(e instanceof Error ? e.message : "Could not start Google connection");
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
+    googleBusyRef.current = true;
+    setGoogleBusy(true);
+    setConnecting((current) => ({ ...current, [itemId]: true }));
+    try {
+      await startGoogleConnect(connectionId, userKey);
+    } catch (error) {
+      if (isCurrent()) {
+        setFailed((current) => ({ ...current, [itemId]: true }));
+        toast.error(error instanceof Error ? error.message : "Could not start Google connection.");
       }
+    } finally {
+      if (isCurrent()) {
+        googleBusyRef.current = false;
+        setGoogleBusy(false);
+        setConnecting((current) => {
+          const next = { ...current };
+          delete next[itemId];
+          return next;
+        });
+      }
+    }
+  };
+
+  const changeGoogleAccount = async (action: "select" | "disconnect", connectionId: string) => {
+    if (
+      !activityReady ||
+      !principal ||
+      !userKey ||
+      googleBusyRef.current ||
+      googleLoading ||
+      !googleStatus?.accounts?.some((account) => account.id === connectionId)
+    )
+      return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
+    const revision = googleStatus.selectionRevision;
+    if (action === "select" && (!Number.isSafeInteger(revision) || (revision ?? -1) < 0)) {
+      await refreshGoogle();
+      return;
+    }
+    googleBusyRef.current = true;
+    googleRequestRef.current += 1;
+    setGoogleBusy(true);
+    try {
+      if (action === "select") await selectGoogleAccount(connectionId, revision!, userKey);
+      else
+        await disconnectGoogleAccount(
+          connectionId,
+          googleStatus.accounts!.find((account) => account.id === connectionId)!.connectionRevision,
+          userKey,
+        );
+      if (!isCurrent()) return;
+      recordActivity(
+        "Google",
+        action === "select" ? "Selected account for new requests" : "Disconnected account",
+      );
+      toast.success(
+        action === "select" ? "Google account selected" : "Google account disconnected",
+      );
+    } catch (error) {
+      if (isCurrent())
+        toast.error(error instanceof Error ? error.message : "Google account change failed.");
+    } finally {
+      if (isCurrent()) {
+        await refreshGoogle();
+        if (isCurrent()) {
+          googleBusyRef.current = false;
+          setGoogleBusy(false);
+        }
+      }
+    }
+  };
+
+  const handleConnect = async (item: ConnectorItem) => {
+    if (isGoogleId(item.id)) {
+      const existing =
+        visibleGoogleStatus?.state === "reauthorization_required" ||
+        visibleGoogleStatus?.state === "permission_incomplete"
+          ? (visibleGoogleStatus.selectedConnectionId ?? undefined)
+          : undefined;
+      await connectGoogle(existing, item.id);
       return;
     }
     toast.error(`${item.label} is not available in this deployment.`);
   };
 
   const handleDisconnect = async (item: ConnectorItem) => {
-    if (!activityReady || !principal) return;
-    const generation = generationRef.current;
-    const requestPrincipal = principal;
-    const isCurrent = () =>
-      generation === generationRef.current && principalRef.current === requestPrincipal;
     if (isGoogleId(item.id)) {
-      try {
-        await disconnectGoogleAccount();
-        if (!isCurrent()) return;
-        setGoogleStatus({ connected: false, state: "disconnected" });
-        recordActivity(item.label, "Disconnected");
-        toast("Google account disconnected");
-      } catch {
-        if (isCurrent()) toast.error("Could not disconnect Google. Try again.");
-      }
+      const id = visibleGoogleStatus?.selectedConnectionId;
+      if (id) await changeGoogleAccount("disconnect", id);
+      else toast.error("Select a Google account to disconnect.");
       return;
     }
     toast.error(`${item.label} is not available in this deployment.`);
@@ -987,7 +1058,7 @@ function AppsPage() {
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
-      if (visibleGoogleLoading) return "syncing";
+      if (visibleGoogleLoading || googleBusy) return "syncing";
       if (activityReady && connecting[id]) return "connecting";
       if (activityReady && failed[id]) return "failed";
       if (visibleGoogleStatus?.state === "temporarily_unavailable")
@@ -1177,6 +1248,107 @@ function AppsPage() {
                 className="h-11 pl-9"
               />
             </label>
+
+            <section
+              aria-labelledby="google-accounts-title"
+              className="space-y-3 rounded-xl border p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 id="google-accounts-title" className="font-semibold">
+                    Google accounts
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Choose the account for new Gmail, Calendar and Drive requests. Existing
+                    confirmed actions remain bound to their original account.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={
+                    googleBusy || visibleGoogleLoading || !CONFIGURED_CONNECTORS.has("google")
+                  }
+                  onClick={() => void connectGoogle()}
+                >
+                  Add Google account
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={googleBusy || visibleGoogleLoading}
+                  onClick={() => void refreshGoogle()}
+                >
+                  Refresh Google accounts
+                </Button>
+              </div>
+              {visibleGoogleLoading || googleBusy ? (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Updating Google accounts…
+                </p>
+              ) : null}
+              {visibleGoogleStatus?.state === "temporarily_unavailable" ? (
+                <p role="status" className="text-sm">
+                  Google account status is unavailable. Refresh to try again.
+                </p>
+              ) : null}
+              {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
+                <ul className="space-y-3">
+                  {visibleGoogleStatus!.accounts!.map((account) => (
+                    <li
+                      key={account.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="break-all text-sm font-medium">
+                          {account.email || "Google account"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {account.id === visibleGoogleStatus?.selectedConnectionId
+                            ? "Selected for new requests · "
+                            : ""}
+                          {account.state.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          disabled={
+                            googleBusy ||
+                            visibleGoogleLoading ||
+                            !account.connected ||
+                            account.id === visibleGoogleStatus?.selectedConnectionId
+                          }
+                          onClick={() => void changeGoogleAccount("select", account.id)}
+                          aria-label={`Use ${account.email || "Google account"} for new requests`}
+                        >
+                          Use account
+                        </Button>
+                        {account.state !== "connected" ? (
+                          <Button
+                            variant="outline"
+                            disabled={googleBusy || visibleGoogleLoading}
+                            onClick={() => void connectGoogle(account.id)}
+                            aria-label={`Reconnect ${account.email || "Google account"}`}
+                          >
+                            Reconnect
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          disabled={googleBusy || visibleGoogleLoading}
+                          onClick={() => void changeGoogleAccount("disconnect", account.id)}
+                          aria-label={`Disconnect ${account.email || "Google account"}`}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : !visibleGoogleLoading &&
+                visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
+                <p className="text-sm text-muted-foreground">No Google accounts are connected.</p>
+              ) : null}
+            </section>
 
             <GitHubManager key={principal ?? "unresolved"} />
 

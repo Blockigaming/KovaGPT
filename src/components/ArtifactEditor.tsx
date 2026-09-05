@@ -20,10 +20,11 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { listMessageVersions, saveMessageVersion } from "@/lib/chat-workspace.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
-import { RealtimeReadiness } from "@/components/RealtimeReadiness";
+import { CollaborationStatus } from "@/components/CollaborationStatus";
+import { CanvasComments } from "@/components/CanvasComments";
+import { useCanvasCollaboration } from "@/lib/use-canvas-collaboration";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
 import {
@@ -38,6 +39,7 @@ type SessionVersion = {
   label: string;
   /** True when this entry is stored server-side and survives closing Canvas. */
   durable?: boolean;
+  remoteRevision?: number;
 };
 
 function documentOutline(value: string, isCode: boolean) {
@@ -56,16 +58,7 @@ function documentOutline(value: string, isCode: boolean) {
     .slice(0, 80);
 }
 
-export function ArtifactEditor({
-  open,
-  onClose,
-  initialContent,
-  kind,
-  onImprove,
-  initialMode = "edit",
-  chatId,
-  messageId,
-}: {
+type ArtifactEditorProps = {
   open: boolean;
   onClose: () => void;
   initialContent: string;
@@ -78,7 +71,29 @@ export function ArtifactEditor({
    */
   chatId?: string | null;
   messageId?: string | null;
-}) {
+  projectId?: string | null;
+};
+export function ArtifactEditor(props: ArtifactEditorProps) {
+  const { user } = useUser();
+  if (!props.open) return null;
+  return (
+    <ArtifactEditorSession
+      key={JSON.stringify([user?.id, props.chatId, props.messageId, props.projectId])}
+      {...props}
+    />
+  );
+}
+function ArtifactEditorSession({
+  open,
+  onClose,
+  initialContent,
+  kind,
+  onImprove,
+  initialMode = "edit",
+  chatId,
+  messageId,
+  projectId,
+}: ArtifactEditorProps) {
   const [value, setValue] = useState(initialContent);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,9 +122,16 @@ export function ArtifactEditor({
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
-  const listVersionsFn = useServerFn(listMessageVersions);
-  const saveVersionFn = useServerFn(saveMessageVersion);
   const canPersistVersions = Boolean(isSignedIn && chatId && messageId);
+  const collaboration = useCanvasCollaboration({
+    open,
+    actorId: canPersistVersions ? userKey : null,
+    chatId,
+    messageId,
+    projectId,
+    initialContent,
+  });
+  const saveVersionFn = collaboration.save;
   const [historyError, setHistoryError] = useState<string | null>(null);
   const artifactTitle =
     kind === "code"
@@ -151,55 +173,56 @@ export function ArtifactEditor({
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
       setHistoryError(null);
+      setComments([]);
+      setCommentDraft("");
+      setCommentsOpen(false);
     }
-  }, [open, initialContent, initialMode, kind]);
-
-  // Load durable versions for this message so history survives closing Canvas.
-  useEffect(() => {
-    if (!open || !canPersistVersions || !chatId || !messageId) return;
-    let cancelled = false;
-    const loadEditRevision = localEditRevisionRef.current;
-    void (async () => {
-      try {
-        const rows = await listVersionsFn({ data: { chatId, messageId } });
-        if (cancelled) return;
-        const durable = rows
-          .slice()
-          .reverse()
-          .map((row) => ({
-            id: new Date(row.createdAt).getTime() + row.version,
-            content: row.content,
-            savedAt: new Date(row.createdAt).getTime(),
-            label: `Saved v${row.version}${row.accepted ? " (current)" : ""}`,
-            durable: true,
-          }));
-        if (durable.length > 0) {
-          setVersions((current) => [...durable, ...current].slice(0, 30));
-          const accepted = rows.find((row) => row.accepted);
-          if (accepted) {
-            // Reopen the server-accepted edit, but never replace text the user
-            // already changed while version history was loading.
-            setValue((current) => {
-              if (!canApplyLoadedArtifactHistory(loadEditRevision, localEditRevisionRef.current)) {
-                return current;
-              }
-              lastRecordedValueRef.current = accepted.content;
-              lastScheduledValueRef.current = accepted.content;
-              return accepted.content;
-            });
-          }
-        }
-      } catch (error) {
-        if (cancelled) return;
-        setHistoryError(
-          error instanceof Error ? error.message : "Saved versions could not be loaded.",
-        );
-      }
-    })();
     return () => {
-      cancelled = true;
+      autosaveGenerationRef.current += 1;
     };
-  }, [open, canPersistVersions, chatId, messageId, initialContent, listVersionsFn]);
+  }, [open, initialContent, initialMode, kind, userKey, chatId, messageId, projectId]);
+
+  // Canonical snapshots never replace a dirty local edit. Version content is
+  // fetched only on restore/compare, keeping realtime refreshes bounded.
+  const remoteSnapshot = collaboration.snapshot;
+  const adoptRemote = collaboration.adopt;
+  useEffect(() => {
+    if (!open || !remoteSnapshot) return;
+    const durable = remoteSnapshot.versions.map((row) => ({
+      id: row.revision,
+      content:
+        row.revision === remoteSnapshot.document.revision ? remoteSnapshot.document.content : "",
+      savedAt: new Date(row.created_at).getTime(),
+      label: `Saved v${row.revision}${row.revision === remoteSnapshot.document.revision ? " (current)" : ""}`,
+      durable: true,
+      remoteRevision: row.revision,
+    }));
+    setVersions((current) =>
+      [
+        ...durable.map((row) => ({
+          ...row,
+          content:
+            row.remoteRevision === remoteSnapshot.document.revision
+              ? row.content
+              : (current.find((existing) => existing.remoteRevision === row.remoteRevision)
+                  ?.content ?? ""),
+        })),
+        ...current.filter((row) => !row.durable),
+      ].slice(0, 50),
+    );
+    if (
+      canApplyLoadedArtifactHistory(0, localEditRevisionRef.current) ||
+      value === lastRecordedValueRef.current
+    ) {
+      const content = adoptRemote();
+      if (content !== null) {
+        lastRecordedValueRef.current = content;
+        lastScheduledValueRef.current = content;
+        setValue(content);
+        setSaveState("saved");
+      }
+    }
+  }, [open, remoteSnapshot, adoptRemote, value]);
 
   useEffect(() => {
     if (!open) return;
@@ -227,6 +250,7 @@ export function ArtifactEditor({
   }, [value]);
 
   const updateValue = (next: string) => {
+    if (canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit) return;
     localEditRevisionRef.current += 1;
     setValue(next);
     setSaveState("unsaved");
@@ -248,6 +272,14 @@ export function ArtifactEditor({
     // write. If edit A is in flight and the user reverts to the prior value,
     // that revert still needs to queue behind A.
     if (!open || value === lastScheduledValueRef.current) return;
+    if (
+      canPersistVersions &&
+      (!collaboration.ready ||
+        collaboration.conflict ||
+        collaboration.error ||
+        !remoteSnapshot?.canEdit)
+    )
+      return;
     let cancelled = false;
     const snapshot = value;
     const generation = autosaveGenerationRef.current;
@@ -259,23 +291,15 @@ export function ArtifactEditor({
         // Persist first, then label the entry honestly: only a resolved server
         // write may be shown as saved beyond this session.
         let durable = false;
-        if (canPersistVersions && chatId && messageId && snapshot.trim()) {
+        if (canPersistVersions && chatId && messageId) {
           try {
-            // The accepted version is a last-write-wins server value. Queue
-            // requests in edit order so a slow older request can never arrive
-            // after and replace a newer snapshot.
-            await autosaveQueueRef.current.enqueue(() =>
-              saveVersionFn({
-                data: {
-                  chatId,
-                  messageId,
-                  source: "inline_edit",
-                  content: snapshot,
-                  originalContent: initialContent,
-                  accepted: true,
-                },
-              }),
-            );
+            // The queue orders this device's writes; the database CAS also
+            // rejects an older snapshot from another editor or device.
+            await autosaveQueueRef.current.enqueue(() => {
+              if (autosaveGenerationRef.current !== generation)
+                throw new Error("This editing session changed.");
+              return saveVersionFn(snapshot);
+            });
             // A later edit cancels this effect's UI work, but it does not
             // cancel an already-started server write. Preserve that successful
             // durable value for failure recovery within the same artifact.
@@ -342,6 +366,10 @@ export function ArtifactEditor({
     initialContent,
     saveVersionFn,
     autosaveRetryNonce,
+    collaboration.ready,
+    collaboration.conflict,
+    collaboration.error,
+    remoteSnapshot?.canEdit,
   ]);
 
   if (!open) return null;
@@ -393,7 +421,7 @@ export function ArtifactEditor({
   };
 
   const improve = () => {
-    if (!onImprove) return;
+    if (!onImprove || (canPersistVersions && !remoteSnapshot?.canEdit)) return;
     const start = textareaRef.current?.selectionStart ?? 0;
     const end = textareaRef.current?.selectionEnd ?? 0;
     const selected = end > start ? value.slice(start, end) : value;
@@ -431,7 +459,14 @@ export function ArtifactEditor({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-            <RealtimeReadiness resource="Artifact" />
+            <CollaborationStatus {...collaboration.presence} />
+            <span className="text-[11px] text-muted-foreground">
+              {projectId
+                ? "Shared with Project members"
+                : canPersistVersions
+                  ? "Only you"
+                  : "This session only"}
+            </span>
             {kind === "website" && !splitView && (
               <div className="ml-2 inline-flex rounded border border-border overflow-hidden">
                 <button
@@ -580,6 +615,9 @@ export function ArtifactEditor({
               <div className="flex-1 flex flex-col min-h-0">
                 <textarea
                   ref={textareaRef}
+                  readOnly={Boolean(
+                    canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit,
+                  )}
                   value={value}
                   onChange={(e) => updateValue(e.target.value)}
                   spellCheck={!isCode}
@@ -636,17 +674,49 @@ export function ArtifactEditor({
                       {new Date(version.savedAt).toLocaleTimeString()}
                     </div>
                     <button
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium"
-                      onClick={() => {
-                        updateValue(version.content);
-                        toast.success("Version restored");
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium disabled:opacity-50"
+                      disabled={canPersistVersions && !remoteSnapshot?.canEdit}
+                      onClick={async () => {
+                        const generation = autosaveGenerationRef.current;
+                        try {
+                          const content = version.remoteRevision
+                            ? await collaboration.versionContent(version.remoteRevision)
+                            : version.content;
+                          if (autosaveGenerationRef.current !== generation) return;
+                          updateValue(content);
+                          toast.success("Version restored");
+                        } catch (error) {
+                          if (autosaveGenerationRef.current !== generation) return;
+                          toast.error(
+                            error instanceof Error ? error.message : "Version could not be loaded.",
+                          );
+                        }
                       }}
                     >
                       <RotateCcw className="h-3 w-3" /> Restore
                     </button>
                     <button
                       className="ml-3 mt-2 inline-flex items-center gap-1 text-xs font-medium"
-                      onClick={() => setCompareVersion(version.id)}
+                      onClick={async () => {
+                        const generation = autosaveGenerationRef.current;
+                        try {
+                          const content = version.remoteRevision
+                            ? await collaboration.versionContent(version.remoteRevision)
+                            : version.content;
+                          if (autosaveGenerationRef.current !== generation) return;
+                          setVersions((current) =>
+                            current.map((row) =>
+                              row.id === version.id ? { ...row, content } : row,
+                            ),
+                          );
+                          setCompareVersion(version.id);
+                        } catch (error) {
+                          if (autosaveGenerationRef.current !== generation) return;
+                          toast.error(
+                            error instanceof Error ? error.message : "Version could not be loaded.",
+                          );
+                        }
+                      }}
                     >
                       <GitCompare className="h-3 w-3" /> Compare
                     </button>
@@ -660,65 +730,148 @@ export function ArtifactEditor({
               className="fixed inset-x-0 bottom-0 z-20 max-h-[70dvh] w-full shrink-0 overflow-y-auto rounded-t-2xl border bg-[var(--surface-secondary)] p-3 shadow-xl md:static md:max-h-none md:w-72 md:rounded-none md:border-y-0 md:border-r-0 md:shadow-none"
               aria-label="Artifact comments"
             >
-              <h2 className="text-sm font-semibold">Comments</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Comments stay with this open editing session.
-              </p>
-              <textarea
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
-                placeholder="Comment on the document or current selection"
-                aria-label="Artifact comment"
-              />
-              <button
-                disabled={!commentDraft.trim()}
-                onClick={() => {
-                  const area = textareaRef.current;
-                  const selection = area ? value.slice(area.selectionStart, area.selectionEnd) : "";
-                  setComments((current) => [
-                    {
-                      id: Date.now(),
-                      body: commentDraft.trim(),
-                      selection: selection.slice(0, 160),
-                    },
-                    ...current,
-                  ]);
-                  setCommentDraft("");
-                }}
-                className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
-              >
-                Add comment
-              </button>
-              {comments.length === 0 ? (
-                <p className="mt-4 text-xs text-muted-foreground">No comments yet.</p>
+              {canPersistVersions ? (
+                remoteSnapshot ? (
+                  <CanvasComments
+                    key={remoteSnapshot.document.id}
+                    snapshot={remoteSnapshot}
+                    value={value}
+                    actorId={userKey}
+                    dirty={value !== lastRecordedValueRef.current || collaboration.conflict}
+                    onComment={(data) => collaboration.commentMutation("comment", data)}
+                    onDelete={(commentId) =>
+                      collaboration.commentMutation("delete_comment", { commentId })
+                    }
+                    onOlder={collaboration.olderComments}
+                    selection={() => {
+                      const area = textareaRef.current;
+                      if (!area || area.selectionStart === area.selectionEnd) return null;
+                      const start = Array.from(value.slice(0, area.selectionStart)).length;
+                      const end = Math.min(
+                        start + 500,
+                        Array.from(value.slice(0, area.selectionEnd)).length,
+                      );
+                      return { start, end };
+                    }}
+                    onSelect={(start, end) => {
+                      setMode("edit");
+                      requestAnimationFrame(() => {
+                        textareaRef.current?.focus();
+                        textareaRef.current?.setSelectionRange(start, end);
+                      });
+                    }}
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Comments are unavailable until this Canvas reconnects.
+                  </p>
+                )
               ) : (
-                <ul className="mt-4 space-y-2">
-                  {comments.map((comment) => (
-                    <li key={comment.id} className="rounded-lg border bg-background p-2 text-xs">
-                      {comment.selection && (
-                        <blockquote className="mb-2 border-l-2 pl-2 text-muted-foreground">
-                          {comment.selection}
-                        </blockquote>
-                      )}
-                      <p>{comment.body}</p>
-                      <button
-                        onClick={() =>
-                          setComments((current) =>
-                            current.filter((value) => value.id !== comment.id),
-                          )
-                        }
-                        className="mt-2 text-destructive"
-                      >
-                        Delete
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <h2 className="text-sm font-semibold">Comments</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Comments stay with this open editing session.
+                  </p>
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
+                    placeholder="Comment on the document or current selection"
+                    aria-label="Artifact comment"
+                  />
+                  <button
+                    disabled={!commentDraft.trim()}
+                    onClick={() => {
+                      const area = textareaRef.current;
+                      const selection = area
+                        ? value.slice(area.selectionStart, area.selectionEnd)
+                        : "";
+                      setComments((current) => [
+                        {
+                          id: Date.now(),
+                          body: commentDraft.trim(),
+                          selection: selection.slice(0, 160),
+                        },
+                        ...current,
+                      ]);
+                      setCommentDraft("");
+                    }}
+                    className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+                  >
+                    Add comment
+                  </button>
+                  {comments.length === 0 ? (
+                    <p className="mt-4 text-xs text-muted-foreground">No comments yet.</p>
+                  ) : (
+                    <ul className="mt-4 space-y-2">
+                      {comments.map((comment) => (
+                        <li
+                          key={comment.id}
+                          className="rounded-lg border bg-background p-2 text-xs"
+                        >
+                          {comment.selection && (
+                            <blockquote className="mb-2 border-l-2 pl-2 text-muted-foreground">
+                              {comment.selection}
+                            </blockquote>
+                          )}
+                          <p>{comment.body}</p>
+                          <button
+                            onClick={() =>
+                              setComments((current) =>
+                                current.filter((value) => value.id !== comment.id),
+                              )
+                            }
+                            className="mt-2 text-destructive"
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </aside>
           ) : null}
         </div>
+
+        {canPersistVersions && (collaboration.conflict || collaboration.error) && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 border-t border-amber-400/40 bg-amber-400/10 p-3 text-sm"
+          >
+            <span>
+              {collaboration.conflict
+                ? "Another editor saved changes. Your draft is preserved; copy it before loading the current version."
+                : collaboration.error}
+            </span>
+            <button className="min-h-9 rounded-lg border px-3" onClick={() => void copy(value)}>
+              Copy my draft
+            </button>
+            {collaboration.conflict ? (
+              <button
+                className="min-h-9 rounded-lg border px-3"
+                onClick={() => {
+                  const content = collaboration.adopt();
+                  if (content !== null) {
+                    autosaveGenerationRef.current += 1;
+                    localEditRevisionRef.current = 0;
+                    lastRecordedValueRef.current = content;
+                    lastScheduledValueRef.current = content;
+                    setValue(content);
+                    setSaveState("saved");
+                  }
+                }}
+              >
+                Load current version
+              </button>
+            ) : (
+              <button className="min-h-9 rounded-lg border px-3" onClick={collaboration.retry}>
+                Reconnect
+              </button>
+            )}
+          </div>
+        )}
 
         {compareVersion && versions.find((version) => version.id === compareVersion) ? (
           <div
@@ -828,6 +981,7 @@ export function ArtifactEditor({
           {onImprove && (
             <button
               onClick={improve}
+              disabled={canPersistVersions && !remoteSnapshot?.canEdit}
               className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
             >
               <Wand2 className="w-3.5 h-3.5 inline mr-1" />

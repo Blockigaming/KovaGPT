@@ -91,7 +91,7 @@ export const Route = createFileRoute("/api/google/callback")({
           // be enabled while the Google consent page is still open.
           await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
           const tokens = await exchangeCodeForTokens(code, request, oauthCookie.verifier);
-          await storeGoogleTokens(userId, tokens);
+          await storeGoogleTokens(userId, tokens, state.split(".")[1]);
           await logAudit({
             userId,
             provider: "google",
@@ -100,7 +100,12 @@ export const Route = createFileRoute("/api/google/callback")({
           });
           return bounce(request, { google_connected: "1" }, true);
         } catch (e) {
-          console.error("[google callback]", e);
+          console.error(
+            "[google callback]",
+            e instanceof Error && e.message === "google_connection_changed"
+              ? "Connection changed"
+              : "OAuth exchange failed",
+          );
           return bounce(request, { google_error: "exchange_failed" }, true);
         }
       },

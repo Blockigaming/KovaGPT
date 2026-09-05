@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { CollaborativeProjectNotes } from "@/components/CollaborativeProjectNotes";
 import { ProjectCollaboration } from "@/components/ProjectCollaboration";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { Button } from "@/components/ui/button";
@@ -71,8 +72,6 @@ import {
   type ProjectChatSummary,
 } from "@/lib/projects.functions";
 import {
-  getProjectNote,
-  saveProjectNote,
   listTasks,
   createTask,
   updateTask,
@@ -1365,81 +1364,7 @@ function ProjectInstructionsTab({
 
 // ===================== NOTES =====================
 function NotesTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
-  const fnGet = useServerFn(getProjectNote);
-  const fnSave = useServerFn(saveProjectNote);
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    (async () => {
-      const n = await fnGet({ data: { project_id: projectId } });
-      setContent(n.content);
-      initialized.current = true;
-      setLoading(false);
-    })();
-  }, [projectId, fnGet]);
-
-  useEffect(() => {
-    if (!initialized.current || !canEdit) return;
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        await fnSave({ data: { project_id: projectId, content } });
-        setSaved(true);
-        if (savedTimer.current) clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaved(false), 1500);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Save failed");
-      } finally {
-        setSaving(false);
-      }
-    }, 800);
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [content, canEdit, projectId, fnSave]);
-
-  if (loading)
-    return (
-      <div className="text-muted-foreground text-sm flex items-center gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Loading notes…
-      </div>
-    );
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-muted-foreground">Shared notes for this project.</div>
-        <div className="text-xs text-muted-foreground h-4">
-          {saving ? (
-            <span className="flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Saving…
-            </span>
-          ) : saved ? (
-            "Saved"
-          ) : (
-            ""
-          )}
-        </div>
-      </div>
-      <Textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder={canEdit ? "Start writing shared notes for the team…" : "No notes yet."}
-        rows={16}
-        disabled={!canEdit}
-        className="font-mono text-sm"
-      />
-    </div>
-  );
+  return <CollaborativeProjectNotes projectId={projectId} canEdit={canEdit} />;
 }
 
 // ===================== TASKS =====================

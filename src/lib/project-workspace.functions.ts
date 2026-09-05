@@ -28,7 +28,13 @@ export type ProjectTask = {
   created_at: string;
   updated_at: string;
 };
-export type ProjectNote = { id: string; project_id: string; content: string; updated_at: string };
+export type ProjectNote = {
+  id: string;
+  project_id: string;
+  content: string;
+  updated_at: string;
+  revision: number;
+};
 export type ProjectFile = {
   id: string;
   project_id: string;
@@ -76,44 +82,50 @@ async function logActivity(
 }
 
 // ============= NOTES =============
+const noteResult = z.object({
+  id: z.string().default(""),
+  project_id: z.string().uuid(),
+  content: z.string(),
+  revision: z.number().int().nonnegative(),
+  updated_at: z.string().default(""),
+});
+async function noteRpc(client: unknown, operation: string, data: Record<string, unknown>) {
+  const result = await (
+    client as {
+      rpc: (
+        name: string,
+        input: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+    }
+  ).rpc("collaboration_rpc", { p_operation: operation, p_data: data });
+  if (result.error)
+    throw new Error("Notes changed or could not be reached. Your draft is preserved.");
+  return noteResult.parse(result.data);
+}
 export const getProjectNote = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }): Promise<ProjectNote> => {
-    const { data: row } = await context.supabase
-      .from("project_notes")
-      .select("id, project_id, content, updated_at")
-      .eq("project_id", data.project_id)
-      .maybeSingle();
-    if (row) return row as ProjectNote;
-    return {
-      id: "",
-      project_id: data.project_id,
-      content: "",
-      updated_at: new Date().toISOString(),
-    };
-  });
-
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<ProjectNote> =>
+    noteRpc(context.supabase, "note_get", { projectId: data.project_id }),
+  );
 export const saveProjectNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
         content: z.string().max(200_000),
+        expectedRevision: z.number().int().nonnegative(),
       })
-      .parse(i),
+      .parse(input),
   )
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
-      .from("project_notes")
-      .upsert(
-        { project_id: data.project_id, content: data.content, updated_by: context.userId },
-        { onConflict: "project_id" },
-      );
-    if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.project_id, context.userId, "note", "Updated notes");
-    return { ok: true };
+  .handler(async ({ data, context }) => {
+    const note = await noteRpc(context.supabase, "note_save", {
+      projectId: data.project_id,
+      content: data.content,
+      expectedRevision: data.expectedRevision,
+    });
+    return { ok: true as const, revision: note.revision };
   });
 
 // ============= TASKS =============

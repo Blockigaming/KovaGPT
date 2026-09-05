@@ -58,13 +58,21 @@ test("receipt maintenance is bounded and retains eight days of replay protection
   );
   assert.deepEqual(
     calls.map((c) => c.name),
-    ["purge_work_sync_receipts", "purge_project_template_mutation_receipts"],
+    [
+      "purge_work_sync_receipts",
+      "purge_project_template_mutation_receipts",
+      "purge_organization_mutation_receipts",
+    ],
   );
   for (const { args } of calls) {
     assert.equal(args.p_before, "2026-08-27T12:00:00.000Z");
     assert.equal(args.p_limit, 500);
   }
-  assert.deepEqual(JSON.parse(JSON.stringify(result.removed)), { work: 7, projectTemplates: 7 });
+  assert.deepEqual(JSON.parse(JSON.stringify(result.removed)), {
+    work: 7,
+    projectTemplates: 7,
+    organizations: 7,
+  });
 });
 
 test("receipt maintenance never reports partial or malformed results as success", async () => {

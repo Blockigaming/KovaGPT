@@ -7,6 +7,7 @@ import {
   CreditCard,
   FolderKanban,
   FolderOpen,
+  Globe,
   HelpCircle,
   ImageIcon,
   LifeBuoy,
@@ -491,6 +492,7 @@ export function Sidebar({
             ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
+            {showSignedIn ? renderNavLink("/sites", "Sites", Globe) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Plugins", Blocks)}
             {renderNavLink("/research-planner", "Deep research", Telescope)}

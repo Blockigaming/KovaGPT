@@ -69,11 +69,11 @@ test("account, memory, and local-device deletion keep their storage scopes disti
 
   assert.match(
     settings,
-    /const clearLocalBrowserData = \([\s\S]{0,180}targetUserKey[\s\S]{0,160}clearPrincipalBrowserStorage\(targetUserKey\)/,
+    /const clearLocalBrowserData = async \([\s\S]{0,180}targetUserKey[\s\S]{0,160}await resetPrincipalDeviceData\(targetUserKey\)/,
   );
   assert.match(
     settings,
-    /const handleDeleteAccount = async \(\) => \{[\s\S]{0,180}const deletionUserKey = isLoaded \? userKey : undefined[\s\S]{0,1800}const cleanupResult = clearLocalBrowserData\(deletionUserKey\);[\s\S]{0,360}currentAuthUserKeyRef\.current === deletionUserKey[\s\S]{0,100}onClearAll\(\);\s*setDeleteAccountOpen/,
+    /const handleDeleteAccount = async \(\) => \{[\s\S]{0,180}const deletionUserKey = isLoaded \? userKey : undefined[\s\S]{0,1800}const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]{0,360}currentAuthUserKeyRef\.current === deletionUserKey[\s\S]{0,100}onClearAll\(\);\s*setDeleteAccountOpen/,
   );
   assert.match(
     settings,
@@ -86,7 +86,7 @@ test("account, memory, and local-device deletion keep their storage scopes disti
   assert.doesNotMatch(settings, /All conversation memory cleared/);
   assert.match(
     settings,
-    /const result = clearLocalBrowserData\(\);[\s\S]{0,500}dispatchPrincipalBrowserStorageCleared\(userKey\);[\s\S]{0,160}onChange\(DEFAULT_SETTINGS\);\s*onClearAll\(\);[\s\S]{0,500}toast\.success\("This profile's local browser data was reset\."\)/,
+    /const result = await clearLocalBrowserData\(resetUserKey\);[\s\S]{0,500}currentAuthUserKeyRef\.current === resetUserKey[\s\S]{0,160}onChange\(DEFAULT_SETTINGS\);\s*onClearAll\(\);[\s\S]{0,650}toast\.success\("This profile's local browser data was reset\."\)/,
   );
   assert.match(
     settings,
@@ -104,6 +104,6 @@ test("account, memory, and local-device deletion keep their storage scopes disti
     home,
     /onClearAll=\{\(\) => \{[\s\S]{0,160}storageGenerationRef\.current \+= 1[\s\S]{0,700}setConversationState\(\{ principal: storagePrincipal, items: \[\] \}\);[\s\S]{0,300}setSettingsPrincipal\(storagePrincipal\)[\s\S]{0,320}setEditingMessage\(null\)/,
   );
-  assert.match(images, /if \(userKey\) localStorage\.removeItem\(HISTORY_KEY_PREFIX \+ userKey\)/);
+  assert.match(images, /isPrincipalBrowserStorageClearedEvent\(event, userKey\)/);
   assert.doesNotMatch(images, /startsWith\("nova-gpt-conversations"\)/);
 });

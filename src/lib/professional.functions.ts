@@ -24,18 +24,24 @@ export type ProjectComment = {
   created_at: string;
   updated_at: string;
 };
+const commentsRpc = async (client: unknown, operation: string, data: Record<string, unknown>) => {
+  const { data: result, error } = await (
+    client as {
+      rpc: (
+        name: string,
+        parameters: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+    }
+  ).rpc("collaboration_rpc", { p_operation: operation, p_data: data });
+  if (error || !Array.isArray(result)) throw new Error("Comments could not be updated");
+  return result as ProjectComment[];
+};
 export const listProjectComments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }): Promise<ProjectComment[]> => {
-    const { data: rows, error } = await t(context.supabase, "project_comments")
-      .select("id,project_id,author_id,body,anchor,mentions,created_at,updated_at")
-      .eq("project_id", data.project_id)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error("Comments could not be loaded");
-    return (rows ?? []) as ProjectComment[];
-  });
+  .handler(async ({ data, context }): Promise<ProjectComment[]> =>
+    commentsRpc(context.supabase, "project_comments", { projectId: data.project_id }),
+  );
 export const addProjectComment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) =>
@@ -49,32 +55,33 @@ export const addProjectComment = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }): Promise<ProjectComment> => {
-    const { data: row, error } = await t(context.supabase, "project_comments")
-      .insert({ ...data, author_id: context.userId })
-      .select("id,project_id,author_id,body,anchor,mentions,created_at,updated_at")
-      .single();
-    if (error || !row) throw new Error("Comment could not be posted");
-    await t(context.supabase, "project_activity")
-      .insert({
-        project_id: data.project_id,
-        actor_id: context.userId,
-        kind: "comment_added",
-        summary: "Added a project comment",
-      })
-      .select("id")
-      .single();
-    return row as ProjectComment;
+    const commentId = crypto.randomUUID();
+    const rows = await commentsRpc(context.supabase, "project_comment", {
+      projectId: data.project_id,
+      commentId,
+      body: data.body,
+      anchor: data.anchor ?? null,
+      mentions: data.mentions,
+    });
+    const row = rows.find((comment) => comment.id === commentId);
+    if (!row) throw new Error("Comment could not be posted");
+    return row;
   });
 export const deleteProjectComment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await t(context.supabase, "project_comments")
-      .delete()
+    // The existing API accepts an id; its RLS-scoped lookup supplies the Project.
+    const { data: value, error } = await t(context.supabase, "project_comments")
+      .select("project_id")
       .eq("id", data.id)
-      .select("id")
       .single();
-    if (error) throw new Error("Comment could not be deleted");
+    const row = z.object({ project_id: z.string().uuid() }).safeParse(value);
+    if (error || !row.success) throw new Error("Comment could not be deleted");
+    await commentsRpc(context.supabase, "project_comment_delete", {
+      projectId: row.data.project_id,
+      commentId: data.id,
+    });
     return { ok: true };
   });
 

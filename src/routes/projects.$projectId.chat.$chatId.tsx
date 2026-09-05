@@ -397,6 +397,7 @@ function ProjectChatPage() {
               <ChatMessage
                 key={messageId}
                 chatId={chatId}
+                projectId={projectId}
                 userKey={userKey}
                 principalResolved={isLoaded}
                 message={{

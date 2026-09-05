@@ -41,7 +41,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   const requestEnd = page.indexOf("signal: controller.signal", requestStart);
   assert.ok(requestStart >= 0 && requestEnd > requestStart);
   const chatRequest = page.slice(requestStart, requestEnd);
-  const toolGateStart = chatApi.indexOf("const availableTools");
+  const toolGateStart = chatApi.indexOf("const googleContext");
   const toolGateEnd = chatApi.indexOf("const enableTools", toolGateStart);
   assert.ok(toolGateStart >= 0 && toolGateEnd > toolGateStart);
   const toolGate = chatApi.slice(toolGateStart, toolGateEnd);
@@ -61,7 +61,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(chatApi, /usesExistingContext && personality/);
   assert.match(chatApi, /temporary: !usesExistingContext/);
   assert.match(toolGate, /auth &&\s*usesExistingContext/);
-  assert.match(toolGate, /getAvailableGoogleTools\(auth\.userId\)/);
+  assert.match(toolGate, /getGoogleToolContext\(auth\.userId\)/);
   assert.match(chatApi, /buildUserContextBlock\(personalContext \?\? \{\}\)/);
   assert.match(page, /if \(!active \|\| active\.temporary\) return/);
   assert.match(chatStore, /memoryStartIndex: active\.messages\.length/);

@@ -174,6 +174,7 @@ function ChatMessageInner({
   principalResolved,
   chatId,
   temporary = false,
+  projectId,
   onReplaceContent,
 }: {
   message: Message;
@@ -189,6 +190,7 @@ function ChatMessageInner({
   chatId?: string | null;
   /** Temporary chats never persist edits or versions. */
   temporary?: boolean;
+  projectId?: string | null;
   /** Applies an accepted selection edit / restored version to this message. */
   onReplaceContent?: (messageId: string, nextContent: string) => void;
 }) {
@@ -774,8 +776,9 @@ function ChatMessageInner({
             kind={artifactKind}
             onImprove={onFollowUp}
             initialMode={editorMode}
-            chatId={chatId ?? null}
-            messageId={message.id ?? null}
+            chatId={temporary ? null : (chatId ?? null)}
+            messageId={temporary ? null : (message.id ?? null)}
+            projectId={temporary ? null : (projectId ?? null)}
           />
         </Suspense>
       )}

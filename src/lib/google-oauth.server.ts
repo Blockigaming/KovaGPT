@@ -1,6 +1,17 @@
+import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 // Per-user Google OAuth token management. Server-only.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
+import { createGoogleAccountRuntime } from "@/lib/google-account-runtime.server.mjs";
+import {
+  googleConnectionHealth,
+  parseGoogleBinding,
+  type GoogleAccountBinding,
+  type GoogleAccountHealth,
+} from "@/lib/google-account-policy.mjs";
+export type { GoogleAccountBinding } from "@/lib/google-account-policy.mjs";
+export type { GoogleConnection } from "@/lib/google-account-runtime.server.mjs";
 
 export const GOOGLE_SCOPES = [
   "openid",
@@ -88,7 +99,7 @@ export function buildGoogleAuthUrl(opts: {
     scope: opts.scope ?? GOOGLE_SCOPES,
     access_type: "offline",
     include_granted_scopes: "true",
-    prompt: "consent",
+    prompt: "consent select_account",
     state: opts.state,
     code_challenge: opts.codeChallenge,
     code_challenge_method: "S256",
@@ -121,263 +132,176 @@ export async function exchangeCodeForTokens(
       grant_type: "authorization_code",
       code_verifier: codeVerifier,
     }),
+    signal: AbortSignal.timeout(10000),
+    redirect: "error",
   });
   if (!res.ok) {
     throw new Error(`google_token_exchange_failed_${res.status}`);
   }
-  return res.json();
+  return JSON.parse(
+    new TextDecoder("utf-8", { fatal: true }).decode(
+      await readResponseBytesBounded(res, 64 * 1024),
+    ),
+  ) as TokenResponse;
 }
 
-function decodeIdToken(idToken: string | undefined): { sub?: string; email?: string } {
-  if (!idToken) return {};
-  const parts = idToken.split(".");
-  if (parts.length < 2) return {};
-  try {
-    const payload = JSON.parse(
-      Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+export async function googleVault(
+  userId: string,
+  operation: string,
+  data: Record<string, unknown> = {},
+) {
+  if (!["disconnect", "disconnect_all"].includes(operation)) {
+    await assertLockdownAllows(
+      admin(),
+      userId,
+      ["begin_oauth", "complete_oauth", "select"].includes(operation)
+        ? "connector_write"
+        : "connector_read",
     );
-    return { sub: payload.sub, email: payload.email };
-  } catch {
-    return {};
   }
+  const result = await (
+    admin() as unknown as {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => {
+        abortSignal: (
+          signal: AbortSignal,
+        ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+      };
+    }
+  )
+    .rpc("google_connection_rpc", { p_user_id: userId, p_operation: operation, p_data: data })
+    .abortSignal(AbortSignal.timeout(10000));
+  if (result.error) {
+    const allowed = [
+      "google_connection_changed",
+      "google_reauthorization_required",
+      "google_refresh_conflict",
+      "google_selection_conflict",
+    ];
+    throw new Error(
+      allowed.find((code) => result.error?.message?.includes(code)) ??
+        "google_connection_unavailable",
+    );
+  }
+  return result.data;
 }
-
-export async function storeGoogleTokens(userId: string, tokens: TokenResponse) {
-  const idInfo = decodeIdToken(tokens.id_token);
-  const expiresAt = new Date(Date.now() + (tokens.expires_in - 30) * 1000).toISOString();
-  const db = admin();
-  // Preserve existing refresh_token if Google didn't return a new one.
-  const { data: existing } = await db
-    .from("google_oauth_tokens")
-    .select("refresh_token")
-    .eq("user_id", userId)
-    .maybeSingle();
-  // New refresh tokens are sealed; a preserved value is already stored sealed.
-  const refresh = tokens.refresh_token
-    ? await encryptGoogleToken(tokens.refresh_token)
-    : (existing?.refresh_token ?? null);
-  const row = {
-    user_id: userId,
-    google_sub: idInfo.sub ?? null,
-    email: idInfo.email ?? null,
-    access_token: await encryptGoogleToken(tokens.access_token),
-    refresh_token: refresh,
-    expires_at: expiresAt,
-    scopes: tokens.scope ?? "",
-  };
-
-  const { error } = await db.from("google_oauth_tokens").upsert(row, { onConflict: "user_id" });
-  if (error) throw new Error(`store google tokens failed: ${error.message}`);
+function accountRuntime() {
+  return createGoogleAccountRuntime({
+    vault: googleVault,
+    encrypt: encryptGoogleToken,
+    decrypt: decryptGoogleToken,
+    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
+    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
+  });
 }
-
-export async function getGoogleConnection(userId: string) {
-  const db = admin();
-  const { data } = await db
-    .from("google_oauth_tokens")
-    .select("email, google_sub, scopes, expires_at, refresh_token")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data;
-}
-
-export type GoogleConnectionHealth = {
-  connected: boolean;
-  state:
-    | "connected"
-    | "disconnected"
-    | "reauthorization_required"
-    | "permission_incomplete"
-    | "temporarily_unavailable";
-  email?: string | null;
-  scopes: string[];
-  has: {
-    gmail: boolean;
-    gmailWrite: boolean;
-    calendar: boolean;
-    calendarWrite: boolean;
-    drive: boolean;
-  };
-};
-
 export function googleOAuthConfigured(): boolean {
   return Boolean(
     process.env.SUPABASE_URL &&
     process.env.SUPABASE_SERVICE_ROLE_KEY &&
     process.env.GOOGLE_OAUTH_CLIENT_ID &&
     process.env.GOOGLE_OAUTH_CLIENT_SECRET &&
-    process.env.GOOGLE_REDIRECT_URI,
+    process.env.GOOGLE_REDIRECT_URI &&
+    process.env.CONNECTOR_ENCRYPTION_KEY,
   );
 }
-
-export async function getGoogleConnectionHealth(userId: string): Promise<GoogleConnectionHealth> {
-  if (!googleOAuthConfigured()) {
-    return {
-      connected: false,
-      state: "temporarily_unavailable",
-      scopes: [],
-      has: { gmail: false, gmailWrite: false, calendar: false, calendarWrite: false, drive: false },
-    };
-  }
-  const connection = await getGoogleConnection(userId);
-  if (!connection) {
-    return {
-      connected: false,
-      state: "disconnected",
-      scopes: [],
-      has: { gmail: false, gmailWrite: false, calendar: false, calendarWrite: false, drive: false },
-    };
-  }
-  const scopes = (connection.scopes ?? "").split(/\s+/).filter(Boolean);
-  const has = {
-    gmail: scopes.some((scope) =>
-      [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.modify",
-      ].includes(scope),
-    ),
-    gmailWrite: scopes.some((scope) =>
-      [
-        "https://www.googleapis.com/auth/gmail.compose",
-        "https://www.googleapis.com/auth/gmail.modify",
-      ].includes(scope),
-    ),
-    calendar: scopes.some((scope) =>
-      [
-        "https://www.googleapis.com/auth/calendar.events.readonly",
-        "https://www.googleapis.com/auth/calendar.events",
-        "https://www.googleapis.com/auth/calendar",
-      ].includes(scope),
-    ),
-    calendarWrite: scopes.some((scope) =>
-      [
-        "https://www.googleapis.com/auth/calendar.events",
-        "https://www.googleapis.com/auth/calendar",
-      ].includes(scope),
-    ),
-    drive: scopes.some((scope) =>
-      [
-        "https://www.googleapis.com/auth/drive.readonly",
-        "https://www.googleapis.com/auth/drive.file",
-      ].includes(scope),
-    ),
-  };
-  const expired = new Date(connection.expires_at).getTime() <= Date.now() + 5_000;
-  if (expired && !connection.refresh_token) {
-    return {
-      connected: false,
-      state: "reauthorization_required",
-      email: connection.email,
-      scopes,
-      has,
-    };
-  }
-  if (expired) {
-    try {
-      await refreshAccessToken(userId);
-    } catch {
-      return {
-        connected: false,
-        state: "reauthorization_required",
-        email: connection.email,
-        scopes,
-        has,
-      };
-    }
-  }
-  const complete = has.gmail && has.gmailWrite && has.calendar && has.calendarWrite && has.drive;
-  return {
-    connected: true,
-    state: complete ? "connected" : "permission_incomplete",
-    email: connection.email,
-    scopes,
-    has,
+export async function beginGoogleOAuth(userId: string, attemptId: string, connectionId?: string) {
+  parseGoogleBinding({ connectionId });
+  return (await googleVault(userId, "begin_oauth", { attemptId, connectionId })) as {
+    loginHint?: string | null;
   };
 }
-
-export async function disconnectGoogle(userId: string) {
-  const db = admin();
-  const { data } = await db
-    .from("google_oauth_tokens")
-    .select("access_token, refresh_token")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const stored = data?.refresh_token ?? data?.access_token;
-  const token = stored ? await decryptGoogleToken(stored).catch(() => null) : null;
-  if (token) {
-    // Best-effort revoke; ignore failures.
-    await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
-      method: "POST",
-    }).catch(() => {});
-  }
-  const { error } = await db.from("google_oauth_tokens").delete().eq("user_id", userId);
-  if (error) throw new Error("google_token_purge_failed");
+export async function storeGoogleTokens(userId: string, tokens: TokenResponse, attemptId: string) {
+  return accountRuntime().store(userId, tokens, attemptId);
 }
-
-async function refreshAccessToken(userId: string, expectedGoogleSub?: string): Promise<string> {
-  const db = admin();
-  const { data, error } = await db
-    .from("google_oauth_tokens")
-    .select("refresh_token, google_sub")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data?.refresh_token) {
-    throw new Error("google_not_connected");
-  }
-  if (expectedGoogleSub && data.google_sub !== expectedGoogleSub) {
-    throw new Error("google_connection_changed");
-  }
-  const refreshToken = await decryptGoogleToken(data.refresh_token);
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(
-      res.status === 400 || res.status === 401
-        ? "google_reauthorization_required"
-        : "google_temporarily_unavailable",
-    );
-  }
-  const t = (await res.json()) as TokenResponse;
-  const expiresAt = new Date(Date.now() + (t.expires_in - 30) * 1000).toISOString();
-  let refreshUpdate = db
-    .from("google_oauth_tokens")
-    .update({
-      access_token: await encryptGoogleToken(t.access_token),
-      expires_at: expiresAt,
-    })
-    .eq("user_id", userId);
-  if (expectedGoogleSub) {
-    refreshUpdate = refreshUpdate.eq("google_sub", expectedGoogleSub);
-  }
-  const { error: updateError } = await refreshUpdate;
-  if (updateError) throw new Error("google_token_refresh_persist_failed");
-  return t.access_token;
+export async function getGoogleConnection(userId: string, connectionId?: string) {
+  return accountRuntime().connection(userId, { connectionId });
 }
-
 export async function getValidGoogleAccessToken(
   userId: string,
-  expectedGoogleSub?: string,
-): Promise<string> {
-  const db = admin();
-  const { data, error } = await db
-    .from("google_oauth_tokens")
-    .select("access_token, expires_at, google_sub")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data) throw new Error("google_not_connected");
-  if (expectedGoogleSub && data.google_sub !== expectedGoogleSub) {
-    throw new Error("google_connection_changed");
-  }
-  if (new Date(data.expires_at).getTime() > Date.now() + 5000)
-    return decryptGoogleToken(data.access_token);
-  return refreshAccessToken(userId, expectedGoogleSub);
+  binding: GoogleAccountBinding = {},
+) {
+  return accountRuntime().accessToken(userId, binding);
+}
+export async function disconnectGoogle(
+  userId: string,
+  connectionId: string,
+  expectedRevision: number,
+) {
+  if (!connectionId) throw new Error("google_invalid_account_selection");
+  return accountRuntime().disconnect(userId, connectionId, expectedRevision);
+}
+export async function disconnectAllGoogle(userId: string) {
+  return accountRuntime().disconnect(userId, null);
+}
+export async function selectGoogleAccount(
+  userId: string,
+  connectionId: string,
+  expectedRevision: number,
+) {
+  parseGoogleBinding({ connectionId });
+  if (!connectionId || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0)
+    throw new Error("google_invalid_account_selection");
+  return googleVault(userId, "select", { connectionId, expectedRevision });
+}
+export type GoogleConnectionHealth = GoogleAccountHealth;
+type AccountMetadata = {
+  id: string;
+  credential_revision: number;
+  email: string | null;
+  google_sub: string | null;
+  scopes: string;
+  expires_at: string;
+  reauthorization_required: boolean;
+  has_refresh_token: boolean;
+  grant_id: string;
+};
+export async function getGoogleAccountsHealth(userId: string) {
+  if (!googleOAuthConfigured())
+    return {
+      ...googleConnectionHealth(null),
+      state: "temporarily_unavailable" as const,
+      accounts: [],
+      selectedConnectionId: null,
+      selectionRevision: 0,
+    };
+  const result = (await googleVault(userId, "list")) as {
+    accounts: AccountMetadata[];
+    selectedConnectionId: string | null;
+    selectionRevision: number;
+  };
+  const selected = result.accounts.find((row) => row.id === result.selectedConnectionId) ?? null;
+  return {
+    ...googleConnectionHealth(selected),
+    accounts: result.accounts.map((row) => googleConnectionHealth(row)),
+    selectedConnectionId: result.selectedConnectionId,
+    selectionRevision: result.selectionRevision,
+  };
+}
+export async function getGoogleConnectionHealth(
+  userId: string,
+  connectionId?: string,
+): Promise<GoogleConnectionHealth> {
+  if (!connectionId) return getGoogleAccountsHealth(userId);
+  const connection = await getGoogleConnection(userId, connectionId);
+  return googleConnectionHealth({
+    ...connection,
+    has_refresh_token: Boolean(connection.refresh_token),
+  });
+}
+export async function getGoogleExecutionBinding(
+  userId: string,
+  connectionId?: string,
+): Promise<GoogleAccountBinding> {
+  const connection = await getGoogleConnection(userId, connectionId);
+  if (!connection.google_sub || connection.reauthorization_required)
+    throw new Error("google_reauthorization_required");
+  return {
+    connectionId: connection.id,
+    grantId: connection.grant_id,
+    expectedGoogleSub: connection.google_sub,
+  };
 }
 
 export async function logAudit(opts: {

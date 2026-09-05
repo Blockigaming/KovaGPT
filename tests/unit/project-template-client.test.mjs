@@ -187,6 +187,8 @@ test("revision conflicts are definitive and never automatically rebase or resubm
 test("received template lists expose view-only access without granting owner management", async () => {
   const client = makeClient(async () =>
     Response.json({
+      hasMore: false,
+      nextCursor: null,
       templates: [
         summary({
           ownerId: projectId,
@@ -223,4 +225,100 @@ test("a malformed successful mutation response stays retryable with its original
   );
   await assert.rejects(client.mutate(operation), (error) => error.uncertain === true);
   assert.equal(JSON.parse(operation.body).mutationId, mutationId);
+});
+
+const pageId = (index) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+const managementRows = Array.from({ length: 65 }, (_, index) =>
+  summary({
+    id: pageId(index + 1),
+    ownerId: index % 3 === 0 ? projectId : userId,
+    grants: [{ granteeUserId: mutationId, canCopy: true, revokedAt: null }],
+  }),
+);
+const firstManagementPage = () => ({
+  templates: managementRows.slice(0, 50),
+  hasMore: true,
+  nextCursor: pageId(50),
+});
+
+test("management traverses more than fifty owned and received templates with stable cursors", async () => {
+  const calls = [];
+  const client = makeClient(async (url) => {
+    calls.push(url);
+    return Response.json(
+      calls.length === 1
+        ? firstManagementPage()
+        : {
+            templates: managementRows.slice(50),
+            hasMore: false,
+            nextCursor: null,
+          },
+    );
+  });
+  const rows = await client.list();
+  assert.equal(rows.length, 65);
+  assert.deepEqual(
+    rows.map(({ id }) => id),
+    managementRows.map(({ id }) => id),
+  );
+  assert.equal(calls[1], `/api/project-templates?limit=50&after=${pageId(50)}`);
+  assert.equal(rows[64].grants[0].granteeUserId, mutationId);
+  assert.deepEqual(rows[63].grants, []);
+});
+
+test("a failed later page never resolves a misleading partial management list", async () => {
+  let calls = 0;
+  const client = makeClient(async () =>
+    ++calls === 1
+      ? Response.json(firstManagementPage())
+      : Response.json({ error: "private diagnostic" }, { status: 503 }),
+  );
+  await assert.rejects(client.list(), (error) => error.status === 503 && !error.uncertain);
+  assert.equal(calls, 2);
+});
+
+test("changing accounts while a page loads discards every collected template", async () => {
+  let reads = 0;
+  let requests = 0;
+  const client = makeClient(
+    async () => {
+      requests++;
+      return Response.json(firstManagementPage());
+    },
+    {
+      getSession: async () =>
+        ++reads === 1
+          ? session()
+          : {
+              data: { session: { user: { id: projectId }, access_token: "other-token" } },
+            },
+    },
+  );
+  await assert.rejects(client.list(), (error) => error.status === 401);
+  assert.equal(requests, 1);
+});
+
+test("the response-account check is bounded even if session refresh stalls", async () => {
+  let reads = 0;
+  const client = makeClient(async () => Response.json(firstManagementPage()), {
+    timeoutMs: 10,
+    getSession: () => (++reads === 1 ? session() : new Promise(() => {})),
+  });
+  await assert.rejects(client.list(), (error) => error.status === 503 && !error.uncertain);
+});
+
+test("repeated, unordered, or mismatched page cursors cannot masquerade as complete results", async () => {
+  for (const templates of [
+    managementRows.slice(0, 2).reverse(),
+    [managementRows[0], managementRows[0]],
+  ]) {
+    const client = makeClient(async () =>
+      Response.json({ templates, hasMore: false, nextCursor: null }),
+    );
+    await assert.rejects(client.list(), (error) => error.status === 503);
+  }
+  const client = makeClient(async () =>
+    Response.json({ ...firstManagementPage(), nextCursor: pageId(49) }),
+  );
+  await assert.rejects(client.list(), (error) => error.status === 503);
 });

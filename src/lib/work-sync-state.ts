@@ -266,7 +266,7 @@ export function applyWorkSyncPage(state: WorkSyncState, value: unknown): WorkSyn
       !isObject(raw) ||
       typeof raw.resourceId !== "string" ||
       !UUID.test(raw.resourceId) ||
-      !["run", "task", "template", "agent_draft"].includes(String(raw.resourceType)) ||
+      (raw.resourceType !== "run" && !KINDS.has(String(raw.resourceType))) ||
       !positive(raw.revision) ||
       !positive(raw.syncVersion) ||
       !nullableDate(raw.deletedAt) ||

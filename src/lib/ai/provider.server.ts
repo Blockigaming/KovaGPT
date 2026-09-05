@@ -1,4 +1,5 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
+import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
@@ -461,34 +462,41 @@ async function providerFetch(
 
   try {
     const headers = await providerHeaders(deadline.signal);
-    const response = await fetchWithDeadline(
-      fetch,
-      `${config.baseUrl}${path}`,
-      {
-        ...init,
-        method: "POST",
-        redirect: "error",
-        headers: {
-          ...Object.fromEntries(new Headers(init?.headers).entries()),
-          ...headers,
-        },
-        body: JSON.stringify(requestBody),
-      },
-      deadline,
-      (outcome) => {
-        const level =
-          outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
-        logProviderEvent(level, "provider.request.finish", {
-          provider: target.provider,
-          capability,
-          path,
-          deployment,
-          status: outcome.status,
-          durationMs: Date.now() - startedAt,
-          code: providerOutcomeCode(outcome),
-        });
-      },
-    );
+    const response = await meterProviderRequest({
+      provider: target.provider,
+      capability,
+      body: requestBody,
+      signal: deadline.signal,
+      send: () =>
+        fetchWithDeadline(
+          fetch,
+          `${config.baseUrl}${path}`,
+          {
+            ...init,
+            method: "POST",
+            redirect: "error",
+            headers: {
+              ...Object.fromEntries(new Headers(init?.headers).entries()),
+              ...headers,
+            },
+            body: JSON.stringify(requestBody),
+          },
+          deadline,
+          (outcome) => {
+            const level =
+              outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
+            logProviderEvent(level, "provider.request.finish", {
+              provider: target.provider,
+              capability,
+              path,
+              deployment,
+              status: outcome.status,
+              durationMs: Date.now() - startedAt,
+              code: providerOutcomeCode(outcome),
+            });
+          },
+        ),
+    });
 
     logProviderEvent("info", "provider.response.headers", {
       provider: target.provider,

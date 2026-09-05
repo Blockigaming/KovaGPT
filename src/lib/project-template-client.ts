@@ -239,7 +239,14 @@ export function createProjectTemplateClient({
               response.status,
               Boolean(operation) && response.status >= 500,
             );
-          return (await response.json()) as unknown;
+          const value: unknown = await response.json();
+          if (!operation) {
+            const current = await getSession();
+            if (controller.signal.aborted) throw new ProjectTemplateRequestError(503, false);
+            if (current.error || current.data.session?.user.id !== userId)
+              throw new ProjectTemplateRequestError(401, false);
+          }
+          return value;
         })(),
       ]);
     } catch (error) {
@@ -253,10 +260,52 @@ export function createProjectTemplateClient({
   }
   return {
     async list(signal?: AbortSignal): Promise<ProjectTemplateSummary[]> {
-      const value = await request("?limit=50", undefined, signal);
-      if (!record(value) || !Array.isArray(value.templates) || value.templates.length > 50)
+      const collected: ProjectTemplateSummary[] = [];
+      const seen = new Set<string>();
+      let cursor: string | null = null;
+      // Cap the whole traversal and fail without returning a partial management
+      // list if any page, session, cursor, or deadline cannot be verified.
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      const timer = setTimeout(abort, 60_000);
+      signal?.addEventListener("abort", abort, { once: true });
+      if (signal?.aborted) abort();
+      try {
+        for (let page = 0; page < 200; page++) {
+          const value = await request(
+            `?limit=50${cursor ? `&after=${cursor}` : ""}`,
+            undefined,
+            controller.signal,
+          );
+          if (
+            !record(value) ||
+            !Array.isArray(value.templates) ||
+            value.templates.length > 50 ||
+            typeof value.hasMore !== "boolean" ||
+            (value.hasMore ? !uuid(value.nextCursor) : value.nextCursor !== null)
+          )
+            invalid();
+          const items = value.templates.map((entry) => parseSummary(entry, userId));
+          let previous = cursor?.toLowerCase() ?? null;
+          for (const item of items) {
+            const key = item.id.toLowerCase();
+            if (seen.has(key) || (previous !== null && key <= previous)) invalid();
+            seen.add(key);
+            previous = key;
+          }
+          if (value.hasMore && (items.length !== 50 || value.nextCursor !== items.at(-1)?.id))
+            invalid();
+          if (controller.signal.aborted) throw new ProjectTemplateRequestError(503, false);
+          collected.push(...items);
+          if (!value.hasMore) return collected;
+          cursor = value.nextCursor as string;
+        }
         invalid();
-      return value.templates.map((entry) => parseSummary(entry, userId));
+      } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", abort);
+        controller.abort();
+      }
     },
     async version(
       templateId: string,
