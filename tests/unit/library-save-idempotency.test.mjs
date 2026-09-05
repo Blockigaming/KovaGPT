@@ -189,3 +189,87 @@ test("image entry validates bytes and binds the verified owner before the quota 
   );
   assert.equal(published.length, 1);
 });
+
+for (const kind of ["image", "text_file"]) {
+  test(`${kind} autosave rejects an account change during dispatch before any side effect`, async () => {
+    const { createLibraryAttachmentAutoSaver } =
+      await import("../../src/lib/library-attachment-auto-save.mjs");
+    const ownerA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const ownerB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    let scope = { enabled: true, principal: ownerA };
+    let release;
+    const sessionWait = new Promise((resolve) => {
+      release = resolve;
+    });
+    let sideEffects = 0;
+    const db = {
+      from() {
+        sideEffects++;
+        throw new Error("Unexpected database access");
+      },
+    };
+    const { saveToLibrary } = load("src/lib/library.functions.ts");
+    const { saveImageToLibrary } = load("src/lib/library-images.functions.ts", {
+      publishLibraryImageBytes: async () => {
+        sideEffects++;
+        throw new Error("Unexpected upload");
+      },
+    });
+    let rejected = false;
+    const dispatch =
+      (handler) =>
+      async ({ data }) => {
+        assert.equal(data.expectedOwnerId, ownerA);
+        await sessionWait;
+        try {
+          return await handler({ data, context: { userId: ownerB, supabase: db } });
+        } catch (error) {
+          assert.match(error.message, /account changed/);
+          rejected = true;
+          throw error;
+        }
+      };
+    const save = createLibraryAttachmentAutoSaver({
+      getScope: () => scope,
+      saveImage: dispatch(saveImageToLibrary),
+      saveText: dispatch(saveToLibrary),
+      onError: () => assert.fail("No stale-account retry should appear"),
+    });
+    const pending = save({
+      clientId: key,
+      source: "file_upload",
+      status: "complete",
+      kind,
+      dataUrl: imageData().imageUrl,
+      textContent: "Account A private attachment",
+      name: "private.txt",
+    });
+    scope = { enabled: true, principal: ownerB };
+    release();
+    await pending;
+    assert.equal(rejected, true);
+    assert.equal(sideEffects, 0);
+  });
+}
+
+test("text save accepts matching expected owner and preserves legacy manual saves", async () => {
+  const { saveToLibrary } = load("src/lib/library.functions.ts");
+  const db = database();
+  const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const data = {
+    title: "notes",
+    item_type: "upload",
+    source: "upload",
+    content_text: "private",
+    expectedOwnerId: owner,
+  };
+  await saveToLibrary({ data, context: { supabase: db, userId: owner } });
+  assert.equal([...db.rows.values()][0].user_id, owner);
+  await assert.rejects(
+    saveToLibrary({
+      data: { ...data, expectedOwnerId: "invalid" },
+      context: { supabase: db, userId: owner },
+    }),
+  );
+  assert.equal(db.rows.size, 1);
+});
