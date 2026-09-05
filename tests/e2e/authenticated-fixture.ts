@@ -26,6 +26,9 @@ export async function installAuthenticatedFixture(page: Page) {
   const welcomeDialog = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
   await page.addLocatorHandler(welcomeDialog, async () => {
     await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
+    // Radix can mark the surface closed before its exit-animation node is
+    // removed. Do not let that stale node intercept a later focus assertion.
+    await welcomeDialog.waitFor({ state: "detached" });
   });
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
