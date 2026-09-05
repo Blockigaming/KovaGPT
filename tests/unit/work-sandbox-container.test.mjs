@@ -98,11 +98,7 @@ test("sandbox runs only fixed Docker/runsc argv with all hard boundaries and no 
     "--log-driver=none",
   ])
     assert.ok(create.args.includes(flag), flag);
-  assert.ok(
-    create.args.includes(
-      "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=1777",
-    ),
-  );
+  assert.ok(create.args.includes("--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=1777"));
   assert.ok(
     !create.args.some((flag) =>
       /--(?:mount|volume|privileged|device)|source\.csv|touch|print|hello|Bearer/u.test(flag),
