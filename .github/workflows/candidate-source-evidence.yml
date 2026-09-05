@@ -77,13 +77,28 @@ jobs:
           tar -cf - node_modules -C "$RUNNER_TEMP" candidate-validation | gzip -1 > "$RUNNER_TEMP/candidate-validation-export/validation-tooling.tar.gz"
           cd "$RUNNER_TEMP/candidate-validation-export"
           sha256sum validation-tooling.tar.gz > SHA256SUMS
+          split -b 350M validation-tooling.tar.gz validation-tooling.part-
+          test "$(find . -name 'validation-tooling.part-*' | wc -l)" -eq 2
+          sha256sum validation-tooling.part-* >> SHA256SUMS
 
-      - name: Upload one-time pinned validation tooling
+      - name: Upload pinned validation tooling first part
         if: github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: candidate-validation-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ runner.temp }}/candidate-validation-export/
+          name: candidate-validation-a-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/candidate-validation-export/validation-tooling.part-aa
+            ${{ runner.temp }}/candidate-validation-export/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload pinned validation tooling second part
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-validation-b-${{ github.sha }}
+          path: ${{ runner.temp }}/candidate-validation-export/validation-tooling.part-ab
           if-no-files-found: error
           compression-level: 0
           retention-days: 1
