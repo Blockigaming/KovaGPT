@@ -113,10 +113,7 @@ export async function loadImageHistory(
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
     const completion = transactionComplete(transaction);
-    const request = transaction
-      .objectStore(STORE_NAME)
-      .index(USER_INDEX)
-      .getAll(IDBKeyRange.only(userKey));
+    const request = transaction.objectStore(STORE_NAME).index(USER_INDEX).getAll(userKey);
     const records = await new Promise<unknown[]>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () =>
@@ -166,7 +163,7 @@ export async function persistImageHistoryItem(
         image,
       } satisfies StoredImageHistoryItem);
 
-      const recordsRequest = store.index(USER_INDEX).getAll(IDBKeyRange.only(userKey));
+      const recordsRequest = store.index(USER_INDEX).getAll(userKey);
       recordsRequest.onsuccess = () => {
         const records = (recordsRequest.result as unknown[])
           .filter(isStoredImageHistoryItem)
@@ -202,7 +199,7 @@ export async function clearImageHistory(userKey: string): Promise<void> {
     try {
       const transaction = database.transaction(STORE_NAME, "readwrite");
       const store = transaction.objectStore(STORE_NAME);
-      const keysRequest = store.index(USER_INDEX).getAllKeys(IDBKeyRange.only(userKey));
+      const keysRequest = store.index(USER_INDEX).getAllKeys(userKey);
       keysRequest.onsuccess = () => {
         for (const key of keysRequest.result) store.delete(key);
       };
