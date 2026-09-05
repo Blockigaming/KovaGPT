@@ -1,4 +1,5 @@
-import { loadStripe, type Stripe } from "@stripe/stripe-js";
+import { loadStripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
 import { PUBLIC_PAYMENTS_CLIENT_TOKEN } from "@/config/public-config";
 
 type StripeEnv = "live";

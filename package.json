@@ -20,8 +20,8 @@
     "test:e2e": "playwright test",
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:e2e:install": "playwright install --with-deps chromium",
-    "test:a11y": "node --test tests/a11y/*.test.mjs",
-    "test:visual": "node --test tests/visual/*.test.mjs && KOVA_BROWSER_PREVIEW=node playwright test tests/e2e/ui-quality.spec.ts --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900",
+    "test:a11y": "npm run test:a11y:source && npm run test:a11y:browser",
+    "test:visual": "node --test tests/visual/*.test.mjs && KOVA_BROWSER_PREVIEW=node playwright test tests/e2e/ui-quality.spec.ts --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900 && KOVA_BROWSER_PREVIEW=node playwright test --config=playwright.auth-visual.config.ts",
     "test:ui-parity": "playwright test tests/e2e/chatgpt-parity.spec.ts --project=desktop-1280x800",
     "test:ui-parity:shell": "playwright test tests/e2e/chatgpt-shell-parity.spec.ts --config=playwright.release.config.ts",
     "smoke:deployment": "node scripts/post-deploy-smoke.mjs",
@@ -74,7 +74,10 @@
     "container:run": "docker run --rm --name kovagpt-web-azure-dev --env-file .env.local -e KOVA_GENERATION_DISABLED=true -e HOST=0.0.0.0 -e PORT=3000 -p 3000:3000 kovagpt-web:azure-dev",
     "container:smoke": "node -e \"fetch('http://127.0.0.1:3000/api/health').then(async r=>{console.log(r.status, await r.text()); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\"",
     "azure:validate": "node scripts/azure/validate.mjs",
-    "azure:staging:validate": "node scripts/azure/validate-staging-template.mjs"
+    "azure:staging:validate": "node scripts/azure/validate-staging-template.mjs",
+    "test:a11y:source": "node --test tests/a11y/*.test.mjs",
+    "test:a11y:browser": "KOVA_BROWSER_PREVIEW=node playwright test --config=playwright.config.ts tests/e2e/signed-out-runtime-qa.spec.ts --grep @a11y --project=phone-390x844 --project=desktop-1440x900",
+    "test:deployed-baseline:audit": "playwright test --config=playwright.deployed-audit.config.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.50.0",
@@ -174,6 +177,6 @@
   "overrides": {
     "nanoid": "3.3.18",
     "undici": "8.9.0",
-    "fast-uri": "3.1.6"
+    "fast-uri": "3.1.7"
   }
 }

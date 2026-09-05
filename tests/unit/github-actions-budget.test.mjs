@@ -12,6 +12,11 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
   assert.doesNotMatch(workflow, /paths(?:-ignore)?:/u);
   assert.match(workflow, /name: Classify changed files/u);
+  assert.match(workflow, /name: Repository formatting audit/u);
+  assert.doesNotMatch(
+    workflow,
+    /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/u,
+  );
   assert.match(workflow, /run_database: \$\{\{ steps\.scope\.outputs\.run_database \}\}/u);
   assert.match(
     workflow,

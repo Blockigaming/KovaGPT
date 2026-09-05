@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
 const themes = ["light", "dark"] as const;
 
@@ -44,12 +46,18 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
   });
 
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
-    test.skip(
-      process.env.KOVA_E2E_SIGNED_IN !== "true",
-      "Final release must rerun with KOVA_E2E_SIGNED_IN=true and authenticated storage state.",
-    );
+    const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {
-      for (const width of widths) await verifyConversationShell(page, width, theme);
+      for (const width of widths) {
+        await verifyConversationShell(page, width, theme);
+        if (width < 1024) {
+          await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
+          await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+        } else {
+          await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+        }
+      }
     }
+    expect(mockedBackendOrigins.size).toBe(1);
   });
 });
