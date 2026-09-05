@@ -59,7 +59,7 @@ test("chat enrichment forwards each preflight signal to the actual operation", (
   const chat = readFileSync("src/routes/api/chat.ts", "utf8");
   assert.match(
     chat,
-    /"web_search",\s*\(signal\) =>\s*runWebSearch\(\s*lastText,\s*clientTool === "deep_research" \|\| NEWS_TRIGGER\.test\(lastText\),\s*signal,/u,
+    /"web_search",\s*async\s*\(signal\)\s*=>\s*\{[\s\S]{0,400}?\breturn\s+runWebSearch\(\s*lastText,\s*clientTool === "deep_research" \|\| NEWS_TRIGGER\.test\(lastText\),\s*signal,\s*\);/u,
   );
   assert.match(
     chat,
