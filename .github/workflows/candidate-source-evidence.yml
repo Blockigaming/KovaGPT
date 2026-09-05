@@ -18,7 +18,7 @@ jobs:
   source-evidence:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -47,4 +47,46 @@ jobs:
           name: candidate-source-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/candidate-source-evidence/
           if-no-files-found: error
+          retention-days: 1
+
+      - name: Classify one-time validation tooling capture
+        id: tooling
+        shell: bash
+        run: |
+          if [[ "$(git log -1 --format=%s)" == "ci: restore integration gates and capture pinned validation tooling" ]]; then
+            echo "capture=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up validation Node
+        if: steps.tooling.outputs.capture == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Prepare pinned offline validation dependencies
+        if: steps.tooling.outputs.capture == 'true'
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/candidate-validation/browsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx --no-install playwright install --only-shell chromium
+          mkdir -p "$RUNNER_TEMP/candidate-validation/bin" "$RUNNER_TEMP/candidate-validation-export"
+          cp "$(command -v node)" "$RUNNER_TEMP/candidate-validation/bin/node"
+          node --version > "$RUNNER_TEMP/candidate-validation/node-version.txt"
+          sha256sum package-lock.json > "$RUNNER_TEMP/candidate-validation/package-lock.sha256"
+          tar -cf - node_modules -C "$RUNNER_TEMP" candidate-validation | gzip -1 > "$RUNNER_TEMP/candidate-validation-export/validation-tooling.tar.gz"
+          cd "$RUNNER_TEMP/candidate-validation-export"
+          sha256sum validation-tooling.tar.gz > SHA256SUMS
+
+      - name: Upload one-time pinned validation tooling
+        if: steps.tooling.outputs.capture == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-validation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/candidate-validation-export/
+          if-no-files-found: error
+          compression-level: 0
           retention-days: 1
