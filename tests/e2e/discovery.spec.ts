@@ -156,6 +156,10 @@ test("local search shares only manually entered location and a disabled deployme
     return route.fulfill({ json: { enabled: false } });
   });
   await page.goto("/maps");
+  // Wait for the authenticated availability check before editing this disabled-deployment form.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Live discovery is not available here yet." }),
+  ).toBeVisible();
   await page.getByLabel("What are you looking for?").fill("quiet cafes");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Oslo");
   await expect(page.getByRole("button", { name: "Search", exact: true })).toBeDisabled();
@@ -200,6 +204,8 @@ test("late discovery response after sign-out cannot restore prior queries or sou
       .catch(() => {});
   });
   await page.goto("/discovery");
+  await expect(page.getByLabel("What are you looking for?")).toBeVisible();
+  await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
   await page.getByLabel("What are you looking for?").fill("private search");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
@@ -249,6 +255,8 @@ test("device privacy reset clears queries and aborts a late request for the capt
       .catch(() => {});
   });
   await page.goto("/maps");
+  await expect(page.getByLabel("What are you looking for?")).toBeVisible();
+  await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
   await page.getByLabel("What are you looking for?").fill("private cafe");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Private place");
   await page.getByRole("button", { name: "Search", exact: true }).click();
