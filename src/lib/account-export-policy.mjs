@@ -11,6 +11,12 @@ export const ACCOUNT_EXPORT_COOLDOWN_SECONDS = 12 * 60 * 60;
 
 export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["chat_history_records", "owner_id"],
+  ["custom_kova_export_rows", "owner_id"],
+  ["custom_kova_versions", "owner_id"],
+  ["custom_kova_link_grants", "user_id"],
+  ["custom_kova_mutations", "owner_id"],
+  ["custom_kova_reports", "reporter_id"],
+  ["custom_kova_moderation_events", "actor_id"],
   ["google_connection_export_rows", "user_id"],
   ["google_connection_preferences", "user_id"],
   ["ai_generation_events", "user_id"],
@@ -57,6 +63,7 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["developer_file_export_records", "owner_id"],
   ["mcp_oauth_grant_export_rows", "owner_id"],
   ["mcp_oauth_client_export_rows", "owner_id"],
+  ["discovery_usage_export_records", "user_id"],
   ["feedback_submissions", "owner_id"],
   ["financial_accounts", "user_id"],
   ["financial_connections", "owner_id"],

@@ -56,6 +56,8 @@ export function chatRequestMessages(previous: Message[], latest: Message) {
 }
 
 export type Conversation = {
+  /** A selected Kova never carries link capabilities or another user's credentials. */
+  kova?: { id: string; versionId?: string };
   id: string;
   title: string;
   messages: Message[];

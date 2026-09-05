@@ -161,7 +161,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
   assert.ok(lockedBranch, "locked model branch should remain explicit");
   assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /"Maps", Map, isOn\("\/maps"\), "Preview"/);
+  assert.match(sidebar, /"Discover", Globe, isOn\("\/discovery"\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

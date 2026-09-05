@@ -84,6 +84,7 @@ export async function recoverDeveloperBilling(): Promise<number> {
   // Retention/accounting maintenance remains available while paid generation is disabled.
   const recovered = await rpc<number>("recover_developer_billing", { p_limit: 100 });
   await rpc<number>("expire_developer_files", { p_limit: 100 });
+  await rpc<number>("expire_discovery_usage", { p_limit: 100 });
   const administrators = (runtimeEnv("KOVA_ADMIN_USER_IDS") ?? "")
     .split(",")
     .map((id) => id.trim())

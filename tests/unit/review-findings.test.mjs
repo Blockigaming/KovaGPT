@@ -174,7 +174,7 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.doesNotMatch(study, /scheduled reminders/i);
   assert.match(product, /title: "Scheduled execution unavailable"/);
   assert.match(notifications, /historical task notifications/);
-  assert.match(parity, /Scheduled Tasks\s+\| Intentionally unavailable/);
+  assert.match(parity, /Scheduled Tasks\s+\| Implemented with readiness gates/);
 });
 
 test("billing checkout and entitlements use exact supported plan keys", () => {

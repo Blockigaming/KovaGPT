@@ -1171,6 +1171,7 @@ function KovaGPT() {
           },
           body: JSON.stringify({
             ...historyPayload,
+            kova: existingConversation?.kova,
             mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
             // Main-chat ids are device-local until a user-owned memory row
@@ -1562,7 +1563,7 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={active?.kova ? undefined : setMode}
           userTier={tier}
           temporaryChat={tempChat}
           onTemporaryChatChange={setTemporaryChatEnabled}
@@ -1600,12 +1601,18 @@ function KovaGPT() {
           </div>
 
           <div className="flex items-center min-w-0 flex-1 relative">
-            <ResponsiveModelSelector
-              mode={mode}
-              onChange={setMode}
-              userTier={tier}
-              placement="topbar"
-            />
+            {active?.kova ? (
+              <span className="text-sm">
+                {active.title} · {active.mode}
+              </span>
+            ) : (
+              <ResponsiveModelSelector
+                mode={mode}
+                onChange={setMode}
+                userTier={tier}
+                placement="topbar"
+              />
+            )}
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
@@ -1745,7 +1752,7 @@ function KovaGPT() {
                   attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
-                  onModeChange={setMode}
+                  onModeChange={active?.kova ? undefined : setMode}
                   userTier={tier}
                   canChangeAgent={false}
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
@@ -2064,7 +2071,7 @@ function KovaGPT() {
                 attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}
-                onModeChange={setMode}
+                onModeChange={active?.kova ? undefined : setMode}
                 userTier={tier}
                 canChangeAgent={false}
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}

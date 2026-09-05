@@ -324,6 +324,21 @@ export function normalizeChatPayload(value) {
   }
 
   const payload = { messages };
+  if (value.kova !== undefined) {
+    if (
+      !isRecord(value.kova) ||
+      Object.keys(value.kova).some((k) => !["id", "versionId"].includes(k))
+    )
+      invalid("invalid_custom_kova");
+    const id = optionalUuid(value.kova.id, "custom_kova_id");
+    if (!id) invalid("invalid_custom_kova");
+    payload.kova = { id };
+    if (value.kova.versionId !== undefined) {
+      const versionId = optionalUuid(value.kova.versionId, "custom_kova_version");
+      if (!versionId) invalid("invalid_custom_kova");
+      payload.kova.versionId = versionId;
+    }
+  }
   const mode = normalizeMode(value.mode);
   const user = normalizeUser(value.user);
   const timezone = normalizeTimezone(value.timezone);

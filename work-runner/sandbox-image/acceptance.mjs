@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWorkSandboxExecutor } from "../sandbox-container.mjs";
 import { compileTerminalPlan } from "../terminal.mjs";
@@ -11,7 +12,28 @@ if (process.argv.length !== 3 || process.argv[2] !== "--execute") {
   );
   process.exitCode = 2;
 } else {
-  const executor = createWorkSandboxExecutor({ image: process.env.KOVA_WORK_SANDBOX_IMAGE });
+  // These are fixed repository fixtures in an ephemeral CI container. Keep
+  // bounded engine diagnostics here; production continues returning safe codes.
+  const fixtureSpawn = (...args) => {
+    const child = spawn(...args);
+    let diagnostic = Buffer.alloc(0);
+    child.stderr?.on("data", (part) => {
+      if (diagnostic.length < 8192)
+        diagnostic = Buffer.concat([
+          diagnostic,
+          Buffer.from(part).subarray(0, 8192 - diagnostic.length),
+        ]);
+    });
+    child.once("close", (code) => {
+      if (code !== 0 && diagnostic.length)
+        process.stderr.write(`FIXTURE_CONTAINER_DIAGNOSTIC ${diagnostic.toString("utf8")}\n`);
+    });
+    return child;
+  };
+  const executor = createWorkSandboxExecutor(
+    { image: process.env.KOVA_WORK_SANDBOX_IMAGE },
+    fixtureSpawn,
+  );
   const readiness = await executor.probe();
   assert.equal(
     readiness.ready,

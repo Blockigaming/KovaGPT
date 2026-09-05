@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 140,
-  "latest": "20260905035000_developer_private_files.sql",
+  "count": 142,
+  "latest": "20260905040500_discovery_daily_admission.sql",
   "migrations": [
     {
       "order": 1,
@@ -2745,6 +2745,38 @@
     },
     {
       "order": 136,
+      "filename": "20260905031401_custom_conversational_kovas.sql",
+      "timestamp": "20260905031401",
+      "sha256": "61b34979da266e24b2f13f1b649bf0ae9661e25feb163e25d08215d4e4fc4a89",
+      "tables": [
+        "custom_kovas",
+        "custom_kova_versions",
+        "custom_kova_link_grants",
+        "custom_kova_mutations",
+        "custom_kova_reports",
+        "custom_kova_moderation_events"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "custom_kovas",
+        "custom_kova_versions",
+        "custom_kova_link_grants",
+        "custom_kova_mutations",
+        "custom_kova_reports",
+        "custom_kova_moderation_events"
+      ],
+      "policies": ["custom_kova_owner_read", "custom_kova_version_owner_read"],
+      "indexes": [
+        "custom_kovas_owner_idx",
+        "custom_kovas_public_idx",
+        "custom_kova_reports_queue_idx"
+      ]
+    },
+    {
+      "order": 137,
       "filename": "20260905032524_organization_scim_provisioning.sql",
       "timestamp": "20260905032524",
       "sha256": "43d12070aeaad75652ca6a85729e7f40672154f6aef2c4786853f75030cc6f0d",
@@ -2770,7 +2802,7 @@
       ]
     },
     {
-      "order": 137,
+      "order": 138,
       "filename": "20260905032714_developer_mcp_oauth.sql",
       "timestamp": "20260905032714",
       "sha256": "8d6ff77a8d09e8ae7320d54cdaf6683a964fea22f8ba521a7e94574c11078d21",
@@ -2802,7 +2834,7 @@
       ]
     },
     {
-      "order": 138,
+      "order": 139,
       "filename": "20260905033500_library_image_storage_quota.sql",
       "timestamp": "20260905033500",
       "sha256": "26187e62e670c1bc3fdaeb518cced84a7ea6fb35ba572ceaaecb7143f463890d",
@@ -2820,7 +2852,7 @@
       ]
     },
     {
-      "order": 139,
+      "order": 140,
       "filename": "20260905034000_work_browser_takeover.sql",
       "timestamp": "20260905034000",
       "sha256": "ba24b2113aabdeb77b65dfb01236105f394c381299490e9aee9216fbb5fff6c1",
@@ -2834,7 +2866,7 @@
       "indexes": ["work_browser_one_live_run"]
     },
     {
-      "order": 140,
+      "order": 141,
       "filename": "20260905035000_developer_private_files.sql",
       "timestamp": "20260905035000",
       "sha256": "ac366d1300c541ee5a21e0a931f3ae5aada6e8af38707f1415c7c993f2d770e3",
@@ -2846,6 +2878,20 @@
       "rls": ["developer_files"],
       "policies": [],
       "indexes": ["developer_files_owner_idx", "developer_files_expiry_idx"]
+    },
+    {
+      "order": 142,
+      "filename": "20260905040500_discovery_daily_admission.sql",
+      "timestamp": "20260905040500",
+      "sha256": "03ff1d0b24a066c99f2ed2f176c4fc57e0debcbe35596aace87a1041d8eeb2c2",
+      "tables": ["discovery_provider_days", "discovery_usage_days"],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["discovery_provider_days", "discovery_usage_days"],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

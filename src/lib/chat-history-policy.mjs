@@ -139,6 +139,19 @@ export function normalizeChatHistory(value, ownerId) {
       return item;
     }),
   };
+  if (value.kova !== undefined) {
+    if (
+      !object(value.kova) ||
+      Object.keys(value.kova).some((k) => !["id", "versionId"].includes(k))
+    )
+      throw new Error("chat_history_invalid");
+    result.kova = {
+      id: chatHistoryUuid(value.kova.id),
+      ...(value.kova.versionId !== undefined
+        ? { versionId: chatHistoryUuid(value.kova.versionId) }
+        : {}),
+    };
+  }
   if (value.pinned === true) result.pinned = true;
   if (time(value.pinnedAt)) result.pinnedAt = value.pinnedAt;
   if (value.memoryStartIndex !== undefined) {

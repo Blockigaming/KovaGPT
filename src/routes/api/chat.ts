@@ -658,7 +658,7 @@ export const Route = createFileRoute("/api/chat")({
 
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
-            const isImageRequest =
+            let isImageRequest =
               lastText.length > 0 &&
               (!lastUser?.attachments || lastUser.attachments.length === 0) &&
               (clientTool === "image" || detectImageIntent(lastText));
@@ -689,6 +689,54 @@ export const Route = createFileRoute("/api/chat")({
               callerTier = isOwner
                 ? "pro"
                 : await preflight.run("plan_entitlement", () => getCallerTier(auth));
+            }
+
+            // A custom Kova supplies creator instructions and immutable knowledge,
+            // never the creator's credentials or an entitlement override.
+            let customKova: Awaited<
+              ReturnType<typeof import("@/lib/custom-kovas.server").resolveCustomKova>
+            > | null = null;
+            if (ingress.kova) {
+              if (!auth?.emailVerified)
+                return Response.json(
+                  { error: "Verify your account to use a custom Kova." },
+                  { status: 403 },
+                );
+              customKova = await preflight.run("custom_kova", async (signal) => {
+                const { resolveCustomKova } = await import("@/lib/custom-kovas.server");
+                return resolveCustomKova(auth.supabaseAdmin, auth.userId, ingress.kova!, signal);
+              });
+              const requiredTier = getMode(customKova.config.mode).tier;
+              const rank = { free: 0, plus: 1, pro: 2 };
+              if (!isOwner && rank[requiredTier] > rank[callerTier])
+                return Response.json(
+                  {
+                    error:
+                      "This Kova's model requires a higher plan. Choose another Kova or update your plan.",
+                  },
+                  { status: 403 },
+                );
+              if (clientTool === "deep_research")
+                return Response.json(
+                  { error: "Start Deep Research from regular chat." },
+                  { status: 400 },
+                );
+              if (clientTool === "web_search" && !customKova.allows("web"))
+                return Response.json(
+                  { error: "Web search is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (clientTool === "image" && !customKova.allows("images"))
+                return Response.json(
+                  { error: "Image generation is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.attachmentsAllowed(messages))
+                return Response.json(
+                  { error: "Attachments are disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.allows("images")) isImageRequest = false;
             }
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -789,6 +837,7 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (quota) return quota;
               }
+              await customKova?.assertCurrent(request.signal);
               return handleImageRequest(lastText, logContext);
             }
 
@@ -812,7 +861,7 @@ export const Route = createFileRoute("/api/chat")({
               plus: 1,
               pro: 2,
             };
-            const requested = getMode(mode ?? "auto");
+            const requested = getMode(customKova?.config.mode ?? mode ?? "auto");
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
@@ -979,6 +1028,7 @@ export const Route = createFileRoute("/api/chat")({
             let webBlock = "";
             if (
               !lockdownBlocksNetwork &&
+              (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
               (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")
@@ -995,12 +1045,14 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const result = await preflight.run(
                   "web_search",
-                  (signal) =>
-                    runWebSearch(
+                  async (signal) => {
+                    await customKova?.assertCurrent(signal);
+                    return runWebSearch(
                       lastText,
                       clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
                       signal,
-                    ),
+                    );
+                  },
                   { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
@@ -1302,6 +1354,7 @@ export const Route = createFileRoute("/api/chat")({
                     (conversationSummary?.block ?? "") +
                     projectBlock +
                     chatWorkspaceBlock +
+                    (customKova?.block ?? "") +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
@@ -1336,14 +1389,21 @@ export const Route = createFileRoute("/api/chat")({
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
             const googleContext =
-              auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasImages &&
+              m.id !== "instant" &&
+              lastText.length > 0
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
                     { required: false },
                   )) ?? null)
                 : null;
-            const availableTools = googleContext?.tools ?? [];
+            const availableTools = customKova
+              ? customKova.filterTools(googleContext?.tools ?? [])
+              : (googleContext?.tools ?? []);
             const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
@@ -1479,6 +1539,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
+                  await customKova?.assertCurrent(hopCtl.signal);
                   providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
@@ -1636,6 +1697,21 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 const results = await Promise.all(
                   msg.tool_calls.map(async (tc): Promise<ToolResultMsg> => {
+                    if (!availableTools.some((tool) => tool.function.name === tc.function.name))
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "tool_not_allowed" }),
+                      };
+                    try {
+                      await customKova?.assertCurrent(request.signal);
+                    } catch {
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "custom_kova_unavailable" }),
+                      };
+                    }
                     let parsedArgs: Record<string, unknown> = {};
                     try {
                       parsedArgs = tc.function.arguments
@@ -1744,6 +1820,7 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
+              await customKova?.assertCurrent(request.signal);
               providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,

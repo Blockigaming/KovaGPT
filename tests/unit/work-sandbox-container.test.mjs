@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { PassThrough, Writable } from "node:stream";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { createWorkSandboxExecutor, SANDBOX_LIMITS } from "../../work-runner/sandbox-container.mjs";
 const image = "registry.example/kova-python@sha256:" + "a".repeat(64);
 const job = {
@@ -90,15 +91,19 @@ test("sandbox runs only fixed Docker/runsc argv with all hard boundaries and no 
     "--user=65532:65532",
     "--cap-drop=ALL",
     "--security-opt=no-new-privileges=true",
+    "--cgroupns=private",
     "--memory=268435456",
     "--memory-swap=268435456",
     "--pids-limit=32",
     "--cpus=1",
     "--log-driver=none",
+    "--init",
   ])
     assert.ok(create.args.includes(flag), flag);
   assert.ok(
-    create.args.some((flag) => flag.startsWith("--tmpfs=/job:") && flag.includes("size=67108864")),
+    create.args.includes(
+      "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=0700,uid=65532,gid=65532",
+    ),
   );
   assert.ok(
     !create.args.some((flag) =>
@@ -232,6 +237,33 @@ test("abort kills the attached process and independently removes its exact conta
   );
   assert.equal(engine.calls.at(-1).args[2], "rm");
 });
+
+test("container failures expose only finite wrapper diagnostics without guessing from arbitrary stderr", async () => {
+  for (const [stderr, expected] of [
+    ["sandbox_execution_failed\n", "sandbox_execution_failed"],
+    [
+      "sandbox_execution_failed_workspace_permission\n",
+      "sandbox_execution_failed_workspace_permission",
+    ],
+    ["sandbox_execution_failed_child_limit", "sandbox_execution_failed_child_limit"],
+    ["sandbox_execution_failed_outputs_invalid", "sandbox_execution_failed_outputs_invalid"],
+    ["sandbox_execution_failed_secret_customer_record", "sandbox_start_failed"],
+    ["exec failed: /private/customer/file", "sandbox_start_failed"],
+    ["sandbox_execution_failed_workspace_permission\nBearer PRIVATE", "sandbox_start_failed"],
+  ]) {
+    const engine = fakeEngine((call, finish) => {
+      if (call.args[2] === "start") {
+        finish(1, "", stderr);
+        return false;
+      }
+    });
+    await assert.rejects(
+      createWorkSandboxExecutor({ image }, engine.spawn).run(job),
+      (error) => error.code === expected && error.message === expected,
+    );
+    assert.equal(engine.calls.at(-1).args[2], "rm");
+  }
+});
 test("uncertain creation never sends code and cleanup failure cannot claim execution success", async () => {
   const failed = fakeEngine((call, finish) => {
     if (call.args[2] === "create") {
@@ -340,6 +372,30 @@ test("the image entrypoint executes Python only in its container and bounds regu
   assert.match(python, /os\.killpg\(child\.pid, signal\.SIGKILL\)/u);
   assert.match(python, /KOVA_INPUT_DIR/u);
   assert.match(python, /KOVA_OUTPUT_DIR/u);
+  assert.match(python, /sys\.stderr\.write\(failure_code\(STAGE, error\) \+ "\\n"\)/u);
+  assert.doesNotMatch(python, /str\(error\)|repr\(error\)|traceback\.print/u);
   assert.match(dockerfile, /USER 65532:65532/u);
   assert.doesNotMatch(dockerfile, /RUN .*pip|curl|wget/u);
+});
+
+test("the pure Python failure formatter reports bounded stages and errno classes without running the entrypoint", async () => {
+  // Parse the source and extract only its pure formatter. The container main,
+  // resource setup, submitted code and file execution are never run on this host.
+  const script = `
+import ast, errno, subprocess, sys
+tree = ast.parse(sys.stdin.read())
+formatter = next(item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name == "failure_code")
+scope = {"errno": errno, "subprocess": subprocess}
+exec(compile(ast.Module(body=[formatter], type_ignores=[]), "pure-failure-formatter", "exec"), scope)
+code = scope["failure_code"]
+for stage in ("preflight", "workspace", "child", "outputs", "response"):
+    for error, category in ((ValueError("PRIVATE"), "invalid"), (PermissionError(errno.EACCES, "PRIVATE"), "permission"), (OSError(errno.ENOSPC, "PRIVATE"), "storage"), (OSError(errno.EMFILE, "PRIVATE"), "limit"), (subprocess.TimeoutExpired("PRIVATE", 1), "timeout"), (RuntimeError("PRIVATE"), "internal")):
+        assert code(stage, error) == "sandbox_execution_failed_" + stage + "_" + category
+assert code("PRIVATE", ValueError("PRIVATE")) == "sandbox_execution_failed_preflight_invalid"
+`;
+  execFileSync("python3", ["-I", "-B", "-c", script], {
+    input: await readFile("work-runner/sandbox-image/execute.py", "utf8"),
+    timeout: 5000,
+    maxBuffer: 8192,
+  });
 });

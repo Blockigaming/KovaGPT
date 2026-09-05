@@ -53,6 +53,7 @@ export type ChatAttachment =
     };
 
 export type NormalizedChatPayload = {
+  kova?: { id: string; versionId?: string };
   messages: Array<{
     role: "user" | "assistant";
     content: string;

@@ -26,6 +26,7 @@ import { Route as CodeHelperRouteImport } from './routes/code-helper'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
+import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
@@ -33,6 +34,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
+import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -67,10 +69,13 @@ import { Route as SectionArticleSlugRouteImport } from './routes/$section.$artic
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminKovasRouteImport } from './routes/admin/kovas'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiDiscoveryRouteImport } from './routes/api/discovery'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiKovasRouteImport } from './routes/api/kovas'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
@@ -105,6 +110,7 @@ import { Route as ApiAccountExportRouteImport } from './routes/api/account/expor
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
+import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
@@ -143,6 +149,7 @@ import { Route as ApiInternalWebPushRouteImport } from './routes/api/internal/we
 import { Route as ApiInternalWorkBrowserRouteImport } from './routes/api/internal/work-browser'
 import { Route as ApiInternalWorkExecutionRouteImport } from './routes/api/internal/work-execution'
 import { Route as ApiInternalWorkspaceSearchRouteImport } from './routes/api/internal/workspace-search'
+import { Route as ApiKovasDirectoryRouteImport } from './routes/api/kovas/directory'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
 import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
@@ -258,6 +265,11 @@ const ContextPacksRoute = ContextPacksRouteImport.update({
   path: '/context-packs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscoveryRoute = DiscoveryRouteImport.update({
+  id: '/discovery',
+  path: '/discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -291,6 +303,11 @@ const ImagesRoute = ImagesRouteImport.update({
 const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
   id: '/knowledge-graph',
   path: '/knowledge-graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KovasRoute = KovasRouteImport.update({
+  id: '/kovas',
+  path: '/kovas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -466,6 +483,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminKovasRoute = AdminKovasRouteImport.update({
+  id: '/admin/kovas',
+  path: '/admin/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAccountRoute = ApiAccountRouteImport.update({
   id: '/api/account',
   path: '/api/account',
@@ -476,6 +498,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDiscoveryRoute = ApiDiscoveryRouteImport.update({
+  id: '/api/discovery',
+  path: '/api/discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   id: '/api/generate-image',
   path: '/api/generate-image',
@@ -484,6 +511,11 @@ const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKovasRoute = ApiKovasRouteImport.update({
+  id: '/api/kovas',
+  path: '/api/kovas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLivezRoute = ApiLivezRouteImport.update({
@@ -658,6 +690,11 @@ const ApiAdminDeveloperBillingRoute =
 const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   id: '/api/admin/diagnostics',
   path: '/api/admin/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminKovasRoute = ApiAdminKovasRouteImport.update({
+  id: '/api/admin/kovas',
+  path: '/api/admin/kovas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
@@ -861,6 +898,11 @@ const ApiInternalWorkspaceSearchRoute =
     path: '/api/internal/workspace-search',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiKovasDirectoryRoute = ApiKovasDirectoryRouteImport.update({
+  id: '/directory',
+  path: '/directory',
+  getParentRoute: () => ApiKovasRoute,
+} as any)
 const ApiLibraryBulkMoveRoute = ApiLibraryBulkMoveRouteImport.update({
   id: '/api/library/bulk-move',
   path: '/api/library/bulk-move',
@@ -1032,6 +1074,7 @@ export interface FileRoutesByFullPath {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1039,6 +1082,7 @@ export interface FileRoutesByFullPath {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -1073,10 +1117,13 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -1111,6 +1158,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -1149,6 +1197,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
   '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
@@ -1197,6 +1246,7 @@ export interface FileRoutesByTo {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1204,6 +1254,7 @@ export interface FileRoutesByTo {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -1238,10 +1289,13 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -1276,6 +1330,7 @@ export interface FileRoutesByTo {
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -1314,6 +1369,7 @@ export interface FileRoutesByTo {
   '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
   '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
@@ -1363,6 +1419,7 @@ export interface FileRoutesById {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1370,6 +1427,7 @@ export interface FileRoutesById {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -1404,10 +1462,13 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -1442,6 +1503,7 @@ export interface FileRoutesById {
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -1480,6 +1542,7 @@ export interface FileRoutesById {
   '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
   '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
   '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
@@ -1530,6 +1593,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1537,6 +1601,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1571,10 +1636,13 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -1609,6 +1677,7 @@ export interface FileRouteTypes {
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1647,6 +1716,7 @@ export interface FileRouteTypes {
     | '/api/internal/work-browser'
     | '/api/internal/work-execution'
     | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
     | '/api/library/files'
     | '/api/library/folders'
@@ -1695,6 +1765,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1702,6 +1773,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1736,10 +1808,13 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -1774,6 +1849,7 @@ export interface FileRouteTypes {
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1812,6 +1888,7 @@ export interface FileRouteTypes {
     | '/api/internal/work-browser'
     | '/api/internal/work-execution'
     | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
     | '/api/library/files'
     | '/api/library/folders'
@@ -1860,6 +1937,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1867,6 +1945,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1901,10 +1980,13 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -1939,6 +2021,7 @@ export interface FileRouteTypes {
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1977,6 +2060,7 @@ export interface FileRouteTypes {
     | '/api/internal/work-browser'
     | '/api/internal/work-execution'
     | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
     | '/api/library/files'
     | '/api/library/folders'
@@ -2026,6 +2110,7 @@ export interface RootRouteChildren {
   ConnectRoute: typeof ConnectRoute
   ContactSupportRoute: typeof ContactSupportRoute
   ContextPacksRoute: typeof ContextPacksRoute
+  DiscoveryRoute: typeof DiscoveryRoute
   FilesRoute: typeof FilesRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
@@ -2033,6 +2118,7 @@ export interface RootRouteChildren {
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
+  KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
   MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
@@ -2067,10 +2153,13 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminKovasRoute: typeof AdminKovasRoute
   ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
+  ApiDiscoveryRoute: typeof ApiDiscoveryRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiKovasRoute: typeof ApiKovasRouteWithChildren
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiOrganizationsRoute: typeof ApiOrganizationsRouteWithChildren
@@ -2102,6 +2191,7 @@ export interface RootRouteChildren {
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
+  ApiAdminKovasRoute: typeof ApiAdminKovasRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
@@ -2287,6 +2377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContextPacksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discovery': {
+      id: '/discovery'
+      path: '/discovery'
+      fullPath: '/discovery'
+      preLoaderRoute: typeof DiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files': {
       id: '/files'
       path: '/files'
@@ -2334,6 +2431,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge-graph'
       fullPath: '/knowledge-graph'
       preLoaderRoute: typeof KnowledgeGraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kovas': {
+      id: '/kovas'
+      path: '/kovas'
+      fullPath: '/kovas'
+      preLoaderRoute: typeof KovasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -2574,6 +2678,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/kovas': {
+      id: '/admin/kovas'
+      path: '/admin/kovas'
+      fullPath: '/admin/kovas'
+      preLoaderRoute: typeof AdminKovasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/account': {
       id: '/api/account'
       path: '/api/account'
@@ -2588,6 +2699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/discovery': {
+      id: '/api/discovery'
+      path: '/api/discovery'
+      fullPath: '/api/discovery'
+      preLoaderRoute: typeof ApiDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-image': {
       id: '/api/generate-image'
       path: '/api/generate-image'
@@ -2600,6 +2718,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/kovas': {
+      id: '/api/kovas'
+      path: '/api/kovas'
+      fullPath: '/api/kovas'
+      preLoaderRoute: typeof ApiKovasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/livez': {
@@ -2838,6 +2963,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/diagnostics'
       fullPath: '/api/admin/diagnostics'
       preLoaderRoute: typeof ApiAdminDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/kovas': {
+      id: '/api/admin/kovas'
+      path: '/api/admin/kovas'
+      fullPath: '/api/admin/kovas'
+      preLoaderRoute: typeof ApiAdminKovasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/pricing': {
@@ -3106,6 +3238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalWorkspaceSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/kovas/directory': {
+      id: '/api/kovas/directory'
+      path: '/directory'
+      fullPath: '/api/kovas/directory'
+      preLoaderRoute: typeof ApiKovasDirectoryRouteImport
+      parentRoute: typeof ApiKovasRoute
+    }
     '/api/library/bulk-move': {
       id: '/api/library/bulk-move'
       path: '/api/library/bulk-move'
@@ -3372,6 +3511,18 @@ const ApiChatRouteChildren: ApiChatRouteChildren = {
 const ApiChatRouteWithChildren =
   ApiChatRoute._addFileChildren(ApiChatRouteChildren)
 
+interface ApiKovasRouteChildren {
+  ApiKovasDirectoryRoute: typeof ApiKovasDirectoryRoute
+}
+
+const ApiKovasRouteChildren: ApiKovasRouteChildren = {
+  ApiKovasDirectoryRoute: ApiKovasDirectoryRoute,
+}
+
+const ApiKovasRouteWithChildren = ApiKovasRoute._addFileChildren(
+  ApiKovasRouteChildren,
+)
+
 interface ApiOrganizationsRouteChildren {
   ApiOrganizationsScimRoute: typeof ApiOrganizationsScimRoute
 }
@@ -3412,6 +3563,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectRoute: ConnectRoute,
   ContactSupportRoute: ContactSupportRoute,
   ContextPacksRoute: ContextPacksRoute,
+  DiscoveryRoute: DiscoveryRoute,
   FilesRoute: FilesRoute,
   GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
@@ -3419,6 +3571,7 @@ const rootRouteChildren: RootRouteChildren = {
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
+  KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,
   MapsRoute: MapsRoute,
   McpRoute: McpRoute,
@@ -3455,10 +3608,13 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthAuthorizationServerRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminKovasRoute: AdminKovasRoute,
   ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
+  ApiDiscoveryRoute: ApiDiscoveryRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiKovasRoute: ApiKovasRouteWithChildren,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiOrganizationsRoute: ApiOrganizationsRouteWithChildren,
@@ -3490,6 +3646,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
+  ApiAdminKovasRoute: ApiAdminKovasRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,

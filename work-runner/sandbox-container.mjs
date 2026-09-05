@@ -266,12 +266,14 @@ export function createWorkSandboxExecutor(
           `com.kova.expires=${Date.now() + job.timeoutMs + 10000}`,
           "--pull=never",
           "--runtime=runsc",
+          "--init",
           "--interactive",
           "--read-only",
           "--user=65532:65532",
           "--network=none",
           "--cap-drop=ALL",
           "--security-opt=no-new-privileges=true",
+          "--cgroupns=private",
           "--log-driver=none",
           "--memory=268435456",
           "--memory-swap=268435456",
@@ -282,7 +284,7 @@ export function createWorkSandboxExecutor(
           "--ulimit=fsize=8388608:8388608",
           "--shm-size=8388608",
           "--stop-timeout=0",
-          "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=1777",
+          "--tmpfs=/job:rw,noexec,nosuid,nodev,size=67108864,mode=0700,uid=65532,gid=65532",
           "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=8388608,mode=1777",
           "--workdir=/job",
           "--entrypoint=/usr/local/bin/python3",
@@ -304,17 +306,16 @@ export function createWorkSandboxExecutor(
       });
       if (executed.code !== 0) {
         const detail = executed.stderr.toString("utf8").trim();
-        if (/^sandbox_execution_failed_[a-z_]+$/u.test(detail)) fail(detail);
-        const category = [
-          ["mount", /mount|tmpfs/iu],
-          ["limit", /ulimit|rlimit/iu],
-          ["cgroup", /cgroup/iu],
-          ["policy", /seccomp|security|capab|permission|operation not permitted/iu],
-          ["entrypoint", /exec|entrypoint|executable/iu],
-          ["network", /network/iu],
-          ["init", /init/iu],
-        ].find(([, pattern]) => pattern.test(detail))?.[0];
-        fail(`sandbox_start_${category ?? "unknown"}`);
+        // Only the fixed wrapper's finite vocabulary may reach callers. A
+        // generic execution error is not evidence of an entrypoint failure.
+        if (detail === "sandbox_execution_failed") fail(detail);
+        if (
+          /^sandbox_execution_failed_(?:preflight|workspace|child|outputs|response)_(?:invalid|permission|storage|limit|timeout|internal)$/u.test(
+            detail,
+          )
+        )
+          fail(detail);
+        fail("sandbox_start_failed");
       }
       result = decode(executed.stdout, job);
     } catch (cause) {

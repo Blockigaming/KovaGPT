@@ -4,6 +4,7 @@ No network, package installation, host mounts, or credentials are available.
 Python's standard library includes csv, json, math, statistics, and sqlite3.
 """
 import base64
+import errno
 import json
 import os
 import re
@@ -19,6 +20,26 @@ MAX_OUTPUT = 8 * 1024 * 1024
 MAX_LOG = 64 * 1024
 MAX_FILES = 16
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+STAGE = "preflight"
+
+
+def failure_code(stage, error):
+    """Finite diagnostics only: never disclose exception text, paths or input."""
+    if stage not in ("preflight", "workspace", "child", "outputs", "response"):
+        stage = "preflight"
+    category = "internal"
+    if isinstance(error, ValueError):
+        category = "invalid"
+    elif isinstance(error, (TimeoutError, subprocess.TimeoutExpired)):
+        category = "timeout"
+    elif isinstance(error, OSError):
+        if error.errno in (errno.EACCES, errno.EPERM):
+            category = "permission"
+        elif error.errno in (errno.ENOMEM, errno.EMFILE, errno.ENFILE, errno.EAGAIN, errno.EFBIG):
+            category = "limit"
+        elif error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ENOSPC, errno.EROFS):
+            category = "storage"
+    return "sandbox_execution_failed_" + stage + "_" + category
 
 
 def require(ok):
@@ -124,6 +145,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except BaseException:
-        sys.stderr.write("sandbox_execution_failed\n")
+    except BaseException as error:
+        sys.stderr.write(failure_code(STAGE, error) + "\n")
         sys.exit(1)
