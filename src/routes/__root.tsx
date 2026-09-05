@@ -287,9 +287,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
+        <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>
-        <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{LOCALE_DOCUMENT_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>

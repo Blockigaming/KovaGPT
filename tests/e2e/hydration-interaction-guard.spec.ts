@@ -88,11 +88,12 @@ for (const { mode, system, dark } of themeCases) {
     await page.addInitScript((selected) => {
       localStorage.clear();
       if (selected === "blocked") {
-        Object.defineProperty(window, "localStorage", {
-          get() {
-            throw new DOMException("Storage blocked", "SecurityError");
-          },
-        });
+        // Exercise theme-storage failure without crashing unrelated app storage.
+        const getItem = Storage.prototype.getItem;
+        Storage.prototype.getItem = function (key) {
+          if (key === "kova-theme-mode") throw new DOMException("Storage blocked", "SecurityError");
+          return getItem.call(this, key);
+        };
       } else if (selected !== null) localStorage.setItem("kova-theme-mode", selected);
       const frames: string[] = [];
       Object.assign(window, { __kovaThemeFrames: frames });
