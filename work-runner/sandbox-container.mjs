@@ -304,8 +304,18 @@ export function createWorkSandboxExecutor(
         maxBytes: PROTOCOL_BYTES,
       });
       if (executed.code !== 0) {
-        const stage = executed.stderr.toString("utf8").trim();
-        fail(/^sandbox_execution_failed_[a-z_]+$/u.test(stage) ? stage : "sandbox_execution_failed");
+        const detail = executed.stderr.toString("utf8").trim();
+        if (/^sandbox_execution_failed_[a-z_]+$/u.test(detail)) fail(detail);
+        const category = [
+          ["mount", /mount|tmpfs/iu],
+          ["limit", /ulimit|rlimit/iu],
+          ["cgroup", /cgroup/iu],
+          ["policy", /seccomp|security|capab|permission|operation not permitted/iu],
+          ["entrypoint", /exec|entrypoint|executable/iu],
+          ["network", /network/iu],
+          ["init", /init/iu],
+        ].find(([, pattern]) => pattern.test(detail))?.[0];
+        fail(`sandbox_start_${category ?? "unknown"}`);
       }
       result = decode(executed.stdout, job);
     } catch (cause) {
