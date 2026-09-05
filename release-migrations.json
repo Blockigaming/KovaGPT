@@ -2232,18 +2232,25 @@
       "order": 108,
       "filename": "20260905000905_project_canvas_collaboration.sql",
       "timestamp": "20260905000905",
-      "sha256": "d472de10523e8b7d57a3f31190d31d5d5e91d7a45ef6d977270e5068d6d19a04",
+      "sha256": "66a9aa7732fb145888ebc41183905d4847881e40062e4befbde513b0ab277378",
       "tables": [
         "canvas_documents",
         "canvas_revisions",
         "canvas_comments",
+        "canvas_comment_tombstones",
         "collaboration_presence"
       ],
       "functions": ["kova_private"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
-      "rls": ["canvas_documents", "canvas_revisions", "canvas_comments", "collaboration_presence"],
+      "rls": [
+        "canvas_documents",
+        "canvas_revisions",
+        "canvas_comments",
+        "canvas_comment_tombstones",
+        "collaboration_presence"
+      ],
       "policies": [
         "canvas_read",
         "canvas_revision_read",
@@ -2254,6 +2261,7 @@
         "canvas_personal_identity",
         "canvas_project_identity",
         "canvas_comments_document_created",
+        "canvas_comment_tombstones_retention",
         "collaboration_presence_resource"
       ]
     },
@@ -2412,7 +2420,7 @@
       "order": 117,
       "filename": "20260905004839_kova_sites_lifecycle.sql",
       "timestamp": "20260905004839",
-      "sha256": "76f1c531157e9caae6f2081e265e125b3d81b8b6eb23779ddf444994697da2d1",
+      "sha256": "6f7b44366e8911bc44aca21732517740bfe3927ad05c28d1abfd274cac840454",
       "tables": [
         "kova_sites",
         "kova_site_versions",
