@@ -39,6 +39,8 @@ def limits():
 
 
 def main():
+    global STAGE
+    STAGE = "preflight"
     # The marker and UID check make accidental invocation visibly fail. Resource
     # isolation comes from required runsc/container flags, never Python checks.
     require(os.getuid() == 65532 and os.path.isdir("/job") and os.path.isfile("/.dockerenv"))
@@ -51,6 +53,7 @@ def main():
     require(type(job.get("timeoutMs")) is int and 1000 <= job["timeoutMs"] <= 30000)
     require(type(job.get("maxOutputBytes")) is int and 1 <= job["maxOutputBytes"] <= MAX_OUTPUT)
     require(isinstance(job.get("inputFiles"), list) and len(job["inputFiles"]) <= MAX_FILES)
+    STAGE = "workspace"
     root = tempfile.mkdtemp(prefix="run-", dir="/job")
     inputs, outputs = os.path.join(root, "inputs"), os.path.join(root, "outputs")
     os.mkdir(inputs, 0o700)
@@ -72,6 +75,7 @@ def main():
         target.write(job["code"])
     os.chmod(code_path, 0o444)
     out_path, err_path = os.path.join(root, "stdout"), os.path.join(root, "stderr")
+    STAGE = "child"
     with open(out_path, "xb") as stdout, open(err_path, "xb") as stderr:
         child = subprocess.Popen(
             ["/usr/local/bin/python3", "-I", "-B", code_path],
@@ -96,6 +100,7 @@ def main():
             require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode))
             # Bound bytes after replacement as malformed UTF-8 can expand.
             return stream.read(MAX_LOG).decode("utf-8", errors="replace").encode()[:MAX_LOG].decode("utf-8", errors="ignore")
+    STAGE = "outputs"
     files, names, total = [], set(), 0
     with os.scandir(outputs) as entries:
         for entry in entries:
@@ -112,6 +117,7 @@ def main():
                 require(total <= job["maxOutputBytes"])
             files.append({"name": name, "base64": base64.b64encode(data).decode("ascii")})
     response = {"version": 1, "jobId": job["jobId"], "stdout": read_log(out_path), "stderr": read_log(err_path), "exitCode": code, "outputs": sorted(files, key=lambda file: file["name"])}
+    STAGE = "response"
     sys.stdout.write(json.dumps(response, separators=(",", ":"), ensure_ascii=False))
 
 
