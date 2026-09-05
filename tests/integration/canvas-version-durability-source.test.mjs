@@ -48,7 +48,13 @@ test("Canvas never edits, exports, or saves a silently truncated document", () =
 test("reopening Canvas applies the accepted durable edit without racing a new local edit", () => {
   assert.match(editor, /const remoteSnapshot = collaboration.snapshot/);
   assert.match(editor, /canApplyLoadedArtifactHistory\(0, localEditRevisionRef\.current\)/);
-  assert.match(editor, /value === lastRecordedValueRef\.current/);
+  assert.doesNotMatch(
+    editor.slice(
+      editor.indexOf("const remoteSnapshot"),
+      editor.indexOf("useEffect(() => {", editor.indexOf("const remoteSnapshot") + 1),
+    ),
+    /value === lastRecordedValueRef\.current/,
+  );
   assert.match(editor, /const content = adoptRemote\(\)/);
   assert.match(editor, /lastRecordedValueRef\.current = content/);
   assert.match(editor, /localEditRevisionRef\.current \+= 1/u);

@@ -1,7 +1,13 @@
 // Google OAuth callback. Verifies HMAC-signed state, exchanges code,
 // stores per-user tokens, then bounces back into the app.
 import { createFileRoute } from "@tanstack/react-router";
-import { exchangeCodeForTokens, storeGoogleTokens, logAudit } from "@/lib/google-oauth.server";
+import {
+  exchangeCodeForTokens,
+  storeGoogleTokens,
+  revokeUnstoredGoogleTokens,
+  logAudit,
+  type GoogleTokenResponse,
+} from "@/lib/google-oauth.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -86,12 +92,14 @@ export const Route = createFileRoute("/api/google/callback")({
         }
         const userId = await verifyState(state);
         if (!userId) return bounce(request, { google_error: "invalid_state" }, true);
+        let exchangedTokens: GoogleTokenResponse | null = null;
         try {
           // Re-check after authenticating the callback owner. Lockdown Mode can
           // be enabled while the Google consent page is still open.
           await assertLockdownAllows(supabaseAdmin, userId, "connector_write");
-          const tokens = await exchangeCodeForTokens(code, request, oauthCookie.verifier);
-          await storeGoogleTokens(userId, tokens, state.split(".")[1]);
+          exchangedTokens = await exchangeCodeForTokens(code, request, oauthCookie.verifier);
+          await storeGoogleTokens(userId, exchangedTokens, state.split(".")[1]);
+          exchangedTokens = null;
           await logAudit({
             userId,
             provider: "google",
@@ -100,6 +108,7 @@ export const Route = createFileRoute("/api/google/callback")({
           });
           return bounce(request, { google_connected: "1" }, true);
         } catch (e) {
+          if (exchangedTokens) await revokeUnstoredGoogleTokens(exchangedTokens);
           console.error(
             "[google callback]",
             e instanceof Error && e.message === "google_connection_changed"

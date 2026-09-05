@@ -318,6 +318,18 @@ async function collectDirectRecords(userId: string): Promise<Record<string, Expo
     );
     for (const result of results) records[result.table] = result.rows;
   }
+  // Site bodies can be gigabytes in aggregate. Read only bounded metadata here;
+  // collectFiles checks the cumulative decoded size before fetching any body.
+  records.kova_site_files = await readAccountExportRows(
+    () =>
+      admin
+        .from("kova_site_files")
+        .select("site_id,version_id,owner_id,path,mime_type,size_bytes,sha256")
+        .eq("owner_id", userId),
+    "kova_site_files",
+    ACCOUNT_EXPORT_PAGE_SIZE,
+    MAX_ROWS,
+  );
   // Include both sides of the user's invitation/audit history without exporting
   // unrelated tenant members, provider configuration, or domain proof tokens.
   records.organization_invitations = uniqueRows([
@@ -534,6 +546,50 @@ async function collectFiles(records: Record<string, ExportRow[]>): Promise<Embed
 
   const embedded: EmbeddedFile[] = [];
   let total = 0;
+  const siteRows = records.kova_site_files ?? [];
+  const siteBytes = siteRows.reduce((sum, row) => {
+    if (!Number.isSafeInteger(row.size_bytes) || Number(row.size_bytes) < 0) {
+      throw exportError("account_export_file_reference_invalid");
+    }
+    return sum + Number(row.size_bytes);
+  }, 0);
+  if (siteBytes > MAX_EMBEDDED_FILE_BYTES) throw exportError("account_export_too_large");
+  for (const row of siteRows) {
+    if (
+      typeof row.site_id !== "string" ||
+      typeof row.version_id !== "string" ||
+      typeof row.path !== "string" ||
+      typeof row.sha256 !== "string"
+    ) {
+      throw exportError("account_export_file_reference_invalid");
+    }
+    const body = await admin
+      .from("kova_site_files")
+      .select("content_base64")
+      .eq("owner_id", row.owner_id)
+      .eq("version_id", row.version_id)
+      .eq("path", row.path)
+      .maybeSingle();
+    if (body.error || !body.data || typeof body.data.content_base64 !== "string") {
+      throw exportError("account_export_file_unavailable");
+    }
+    const bytes = Buffer.from(body.data.content_base64, "base64");
+    if (
+      bytes.byteLength !== row.size_bytes ||
+      createHash("sha256").update(bytes).digest("hex") !== row.sha256
+    ) {
+      throw exportError("account_export_file_reference_invalid");
+    }
+    embedded.push({
+      bucket: "kova-sites",
+      path: `${row.site_id}/${row.version_id}/${row.path}`,
+      contentType: typeof row.mime_type === "string" ? row.mime_type : null,
+      sizeBytes: bytes.byteLength,
+      sha256: row.sha256,
+      base64: body.data.content_base64,
+    });
+    total += bytes.byteLength;
+  }
   for (const candidate of candidates.values()) {
     const file = await embedFile(
       candidate.bucket,

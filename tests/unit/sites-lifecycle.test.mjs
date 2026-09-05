@@ -174,6 +174,27 @@ test("immutable versions charge exactly once and publication receipts invalidate
       (await db.query("SELECT bytes_used FROM public.user_storage")).rows[0].bytes_used,
       0,
     );
+    assert.equal(
+      (await db.query("SELECT count(*)::int n FROM public.kova_site_retirements")).rows[0].n,
+      0,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("cleanup finishes deleted Site metadata even when no versions exist", async () => {
+  const db = await fixture();
+  try {
+    await mutate(db, "create", { title: "Empty", slug: "empty-site" }, 0);
+    await mutate(db, "delete", {}, 1);
+    assert.equal((await db.query("SELECT count(*)::int n FROM public.kova_sites")).rows[0].n, 1);
+    await rpc(db, "cleanup_kova_site_versions", [OWNER, 5]);
+    assert.equal((await db.query("SELECT count(*)::int n FROM public.kova_sites")).rows[0].n, 0);
+    assert.equal(
+      (await db.query("SELECT count(*)::int n FROM public.kova_site_aliases")).rows[0].n,
+      0,
+    );
   } finally {
     await db.close();
   }

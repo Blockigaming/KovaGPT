@@ -37,6 +37,7 @@
     "app_notifications",
     "banned_users",
     "billing_plan_tiers",
+    "canvas_comment_tombstones",
     "canvas_comments",
     "canvas_documents",
     "canvas_revisions",
@@ -511,6 +512,7 @@
     "ai_usage_events_user_created_idx",
     "ai_usage_events_user_idempotency_idx",
     "app_notifications_owner_created_idx",
+    "canvas_comment_tombstones_retention",
     "canvas_comments_document_created",
     "canvas_personal_identity",
     "canvas_project_identity",
@@ -1020,6 +1022,7 @@
     "app_notifications",
     "banned_users",
     "billing_plan_tiers",
+    "canvas_comment_tombstones",
     "canvas_comments",
     "canvas_documents",
     "canvas_revisions",
@@ -1161,7 +1164,7 @@
     "ALL ON public.ai_generation_events TO service_role",
     "ALL ON public.ai_generation_events TO service_role",
     "ALL ON public.banned_users TO service_role",
-    "ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence TO service_role",
+    "ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence TO service_role",
     "ALL ON public.chat_memories TO service_role",
     "ALL ON public.connected_account_audit_log TO service_role",
     "ALL ON public.daily_usage TO service_role",
@@ -1681,7 +1684,7 @@
     "ALL ON public.agent_run_approval_bindings FROM PUBLIC,anon,authenticated,service_role",
     "ALL ON public.ai_generation_events FROM anon, authenticated",
     "ALL ON public.banned_users FROM anon, authenticated",
-    "ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence FROM PUBLIC,anon,authenticated",
+    "ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence FROM PUBLIC,anon,authenticated",
     "ALL ON public.google_connection_export_rows FROM PUBLIC,anon,authenticated",
     "ALL ON public.google_connection_preferences,public.google_oauth_attempts FROM PUBLIC,anon,authenticated",
     "ALL ON public.google_oauth_tokens FROM PUBLIC,anon,authenticated",
@@ -1990,5 +1993,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "d442468f72b316f275457603d360dc9b579163d3a82fa34abd8bb26817744d62"
+  "sha256": "1273fdaa8efb0e64cb2612c50e8786620cfcfb9cb498fd38d43dfef769b73931"
 }

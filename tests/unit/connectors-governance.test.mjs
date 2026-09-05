@@ -45,6 +45,8 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /oauthCookie\.state !== state/);
   assert.match(callbackRoute, /age < -30_000/);
   assert.match(callbackRoute, /Max-Age=0/);
+  assert.match(callbackRoute, /if \(exchangedTokens\) await revokeUnstoredGoogleTokens/);
+  assert.match(oauth, /https:\/\/oauth2\.googleapis\.com\/revoke/);
 });
 
 test("voice stays disabled without adding provider secrets or billing claims", () => {

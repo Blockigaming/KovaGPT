@@ -63,6 +63,13 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /records\.agent_deliverables/u);
   assert.match(worker, /"agent_resource_promotions",\s*"destination_id"/u);
   assert.match(worker, /agent-evidence\|project-files/u);
+  assert.match(worker, /select\("site_id,version_id,owner_id,path,mime_type,size_bytes,sha256"\)/u);
+  assert.match(worker, /if \(siteBytes > MAX_EMBEDDED_FILE_BYTES\)/u);
+  assert.ok(
+    worker.indexOf("if (siteBytes > MAX_EMBEDDED_FILE_BYTES)") <
+      worker.indexOf('.select("content_base64")'),
+    "Site byte totals must be bounded before any base64 body is fetched",
+  );
   const process = worker.slice(worker.indexOf("async function processClaimed"));
   assert.ok(
     process.indexOf('admin.rpc("register_account_export_artifact"') <

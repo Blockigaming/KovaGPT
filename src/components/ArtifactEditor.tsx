@@ -210,10 +210,7 @@ function ArtifactEditorSession({
         ...current.filter((row) => !row.durable),
       ].slice(0, 50),
     );
-    if (
-      canApplyLoadedArtifactHistory(0, localEditRevisionRef.current) ||
-      value === lastRecordedValueRef.current
-    ) {
+    if (canApplyLoadedArtifactHistory(0, localEditRevisionRef.current)) {
       const content = adoptRemote();
       if (content !== null) {
         lastRecordedValueRef.current = content;

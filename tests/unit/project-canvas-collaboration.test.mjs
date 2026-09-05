@@ -204,9 +204,17 @@ test("anchored comments are immutable, idempotent, bounded and role protected", 
     );
     await assert.rejects(as(db, editor, "comment", request), /comment_id_conflict/);
     assert.equal(
-      (await db.query("select body,anchor from public.canvas_comments where id=$1", [session]))
-        .rows[0].body,
-      "[deleted]",
+      (await db.query("select count(*)::int n from public.canvas_comments where id=$1", [session]))
+        .rows[0].n,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query("select count(*)::int n from public.canvas_comment_tombstones where id=$1", [
+          session,
+        ])
+      ).rows[0].n,
+      1,
     );
     assert.equal((await as(db, editor, "get", { documentId: a.document.id })).comments.length, 0);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [editor]);

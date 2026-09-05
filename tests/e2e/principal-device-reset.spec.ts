@@ -40,23 +40,32 @@ async function seedImageHistory(page: Page) {
 }
 
 async function imageOwners(page: Page) {
-  return page.evaluate(async () => {
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("kovagpt-image-history", 1);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+  for (;;) {
     try {
-      const request = database.transaction("images", "readonly").objectStore("images").getAll();
-      const rows = await new Promise<Array<{ userKey: string }>>((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+      return await page.evaluate(async () => {
+        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open("kovagpt-image-history", 1);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        try {
+          const request = database.transaction("images", "readonly").objectStore("images").getAll();
+          const rows = await new Promise<Array<{ userKey: string }>>((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          return rows.map((row) => row.userKey).sort();
+        } finally {
+          database.close();
+        }
       });
-      return rows.map((row) => row.userKey).sort();
-    } finally {
-      database.close();
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("Execution context was destroyed")) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded");
     }
-  });
+  }
 }
 
 for (const path of ["/", "/apps"]) {

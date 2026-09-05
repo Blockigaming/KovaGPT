@@ -72,7 +72,6 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["knowledge_relationships", "owner_id"],
   ["kova_sites", "owner_id"],
   ["kova_site_versions", "owner_id"],
-  ["kova_site_files", "owner_id"],
   ["kova_site_aliases", "owner_id"],
   ["kova_site_viewers", "owner_id"],
   ["library_folders", "user_id"],

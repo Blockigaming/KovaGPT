@@ -178,15 +178,34 @@ GRANT EXECUTE ON FUNCTION public.mutate_kova_site(uuid,uuid,uuid,bigint,text,jso
 
 CREATE FUNCTION public.cleanup_kova_site_versions(p_owner uuid DEFAULT NULL,p_limit integer DEFAULT 5)
 RETURNS integer LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
-DECLARE entry public.kova_site_retirements; n integer:=0;
+DECLARE entry public.kova_site_retirements; retired public.kova_site_versions; n integer:=0;
 BEGIN
  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 5 THEN RAISE EXCEPTION 'site_cleanup_invalid' USING ERRCODE='22023'; END IF;
  FOR entry IN SELECT * FROM public.kova_site_retirements WHERE settled_at IS NULL AND (p_owner IS NULL OR owner_id=p_owner) ORDER BY created_at,version_id LIMIT p_limit FOR UPDATE SKIP LOCKED LOOP
+  SELECT * INTO retired FROM public.kova_site_versions WHERE id=entry.version_id AND owner_id=entry.owner_id AND state='retired' FOR UPDATE;
   DELETE FROM public.kova_site_versions WHERE id=entry.version_id AND owner_id=entry.owner_id AND state='retired';
   UPDATE public.user_storage SET bytes_used=greatest(0,bytes_used-entry.size_bytes),updated_at=now() WHERE user_id=entry.owner_id;
   UPDATE public.kova_site_retirements SET settled_at=now() WHERE version_id=entry.version_id AND settled_at IS NULL;
+  -- Once the last version is physically gone, finish a soft-deleted Site so
+  -- aliases and private metadata cannot accumulate outside its visible quota.
+  IF retired.site_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.kova_site_versions WHERE site_id=retired.site_id) THEN
+   DELETE FROM public.kova_sites WHERE id=retired.site_id AND owner_id=entry.owner_id AND deleted_at IS NOT NULL;
+  END IF;
+  DELETE FROM public.kova_site_retirements WHERE version_id=entry.version_id AND settled_at IS NOT NULL;
   n:=n+1;
  END LOOP;
+ -- Also finish deletions that never had a version (and any older rows whose
+ -- final retirement was already settled by a previous worker revision).
+ DELETE FROM public.kova_sites WHERE id IN(
+  SELECT s.id FROM public.kova_sites s WHERE s.deleted_at IS NOT NULL
+   AND (p_owner IS NULL OR s.owner_id=p_owner)
+   AND NOT EXISTS(SELECT 1 FROM public.kova_site_versions v WHERE v.site_id=s.id)
+   ORDER BY s.deleted_at,s.id LIMIT p_limit
+ );
+ DELETE FROM public.kova_site_retirements WHERE version_id IN(
+  SELECT version_id FROM public.kova_site_retirements WHERE settled_at IS NOT NULL
+   AND (p_owner IS NULL OR owner_id=p_owner) ORDER BY settled_at,version_id LIMIT 200
+ );
  -- Receipts cover retry windows, then stop consuming owner capacity. Expired
  -- access tokens contain no useful authority and are removed in bounded pages.
  DELETE FROM public.kova_site_access_sessions WHERE token_hash IN(SELECT token_hash FROM public.kova_site_access_sessions WHERE expires_at<now() ORDER BY expires_at LIMIT 200);

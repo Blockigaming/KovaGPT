@@ -30,6 +30,14 @@ CREATE TABLE public.canvas_comments (
   deleted_at timestamptz
 );
 CREATE INDEX canvas_comments_document_created ON public.canvas_comments(document_id, created_at, id);
+-- Keep compact deletion receipts separate from active comment capacity. They
+-- reject delayed retries without retaining deleted bodies or anchors forever.
+CREATE TABLE public.canvas_comment_tombstones (
+  id uuid PRIMARY KEY,
+  document_id uuid NOT NULL REFERENCES public.canvas_documents(id) ON DELETE CASCADE,
+  deleted_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX canvas_comment_tombstones_retention ON public.canvas_comment_tombstones(deleted_at,id);
 CREATE TABLE public.collaboration_presence (
   actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   session_id uuid NOT NULL,
@@ -58,6 +66,7 @@ GRANT EXECUTE ON FUNCTION kova_private.canvas_access(uuid,boolean) TO authentica
 ALTER TABLE public.canvas_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.canvas_revisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.canvas_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.canvas_comment_tombstones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collaboration_presence ENABLE ROW LEVEL SECURITY;
 CREATE POLICY canvas_read ON public.canvas_documents FOR SELECT TO authenticated USING (kova_private.canvas_access(id,false));
 CREATE POLICY canvas_revision_read ON public.canvas_revisions FOR SELECT TO authenticated USING (kova_private.canvas_access(document_id,false));
@@ -68,9 +77,9 @@ CREATE POLICY collaboration_presence_read ON public.collaboration_presence FOR S
     (resource_kind='project' AND public.is_project_member(resource_id,auth.uid()))
   )
 );
-REVOKE ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence TO authenticated;
-GRANT ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.collaboration_presence TO service_role;
+GRANT ALL ON public.canvas_documents,public.canvas_revisions,public.canvas_comments,public.canvas_comment_tombstones,public.collaboration_presence TO service_role;
 
 -- Canvas accepts complete documents up to 200k characters, including clearing
 -- a document. Keep the existing personal history readable by legacy clients.
@@ -202,10 +211,13 @@ BEGIN
      content_value:=btrim(p_data->>'body');
      IF content_value IS NULL OR char_length(content_value) NOT BETWEEN 1 AND 4000 THEN RAISE EXCEPTION 'collaboration_invalid_input' USING ERRCODE='22023'; END IF;
      SELECT * INTO comment_value FROM public.canvas_comments WHERE id=(p_data->>'commentId')::uuid;
-     IF comment_value.id IS NOT NULL THEN
+     IF EXISTS(SELECT 1 FROM public.canvas_comment_tombstones WHERE id=(p_data->>'commentId')::uuid) THEN
+       RAISE EXCEPTION 'comment_id_conflict' USING ERRCODE='40001';
+     ELSIF comment_value.id IS NOT NULL THEN
        IF comment_value.deleted_at IS NOT NULL OR comment_value.document_id<>cid OR comment_value.author_id<>uid OR comment_value.body<>content_value OR (comment_value.anchor->>'start') IS DISTINCT FROM (p_data->>'start') OR (comment_value.anchor->>'end') IS DISTINCT FROM (p_data->>'end') THEN RAISE EXCEPTION 'comment_id_conflict' USING ERRCODE='40001'; END IF;
      ELSE
-       IF (SELECT count(*) FROM public.canvas_comments WHERE document_id=cid)>=500 THEN RAISE EXCEPTION 'comment_limit' USING ERRCODE='54000'; END IF;
+       DELETE FROM public.canvas_comment_tombstones WHERE id IN (SELECT id FROM public.canvas_comment_tombstones WHERE deleted_at<now()-interval '90 days' ORDER BY deleted_at,id LIMIT 100);
+       IF (SELECT count(*) FROM public.canvas_comments WHERE document_id=cid AND deleted_at IS NULL)>=500 THEN RAISE EXCEPTION 'comment_limit' USING ERRCODE='54000'; END IF;
        start_value:=(p_data->>'start')::integer; end_value:=(p_data->>'end')::integer;
        IF start_value IS NOT NULL OR end_value IS NOT NULL THEN
          IF start_value IS NULL OR end_value IS NULL OR start_value<0 OR end_value<=start_value OR end_value>char_length(doc.content) OR end_value-start_value>500 THEN
@@ -220,9 +232,12 @@ BEGIN
          VALUES((p_data->>'commentId')::uuid,cid,uid,content_value,anchor_value);
      END IF;
    ELSIF p_operation='delete_comment' THEN
-     UPDATE public.canvas_comments c SET deleted_at=coalesce(deleted_at,now()),body='[deleted]',anchor=NULL WHERE c.id=(p_data->>'commentId')::uuid AND c.document_id=cid
-       AND (c.author_id=uid OR doc.private_owner_id=uid OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid));
+     INSERT INTO public.canvas_comment_tombstones(id,document_id)
+       SELECT c.id,c.document_id FROM public.canvas_comments c WHERE c.id=(p_data->>'commentId')::uuid AND c.document_id=cid
+       AND (c.author_id=uid OR doc.private_owner_id=uid OR EXISTS(SELECT 1 FROM public.projects WHERE id=doc.project_id AND owner_id=uid))
+       ON CONFLICT(id) DO NOTHING;
      IF NOT FOUND THEN RAISE EXCEPTION 'collaboration_access_denied' USING ERRCODE='42501'; END IF;
+     DELETE FROM public.canvas_comments WHERE id=(p_data->>'commentId')::uuid AND document_id=cid;
    END IF;
  ELSIF p_operation IN ('presence','leave') THEN
    session_value:=(p_data->>'sessionId')::uuid; cid:=(p_data->>'resourceId')::uuid;
@@ -263,6 +278,7 @@ BEGIN
      IF content_value IS NULL OR char_length(content_value) NOT BETWEEN 1 AND 4000 OR char_length(coalesce(p_data->>'anchor',''))>200 OR jsonb_typeof(p_data->'mentions')<>'array' OR jsonb_array_length(p_data->'mentions')>20 THEN RAISE EXCEPTION 'collaboration_invalid_input' USING ERRCODE='22023'; END IF;
      IF EXISTS(SELECT 1 FROM jsonb_array_elements_text(p_data->'mentions') mention WHERE NOT EXISTS(SELECT 1 FROM public.projects p WHERE p.id=pid AND p.owner_id=mention::uuid) AND NOT EXISTS(SELECT 1 FROM public.project_members m WHERE m.project_id=pid AND m.user_id=mention::uuid)) THEN RAISE EXCEPTION 'collaboration_invalid_mentions' USING ERRCODE='22023'; END IF;
      PERFORM pg_advisory_xact_lock(hashtextextended('project-comment:'||pid::text,0));
+     IF NOT public.can_edit_project(pid,uid) THEN RAISE EXCEPTION 'collaboration_access_denied' USING ERRCODE='42501'; END IF;
      SELECT * INTO project_comment_value FROM public.project_comments WHERE id=(p_data->>'commentId')::uuid;
      IF project_comment_value.id IS NOT NULL THEN
        IF project_comment_value.deleted_at IS NOT NULL OR project_comment_value.project_id<>pid OR project_comment_value.author_id<>uid OR project_comment_value.body<>content_value OR project_comment_value.anchor IS DISTINCT FROM (p_data->>'anchor') OR project_comment_value.mentions IS DISTINCT FROM (p_data->'mentions') THEN RAISE EXCEPTION 'comment_id_conflict' USING ERRCODE='40001'; END IF;

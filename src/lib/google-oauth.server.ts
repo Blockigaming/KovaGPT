@@ -108,7 +108,7 @@ export function buildGoogleAuthUrl(opts: {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-type TokenResponse = {
+export type GoogleTokenResponse = {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
@@ -120,7 +120,7 @@ export async function exchangeCodeForTokens(
   code: string,
   request: Request,
   codeVerifier: string,
-): Promise<TokenResponse> {
+): Promise<GoogleTokenResponse> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -142,7 +142,25 @@ export async function exchangeCodeForTokens(
     new TextDecoder("utf-8", { fatal: true }).decode(
       await readResponseBytesBounded(res, 64 * 1024),
     ),
-  ) as TokenResponse;
+  ) as GoogleTokenResponse;
+}
+
+/** Revoke an exchanged grant that could not be durably attached to an account. */
+export async function revokeUnstoredGoogleTokens(tokens: GoogleTokenResponse): Promise<void> {
+  const token = tokens.refresh_token || tokens.access_token;
+  if (!token) return;
+  try {
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+      signal: AbortSignal.timeout(5000),
+      redirect: "error",
+    });
+  } catch {
+    // Completion remains failed; never persist credentials merely because the
+    // provider's best-effort revocation endpoint is temporarily unavailable.
+  }
 }
 
 export async function googleVault(
@@ -212,7 +230,11 @@ export async function beginGoogleOAuth(userId: string, attemptId: string, connec
     loginHint?: string | null;
   };
 }
-export async function storeGoogleTokens(userId: string, tokens: TokenResponse, attemptId: string) {
+export async function storeGoogleTokens(
+  userId: string,
+  tokens: GoogleTokenResponse,
+  attemptId: string,
+) {
   return accountRuntime().store(userId, tokens, attemptId);
 }
 export async function getGoogleConnection(userId: string, connectionId?: string) {
