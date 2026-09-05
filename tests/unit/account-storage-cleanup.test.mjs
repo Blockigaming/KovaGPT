@@ -202,6 +202,8 @@ function accountClient({
     },
     async rpc(name, args) {
       if (name === "claim_project_storage_source_cleanup") return { data: [], error: null };
+      if (name === "claim_account_retained_source_transfer")
+        return { data: { state: "busy" }, error: null };
       if (name === "claim_account_project_file_cleanup") {
         events.push("project-claim");
         if (lifecycleBusy) return { data: { state: "busy" }, error: null };
@@ -623,7 +625,7 @@ test("unregistered upload cleanup verifies removals and rejects a no-op", async 
   assert.equal(client.buckets["library-images"].objects.size, 1);
 });
 
-test("owned orphan discovery fails closed while a surviving canonical Project row depends on it", async () => {
+test("an active retained-source transfer leaves source bytes and Library untouched", async () => {
   const path = `${OTHER_PROJECT_ID}/shared-source.txt`;
   const client = accountClient({
     ownedObjects: [{ name: path, owner_id: USER_ID }],
@@ -638,10 +640,7 @@ test("owned orphan discovery fails closed while a surviving canonical Project ro
       },
     ],
   });
-  await assert.rejects(
-    () => cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID),
-    /still_referenced/u,
-  );
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, false);
   assert.equal(client.buckets["project-files"].objects.has(path), true);
   assert.equal(client.buckets["library-images"].objects.size, 1);
 });
@@ -830,4 +829,42 @@ test("failed lifecycle finalization preserves a retryable claim and leaves Libra
   );
   assert.equal(events.includes("project-metadata"), false);
   assert.equal(client.buckets["library-images"].objects.size, 1);
+});
+
+test("retained-source cleanup processes at most two verified transfers before a bounded retry", async () => {
+  const projectRows = Array.from({ length: 3 }, (_, i) => ({
+    id: crypto.randomUUID(),
+    project_id: OTHER_PROJECT_ID,
+    storage_path: `${OTHER_PROJECT_ID}/retained-${i}.txt`,
+    uploaded_by: OTHER_USER_ID,
+    project_owner_id: OTHER_USER_ID,
+    kind: "upload",
+  }));
+  const oldPaths = projectRows.map((row) => row.storage_path);
+  const client = accountClient({
+    projectRows,
+    ownedObjects: oldPaths.map((name) => ({ name, owner_id: USER_ID })),
+  });
+  const originalRpc = client.rpc.bind(client);
+  const calls = [];
+  client.rpc = async (name, args) => {
+    if (name !== "claim_account_retained_source_transfer") return originalRpc(name, args);
+    calls.push(args.p_source_path);
+    // This response represents an earlier completed and verified DB transfer.
+    const row = projectRows.find((entry) => entry.storage_path === args.p_source_path);
+    row.storage_path = `${OTHER_PROJECT_ID}/${crypto.randomUUID()}.txt`;
+    client.buckets["project-files"].objects.add(row.storage_path);
+    return { data: { state: "published" }, error: null };
+  };
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, false);
+  assert.equal(calls.length, 2);
+  assert.equal(
+    oldPaths.filter((path) => client.buckets["project-files"].objects.has(path)).length,
+    1,
+  );
+  assert.equal(client.buckets["library-images"].objects.size, 1);
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, false);
+  assert.equal(calls.length, 3);
+  assert.equal((await cleanupOwnedStorageBeforeAccountDeletion(client, USER_ID)).complete, true);
+  assert.equal(client.buckets["project-files"].objects.size, 3);
 });

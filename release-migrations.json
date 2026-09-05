@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 111,
-  "latest": "20260905002230_retained_work_source_read_access.sql",
+  "count": 112,
+  "latest": "20260905002934_account_retained_source_transfer.sql",
   "migrations": [
     {
       "order": 1,
@@ -2287,6 +2287,20 @@
       "rls": [],
       "policies": ["project_files_retained_work_read"],
       "indexes": []
+    },
+    {
+      "order": 112,
+      "filename": "20260905002934_account_retained_source_transfer.sql",
+      "timestamp": "20260905002934",
+      "sha256": "1948c4ffc702244f240a3e70abe5a7322f5dded140f7a74ecb8abca7a0e08711",
+      "tables": ["project_storage_source_transfers"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_storage_source_transfers"],
+      "policies": [],
+      "indexes": ["project_storage_source_transfers_source_idx"]
     }
   ]
 }

@@ -28,5 +28,8 @@ test("browser and server live credentials must target the approved Stripe accoun
   assert.match(rollout, /Cloudflare[\s\S]*webhook source IPs/i);
   assert.match(rollout, /Customer[\s\S]*reads\/updates\/deletion/);
   assert.match(rollout, /restricted-key permissions/);
-  assert.match(rollout, /deletes that Customer before connector teardown and deleting the auth user/);
+  assert.match(
+    rollout,
+    /deletes that Customer before connector teardown and deleting the auth user/,
+  );
 });

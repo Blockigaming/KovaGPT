@@ -1,3 +1,4 @@
+import { transferRetainedAccountSource } from "./account-retained-source-transfer.server.ts";
 import { claimProjectStorageSourceCleanup } from "./project-storage-references.server.ts";
 import {
   AGENT_EVIDENCE_BUCKET,
@@ -266,21 +267,34 @@ async function cleanupUnregisteredOwnedProjectObjects(
         if (row.owner_id !== userId && row.owner_id !== null) throw new Error("owner_mismatch");
         const { path, parts } = validateStorageObjectPath(row.name);
         if (!UUID.test(parts[0] ?? "")) throw new Error("project_prefix_invalid");
-        return { bucket: PROJECT_FILE_BUCKET, path };
+        return { bucket: PROJECT_FILE_BUCKET, path, ownerId: row.owner_id };
       } catch {
         throw cleanupError("account_project_storage_ownership_invalid");
       }
     });
     const referenced = await externallyReferencedProjectObjects(client, entries, new Set(), userId);
+    // Legacy caller uploads cannot remain owned by the departing Auth user.
+    // Preserve authorized collaborator bytes in a verified service-owned copy
+    // before the usual retirement/removal pass. Limit heavy copies per request.
+    const transferred = new Set<string>();
+    const retainedOwned = entries.filter(
+      (entry) => entry.ownerId === userId && referenced.has(`${entry.bucket}:${entry.path}`),
+    );
+    for (const entry of retainedOwned.slice(0, 2)) {
+      if (await transferRetainedAccountSource(client, userId, entry.path))
+        transferred.add(entry.path);
+    }
     const candidates = entries
-      .filter((entry) => !referenced.has(`${entry.bucket}:${entry.path}`))
+      .filter(
+        (entry) => transferred.has(entry.path) || !referenced.has(`${entry.bucket}:${entry.path}`),
+      )
       .map((entry) => entry.path);
     const retained = await claimProjectStorageSourceCleanup(client, null, candidates, [], userId);
     const paths = candidates.filter((path) => !retained.has(path));
     if (paths.length === 0) {
-      // Auth cannot delete an owner while Storage still belongs to them. Keep
-      // the account and all surviving Project dependencies intact.
-      throw cleanupError("account_project_storage_still_referenced");
+      // An active transfer lease or another deletion remains retryable. Bytes
+      // and Auth ownership stay intact until a verified copy can be rebound.
+      return { complete: false, removed };
     }
     const fingerprint = paths.join("\0");
     if (fingerprint === lastFingerprint) {
@@ -295,6 +309,7 @@ async function cleanupUnregisteredOwnedProjectObjects(
       throw cleanupError("account_project_storage_settlement_failed");
     removed += paths.length;
     lastFingerprint = fingerprint;
+    if (retainedOwned.length > 0) return { complete: false, removed };
   }
   return { complete: false, removed };
 }
