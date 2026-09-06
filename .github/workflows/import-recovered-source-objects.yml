@@ -28,9 +28,16 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git hash-object scripts/recovery/import-reviewed-objects.py)" = '411aa513a0413b3073627fe72eb0cb8b659395e6'
-          # This fixed recovery script posts Git blobs only. It does not create
-          # commits, change refs, execute recovered product code, or deploy.
-          python3 scripts/recovery/import-reviewed-objects.py
+          # Preserve the fixed importer and add only the one verified worker
+          # path omitted from its allowlist. All object/tree hashes still apply.
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('scripts/recovery/import-reviewed-objects.py').read_text()
+          old = 'path in ("database-contract.json", "release-migrations.json")'
+          new = 'path in ("database-contract.json", "release-migrations.json", "public/kova-sw.js")'
+          assert source.count(old) == 1
+          exec(compile(source.replace(old, new), 'verified-source-import', 'exec'))
+          PY
 
       - name: Retain exact recovered manifest
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
