@@ -173,10 +173,6 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   await page.goto("/?e2e-settings-auth=1", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  if (await onboarding.isVisible().catch(() => false)) {
-    await onboarding.getByRole("button", { name: "Close" }).click();
-    await expect(onboarding).toHaveCount(0);
-  }
   const runtimeStorageKey = await page.evaluate(
     (key) => sessionStorage.getItem(key),
     observedAuthStorageKey,
@@ -188,9 +184,20 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   ).not.toBeNull();
   expect([...mockedBackendOrigins]).toEqual([`https://${storageMatch![1]}.supabase.co`]);
 
-  await page.evaluate(() => {
-    window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab: "general" } }));
-  });
+  // Hydration completes before the mocked auth session necessarily propagates
+  // through every consumer. Wait for the signed-in shell to mount, then allow
+  // its asynchronous onboarding lookup to settle before exercising the same
+  // mobile navigation path a user takes.
+  const signedInControls = page.locator('button[aria-label="Start temporary chat"]');
+  await expect(signedInControls.first()).toBeAttached();
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole("button", { name: "Close" }).click();
+    await expect(onboarding).toHaveCount(0);
+  }
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.locator(".kova-settings-dialog")).toBeVisible();
   const sectionPicker = page.getByRole("combobox", { name: "Settings section" });
   await expect(sectionPicker).toBeVisible();
   await sectionPicker.click();
