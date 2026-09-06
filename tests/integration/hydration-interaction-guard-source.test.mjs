@@ -185,6 +185,9 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
 
   const uiQuality = specsByPath.get("tests/e2e/ui-quality.spec.ts");
   assert.match(uiQuality, /await page\.route\("\*\*\/api\/chat"/);
-  assert.match(uiQuality, /await page\.getByRole\("button", \{ name: "Send" \}\)\.click\(\)/);
+  assert.match(
+    uiQuality,
+    /await page\.getByRole\("button", \{ name: "Send message" \}\)\.click\(\)/,
+  );
   assert.doesNotMatch(uiQuality, /await page\.goBack\(\)/);
 });
