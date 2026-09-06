@@ -850,6 +850,19 @@ BEGIN
     RETURN jsonb_build_object('deleted', false);
   END IF;
 
+  -- The Project-deletion migration fences normal workspace writes while it
+  -- drains stale file operations. Mark this transaction before explicitly
+  -- deleting chunks so that fence can distinguish this exact service-role,
+  -- attempt-bound FK cleanup from a client mutation.
+  PERFORM pg_catalog.set_config(
+    'app.project_file_stale_cleanup_attempt',
+    p_attempt_id::text,
+    true
+  );
+  DELETE FROM public.project_file_chunks
+  WHERE file_id = target.id
+    AND project_id = target.project_id;
+
   DELETE FROM public.project_files WHERE id = target.id;
   IF target.storage_charged
     AND target.storage_owner_id IS NOT NULL

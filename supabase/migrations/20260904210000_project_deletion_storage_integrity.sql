@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS public.project_deletion_jobs (
     ),
   attempt_id uuid,
   lease_until timestamptz,
+  -- A completed stale-file reconciliation is followed by one full upload lease
+  -- before the Storage sweep. This gives a pre-existing upload request a
+  -- bounded interval to observe its lost lease and remove its temporary
+  -- object before project metadata can be finalized.
+  file_drain_until timestamptz,
   attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
   last_error_code text
     CHECK (
@@ -42,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.project_deletion_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS project_deletion_jobs_retry_idx
-  ON public.project_deletion_jobs(status, lease_until, updated_at)
+  ON public.project_deletion_jobs(status, lease_until, file_drain_until, updated_at)
   WHERE status <> 'completed';
 
 ALTER TABLE public.project_deletion_jobs ENABLE ROW LEVEL SECURITY;
@@ -122,6 +127,47 @@ BEGIN
   IF TG_OP = 'DELETE'
     AND TG_TABLE_NAME = 'project_members'
     AND (to_jsonb(OLD) ->> 'role') IS DISTINCT FROM 'owner'
+  THEN
+    RETURN OLD;
+  END IF;
+
+  -- A stale file finalizer removes RAG chunks before deleting its parent file
+  -- so the normal project-deletion fence cannot mistake that FK cleanup for a
+  -- user mutation. The transaction-local marker is set only inside the
+  -- service-role stale-finalizer function and must match its active attempt.
+  IF TG_OP = 'DELETE'
+    AND TG_TABLE_NAME = 'project_file_chunks'
+    AND coalesce(
+      NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+      current_setting('request.jwt.claim.role', true)
+    ) = 'service_role'
+    AND current_setting('app.project_file_stale_cleanup_attempt', true) IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.project_files AS pf
+      JOIN public.project_deletion_jobs AS j
+        ON j.project_id = pf.project_id
+      WHERE pf.id::text = to_jsonb(OLD) ->> 'file_id'
+        AND pf.project_id::text = to_jsonb(OLD) ->> 'project_id'
+        AND j.status = 'waiting_for_files'
+        AND j.attempt_id IS NULL
+        AND (
+          (
+            pf.status = 'cleanup_failed'
+            AND pf.upload_attempt_id::text = current_setting(
+              'app.project_file_stale_cleanup_attempt',
+              true
+            )
+          )
+          OR (
+            pf.status = 'deleting'
+            AND pf.delete_attempt_id::text = current_setting(
+              'app.project_file_stale_cleanup_attempt',
+              true
+            )
+          )
+        )
+    )
   THEN
     RETURN OLD;
   END IF;
@@ -239,6 +285,85 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  -- Stale cleanup is the only update allowed after the deletion marker. The
+  -- exact row shapes below cover claim, lease renewal, and failed-cleanup
+  -- release; they cannot publish a canonical ready file or change file
+  -- metadata. Direct client writes have no table permission and service-role calls
+  -- still need the durable waiting job plus a matching cleanup attempt.
+  IF TG_OP = 'UPDATE'
+    AND coalesce(
+      NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+      current_setting('request.jwt.claim.role', true)
+    ) = 'service_role'
+    AND EXISTS (
+      SELECT 1
+      FROM public.project_deletion_jobs AS j
+      WHERE j.project_id = NEW.project_id
+        AND j.status = 'waiting_for_files'
+        AND j.attempt_id IS NULL
+    )
+    AND (
+      (
+        OLD.status IN ('pending', 'upload_failed', 'cleanup_failed')
+        AND (OLD.upload_lease_until IS NULL OR OLD.upload_lease_until <= now())
+        AND NEW.status = 'cleanup_failed'
+        AND NEW.upload_attempt_id IS NOT NULL
+        AND NEW.upload_lease_until > now()
+        AND (to_jsonb(NEW) - 'status' - 'upload_attempt_id' - 'upload_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM
+            (to_jsonb(OLD) - 'status' - 'upload_attempt_id' - 'upload_lease_until' - 'updated_at')
+      )
+      OR (
+        OLD.status = 'cleanup_failed'
+        AND OLD.upload_attempt_id IS NOT NULL
+        AND NEW.status = 'cleanup_failed'
+        AND NEW.upload_attempt_id = OLD.upload_attempt_id
+        AND NEW.upload_lease_until > now()
+        AND (to_jsonb(NEW) - 'upload_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM (to_jsonb(OLD) - 'upload_lease_until' - 'updated_at')
+      )
+      OR (
+        OLD.status = 'cleanup_failed'
+        AND OLD.upload_attempt_id IS NOT NULL
+        AND NEW.status = 'cleanup_failed'
+        AND NEW.upload_attempt_id = OLD.upload_attempt_id
+        AND NEW.upload_lease_until IS NULL
+        AND (to_jsonb(NEW) - 'upload_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM (to_jsonb(OLD) - 'upload_lease_until' - 'updated_at')
+      )
+      OR (
+        OLD.status = 'deleting'
+        AND (OLD.delete_lease_until IS NULL OR OLD.delete_lease_until <= now())
+        AND NEW.status = 'deleting'
+        AND NEW.delete_attempt_id IS NOT NULL
+        AND NEW.delete_lease_until > now()
+        AND (to_jsonb(NEW) - 'delete_attempt_id' - 'delete_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM
+            (to_jsonb(OLD) - 'delete_attempt_id' - 'delete_lease_until' - 'updated_at')
+      )
+      OR (
+        OLD.status = 'deleting'
+        AND OLD.delete_attempt_id IS NOT NULL
+        AND NEW.status = 'deleting'
+        AND NEW.delete_attempt_id = OLD.delete_attempt_id
+        AND NEW.delete_lease_until > now()
+        AND (to_jsonb(NEW) - 'delete_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM (to_jsonb(OLD) - 'delete_lease_until' - 'updated_at')
+      )
+      OR (
+        OLD.status = 'deleting'
+        AND OLD.delete_attempt_id IS NOT NULL
+        AND NEW.status = 'deleting'
+        AND NEW.delete_attempt_id = OLD.delete_attempt_id
+        AND NEW.delete_lease_until IS NULL
+        AND (to_jsonb(NEW) - 'delete_lease_until' - 'updated_at')
+          IS NOT DISTINCT FROM (to_jsonb(OLD) - 'delete_lease_until' - 'updated_at')
+      )
+    )
+  THEN
+    RETURN NEW;
+  END IF;
+
   SELECT p.deletion_requested_at
   INTO deletion_requested
   FROM public.projects AS p
@@ -276,7 +401,7 @@ AS $$
 DECLARE
   project_owner uuid;
   job public.project_deletion_jobs;
-  active_file_operations bigint;
+  unsettled_file_operations bigint;
 BEGIN
   IF p_user_id IS NULL OR p_project_id IS NULL OR p_attempt_id IS NULL THEN
     RAISE EXCEPTION
@@ -341,26 +466,21 @@ BEGIN
     );
   END IF;
 
+  -- A lease expiry permits *reconciliation*, not Storage-first deletion. The
+  -- originating request can still be finishing an upload, so every transient
+  -- row blocks the Project deletion until stale rows have been cleaned.
   SELECT count(*)
-  INTO active_file_operations
+  INTO unsettled_file_operations
   FROM public.project_files AS pf
   WHERE pf.project_id = p_project_id
-    AND (
-      (
-        pf.status IN ('pending', 'upload_failed', 'cleanup_failed')
-        AND pf.upload_lease_until > now()
-      )
-      OR (
-        pf.status = 'deleting'
-        AND pf.delete_lease_until > now()
-      )
-    );
+    AND pf.status IN ('pending', 'upload_failed', 'cleanup_failed', 'deleting');
 
-  IF active_file_operations > 0 THEN
+  IF unsettled_file_operations > 0 THEN
     UPDATE public.project_deletion_jobs
     SET status = 'waiting_for_files',
         attempt_id = NULL,
         lease_until = NULL,
+        file_drain_until = NULL,
         last_error_code = 'project_file_operations_settling',
         updated_at = now()
     WHERE project_id = p_project_id;
@@ -372,10 +492,42 @@ BEGIN
     );
   END IF;
 
+  -- Once stale rows are reconciled, wait out one full upload lease before the
+  -- final prefix sweep. A stale uploader that returns during this interval
+  -- fails its state transition and removes its own temporary object; the
+  -- coordinator then makes the Storage-first sweep against a quiet prefix.
+  IF job.status = 'waiting_for_files' THEN
+    IF job.file_drain_until IS NULL THEN
+      UPDATE public.project_deletion_jobs
+      SET file_drain_until = now() + interval '2 minutes',
+          last_error_code = 'project_file_operations_settling',
+          updated_at = now()
+      WHERE project_id = p_project_id;
+
+      RETURN jsonb_build_object(
+        'state', 'waiting_for_files',
+        'projectId', p_project_id,
+        'retryAfter', 60
+      );
+    END IF;
+
+    IF job.file_drain_until > now() THEN
+      RETURN jsonb_build_object(
+        'state', 'waiting_for_files',
+        'projectId', p_project_id,
+        'retryAfter', least(
+          60,
+          greatest(1, ceil(extract(epoch FROM (job.file_drain_until - now())))::integer)
+        )
+      );
+    END IF;
+  END IF;
+
   UPDATE public.project_deletion_jobs
   SET status = 'deleting_storage',
       attempt_id = p_attempt_id,
       lease_until = now() + interval '2 minutes',
+      file_drain_until = NULL,
       attempt_count = attempt_count + 1,
       started_at = coalesce(started_at, now()),
       last_error_code = NULL,
@@ -557,20 +709,16 @@ BEGIN
       USING ERRCODE = '55000', MESSAGE = 'project_deletion_lease_lost';
   END IF;
 
+  IF job.file_drain_until IS NOT NULL AND job.file_drain_until > now() THEN
+    RAISE EXCEPTION
+      USING ERRCODE = '55000', MESSAGE = 'project_file_operations_settling';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.project_files AS pf
     WHERE pf.project_id = p_project_id
-      AND (
-        (
-        pf.status IN ('pending', 'upload_failed', 'cleanup_failed')
-        AND pf.upload_lease_until > now()
-      )
-      OR (
-        pf.status = 'deleting'
-        AND pf.delete_lease_until > now()
-      )
-      )
+      AND pf.status IN ('pending', 'upload_failed', 'cleanup_failed', 'deleting')
   ) THEN
     RAISE EXCEPTION
       USING ERRCODE = '55000', MESSAGE = 'project_file_operations_settling';
@@ -620,6 +768,7 @@ BEGIN
   SET status = 'completed',
       attempt_id = NULL,
       lease_until = NULL,
+      file_drain_until = NULL,
       last_error_code = NULL,
       completed_at = now(),
       updated_at = now()

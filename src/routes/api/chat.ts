@@ -678,6 +678,83 @@ export const Route = createFileRoute("/api/chat")({
                 : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
 
+            // A Project that has entered durable deletion is read-only. Check
+            // this before quota reservation or provider work so an open tab
+            // cannot spend generation quota on a response whose Project save
+            // must be rejected by the deletion fence.
+            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+              try {
+                const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
+                const membership = (await preflight.run(
+                  "project_generation_membership",
+                  () =>
+                    admin.rpc("is_project_member", {
+                      _user_id: auth.userId,
+                      _project_id: projectId,
+                    }),
+                  { required: false },
+                )) as { data?: unknown; error?: unknown } | undefined;
+                if (!membership || membership.error) {
+                  return Response.json(
+                    { error: "Project access could not be verified. Try again shortly." },
+                    {
+                      status: 503,
+                      headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                    },
+                  );
+                }
+                if (membership.data === true) {
+                  const projectState = (await preflight.run(
+                    "project_generation_state",
+                    () =>
+                      admin
+                        .from("projects")
+                        .select("id,deletion_requested_at")
+                        .eq("id", projectId)
+                        .maybeSingle(),
+                    { required: false },
+                  )) as { data?: unknown; error?: unknown } | undefined;
+                  const project = projectState?.data as
+                    { id?: unknown; deletion_requested_at?: unknown } | null | undefined;
+                  if (!projectState || projectState.error || project?.id !== projectId) {
+                    return Response.json(
+                      { error: "Project access could not be verified. Try again shortly." },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    );
+                  }
+                  if (project.deletion_requested_at) {
+                    return Response.json(
+                      {
+                        error:
+                          "This Project is being deleted and cannot generate new chat responses.",
+                      },
+                      {
+                        status: 409,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    );
+                  }
+                }
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
+                logSafeFailure("warn", "[chat] project generation gate unavailable", logContext, {
+                  status: 503,
+                  category: "policy",
+                  code: "project_generation_gate_unavailable",
+                });
+                return Response.json(
+                  { error: "Project access could not be verified. Try again shortly." },
+                  {
+                    status: 503,
+                    headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                  },
+                );
+              }
+            }
+
             // Deep Research is a paid, high-cost operation. Authorize it before
             // checking or invoking any AI/search provider so forged clientTool
             // values cannot become a denial-of-wallet path.

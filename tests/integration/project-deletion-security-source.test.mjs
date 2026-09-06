@@ -59,9 +59,11 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
 
   assert.match(
     migration,
-    /pf\.status IN \('pending', 'upload_failed', 'cleanup_failed'\)[\s\S]*pf\.upload_lease_until > now\(\)/,
+    /pf\.status IN \('pending', 'upload_failed', 'cleanup_failed', 'deleting'\)/,
   );
-  assert.match(migration, /pf\.status = 'deleting'[\s\S]*pf\.delete_lease_until > now\(\)/);
+  assert.match(migration, /file_drain_until timestamptz/);
+  assert.match(migration, /file_drain_until = now\(\) \+ interval '2 minutes'/);
+  assert.match(migration, /job\.file_drain_until > now\(\)/);
   assert.match(
     migration,
     /CREATE TRIGGER project_files_deletion_fence[\s\S]*BEFORE INSERT OR UPDATE ON public\.project_files/,
@@ -75,6 +77,9 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
     migration,
     /OLD\.uploaded_by IS NOT NULL[\s\S]*NEW\.uploaded_by IS NULL[\s\S]*to_jsonb\(NEW\) - 'uploaded_by' - 'updated_at'/,
   );
+  assert.match(migration, /request\.jwt\.claims/);
+  assert.match(migration, /app\.project_file_stale_cleanup_attempt/);
+  assert.match(migration, /NEW\.status = 'cleanup_failed'/);
   for (const table of [
     "agent_resource_promotions",
     "agent_resource_relationships",
@@ -116,10 +121,17 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
   }
   assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.abort_project_file_upload/);
 
-  const claim = coordinator.indexOf('"claim_project_deletion"');
-  const purge = coordinator.indexOf("purgeProjectStorageFolder({");
-  const finalize = coordinator.indexOf('"finalize_project_deletion"');
-  assert.ok(claim >= 0 && purge > claim && finalize > purge);
+  const deletionStart = coordinator.indexOf("export async function deleteProjectStorageFirst");
+  const claim = coordinator.indexOf(
+    "claimProjectDeletion(admin, userId, projectId, attemptId)",
+    deletionStart,
+  );
+  const reconcile = coordinator.indexOf("reconcileProjectFileLifecycle", deletionStart);
+  const purge = coordinator.indexOf("purgeProjectStorageFolder({", deletionStart);
+  const finalize = coordinator.indexOf('"finalize_project_deletion"', deletionStart);
+  assert.ok(claim >= 0 && reconcile > claim && purge > reconcile && finalize > purge);
+  assert.match(coordinator, /async function claimProjectDeletion[\s\S]*"claim_project_deletion"/);
+  assert.match(coordinator, /client: admin as unknown as ProjectFileMaintenanceClient/);
   assert.match(coordinator, /assertProjectStoragePath\(projectId, row\.storage_path\)/);
   assert.match(coordinator, /row\.kind === "agent-deliverable"/);
   assert.match(coordinator, /renewed !== true/);
@@ -163,9 +175,21 @@ test("Project and account routes keep incomplete cleanup visible and retryable",
   assert.match(detailRoute, /Retry deletion/);
   assert.match(detailRoute, /aria-busy=\{deletionBusy/);
   assert.match(detailRoute, /<span>\{confirmLabel\}…<\/span>/);
+  assert.match(detailRoute, /Deletion is incomplete\. Try again\.[\s\S]*await refresh\(\)/);
 
   assert.match(projectFilesRoute, /project_deletion_pending/);
   assert.match(projectFilesRoute, /"Retry-After": "5"/);
+});
+
+test("Project-scoped chat generation fails closed once deletion begins", () => {
+  const chatRoute = read("src/routes/api/chat.ts");
+  assert.match(chatRoute, /project_generation_membership/);
+  assert.match(chatRoute, /project_generation_state/);
+  assert.match(chatRoute, /select\("id,deletion_requested_at"\)/);
+  assert.match(chatRoute, /project\.deletion_requested_at/);
+  assert.match(chatRoute, /cannot generate new chat responses/);
+  assert.match(chatRoute, /status: 409/);
+  assert.match(chatRoute, /project_generation_gate_unavailable/);
 });
 
 test("Project queries expose the durable deletion marker", () => {
@@ -181,8 +205,14 @@ test("Project queries expose the durable deletion marker", () => {
 
 test("checked-in database types expose the deletion schema and every file RPC", () => {
   const types = read("src/integrations/supabase/types.ts");
+  const fileMigration = read(
+    "supabase/migrations/20260904200000_project_file_upload_integrity.sql",
+  );
   assert.match(types, /project_deletion_jobs: \{/);
+  assert.match(types, /file_drain_until: string \| null/);
   assert.match(types, /deletion_requested_at: string \| null/);
+  assert.match(fileMigration, /set_config\([\s\S]*app\.project_file_stale_cleanup_attempt/);
+  assert.match(fileMigration, /DELETE FROM public\.project_file_chunks[\s\S]*file_id = target\.id/);
   for (const fn of [
     "abort_project_file_upload",
     "claim_project_deletion",

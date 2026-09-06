@@ -908,6 +908,7 @@ export type Database = {
           attempt_count: number;
           attempt_id: string | null;
           completed_at: string | null;
+          file_drain_until: string | null;
           last_error_code: string | null;
           lease_until: string | null;
           owner_id: string;
@@ -921,6 +922,7 @@ export type Database = {
           attempt_count?: number;
           attempt_id?: string | null;
           completed_at?: string | null;
+          file_drain_until?: string | null;
           last_error_code?: string | null;
           lease_until?: string | null;
           owner_id: string;
@@ -934,6 +936,7 @@ export type Database = {
           attempt_count?: number;
           attempt_id?: string | null;
           completed_at?: string | null;
+          file_drain_until?: string | null;
           last_error_code?: string | null;
           lease_until?: string | null;
           owner_id?: string;

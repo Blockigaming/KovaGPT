@@ -7,6 +7,10 @@ import {
   purgeProjectStorageFolder,
   type ProjectStorageAdapter,
 } from "@/lib/project-deletion-policy.mjs";
+import {
+  reconcileProjectFileLifecycle,
+  type ProjectFileMaintenanceClient,
+} from "@/lib/project-file-maintenance.server";
 
 const METADATA_PAGE_SIZE = 500;
 
@@ -35,6 +39,32 @@ function claimError(error: { code?: string; message?: string } | null): ProjectD
     return new ProjectDeletionError("project_not_found", 404);
   }
   return new ProjectDeletionError("project_deletion_claim_failed");
+}
+
+async function claimProjectDeletion(
+  admin: ProjectDeletionAdmin,
+  userId: string,
+  projectId: string,
+  attemptId: string,
+): Promise<{
+  claim: Record<string, unknown> | null;
+  state: string;
+  canonicalProjectId: string;
+}> {
+  const { data: claimValue, error: claimFailure } = await admin.rpc("claim_project_deletion", {
+    p_attempt_id: attemptId,
+    p_project_id: projectId,
+    p_user_id: userId,
+  });
+  if (claimFailure) throw claimError(claimFailure);
+
+  const claim = record(claimValue);
+  return {
+    claim,
+    state: typeof claim?.state === "string" ? claim.state : "",
+    canonicalProjectId:
+      typeof claim?.projectId === "string" ? claim.projectId : projectId.toLowerCase(),
+  };
 }
 
 async function verifyMetadataPaths(
@@ -109,18 +139,31 @@ export async function deleteProjectStorageFirst({
   userId: string;
   projectId: string;
 }): Promise<DeletionOutcome> {
-  const attemptId = crypto.randomUUID();
-  const { data: claimValue, error: claimFailure } = await admin.rpc("claim_project_deletion", {
-    p_attempt_id: attemptId,
-    p_project_id: projectId,
-    p_user_id: userId,
-  });
-  if (claimFailure) throw claimError(claimFailure);
+  let attemptId = crypto.randomUUID();
+  let deletionClaim = await claimProjectDeletion(admin, userId, projectId, attemptId);
 
-  const claim = record(claimValue);
-  const state = typeof claim?.state === "string" ? claim.state : "";
-  const canonicalProjectId =
-    typeof claim?.projectId === "string" ? claim.projectId : projectId.toLowerCase();
+  if (deletionClaim.state === "waiting_for_files") {
+    const maintenance = await reconcileProjectFileLifecycle({
+      client: admin as unknown as ProjectFileMaintenanceClient,
+      userId,
+      projectId: deletionClaim.canonicalProjectId,
+    });
+    if (!maintenance.complete) {
+      throw new ProjectDeletionError("project_file_operations_settling", 409, 5);
+    }
+
+    // Reclaim only after reconciliation. An active file operation still
+    // returns waiting_for_files; a clean prefix starts the bounded drain.
+    attemptId = crypto.randomUUID();
+    deletionClaim = await claimProjectDeletion(
+      admin,
+      userId,
+      deletionClaim.canonicalProjectId,
+      attemptId,
+    );
+  }
+
+  const { claim, state, canonicalProjectId } = deletionClaim;
 
   if (state === "completed") {
     return { ok: true, alreadyDeleted: true, removedObjects: 0 };
