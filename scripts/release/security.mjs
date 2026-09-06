@@ -161,6 +161,7 @@ function inspectText(path, source, violations, { built = false } = {}) {
   for (const name of [
     "OPENAI_API_KEY",
     "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_IMAGE_API_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "STRIPE_SECRET_KEY",
     "PAYMENTS_LIVE_API_KEY",

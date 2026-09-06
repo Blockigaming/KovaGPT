@@ -41,6 +41,15 @@
     "azureOpenAiResourceGroupName": {
       "value": "REPLACE_WITH_PRODUCTION_AZURE_OPENAI_RESOURCE_GROUP"
     },
+    "azureOpenAiImageAccountName": {
+      "value": "REPLACE_WITH_PRODUCTION_IMAGE_AZURE_OPENAI_ACCOUNT"
+    },
+    "azureOpenAiImageResourceGroupName": {
+      "value": "REPLACE_WITH_PRODUCTION_IMAGE_AZURE_OPENAI_RESOURCE_GROUP"
+    },
+    "azureOpenAiImageApiKeySecretUri": {
+      "value": ""
+    },
     "azureOpenAiChatDeployment": {
       "value": "REPLACE_WITH_PRODUCTION_CHAT_DEPLOYMENT"
     },

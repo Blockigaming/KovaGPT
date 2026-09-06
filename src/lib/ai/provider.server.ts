@@ -302,6 +302,24 @@ export function supportsProviderCapability(capability: ProviderCapability): bool
   return providerCapabilities().includes(capability);
 }
 
+export function providerCapabilityConfigured(capability: ProviderCapability): boolean {
+  try {
+    if (providerTarget().auth === "missing" || !supportsProviderCapability(capability)) {
+      return false;
+    }
+
+    const target = providerTarget(capability);
+    if (target.auth === "missing") return false;
+    if (target.provider === "azure_openai" && capability === "image_generation") {
+      return Boolean(env("AZURE_OPENAI_DEPLOYMENT_IMAGE"));
+    }
+    return true;
+  } catch {
+    // Invalid primary or capability-specific endpoints fail closed.
+    return false;
+  }
+}
+
 export function providerUnavailableEnvelope(
   capability?: ProviderCapability,
 ): ProviderErrorEnvelope | null {
@@ -315,24 +333,13 @@ export function providerUnavailableEnvelope(
       status: 501,
     };
   }
-  if (capability === "image_generation") {
-    try {
-      if (providerTarget(capability).auth === "missing") {
-        return {
-          error: "KovaGPT is temporarily unavailable. Please try again later.",
-          code: "provider_unavailable",
-          retryable: false,
-          status: 503,
-        };
-      }
-    } catch {
-      return {
-        error: "KovaGPT is temporarily unavailable. Please try again later.",
-        code: "provider_unavailable",
-        retryable: false,
-        status: 503,
-      };
-    }
+  if (capability === "image_generation" && !providerCapabilityConfigured(capability)) {
+    return {
+      error: "KovaGPT is temporarily unavailable. Please try again later.",
+      code: "provider_unavailable",
+      retryable: false,
+      status: 503,
+    };
   }
   return null;
 }
@@ -352,6 +359,11 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
     },
     { status: missing.status, headers: NO_STORE_HEADERS },
   );
+}
+
+export function providerUnavailableResponse(capability: ProviderCapability): Response | null {
+  const unavailable = providerUnavailableEnvelope(capability);
+  return unavailable ? providerErrorResponse(new AiProviderError(unavailable)) : null;
 }
 
 async function providerHeaders(
