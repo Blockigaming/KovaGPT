@@ -42,7 +42,7 @@ export const listMyLibrary = createServerFn({ method: "GET" })
       console.error("[listMyLibrary]", error.message);
       throw new Error("Library could not be loaded. Check your connection and try again.");
     }
-    return (data ?? []) as LibraryItem[];
+    return (data ?? []) as unknown as LibraryItem[];
   });
 
 const SaveSchema = z.object({
