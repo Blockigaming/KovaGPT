@@ -252,6 +252,14 @@ export function ChatInput({
       toast.error(blockedAttachmentMessage);
       return;
     }
+    if (selectedToolRef.current === "deep_research" && attachments.length > 0) {
+      const message = "Deep Research doesn't support attachments yet";
+      setUploadAnnouncement(message);
+      toast.error(message, {
+        description: "Remove the attached files or choose another tool before sending.",
+      });
+      return;
+    }
     submittingRef.current = true;
     setUploadAnnouncement("Message submitted");
     onSubmit(selectedToolRef.current);

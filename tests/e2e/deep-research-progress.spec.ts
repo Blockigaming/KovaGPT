@@ -171,3 +171,119 @@ test("Deep Research renders its completed lifecycle and partial-source warning",
     expect.objectContaining({ clientTool: "deep_research", mode: "thinking" }),
   );
 });
+
+test("Deep Research blocks attachments before creating a progress message", async ({
+  page,
+}, testInfo) => {
+  test.skip(!projects.has(testInfo.project.name));
+  await mockPlusUser(page);
+  let chatRequests = 0;
+  await page.route("**/api/chat", async (route) => {
+    chatRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Unexpected request"}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false))
+    await onboarding.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Deep research" }).click();
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
+    name: "sources.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("source,status\nexample,ready"),
+  });
+  await page.keyboard.press("Escape");
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Research these sources");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  await expect(page.getByText("Deep Research doesn't support attachments yet")).toBeVisible();
+  await expect(page.getByText("sources.csv", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Deep Research progress" })).toHaveCount(0);
+  expect(chatRequests).toBe(0);
+});
+
+test("interrupted progress-only research exposes a working retry", async ({ page }, testInfo) => {
+  test.skip(!projects.has(testInfo.project.name));
+  await mockPlusUser(page);
+  await page.addInitScript(
+    ({ userId }) => {
+      const principal = `user:${encodeURIComponent(userId)}`;
+      const conversationId = "interrupted-research";
+      localStorage.setItem(
+        `nova-gpt-conversations-v3:${principal}`,
+        JSON.stringify([
+          {
+            id: conversationId,
+            title: "Interrupted research",
+            mode: "thinking",
+            createdAt: 1,
+            updatedAt: 2,
+            messages: [
+              { id: "prompt", role: "user", content: "Research resilient systems" },
+              {
+                id: "progress",
+                role: "assistant",
+                content: "",
+                researchProgress: {
+                  stage: "searching",
+                  label: "Searching sources",
+                  status: "running",
+                  progress: 0.4,
+                },
+                activities: [{ tool: "search_web", label: "Searching the web", status: "running" }],
+              },
+            ],
+          },
+        ]),
+      );
+      localStorage.setItem(`nova-gpt-pending-active:v2:${principal}`, conversationId);
+    },
+    { userId: user.id },
+  );
+
+  let requestBody: Record<string, unknown> | undefined;
+  await page.route("**/api/chat", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body:
+        event({
+          kind: "research_progress",
+          stage: "complete",
+          label: "Research complete",
+          status: "complete",
+          progress: 1,
+        }) +
+        event({ content: "Recovered research result." }) +
+        "data: [DONE]\n\n",
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false))
+    await onboarding.getByRole("button", { name: "Close" }).click();
+
+  const progress = page.getByRole("region", { name: "Deep Research progress" });
+  await expect(progress).toContainText("Research interrupted");
+  await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry Deep Research" })).toBeVisible();
+  await page.getByRole("button", { name: "Retry Deep Research" }).click();
+  await expect(page.getByText("Recovered research result.")).toBeVisible();
+  expect(requestBody).toEqual(
+    expect.objectContaining({ clientTool: "deep_research", mode: "thinking" }),
+  );
+});

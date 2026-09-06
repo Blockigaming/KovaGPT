@@ -58,6 +58,8 @@ const ShareChatDialog = lazy(() =>
 const ChatWorkspaceDialog = lazy(() =>
   import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
 );
+const COMPLETE = "complete" as const;
+const RESEARCH_CANCELED = "canceled" as const;
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import {
@@ -970,8 +972,6 @@ function KovaGPT() {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
-      if (retryTool === "deep_research" && atts.length)
-        return void toast.error("Deep Research doesn't support attachments");
       const requestGeneration = storageGenerationRef.current;
       const requestPrincipal = storagePrincipal;
       const isCurrentRequest = () =>
@@ -1227,7 +1227,7 @@ function KovaGPT() {
                   tool: String(delta.tool ?? ""),
                   label: String(delta.label),
                   status:
-                    delta.status === "failed" || delta.status === "canceled"
+                    delta.status === "failed" || delta.status === RESEARCH_CANCELED
                       ? delta.status
                       : delta.status === "running" || delta.status === "pending"
                         ? ("running" as const)
@@ -1305,7 +1305,7 @@ function KovaGPT() {
                       messages: conversation.messages.filter(
                         (message) =>
                           message.id !== assistantMsg.id ||
-                          message.researchProgress?.status === "canceled",
+                          message.researchProgress?.status === RESEARCH_CANCELED,
                       ),
                     }
                   : conversation,
@@ -1472,21 +1472,19 @@ function KovaGPT() {
           ...conversation,
           messages: conversation.messages.map((message) =>
             message.researchProgress &&
-            message.researchProgress.status !== "complete" &&
-            message.researchProgress.status !== "failed" &&
-            message.researchProgress.status !== "canceled"
+            ![COMPLETE, "failed", RESEARCH_CANCELED].includes(message.researchProgress.status)
               ? {
                   ...message,
+                  activities: message.activities?.map((activity) =>
+                    activity.status === "running"
+                      ? { ...activity, status: RESEARCH_CANCELED }
+                      : activity,
+                  ),
                   researchProgress: {
                     ...message.researchProgress,
                     label: "Research canceled",
-                    status: "canceled",
+                    status: RESEARCH_CANCELED,
                   },
-                  activities: message.activities?.map((activity) =>
-                    activity.status === "running"
-                      ? { ...activity, status: "canceled" as const }
-                      : activity,
-                  ),
                 }
               : message,
           ),
@@ -1994,7 +1992,7 @@ function KovaGPT() {
                                       kind: "image" as const,
                                       dataUrl: attachment.dataUrl,
                                       name: "Attached image",
-                                      status: "complete" as const,
+                                      status: COMPLETE,
                                     }
                                   : attachment.kind === "text_file"
                                     ? {
@@ -2004,7 +2002,7 @@ function KovaGPT() {
                                         size: attachment.size ?? undefined,
                                         fileType: attachment.fileType,
                                         textContent: attachment.content,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       }
                                     : {
                                         kind: "library_file" as const,
@@ -2014,7 +2012,7 @@ function KovaGPT() {
                                         libraryItemId: attachment.libraryItemId,
                                         fileType: attachment.fileType,
                                         sourceProject: attachment.sourceProject,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       },
                               ),
                             );
@@ -2046,7 +2044,7 @@ function KovaGPT() {
                                       kind: "image" as const,
                                       dataUrl: attachment.dataUrl,
                                       name: "Attached image",
-                                      status: "complete" as const,
+                                      status: COMPLETE,
                                     }
                                   : attachment.kind === "text_file"
                                     ? {
@@ -2056,7 +2054,7 @@ function KovaGPT() {
                                         size: attachment.size ?? undefined,
                                         fileType: attachment.fileType,
                                         textContent: attachment.content,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       }
                                     : {
                                         kind: "library_file" as const,
@@ -2066,7 +2064,7 @@ function KovaGPT() {
                                         libraryItemId: attachment.libraryItemId,
                                         fileType: attachment.fileType,
                                         sourceProject: attachment.sourceProject,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       },
                               ),
                               m.researchProgress ? "deep_research" : null,

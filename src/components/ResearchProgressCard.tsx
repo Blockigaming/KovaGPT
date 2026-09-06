@@ -67,6 +67,17 @@ export function ResearchProgressCard({
               style={{ width: `${percent}%` }}
             />
           </div>
+          {progress.status !== "complete" && onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Retry Deep Research"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Retry research
+            </button>
+          )}
         </div>
       </div>
       {Array.isArray(progress.warnings) &&
@@ -85,16 +96,6 @@ export function ResearchProgressCard({
             <span>{warning}</span>
           </div>
         ))}
-      {(progress.status === "failed" || progress.status === "canceled") && onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          aria-label="Retry Deep Research"
-        >
-          <RefreshCw className="h-3.5 w-3.5" /> Retry
-        </button>
-      )}
     </section>
   );
 }

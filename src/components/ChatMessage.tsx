@@ -502,7 +502,10 @@ function ChatMessageInner({
           >
             {message.researchProgress && (
               <Suspense fallback={null}>
-                <ResearchProgressCard progress={message.researchProgress} onRetry={onRetry} />
+                <ResearchProgressCard
+                  progress={message.researchProgress}
+                  onRetry={onRetry}
+                />
               </Suspense>
             )}
             {message.activities && message.activities.length > 0 && (

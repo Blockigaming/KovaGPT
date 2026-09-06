@@ -61,14 +61,7 @@ test("chat UI consumes and renders Deep Research lifecycle events", () => {
   assert.match(progressCard, /role="progressbar"/);
   assert.match(message, /streaming && !message\.content && !message\.researchProgress/);
   assert.match(client, /activity\.status === "running"/);
-  assert.match(route, /message\.researchProgress\?\.status === "canceled"/);
-  assert.match(route, /activity\.status === "running"[\s\S]*status: "canceled" as const/);
-  assert.match(route, /retryTool === "deep_research" && atts\.length/);
-  assert.match(
-    message,
-    /ResearchProgressCard progress={message\.researchProgress} onRetry={onRetry}/,
-  );
-  assert.match(progressCard, /aria-label="Retry Deep Research"/);
+  assert.match(route, /message\.researchProgress\?\.status === RESEARCH_CANCELED/);
   assert.match(store, /Research interrupted/);
   assert.match(store, /Array\.isArray\(candidate\.warnings\)/);
   assert.match(store, /researchProgress\?: ResearchProgress/);
@@ -79,7 +72,7 @@ test("deep research closes comparison and preserves failure activity states", ()
   const route = read("src/routes/index.tsx");
   const message = read("src/components/ChatMessage.tsx");
   assert.match(research, /"compare_sources", "Source comparison complete", "complete"/);
-  assert.match(route, /delta\.status === "failed" \|\| delta\.status === "canceled"/);
+  assert.match(route, /delta\.status === "failed" \|\| delta\.status === RESEARCH_CANCELED/);
   assert.match(message, /activity\.status === "failed"/);
   assert.match(message, /activity\.status === "canceled"/);
   assert.match(research, /if \(workflowComplete\) throw error/);
@@ -174,4 +167,24 @@ test("deep research selection and retry mode are race-safe", () => {
   assert.match(composer, /onSubmit\(selectedToolRef\.current\)/);
   assert.match(composer, /selectedToolRef\.current = next/);
   assert.match(route, /m\.researchProgress \? "deep_research" : null/);
+});
+
+test("deep research rejects attachments before starting and at the API boundary", () => {
+  const composer = read("src/components/ChatInput.tsx");
+  const chat = read("src/routes/api/chat.ts");
+  assert.match(composer, /selectedToolRef\.current === "deep_research" && attachments\.length > 0/);
+  assert.match(composer, /Deep Research doesn't support attachments yet/);
+  assert.match(chat, /clientTool === "deep_research" && hasAttachments/);
+  assert.match(chat, /category: "invalid_request"/);
+  assert.match(chat, /retryable: false/);
+});
+
+test("canceled and interrupted progress-only research remains actionable", () => {
+  const route = read("src/routes/index.tsx");
+  const message = read("src/components/ChatMessage.tsx");
+  const progressCard = read("src/components/ResearchProgressCard.tsx");
+  assert.match(route, /activity\.status === "running"[\s\S]{0,100}status: RESEARCH_CANCELED/);
+  assert.match(message, /onRetry=\{onRetry\}/);
+  assert.match(progressCard, /aria-label="Retry Deep Research"/);
+  assert.match(progressCard, /progress\.status !== "complete" && onRetry/);
 });
