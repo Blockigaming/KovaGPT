@@ -23,12 +23,13 @@ jobs:
   source-evidence:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
-      - name: Checkout exact candidate head
+      - name: Checkout candidate with repository ancestry
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Archive tracked source and record provenance
@@ -39,12 +40,19 @@ jobs:
           set -euo pipefail
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          mkdir -p "$RUNNER_TEMP/candidate-source-evidence"
-          git archive --format=tar --prefix=candidate/ "$SOURCE_SHA" | gzip -n > "$RUNNER_TEMP/candidate-source-evidence/candidate-source.tar.gz"
-          printf '%s\n' "$SOURCE_SHA" > "$RUNNER_TEMP/candidate-source-evidence/commit.txt"
-          git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/candidate-source-evidence/tree.txt"
-          cd "$RUNNER_TEMP/candidate-source-evidence"
-          sha256sum candidate-source.tar.gz > SHA256SUMS
+          evidence="$RUNNER_TEMP/candidate-source-evidence"
+          mkdir -p "$evidence"
+          git archive --format=tar --prefix=candidate/ "$SOURCE_SHA" | gzip -n > "$evidence/candidate-source.tar.gz"
+          printf '%s\n' "$SOURCE_SHA" > "$evidence/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree.txt"
+          # A bundle contains only repository objects and refs, not checkout
+          # configuration, credentials, environment, or runner files.
+          git update-ref refs/heads/evidence-candidate "$SOURCE_SHA"
+          git bundle create "$evidence/candidate.bundle" --all
+          git bundle verify "$evidence/candidate.bundle"
+          git for-each-ref --format='%(objectname) %(refname)' > "$evidence/refs.txt"
+          cd "$evidence"
+          sha256sum candidate-source.tar.gz candidate.bundle > SHA256SUMS
 
       - name: Upload exact-head source evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -52,53 +60,4 @@ jobs:
           name: candidate-source-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/candidate-source-evidence/
           if-no-files-found: error
-          retention-days: 1
-
-      - name: Set up validation Node
-        if: github.event_name == 'push'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Prepare pinned offline validation dependencies
-        if: github.event_name == 'push'
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/candidate-validation/browsers
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm ci --ignore-scripts --no-audit --no-fund
-          npx --no-install playwright install --only-shell chromium
-          mkdir -p "$RUNNER_TEMP/candidate-validation/bin" "$RUNNER_TEMP/candidate-validation-export"
-          cp "$(command -v node)" "$RUNNER_TEMP/candidate-validation/bin/node"
-          node --version > "$RUNNER_TEMP/candidate-validation/node-version.txt"
-          sha256sum package-lock.json > "$RUNNER_TEMP/candidate-validation/package-lock.sha256"
-          tar -cf - node_modules -C "$RUNNER_TEMP" candidate-validation | gzip -1 > "$RUNNER_TEMP/candidate-validation-export/validation-tooling.tar.gz"
-          cd "$RUNNER_TEMP/candidate-validation-export"
-          sha256sum validation-tooling.tar.gz > SHA256SUMS
-          split -b 350M validation-tooling.tar.gz validation-tooling.part-
-          test "$(find . -name 'validation-tooling.part-*' | wc -l)" -eq 2
-          sha256sum validation-tooling.part-* >> SHA256SUMS
-
-      - name: Upload pinned validation tooling first part
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: candidate-validation-a-${{ github.sha }}
-          path: |
-            ${{ runner.temp }}/candidate-validation-export/validation-tooling.part-aa
-            ${{ runner.temp }}/candidate-validation-export/SHA256SUMS
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 1
-
-      - name: Upload pinned validation tooling second part
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: candidate-validation-b-${{ github.sha }}
-          path: ${{ runner.temp }}/candidate-validation-export/validation-tooling.part-ab
-          if-no-files-found: error
-          compression-level: 0
           retention-days: 1
