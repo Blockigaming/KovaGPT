@@ -27,7 +27,26 @@ jobs:
           python3 - <<'PY'
           import base64, hashlib, json, os, pathlib, urllib.request
           out = pathlib.Path(os.environ['RECOVERY_DIR'])
-          shas = ['328650e7d9f98096080dbfaadb2e948d3a14e7de', '008a029967f3cd8bee1627073d26d29c53d4b64d', '0005f289b455ca4d059864ac1625d0f3d53c8d53']
+          shas = [
+              '328650e7d9f98096080dbfaadb2e948d3a14e7de',
+              '008a029967f3cd8bee1627073d26d29c53d4b64d',
+              '0005f289b455ca4d059864ac1625d0f3d53c8d53',
+              'a890ab113ae9199c23afc769879ce0499f5fddea',
+              '7b11a9ffdd6d3fd892f42d61c6b9263253fd9002',
+              'cd99b3b639e041705ffe7494c77be5ac5395230e',
+              '511bb6e4924845a5034d1ae0a8f27d2762c4ffda',
+              'efff68a0028d8c6be52f6bb741f8e6800f9c0a18',
+              'a8607361627146858e1156c21c5461aec27e3ea2',
+              '0cdb3e6a93c1a2ea68c325115aed4d045053eb98',
+              '57f495011b8c277a9a2a5ad9c606154723ef417b',
+              'e4adc81672251d42aee6e1f8392858d0fce578f0',
+              '4502b744786a1c9784a054a2980e28fa9c3caa75',
+              '38e11728415fbf1eb058e4b61db7c509062ec5f5',
+              '2b98c27d37b1df4a6b7329e4def765220835c7c9',
+              'ac5a81f22485139da110012121b7dca9b9b50940',
+              '717fc3c1510cf3a5cb778cb523499364e98e319e',
+          ]
+          manifest = []
           for i, sha in enumerate(shas):
               req = urllib.request.Request('https://api.github.com/repos/Blockigaming/KovaGPT/git/blobs/' + sha, headers={'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + os.environ['GH_TOKEN']})
               with urllib.request.urlopen(req, timeout=30) as response:
@@ -36,13 +55,15 @@ jobs:
               actual = hashlib.sha1(('blob ' + str(len(data)) + '\0').encode() + data).hexdigest()
               if actual != sha:
                   raise ValueError('Repository object hash mismatch')
-              (out / ('part-' + str(i))).write_bytes(data)
-          (out / 'unpublished.pack').write_bytes(b''.join((out / ('part-' + str(i))).read_bytes() for i in range(len(shas))))
+              name = 'binary-' + str(i) if i < 8 else 'text-' + str(i - 4) + '.txt'
+              (out / name).write_bytes(data)
+              manifest.append({'path': name, 'blob': sha, 'length': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+          (out / 'objects.json').write_text(json.dumps(manifest, indent=2))
           PY
           git bundle create "$RECOVERY_DIR/current-ancestry.bundle" --all
           git for-each-ref --format='%(objectname) %(refname)' > "$RECOVERY_DIR/refs.txt"
           cd "$RECOVERY_DIR"
-          sha256sum part-* unpublished.pack current-ancestry.bundle > SHA256SUMS
+          sha256sum binary-* text-* objects.json current-ancestry.bundle > SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: recovered-source-${{ github.sha }}
