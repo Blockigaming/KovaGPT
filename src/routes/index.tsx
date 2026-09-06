@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
+import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -1172,111 +1173,75 @@ function KovaGPT() {
         }
 
         if (!resp.ok || !resp.body) {
-          const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
-          const errMsg = errJson.error || `HTTP ${resp.status}`;
-          const requestId = errJson.requestId || resp.headers.get("x-request-id") || undefined;
-          const category = errJson.category || undefined;
-          if (resp.status === 429 && /limit/i.test(errMsg)) {
-            const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
-            setLimitDialog({ open: true, kind, message: errMsg });
-          }
-          const err = new Error(errMsg) as Error & {
-            requestId?: string;
-            category?: string;
-            retryable?: boolean;
-          };
-          err.requestId = requestId;
-          err.category = category;
-          err.retryable = Boolean(errJson.retryable);
-          throw err;
+          throw await chatResponseError(resp, "Request failed");
         }
 
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let done = false;
-        while (!done) {
-          const { done: d, value } = await reader.read();
-          if (!isCurrentRequest()) {
-            void reader.cancel().catch(() => undefined);
-            return;
-          }
-          if (d) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx: number;
-          while ((idx = buffer.indexOf("\n")) !== -1) {
-            let line = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line || line.startsWith(":")) continue;
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") {
-              done = true;
-              break;
+        await consumeChatSse(resp.body, {
+          signal: controller.signal,
+          onEvent: (parsed) => {
+            if (!isCurrentRequest()) {
+              throw new DOMException("A newer chat request replaced this one.", "AbortError");
             }
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta;
-              if (delta?.kind === "image_pending") {
-                markPendingImage();
+            const delta = (
+              parsed as {
+                choices?: Array<{ delta?: Record<string, unknown> }>;
               }
-              if (delta?.kind === "activity" && delta?.label) {
-                setConversations((prev) =>
-                  prev.map((c) => {
-                    if (c.id !== nextConvId) return c;
-                    const msgs = c.messages.map((m) => {
-                      if (m.id !== assistantMsg.id) return m;
-                      const activity = {
-                        tool: String(delta.tool ?? ""),
-                        label: String(delta.label),
-                        status: "done" as const,
-                      };
-                      const activities = (m.activities ?? []).some(
-                        (item) => item.tool === activity.tool && item.label === activity.label,
-                      )
-                        ? m.activities
-                        : [...(m.activities ?? []), activity];
-                      return { ...m, activities };
-                    });
-                    return { ...c, messages: msgs };
-                  }),
-                );
-              }
-              if (delta?.kind === "tool_confirm" && delta?.action_id) {
-                setConversations((prev) =>
-                  prev.map((c) => {
-                    if (c.id !== nextConvId) return c;
-                    const msgs = c.messages.map((m) => {
-                      if (m.id !== assistantMsg.id) return m;
-                      const confirmation = {
-                        actionId: String(delta.action_id),
-                        tool: String(delta.tool ?? ""),
-                        summary: String(delta.summary ?? "Confirm action"),
-                        argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
-                        status: "pending" as const,
-                      };
-                      const pendingConfirms = (m.pendingConfirms ?? []).some(
-                        (item) => item.actionId === confirmation.actionId,
-                      )
-                        ? m.pendingConfirms
-                        : [...(m.pendingConfirms ?? []), confirmation];
-                      return { ...m, pendingConfirms };
-                    });
-                    return { ...c, messages: msgs };
-                  }),
-                );
-              }
-              if (delta?.content) {
-                assembledReply += delta.content;
-                updateAssistant(delta.content);
-              }
-            } catch {
-              buffer = line + "\n" + buffer;
-              break;
+            ).choices?.[0]?.delta;
+            if (delta?.kind === "image_pending") {
+              markPendingImage();
             }
-          }
-        }
+            if (delta?.kind === "activity" && delta?.label) {
+              setConversations((prev) =>
+                prev.map((c) => {
+                  if (c.id !== nextConvId) return c;
+                  const msgs = c.messages.map((m) => {
+                    if (m.id !== assistantMsg.id) return m;
+                    const activity = {
+                      tool: String(delta.tool ?? ""),
+                      label: String(delta.label),
+                      status: "done" as const,
+                    };
+                    const activities = (m.activities ?? []).some(
+                      (item) => item.tool === activity.tool && item.label === activity.label,
+                    )
+                      ? m.activities
+                      : [...(m.activities ?? []), activity];
+                    return { ...m, activities };
+                  });
+                  return { ...c, messages: msgs };
+                }),
+              );
+            }
+            if (delta?.kind === "tool_confirm" && delta?.action_id) {
+              setConversations((prev) =>
+                prev.map((c) => {
+                  if (c.id !== nextConvId) return c;
+                  const msgs = c.messages.map((m) => {
+                    if (m.id !== assistantMsg.id) return m;
+                    const confirmation = {
+                      actionId: String(delta.action_id),
+                      tool: String(delta.tool ?? ""),
+                      summary: String(delta.summary ?? "Confirm action"),
+                      argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
+                      status: "pending" as const,
+                    };
+                    const pendingConfirms = (m.pendingConfirms ?? []).some(
+                      (item) => item.actionId === confirmation.actionId,
+                    )
+                      ? m.pendingConfirms
+                      : [...(m.pendingConfirms ?? []), confirmation];
+                    return { ...m, pendingConfirms };
+                  });
+                  return { ...c, messages: msgs };
+                }),
+              );
+            }
+            if (typeof delta?.content === "string" && delta.content) {
+              assembledReply += delta.content;
+              updateAssistant(delta.content);
+            }
+          },
+        });
         if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
         flushAssistant();
         if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
@@ -1308,8 +1273,21 @@ function KovaGPT() {
             );
           }
         } else {
-          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const err = e as Error & {
+            requestId?: string;
+            category?: string;
+            retryable?: boolean;
+            status?: number;
+          };
           const raw = err.message || "Something went wrong";
+          if (err.status === 429 && /limit/i.test(raw)) {
+            const kind: "image" | "chat" | "upload" = /image/i.test(raw)
+              ? "image"
+              : /upload|file/i.test(raw)
+                ? "upload"
+                : "chat";
+            setLimitDialog({ open: true, kind, message: raw });
+          }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;

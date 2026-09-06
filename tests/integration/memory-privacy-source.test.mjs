@@ -73,5 +73,8 @@ test("family-plan entitlement is resolved by the server and picks the highest ac
   assert.match(auth, /resolved = higherTier\(resolved, tierForLookupKey\(row\.price_id\)\)/);
   assert.match(auth, /\.rpc\("family_owner_of"/);
   assert.match(auth, /resolveSubscriptionTier\(caller, ownerId\)/);
-  assert.match(chatApi, /callerTier = isOwner \? "pro" : await getCallerTier\(auth\)/);
+  assert.match(
+    chatApi,
+    /callerTier = isOwner[\s\S]{0,80}\? "pro"[\s\S]{0,160}preflight\.run\("plan_entitlement"[\s\S]{0,100}getCallerTier\(auth\)/,
+  );
 });

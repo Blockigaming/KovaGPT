@@ -10,10 +10,10 @@ test("chat uses the shared streamed byte-bounded JSON reader before provider rou
 
   assert.match(ingress, /mediaType !== "application\/json"/);
   assert.match(ingress, /unsupported_media_type/);
-  assert.match(ingress, /readBoundedJsonObject\(request, maxBytes\)/);
-  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES\)/);
-  assert.match(chat, /error instanceof ChatIngressError/);
-  assert.match(chat, /toChatIngressErrorEnvelope\(error, requestId\)/);
+  assert.match(ingress, /readBoundedJsonObject\(request, maxBytes, signal\)/);
+  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES, signal\)/);
+  assert.match(chat, /ingressError instanceof ChatIngressError/);
+  assert.match(chat, /toChatIngressErrorEnvelope\(ingressError, requestId\)/);
   assert.ok(chat.indexOf("readChatRequest(request") < chat.indexOf("optionalUser(request)"));
   assert.ok(chat.indexOf("readChatRequest(request") < chat.indexOf("missingAiProviderResponse()"));
   assert.doesNotMatch(chat, /request\.text\(\)|request\.json\(\)/);

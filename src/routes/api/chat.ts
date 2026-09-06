@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
+import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
   getMode,
-  STORAGE_LIMITS_BYTES,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
@@ -11,7 +10,6 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
-  enforceStorage,
   getCallerTier,
   optionalUser,
 } from "@/lib/api-auth.server";
@@ -27,6 +25,7 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  providerErrorFromResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
@@ -73,6 +72,7 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { ChatPreflightError, createChatPreflightRunner } from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -484,20 +484,37 @@ export const Route = createFileRoute("/api/chat")({
           }
         };
         const run = async (): Promise<Response> => {
+          const preflight = createChatPreflightRunner({
+            signal: request.signal,
+            onMilestone: (event) => {
+              console.info("[chat] preflight stage", {
+                requestId,
+                stage: event.stage,
+                state: event.state,
+                required: event.required,
+                durationMs: event.durationMs,
+                code: event.code,
+                status: event.status,
+              });
+            },
+          });
           try {
             let ingress;
             try {
-              ingress = await readChatRequest(request, CHAT_BODY_LIMIT_BYTES);
+              ingress = await preflight.run("request_body", (signal) =>
+                readChatRequest(request, CHAT_BODY_LIMIT_BYTES, signal),
+              );
             } catch (error) {
-              if (error instanceof ChatIngressError) {
-                return Response.json(toChatIngressErrorEnvelope(error, requestId), {
-                  status: error.status,
+              const ingressError = error instanceof ChatPreflightError ? error.cause : error;
+              if (ingressError instanceof ChatIngressError) {
+                return Response.json(toChatIngressErrorEnvelope(ingressError, requestId), {
+                  status: ingressError.status,
                 });
               }
               throw error;
             }
 
-            const auth = await optionalUser(request);
+            const auth = await preflight.run("session", () => optionalUser(request));
             if (auth instanceof Response) return auth;
 
             const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
@@ -517,12 +534,14 @@ export const Route = createFileRoute("/api/chat")({
               // guard, then consume an atomic Supabase bucket before any
               // optional search or provider work can begin. Generation has a
               // second authoritative reservation later in the request.
-              const distributedLimit = await consumeApplicationRateLimit({
-                identity: clientKey,
-                action: "guest_chat_preflight",
-                limit: 60,
-                windowSeconds: 3600,
-              });
+              const distributedLimit = await preflight.run("guest_rate_limit", () =>
+                consumeApplicationRateLimit({
+                  identity: clientKey,
+                  action: "guest_chat_preflight",
+                  limit: 60,
+                  windowSeconds: 3600,
+                }),
+              );
               if (!distributedLimit.allowed) {
                 return Response.json(
                   {
@@ -566,8 +585,31 @@ export const Route = createFileRoute("/api/chat")({
             let lockdownBlocksNetwork = false;
             if (auth) {
               try {
-                lockdownBlocksNetwork = await readLockdownMode(auth.supabaseAdmin, auth.userId);
+                const lockdownResult = await preflight.run(
+                  "lockdown",
+                  () => readLockdownMode(auth.supabaseAdmin, auth.userId),
+                  { required: false },
+                );
+                if (typeof lockdownResult !== "boolean") {
+                  lockdownBlocksNetwork = true;
+                  if (explicitLockdownCapability) {
+                    return Response.json(
+                      {
+                        error: "Lockdown Mode could not be verified. Try again shortly.",
+                        code: "lockdown_status_unavailable",
+                        retryable: true,
+                      },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    );
+                  }
+                } else {
+                  lockdownBlocksNetwork = lockdownResult;
+                }
               } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 lockdownBlocksNetwork = true;
                 if (explicitLockdownCapability) {
                   return (
@@ -612,10 +654,16 @@ export const Route = createFileRoute("/api/chat")({
             let isOwner = false;
             if (auth) {
               try {
-                const { data } = await auth.supabaseAdmin.auth.admin.getUserById(auth.userId);
+                const ownerLookup = await preflight.run(
+                  "owner_lookup",
+                  () => auth.supabaseAdmin.auth.admin.getUserById(auth.userId),
+                  { required: false },
+                );
+                const data = ownerLookup?.data;
                 const email = data?.user?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 // ignore; treat as non-owner
               }
             }
@@ -623,9 +671,11 @@ export const Route = createFileRoute("/api/chat")({
             // Banned-user + maintenance + tier checks for signed-in callers.
             let callerTier: "free" | "plus" | "pro" = "free";
             if (auth) {
-              const banned = await assertNotBanned(auth);
+              const banned = await preflight.run("ban_check", () => assertNotBanned(auth));
               if (banned) return banned;
-              callerTier = isOwner ? "pro" : await getCallerTier(auth);
+              callerTier = isOwner
+                ? "pro"
+                : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -651,33 +701,38 @@ export const Route = createFileRoute("/api/chat")({
             let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
             if (clientTool === "deep_research" && auth) {
               try {
-                authorizedResearchReferences = await authorizeResearchPersistence({
-                  supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
-                  chatId,
-                  projectId,
-                });
+                authorizedResearchReferences = await preflight.run("research_authorization", () =>
+                  authorizeResearchPersistence({
+                    supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
+                    chatId,
+                    projectId,
+                  }),
+                );
               } catch (error) {
-                if (error instanceof ResearchPersistenceAuthorizationError) {
-                  if (error.status === 503) {
+                const authorizationError =
+                  error instanceof ChatPreflightError ? error.cause : error;
+                if (authorizationError instanceof ResearchPersistenceAuthorizationError) {
+                  if (authorizationError.status === 503) {
                     logSafeFailure(
                       "warn",
                       "[chat] research authorization unavailable",
                       logContext,
                       {
-                        status: error.status,
+                        status: authorizationError.status,
                         category: "server",
-                        code: error.code,
+                        code: authorizationError.code,
                       },
                     );
                   }
                   return Response.json(
-                    { error: error.publicMessage },
+                    { error: authorizationError.publicMessage },
                     {
-                      status: error.status,
+                      status: authorizationError.status,
                       headers: { "Cache-Control": "no-store" },
                     },
                   );
                 }
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("error", "[chat] research authorization failed", logContext, {
                   status: 503,
                   category: "server",
@@ -711,10 +766,14 @@ export const Route = createFileRoute("/api/chat")({
                     },
                   );
                 }
-                const maint = await assertFeatureEnabled(auth, "images");
+                const maint = await preflight.run("image_feature", () =>
+                  assertFeatureEnabled(auth, "images"),
+                );
                 if (maint) return maint;
                 const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
-                const quota = await enforceQuota(auth, "images", imgLimit);
+                const quota = await preflight.run("image_quota", (signal) =>
+                  enforceQuota(auth, "images", imgLimit, 1, signal),
+                );
                 if (quota) return quota;
               }
               return handleImageRequest(lastText, logContext);
@@ -722,9 +781,13 @@ export const Route = createFileRoute("/api/chat")({
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
             if (auth && !isOwner) {
-              const maint = await assertFeatureEnabled(auth, "chat");
+              const maint = await preflight.run("chat_feature", () =>
+                assertFeatureEnabled(auth, "chat"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
+              );
               if (quota) return quota;
             }
 
@@ -774,35 +837,20 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 );
               }
-              const maint = await assertFeatureEnabled(auth, "uploads");
+              const maint = await preflight.run("upload_feature", () =>
+                assertFeatureEnabled(auth, "uploads"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(
-                auth,
-                "uploads",
-                DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
-                totalAttachments,
+              const quota = await preflight.run("upload_quota", (signal) =>
+                enforceQuota(
+                  auth,
+                  "uploads",
+                  DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
+                  totalAttachments,
+                  signal,
+                ),
               );
               if (quota) return quota;
-              // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
-              let totalBytes = 0;
-              for (const att of currentAttachments) {
-                if (att.kind === "text_file") {
-                  totalBytes += new TextEncoder().encode(att.content).byteLength;
-                  continue;
-                }
-                if (att.kind !== "image") continue;
-                const url = att.dataUrl ?? "";
-                const commaIdx = url.indexOf(",");
-                if (commaIdx > -1) {
-                  // base64 length * 3/4 approx. raw byte size
-                  totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
-                } else {
-                  totalBytes += url.length;
-                }
-              }
-              const tier = await getCallerTier(auth);
-              const storage = await enforceStorage(auth, totalBytes, STORAGE_LIMITS_BYTES[tier]);
-              if (storage) return storage;
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
@@ -859,12 +907,18 @@ export const Route = createFileRoute("/api/chat")({
                     } else if (att.kind === "library_file") {
                       let libraryContent = "";
                       if (auth && msg === lastUser) {
-                        const { data } = await auth.supabaseAdmin
-                          .from("user_library_items")
-                          .select("content_text")
-                          .eq("id", att.libraryItemId)
-                          .eq("user_id", auth.userId)
-                          .maybeSingle();
+                        const libraryResult = await preflight.run(
+                          "library_attachment",
+                          () =>
+                            auth.supabaseAdmin
+                              .from("user_library_items")
+                              .select("content_text")
+                              .eq("id", att.libraryItemId)
+                              .eq("user_id", auth.userId)
+                              .maybeSingle(),
+                          { required: false },
+                        );
+                        const data = libraryResult?.data;
                         const row = data as { content_text?: unknown } | null;
                         if (typeof row?.content_text === "string") {
                           libraryContent = row.content_text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
@@ -929,9 +983,14 @@ export const Route = createFileRoute("/api/chat")({
                   "Searching the web",
                   "running",
                 );
-                const result = await runWebSearch(
-                  lastText,
-                  clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                const result = await preflight.run(
+                  "web_search",
+                  () =>
+                    runWebSearch(
+                      lastText,
+                      clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                    ),
+                  { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
                   webBlock = result;
@@ -952,16 +1011,22 @@ export const Route = createFileRoute("/api/chat")({
               !temporary
             ) {
               try {
-                const { data: memRows } = await (
-                  auth.supabaseAdmin as unknown as {
-                    from: (t: string) => ChainableQueryLike;
-                  }
-                )
-                  .from("chat_memories")
-                  .select("title, summary, updated_at")
-                  .eq("user_id", auth.userId)
-                  .order("updated_at", { ascending: false })
-                  .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0);
+                const memoryResult = await preflight.run(
+                  "memory_context",
+                  () =>
+                    (
+                      auth.supabaseAdmin as unknown as {
+                        from: (t: string) => ChainableQueryLike;
+                      }
+                    )
+                      .from("chat_memories")
+                      .select("title, summary, updated_at")
+                      .eq("user_id", auth.userId)
+                      .order("updated_at", { ascending: false })
+                      .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
+                  { required: false },
+                );
+                const memRows = memoryResult?.data;
                 if (Array.isArray(memRows) && memRows.length > 0) {
                   const memories = (memRows as { title?: string | null; summary: string }[]).map(
                     (r, i): KovaMemory => ({
@@ -979,7 +1044,8 @@ export const Route = createFileRoute("/api/chat")({
                     }),
                   );
                 }
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
@@ -996,16 +1062,27 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
-                const { data: isMember } = await admin.rpc("is_project_member", {
-                  _user_id: auth.userId,
-                  _project_id: projectId,
-                });
+                const membershipResult = await preflight.run(
+                  "project_membership",
+                  () =>
+                    admin.rpc("is_project_member", {
+                      _user_id: auth.userId,
+                      _project_id: projectId,
+                    }),
+                  { required: false },
+                );
+                const isMember = membershipResult?.data;
                 if (isMember === true) {
-                  const projRes = await admin
-                    .from("projects")
-                    .select("id, name, system_prompt")
-                    .eq("id", projectId)
-                    .maybeSingle();
+                  const projRes = await preflight.run(
+                    "project_context",
+                    () =>
+                      admin
+                        .from("projects")
+                        .select("id, name, system_prompt")
+                        .eq("id", projectId)
+                        .maybeSingle(),
+                    { required: false },
+                  );
                   const proj = projRes?.data as {
                     id: string;
                     name: string;
@@ -1021,12 +1098,17 @@ export const Route = createFileRoute("/api/chat")({
                         `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
                       );
                     }
-                    const memRes = await admin
-                      .from("project_memory")
-                      .select("content")
-                      .eq("project_id", projectId)
-                      .order("created_at", { ascending: false })
-                      .limit(20);
+                    const memRes = await preflight.run(
+                      "project_memory",
+                      () =>
+                        admin
+                          .from("project_memory")
+                          .select("content")
+                          .eq("project_id", projectId)
+                          .order("created_at", { ascending: false })
+                          .limit(20),
+                      { required: false },
+                    );
                     const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
                     if (memRows.length > 0) {
                       parts.push(
@@ -1051,12 +1133,18 @@ export const Route = createFileRoute("/api/chat")({
                     }
                     if (q.trim()) {
                       const { retrieveProjectContext } = await import("@/lib/project-rag.server");
-                      const chunks = await retrieveProjectContext({
-                        supabase: admin,
-                        project_id: projectId,
-                        query: q,
-                        k: 6,
-                      });
+                      const chunks =
+                        (await preflight.run(
+                          "project_retrieval",
+                          () =>
+                            retrieveProjectContext({
+                              supabase: admin,
+                              project_id: projectId,
+                              query: q,
+                              k: 6,
+                            }),
+                          { required: false, timeoutMs: 5_000 },
+                        )) ?? [];
                       const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
                       if (rel.length > 0) {
                         parts.push(
@@ -1071,7 +1159,8 @@ export const Route = createFileRoute("/api/chat")({
                       "\n--- END PROJECT CONTEXT ---";
                   }
                 }
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
@@ -1088,12 +1177,17 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && typeof chatId === "string" && chatId && !temporary) {
               const { buildChatWorkspaceBlock } =
                 await import("@/lib/chat-workspace-context.server");
-              const workspace = await buildChatWorkspaceBlock(auth.supabaseAdmin, {
-                userId: auth.userId,
-                chatId,
-                temporary: Boolean(temporary),
-              });
-              chatWorkspaceBlock = workspace.block;
+              const workspace = await preflight.run(
+                "chat_workspace",
+                () =>
+                  buildChatWorkspaceBlock(auth.supabaseAdmin, {
+                    userId: auth.userId,
+                    chatId,
+                    temporary: Boolean(temporary),
+                  }),
+                { required: false },
+              );
+              chatWorkspaceBlock = workspace?.block ?? "";
             }
 
             const toolInstruction =
@@ -1172,7 +1266,11 @@ export const Route = createFileRoute("/api/chat")({
             // through to the original streaming behavior with zero change.
             const availableTools =
               auth && !hasImages && m.id !== "instant" && lastText.length > 0
-                ? await getAvailableGoogleTools(auth.userId).catch(() => [])
+                ? ((await preflight.run(
+                    "connector_tools",
+                    () => getAvailableGoogleTools(auth.userId),
+                    { required: false },
+                  )) ?? [])
                 : [];
             const enableTools = availableTools.length > 0;
 
@@ -1219,21 +1317,27 @@ export const Route = createFileRoute("/api/chat")({
             }
             let usageEventId: string;
             try {
-              const acquisition = await acquireGeneration({
-                requestId,
-                idempotencyKey,
-                userId: auth?.userId ?? null,
-                guestIpHash: clientKey ? await hashGuestIp(clientKey) : null,
-                conversationId: chatId,
-                mode: m.id,
-                plan: auth ? callerTier : "guest",
-                premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
-                model: catalogModel,
-                estimatedInputTokens: inputEstimate.tokens,
-                reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
-                estimatedCostUsd: estimatedCost,
-                contextTrimmed: messages.length > HISTORY_TURNS,
-              });
+              const guestIpHash = clientKey
+                ? await preflight.run("guest_identity", () => hashGuestIp(clientKey))
+                : null;
+              const acquisition = await preflight.run("usage_authorization", (signal) =>
+                acquireGeneration({
+                  requestId,
+                  idempotencyKey,
+                  userId: auth?.userId ?? null,
+                  guestIpHash,
+                  conversationId: chatId,
+                  mode: m.id,
+                  plan: auth ? callerTier : "guest",
+                  premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                  model: catalogModel,
+                  estimatedInputTokens: inputEstimate.tokens,
+                  reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                  estimatedCostUsd: estimatedCost,
+                  contextTrimmed: messages.length > HISTORY_TURNS,
+                  signal,
+                }),
+              );
               if ("rejection" in acquisition) {
                 const duplicate = acquisition.rejection === "duplicate";
                 return Response.json(
@@ -1247,10 +1351,15 @@ export const Route = createFileRoute("/api/chat")({
                 );
               }
               usageEventId = acquisition.eventId;
-            } catch {
+            } catch (error) {
+              if (error instanceof ChatPreflightError) throw error;
               return Response.json(
-                { error: "Usage authorization is temporarily unavailable." },
-                { status: 503 },
+                {
+                  error: "Usage authorization is temporarily unavailable.",
+                  code: "usage_authorization_unavailable",
+                  retryable: true,
+                },
+                { status: 503, headers: { "Retry-After": "5" } },
               );
             }
 
@@ -1549,7 +1658,7 @@ export const Route = createFileRoute("/api/chat")({
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
-            } catch {
+            } catch (error) {
               await finalizeGeneration({
                 eventId: usageEventId,
                 status: request.signal.aborted ? "client_disconnected" : "provider_failed",
@@ -1560,30 +1669,30 @@ export const Route = createFileRoute("/api/chat")({
                 error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
+              const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
-                status: 502,
+                status: providerError.status,
                 category: "provider",
-                code: "final_provider_network_error",
+                code: providerError.code,
               });
-              return new Response(
-                JSON.stringify({
-                  error: "AI service is temporarily unavailable. Please try again.",
-                }),
+              return Response.json(
                 {
-                  status: 502,
-                  headers: { "Content-Type": "application/json" },
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, providerError.status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: providerError.status,
+                  headers: { "Cache-Control": "no-store" },
                 },
               );
             }
 
             if (!upstream.ok) {
-              const errMsg =
-                upstream.status === 429
-                  ? "Rate limit exceeded. Please wait a moment."
-                  : upstream.status === 402
-                    ? "Image provider quota exhausted."
-                    : "AI service is temporarily unavailable. Please try again.";
-              const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+              const providerError = mapProviderError(await providerErrorFromResponse(upstream));
+              const errMsg = providerError.message;
+              const status = providerError.status;
               await finalizeGeneration({
                 eventId: usageEventId,
                 status: "provider_rejected",
@@ -1593,7 +1702,6 @@ export const Route = createFileRoute("/api/chat")({
                 toolCalls: activityEvents.length,
                 error: `provider_http_${upstream.status}`,
               }).catch(() => undefined);
-              void upstream.body?.cancel().catch(() => undefined);
               logSafeFailure("error", "[chat] final provider rejected request", logContext, {
                 status: upstream.status,
                 category: "provider",
@@ -1642,7 +1750,19 @@ export const Route = createFileRoute("/api/chat")({
                         ),
                       );
                     }
-                    controller.enqueue(enc.encode(sseChunk(`\n\n_${errMsg}_`)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: errMsg,
+                          code: providerError.code,
+                          category: categorizeError(providerError, status),
+                          retryable: providerError.retryable,
+                          status,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                     controller.close();
                   },
@@ -1654,10 +1774,15 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 });
               }
-              return new Response(JSON.stringify({ error: errMsg }), {
-                status,
-                headers: { "Content-Type": "application/json" },
-              });
+              return Response.json(
+                {
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                { status, headers: { "Cache-Control": "no-store" } },
+              );
             }
 
             let boundedUpstreamBody: ReadableStream<Uint8Array>;
@@ -1805,7 +1930,19 @@ export const Route = createFileRoute("/api/chat")({
                       category: "provider",
                       code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
                     });
-                    controller.enqueue(enc.encode(sseChunk(providerFailureMessage)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: providerFailureMessage.trim(),
+                          code: providerFailureCode,
+                          category: providerTimedOut ? "model_timeout" : "streaming_interruption",
+                          retryable: true,
+                          status: providerTimedOut ? 504 : 502,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                   }
                 }
@@ -1829,6 +1966,27 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (e instanceof ChatPreflightError) {
+              logSafeFailure("error", "[chat] preflight failed", logContext, {
+                status: e.status,
+                category: "server",
+                code: e.code,
+              });
+              return Response.json(
+                {
+                  ...e.toEnvelope(),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: e.status,
+                  headers: {
+                    "Cache-Control": "no-store",
+                    ...(e.retryable ? { "Retry-After": "5" } : {}),
+                  },
+                },
+              );
+            }
             if (request.signal.aborted) {
               return new Response(null, {
                 status: 499,
@@ -1837,7 +1995,12 @@ export const Route = createFileRoute("/api/chat")({
             }
             const providerError = mapProviderError(e);
             const status = providerError.status;
-            const envelope = buildErrorEnvelope(providerError, requestId, status);
+            const envelope = {
+              ...providerError.toSafeResponse(),
+              category: categorizeError(providerError, status),
+              requestId,
+              timestamp: new Date().toISOString(),
+            };
             logSafeFailure("error", "[chat] handler failed", logContext, {
               status,
               category: "server",
@@ -1847,6 +2010,8 @@ export const Route = createFileRoute("/api/chat")({
               status,
               headers: { "Content-Type": "application/json" },
             });
+          } finally {
+            preflight.close();
           }
         };
         return await withRequestId(await run());

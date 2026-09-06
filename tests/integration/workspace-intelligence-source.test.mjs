@@ -78,7 +78,10 @@ test("chat history is searchable from both the sidebar and command palette", asy
 
 test("all currently implementable gaps are closed and deferred gaps are classified", async () => {
   const ledger = await read("docs/remaining-chatgpt-gaps.md");
-  assert.match(ledger, /A — Fully implementable now[\s\S]*Empty after this checkpoint/);
+  assert.match(
+    ledger,
+    /A — Fully implementable now[\s\S]*implementable truthfulness gaps found during this checkpoint were completed/,
+  );
   for (const category of [
     "B — Requires backend work",
     "C — Requires provider support",

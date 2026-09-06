@@ -24,14 +24,11 @@ test("Apollo exposes every specialist and ten real workflow templates", async ()
   assert.match(team, /depends on missing task/);
 });
 
-test("agent teams are server gated, dependency aware, parallel and controllable", async () => {
+test("legacy agent teams fail closed while no compatible worker exists", async () => {
   const server = await read("src/agents/team.server.ts");
-  assert.match(server, /getAgentEntitlement/);
-  assert.match(server, /entitlement === "plus" \? 4/);
-  assert.match(server, /parallelism: limits\.concurrency/);
-  assert.match(server, /releaseReadyTasks/);
-  for (const command of ["pause", "resume", "cancel", "retry", "approve", "deny"])
-    assert.match(server, new RegExp(`"${command}"`));
+  assert.match(server, /createAgentTeamRun[\s\S]*agent_team_execution_unavailable/);
+  assert.match(server, /command !== "cancel" && command !== "deny"/);
+  assert.doesNotMatch(server, /getAgentEntitlement|releaseReadyTasks|parallelism:/);
 });
 
 test("legacy specialist worker fails closed without browser or model execution", async () => {

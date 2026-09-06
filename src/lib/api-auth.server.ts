@@ -138,16 +138,19 @@ export async function enforceQuota(
   kind: "images" | "chats" | "uploads",
   limit: number,
   increment = 1,
+  signal?: AbortSignal,
 ): Promise<Response | null> {
   // Atomic check-and-increment via SECURITY DEFINER RPC. Row-level locking
   // inside the function prevents TOCTOU races where concurrent requests all
   // pass the limit check before any increment lands.
-  const { data, error } = await caller.supabaseAdmin.rpc("try_increment_daily_usage", {
+  signal?.throwIfAborted();
+  const quotaQuery = caller.supabaseAdmin.rpc("try_increment_daily_usage", {
     _user_id: caller.userId,
     _kind: kind,
     _increment: increment,
     _limit: limit,
   });
+  const { data, error } = await (signal ? quotaQuery.abortSignal(signal) : quotaQuery);
   if (error) {
     console.error("[enforceQuota] rpc error", error);
     return jsonError("Quota check failed", 500);

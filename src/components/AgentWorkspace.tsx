@@ -198,8 +198,8 @@ export function AgentWorkspace() {
             Agent workspace
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Build reusable, approval-aware runs. Execution starts only when you hand the plan to
-            Chat or Scheduling.
+            Build reusable plans with approval checkpoints. Plans can be handed to Chat for
+            user-supervised work; background execution and scheduling are unavailable.
           </p>
         </div>
         <span className="rounded-full border px-2 py-1 text-xs">Plus</span>
@@ -215,7 +215,8 @@ export function AgentWorkspace() {
             Plus or Pro required
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Agent plans, reusable context, and execution history are available on paid plans.
+            Saved agent plans and reusable context are available on paid plans. Background execution
+            remains unavailable.
           </p>
           <button
             onClick={() => navigate({ to: "/pricing" })}
@@ -329,7 +330,7 @@ export function AgentWorkspace() {
               onClick={createRun}
               className="min-h-10 rounded-lg bg-foreground px-3 text-sm text-background disabled:opacity-50"
             >
-              Save run
+              Save plan
             </button>
             <button
               type="button"
@@ -355,10 +356,10 @@ export function AgentWorkspace() {
       )}
       {available && principalReady && (
         <div className="mt-6">
-          <h3 className="font-medium">Execution history</h3>
+          <h3 className="font-medium">Saved plans</h3>
           {runs.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              No agent runs yet. Save a validated plan to begin.
+              No saved plans yet. Save a validated plan to begin.
             </p>
           ) : (
             <ul className="mt-2 space-y-3">
@@ -392,7 +393,7 @@ export function AgentWorkspace() {
                         className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-sm"
                       >
                         <RotateCcw className="h-3 w-3" />
-                        Retry
+                        Reset plan
                       </button>
                     ) : null}
                     <button
@@ -417,7 +418,7 @@ export function AgentWorkspace() {
                       }}
                       className="min-h-10 rounded-lg border px-3 text-sm"
                     >
-                      Schedule
+                      Review scheduling
                     </button>
                     {run.status === "handed_off" && (
                       <button
