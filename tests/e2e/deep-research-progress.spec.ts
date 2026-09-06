@@ -154,6 +154,7 @@ test("Deep Research renders its completed lifecycle and partial-source warning",
   const deepResearch = page.getByRole("button", { name: "Deep research" });
   await expect(deepResearch).toBeVisible();
   await deepResearch.click();
+  await expect(page.getByRole("button", { name: "Remove Deep research" })).toBeVisible();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Research this topic");
   await page.getByRole("button", { name: "Send message" }).click();
 
@@ -206,7 +207,11 @@ test("Deep Research blocks attachments before creating a progress message", asyn
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Research these sources");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect(page.getByText("Deep Research doesn't support attachments yet")).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Notifications alt+T")
+      .getByText("Deep Research doesn't support attachments yet"),
+  ).toBeVisible();
   await expect(page.getByText("sources.csv", { exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Deep Research progress" })).toHaveCount(0);
   expect(chatRequests).toBe(0);
@@ -279,7 +284,9 @@ test("interrupted progress-only research exposes a working retry", async ({ page
 
   const progress = page.getByRole("region", { name: "Deep Research progress" });
   await expect(progress).toContainText("Research interrupted");
-  await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article", { name: "KovaGPT response" })).toContainText(
+    "Searching the web",
+  );
   await expect(page.getByRole("button", { name: "Retry Deep Research" })).toBeVisible();
   await page.getByRole("button", { name: "Retry Deep Research" }).click();
   await expect(page.getByText("Recovered research result.")).toBeVisible();
