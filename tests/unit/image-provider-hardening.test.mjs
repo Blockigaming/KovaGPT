@@ -27,7 +27,11 @@ test("production IaC preserves a dedicated image provider across deployments", (
   assert.match(bicep, /keyVaultUrl: azureOpenAiImageApiKeySecretUri/u);
   assert.match(
     bicep,
-    /resource azureOpenAiImageUser 'Microsoft\.Authorization\/roleAssignments@2022-04-01' = if/u,
+    /var useAzureOpenAiImageManagedIdentity = useDedicatedAzureOpenAiImage && !useAzureOpenAiImageApiKey/u,
+  );
+  assert.match(
+    bicep,
+    /resource azureOpenAiImageUser 'Microsoft\.Authorization\/roleAssignments@2022-04-01' = if \(useAzureOpenAiImageManagedIdentity\)/u,
   );
   assert.match(bicep, /scope: azureOpenAiImage/u);
   assert.match(bicep, /roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId/u);

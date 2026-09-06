@@ -132,6 +132,7 @@ var appInsightsName = '${namePrefix}-insights'
 var budgetName = '${namePrefix}-monthly-budget'
 var useDedicatedAzureOpenAiImage = !empty(azureOpenAiImageAccountName)
 var useAzureOpenAiImageApiKey = useDedicatedAzureOpenAiImage && !empty(azureOpenAiImageApiKeySecretUri)
+var useAzureOpenAiImageManagedIdentity = useDedicatedAzureOpenAiImage && !useAzureOpenAiImageApiKey
 var acrPullRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '7f951dda-4ed3-4680-a7ca-43fe172d538d'
@@ -169,7 +170,7 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   name: managedIdentityName
 }
 
-resource azureOpenAiImageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useDedicatedAzureOpenAiImage) {
+resource azureOpenAiImageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useAzureOpenAiImageManagedIdentity) {
   name: guid(azureOpenAiImage.id, identity.id, cognitiveServicesOpenAiUserRoleDefinitionId)
   scope: azureOpenAiImage
   properties: {
