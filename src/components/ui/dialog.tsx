@@ -21,7 +21,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
       className,
     )}
     {...props}
@@ -46,7 +46,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "fixed z-50 flex flex-col gap-4 border border-border bg-background shadow-xl duration-150",
+        "fixed z-50 flex flex-col gap-4 border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",

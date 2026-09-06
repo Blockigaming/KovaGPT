@@ -86,6 +86,10 @@ test("successful account deletion also removes IndexedDB image history from Chat
   await installAuthenticatedFixture(page);
   let deletionRequests = 0;
   await page.route("**/api/account", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { state: "active" } });
+      return;
+    }
     expect(route.request().method()).toBe("DELETE");
     expect(route.request().postDataJSON()).toEqual({ confirmation: "DELETE" });
     deletionRequests += 1;
