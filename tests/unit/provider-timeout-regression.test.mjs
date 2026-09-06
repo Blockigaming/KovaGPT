@@ -208,7 +208,7 @@ test("provider source covers authentication, connection, and full-body deadlines
   const transport = readFileSync("src/lib/ai/provider-transport.server.mjs", "utf8");
 
   assert.match(provider, /createRequestDeadline\([\s\S]{0,180}config\.timeoutMs/u);
-  assert.match(provider, /await providerHeaders\(deadline\.signal\)/u);
+  assert.match(provider, /await providerHeaders\(target, deadline\.signal\)/u);
   assert.match(provider, /fetchWithDeadline\(/u);
   assert.match(provider, /getTimeoutMs:\s*\(\) => DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS/u);
   assert.match(transport, /wrapResponseBodyWithDeadline/u);

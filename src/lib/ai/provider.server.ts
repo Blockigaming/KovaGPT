@@ -57,6 +57,7 @@ type ProviderTarget = {
   provider: ProviderKind;
   baseUrl: string;
   auth: ProviderAuth;
+  apiKey?: string;
 };
 
 type SafeLogValue = string | number | boolean | undefined;
@@ -153,11 +154,23 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
   return `${endpoint.origin}/openai/v1`;
 }
 
-function providerTarget(): ProviderTarget {
-  const azureBaseUrl = normalizeAzureOpenAiBaseUrl(env("AZURE_OPENAI_ENDPOINT"));
+function providerTarget(capability?: ProviderCapability): ProviderTarget {
+  const dedicatedImageEndpoint =
+    capability === "image_generation" ? env("AZURE_OPENAI_IMAGE_ENDPOINT") : undefined;
+  const azureBaseUrl = normalizeAzureOpenAiBaseUrl(
+    dedicatedImageEndpoint ?? env("AZURE_OPENAI_ENDPOINT"),
+  );
   if (azureBaseUrl) {
-    if (env("AZURE_OPENAI_API_KEY")) {
-      return { provider: "azure_openai", baseUrl: azureBaseUrl, auth: "azure_api_key" };
+    const azureApiKey = dedicatedImageEndpoint
+      ? env("AZURE_OPENAI_IMAGE_API_KEY")
+      : env("AZURE_OPENAI_API_KEY");
+    if (azureApiKey) {
+      return {
+        provider: "azure_openai",
+        baseUrl: azureBaseUrl,
+        auth: "azure_api_key",
+        apiKey: azureApiKey,
+      };
     }
     if (env("IDENTITY_ENDPOINT") && env("IDENTITY_HEADER")) {
       return {
@@ -196,7 +209,7 @@ function azureDeploymentForModel(modelId: string, capability?: ProviderCapabilit
 }
 
 export function providerModelId(modelId: string, capability?: ProviderCapability): string {
-  return providerTarget().provider === "azure_openai"
+  return providerTarget(capability).provider === "azure_openai"
     ? azureDeploymentForModel(modelId, capability)
     : modelId;
 }
@@ -302,6 +315,25 @@ export function providerUnavailableEnvelope(
       status: 501,
     };
   }
+  if (capability === "image_generation") {
+    try {
+      if (providerTarget(capability).auth === "missing") {
+        return {
+          error: "KovaGPT is temporarily unavailable. Please try again later.",
+          code: "provider_unavailable",
+          retryable: false,
+          status: 503,
+        };
+      }
+    } catch {
+      return {
+        error: "KovaGPT is temporarily unavailable. Please try again later.",
+        code: "provider_unavailable",
+        retryable: false,
+        status: 503,
+      };
+    }
+  }
   return null;
 }
 
@@ -322,11 +354,13 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
   );
 }
 
-async function providerHeaders(signal?: AbortSignal): Promise<Record<string, string>> {
-  const target = providerTarget();
+async function providerHeaders(
+  target: ProviderTarget,
+  signal?: AbortSignal,
+): Promise<Record<string, string>> {
   if (target.auth === "azure_api_key") {
     return {
-      "api-key": env("AZURE_OPENAI_API_KEY")!,
+      "api-key": target.apiKey!,
       "Content-Type": "application/json",
     };
   }
@@ -439,7 +473,7 @@ async function providerFetch(
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
 
-  const target = providerTarget();
+  const target = providerTarget(capability);
   const config = getAiProviderConfig();
   const requestBody = withProviderModel(body, capability);
   const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
@@ -460,10 +494,10 @@ async function providerFetch(
   });
 
   try {
-    const headers = await providerHeaders(deadline.signal);
+    const headers = await providerHeaders(target, deadline.signal);
     const response = await fetchWithDeadline(
       fetch,
-      `${config.baseUrl}${path}`,
+      `${target.baseUrl}${path}`,
       {
         ...init,
         method: "POST",
