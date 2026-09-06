@@ -278,6 +278,7 @@ export async function runDeepResearch(
   const safeQuery = sanitizeResearchText(query, 1000);
   if (!safeQuery) throw new Error("empty_research_query");
   let currentProgress = 0;
+  let workflowComplete = false;
   const emit = async (stage: ResearchStage, progress: number, activity?: ToolActivityEvent) => {
     currentProgress = Math.min(1, Math.max(0, progress));
     await opts.onProgress?.({ stage, progress: currentProgress, activity });
@@ -399,6 +400,7 @@ export async function runDeepResearch(
       partial_failures: partialFailures,
       completed_at: new Date().toISOString(),
     });
+    workflowComplete = true;
     await emit(
       {
         id: "complete",
@@ -412,6 +414,9 @@ export async function runDeepResearch(
 
     return { query: safeQuery, plan, evidence, report, sources, partialFailures };
   } catch (error) {
+    // A closed response stream can reject the final delivery callback after the
+    // completed report is already stored. Preserve that truthful terminal state.
+    if (workflowComplete) throw error;
     const canceled = opts.signal?.aborted === true;
     await updateResearchRun(opts.persistence, runId, {
       status: canceled ? "canceled" : "failed",

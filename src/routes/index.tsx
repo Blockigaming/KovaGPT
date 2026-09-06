@@ -962,6 +962,7 @@ function KovaGPT() {
     async (
       text: string,
       atts: PendingAttachment[],
+      retryTool?: ComposerToolId | null,
       _retryAttempt = 0,
       retryConversationId?: string,
       retryHistory?: Message[],
@@ -986,8 +987,6 @@ function KovaGPT() {
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
       const isNewConversation = !retryConversationId && !existingConversation;
-
-      const activeTool = selectedTool;
 
       const userMsg: Message = {
         id: newId(),
@@ -1018,7 +1017,7 @@ function KovaGPT() {
         id: newId(),
         role: "assistant",
         content: "",
-        ...(activeTool === "deep_research"
+        ...(retryTool === "deep_research"
           ? {
               researchProgress: {
                 stage: "created",
@@ -1125,7 +1124,7 @@ function KovaGPT() {
 
       try {
         const researchUpdates =
-          activeTool === "deep_research" ? await import("@/lib/deep-research-client") : null;
+          retryTool === "deep_research" ? await import("@/lib/deep-research-client") : null;
         controller.signal.throwIfAborted();
         const payloadMessages = [
           ...priorMessages.map((message) => ({
@@ -1147,12 +1146,12 @@ function KovaGPT() {
           },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode: activeTool === "deep_research" ? "thinking" : mode,
-            clientTool: activeTool,
+            mode: retryTool === "deep_research" ? "thinking" : mode,
+            clientTool: retryTool,
             // Main-chat ids are device-local until a user-owned memory row
             // exists. Do not submit an unclaimable relationship for a
             // service-role Deep Research write.
-            chatId: activeTool === "deep_research" ? undefined : nextConvId,
+            chatId: retryTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
             user: tempChat
               ? undefined
@@ -1364,7 +1363,7 @@ function KovaGPT() {
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
               if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-              void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
+              send(text, atts, retryTool, _retryAttempt + 1, nextConvId, priorMessages);
             }, backoffMs);
             return;
           }
@@ -1387,7 +1386,7 @@ function KovaGPT() {
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
-          if (activeTool === "deep_research") {
+          if (retryTool === "deep_research") {
             updateAssistantMessage((message) =>
               message.researchProgress
                 ? {
@@ -1422,7 +1421,7 @@ function KovaGPT() {
                 retryTimerRef.current = window.setTimeout(() => {
                   retryTimerRef.current = null;
                   if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-                  void send(text, atts, 0, nextConvId, priorMessages);
+                  send(text, atts, retryTool, 0, nextConvId, priorMessages);
                 }, 100);
               },
             },
@@ -1444,7 +1443,6 @@ function KovaGPT() {
       mode,
       autoTitle,
       settings,
-      selectedTool,
       tempChat,
       editingMessage,
       principalReady,
@@ -1805,7 +1803,7 @@ function KovaGPT() {
                 <ChatInput
                   value={principalReady ? input : ""}
                   onChange={setInput}
-                  onSubmit={() => send(input, attachments)}
+                  onSubmit={(tool) => send(input, attachments, tool)}
                   onStop={stop}
                   isStreaming={isStreaming}
                   disabled={!principalReady}
@@ -2033,7 +2031,7 @@ function KovaGPT() {
                       isLastAssistant && !isStreaming && priorUser
                         ? () => {
                             const retryHistory = active.messages.slice(0, -2);
-                            void send(
+                            send(
                               priorUser.content,
                               (priorUser.attachments ?? []).map((attachment) =>
                                 attachment.kind === "image"
@@ -2064,6 +2062,7 @@ function KovaGPT() {
                                         status: "complete" as const,
                                       },
                               ),
+                              m.researchProgress ? "deep_research" : null,
                               0,
                               active.id,
                               retryHistory,
@@ -2148,7 +2147,7 @@ function KovaGPT() {
               <ChatInput
                 value={principalReady ? input : ""}
                 onChange={setInput}
-                onSubmit={() => send(input, attachments)}
+                onSubmit={(tool) => send(input, attachments, tool)}
                 onStop={stop}
                 isStreaming={isStreaming}
                 disabled={!principalReady}

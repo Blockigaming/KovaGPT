@@ -123,7 +123,7 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
+  onSubmit: (tool?: ComposerToolId | null) => void;
   onStop: () => void;
   isStreaming: boolean;
 
@@ -167,6 +167,8 @@ export function ChatInput({
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
+  const selectedToolRef = useRef(selectedTool);
+  selectedToolRef.current = selectedTool;
 
   const [plusOpen, setPlusOpen] = useState(false);
   const online = useSyncExternalStore(
@@ -252,7 +254,7 @@ export function ChatInput({
     }
     submittingRef.current = true;
     setUploadAnnouncement("Message submitted");
-    onSubmit();
+    onSubmit(selectedToolRef.current);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -582,6 +584,7 @@ export function ChatInput({
       return;
     }
     const next = selectedTool === tool.id ? null : tool.id;
+    selectedToolRef.current = next;
     onToolSelect?.(next);
     setPlusOpen(false);
     setUploadAnnouncement(next ? `${tool.label} selected` : `${tool.label} removed`);

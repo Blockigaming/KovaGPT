@@ -34,7 +34,7 @@ export function applyResearchDelta(message: Message, delta: Record<string, unkno
         progress: Math.min(1, Math.max(0, progress)),
         warnings: message.researchProgress?.warnings,
       },
-      ...(terminal && message.activities
+      ...(terminal && Array.isArray(message.activities)
         ? {
             activities: message.activities.map((activity) =>
               activity.status === "running"

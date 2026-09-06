@@ -169,10 +169,26 @@ function boundConversations(value: unknown[], interruptResearch = false): Conver
       ...conversation,
       messages: dedupeMessages(conversation.messages)
         .slice(-MAX_MESSAGES_PER_CONVERSATION)
-        .map((message) => ({
-          ...message,
-          researchProgress: normalizeResearchProgress(message.researchProgress, interruptResearch),
-        })),
+        .map((message) => {
+          const researchProgress = normalizeResearchProgress(
+            message.researchProgress,
+            interruptResearch,
+          );
+          return {
+            ...message,
+            researchProgress,
+            ...(researchProgress?.label === "Research interrupted" &&
+            Array.isArray(message.activities)
+              ? {
+                  activities: message.activities.map((activity) =>
+                    activity.status === "running"
+                      ? { ...activity, status: "failed" as const }
+                      : activity,
+                  ),
+                }
+              : {}),
+          };
+        }),
     }));
 }
 

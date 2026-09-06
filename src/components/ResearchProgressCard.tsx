@@ -67,21 +67,22 @@ export function ResearchProgressCard({
           </div>
         </div>
       </div>
-      {progress.warnings?.map((warning, index) => (
-        <div
-          key={`${warning}-${index}`}
-          className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300"
-          role="status"
-        >
-          <span
-            className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center font-semibold"
-            aria-hidden="true"
+      {Array.isArray(progress.warnings) &&
+        progress.warnings.map((warning, index) => (
+          <div
+            key={`${warning}-${index}`}
+            className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300"
+            role="status"
           >
-            !
-          </span>
-          <span>{warning}</span>
-        </div>
-      ))}
+            <span
+              className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center font-semibold"
+              aria-hidden="true"
+            >
+              !
+            </span>
+            <span>{warning}</span>
+          </div>
+        ))}
     </section>
   );
 }

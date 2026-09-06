@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { normalizeResearchProgress } from "../../src/lib/chat-store.ts";
+import {
+  conversationStorageKey,
+  loadConversations,
+  normalizeResearchProgress,
+} from "../../src/lib/chat-store.ts";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -71,6 +75,7 @@ test("deep research closes comparison and preserves failure activity states", ()
   assert.match(route, /delta\.status === "failed" \|\| delta\.status === "canceled"/);
   assert.match(message, /activity\.status === "failed"/);
   assert.match(message, /activity\.status === "canceled"/);
+  assert.match(research, /if \(workflowComplete\) throw error/);
 });
 
 test("restored research progress is bounded and interrupted safely", () => {
@@ -103,4 +108,63 @@ test("restored research progress is bounded and interrupted safely", () => {
     }),
     undefined,
   );
+});
+
+test("reload terminalizes running research activities", () => {
+  const records = new Map();
+  const storage = {
+    getItem: (key) => records.get(key) ?? null,
+    setItem: (key, value) => records.set(key, value),
+    removeItem: (key) => records.delete(key),
+  };
+  globalThis.window = { localStorage: storage };
+  globalThis.localStorage = storage;
+  records.set(
+    conversationStorageKey("research-user"),
+    JSON.stringify([
+      {
+        id: "conversation",
+        title: "Research",
+        mode: "thinking",
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [
+          {
+            id: "assistant",
+            role: "assistant",
+            content: "",
+            researchProgress: {
+              stage: "searching",
+              label: "Searching",
+              status: "running",
+              progress: 0.4,
+            },
+            activities: [
+              { tool: "search_web", label: "Searching web", status: "running" },
+              { tool: "research_plan", label: "Plan ready", status: "done" },
+            ],
+          },
+        ],
+      },
+    ]),
+  );
+  try {
+    const [restored] = loadConversations("research-user");
+    assert.equal(restored.messages[0].researchProgress.status, "failed");
+    assert.deepEqual(
+      restored.messages[0].activities.map((activity) => activity.status),
+      ["failed", "done"],
+    );
+  } finally {
+    delete globalThis.window;
+    delete globalThis.localStorage;
+  }
+});
+
+test("deep research selection and retry mode are race-safe", () => {
+  const route = read("src/routes/index.tsx");
+  const composer = read("src/components/ChatInput.tsx");
+  assert.match(composer, /onSubmit\(selectedToolRef\.current\)/);
+  assert.match(composer, /selectedToolRef\.current = next/);
+  assert.match(route, /m\.researchProgress \? "deep_research" : null/);
 });
