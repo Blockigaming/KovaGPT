@@ -8,6 +8,11 @@ const replacements = [
     before: `import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";`,
     after: `import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";`,
+    isApplied(source) {
+      return /import\s*\{\s*safeConnectorError\s*\}\s*from\s*["']@\/lib\/connectors\.server["'];/u.test(
+        source,
+      );
+    },
   },
   {
     path: "src/lib/google-tools.server.ts",
@@ -45,7 +50,9 @@ function replacementState(source, replacement) {
   const beforeCount = occurrences(source, replacement.before);
   const afterCount = occurrences(source, replacement.after);
   const afterContainsBefore = replacement.after.includes(replacement.before);
-  const applied = afterCount === 1 && beforeCount === (afterContainsBefore ? 1 : 0);
+  const applied = replacement.isApplied
+    ? replacement.isApplied(source)
+    : afterCount === 1 && beforeCount === (afterContainsBefore ? 1 : 0);
   const pending = afterCount === 0 && beforeCount === 1;
   return { applied, pending, beforeCount, afterCount };
 }

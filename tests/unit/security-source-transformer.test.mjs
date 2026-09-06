@@ -46,6 +46,29 @@ test("security transformer sanitizes connector error and staging logs exactly on
   }
 });
 
+test("security transformer recognizes an already-sanitized formatted connector import", () => {
+  const root = mkdtempSync(join(tmpdir(), "kova-security-formatted-"));
+  const previous = process.cwd();
+  try {
+    const path = join(root, "src/lib/google-tools.server.ts");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, source);
+    process.chdir(root);
+    applySecuritySource({ check: false });
+    const formatted = readFileSync(path, "utf8").replace(
+      'import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";',
+      `import {
+  validateSupportedGoogleWrite,
+} from "@/lib/google-write-validation.server.mjs";`,
+    );
+    writeFileSync(path, formatted);
+    assert.deepEqual(applySecuritySource({ check: true }).changed, []);
+  } finally {
+    process.chdir(previous);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("security transformer fails closed on source drift", () => {
   const root = mkdtempSync(join(tmpdir(), "kova-security-drift-"));
   const previous = process.cwd();

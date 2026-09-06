@@ -49,6 +49,32 @@ test("ChatGPT parity transformer is exact and idempotent", () => {
   }
 });
 
+test("ChatGPT parity transformer recognizes formatter-equivalent applied source", () => {
+  const root = mkdtempSync(join(tmpdir(), "kova-parity-formatted-"));
+  const previous = process.cwd();
+  try {
+    const path = join(root, "src/components/ChatInput.tsx");
+    for (const [fixturePath, fixture] of Object.entries(fixtures)) {
+      const target = join(root, fixturePath);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, fixture);
+    }
+    process.chdir(root);
+    applyChatGptParitySource({ check: false });
+    writeFileSync(
+      path,
+      readFileSync(path, "utf8").replace(
+        `COMPOSER_TOOLS.filter(\n          (tool) => tool.id !== "deep_research" || userTier !== "free",\n        ).map(toolRow)`,
+        `COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(\n          toolRow,\n        )`,
+      ),
+    );
+    assert.deepEqual(applyChatGptParitySource({ check: true }).changed, []);
+  } finally {
+    process.chdir(previous);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("ChatGPT parity transformer fails closed on source drift", () => {
   const root = mkdtempSync(join(tmpdir(), "kova-parity-drift-"));
   const previous = process.cwd();
