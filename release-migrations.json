@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 93,
-  "latest": "20260904210000_project_deletion_storage_integrity.sql",
+  "count": 94,
+  "latest": "20260906230506_remove_duplicate_performance_indexes.sql",
   "migrations": [
     {
       "order": 1,
@@ -1924,6 +1924,20 @@
       "rls": ["project_deletion_jobs"],
       "policies": [],
       "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
+    },
+    {
+      "order": 94,
+      "filename": "20260906230506_remove_duplicate_performance_indexes.sql",
+      "timestamp": "20260906230506",
+      "sha256": "770e564614d7e8c96cfb676236df9e567b3a479189037bb27d3e8c2e7ec31db0",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

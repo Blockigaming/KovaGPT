@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 93,
+  "migrationCount": 94,
   "tables": [
     "account_audit_entries",
     "account_export_jobs",
@@ -321,7 +321,6 @@
     "chat_memories_user_updated_idx",
     "connected_account_audit_log_user_created_idx",
     "context_packs_user_updated_idx",
-    "daily_usage_user_date_uidx",
     "deep_research_evidence_run_idx",
     "deep_research_evidence_user_idx",
     "deep_research_runs_chat_idx",
@@ -373,7 +372,6 @@
     "idx_suppressed_emails_email",
     "idx_unsubscribe_tokens_token",
     "idx_unsubscribe_tokens_token",
-    "idx_user_library_items_user_created",
     "integration_accounts_owner_provider",
     "integration_audit_owner_time",
     "integration_sync_ready",
@@ -433,7 +431,6 @@
     "work_saved_records_owner_active_idx",
     "work_saved_records_owner_sync_idx",
     "work_sync_mutations_created_idx",
-    "writing_document_versions_doc_idx",
     "writing_documents_owner_archived_idx",
     "writing_documents_owner_updated_idx",
     "writing_documents_owner_updated_idx",
@@ -1398,5 +1395,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "6d54ae190609f7af0807126580d5ec3b1f9f4f222ff9f7360ba17c1a008a964b"
+  "sha256": "55aa2288c0cb0b4d89a55e2aa67ea28b413d7d52cf48d8c4fee5b97d858c6222"
 }
