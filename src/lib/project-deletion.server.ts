@@ -8,10 +8,10 @@ import {
   type ProjectStorageAdapter,
 } from "@/lib/project-deletion-policy.mjs";
 import {
-import type { LooseClient } from "./supabase-loose";
   reconcileProjectFileLifecycle,
   type ProjectFileMaintenanceClient,
 } from "@/lib/project-file-maintenance.server";
+import type { LooseClient } from "./supabase-loose";
 
 const METADATA_PAGE_SIZE = 500;
 

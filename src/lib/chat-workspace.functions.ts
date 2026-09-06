@@ -23,12 +23,12 @@ import {
   type PinStatus,
 } from "@/lib/chat-workspace-contract.mjs";
 import {
-import { loose } from "./supabase-loose";
   callWorkspaceRpc,
   definedArgs,
   isMissingFunction,
   type RpcClient,
 } from "@/lib/chat-workspace-rpc";
+import { loose } from "./supabase-loose";
 
 export type MessageVersionDto = {
   id: string;
