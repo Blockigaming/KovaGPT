@@ -1874,7 +1874,7 @@
       "order": 92,
       "filename": "20260904200000_project_file_upload_integrity.sql",
       "timestamp": "20260904200000",
-      "sha256": "fedeb3a840e7de078cfe46bec7b4e2c44d6a3c7972dbea1d7d9229b395392105",
+      "sha256": "6ec35017264f2a5a97d70f1fa1b06d5fa1efa49c99b96e11ded1263f808427e9",
       "tables": [],
       "functions": [
         "lock_project_for_file_operation",
@@ -1906,7 +1906,7 @@
       "order": 93,
       "filename": "20260904210000_project_deletion_storage_integrity.sql",
       "timestamp": "20260904210000",
-      "sha256": "af892ba0a329bfddd6bbf541b038f611c96ded8055039fbc1769fc0b3975c595",
+      "sha256": "1bbff8504b325e8ea798012674985ad0d447f77a71dca24181ab225370328757",
       "tables": ["project_deletion_jobs"],
       "functions": [
         "project_deletion_project_write_fence",
