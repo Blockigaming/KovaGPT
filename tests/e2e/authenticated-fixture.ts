@@ -23,10 +23,17 @@ export async function installAuthenticatedFixture(page: Page) {
   // This fixture exercises the returning-user shell. Server-function onboarding
   // can arrive after hydration; dismiss that separate flow through its real UI
   // without issuing a save/skip request or hiding background accessibility bugs.
-  const welcomeDialog = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  // Radix retains its dialog element while its close animation completes. Scope
+  // the handler to the open state so a completed dismissal cannot be selected
+  // again by the next fixture action.
+  const welcomeDialog = page
+    .locator('[role="dialog"][data-state="open"]')
+    .filter({ has: page.getByRole("heading", { name: "Welcome to KovaGPT" }) });
   await page.addLocatorHandler(welcomeDialog, async () => {
     await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
-    // Wait for Radix exit-animation removal before later focus assertions.
+    // The selector stops matching as soon as Radix begins closing, which is
+    // the correct boundary for subsequent focus assertions. The underlying
+    // portal can remain mounted briefly for its exit animation.
     await welcomeDialog.waitFor({ state: "detached" });
   });
   await page.addInitScript(
