@@ -50,7 +50,7 @@ test("projects overview supports real search, sorting, view preference, counts, 
   assert.match(projects, /file_count/);
   assert.match(projects, /Grid view/);
   assert.match(projects, /List view/);
-  assert.match(projects, /disabled=\{p\.role === "viewer"\}/);
+  assert.match(projects, /disabled=\{[\s\S]{0,100}p\.role === "viewer"/);
   assert.match(projectFns, /project_chats/);
   assert.match(projectFns, /project_files/);
   assert.match(projectFns, /system_prompt/);

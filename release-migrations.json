@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 91,
-  "latest": "20260904100000_agent_team_atomic_terminal_controls.sql",
+  "count": 93,
+  "latest": "20260904210000_project_deletion_storage_integrity.sql",
   "migrations": [
     {
       "order": 1,
@@ -1869,6 +1869,61 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 92,
+      "filename": "20260904200000_project_file_upload_integrity.sql",
+      "timestamp": "20260904200000",
+      "sha256": "6ec35017264f2a5a97d70f1fa1b06d5fa1efa49c99b96e11ded1263f808427e9",
+      "tables": [],
+      "functions": [
+        "lock_project_for_file_operation",
+        "reserve_project_file_upload",
+        "acquire_project_file_upload_quota",
+        "set_project_file_upload_state",
+        "abort_project_file_upload",
+        "claim_stale_project_file_cleanup",
+        "renew_stale_project_file_cleanup",
+        "fail_stale_project_file_cleanup",
+        "finalize_stale_project_file_cleanup",
+        "claim_project_file_delete",
+        "restore_project_file_delete",
+        "finalize_project_file_delete",
+        "release_project_storage_bytes"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": ["files_select_members", "project_files_read"],
+      "indexes": [
+        "project_files_project_storage_unique",
+        "project_files_upload_idempotency_unique",
+        "project_files_status_idx"
+      ]
+    },
+    {
+      "order": 93,
+      "filename": "20260904210000_project_deletion_storage_integrity.sql",
+      "timestamp": "20260904210000",
+      "sha256": "1bbff8504b325e8ea798012674985ad0d447f77a71dca24181ab225370328757",
+      "tables": ["project_deletion_jobs"],
+      "functions": [
+        "project_deletion_project_write_fence",
+        "project_deletion_child_write_fence",
+        "project_file_deletion_fence",
+        "claim_project_deletion",
+        "renew_project_deletion",
+        "fail_project_deletion",
+        "project_storage_first_delete_guard",
+        "finalize_project_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["project_deletion_jobs"],
+      "policies": [],
+      "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
     }
   ]
 }

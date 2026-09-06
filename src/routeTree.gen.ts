@@ -111,6 +111,7 @@ import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/inte
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
+import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
@@ -637,6 +638,11 @@ const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
   path: '/api/library/folders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
+  id: '/api/project-files',
+  path: '/api/project-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
@@ -786,6 +792,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -898,6 +905,7 @@ export interface FileRoutesByTo {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -1011,6 +1019,7 @@ export interface FileRoutesById {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -1125,6 +1134,7 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
+    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1237,6 +1247,7 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
+    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1349,6 +1360,7 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
+    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1458,6 +1470,7 @@ export interface RootRouteChildren {
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
+  ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
@@ -2183,6 +2196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLibraryFoldersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/project-files': {
+      id: '/api/project-files'
+      path: '/api/project-files'
+      fullPath: '/api/project-files'
+      preLoaderRoute: typeof ApiProjectFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/help-submit': {
       id: '/api/public/help-submit'
       path: '/api/public/help-submit'
@@ -2400,6 +2420,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
+  ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiWorkSyncRoute: ApiWorkSyncRoute,

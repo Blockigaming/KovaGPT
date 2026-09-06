@@ -32,6 +32,10 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
   assert.match(worker, /clearAccountExportArtifacts/u);
   assert.match(worker, /settled\.data === "queued"/u);
   assert.match(worker, /createHash\("sha256"\)/u);
+  assert.match(
+    worker,
+    /row\.status === "ready"[\s\S]*row\.kind === "file"[\s\S]*row\.kind === "image"/u,
+  );
   assert.match(worker, /OAuth credentials, access tokens/u);
 });
 
