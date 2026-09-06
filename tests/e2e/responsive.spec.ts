@@ -49,9 +49,12 @@ test.describe("KovaGPT responsive shell", () => {
       contentType: "image/png",
     });
 
-    // No uncaught console errors (excluding known 3rd-party auth noise).
+    // No uncaught console errors. This exact Stripe browser diagnostic is already
+    // classified as expected in the OpenAI-migration browser suite.
     const filtered = errors.filter(
-      (e) => !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
+      (e) =>
+        !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e) &&
+        e !== "Potential permissions policy violation: payment is not allowed in this document.",
     );
     expect(filtered, `unexpected client errors: ${filtered.join("\n")}`).toEqual([]);
   });
