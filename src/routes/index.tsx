@@ -58,6 +58,8 @@ const ShareChatDialog = lazy(() =>
 const ChatWorkspaceDialog = lazy(() =>
   import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
 );
+const COMPLETE = "complete" as const;
+const RESEARCH_CANCELED = "canceled" as const;
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import {
@@ -81,6 +83,7 @@ import {
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
+  type Activity,
   type Message,
   deriveTitle,
   branchConversation,
@@ -961,6 +964,7 @@ function KovaGPT() {
     async (
       text: string,
       atts: PendingAttachment[],
+      retryTool?: ComposerToolId | null,
       _retryAttempt = 0,
       retryConversationId?: string,
       retryHistory?: Message[],
@@ -985,8 +989,6 @@ function KovaGPT() {
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
       const isNewConversation = !retryConversationId && !existingConversation;
-
-      const activeTool = selectedTool;
 
       const userMsg: Message = {
         id: newId(),
@@ -1013,7 +1015,21 @@ function KovaGPT() {
               : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
-      const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
+      const assistantMsg: Message = {
+        id: newId(),
+        role: "assistant",
+        content: "",
+        ...(retryTool === "deep_research"
+          ? {
+              researchProgress: {
+                stage: "created",
+                label: "Starting research",
+                status: "created" as const,
+                progress: 0,
+              },
+            }
+          : {}),
+      };
 
       const editIndex =
         existingConversation && editingMessage?.conversationId === existingConversation.id
@@ -1088,22 +1104,30 @@ function KovaGPT() {
         if (assistantFrame === null) assistantFrame = requestAnimationFrame(flushAssistant);
       };
 
-      const markPendingImage = () => {
-        if (!isCurrentRequest()) return;
+      const updateAssistantMessage = (update: (message: Message) => Message) => {
         setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id !== nextConvId) return c;
-            const messages = c.messages.map((m) =>
-              m.id === assistantMsg.id ? { ...m, pendingImage: true } : m,
-            );
-            return { ...c, messages, updatedAt: Date.now() };
-          }),
+          prev.map((conversation) =>
+            conversation.id === nextConvId
+              ? {
+                  ...conversation,
+                  messages: conversation.messages.map((message) =>
+                    message.id === assistantMsg.id ? update(message) : message,
+                  ),
+                  updatedAt: Date.now(),
+                }
+              : conversation,
+          ),
         );
       };
+      const markPendingImage = () =>
+        updateAssistantMessage((message) => ({ ...message, pendingImage: true }));
 
       let assembledReply = "";
 
       try {
+        const researchUpdates =
+          retryTool === "deep_research" ? await import("@/lib/deep-research-client") : null;
+        controller.signal.throwIfAborted();
         const payloadMessages = [
           ...priorMessages.map((message) => ({
             role: message.role,
@@ -1124,12 +1148,12 @@ function KovaGPT() {
           },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode: activeTool === "deep_research" ? "thinking" : mode,
-            clientTool: activeTool,
+            mode: retryTool === "deep_research" ? "thinking" : mode,
+            clientTool: retryTool,
             // Main-chat ids are device-local until a user-owned memory row
             // exists. Do not submit an unclaimable relationship for a
             // service-role Deep Research write.
-            chatId: activeTool === "deep_research" ? undefined : nextConvId,
+            chatId: retryTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
             user: tempChat
               ? undefined
@@ -1190,27 +1214,41 @@ function KovaGPT() {
             if (delta?.kind === "image_pending") {
               markPendingImage();
             }
-            if (delta?.kind === "activity" && delta?.label) {
-              setConversations((prev) =>
-                prev.map((c) => {
-                  if (c.id !== nextConvId) return c;
-                  const msgs = c.messages.map((m) => {
-                    if (m.id !== assistantMsg.id) return m;
-                    const activity = {
-                      tool: String(delta.tool ?? ""),
-                      label: String(delta.label),
-                      status: "done" as const,
-                    };
-                    const activities = (m.activities ?? []).some(
-                      (item) => item.tool === activity.tool && item.label === activity.label,
-                    )
-                      ? m.activities
-                      : [...(m.activities ?? []), activity];
-                    return { ...m, activities };
-                  });
-                  return { ...c, messages: msgs };
-                }),
+            if (
+              researchUpdates &&
+              (delta?.kind === "research_progress" || delta?.kind === "research_warning")
+            )
+              updateAssistantMessage((message) =>
+                researchUpdates.applyResearchDelta(message, delta),
               );
+            if (delta?.kind === "activity" && delta?.label) {
+              updateAssistantMessage((message) => {
+                const activity: Activity = {
+                  tool: String(delta.tool ?? ""),
+                  label: String(delta.label),
+                  status:
+                    delta.status === "failed" || delta.status === RESEARCH_CANCELED
+                      ? delta.status
+                      : delta.status === "running" || delta.status === "pending"
+                        ? ("running" as const)
+                        : ("done" as const),
+                };
+                const currentActivities = message.activities ?? [];
+                const matchingToolIndex = activity.tool
+                  ? currentActivities.findIndex((item) => item.tool === activity.tool)
+                  : -1;
+                const activities =
+                  matchingToolIndex >= 0
+                    ? currentActivities.map((item, index) =>
+                        index === matchingToolIndex ? activity : item,
+                      )
+                    : currentActivities.some(
+                          (item) => item.tool === activity.tool && item.label === activity.label,
+                        )
+                      ? currentActivities
+                      : [...currentActivities, activity];
+                return { ...message, activities };
+              });
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {
               setConversations((prev) =>
@@ -1265,7 +1303,9 @@ function KovaGPT() {
                   ? {
                       ...conversation,
                       messages: conversation.messages.filter(
-                        (message) => message.id !== assistantMsg.id,
+                        (message) =>
+                          message.id !== assistantMsg.id ||
+                          message.researchProgress?.status === RESEARCH_CANCELED,
                       ),
                     }
                   : conversation,
@@ -1325,7 +1365,7 @@ function KovaGPT() {
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
               if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-              void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
+              send(text, atts, retryTool, _retryAttempt + 1, nextConvId, priorMessages);
             }, backoffMs);
             return;
           }
@@ -1348,6 +1388,21 @@ function KovaGPT() {
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
+          if (retryTool === "deep_research") {
+            updateAssistantMessage((message) =>
+              message.researchProgress
+                ? {
+                    ...message,
+                    researchProgress: {
+                      ...message.researchProgress,
+                      label: "Research failed",
+                      status: "failed",
+                      detail: friendly,
+                    },
+                  }
+                : message,
+            );
+          }
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {
@@ -1368,7 +1423,7 @@ function KovaGPT() {
                 retryTimerRef.current = window.setTimeout(() => {
                   retryTimerRef.current = null;
                   if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-                  void send(text, atts, 0, nextConvId, priorMessages);
+                  send(text, atts, retryTool, 0, nextConvId, priorMessages);
                 }, 100);
               },
             },
@@ -1390,7 +1445,6 @@ function KovaGPT() {
       mode,
       autoTitle,
       settings,
-      selectedTool,
       tempChat,
       editingMessage,
       principalReady,
@@ -1411,7 +1465,33 @@ function KovaGPT() {
     abortRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
-  }, []);
+    setConversations((previous) =>
+      previous.map((conversation) => {
+        if (conversation.id !== activeIdRef.current) return conversation;
+        return {
+          ...conversation,
+          messages: conversation.messages.map((message) =>
+            message.researchProgress &&
+            ![COMPLETE, "failed", RESEARCH_CANCELED].includes(message.researchProgress.status)
+              ? {
+                  ...message,
+                  activities: message.activities?.map((activity) =>
+                    activity.status === "running"
+                      ? { ...activity, status: RESEARCH_CANCELED }
+                      : activity,
+                  ),
+                  researchProgress: {
+                    ...message.researchProgress,
+                    label: "Research canceled",
+                    status: RESEARCH_CANCELED,
+                  },
+                }
+              : message,
+          ),
+        };
+      }),
+    );
+  }, [setConversations]);
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
@@ -1728,7 +1808,7 @@ function KovaGPT() {
                 <ChatInput
                   value={principalReady ? input : ""}
                   onChange={setInput}
-                  onSubmit={() => send(input, attachments)}
+                  onSubmit={(tool) => send(input, attachments, tool)}
                   onStop={stop}
                   isStreaming={isStreaming}
                   disabled={!principalReady}
@@ -1912,7 +1992,7 @@ function KovaGPT() {
                                       kind: "image" as const,
                                       dataUrl: attachment.dataUrl,
                                       name: "Attached image",
-                                      status: "complete" as const,
+                                      status: COMPLETE,
                                     }
                                   : attachment.kind === "text_file"
                                     ? {
@@ -1922,7 +2002,7 @@ function KovaGPT() {
                                         size: attachment.size ?? undefined,
                                         fileType: attachment.fileType,
                                         textContent: attachment.content,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       }
                                     : {
                                         kind: "library_file" as const,
@@ -1932,7 +2012,7 @@ function KovaGPT() {
                                         libraryItemId: attachment.libraryItemId,
                                         fileType: attachment.fileType,
                                         sourceProject: attachment.sourceProject,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       },
                               ),
                             );
@@ -1956,7 +2036,7 @@ function KovaGPT() {
                       isLastAssistant && !isStreaming && priorUser
                         ? () => {
                             const retryHistory = active.messages.slice(0, -2);
-                            void send(
+                            send(
                               priorUser.content,
                               (priorUser.attachments ?? []).map((attachment) =>
                                 attachment.kind === "image"
@@ -1964,7 +2044,7 @@ function KovaGPT() {
                                       kind: "image" as const,
                                       dataUrl: attachment.dataUrl,
                                       name: "Attached image",
-                                      status: "complete" as const,
+                                      status: COMPLETE,
                                     }
                                   : attachment.kind === "text_file"
                                     ? {
@@ -1974,7 +2054,7 @@ function KovaGPT() {
                                         size: attachment.size ?? undefined,
                                         fileType: attachment.fileType,
                                         textContent: attachment.content,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       }
                                     : {
                                         kind: "library_file" as const,
@@ -1984,9 +2064,10 @@ function KovaGPT() {
                                         libraryItemId: attachment.libraryItemId,
                                         fileType: attachment.fileType,
                                         sourceProject: attachment.sourceProject,
-                                        status: "complete" as const,
+                                        status: COMPLETE,
                                       },
                               ),
+                              m.researchProgress ? "deep_research" : null,
                               0,
                               active.id,
                               retryHistory,
@@ -2071,7 +2152,7 @@ function KovaGPT() {
               <ChatInput
                 value={principalReady ? input : ""}
                 onChange={setInput}
-                onSubmit={() => send(input, attachments)}
+                onSubmit={(tool) => send(input, attachments, tool)}
                 onStop={stop}
                 isStreaming={isStreaming}
                 disabled={!principalReady}

@@ -68,6 +68,11 @@ const MessageVersionHistoryDialog = lazy(() =>
     default: MessageVersionHistoryDialog,
   })),
 );
+const ResearchProgressCard = lazy(() =>
+  import("./ResearchProgressCard").then(({ ResearchProgressCard }) => ({
+    default: ResearchProgressCard,
+  })),
+);
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -495,6 +500,11 @@ function ChatMessageInner({
               }
             }}
           >
+            {message.researchProgress && (
+              <Suspense fallback={null}>
+                <ResearchProgressCard progress={message.researchProgress} onRetry={onRetry} />
+              </Suspense>
+            )}
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {message.activities.map((activity, index) => (
@@ -502,7 +512,19 @@ function ChatMessageInner({
                     key={index}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
                   >
-                    <Check className="w-3 h-3 text-primary" />
+                    {activity.status === "running" ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    ) : activity.status === "failed" ? (
+                      <span className="font-semibold text-destructive" aria-hidden="true">
+                        !
+                      </span>
+                    ) : activity.status === "canceled" ? (
+                      <span className="font-semibold text-muted-foreground" aria-hidden="true">
+                        ×
+                      </span>
+                    ) : (
+                      <Check className="h-3 w-3 text-primary" />
+                    )}
                     {activity.label}
                   </span>
                 ))}
@@ -546,7 +568,7 @@ function ChatMessageInner({
                     </div>
                   </div>
                 </div>
-              ) : streaming && !message.content ? (
+              ) : streaming && !message.content && !message.researchProgress ? (
                 <StreamingStatus activities={message.activities} />
               ) : (
                 (() => {

@@ -123,7 +123,7 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
+  onSubmit: (tool?: ComposerToolId | null) => void;
   onStop: () => void;
   isStreaming: boolean;
 
@@ -167,6 +167,8 @@ export function ChatInput({
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
+  const selectedToolRef = useRef(selectedTool);
+  selectedToolRef.current = selectedTool;
 
   const [plusOpen, setPlusOpen] = useState(false);
   const online = useSyncExternalStore(
@@ -180,7 +182,7 @@ export function ChatInput({
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
   useEffect(() => {
-    if (!plusOpen) return;
+    if (!plusOpen || isMobileLayout) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
@@ -197,7 +199,7 @@ export function ChatInput({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen]);
+  }, [isMobileLayout, plusOpen]);
 
   useEffect(() => {
     const el = ref.current;
@@ -250,9 +252,17 @@ export function ChatInput({
       toast.error(blockedAttachmentMessage);
       return;
     }
+    if (selectedToolRef.current === "deep_research" && attachments.length > 0) {
+      const message = "Deep Research doesn't support attachments yet";
+      setUploadAnnouncement(message);
+      toast.error(message, {
+        description: "Remove the attached files or choose another tool before sending.",
+      });
+      return;
+    }
     submittingRef.current = true;
     setUploadAnnouncement("Message submitted");
-    onSubmit();
+    onSubmit(selectedToolRef.current);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -582,6 +592,7 @@ export function ChatInput({
       return;
     }
     const next = selectedTool === tool.id ? null : tool.id;
+    selectedToolRef.current = next;
     onToolSelect?.(next);
     setPlusOpen(false);
     setUploadAnnouncement(next ? `${tool.label} selected` : `${tool.label} removed`);

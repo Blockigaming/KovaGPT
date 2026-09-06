@@ -277,119 +277,167 @@ export async function runDeepResearch(
 ): Promise<ResearchResult> {
   const safeQuery = sanitizeResearchText(query, 1000);
   if (!safeQuery) throw new Error("empty_research_query");
+  let currentProgress = 0;
+  let workflowComplete = false;
   const emit = async (stage: ResearchStage, progress: number, activity?: ToolActivityEvent) => {
-    await opts.onProgress?.({ stage, progress, activity });
+    currentProgress = Math.min(1, Math.max(0, progress));
+    await opts.onProgress?.({ stage, progress: currentProgress, activity });
   };
 
   const runId = await createResearchRun(opts.persistence, safeQuery);
-  await emit(
-    { id: "created", label: "Created research run", status: "created", detail: safeQuery },
-    0.05,
-  );
-  await emit(
-    { id: "intake", label: "Scope research question", status: "complete", detail: safeQuery },
-    0.1,
-  );
-  await emit(
-    { id: "planning", label: "Create research plan", status: "running" },
-    0.2,
-    createToolActivityEvent("research_plan", "Creating research plan", "running"),
-  );
-  let plan: string[];
   try {
-    plan = await makePlan(safeQuery, opts.signal);
-  } catch {
-    plan = fallbackPlan(safeQuery);
+    await emit(
+      { id: "created", label: "Created research run", status: "created", detail: safeQuery },
+      0.05,
+    );
+    await emit(
+      { id: "intake", label: "Scope research question", status: "complete", detail: safeQuery },
+      0.1,
+    );
+    await emit(
+      { id: "planning", label: "Create research plan", status: "running" },
+      0.2,
+      createToolActivityEvent("research_plan", "Creating research plan", "running"),
+    );
+    let plan: string[];
+    try {
+      plan = await makePlan(safeQuery, opts.signal);
+    } catch (error) {
+      if (opts.signal?.aborted) throw error;
+      plan = fallbackPlan(safeQuery);
+    }
+    await updateResearchRun(opts.persistence, runId, { plan });
+    await emit(
+      {
+        id: "planning",
+        label: "Create research plan",
+        status: "complete",
+        detail: `${plan.length} search queries`,
+      },
+      0.32,
+      createToolActivityEvent("research_plan", "Research plan ready", "complete", {
+        metadata: { queries: plan.length },
+      }),
+    );
+
+    await emit(
+      { id: "searching", label: "Search multiple source sets", status: "running" },
+      0.38,
+      createToolActivityEvent("search_web", "Searching web", "running"),
+    );
+    const partialFailures: string[] = [];
+    const sourceGroups = await Promise.all(
+      plan.map(async (searchQuery) => {
+        const response = await searchWeb(searchQuery, {
+          wantsNews: true,
+          limit: 4,
+          signal: opts.signal,
+        });
+        if (response.status !== "ok")
+          partialFailures.push(`${searchQuery}: ${response.error ?? response.status}`);
+        return { query: searchQuery, sources: response.sources };
+      }),
+    );
+    await emit(
+      {
+        id: "searching",
+        label: "Search multiple source sets",
+        status: "complete",
+        detail: `${sourceGroups.reduce((n, g) => n + g.sources.length, 0)} raw sources`,
+      },
+      0.58,
+      createToolActivityEvent("search_web", "Web search complete", "complete"),
+    );
+
+    await emit(
+      { id: "reading", label: "Read and dedupe evidence", status: "running" },
+      0.64,
+      createToolActivityEvent("read_source", "Reading source snippets", "running"),
+    );
+    await emit(
+      { id: "comparing", label: "Compare source coverage", status: "running" },
+      0.68,
+      createToolActivityEvent("compare_sources", "Comparing sources", "running"),
+    );
+    await emit({ id: "analyzing", label: "Analyze evidence", status: "running" }, 0.72);
+    const { evidence, sources } = buildEvidence(plan, sourceGroups);
+    if (!evidence.length) throw new Error(partialFailures[0] ?? "no_research_sources");
+    await insertResearchEvidence(opts.persistence, runId, evidence);
+    await updateResearchRun(opts.persistence, runId, { evidence, sources });
+    await emit(
+      {
+        id: "analyzing",
+        label: "Extract and dedupe evidence",
+        status: "complete",
+        detail: `${evidence.length} evidence notes`,
+      },
+      0.76,
+      createToolActivityEvent("read_source", "Evidence ready", "complete", {
+        metadata: { evidence: evidence.length },
+      }),
+    );
+    await emit(
+      {
+        id: "comparing",
+        label: "Compare source coverage",
+        status: "complete",
+        detail: `${sources.length} unique sources`,
+      },
+      0.8,
+      createToolActivityEvent("compare_sources", "Source comparison complete", "complete"),
+    );
+
+    await emit(
+      { id: "writing_report", label: "Write cited report", status: "running" },
+      0.84,
+      createToolActivityEvent("write_report", "Writing cited report", "running"),
+    );
+    const report = await writeReport(safeQuery, plan, evidence, opts.signal);
+    await updateResearchRun(opts.persistence, runId, {
+      status: "complete",
+      report,
+      sources,
+      partial_failures: partialFailures,
+      completed_at: new Date().toISOString(),
+    });
+    workflowComplete = true;
+    await emit(
+      {
+        id: "complete",
+        label: "Research complete",
+        status: "complete",
+        detail: `${sources.length} sources · ${evidence.length} evidence notes`,
+      },
+      1,
+      createToolActivityEvent("write_report", "Cited report complete", "complete"),
+    );
+
+    return { query: safeQuery, plan, evidence, report, sources, partialFailures };
+  } catch (error) {
+    // A closed response stream can reject the final delivery callback after the
+    // completed report is already stored. Preserve that truthful terminal state.
+    if (workflowComplete) throw error;
+    const canceled = opts.signal?.aborted === true;
+    await updateResearchRun(opts.persistence, runId, {
+      status: canceled ? "canceled" : "failed",
+      completed_at: new Date().toISOString(),
+    });
+    await emit(
+      {
+        id: canceled ? "canceled" : "failed",
+        label: canceled ? "Research canceled" : "Research could not complete",
+        status: canceled ? "canceled" : "failed",
+        ...(!canceled
+          ? { detail: "Search or the AI provider failed. You can retry this request." }
+          : {}),
+      },
+      currentProgress,
+      createToolActivityEvent(
+        "write_report",
+        canceled ? "Research canceled" : "Research failed",
+        canceled ? "canceled" : "failed",
+      ),
+    );
+    throw error;
   }
-  await updateResearchRun(opts.persistence, runId, { plan });
-  await emit(
-    {
-      id: "planning",
-      label: "Create research plan",
-      status: "complete",
-      detail: `${plan.length} search queries`,
-    },
-    0.32,
-    createToolActivityEvent("research_plan", "Research plan ready", "complete", {
-      metadata: { queries: plan.length },
-    }),
-  );
-
-  await emit(
-    { id: "searching", label: "Search multiple source sets", status: "running" },
-    0.38,
-    createToolActivityEvent("search_web", "Searching web", "running"),
-  );
-  const partialFailures: string[] = [];
-  const sourceGroups = await Promise.all(
-    plan.map(async (searchQuery) => {
-      const response = await searchWeb(searchQuery, {
-        wantsNews: true,
-        limit: 4,
-        signal: opts.signal,
-      });
-      if (response.status !== "ok")
-        partialFailures.push(`${searchQuery}: ${response.error ?? response.status}`);
-      return { query: searchQuery, sources: response.sources };
-    }),
-  );
-  await emit(
-    {
-      id: "searching",
-      label: "Search multiple source sets",
-      status: "complete",
-      detail: `${sourceGroups.reduce((n, g) => n + g.sources.length, 0)} raw sources`,
-    },
-    0.58,
-    createToolActivityEvent("search_web", "Web search complete", "complete"),
-  );
-
-  await emit(
-    { id: "reading", label: "Read and dedupe evidence", status: "running" },
-    0.64,
-    createToolActivityEvent("read_source", "Reading source snippets", "running"),
-  );
-  await emit(
-    { id: "comparing", label: "Compare source coverage", status: "running" },
-    0.68,
-    createToolActivityEvent("compare_sources", "Comparing sources", "running"),
-  );
-  await emit({ id: "analyzing", label: "Analyze evidence", status: "running" }, 0.72);
-  const { evidence, sources } = buildEvidence(plan, sourceGroups);
-  if (!evidence.length) throw new Error(partialFailures[0] ?? "no_research_sources");
-  await insertResearchEvidence(opts.persistence, runId, evidence);
-  await updateResearchRun(opts.persistence, runId, { evidence, sources });
-  await emit(
-    {
-      id: "analyzing",
-      label: "Extract and dedupe evidence",
-      status: "complete",
-      detail: `${evidence.length} evidence notes`,
-    },
-    0.76,
-    createToolActivityEvent("read_source", "Evidence ready", "complete", {
-      metadata: { evidence: evidence.length },
-    }),
-  );
-
-  await emit(
-    { id: "writing_report", label: "Write cited report", status: "running" },
-    0.84,
-    createToolActivityEvent("write_report", "Writing cited report", "running"),
-  );
-  const report = await writeReport(safeQuery, plan, evidence, opts.signal);
-  await updateResearchRun(opts.persistence, runId, {
-    status: "complete",
-    report,
-    sources,
-    partial_failures: partialFailures,
-    completed_at: new Date().toISOString(),
-  });
-  await emit(
-    { id: "complete", label: "Research complete", status: "complete" },
-    1,
-    createToolActivityEvent("write_report", "Cited report complete", "complete"),
-  );
-
-  return { query: safeQuery, plan, evidence, report, sources, partialFailures };
 }
