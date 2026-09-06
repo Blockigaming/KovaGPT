@@ -47,5 +47,5 @@ test("authorization uses a verified JWT-scoped user client while writes retain s
 });
 
 test("the first-party main-chat client does not submit an unowned research chat id", () => {
-  assert.match(clientSource, /chatId:\s*activeTool === "deep_research" \? undefined : nextConvId/);
+  assert.match(clientSource, /chatId:\s*retryTool === "deep_research" \? undefined : nextConvId/);
 });
