@@ -1,124 +1,35 @@
-import { expect, test } from "@playwright/test";
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×tN‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉÐì•áÁ•Ð°Ñ•ÍÐô™É½´€‰Á±…åÝÉ¥¡Ð½Ñ•ÍÐˆì()½¹ÍÐÁÕ‰±¥I½ÕÑ•Ì€ôl(€€ˆ½™•…ÑÕÉ•Ìˆ°(€€ˆ½ÕÍ”µ…Í•Ìˆ°(€€ˆ½‘•Ù•±½Á•ÉÌˆ°(€€ˆ½ÑÉÕÍÐˆ°(€€ˆ½ÁÉ¥¥¹œˆ°(€€ˆ½¡•±Àˆ°(€€ˆ½ÁÉ¥Ù…äˆ°(€€ˆ½Ñ•ÉµÌˆ°(€€ˆ½É•™Õ¹ˆ°(€€ˆ½…¤µÍ…™•Ñäˆ°(€€ˆ½•ÑÑ¥¹œµÍÑ…ÉÑ•ˆ°(€€ˆ½µ½‘•Ìˆ°(€€ˆ½ÍÑ…ÑÕÌˆ°(€€ˆ½¡…¹•±½œˆ°(€€ˆ½½¹¹•Ðˆ°(€€ˆ½…¤µÝÉ¥Ñ•Èˆ°(€€ˆ½‰±½œ½…¤µµ…É­•ÐµÉ•Í•…É µÕ¥‘”ˆ°)t…Ì½¹ÍÐì()…Íå¹Œ™Õ¹Ñ¥½¸Ý…¥Ñ½É!å‘É…Ñ¥½¸¡Á…”è¥µÁ½ÉÐ ‰Á±…åÝÉ¥¡Ð½Ñ•ÍÐˆ¤¹A…”¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ‰¡Ñµ°ˆ¤¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰‘…Ñ„µ­½Ù„µ¡å‘É…Ñ¥½¸ˆ°€‰É•…‘äˆ°ì(€€€Ñ¥µ•½ÕÐè€ÌÁ|ÀÀÀ°(€ô¤ì)ô()Ñ•ÍÐ ‰ÁÕ‰±¥ŒÉ½ÕÑ•ÌÍ¡…É”½¹”±…¹‘µ…É¬…¹„Ý½É­¥¹œÍ­¥ÀÑ…É•Ðˆ°…Íå¹Œ€¡ìÁ…”ô°Ñ•ÍÑ%¹™¼¤€ôøì(€Ñ•ÍÐ¹Í­¥À¡Ñ•ÍÑ%¹™¼¹ÁÉ½©•Ð¹¹…µ”€„ôô€‰‘•Í­Ñ½À´ÄÐÐÁàäÀÀˆ¤ì(€Ñ•ÍÐ¹Í•ÑQ¥µ•½ÕÐ äÁ|ÀÀÀ¤ì((€™½È€¡½¹ÍÐÉ½ÕÑ”½˜ÁÕ‰±¥I½ÕÑ•Ì¤ì(€€€½¹ÍÐÉ•ÍÁ½¹Í”€ô…Ý…¥ÐÁ…”¹½Ñ¼¡É½ÕÑ”°ìÝ…¥ÑU¹Ñ¥°è€‰‘½µ½¹Ñ•¹Ñ±½…‘•ˆô¤ì(€€€•áÁ•Ð¡É•ÍÁ½¹Í”ü¹ÍÑ…ÑÕÌ ¤°É½ÕÑ”¤¹Ñ½	•1•ÍÍQ¡…¸ ÐÀÀ¤ì(€€€…Ý…¥ÐÝ…¥Ñ½É!å‘É…Ñ¥½¸¡Á…”¤ì((€€€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ‰µ…¥¸ˆ¤°€‘íÉ½ÕÑ•ôÍ¡½Õ±É•¹‘•È½¹”µ…¥¸±…¹‘µ…É­€¤¹Ñ½!…Ù•½Õ¹Ð Ä¤ì(€€€…Ý…¥Ð•áÁ•Ð (€€€€€Á…”¹±½…Ñ½È ‰µ…¥¸µ…¥¸µ½¹Ñ•¹Ðˆ¤°(€€€€€€‘íÉ½ÕÑ•ôÍ¡½Õ±•áÁ½Í”Ñ¡”Í­¥ÀÑ…É•Ñ€°(€€€€¤¹Ñ½!…Ù•½Õ¹Ð Ä¤ì(€€€…Ý…¥Ð•áÁ•Ð¡Á…”¹•Ñ	åI½±” ‰¹…Ù¥…Ñ¥½¸ˆ°ì¹…µ”è€‰AÕ‰±¥Œ¹…Ù¥…Ñ¥½¸ˆô¤¤¹Ñ½	•Y¥Í¥‰±” ¤ì(€€€…Ý…¥Ð•áÁ•Ð¡Á…”¹•Ñ	åI½±” ‰½¹Ñ•¹Ñ¥¹™¼ˆ¤¤¹Ñ½	•Y¥Í¥‰±” ¤ì((€€€½¹ÍÐÙ¥•ÝÁ½ÉÐ€ô…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôø€¡ì(€€€€€±¥•¹Ñ]¥‘Ñ è‘½Õµ•¹Ð¹‘½Õµ•¹Ñ±•µ•¹Ð¹±¥•¹Ñ]¥‘Ñ °(€€€€€ÍÉ½±±]¥‘Ñ è‘½Õµ•¹Ð¹‘½Õµ•¹Ñ±•µ•¹Ð¹ÍÉ½±±]¥‘Ñ °(€€€ô¤¤ì(ƒt¶‰žËkºwµçH\ÈÙ^X›Ø\™[Ü\˜X›H[™™\Ù\™\È]Èš[X\žHXÝ[Ûˆ‹\Þ[˜È
+ÂˆYÙKŸK\Ý[™›ÊHOˆÂˆ\ÝœÚÚ\
+\Ý[™›Ëœ›Ú™XÝ›˜[YHOOHœÛ™KLÎLŠNÂˆ]ØZ]YÙK™ÛÝÊ‹Ù™X]\™\ÈŠNÂˆ]ØZ]ØZ]›Ü’Y˜][ÛŠYÙJNÂ‚ˆÛÛœÝÙÙÛHHYÙK™Ù]žT›ÛJ˜]Ûˆ‹È˜[YNˆ“Ü[ˆ˜]šYØ][ÛˆˆJNÂˆ]ØZ]^XÝ
+ÙÙÛJKÒ]™P]šX]J˜\šXKXÛÛ›ÛÈ‹œX›XË[[Øš[K[˜]šYØ][ÛˆŠNÂˆ]ØZ]ÙÙÛK˜ÛXÚÊ
+NÂ‚ˆÛÛœÝY[HHYÙK™Ù]žT›ÛJ›˜]šYØ][Ûˆ‹È˜[YNˆ“[Øš[HX›XÈ˜]šYØ][ÛˆˆJNÂˆ]ØZ]^XÝ
+Y[JKÐ™Uš\ÚX›J
+NÂˆ]ØZ]^XÝ
+Y[K™Ù]žT›ÛJ›[šÈ‹È˜[YNˆ”›ÙXÝˆJJKÒ]™P]šX]J˜\šXKXÝ\œ™[‹œYÙHŠNÂˆ]ØZ]^XÝ
+Y[K™Ù]žT›ÛJ›[šÈ‹È˜[YNˆ“Ü[ˆÛÝ˜QÔˆJJKÐ™Uš\ÚX›J
+NÂ‚ˆ]ØZ]YÙKšÙ^X›Ø\™œ™\ÜÊ‘\ØØ\HŠNÂˆ]ØZ]^XÝ
+Y[JKÐ™RY[Š
+NÂˆ]ØZ]^XÝ
+YÙK™Ù]žT›ÛJ˜]Ûˆ‹È˜[YNˆ“Ü[ˆ˜]šYØ][ÛˆˆJJKÐ™Q›ØÝ\ÙY
 
-const publicRoutes = [
-  "/features",
-  "/use-cases",
-  "/developers",
-  "/trust",
-  "/pricing",
-  "/help",
-  "/privacy",
-  "/terms",
-  "/refund",
-  "/ai-safety",
-  "/getting-started",
-  "/modes",
-  "/status",
-  "/changelog",
-  "/connect",
-  "/ai-writer",
-  "/blog/ai-market-research-guide",
-] as const;
+NÂ‚ˆ]ØZ]YÙK™Ù]žT›ÛJ˜]Ûˆ‹È˜[YNˆ“Ü[ˆ˜]šYØ][ÛˆˆJK˜ÛXÚÊ
+NÂˆ]ØZ]Y[K™Ù]žT›ÛJ›[šÈ‹È˜[YNˆ”šXÚ[™ÈˆJK˜ÛXÚÊ
+NÂˆ]ØZ]^XÝ
+YÙJKÒ]™UT“
+×ÜšXÚ[™ÉÊNÂˆ]ØZ]^XÝ
+YÙK™Ù]žT›ÛJ˜]Ûˆ‹È˜[YNˆ“Ü[ˆ˜]šYØ][ÛˆˆJJKÒ]™P]šX]Jˆ˜\šXKY^[™Y‹ˆ™˜[ÙH‹ˆ
+NÂ‚ˆÛÛœÝ\™Ù]ÈHYÙK›ØØ]ÜŠšXY\ˆKXY\ˆ]Û‹›ÛÝ\ˆHŠNÂˆÛÛœÝÛÝ[H]ØZ]\™Ù]Ë˜ÛÝ[
 
-async function waitForHydration(page: import("@playwright/test").Page) {
-  await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "ready", {
-    timeout: 30_000,
-  });
-}
+NÂˆ›Üˆ
+][™^HÈ[™^ÛÝ[È[™^
+ÏHJHÂˆÛÛœÝ›ÞH]ØZ]\™Ù]Ë›
+[™^
+K˜›Ý[™[™Ð›Þ
 
-test("public routes share one landmark and a working skip target", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(90_000);
-
-  for (const route of publicRoutes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), route).toBeLessThan(400);
-    await waitForHydration(page);
-
-    await expect(page.locator("main"), `${route} should render one main landmark`).toHaveCount(1);
-    await expect(
-      page.locator("main#main-content"),
-      `${route} should expose the skip target`,
-    ).toHaveCount(1);
-    await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
-    await expect(page.getByRole("contentinfo")).toBeVisible();
-
-    const viewport = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(viewport.scrollWidth, `${route} should not overflow horizontally`).toBeLessThanOrEqual(
-      viewport.clientWidth + 1,
-    );
-  }
-
-  await page.goto("/features");
-  await waitForHydration(page);
-  await expect(page).toHaveTitle("KovaGPT features | KovaGPT");
-  await page
-    .getByRole("navigation", { name: "Public navigation" })
-    .getByRole("link", { name: "Pricing" })
-    .click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page).toHaveTitle("KovaGPT Billing");
-  await page
-    .getByRole("navigation", { name: "Footer navigation" })
-    .getByRole("link", { name: "Privacy" })
-    .click();
-  await expect(page).toHaveURL(/\/privacy$/);
-  await expect(page).toHaveTitle("KovaGPT Privacy");
-
-  const withdrawnDeveloperDoc = await page.goto("/developers/quickstart", {
-    waitUntil: "domcontentloaded",
-  });
-  expect(withdrawnDeveloperDoc?.status()).toBe(404);
-  await waitForHydration(page);
-  await expect(
-    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Return home", exact: true })).toBeVisible();
-
-  await page.goto("/privacy");
-  await waitForHydration(page);
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page.locator("main#main-content")).toBeFocused();
-});
-
-test("mobile public navigation is keyboard-operable and preserves its primary action", async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== "phone-390x844");
-  await page.goto("/features");
-  await waitForHydration(page);
-
-  const toggle = page.getByRole("button", { name: "Open navigation" });
-  await expect(toggle).toHaveAttribute("aria-controls", "public-mobile-navigation");
-  await toggle.click();
-
-  const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
-  await expect(menu).toBeVisible();
-  await expect(menu.getByRole("link", { name: "Product" })).toHaveAttribute("aria-current", "page");
-  await expect(menu.getByRole("link", { name: "Open KovaGPT" })).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  await expect(page.getByRole("button", { name: "Open navigation" })).toBeFocused();
-
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await menu.getByRole("link", { name: "Pricing" }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
-
-  const targets = page.locator("header a, header button, footer a");
-  const count = await targets.count();
-  for (let index = 0; index < count; index += 1) {
-    const box = await targets.nth(index).boundingBox();
-    if (box)
-      expect(box.height, `target ${index} should be at least 44px tall`).toBeGreaterThanOrEqual(44);
-  }
-});
+NÂˆYˆ
+›Þ
+Bˆ^XÝ
+›ÞšZYÚ\™Ù]	Ú[™^HÚÝ[™H]X\Ý[
+KÐ™QÜ™X]\•[“Ü‘\]X[
+
+NÂˆBŸJNÂ
