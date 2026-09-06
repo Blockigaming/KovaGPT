@@ -1,29 +1,124 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×½<N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉĞì•áÁ•Ğ°Ñ•ÍĞ°ÑåÁ”A…”ô™É½´€‰Á±…åİÉ¥¡Ğ½Ñ•ÍĞˆì)¥µÁ½ÉĞì¥¹ÍÑ…±±ÕÑ¡•¹Ñ¥…Ñ•‘¥áÑÕÉ”ô™É½´€ˆ¸½…ÕÑ¡•¹Ñ¥…Ñ•µ™¥áÑÕÉ”ˆì()½¹ÍĞ½İ¹•È€ô€ˆÈÈÈÈÈÈÈÈ´ÈÈÈÈ´ĞÈÈÈ´àÈÈÈ´ÈÈÈÈÈÈÈÈÈÈÈÈˆì)½¹ÍĞ½Ñ¡•É=İ¹•È€ô€ˆÌÌÌÌÌÌÌÌ´ÌÌÌÌ´ĞÌÌÌ´àÌÌÌ´ÌÌÌÌÌÌÌÌÌÌÌÌˆì()…Íå¹Œ™Õ¹Ñ¥½¸Í••‘%µ…•!¥ÍÑ½Éä¡Á…”èA…”¤ì(€…İ…¥ĞÁ…”¹•Ù…±Õ…Ñ” (€€€…Íå¹Œ€¡ì½İ¹•È°½Ñ¡•É=İ¹•Èô¤€ôøì(€€€€€½¹ÍĞ‘…Ñ…‰…Í”€ô…İ…¥Ğ¹•ÜAÉ½µ¥Í”ñ%	…Ñ…‰…Í”ø ¡É•Í½±Ù”°É•©•Ğ¤€ôøì(€€€€€€€½¹ÍĞÉ•ÅÕ•ÍĞ€ô¥¹‘•á•‘¹½Á•¸ ‰­½Ù…ÁĞµ¥µ…”µ¡¥ÍÑ½Éäˆ°€Ä¤ì(€€€€€€€É•ÅÕ•ÍĞ¹½¹ÕÁÉ…‘•¹••‘•€ô€ ¤€ôøì(€€€€€€€€€½¹ÍĞÍÑ½É”€ôÉ•ÅÕ•ÍĞ¹É•ÍÕ±Ğ¹É•…Ñ•=‰©•ÑMÑ½É” ‰¥µ…•Ìˆ°ì­•åA…Ñ èl‰ÕÍ•É-•äˆ°€‰¥‰tô¤ì(€€€€€€€€€ÍÑ½É”¹É•…Ñ•%¹‘•à ‰ÕÍ•É-•äˆ°€‰ÕÍ•É-•äˆ°ìÕ¹¥ÅÕ”è™…±Í”ô¤ì(€€€€€€€ôì(€€€€€€€É•ÅÕ•ÍĞ¹½¹ÍÕ•ÍÌ€ô€ ¤€ôøÉ•Í½±Ù”¡É•ÅÕ•ÍĞ¹É•ÍÕ±Ğ¤ì(€€€€€€€É•ÅÕ•ÍĞ¹½¹•ÉÉ½È€ô€ ¤€ôøÉ•©•Ğ¡É•ÅÕ•ÍĞ¹•ÉÉ½È¤ì(€€€€€ô¤ì(€€€€€ÑÉäì(€€€€€€€½¹ÍĞÑÉ…¹Í…Ñ¥½¸€ô‘…Ñ…‰…Í”¹ÑÉ…¹Í…Ñ¥½¸ ‰¥µ…•Ìˆ°€‰É•…‘İÉ¥Ñ”ˆ¤ì(€€€€€€€™½È€¡½¹ÍĞÕÍ•É-•ä½˜m½İ¹•È°½Ñ¡•É=İ¹•Ét¤ì(€€€€€€€€€ÑÉ…¹Í…Ñ¥½¸¹½‰©•ÑMÑ½É” ‰¥µ…•Ìˆ¤¹ÁÕĞ¡ì(€€€€€€€€€€€ÕÍ•É-•ä°(€€€€€€€€€€€¥è€‰ÁÉ¥Ù…Ñ”µ¥µ…”ˆ°(€€€€€€€€€€€ÁÉ½µÁĞè€‰ÁÉ¥Ù…Ñ”ÁÉ½µÁĞˆ°(€€€€€€€€€€€É•…Ñ•‘Ğè€Ä°(€€€€€€€€€€€¥µ…”è¹•Ü	±½ˆ¡l‰¥µ…”‰åÑ•Ì‰t°ìÑåÁ”è€‰¥µ…”½Á¹œˆô¤°(€€€€€€€€€ô¤ì(€€€€€€€ô(€€€€€€€…İ…¥Ğ¹•ÜAÉ½µ¥Í”ñÙ½¥ø ¡É•Í½±Ù”°É•©•Ğ¤€ôøì(€€€€€€€€€ÑÉ…¹Í…Ñ¥½¸¹½¹½µÁ±•Ñ”€ô€ ¤€ôøÉ•Í½±Ù” ¤ì(€€€€€€€€€ÑÉ…¹Í…Ñ¥½¸¹½¹•ÉÉ½È€ô€ ¤€ôøÉ•©•Ğ¡ÑÉ…¹Í…Ñ¥½¸¹•ÉÉ½È¤ì(€€€€€€€ô¤ì(€€€€€ô™¥¹…±±äì(€€€€€€€‘…Ñ…‰…Í”¹±½Í” ¤ì(€€€€€ô(€€€ô°(€€€ì½İ¹•È³½<¶‰ËkºwµçH‘SUHˆJNÂˆ[][Û”™\]Y\İÈ
-ÏHNÂˆ]ØZ]›İ]K™[š[
-Èİ]\ÎˆŒÛÛ[\Nˆ˜\XØ][Û‹ÚœÛÛˆ‹›ÙNˆ	ŞÈ›ÚÈY_IÈJNÂˆJNÂˆ]ØZ]YÙK™ÛİÊ‹ÈŠNÂˆ]ØZ]YÙK™Ù]T›ÛJ˜]Ûˆ‹È˜[YNˆ”Ù][™ÜÈ‹^XİˆYHJK™š\œİ
+import { expect, test, type Page } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 
-K˜ÛXÚÊ
-NÂˆ]ØZ]ÙYY[XYÙR\İÜJYÙJNÂˆ]ØZ]YÙK™Ù]T›ÛJXˆ‹È˜[YNˆ‘]HÛÛ›Û‹^XİˆYHJK˜ÛXÚÊ
-NÂˆ]ØZ]YÙK™Ù]T›ÛJ˜]Ûˆ‹È˜[YNˆ‘[]HXØÛİ[‹^XİˆYHJK˜ÛXÚÊ
-NÂˆÛÛœİÛÛ™š\›X][ÛˆHYÙK™Ù]T›ÛJ˜[\X[ÙÈ‹È˜[YNˆ‘[]H[İ\ˆXØÛİ[\›X[™[OÈˆJNÂˆ]ØZ]ÛÛ™š\›X][Û‹™Ù]T›ÛJ^›Ş‹È˜[YNˆ•\HSUHÈÛÛ™š\›HˆJK™š[
-‘SUHŠNÂˆËÈØœÙ\™HHØ[YHÜšYÚ[‰ÜÈ\˜X›H]X˜\ÙHœ›ÛHHYÙHÚ]İ]\XØ][Û‚ˆËÈ˜]šYØ][Û‹ˆÚYÛš[™Èİ]\İ›Ş\ÈH[][™ÈYÙIÜÈ]˜[X][ÛˆÛÛ^‚ˆÛÛœİİÜ˜YÙTYÙHH]ØZ]YÙK˜ÛÛ^
+const owner = "22222222-2222-4222-8222-222222222222";
+const otherOwner = "33333333-3333-4333-8333-333333333333";
 
-K›™]ÔYÙJ
-NÂˆ]ØZ]İÜ˜YÙTYÙKœ›İ]JŠŠ‹××Ù]šXÙK\İÜ˜YÙK\›Ø™H‹
-›İ]JHO‚ˆ›İ]K™[š[
-ÂˆÛÛ[\Nˆ^Ú[‹ˆ›ÙNˆYØİ\H[]O”İÜ˜YÙH›Ø™Oİ]Oˆ‹ˆJKˆ
-NÂˆ]ØZ]İÜ˜YÙTYÙK™ÛİÊ™]ÈT“
-‹××Ù]šXÙK\İÜ˜YÙK\›Ø™H‹YÙK\›
+async function seedImageHistory(page: Page) {
+  await page.evaluate(
+    async ({ owner, otherOwner }) => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("kovagpt-image-history", 1);
+        request.onupgradeneeded = () => {
+          const store = request.result.createObjectStore("images", { keyPath: ["userKey", "id"] });
+          store.createIndex("userKey", "userKey", { unique: false });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      try {
+        const transaction = database.transaction("images", "readwrite");
+        for (const userKey of [owner, otherOwner]) {
+          transaction.objectStore("images").put({
+            userKey,
+            id: "private-image",
+            prompt: "private prompt",
+            createdAt: 1,
+            image: new Blob(["image bytes"], { type: "image/png" }),
+          });
+        }
+        await new Promise<void>((resolve, reject) => {
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error);
+        });
+      } finally {
+        database.close();
+      }
+    },
+    { owner, otherOwner },
+  );
+}
 
-JKš™YŠNÂˆHÂˆ]ØZ]ÛÛ™š\›X][Û‹™Ù]T›ÛJ˜]Ûˆ‹È˜[YNˆ‘[]HXØÛİ[‹^XİˆYHJK˜ÛXÚÊ
-NÂˆ]ØZ]^XİœÛ
+async function imageOwners(page: Page) {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("kovagpt-image-history", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const request = database.transaction("images", "readonly").objectStore("images").getAll();
+      const rows = await new Promise<Array<{ userKey: string }>>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return rows.map((row) => row.userKey).sort();
+    } finally {
+      database.close();
+    }
+  });
+}
 
+for (const path of ["/", "/apps"]) {
+  test(`device reset from ${path} removes private image bytes and preserves another profile`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAuthenticatedFixture(page);
+    await page.goto(path);
+    await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+    await seedImageHistory(page);
+    await page.getByRole("tab", { name: "Storage", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Reset this profile's local data", exact: true })
+      .click();
+    await expect(
+      page.getByText("This profile's local browser data was reset.", { exact: true }),
+    ).toBeVisible();
+    expect(await imageOwners(page)).toEqual([otherOwner]);
+  });
+}
 
-HOˆ[XYÙSİÛ™\œÊİÜ˜YÙTYÙJJKÑ\]X[
-Ûİ\“İÛ™\—JNÂˆ^Xİ
-[][Û”™\]Y\İÊKĞ™JJNÂˆ]ØZ]^Xİ
-ÛÛ™š\›X][ÛŠKĞ™RY[Š
-NÂˆ^Xİ
-]ØZ][XYÙSİÛ™\œÊİÜ˜YÙTYÙJJKÑ\]X[
-Ûİ\“İÛ™\—JNÂˆHš[˜[HÂˆ]ØZ]İÜ˜YÙTYÙK˜ÛÜÙJ
-NÂˆBŸJNÂ
+test("successful account deletion also removes IndexedDB image history from Chat", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installAuthenticatedFixture(page);
+  let deletionRequests = 0;
+  await page.route("**/api/account", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { state: "active" } });
+      return;
+    }
+    expect(route.request().method()).toBe("DELETE");
+    expect(route.request().postDataJSON()).toEqual({ confirmation: "DELETE" });
+    deletionRequests += 1;
+    await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await seedImageHistory(page);
+  await page.getByRole("tab", { name: "Data control", exact: true }).click();
+  await page.getByRole("button", { name: "Delete account", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Delete your account permanently?" });
+  await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");
+  // Observe the same origin's durable database from a page without application
+  // navigation. Signing out destroys the deleting page's evaluation context.
+  const storagePage = await page.context().newPage();
+  await storagePage.route("**/__device-storage-probe", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Storage probe</title>",
+    }),
+  );
+  await storagePage.goto(new URL("/__device-storage-probe", page.url()).href);
+  try {
+    await confirmation.getByRole("button", { name: "Delete account", exact: true }).click();
+    await expect.poll(() => imageOwners(storagePage)).toEqual([otherOwner]);
+    expect(deletionRequests).toBe(1);
+    await expect(confirmation).toBeHidden();
+    expect(await imageOwners(storagePage)).toEqual([otherOwner]);
+  } finally {
+    await storagePage.close();
+  }
+});
