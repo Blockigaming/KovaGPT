@@ -76,20 +76,17 @@ test("chat history is searchable from both the sidebar and command palette", asy
   assert.match(home, /onSelectArchived/);
 });
 
-test("all currently implementable gaps are closed and deferred gaps are classified", async () => {
+test("remaining gaps distinguish active source work from external dependencies", async () => {
   const ledger = await read("docs/remaining-chatgpt-gaps.md");
-  assert.match(
-    ledger,
-    /A — Fully implementable now[\s\S]*implementable truthfulness gaps found during this checkpoint were completed/,
-  );
   for (const category of [
-    "B — Requires backend work",
-    "C — Requires provider support",
-    "D — Requires proprietary OpenAI infrastructure",
+    "A — Autonomous source work still open",
+    "B — Active packages, not yet in this audited source snapshot",
+    "C — Public-reference differences requiring bounded scope decisions",
+    "D — Work that genuinely needs Zachary or approved live access",
   ]) {
     assert.match(ledger, new RegExp(category));
   }
-  assert.match(ledger, /Workspace Timeline/);
+  assert.match(ledger, /Work-to-Sites output/);
 });
 
 test("Workspace Timeline and batch context workflows use existing authorized records", async () => {
