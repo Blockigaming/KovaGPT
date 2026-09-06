@@ -34,6 +34,7 @@ Azure and application values include:
 
 - `AZURE_ENVIRONMENT=production`
 - `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_IMAGE_ENDPOINT` (optional dedicated image-model resource)
 - `AZURE_OPENAI_DEPLOYMENT_CHAT`
 - `AZURE_OPENAI_DEPLOYMENT_THINKING`
 - `AZURE_OPENAI_DEPLOYMENT_DEEP`
@@ -49,6 +50,13 @@ Azure and application values include:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS`
+
+When an image model is unavailable in the primary Azure OpenAI resource's region, set
+`AZURE_OPENAI_IMAGE_ENDPOINT` to a separately approved Azure OpenAI resource and keep
+`AZURE_OPENAI_DEPLOYMENT_IMAGE` as the deployment name on that resource. The same Container Apps
+managed identity must have the required inference role on both resources. Key-authenticated
+deployments may instead set the server-only `AZURE_OPENAI_IMAGE_API_KEY`; never expose it through a
+`VITE_` variable.
 
 The browser and server Supabase configuration must resolve to the same approved production project. Supabase service-role, Stripe, OAuth, connector-encryption, and hashing secrets remain server-only.
 
