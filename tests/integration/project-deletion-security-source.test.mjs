@@ -52,6 +52,10 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
     migration,
     /project_row\.deletion_requested_at IS NOT NULL[\s\S]*metadata_finalizing/,
   );
+  assert.match(
+    migration,
+    /TG_TABLE_NAME = 'project_members'[\s\S]*to_jsonb\(OLD\) ->> 'role'\) IS DISTINCT FROM 'owner'/,
+  );
 
   assert.match(
     migration,
@@ -67,6 +71,22 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
     /OLD\.delete_attempt_id IS NOT NULL[\s\S]*NEW\.delete_attempt_id IS NULL/,
   );
   assert.match(migration, /project_file_operations_settling/);
+  assert.match(
+    migration,
+    /OLD\.uploaded_by IS NOT NULL[\s\S]*NEW\.uploaded_by IS NULL[\s\S]*to_jsonb\(NEW\) - 'uploaded_by' - 'updated_at'/,
+  );
+  for (const table of [
+    "agent_resource_promotions",
+    "agent_resource_relationships",
+    "agent_resource_activity",
+  ]) {
+    assert.match(
+      migration,
+      new RegExp(
+        `UPDATE public\\.${table}[\\s\\S]*SET project_id = NULL[\\s\\S]*WHERE project_id = p_project_id`,
+      ),
+    );
+  }
 
   for (const fn of [
     "claim_project_deletion",

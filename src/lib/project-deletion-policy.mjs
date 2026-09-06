@@ -1,7 +1,6 @@
 export const PROJECT_FILES_BUCKET = "project-files";
 export const PROJECT_STORAGE_DELETE_BATCH = 100;
 export const PROJECT_STORAGE_MAX_OBJECTS_PER_ATTEMPT = 2_000;
-export const PROJECT_STORAGE_MAX_FOLDER_DEPTH = 16;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UNSAFE_SEGMENT_PATTERN = /[\\/\u0000-\u001f\u007f]/u;
@@ -89,7 +88,6 @@ export async function purgeProjectStorageFolder({
   storage,
   projectId,
   maxObjects = PROJECT_STORAGE_MAX_OBJECTS_PER_ATTEMPT,
-  maxFolderDepth = PROJECT_STORAGE_MAX_FOLDER_DEPTH,
   onProgress = async () => undefined,
 }) {
   if (
@@ -97,9 +95,7 @@ export async function purgeProjectStorageFolder({
     typeof storage.list !== "function" ||
     typeof storage.remove !== "function" ||
     !Number.isSafeInteger(maxObjects) ||
-    maxObjects < 1 ||
-    !Number.isSafeInteger(maxFolderDepth) ||
-    maxFolderDepth < 1
+    maxObjects < 1
   ) {
     throw new ProjectDeletionError("project_storage_cleanup_configuration_invalid", 500);
   }
@@ -109,11 +105,7 @@ export async function purgeProjectStorageFolder({
   let scanCount = 0;
   const maxScans = Math.max(32, maxObjects * 4);
 
-  async function purgeFolder(folder, depth) {
-    if (depth > maxFolderDepth) {
-      throw new ProjectDeletionError("project_storage_folder_depth_exceeded", 409);
-    }
-
+  async function purgeFolder(folder) {
     let folderOnlyRounds = 0;
     while (true) {
       scanCount += 1;
@@ -154,7 +146,10 @@ export async function purgeProjectStorageFolder({
       }
 
       for (const nestedFolder of folders) {
-        await purgeFolder(nestedFolder, depth + 1);
+        // Bound total scans, rather than rejecting a historical folder just
+        // because its nesting exceeds an arbitrary depth. This makes legacy
+        // objects retryable without widening the project prefix.
+        await purgeFolder(nestedFolder);
       }
 
       if (files.length > 0) {
@@ -174,7 +169,7 @@ export async function purgeProjectStorageFolder({
     }
   }
 
-  await purgeFolder(root, 0);
+  await purgeFolder(root);
   return { complete: true, removedCount };
 }
 

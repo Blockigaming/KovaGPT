@@ -1,7 +1,6 @@
 export const PROJECT_FILES_BUCKET: "project-files";
 export const PROJECT_STORAGE_DELETE_BATCH: number;
 export const PROJECT_STORAGE_MAX_OBJECTS_PER_ATTEMPT: number;
-export const PROJECT_STORAGE_MAX_FOLDER_DEPTH: number;
 export const PROJECT_UPLOAD_CLEANUP_MAX_OBJECTS: number;
 
 export class ProjectDeletionError extends Error {
@@ -38,7 +37,6 @@ export function purgeProjectStorageFolder(options: {
   storage: ProjectStorageAdapter;
   projectId: string;
   maxObjects?: number;
-  maxFolderDepth?: number;
   onProgress?: (progress: {
     removedCount: number;
     folder: string;

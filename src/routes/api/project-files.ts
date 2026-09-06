@@ -72,8 +72,8 @@ function uploadMetadata(request: Request): {
   requestedKind: "file" | "image";
   idempotencyKey: string;
 } {
-  const projectId = headerValue(request, "x-kova-project-id", 36);
-  const idempotencyKey = headerValue(request, "x-kova-idempotency-key", 36);
+  const projectId = headerValue(request, "x-kova-project-id", 36).toLowerCase();
+  const idempotencyKey = headerValue(request, "x-kova-idempotency-key", 36).toLowerCase();
   if (!UUID_PATTERN.test(projectId) || !UUID_PATTERN.test(idempotencyKey)) {
     throw new ProjectFileInputError(400, "invalid_project_file_identity");
   }

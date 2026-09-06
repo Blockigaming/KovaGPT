@@ -66,6 +66,14 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(route, /storage_charged: row\.storage_charged/);
   assert.match(route, /owner_id,deletion_requested_at/);
   assert.match(route, /project\.deletion_requested_at[\s\S]*project_deletion_pending/);
+  assert.match(
+    route,
+    /const projectId = headerValue\(request, "x-kova-project-id", 36\)\.toLowerCase\(\)/,
+  );
+  assert.match(
+    route,
+    /const idempotencyKey = headerValue\(request, "x-kova-idempotency-key", 36\)\.toLowerCase\(\)/,
+  );
   assert.match(route, /file\.kind !== "agent-deliverable"/);
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);

@@ -115,6 +115,17 @@ DECLARE
   new_project_id uuid;
   project_row record;
 BEGIN
+  -- A user's Auth-row deletion cascades through every membership they hold.
+  -- Do not let an unrelated, deletion-pending project prevent that account
+  -- cleanup. Owner membership remains fenced so the Storage-first coordinator
+  -- is still the only path that can delete a project.
+  IF TG_OP = 'DELETE'
+    AND TG_TABLE_NAME = 'project_members'
+    AND (to_jsonb(OLD) ->> 'role') IS DISTINCT FROM 'owner'
+  THEN
+    RETURN OLD;
+  END IF;
+
   IF TG_OP <> 'INSERT' THEN
     old_project_id := OLD.project_id;
   END IF;
@@ -214,6 +225,19 @@ BEGIN
   -- Single-file finalizers use DELETE, not UPDATE. Every insert/update is
   -- fenced once Project deletion begins so an expired uploader cannot publish
   -- a new object after the coordinator's final Storage sweep.
+
+  -- Deleting an Auth user can null the uploader reference on a file belonging
+  -- to another owner's deletion-pending project. Permit only that referential
+  -- action (and a conventional updated_at touch); direct file mutation stays
+  -- fenced and authenticated clients have no UPDATE grant.
+  IF TG_OP = 'UPDATE'
+    AND OLD.uploaded_by IS NOT NULL
+    AND NEW.uploaded_by IS NULL
+    AND (to_jsonb(NEW) - 'uploaded_by' - 'updated_at')
+      IS NOT DISTINCT FROM (to_jsonb(OLD) - 'uploaded_by' - 'updated_at')
+  THEN
+    RETURN NEW;
+  END IF;
 
   SELECT p.deletion_requested_at
   INTO deletion_requested
@@ -572,6 +596,21 @@ BEGIN
         updated_at = now()
     WHERE user_id = charged.storage_owner_id;
   END LOOP;
+
+  -- Project-scoped agent-resource history must survive project deletion. The
+  -- legacy foreign keys intentionally retain those records, so detach their
+  -- optional Project reference before the final guarded DELETE.
+  UPDATE public.agent_resource_promotions
+  SET project_id = NULL
+  WHERE project_id = p_project_id;
+
+  UPDATE public.agent_resource_relationships
+  SET project_id = NULL
+  WHERE project_id = p_project_id;
+
+  UPDATE public.agent_resource_activity
+  SET project_id = NULL
+  WHERE project_id = p_project_id;
 
   DELETE FROM public.projects
   WHERE id = p_project_id
