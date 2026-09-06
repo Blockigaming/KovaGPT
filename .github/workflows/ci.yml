@@ -124,7 +124,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.run_ci == 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Integration tests
         id: integration
