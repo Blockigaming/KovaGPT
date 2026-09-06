@@ -970,6 +970,8 @@ function KovaGPT() {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
+      if (retryTool === "deep_research" && atts.length)
+        return void toast.error("Deep Research doesn't support attachments");
       const requestGeneration = storageGenerationRef.current;
       const requestPrincipal = storagePrincipal;
       const isCurrentRequest = () =>
@@ -1480,6 +1482,11 @@ function KovaGPT() {
                     label: "Research canceled",
                     status: "canceled",
                   },
+                  activities: message.activities?.map((activity) =>
+                    activity.status === "running"
+                      ? { ...activity, status: "canceled" as const }
+                      : activity,
+                  ),
                 }
               : message,
           ),

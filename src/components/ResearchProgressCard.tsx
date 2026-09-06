@@ -1,10 +1,12 @@
-import { Globe, Loader2 } from "lucide-react";
+import { Globe, Loader2, RefreshCw } from "lucide-react";
 import type { Message } from "@/lib/chat-store";
 
 export function ResearchProgressCard({
   progress,
+  onRetry,
 }: {
   progress: NonNullable<Message["researchProgress"]>;
+  onRetry?: () => void;
 }) {
   const percent = Math.round(Math.min(1, Math.max(0, progress.progress)) * 100);
   const terminal =
@@ -83,6 +85,16 @@ export function ResearchProgressCard({
             <span>{warning}</span>
           </div>
         ))}
+      {(progress.status === "failed" || progress.status === "canceled") && onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Retry Deep Research"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        </button>
+      )}
     </section>
   );
 }

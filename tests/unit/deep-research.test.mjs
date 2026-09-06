@@ -62,6 +62,13 @@ test("chat UI consumes and renders Deep Research lifecycle events", () => {
   assert.match(message, /streaming && !message\.content && !message\.researchProgress/);
   assert.match(client, /activity\.status === "running"/);
   assert.match(route, /message\.researchProgress\?\.status === "canceled"/);
+  assert.match(route, /activity\.status === "running"[\s\S]*status: "canceled" as const/);
+  assert.match(route, /retryTool === "deep_research" && atts\.length/);
+  assert.match(
+    message,
+    /ResearchProgressCard progress={message\.researchProgress} onRetry={onRetry}/,
+  );
+  assert.match(progressCard, /aria-label="Retry Deep Research"/);
   assert.match(store, /Research interrupted/);
   assert.match(store, /Array\.isArray\(candidate\.warnings\)/);
   assert.match(store, /researchProgress\?: ResearchProgress/);
