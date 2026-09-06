@@ -8,13 +8,16 @@ import {
   type ProjectStorageAdapter,
 } from "@/lib/project-deletion-policy.mjs";
 import {
+import type { LooseClient } from "./supabase-loose";
   reconcileProjectFileLifecycle,
   type ProjectFileMaintenanceClient,
 } from "@/lib/project-file-maintenance.server";
 
 const METADATA_PAGE_SIZE = 500;
 
-type ProjectDeletionAdmin = AuthedCaller["supabaseAdmin"];
+type ProjectDeletionAdmin = Omit<AuthedCaller["supabaseAdmin"], "rpc"> & {
+  rpc: LooseClient["rpc"];
+};
 
 type DeletionOutcome = {
   ok: true;
