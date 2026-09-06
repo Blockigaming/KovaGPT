@@ -19,6 +19,14 @@ export type Attachment =
       sourceProject?: string | null;
     };
 export type Activity = { tool: string; label: string; status: "done" | "running" };
+export type ResearchProgress = {
+  stage: string;
+  label: string;
+  status: "created" | "pending" | "running" | "complete" | "failed" | "canceled";
+  detail?: string;
+  progress: number;
+  warnings?: string[];
+};
 export type PendingConfirm = {
   actionId: string;
   tool: string;
@@ -34,6 +42,7 @@ export type Message = {
   attachments?: Attachment[];
   pendingImage?: boolean;
   activities?: Activity[];
+  researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
 };
 export type Conversation = {
@@ -408,6 +417,12 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       id: newId(),
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
+      researchProgress: message.researchProgress
+        ? {
+            ...message.researchProgress,
+            warnings: message.researchProgress.warnings?.slice(),
+          }
+        : undefined,
       pendingConfirms: message.pendingConfirms?.map((confirmation) => ({ ...confirmation })),
     })),
     createdAt: timestamp,

@@ -1013,7 +1013,21 @@ function KovaGPT() {
               : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
-      const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
+      const assistantMsg: Message = {
+        id: newId(),
+        role: "assistant",
+        content: "",
+        ...(activeTool === "deep_research"
+          ? {
+              researchProgress: {
+                stage: "created",
+                label: "Starting Deep Research",
+                status: "created" as const,
+                progress: 0,
+              },
+            }
+          : {}),
+      };
 
       const editIndex =
         existingConversation && editingMessage?.conversationId === existingConversation.id
@@ -1190,6 +1204,78 @@ function KovaGPT() {
             if (delta?.kind === "image_pending") {
               markPendingImage();
             }
+            if (delta?.kind === "research_progress") {
+              const allowedStatuses = new Set([
+                "created",
+                "pending",
+                "running",
+                "complete",
+                "failed",
+                "canceled",
+              ]);
+              const nextProgress = Number(delta.progress);
+              if (
+                typeof delta.stage === "string" &&
+                typeof delta.label === "string" &&
+                allowedStatuses.has(String(delta.status)) &&
+                Number.isFinite(nextProgress)
+              ) {
+                setConversations((prev) =>
+                  prev.map((conversation) => {
+                    if (conversation.id !== nextConvId) return conversation;
+                    return {
+                      ...conversation,
+                      messages: conversation.messages.map((message) =>
+                        message.id === assistantMsg.id
+                          ? {
+                              ...message,
+                              researchProgress: {
+                                stage: (delta.stage as string).slice(0, 80),
+                                label: (delta.label as string).slice(0, 160),
+                                status: String(delta.status) as NonNullable<
+                                  Message["researchProgress"]
+                                >["status"],
+                                ...(typeof delta.detail === "string" && delta.detail
+                                  ? { detail: delta.detail.slice(0, 240) }
+                                  : {}),
+                                progress: Math.min(1, Math.max(0, nextProgress)),
+                                warnings: message.researchProgress?.warnings,
+                              },
+                            }
+                          : message,
+                      ),
+                    };
+                  }),
+                );
+              }
+            }
+            if (delta?.kind === "research_warning" && typeof delta.detail === "string") {
+              const warning = delta.detail.trim().slice(0, 320);
+              if (warning) {
+                setConversations((prev) =>
+                  prev.map((conversation) => {
+                    if (conversation.id !== nextConvId) return conversation;
+                    return {
+                      ...conversation,
+                      messages: conversation.messages.map((message) => {
+                        if (message.id !== assistantMsg.id || !message.researchProgress)
+                          return message;
+                        const warnings = message.researchProgress.warnings ?? [];
+                        return warnings.includes(warning)
+                          ? message
+                          : {
+                              ...message,
+                              researchProgress: {
+                                ...message.researchProgress,
+                                warnings: [...warnings, warning].slice(-3),
+                              },
+                            };
+                      }),
+                    };
+                  }),
+                );
+              }
+            }
             if (delta?.kind === "activity" && delta?.label) {
               setConversations((prev) =>
                 prev.map((c) => {
@@ -1199,13 +1285,26 @@ function KovaGPT() {
                     const activity = {
                       tool: String(delta.tool ?? ""),
                       label: String(delta.label),
-                      status: "done" as const,
+                      status:
+                        delta.status === "running" || delta.status === "pending"
+                          ? ("running" as const)
+                          : ("done" as const),
                     };
-                    const activities = (m.activities ?? []).some(
-                      (item) => item.tool === activity.tool && item.label === activity.label,
-                    )
-                      ? m.activities
-                      : [...(m.activities ?? []), activity];
+                    const currentActivities = m.activities ?? [];
+                    const matchingToolIndex = activity.tool
+                      ? currentActivities.findIndex((item) => item.tool === activity.tool)
+                      : -1;
+                    const activities =
+                      matchingToolIndex >= 0
+                        ? currentActivities.map((item, index) =>
+                            index === matchingToolIndex ? activity : item,
+                          )
+                        : currentActivities.some(
+                              (item) =>
+                                item.tool === activity.tool && item.label === activity.label,
+                            )
+                          ? currentActivities
+                          : [...currentActivities, activity];
                     return { ...m, activities };
                   });
                   return { ...c, messages: msgs };
@@ -1348,6 +1447,29 @@ function KovaGPT() {
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
+          if (activeTool === "deep_research") {
+            setConversations((prev) =>
+              prev.map((conversation) => {
+                if (conversation.id !== nextConvId) return conversation;
+                return {
+                  ...conversation,
+                  messages: conversation.messages.map((message) =>
+                    message.id === assistantMsg.id && message.researchProgress
+                      ? {
+                          ...message,
+                          researchProgress: {
+                            ...message.researchProgress,
+                            label: "Research could not complete",
+                            status: "failed",
+                            detail: friendly,
+                          },
+                        }
+                      : message,
+                  ),
+                };
+              }),
+            );
+          }
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {
@@ -1411,7 +1533,30 @@ function KovaGPT() {
     abortRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
-  }, []);
+    setConversations((previous) =>
+      previous.map((conversation) => {
+        if (conversation.id !== activeIdRef.current) return conversation;
+        return {
+          ...conversation,
+          messages: conversation.messages.map((message) =>
+            message.researchProgress &&
+            message.researchProgress.status !== "complete" &&
+            message.researchProgress.status !== "failed" &&
+            message.researchProgress.status !== "canceled"
+              ? {
+                  ...message,
+                  researchProgress: {
+                    ...message.researchProgress,
+                    label: "Research canceled",
+                    status: "canceled",
+                  },
+                }
+              : message,
+          ),
+        };
+      }),
+    );
+  }, [setConversations]);
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
