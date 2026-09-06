@@ -1,0 +1,40 @@
+name: Import reviewed source objects
+
+on:
+  push:
+    branches: [codex/recover-unpublished-20260906]
+    paths:
+      - .github/workflows/import-reviewed-source-objects.yml
+      - scripts/recovery/import-reviewed-objects.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-reviewed-source-objects
+  cancel-in-progress: false
+
+jobs:
+  import-objects:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/recover-unpublished-20260906'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Read repository ancestry without persisting credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Import independently verified source objects without changing refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/recovery/import-reviewed-objects.py
+
+      - name: Retain exact object manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: imported-source-${{ github.sha }}
+          path: ${{ runner.temp }}/imported-source/
+          if-no-files-found: error
+          retention-days: 7
