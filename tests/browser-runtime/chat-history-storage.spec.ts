@@ -139,9 +139,12 @@ test("Web Locks admit one editor per account and release when its tab closes", a
     ),
   ).toBe(true);
   await page.close();
-  expect(
-    await other.evaluate(() =>
-      navigator.locks.request("kova-chat-history:A", { ifAvailable: true }, (lock) => !!lock),
-    ),
-  ).toBe(true);
+  // Closing the page initiates lock cleanup; the other process observes release asynchronously.
+  await expect
+    .poll(() =>
+      other.evaluate(() =>
+        navigator.locks.request("kova-chat-history:A", { ifAvailable: true }, (lock) => !!lock),
+      ),
+    )
+    .toBe(true);
 });
