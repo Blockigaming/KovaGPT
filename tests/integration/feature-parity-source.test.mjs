@@ -32,28 +32,23 @@ test("temporary chat never persists an unsent draft", () => {
   );
 });
 
-test("feature matrix uses the required honest status vocabulary and covers core categories", () => {
-  for (const status of [
-    "Working and verified locally",
-    "Implemented; production configuration required",
-    "Partially implemented",
-    "Missing",
-    "Intentionally unavailable",
-  ]) {
+test("capability inventory uses truthful source states and covers core categories", () => {
+  for (const status of ["bounded source", "partial source", "pending package"]) {
     assert.match(matrix, new RegExp(status));
   }
   for (const capability of [
-    "Normal chat",
-    "File uploads",
-    "Image generation",
-    "Web search",
+    "Core chat",
+    "Composer and multimodal input",
+    "Image generation and editing",
+    "Search, images, shopping and local discovery",
     "Projects",
-    "Scheduled tasks",
-    "Apps/connectors",
-    "Voice",
-    "Account deletion",
-    "Mobile accessibility",
+    "Scheduled Tasks",
+    "Apps, connectors, plugins and skills",
+    "Authentication, account and privacy",
+    "Web, PWA and native platforms",
   ]) {
     assert.match(matrix, new RegExp(capability));
   }
+  assert.match(matrix, /Hosted CI\/review[\s\S]*Not verified/u);
+  assert.match(matrix, /Production[\s\S]*Not verified/u);
 });

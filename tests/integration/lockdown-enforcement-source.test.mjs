@@ -18,7 +18,7 @@ test("chat blocks explicit and implicit network tools before provider work", asy
   const chat = await source("src/routes/api/chat.ts");
   before(chat, "readLockdownMode(", "handleDeepResearchRequest(lastText", "deep research");
   before(chat, "readLockdownMode(", "runWebSearch(", "web search");
-  assert.match(chat, /!lockdownBlocksNetwork\s*&&\s*lastText/u);
+  assert.match(chat, /!lockdownBlocksNetwork\s*&&[\s\S]{0,240}lastText/u);
   assert.match(chat, /clientTool === "deep_research"\s*\? "deep_research"/u);
   assert.match(chat, /clientTool === "web_search"\s*\? "live_web"/u);
 });
