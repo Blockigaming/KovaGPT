@@ -1,4 +1,5 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
+import { providerCapabilityConfigured } from "@/lib/ai/provider.server";
 
 export type CapabilityState =
   | "ready"
@@ -64,7 +65,7 @@ export function structuralReadiness(): ReadinessReport {
     ),
     scheduledTasks: capability(any("CRON_SECRET", "SCHEDULED_TASK_SECRET")),
     accountExports: capability(any("ACCOUNT_EXPORT_WORKER_SECRET", "CRON_SECRET")),
-    images: capability(aiProviderConfigured()),
+    images: capability(providerCapabilityConfigured("image_generation")),
     research: capability(any("FIRECRAWL_API_KEY")),
     storage: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     migrations: { state: "migration-required", optional: false },

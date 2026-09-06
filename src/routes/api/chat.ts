@@ -26,6 +26,7 @@ import {
   imageModel,
   missingAiProviderResponse,
   providerErrorFromResponse,
+  providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
@@ -830,6 +831,8 @@ export const Route = createFileRoute("/api/chat")({
             // in text (esp. important when the user *explicitly declined* an
             // image but a keyword still slipped past the negation guard).
             if (isImageRequest && auth) {
+              const unavailableImageProvider = providerUnavailableResponse("image_generation");
+              if (unavailableImageProvider) return unavailableImageProvider;
               if (!isOwner) {
                 if (!auth.emailVerified) {
                   return new Response(

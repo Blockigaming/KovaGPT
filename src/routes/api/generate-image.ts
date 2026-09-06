@@ -10,9 +10,9 @@ import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 import {
   AiProviderError,
   imageGenerations,
-  missingAiProviderResponse,
   providerErrorFromResponse,
   providerErrorResponse,
+  providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import {
   imageProviderPayload,
@@ -93,8 +93,8 @@ export const Route = createFileRoute("/api/generate-image")({
               400,
             );
           }
-          const missingProvider = missingAiProviderResponse();
-          if (missingProvider) return missingProvider;
+          const unavailableProvider = providerUnavailableResponse("image_generation");
+          if (unavailableProvider) return unavailableProvider;
 
           const banned = await assertNotBanned(auth);
           if (banned) return banned;

@@ -58,6 +58,12 @@ managed identity must have the required inference role on both resources. Key-au
 deployments may instead set the server-only `AZURE_OPENAI_IMAGE_API_KEY`; never expose it through a
 `VITE_` variable.
 
+For the production Bicep path, supply `azureOpenAiImageAccountName` and
+`azureOpenAiImageResourceGroupName`. The template then resolves the dedicated endpoint, injects it
+into the Container App, and declares the managed-identity inference role on that resource. If key
+authentication is required instead, supply a versioned Key Vault URI through
+`azureOpenAiImageApiKeySecretUri`; the template injects only a secret reference, never the key value.
+
 The browser and server Supabase configuration must resolve to the same approved production project. Supabase service-role, Stripe, OAuth, connector-encryption, and hashing secrets remain server-only.
 
 ## Identity and deployment

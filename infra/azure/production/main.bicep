@@ -46,6 +46,16 @@ param azureOpenAiAccountName string
 @description('Resource group containing the existing Azure OpenAI account.')
 param azureOpenAiResourceGroupName string = resourceGroup().name
 
+@description('Existing dedicated Azure OpenAI account for image generation. Leave empty to use the primary account.')
+param azureOpenAiImageAccountName string = ''
+
+@description('Resource group containing the optional dedicated image Azure OpenAI account.')
+param azureOpenAiImageResourceGroupName string = azureOpenAiResourceGroupName
+
+@description('Optional versioned Key Vault secret URI for AZURE_OPENAI_IMAGE_API_KEY. Leave empty to use managed identity.')
+@secure()
+param azureOpenAiImageApiKeySecretUri string = ''
+
 @description('Azure OpenAI deployment used for Luna/normal chat.')
 param azureOpenAiChatDeployment string = 'kova-chat'
 
@@ -120,6 +130,8 @@ param tags object = {
 var webAppName = '${namePrefix}-web'
 var appInsightsName = '${namePrefix}-insights'
 var budgetName = '${namePrefix}-monthly-budget'
+var useDedicatedAzureOpenAiImage = !empty(azureOpenAiImageAccountName)
+var useAzureOpenAiImageApiKey = useDedicatedAzureOpenAiImage && !empty(azureOpenAiImageApiKeySecretUri)
 var acrPullRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '7f951dda-4ed3-4680-a7ca-43fe172d538d'
@@ -148,13 +160,24 @@ resource azureOpenAi 'Microsoft.CognitiveServices/accounts@2024-10-01' existing 
   scope: resourceGroup(azureOpenAiResourceGroupName)
 }
 
+resource azureOpenAiImage 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = if (useDedicatedAzureOpenAiImage) {
+  name: azureOpenAiImageAccountName
+  scope: resourceGroup(azureOpenAiImageResourceGroupName)
+}
+
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: managedIdentityName
 }
 
-
-
-
+resource azureOpenAiImageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useDedicatedAzureOpenAiImage) {
+  name: guid(azureOpenAiImage.id, identity.id, cognitiveServicesOpenAiUserRoleDefinitionId)
+  scope: azureOpenAiImage
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId
+  }
+}
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: logAnalyticsWorkspaceName
 }
@@ -210,7 +233,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           identity: identity.id
         }
       ]
-      secrets: [
+      secrets: concat([
         {
           name: 'supabase-service-role-key'
           keyVaultUrl: supabaseServiceRoleSecretUri
@@ -218,10 +241,16 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
         }
           {
             name: 'kova-ip-hash-secret'
-            keyVaultUrl: kovaIpHashSecretUri
-            identity: identity.id
-          }
-      ]
+          keyVaultUrl: kovaIpHashSecretUri
+          identity: identity.id
+        }
+      ], useAzureOpenAiImageApiKey ? [
+        {
+          name: 'azure-openai-image-api-key'
+          keyVaultUrl: azureOpenAiImageApiKeySecretUri
+          identity: identity.id
+        }
+      ] : [])
     }
     template: {
       containers: [
@@ -232,7 +261,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
-          env: [
+          env: concat([
             {
               name: 'NODE_ENV'
               value: 'production'
@@ -329,7 +358,17 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
-          ]
+          ], useDedicatedAzureOpenAiImage ? [
+            {
+              name: 'AZURE_OPENAI_IMAGE_ENDPOINT'
+              value: azureOpenAiImage.properties.endpoint
+            }
+          ] : [], useAzureOpenAiImageApiKey ? [
+            {
+              name: 'AZURE_OPENAI_IMAGE_API_KEY'
+              secretRef: 'azure-openai-image-api-key'
+            }
+          ] : [])
           probes: [
             {
               type: 'Startup'
@@ -429,6 +468,7 @@ output managedEnvironmentName string = environment.name
 output managedIdentityResourceId string = identity.id
 output managedIdentityClientId string = identity.properties.clientId
 output azureOpenAiResourceId string = azureOpenAi.id
+output azureOpenAiImageResourceId string = useDedicatedAzureOpenAiImage ? azureOpenAiImage.id : azureOpenAi.id
 output logAnalyticsWorkspaceName string = workspace.name
 output applicationInsightsName string = appInsights.name
 output generationIsEnabled bool = generationEnabled
