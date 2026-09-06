@@ -168,8 +168,11 @@ export function OnboardingDialog() {
     setSaving(true);
     try {
       await doSkip();
-      setOpen(false);
+    } catch {
+      // A transient persistence failure must not trap the user in onboarding.
+      // The next signed-in visit can offer onboarding again.
     } finally {
+      setOpen(false);
       setSaving(false);
     }
   };
