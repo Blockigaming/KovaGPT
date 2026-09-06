@@ -1,0 +1,64 @@
+name: Recover Interrupted Source Transfer
+
+on:
+  push:
+    branches: [codex/recover-unpublished-20260906]
+    paths: [.github/workflows/recover-unpublished-source.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository objects without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Recover and verify existing transfer parts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/source-recovery"
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, urllib.request
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'source-recovery'
+          shas = [
+              '328650e7d9f98096080dbfaadb2e948d3a14e7de',
+              '008a029967f3cd8bee1627073d26d29c53d4b64d',
+              '0005f289b455ca4d059864ac1625d0f3d53c8d53',
+          ]
+          for index, sha in enumerate(shas):
+              request = urllib.request.Request(
+                  f'https://api.github.com/repos/Blockigaming/KovaGPT/git/blobs/{sha}',
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                           'Accept': 'application/vnd.github+json',
+                           'User-Agent': 'KovaGPT-source-recovery'})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+              if payload.get('encoding') != 'base64':
+                  raise RuntimeError('Unexpected Git blob encoding')
+              data = base64.b64decode(payload['content'])
+              actual = hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest()
+              if actual != sha:
+                  raise RuntimeError('Source part object hash does not match')
+              (out / f'part-{index:02d}.bin').write_bytes(data)
+          (out / 'blob-shas.json').write_text(json.dumps(shas) + '\n')
+          PY
+          git bundle create "$RUNNER_TEMP/source-recovery/repository.bundle" --all
+          git bundle verify "$RUNNER_TEMP/source-recovery/repository.bundle"
+          git for-each-ref --format='%(objectname) %(refname)' > "$RUNNER_TEMP/source-recovery/refs.txt"
+          cd "$RUNNER_TEMP/source-recovery"
+          sha256sum part-*.bin repository.bundle > SHA256SUMS
+      - name: Upload preserved source objects only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: interrupted-source-recovery-${{ github.sha }}
+          path: ${{ runner.temp }}/source-recovery/
+          if-no-files-found: error
+          retention-days: 1
