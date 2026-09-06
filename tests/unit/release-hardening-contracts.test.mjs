@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   analyzeMigrationManifest,
+  classifyRemoteMigrationLineage,
   normalizeRemoteVersions,
   reconcileMigrationVersions,
+  validateMigrationLineage,
 } from "../../scripts/release/migration-preflight.mjs";
 import { assertSafeRlsTarget, validateRlsMatrix } from "../../scripts/release/rls-two-user.mjs";
 import {
@@ -51,6 +53,59 @@ test("migration preflight detects duplicates and reconciles remote history", () 
     unknownRemote: [],
     applied: ["20260101000000"],
   });
+});
+
+test("migration lineage makes production drift explicit and blocks unproven mappings", () => {
+  const manifest = {
+    migrations: [
+      {
+        timestamp: "20260101000000",
+        filename: "20260101000000_source.sql",
+        sha256: "a".repeat(64),
+      },
+      {
+        timestamp: "20260101000001",
+        filename: "20260101000001_candidate.sql",
+        sha256: "b".repeat(64),
+      },
+    ],
+  };
+  const lineage = {
+    schemaVersion: 1,
+    targetProjectRef: "abcdefghijklmnopqrst",
+    entries: [
+      {
+        remoteVersion: "20260102000000",
+        remoteName: "equivalent",
+        status: "equivalent",
+        sourceVersion: "20260101000000",
+        sourceFilename: "20260101000000_source.sql",
+        sourceSha256: "a".repeat(64),
+        comparison: "exact-content",
+      },
+      {
+        remoteVersion: "20260102000001",
+        remoteName: "requires proof",
+        status: "requires_schema_proof",
+        candidateSourceVersions: ["20260101000001"],
+        reason: "names alone do not prove schema equivalence",
+      },
+    ],
+  };
+  assert.deepEqual(validateMigrationLineage(lineage, manifest), {
+    targetProjectRef: "abcdefghijklmnopqrst",
+    remoteVersions: ["20260102000000", "20260102000001"],
+    equivalent: 1,
+    requiresSchemaProof: 1,
+  });
+  assert.deepEqual(
+    classifyRemoteMigrationLineage(["20260102000000", "20260102000001", "20260102000002"], lineage),
+    {
+      unknownRemote: ["20260102000002"],
+      equivalent: [{ remoteVersion: "20260102000000", sourceVersion: "20260101000000" }],
+      requiresSchemaProof: ["20260102000001"],
+    },
+  );
 });
 
 test("RLS matrix is executable and production execution is prohibited", () => {
