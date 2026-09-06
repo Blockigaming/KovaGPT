@@ -2,6 +2,26 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const checkOnly = process.argv.includes("--check");
 
+const REQUIRED_COMPOSER_TOOLS = `[
+  { id: "web_search", label: "Search the web", icon: Globe },
+  { id: "deep_research", label: "Deep research", icon: Telescope },
+  { id: "image", label: "Create Image", icon: ImagePlus },
+]`;
+
+function compactSource(source) {
+  return source.replace(/\s+/gu, "");
+}
+
+function hasRequiredComposerTools(source) {
+  const declaration = source.match(
+    /const\s+COMPOSER_TOOLS\s*:\s*readonly\s+ComposerAction\[\]\s*=\s*(\[[\s\S]*?\]);/u,
+  );
+  return (
+    declaration?.[1] != null &&
+    compactSource(declaration[1]) === compactSource(REQUIRED_COMPOSER_TOOLS)
+  );
+}
+
 const replacements = [
   {
     path: "src/components/ChatInput.tsx",
@@ -15,9 +35,7 @@ const replacements = [
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];`,
     isApplied(source) {
-      return /const COMPOSER_TOOLS: readonly ComposerAction\[\] = \[[\s\S]*?\{ id: "deep_research", label: "Deep research", icon: Telescope \}[\s\S]*?\];/u.test(
-        source,
-      );
+      return hasRequiredComposerTools(source);
     },
   },
   {

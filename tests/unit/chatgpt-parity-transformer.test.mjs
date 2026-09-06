@@ -75,6 +75,29 @@ test("ChatGPT parity transformer recognizes formatter-equivalent applied source"
   }
 });
 
+test("ChatGPT parity transformer fails closed when an applied composer tool drifts", () => {
+  const root = mkdtempSync(join(tmpdir(), "kova-parity-composer-drift-"));
+  const previous = process.cwd();
+  try {
+    for (const [path, source] of Object.entries(fixtures)) {
+      const target = join(root, path);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, source);
+    }
+    process.chdir(root);
+    applyChatGptParitySource({ check: false });
+    const chatInputPath = "src/components/ChatInput.tsx";
+    writeFileSync(
+      chatInputPath,
+      readFileSync(chatInputPath, "utf8").replace('label: "Create Image"', 'label: "Make image"'),
+    );
+    assert.throws(() => applyChatGptParitySource({ check: true }), /source_drift/u);
+  } finally {
+    process.chdir(previous);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("ChatGPT parity transformer fails closed on source drift", () => {
   const root = mkdtempSync(join(tmpdir(), "kova-parity-drift-"));
   const previous = process.cwd();
