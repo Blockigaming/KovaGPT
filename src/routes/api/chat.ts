@@ -822,6 +822,20 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            if (clientTool === "deep_research" && currentAttachments.length > 0) {
+              return new Response(
+                JSON.stringify({
+                  error: "Deep Research doesn't support attachments yet. Remove them and retry.",
+                  category: "invalid_request",
+                  retryable: false,
+                }),
+                {
+                  status: 400,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
+            }
+
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
@@ -931,20 +945,6 @@ export const Route = createFileRoute("/api/chat")({
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
-
-            if (clientTool === "deep_research" && hasAttachments) {
-              return new Response(
-                JSON.stringify({
-                  error: "Deep Research doesn't support attachments yet. Remove them and retry.",
-                  category: "invalid_request",
-                  retryable: false,
-                }),
-                {
-                  status: 400,
-                  headers: { "Content-Type": "application/json" },
-                },
-              );
-            }
 
             if (clientTool === "deep_research" && lastText) {
               return handleDeepResearchRequest(lastText, {

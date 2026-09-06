@@ -21,13 +21,16 @@ export function applyResearchDelta(message: Message, delta: Record<string, unkno
     )
       return message;
 
-    const terminal = status === "complete" || status === "failed" || status === "canceled";
+    const overallStatus =
+      status === "complete" && delta.stage !== "complete" ? ("running" as const) : status;
+    const terminal =
+      overallStatus === "complete" || overallStatus === "failed" || overallStatus === "canceled";
     return {
       ...message,
       researchProgress: {
         stage: delta.stage.slice(0, 80),
         label: delta.label.slice(0, 160),
-        status,
+        status: overallStatus,
         ...(typeof delta.detail === "string" && delta.detail
           ? { detail: delta.detail.slice(0, 240) }
           : {}),
@@ -40,7 +43,7 @@ export function applyResearchDelta(message: Message, delta: Record<string, unkno
               activity.status === "running"
                 ? {
                     ...activity,
-                    status: status === "complete" ? "done" : status,
+                    status: overallStatus === "complete" ? "done" : overallStatus,
                   }
                 : activity,
             ),
