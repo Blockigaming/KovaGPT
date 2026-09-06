@@ -4,8 +4,8 @@
 // unchanged; only compile-time narrowing is relaxed at the specific call sites.
 
 export type LooseClient = {
-  from: (table: string) => any;
-  rpc: (fn: string, args?: Record<string, unknown>) => any;
+  from(table: string): any;
+  rpc(fn: string, args?: Record<string, unknown>): any;
   storage: any;
   auth: any;
 };
