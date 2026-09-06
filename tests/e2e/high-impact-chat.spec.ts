@@ -19,7 +19,7 @@ async function startAttachedConversation(
   });
   await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Original prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-assistant-message")).toContainText(expectedResponse);
 }
 
@@ -43,7 +43,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toHaveValue("Original prompt");
   await composer.fill("Updated prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
   await expect(page.locator(".kova-user-message")).toContainText("Updated prompt");
@@ -140,7 +140,7 @@ test("signed-out chat history stays session-only", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Session-only prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-assistant-message")).toContainText("Session response");
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
@@ -175,7 +175,7 @@ test("text files are attached as real request context and remain visible in hist
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
 
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("What is the revenue?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
 
   await expect(page.locator(".kova-user-message").last()).toContainText("What is the revenue?");
   await expect(page.getByText("quarterly.csv", { exact: true })).toBeVisible();

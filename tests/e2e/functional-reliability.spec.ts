@@ -37,7 +37,7 @@ test("real sharing remains available without the misleading local-member flow", 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Review this");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Add members/i })).toHaveCount(0);
 });
