@@ -21,8 +21,6 @@ import {
   ThumbsDown,
   History,
   TextSelect,
-  Telescope,
-  AlertTriangle,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -68,6 +66,11 @@ const SelectionEditDialog = lazy(() =>
 const MessageVersionHistoryDialog = lazy(() =>
   import("./MessageVersionHistoryDialog").then(({ MessageVersionHistoryDialog }) => ({
     default: MessageVersionHistoryDialog,
+  })),
+);
+const ResearchProgressCard = lazy(() =>
+  import("./ResearchProgressCard").then(({ ResearchProgressCard }) => ({
+    default: ResearchProgressCard,
   })),
 );
 
@@ -155,84 +158,6 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
         {label}…
       </span>
     </div>
-  );
-}
-
-function ResearchProgressCard({
-  progress,
-}: {
-  progress: NonNullable<Message["researchProgress"]>;
-}) {
-  const percent = Math.round(Math.min(1, Math.max(0, progress.progress)) * 100);
-  const terminal =
-    progress.status === "complete" ||
-    progress.status === "failed" ||
-    progress.status === "canceled";
-  const statusLabel =
-    progress.status === "failed"
-      ? "Research failed"
-      : progress.status === "canceled"
-        ? "Research canceled"
-        : progress.status === "complete"
-          ? "Research complete"
-          : `${percent}% complete`;
-
-  return (
-    <section
-      className={`mb-3 rounded-2xl border p-3.5 ${
-        progress.status === "failed"
-          ? "border-destructive/30 bg-destructive/5"
-          : "border-border bg-accent/20"
-      }`}
-      aria-label="Deep Research progress"
-      data-testid="research-progress"
-    >
-      <div className="flex items-start gap-2.5">
-        <div className="mt-0.5 rounded-lg bg-primary/10 p-1.5 text-primary" aria-hidden="true">
-          {progress.status === "failed" ? (
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          ) : terminal ? (
-            <Telescope className="h-4 w-4" />
-          ) : (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <p className="truncate text-sm font-medium text-foreground">{progress.label}</p>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-              {statusLabel}
-            </span>
-          </div>
-          {progress.detail && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{progress.detail}</p>
-          )}
-          <div
-            className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-label="Deep Research completion"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-          >
-            <div
-              className={`h-full rounded-full transition-[width] duration-300 ${progress.status === "failed" ? "bg-destructive" : "bg-primary"}`}
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-        </div>
-      </div>
-      {progress.warnings?.map((warning, index) => (
-        <div
-          key={`${warning}-${index}`}
-          className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300"
-          role="status"
-        >
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>{warning}</span>
-        </div>
-      ))}
-    </section>
   );
 }
 
@@ -576,7 +501,9 @@ function ChatMessageInner({
             }}
           >
             {message.researchProgress && (
-              <ResearchProgressCard progress={message.researchProgress} />
+              <Suspense fallback={null}>
+                <ResearchProgressCard progress={message.researchProgress} />
+              </Suspense>
             )}
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
@@ -587,6 +514,14 @@ function ChatMessageInner({
                   >
                     {activity.status === "running" ? (
                       <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    ) : activity.status === "failed" ? (
+                      <span className="font-semibold text-destructive" aria-hidden="true">
+                        !
+                      </span>
+                    ) : activity.status === "canceled" ? (
+                      <span className="font-semibold text-muted-foreground" aria-hidden="true">
+                        ×
+                      </span>
                     ) : (
                       <Check className="h-3 w-3 text-primary" />
                     )}

@@ -375,6 +375,16 @@ export async function runDeepResearch(
         metadata: { evidence: evidence.length },
       }),
     );
+    await emit(
+      {
+        id: "comparing",
+        label: "Compare source coverage",
+        status: "complete",
+        detail: `${sources.length} unique sources`,
+      },
+      0.8,
+      createToolActivityEvent("compare_sources", "Source comparison complete", "complete"),
+    );
 
     await emit(
       { id: "writing_report", label: "Write cited report", status: "running" },

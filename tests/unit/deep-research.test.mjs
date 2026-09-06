@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { normalizeResearchProgress } from "../../src/lib/chat-store.ts";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -46,12 +47,60 @@ test("chat route has a separate deep research execution path", () => {
 test("chat UI consumes and renders Deep Research lifecycle events", () => {
   const route = read("src/routes/index.tsx");
   const message = read("src/components/ChatMessage.tsx");
+  const progressCard = read("src/components/ResearchProgressCard.tsx");
+  const client = read("src/lib/deep-research-client.ts");
   const store = read("src/lib/chat-store.ts");
   assert.match(route, /delta\?\.kind === "research_progress"/);
   assert.match(route, /delta\?\.kind === "research_warning"/);
   assert.match(route, /label: "Research canceled"/);
-  assert.match(message, /aria-label="Deep Research progress"/);
-  assert.match(message, /role="progressbar"/);
+  assert.match(progressCard, /aria-label="Deep Research progress"/);
+  assert.match(progressCard, /role="progressbar"/);
   assert.match(message, /streaming && !message\.content && !message\.researchProgress/);
+  assert.match(client, /activity\.status === "running"/);
+  assert.match(route, /message\.researchProgress\?\.status === "canceled"/);
+  assert.match(store, /Research interrupted/);
+  assert.match(store, /Array\.isArray\(candidate\.warnings\)/);
   assert.match(store, /researchProgress\?: ResearchProgress/);
+});
+
+test("deep research closes comparison and preserves failure activity states", () => {
+  const research = read("src/lib/ai/deep-research.server.ts");
+  const route = read("src/routes/index.tsx");
+  const message = read("src/components/ChatMessage.tsx");
+  assert.match(research, /"compare_sources", "Source comparison complete", "complete"/);
+  assert.match(route, /delta\.status === "failed" \|\| delta\.status === "canceled"/);
+  assert.match(message, /activity\.status === "failed"/);
+  assert.match(message, /activity\.status === "canceled"/);
+});
+
+test("restored research progress is bounded and interrupted safely", () => {
+  assert.deepEqual(
+    normalizeResearchProgress(
+      {
+        stage: "searching",
+        label: "Searching",
+        status: "running",
+        progress: 2,
+        warnings: [" valid warning ", 42, { unsafe: true }],
+      },
+      true,
+    ),
+    {
+      stage: "searching",
+      label: "Research interrupted",
+      status: "failed",
+      detail: "This research stopped when the page reloaded. Retry to continue.",
+      progress: 1,
+      warnings: ["valid warning"],
+    },
+  );
+  assert.equal(
+    normalizeResearchProgress({
+      stage: "searching",
+      label: "Searching",
+      status: "running",
+      progress: "invalid",
+    }),
+    undefined,
+  );
 });

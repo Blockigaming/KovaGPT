@@ -18,7 +18,11 @@ export type Attachment =
       size?: number | null;
       sourceProject?: string | null;
     };
-export type Activity = { tool: string; label: string; status: "done" | "running" };
+export type Activity = {
+  tool: string;
+  label: string;
+  status: "done" | "running" | "failed" | "canceled";
+};
 export type ResearchProgress = {
   stage: string;
   label: string;
@@ -102,7 +106,56 @@ function isConversation(value: unknown): value is Conversation {
   );
 }
 
-function boundConversations(value: unknown[]): Conversation[] {
+const researchStatuses = new Set<ResearchProgress["status"]>([
+  "created",
+  "pending",
+  "running",
+  "complete",
+  "failed",
+  "canceled",
+]);
+
+export function normalizeResearchProgress(
+  value: unknown,
+  interruptNonterminal = false,
+): ResearchProgress | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Partial<ResearchProgress>;
+  if (
+    typeof candidate.stage !== "string" ||
+    typeof candidate.label !== "string" ||
+    !researchStatuses.has(candidate.status as ResearchProgress["status"]) ||
+    typeof candidate.progress !== "number" ||
+    !Number.isFinite(candidate.progress)
+  )
+    return undefined;
+  const interrupted =
+    interruptNonterminal &&
+    candidate.status !== "complete" &&
+    candidate.status !== "failed" &&
+    candidate.status !== "canceled";
+  const warnings = Array.isArray(candidate.warnings)
+    ? candidate.warnings
+        .filter((warning): warning is string => typeof warning === "string")
+        .map((warning) => warning.trim().slice(0, 320))
+        .filter(Boolean)
+        .slice(-3)
+    : [];
+  return {
+    stage: candidate.stage.slice(0, 80),
+    label: interrupted ? "Research interrupted" : candidate.label.slice(0, 160),
+    status: interrupted ? "failed" : (candidate.status as ResearchProgress["status"]),
+    ...(interrupted
+      ? { detail: "This research stopped when the page reloaded. Retry to continue." }
+      : typeof candidate.detail === "string" && candidate.detail
+        ? { detail: candidate.detail.slice(0, 240) }
+        : {}),
+    progress: Math.min(1, Math.max(0, candidate.progress)),
+    ...(warnings.length ? { warnings } : {}),
+  };
+}
+
+function boundConversations(value: unknown[], interruptResearch = false): Conversation[] {
   const seen = new Set<string>();
   return value
     .filter(isConversation)
@@ -114,7 +167,12 @@ function boundConversations(value: unknown[]): Conversation[] {
     .slice(0, MAX_STORED_CONVERSATIONS)
     .map((conversation) => ({
       ...conversation,
-      messages: dedupeMessages(conversation.messages).slice(-MAX_MESSAGES_PER_CONVERSATION),
+      messages: dedupeMessages(conversation.messages)
+        .slice(-MAX_MESSAGES_PER_CONVERSATION)
+        .map((message) => ({
+          ...message,
+          researchProgress: normalizeResearchProgress(message.researchProgress, interruptResearch),
+        })),
     }));
 }
 
@@ -233,7 +291,7 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
     );
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? boundConversations(parsed) : [];
+    return Array.isArray(parsed) ? boundConversations(parsed, true) : [];
   } catch {
     return [];
   }
@@ -266,7 +324,8 @@ export function loadArchivedConversations(userKey: ChatStorageUserKey): Conversa
       archivedConversationStorageKey(userKey),
       LEGACY_ARCHIVED_KEY,
     );
-    return JSON.parse(raw ?? "[]") as Conversation[];
+    const parsed: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(parsed) ? boundConversations(parsed, true) : [];
   } catch {
     return [];
   }
@@ -287,7 +346,7 @@ export function saveArchivedConversations(
   if (typeof window === "undefined") return;
   localStorage.setItem(
     archivedConversationStorageKey(userKey),
-    JSON.stringify(conversations.slice(0, 500)),
+    JSON.stringify(boundConversations(conversations).slice(0, 500)),
   );
   if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
 }
