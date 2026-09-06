@@ -67,6 +67,7 @@ import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-imag
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
+import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
@@ -111,7 +112,6 @@ import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/inte
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
-import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
@@ -413,6 +413,11 @@ const ApiMemoryRoute = ApiMemoryRouteImport.update({
   path: '/api/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
+  id: '/api/project-files',
+  path: '/api/project-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
   id: '/api/project-suggest',
   path: '/api/project-suggest',
@@ -638,11 +643,6 @@ const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
   path: '/api/library/folders',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
-  id: '/api/project-files',
-  path: '/api/project-files',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
@@ -748,6 +748,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -792,7 +793,6 @@ export interface FileRoutesByFullPath {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
-  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -861,6 +861,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -905,7 +906,6 @@ export interface FileRoutesByTo {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
-  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -975,6 +975,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
   '/api/readyz': typeof ApiReadyzRoute
@@ -1019,7 +1020,6 @@ export interface FileRoutesById {
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
-  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
@@ -1090,6 +1090,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1134,7 +1135,6 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
-    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1203,6 +1203,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1247,7 +1248,6 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
-    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1316,6 +1316,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/livez'
     | '/api/memory'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
     | '/api/readyz'
@@ -1360,7 +1361,6 @@ export interface FileRouteTypes {
     | '/api/internal/scheduled-execution'
     | '/api/library/bulk-move'
     | '/api/library/folders'
-    | '/api/project-files'
     | '/api/public/help-submit'
     | '/api/security/lockdown'
     | '/api/work/sync'
@@ -1430,6 +1430,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
   ApiReadyzRoute: typeof ApiReadyzRoute
@@ -1470,7 +1471,6 @@ export interface RootRouteChildren {
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
-  ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
@@ -1888,6 +1888,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/project-files': {
+      id: '/api/project-files'
+      path: '/api/project-files'
+      fullPath: '/api/project-files'
+      preLoaderRoute: typeof ApiProjectFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/project-suggest': {
       id: '/api/project-suggest'
       path: '/api/project-suggest'
@@ -2196,13 +2203,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLibraryFoldersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/project-files': {
-      id: '/api/project-files'
-      path: '/api/project-files'
-      fullPath: '/api/project-files'
-      preLoaderRoute: typeof ApiProjectFilesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/help-submit': {
       id: '/api/public/help-submit'
       path: '/api/public/help-submit'
@@ -2380,6 +2380,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
+  ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
   ApiReadyzRoute: ApiReadyzRoute,
@@ -2420,7 +2421,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
-  ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiWorkSyncRoute: ApiWorkSyncRoute,
