@@ -23,12 +23,19 @@ export async function installAuthenticatedFixture(page: Page) {
   // This fixture exercises the returning-user shell. Server-function onboarding
   // can arrive after hydration; dismiss that separate flow through its real UI
   // without issuing a save/skip request or hiding background accessibility bugs.
-  const welcomeDialog = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await page.addLocatorHandler(welcomeDialog, async () => {
-    await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
-    // Wait for Radix exit-animation removal before later focus assertions.
-    await welcomeDialog.waitFor({ state: "detached" });
-  });
+  const welcomeDialog = page
+    .locator('[role="dialog"][data-state="open"]')
+    .filter({ hasText: "Welcome to KovaGPT" });
+  await page.addLocatorHandler(
+    welcomeDialog,
+    async () => {
+      await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
+      // The handler targets only an open overlay. Radix keeps the closed node
+      // mounted during its exit animation, so waiting for removal here can
+      // turn a successful dismissal into a false test failure.
+    },
+    { noWaitAfter: true },
+  );
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
       localStorage.clear();
