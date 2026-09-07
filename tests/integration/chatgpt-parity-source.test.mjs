@@ -47,6 +47,22 @@ test("signed-in users can move clearly between Chat and Work", () => {
   );
 });
 
+test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
+  assert.match(sidebar, /aria-label="More destinations"/);
+  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
+  );
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
+  );
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
+  );
+});
+
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
