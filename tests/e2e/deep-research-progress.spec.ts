@@ -21,10 +21,26 @@ const user = {
   is_anonymous: false,
 };
 
-async function mockPlusUser(page: Page) {
+type StoredConversationSeed = {
+  conversationId: string;
+  conversations: Array<Record<string, unknown>>;
+};
+
+async function mockPlusUser(page: Page, seed?: StoredConversationSeed) {
   await page.addInitScript(
-    ({ storageKeyPatternSource, signedInUser }) => {
+    ({ storageKeyPatternSource, signedInUser, storedConversationSeed }) => {
       localStorage.clear();
+      if (storedConversationSeed) {
+        const principal = `user:${encodeURIComponent(signedInUser.id)}`;
+        localStorage.setItem(
+          `nova-gpt-conversations-v3:${principal}`,
+          JSON.stringify(storedConversationSeed.conversations),
+        );
+        localStorage.setItem(
+          `nova-gpt-pending-active:v2:${principal}`,
+          storedConversationSeed.conversationId,
+        );
+      }
       const base64Url = (value: unknown) =>
         btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
       const storageKeyPattern = new RegExp(storageKeyPatternSource);
@@ -53,7 +69,11 @@ async function mockPlusUser(page: Page) {
         });
       };
     },
-    { storageKeyPatternSource: supabaseAuthStorageKeyPattern.source, signedInUser: user },
+    {
+      storageKeyPatternSource: supabaseAuthStorageKeyPattern.source,
+      signedInUser: user,
+      storedConversationSeed: seed,
+    },
   );
 
   await page.route(supabaseRequestPattern, async (route) => {
@@ -232,42 +252,34 @@ test("Deep Research blocks attachments before creating a progress message", asyn
 
 test("interrupted progress-only research exposes a working retry", async ({ page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
-  await mockPlusUser(page);
-  await page.addInitScript(
-    ({ userId }) => {
-      const principal = `user:${encodeURIComponent(userId)}`;
-      const conversationId = "interrupted-research";
-      localStorage.setItem(
-        `nova-gpt-conversations-v3:${principal}`,
-        JSON.stringify([
+  const conversationId = "interrupted-research";
+  await mockPlusUser(page, {
+    conversationId,
+    conversations: [
+      {
+        id: conversationId,
+        title: "Interrupted research",
+        mode: "thinking",
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [
+          { id: "prompt", role: "user", content: "Research resilient systems" },
           {
-            id: conversationId,
-            title: "Interrupted research",
-            mode: "thinking",
-            createdAt: 1,
-            updatedAt: 2,
-            messages: [
-              { id: "prompt", role: "user", content: "Research resilient systems" },
-              {
-                id: "progress",
-                role: "assistant",
-                content: "",
-                researchProgress: {
-                  stage: "searching",
-                  label: "Searching sources",
-                  status: "running",
-                  progress: 0.4,
-                },
-                activities: [{ tool: "search_web", label: "Searching the web", status: "running" }],
-              },
-            ],
+            id: "progress",
+            role: "assistant",
+            content: "",
+            researchProgress: {
+              stage: "searching",
+              label: "Searching sources",
+              status: "running",
+              progress: 0.4,
+            },
+            activities: [{ tool: "search_web", label: "Searching the web", status: "running" }],
           },
-        ]),
-      );
-      localStorage.setItem(`nova-gpt-pending-active:v2:${principal}`, conversationId);
-    },
-    { userId: user.id },
-  );
+        ],
+      },
+    ],
+  });
 
   let requestBody: Record<string, unknown> | undefined;
   await page.route("**/api/chat", async (route) => {
