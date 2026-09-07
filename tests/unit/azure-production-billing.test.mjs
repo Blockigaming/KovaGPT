@@ -120,6 +120,7 @@ test("raw credentials, unversioned, foreign-vault and malformed references fail 
 test("production source connects approved parameters to existing identity and keeps planning non-deploying", () => {
   const read = (path) => readFileSync(path, "utf8");
   const bicep = read("infra/azure/production/main.bicep");
+  const roleModule = read("infra/azure/production/cognitive-account-role.bicep");
   const parameters = JSON.parse(
     read("infra/azure/production/main.parameters.example.json"),
   ).parameters;
@@ -141,9 +142,15 @@ test("production source connects approved parameters to existing identity and ke
   assert.doesNotMatch(bicep, /Microsoft\.KeyVault\/vaults\/secrets@/u);
   const roleAssignments =
     bicep.match(/resource \w+ 'Microsoft\.Authorization\/roleAssignments@[^']+'[^\n]*/gu) ?? [];
-  assert.deepEqual(roleAssignments, [
-    "resource azureOpenAiImageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useAzureOpenAiImageManagedIdentity) {",
-  ]);
+  assert.deepEqual(roleAssignments, []);
+  assert.match(
+    bicep,
+    /module azureOpenAiImageAccess 'cognitive-account-role\.bicep' = if \(useAzureOpenAiImageManagedIdentity\)/u,
+  );
+  assert.match(
+    roleModule,
+    /resource accountRole 'Microsoft\.Authorization\/roleAssignments@2022-04-01'/u,
+  );
   assert.match(workflow, /validateProductionBillingParameters\(\{/u);
   assert.match(
     workflow,

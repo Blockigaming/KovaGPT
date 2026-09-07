@@ -240,12 +240,13 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   name: managedIdentityName
 }
 
-resource azureOpenAiImageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useAzureOpenAiImageManagedIdentity) {
-  name: guid(azureOpenAiImage.id, identity.id, cognitiveServicesOpenAiUserRoleDefinitionId)
-  scope: azureOpenAiImage
-  properties: {
+module azureOpenAiImageAccess 'cognitive-account-role.bicep' = if (useAzureOpenAiImageManagedIdentity) {
+  name: 'azure-openai-image-access'
+  scope: resourceGroup(azureOpenAiImageResourceGroupName)
+  params: {
+    accountName: azureOpenAiImageAccountName
     principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
+    identityResourceId: identity.id
     roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId
   }
 }
