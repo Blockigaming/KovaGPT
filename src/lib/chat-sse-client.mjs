@@ -197,7 +197,9 @@ export async function consumeChatSse(
         "KovaGPT's response ended early. Please retry.",
       );
     }
-    cancelReaderWithoutWaiting(reader, "chat_stream_complete");
+    // DONE completes the UI, but the server may still be finalizing usage.
+    // Releasing the reader below preserves that successful response; cancel
+    // would turn it into a client disconnect before accounting has settled.
   } catch (error) {
     cancelReaderWithoutWaiting(reader, "chat_stream_rejected");
     if (error instanceof TypeError && /encoded data/u.test(error.message)) {

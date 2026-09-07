@@ -3,6 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { Bot, CheckCircle2, Globe2, LockKeyhole, Play, RotateCcw } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
+import { toast } from "sonner";
+import { WorkSyncStatus } from "@/components/WorkSyncStatus";
+import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
+import { recordWorkRecent } from "@/lib/work-sync-client";
 import {
   loadAgentRuns,
   saveAgentRuns,
@@ -29,6 +33,7 @@ export function AgentWorkspace() {
   const navigate = useNavigate();
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
+  const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? workStoragePrincipal(userKey) : null;
   const { tier, loading } = useTier();
   const available = tier === "plus" || tier === "pro";
@@ -73,6 +78,15 @@ export function AgentWorkspace() {
   }, [isLoaded, principal, userKey]);
 
   useEffect(() => {
+    if (isLoaded && principal !== null)
+      setRunState({
+        principal,
+        generation: storageGenerationRef.current,
+        items: loadAgentRuns(userKey),
+      });
+  }, [isLoaded, principal, userKey, workRevision]);
+
+  useEffect(() => {
     if (!isLoaded || principal === null) return;
     const handlePrincipalReset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
@@ -98,8 +112,18 @@ export function AgentWorkspace() {
     if (!principalReady || principal === null) return;
     const generation = runState.generation;
     if (generation !== storageGenerationRef.current) return;
-    setRunState({ principal, generation, items: next });
-    saveAgentRuns(userKey, next);
+    try {
+      saveAgentRuns(userKey, next);
+      setRunState({ principal, generation, items: next });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Saved work could not be updated. Your draft is still here.",
+      );
+      return false;
+    }
+    return true;
   };
   const canSave =
     principalReady &&
@@ -147,8 +171,16 @@ export function AgentWorkspace() {
         },
       ],
     };
-    persist([run, ...runs].slice(0, 100));
-    setObjective("");
+    if (persist([run, ...runs].slice(0, 100))) {
+      setObjective("");
+      if (userKey) {
+        try {
+          recordWorkRecent(userKey, "agent_draft", run.id);
+        } catch {
+          /* Saved draft remains available. */
+        }
+      }
+    }
   };
   const update = (id: string, status: AgentRunStatus, message: string) => {
     const now = Date.now();
@@ -204,6 +236,7 @@ export function AgentWorkspace() {
         </div>
         <span className="rounded-full border px-2 py-1 text-xs">Plus</span>
       </div>
+      <WorkSyncStatus />
       {loading ? (
         <p className="mt-4 text-sm text-muted-foreground" role="status">
           Checking plan access…

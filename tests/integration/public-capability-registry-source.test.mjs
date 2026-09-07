@@ -88,7 +88,14 @@ test("known limitations and voice exclusion remain explicit", () => {
   assert.match(registry, /availability: "excluded"/);
   assert.match(registry, /PDF, Word, PowerPoint, and Excel extraction is not currently supported/);
   assert.match(registry, /Editing an uploaded or generated image is not currently available/);
-  assert.match(registry, /Signing in does not currently promise cross-device chat synchronization/);
+  assert.match(
+    registry,
+    /Signed-in ordinary chats synchronize with your account when chat sync is available/,
+  );
+  assert.match(
+    registry,
+    /Offline edits stay on this device until acknowledged; Temporary Chat stays out of history/,
+  );
   assert.match(registry, /Background scheduled execution is unavailable in this deployment/);
   assert.match(registry, /Voice is intentionally outside KovaGPT's current product scope/);
   assert.doesNotMatch(aiWriter, /voice notes|audio notes|microphone input|audio upload/i);

@@ -18,7 +18,7 @@ Audited 2026-07-27 across public routes, authenticated workspaces, server functi
 ## Intentional deferred engineering
 
 - **Inline attachment cleanup:** chat attachments currently live inside message records, not object storage. Object cleanup becomes necessary only if uploads move to a bucket.
-- **Durable long-chat summaries:** bounded recent turns and existing memory are used today. A background summary worker requires durable job execution and observability.
+- **Durable long-chat summary activation:** source now includes bounded owner-scoped summary jobs, verified history-prefix reuse, lease/revision fences, privacy deletion, and a retryable internal worker. `KOVA_CHAT_SUMMARIES_ENABLED` remains false until the owner applies its migration, configures a dedicated worker secret/schedule, verifies provider budget and privacy evidence, and monitors completed/retrying/superseded batch counts. No live activation has occurred.
 - **Per-request model classification:** current explicit modes and capability routing remain deterministic. A classifier requires evaluation data and provider budget controls.
 - **Cross-device local workspace state:** Work drafts, some preferences, and branch metadata require an owner-scoped sync schema and conflict resolution.
 - **Atomic multi-row bulk operations:** current operations recover by refreshing authoritative state; true atomicity requires database RPCs.

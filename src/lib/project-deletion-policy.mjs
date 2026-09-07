@@ -1,6 +1,9 @@
 export const PROJECT_FILES_BUCKET = "project-files";
 export const PROJECT_STORAGE_DELETE_BATCH = 100;
 export const PROJECT_STORAGE_MAX_OBJECTS_PER_ATTEMPT = 2_000;
+// A 1,024-character Storage path admits at most 494 one-character folders
+// beneath the UUID root. Cover the complete valid legacy namespace.
+export const PROJECT_STORAGE_MAX_FOLDER_DEPTH = 512;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UNSAFE_SEGMENT_PATTERN = /[\\/\u0000-\u001f\u007f]/u;
@@ -55,7 +58,7 @@ export function joinListedProjectStorageChild(projectId, folder, childName) {
     !childName ||
     childName === "." ||
     childName === ".." ||
-    childName.length > 512 ||
+    childName.length > 1_024 ||
     UNSAFE_SEGMENT_PATTERN.test(childName)
   ) {
     throw new ProjectDeletionError("project_storage_listing_invalid", 503);
@@ -88,6 +91,8 @@ export async function purgeProjectStorageFolder({
   storage,
   projectId,
   maxObjects = PROJECT_STORAGE_MAX_OBJECTS_PER_ATTEMPT,
+  maxFolderDepth = PROJECT_STORAGE_MAX_FOLDER_DEPTH,
+  protectedPaths = async () => new Set(),
   onProgress = async () => undefined,
 }) {
   if (
@@ -95,7 +100,9 @@ export async function purgeProjectStorageFolder({
     typeof storage.list !== "function" ||
     typeof storage.remove !== "function" ||
     !Number.isSafeInteger(maxObjects) ||
-    maxObjects < 1
+    maxObjects < 1 ||
+    !Number.isSafeInteger(maxFolderDepth) ||
+    maxFolderDepth < 1
   ) {
     throw new ProjectDeletionError("project_storage_cleanup_configuration_invalid", 500);
   }
@@ -103,10 +110,15 @@ export async function purgeProjectStorageFolder({
   const root = projectStorageFolder(projectId);
   let removedCount = 0;
   let scanCount = 0;
-  const maxScans = Math.max(32, maxObjects * 4);
+  const maxScans = Math.max((maxFolderDepth + 1) * 2 + 2, maxObjects * 4);
 
-  async function purgeFolder(folder) {
+  async function purgeFolder(folder, depth) {
+    if (depth > maxFolderDepth) {
+      throw new ProjectDeletionError("project_storage_folder_depth_exceeded", 409);
+    }
+
     let folderOnlyRounds = 0;
+    let retainedEntries = 0;
     while (true) {
       scanCount += 1;
       if (scanCount > maxScans) {
@@ -117,7 +129,7 @@ export async function purgeProjectStorageFolder({
       const listed = storageResult(
         await storage.list(folder, {
           limit: remaining > 0 ? Math.min(PROJECT_STORAGE_DELETE_BATCH, remaining) : 1,
-          offset: 0,
+          offset: retainedEntries,
           sortBy: { column: "name", order: "asc" },
         }),
         "project_storage_list_failed",
@@ -128,7 +140,7 @@ export async function purgeProjectStorageFolder({
       if (!Array.isArray(listed.data)) {
         throw new ProjectDeletionError("project_storage_listing_invalid");
       }
-      if (listed.data.length === 0) return;
+      if (listed.data.length === 0) return retainedEntries > 0;
       if (remaining <= 0) {
         throw new ProjectDeletionError("project_storage_cleanup_incomplete", 503, 2);
       }
@@ -146,21 +158,24 @@ export async function purgeProjectStorageFolder({
       }
 
       for (const nestedFolder of folders) {
-        // Bound total scans, rather than rejecting a historical folder just
-        // because its nesting exceeds an arbitrary depth. This makes legacy
-        // objects retryable without widening the project prefix.
-        await purgeFolder(nestedFolder);
+        if (await purgeFolder(nestedFolder, depth + 1)) retainedEntries += 1;
       }
 
-      if (files.length > 0) {
-        const removed = storageResult(await storage.remove(files), "project_storage_remove_failed");
+      const protectedObjects = await protectedPaths(files);
+      const removable = files.filter((path) => !protectedObjects.has(path));
+      retainedEntries += files.length - removable.length;
+      if (removable.length > 0) {
+        const removed = storageResult(
+          await storage.remove(removable),
+          "project_storage_remove_failed",
+        );
         if (removed.error && !isMissingStorageObjectError(removed.error)) {
           throw new ProjectDeletionError("project_storage_remove_failed");
         }
-        removedCount += files.length;
+        removedCount += removable.length;
         folderOnlyRounds = 0;
-        await onProgress({ removedCount, folder, paths: [...files] });
-      } else {
+        await onProgress({ removedCount, folder, paths: [...removable] });
+      } else if (files.length === 0 && retainedEntries === 0) {
         folderOnlyRounds += 1;
         if (folderOnlyRounds > 1) {
           throw new ProjectDeletionError("project_storage_tree_stalled", 503, 2);
@@ -169,7 +184,7 @@ export async function purgeProjectStorageFolder({
     }
   }
 
-  await purgeFolder(root);
+  await purgeFolder(root, 0);
   return { complete: true, removedCount };
 }
 

@@ -1,14 +1,35 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 import {
   parseWorkSyncMutation,
   parseWorkSyncQuery,
+  WORK_SYNC_MAX_PAYLOAD_DEPTH,
+  WORK_SYNC_MUTATION_RATE_POLICY,
+  WORK_SYNC_READ_RATE_POLICY,
   workSyncErrorStatus,
 } from "../../src/lib/work-sync-policy.mjs";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const mutationId = "22222222-2222-4222-8222-222222222222";
+
+test("Work sync rate policies satisfy the shared limiter contract", async () => {
+  for (const policy of [WORK_SYNC_READ_RATE_POLICY, WORK_SYNC_MUTATION_RATE_POLICY]) {
+    assert.equal(Object.isFrozen(policy), true);
+    const result = await consumeDistributedRateLimit({
+      identity: `user:${id}`,
+      ...policy,
+      backendUrl: "",
+      serviceRoleKey: "",
+      hashSecret: "",
+    });
+    assert.equal(result.status, "unavailable");
+    assert.equal(result.allowed, false);
+  }
+  assert.equal(WORK_SYNC_READ_RATE_POLICY.limit, 60);
+  assert.equal(WORK_SYNC_MUTATION_RATE_POLICY.limit, 12);
+});
 
 test("saved Work records require exact conflict and idempotency fields", () => {
   assert.deepEqual(
@@ -60,6 +81,39 @@ test("saved Work records require exact conflict and idempotency fields", () => {
   );
 });
 
+test("saved Work payload depth stays compatible with account export serialization", () => {
+  const wrap = (count) => {
+    let value = { leaf: true };
+    for (let index = 1; index < count; index += 1) value = { nested: value };
+    return value;
+  };
+  assert.equal(WORK_SYNC_MAX_PAYLOAD_DEPTH, 16);
+  assert.doesNotThrow(() =>
+    parseWorkSyncMutation({
+      action: "save",
+      mutationId,
+      id,
+      kind: "task",
+      title: "Bounded depth",
+      payload: wrap(WORK_SYNC_MAX_PAYLOAD_DEPTH),
+      expectedRevision: 0,
+    }),
+  );
+  assert.throws(
+    () =>
+      parseWorkSyncMutation({
+        action: "save",
+        mutationId,
+        id,
+        kind: "task",
+        title: "Too deep",
+        payload: wrap(WORK_SYNC_MAX_PAYLOAD_DEPTH + 1),
+        expectedRevision: 0,
+      }),
+    /work_sync_payload_too_deep/u,
+  );
+});
+
 test("pin changes require a known revision while passive recents do not", () => {
   assert.equal(
     parseWorkSyncMutation({
@@ -104,6 +158,8 @@ test("sync cursors are monotonic bounded integers with no extra parameters", () 
 });
 
 test("database errors map without exposing SQL messages", () => {
+  assert.equal(workSyncErrorStatus("P0003"), 429);
+  assert.equal(workSyncErrorStatus("54000"), 409);
   assert.equal(workSyncErrorStatus("40001"), 409);
   assert.equal(workSyncErrorStatus("P0002"), 404);
   assert.equal(workSyncErrorStatus("22023"), 400);

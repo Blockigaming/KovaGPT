@@ -34,15 +34,10 @@ begin
     raise exception 'agent_run_not_found' using errcode = 'P0002';
   end if;
 
-  if p_command = 'cancel' and v_run_status = 'cancelled' then
-    return jsonb_build_object(
-      'accepted', true,
-      'command', p_command,
-      'status', 'cancelled',
-      'idempotent', true
-    );
-  end if;
-  if v_run_status in ('completed', 'failed', 'cancelled') then
+  -- Repeated cancellation must repair partial state left by the former
+  -- nontransactional handler. Keep it under the same locked transaction.
+  if v_run_status in ('completed', 'failed')
+     or (v_run_status = 'cancelled' and p_command <> 'cancel') then
     raise exception 'invalid_agent_state_transition' using errcode = '40001';
   end if;
 
@@ -86,7 +81,7 @@ begin
            case when p_command = 'deny' then 'approval_denied' else 'user_requested' end,
          lease_owner = null,
          lease_expires_at = null,
-         cancelled_at = v_now,
+         cancelled_at = coalesce(cancelled_at, v_now),
          updated_at = v_now
    where id = p_run_id
      and owner_id = v_owner_id
@@ -95,6 +90,12 @@ begin
     raise exception 'agent_run_state_changed' using errcode = '40001';
   end if;
 
+  if v_run_status <> 'cancelled' or not exists (
+    select 1 from public.agent_run_events
+     where run_id = p_run_id and owner_id = v_owner_id
+       and safe_payload ->> 'result' = 'cancelled'
+       and safe_payload ->> 'command' in ('cancel', 'deny')
+  ) then
   insert into public.agent_run_events(run_id, owner_id, kind, safe_payload)
   values (
     p_run_id,
@@ -107,12 +108,13 @@ begin
       'task_id', p_task_id
     )
   );
+  end if;
 
   return jsonb_build_object(
     'accepted', true,
     'command', p_command,
     'status', 'cancelled',
-    'idempotent', false
+    'idempotent', v_run_status = 'cancelled'
   );
 end;
 $$;

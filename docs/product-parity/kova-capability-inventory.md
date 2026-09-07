@@ -1,15 +1,17 @@
-# Kova capability inventory
+# Kova capability evidence index
 
-| Capability group                                                                        | Classification                             | Evidence / limitation                                                                        | Next gate                                                |
-| --------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Ordinary chat, history, search, message actions, markdown/code/tables, files, citations | partially complete                         | Components and stores exist; full acceptance matrix is not evidenced across every state      | Browser, a11y, tenancy, and failure-state matrix         |
-| Projects, instructions/files/collaboration                                              | partially complete                         | Released project routes and collaboration components                                         | Server role/tenant isolation verification                |
-| Images, writing, research, work, artifacts                                              | partially complete                         | Focused routes and runtime modules exist                                                     | Export/version-history and authoritative usage tests     |
-| Memory, personalization, model/mode selection, themes                                   | partially complete                         | Memory/settings/model components exist                                                       | Cross-device persistence and deletion proof              |
-| Agents, apps, connectors, MCP, skills/plugins                                           | partially complete                         | Runtime and integration modules exist; not all requested discovery/publishing journeys exist | Feature flags and permission tests                       |
-| Billing/subscriptions                                                                   | partially complete                         | Checkout and plan modules exist                                                              | Prepaid developer credit UI and end-to-end settlement    |
-| Dynamic developer API pricing                                                           | partially complete                         | Versioned schema, pure quote/reconciliation engine, margin unit tests                        | Wire into every paid ingress and production admin review |
-| SSO, SCIM, domains, groups, enterprise administration                                   | unsupported by current Kova infrastructure | No complete released server-authorized journey proven                                        | Identity and tenant administration project               |
-| Desktop/mobile installation                                                             | planned for later                          | No verified native distribution                                                              | Distribution infrastructure                              |
-| Voice                                                                                   | intentionally excluded                     | Not authorized                                                                               | Separate explicit approval                               |
-| OpenAI names, proprietary assets, private APIs, exact trade dress/copy                  | legally inappropriate to copy              | Deliberately excluded                                                                        | None                                                     |
+Updated **2026-09-05**, source `1eb7ef53`; progress baseline remains **23.2%**.
+
+The canonical human-readable inventory is [feature-parity.md](../feature-parity.md). Its [machine-readable companion](capability-audit.json) contains all 27 master areas with separate source, local, hosted, staging and production fields. Keep those records together when a package lands; do not maintain a second contradictory feature table here.
+
+| Evidence                           | Authority / interpretation                                                                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Source scope and exact limitations | [27-area inventory](../feature-parity.md), feature-specific source documents and actual runtime paths.                        |
+| Actual tests                       | Per-surface test paths in the inventory. Test existence is not a current pass result.                                         |
+| Pending implementation/integration | [Remaining work](../remaining-chatgpt-gaps.md), including Work delegation/Sites, skills and active packages.                  |
+| Current public reference           | [Official source audit](chatgpt-surface-audit.md); unauthenticated public documents only.                                     |
+| Hosted CI/review                   | Exact final published commit/tree and terminal checks; this audit does not supply them.                                       |
+| Staging/production                 | Approved deployment record, real-provider/account canaries and rollback; not exercised by this audit.                         |
+| Exclusions                         | [Scope register](intentionally-excluded.md), including all voice/audio/dictation and native/proprietary/regulated boundaries. |
+
+A green local suite, source-complete adapter, empty exact-app manifest or route count must never be converted into full product parity, an available paid entitlement or production readiness.

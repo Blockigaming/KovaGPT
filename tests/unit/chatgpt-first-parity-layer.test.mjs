@@ -28,7 +28,7 @@ test("the final ChatGPT-first parity layer is loaded in every application route"
 });
 
 test("current signed-out ChatGPT reference surfaces remain represented with Kova branding", () => {
-  for (const label of ["New chat", "Search", "Images", "Plugins", "Deep research", "Maps"])
+  for (const label of ["New chat", "Search", "Images", "Plugins", "Deep research", "Discover"])
     assert.match(sidebar, new RegExp(label, "u"));
   assert.match(sidebar, /Get responses tailored to you/u);
   assert.doesNotMatch(sidebar, /OpenAI|ChatGPT logo/u);

@@ -1,3 +1,4 @@
+import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
@@ -14,7 +15,7 @@ import {
   optionalUser,
 } from "@/lib/api-auth.server";
 import {
-  getAvailableGoogleTools,
+  getGoogleToolContext,
   TOOL_ACTIVITY,
   WRITE_TOOL_NAMES,
   runGoogleTool,
@@ -106,7 +107,12 @@ type ChainableQueryLike = {
 
 type SupabaseAdminLike = {
   from: (table: string) => ChainableQueryLike;
-  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }> & {
+    abortSignal: (signal: AbortSignal) => PromiseLike<{ data: unknown; error: unknown }>;
+  };
 };
 
 const OWNER_EMAIL = "support@kovagpt.com";
@@ -571,6 +577,10 @@ export const Route = createFileRoute("/api/chat")({
               personality,
               projectId,
               temporary,
+              temporaryContext,
+              memoryStartIndex,
+              historyOffset,
+              summaryProof,
               clientTool,
             } = ingress;
             // Lockdown Mode is a server-enforced account boundary. Explicit
@@ -631,12 +641,15 @@ export const Route = createFileRoute("/api/chat")({
                 )!;
               }
             }
-            // Temporary Chat is a clean-room request: even a custom client
-            // cannot combine `temporary: true` with profile or personality
-            // fields and have those values reach the model prompt.
-            const personalContext = temporary ? undefined : user;
+            // Temporary chats never write history or memory. At creation, the
+            // user may explicitly opt into existing personalization; omission
+            // remains clean-room behavior for older and custom clients.
+            const temporaryUsesExistingContext =
+              temporary === true && temporaryContext === "personalized";
+            const usesExistingContext = !temporary || temporaryUsesExistingContext;
+            const personalContext = usesExistingContext ? user : undefined;
             const personalityBlock =
-              !temporary && personality
+              usesExistingContext && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
                 : "";
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
@@ -646,7 +659,7 @@ export const Route = createFileRoute("/api/chat")({
 
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
-            const isImageRequest =
+            let isImageRequest =
               lastText.length > 0 &&
               (!lastUser?.attachments || lastUser.attachments.length === 0) &&
               (clientTool === "image" || detectImageIntent(lastText));
@@ -679,81 +692,52 @@ export const Route = createFileRoute("/api/chat")({
                 : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
 
-            // A Project that has entered durable deletion is read-only. Check
-            // this before quota reservation or provider work so an open tab
-            // cannot spend generation quota on a response whose Project save
-            // must be rejected by the deletion fence.
-            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
-              try {
-                const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
-                const membership = (await preflight.run(
-                  "project_generation_membership",
-                  () =>
-                    admin.rpc("is_project_member", {
-                      _user_id: auth.userId,
-                      _project_id: projectId,
-                    }),
-                  { required: false },
-                )) as { data?: unknown; error?: unknown } | undefined;
-                if (!membership || membership.error) {
-                  return Response.json(
-                    { error: "Project access could not be verified. Try again shortly." },
-                    {
-                      status: 503,
-                      headers: { "Cache-Control": "no-store", "Retry-After": "5" },
-                    },
-                  );
-                }
-                if (membership.data === true) {
-                  const projectState = (await preflight.run(
-                    "project_generation_state",
-                    () =>
-                      admin
-                        .from("projects")
-                        .select("id,deletion_requested_at")
-                        .eq("id", projectId)
-                        .maybeSingle(),
-                    { required: false },
-                  )) as { data?: unknown; error?: unknown } | undefined;
-                  const project = projectState?.data as
-                    { id?: unknown; deletion_requested_at?: unknown } | null | undefined;
-                  if (!projectState || projectState.error || project?.id !== projectId) {
-                    return Response.json(
-                      { error: "Project access could not be verified. Try again shortly." },
-                      {
-                        status: 503,
-                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
-                      },
-                    );
-                  }
-                  if (project.deletion_requested_at) {
-                    return Response.json(
-                      {
-                        error:
-                          "This Project is being deleted and cannot generate new chat responses.",
-                      },
-                      {
-                        status: 409,
-                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
-                      },
-                    );
-                  }
-                }
-              } catch (error) {
-                if (error instanceof ChatPreflightError) throw error;
-                logSafeFailure("warn", "[chat] project generation gate unavailable", logContext, {
-                  status: 503,
-                  category: "policy",
-                  code: "project_generation_gate_unavailable",
-                });
+            // A custom Kova supplies creator instructions and immutable knowledge,
+            // never the creator's credentials or an entitlement override.
+            let customKova: Awaited<
+              ReturnType<typeof import("@/lib/custom-kovas.server").resolveCustomKova>
+            > | null = null;
+            if (ingress.kova) {
+              if (!auth?.emailVerified)
                 return Response.json(
-                  { error: "Project access could not be verified. Try again shortly." },
-                  {
-                    status: 503,
-                    headers: { "Cache-Control": "no-store", "Retry-After": "5" },
-                  },
+                  { error: "Verify your account to use a custom Kova." },
+                  { status: 403 },
                 );
-              }
+              customKova = await preflight.run("custom_kova", async (signal) => {
+                const { resolveCustomKova } = await import("@/lib/custom-kovas.server");
+                return resolveCustomKova(auth.supabaseAdmin, auth.userId, ingress.kova!, signal);
+              });
+              const requiredTier = getMode(customKova.config.mode).tier;
+              const rank = { free: 0, plus: 1, pro: 2 };
+              if (!isOwner && rank[requiredTier] > rank[callerTier])
+                return Response.json(
+                  {
+                    error:
+                      "This Kova's model requires a higher plan. Choose another Kova or update your plan.",
+                  },
+                  { status: 403 },
+                );
+              if (clientTool === "deep_research")
+                return Response.json(
+                  { error: "Start Deep Research from regular chat." },
+                  { status: 400 },
+                );
+              if (clientTool === "web_search" && !customKova.allows("web"))
+                return Response.json(
+                  { error: "Web search is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (clientTool === "image" && !customKova.allows("images"))
+                return Response.json(
+                  { error: "Image generation is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.attachmentsAllowed(messages))
+                return Response.json(
+                  { error: "Attachments are disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.allows("images")) isImageRequest = false;
             }
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -870,6 +854,7 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (quota) return quota;
               }
+              await customKova?.assertCurrent(request.signal);
               return handleImageRequest(lastText, logContext);
             }
 
@@ -893,7 +878,7 @@ export const Route = createFileRoute("/api/chat")({
               plus: 1,
               pro: 2,
             };
-            const requested = getMode(mode ?? "auto");
+            const requested = getMode(customKova?.config.mode ?? mode ?? "auto");
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
@@ -966,13 +951,10 @@ export const Route = createFileRoute("/api/chat")({
               });
             }
 
-            // COST: only send the last ~12 turns to the model. Adaptive memory +
-            // cross-chat summaries (below) carry forward standing rules and
-            // long-term context, so we don't need to resend the full transcript
-            // on every call. The latest user message is always preserved.
-            // INTENTIONAL-DEFERRED(summarization): a future durable summary worker can
-            // background summary pass and store it in chat_memories instead of
-            // sending raw turns.
+            // Keep the latest 12 messages. The optional durable same-chat summary
+            // below can retain earlier context only after its exact eligible
+            // prefix is verified against this request. Existing cross-chat memory
+            // remains a separate, consent-bound source.
             const HISTORY_TURNS = 12;
             const trimmedMessages =
               messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
@@ -1063,6 +1045,7 @@ export const Route = createFileRoute("/api/chat")({
             let webBlock = "";
             if (
               !lockdownBlocksNetwork &&
+              (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
               (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")
@@ -1079,11 +1062,14 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const result = await preflight.run(
                   "web_search",
-                  () =>
-                    runWebSearch(
+                  async (signal) => {
+                    await customKova?.assertCurrent(signal);
+                    return runWebSearch(
                       lastText,
                       clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
-                    ),
+                      signal,
+                    );
+                  },
                   { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
@@ -1095,14 +1081,15 @@ export const Route = createFileRoute("/api/chat")({
 
             // Cross-chat memory: for Plus+ signed-in users, inject short
             // summaries of their recent past chats so KovaGPT can recall
-            // context across conversations. Consent is opt-in and Temporary
-            // Chat never reaches the memory table.
+            // context across conversations. Consent is opt-in. A personalized
+            // Temporary Chat may read existing memory but never writes it.
             let memoryBlock = "";
+            const memorySourceRefs: MemorySourceRef[] = [];
             if (
               auth &&
               (callerTier === "plus" || callerTier === "pro") &&
               personalContext?.rememberAcross === true &&
-              !temporary
+              usesExistingContext
             ) {
               try {
                 const memoryResult = await preflight.run(
@@ -1114,7 +1101,7 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     )
                       .from("chat_memories")
-                      .select("title, summary, updated_at")
+                      .select("id, title, summary, updated_at")
                       .eq("user_id", auth.userId)
                       .order("updated_at", { ascending: false })
                       .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
@@ -1122,20 +1109,22 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const memRows = memoryResult?.data;
                 if (Array.isArray(memRows) && memRows.length > 0) {
-                  const memories = (memRows as { title?: string | null; summary: string }[]).map(
-                    (r, i): KovaMemory => ({
-                      id: `chat-memory-${i + 1}`,
-                      userId: auth.userId,
-                      content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
-                      category: "personal_context",
-                    }),
-                  );
-                  memoryBlock = formatMemoryBlock(
-                    selectRelevantMemories(memories, lastText, {
-                      enabled: personalContext.rememberAcross === true,
-                      temporary: Boolean(temporary),
-                      maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
-                    }),
+                  const memories = (
+                    memRows as { id: string; title?: string | null; summary: string }[]
+                  ).map((r): KovaMemory => ({
+                    id: r.id,
+                    userId: auth.userId,
+                    content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
+                    category: "personal_context",
+                  }));
+                  const selectedMemories = selectRelevantMemories(memories, lastText, {
+                    enabled: personalContext.rememberAcross === true,
+                    temporary: !usesExistingContext,
+                    maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
+                  });
+                  memoryBlock = formatMemoryBlock(selectedMemories);
+                  memorySourceRefs.push(
+                    ...selectedMemories.map(({ id }) => ({ kind: "chat_memory" as const, id })),
                   );
                 }
               } catch (error) {
@@ -1148,11 +1137,58 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            // Same-chat summaries have a separate opt-in deployment gate. Never
+            // read Temporary turns or pre-conversion history; older clients
+            // without an explicit privacy boundary retain the recent-turn path.
+            let conversationSummary:
+              import("@/lib/chat-summary-policy.server.mjs").SummaryContext | null = null;
+            if (
+              auth &&
+              chatId &&
+              !temporary &&
+              memoryStartIndex !== undefined &&
+              (callerTier === "plus" || callerTier === "pro") &&
+              personalContext?.rememberAcross === true
+            ) {
+              const { buildChatSummaryContext } = await import("@/lib/chat-summary.server");
+              conversationSummary =
+                (await preflight.run(
+                  "conversation_summary",
+                  (signal) =>
+                    buildChatSummaryContext(
+                      auth.supabaseAdmin,
+                      {
+                        userId: auth.userId,
+                        chatId,
+                        messages,
+                        memoryStartIndex,
+                        historyOffset,
+                        summaryProof,
+                        temporary: Boolean(temporary),
+                        memoryEnabled: personalContext.rememberAcross === true,
+                      },
+                      signal,
+                    ),
+                  { required: false },
+                )) ?? null;
+              if (conversationSummary) {
+                memorySourceRefs.push({
+                  kind: "conversation_summary",
+                  id: conversationSummary.source.id,
+                });
+              }
+            }
+
             // Project workspace context: only for signed-in members of `projectId`.
             // Injects project instructions, project memory, and top-k retrieved
             // knowledge-base chunks matched against the user's last message.
             let projectBlock = "";
-            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            if (
+              auth &&
+              usesExistingContext &&
+              typeof projectId === "string" &&
+              /^[0-9a-f-]{36}$/i.test(projectId)
+            ) {
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
@@ -1197,13 +1233,14 @@ export const Route = createFileRoute("/api/chat")({
                       () =>
                         admin
                           .from("project_memory")
-                          .select("content")
+                          .select("id, content")
                           .eq("project_id", projectId)
                           .order("created_at", { ascending: false })
                           .limit(20),
                       { required: false },
                     );
-                    const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
+                    const memRows =
+                      (memRes?.data as Array<{ id: string; content: string }> | null) ?? [];
                     if (memRows.length > 0) {
                       parts.push(
                         "Project memory (facts the user has saved about this project - honor them):\n" +
@@ -1230,12 +1267,13 @@ export const Route = createFileRoute("/api/chat")({
                       const chunks =
                         (await preflight.run(
                           "project_retrieval",
-                          () =>
+                          (signal) =>
                             retrieveProjectContext({
                               supabase: admin,
                               project_id: projectId,
                               query: q,
                               k: 6,
+                              signal,
                             }),
                           { required: false, timeoutMs: 5_000 },
                         )) ?? [];
@@ -1251,6 +1289,13 @@ export const Route = createFileRoute("/api/chat")({
                       "\n\n--- PROJECT CONTEXT ---\n" +
                       parts.join("\n\n") +
                       "\n--- END PROJECT CONTEXT ---";
+                    memorySourceRefs.push(
+                      ...memRows.map(({ id }) => ({
+                        kind: "project_memory" as const,
+                        id,
+                        projectId,
+                      })),
+                    );
                   }
                 }
               } catch (error) {
@@ -1323,8 +1368,10 @@ export const Route = createFileRoute("/api/chat")({
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
                     memoryBlock +
+                    (conversationSummary?.block ?? "") +
                     projectBlock +
                     chatWorkspaceBlock +
+                    (customKova?.block ?? "") +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
@@ -1358,14 +1405,23 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
-            const availableTools =
-              auth && !hasImages && m.id !== "instant" && lastText.length > 0
+            const googleContext =
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasImages &&
+              m.id !== "instant" &&
+              lastText.length > 0
                 ? ((await preflight.run(
                     "connector_tools",
-                    () => getAvailableGoogleTools(auth.userId),
+                    () => getGoogleToolContext(auth.userId),
                     { required: false },
-                  )) ?? [])
-                : [];
+                  )) ?? null)
+                : null;
+            const availableTools = customKova
+              ? customKova.filterTools(googleContext?.tools ?? [])
+              : (googleContext?.tools ?? []);
+            const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
             const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
@@ -1500,6 +1556,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
+                  await customKova?.assertCurrent(hopCtl.signal);
                   providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
@@ -1560,6 +1617,17 @@ export const Route = createFileRoute("/api/chat")({
                     const enc = new TextEncoder();
                     const stream = new ReadableStream({
                       start(controller) {
+                        controller.enqueue(
+                          enc.encode(
+                            sseEvent(
+                              memorySourcesDelta(
+                                auth?.userId ?? null,
+                                memorySourceRefs,
+                                Boolean(temporary),
+                              ),
+                            ),
+                          ),
+                        );
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -1646,6 +1714,21 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 const results = await Promise.all(
                   msg.tool_calls.map(async (tc): Promise<ToolResultMsg> => {
+                    if (!availableTools.some((tool) => tool.function.name === tc.function.name))
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "tool_not_allowed" }),
+                      };
+                    try {
+                      await customKova?.assertCurrent(request.signal);
+                    } catch {
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "custom_kova_unavailable" }),
+                      };
+                    }
                     let parsedArgs: Record<string, unknown> = {};
                     try {
                       parsedArgs = tc.function.arguments
@@ -1676,6 +1759,7 @@ export const Route = createFileRoute("/api/chat")({
                           auth!.userId,
                           tc.function.name,
                           parsedArgs,
+                          googleBinding,
                         );
                         pendingConfirms.push({
                           id: staged.id,
@@ -1703,7 +1787,12 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(auth!.userId, tc.function.name, parsedArgs);
+                      const out = await runGoogleTool(
+                        auth!.userId,
+                        tc.function.name,
+                        parsedArgs,
+                        googleBinding,
+                      );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
@@ -1748,6 +1837,7 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
+              await customKova?.assertCurrent(request.signal);
               providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
@@ -1973,6 +2063,17 @@ export const Route = createFileRoute("/api/chat")({
             };
             const stream = new ReadableStream({
               async start(controller) {
+                controller.enqueue(
+                  enc.encode(
+                    sseEvent(
+                      memorySourcesDelta(
+                        auth?.userId ?? null,
+                        memorySourceRefs,
+                        Boolean(temporary),
+                      ),
+                    ),
+                  ),
+                );
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(

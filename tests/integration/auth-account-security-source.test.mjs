@@ -113,12 +113,18 @@ test("account and memory mutations are bounded, no-store, and cross-site guarded
   assert.match(account, /readUtf8BodyBounded\(request, MAX_DELETE_BODY_BYTES\)/);
   assert.match(account, /mediaType !== "application\/json"/);
   assert.match(account, /isCrossSiteMutation\(request\)/);
-  assert.match(account, /\.eq\("user_id", auth\.userId\)/);
-  assert.match(account, /auth\.admin\.deleteUser\(auth\.userId\)/);
+  assert.match(
+    account,
+    /prepareStripeAccountDeletion\(\{\s*supabase: auth\.supabaseAdmin,\s*userId: auth\.userId,/,
+  );
+  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
   assert.match(account, /"Cache-Control": "no-store"/);
   assert.doesNotMatch(account, /error instanceof Error \? error\.message/);
   assert.equal(memory.match(/isCrossSiteMutation\(request\)/g)?.length, 2);
-  assert.match(memory, /\.eq\("user_id", caller\.auth\.userId\)/);
+  assert.match(
+    memory,
+    /deleteChatMemory\(caller\.auth\.supabaseAdmin, caller\.auth\.userId, chatId\)/,
+  );
 });
 
 test("auth UI does not enumerate duplicate signups or expose raw provider errors", async () => {
@@ -154,7 +160,8 @@ test("RLS-facing library and project functions retain explicit ownership boundar
   const [library, projects, workspace, migration] = sources;
 
   assert.match(library, /\.eq\("user_id", context\.userId\)/);
-  assert.match(library, /\.insert\(\{\s*user_id: context\.userId/s);
+  assert.match(library, /const values = \{\s*user_id: context\.userId/s);
+  assert.match(library, /\.insert\(\{\s*\.\.\.values,/s);
   assert.match(projects, /owner_id: context\.userId/);
   assert.match(projects, /middleware\(\[requireSupabaseAuth\]\)/);
   assert.match(workspace, /middleware\(\[requireSupabaseAuth\]\)/);

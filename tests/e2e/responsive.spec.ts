@@ -49,7 +49,7 @@ test.describe("KovaGPT responsive shell", () => {
       contentType: "image/png",
     });
 
-    // No uncaught console errors (excluding known 3rd-party auth noise).
+    // No uncaught console errors (excluding known third-party auth noise).
     const filtered = errors.filter(
       (e) => !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
     );

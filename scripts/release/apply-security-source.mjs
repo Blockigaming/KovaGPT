@@ -8,11 +8,7 @@ const replacements = [
     before: `import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";`,
     after: `import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";`,
-    isApplied(source) {
-      return /import\s*\{\s*safeConnectorError\s*\}\s*from\s*["']@\/lib\/connectors\.server["'];/u.test(
-        source,
-      );
-    },
+    appliedNeedle: `import { safeConnectorError } from "@/lib/connectors.server";`,
   },
   {
     path: "src/lib/google-tools.server.ts",
@@ -48,7 +44,11 @@ function occurrences(source, needle) {
 
 function replacementState(source, replacement) {
   const beforeCount = occurrences(source, replacement.before);
-  const afterCount = occurrences(source, replacement.after);
+  const appliedNeedle = replacement.appliedNeedle ?? replacement.after;
+  const afterCount = occurrences(source, appliedNeedle);
+  if (replacement.appliedNeedle && afterCount === 1) {
+    return { applied: true, pending: false, beforeCount, afterCount };
+  }
   const afterContainsBefore = replacement.after.includes(replacement.before);
   const applied = replacement.isApplied
     ? replacement.isApplied(source)

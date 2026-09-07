@@ -4,6 +4,7 @@
 
 ALTER TABLE public.project_files
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'ready',
+  ADD COLUMN IF NOT EXISTS account_cleanup_user_id uuid,
   ADD COLUMN IF NOT EXISTS content_sha256 text,
   ADD COLUMN IF NOT EXISTS idempotency_key uuid,
   ADD COLUMN IF NOT EXISTS storage_owner_id uuid,
@@ -116,7 +117,7 @@ BEGIN
           kind IN ('file', 'image')
           AND content_sha256 IS NOT NULL
           AND storage_path ~ (
-            '^' || project_id::text || '/' || id::text || E'\\.[a-z0-9]{1,12}$'
+            '^' || project_id::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' || E'\\.[a-z0-9]{1,12}$'
           )
         )
         OR (
@@ -394,6 +395,7 @@ BEGIN
 
     UPDATE public.project_files
     SET status = 'pending',
+        storage_path = p_project_id::text || '/' || p_attempt_id::text || '.' || p_extension,
         storage_owner_id = project_owner,
         storage_charged = existing.storage_charged OR p_size_bytes > 0,
         upload_attempt_id = p_attempt_id,
@@ -430,7 +432,7 @@ BEGIN
   END IF;
 
   file_id := gen_random_uuid();
-  canonical_path := p_project_id::text || '/' || file_id::text || '.' || p_extension;
+  canonical_path := p_project_id::text || '/' || p_attempt_id::text || '.' || p_extension;
 
   INSERT INTO public.project_files (
     id, project_id, name, storage_path, mime_type, size_bytes, kind,
@@ -552,6 +554,7 @@ AS $$
 DECLARE
   target_project_id uuid;
   changed boolean;
+  target public.project_files;
 BEGIN
   IF p_file_id IS NULL
     OR p_attempt_id IS NULL
@@ -565,6 +568,15 @@ BEGIN
   target_project_id := public.lock_project_for_file_operation(p_file_id);
   IF target_project_id IS NULL THEN
     RETURN false;
+  END IF;
+
+  IF p_status = 'ready' THEN
+    SELECT * INTO target FROM public.project_files WHERE id=p_file_id
+      AND project_id=target_project_id AND upload_attempt_id=p_attempt_id
+      AND status='pending' AND upload_lease_until > now() FOR UPDATE;
+    IF NOT FOUND OR NOT public.settle_account_storage_artifact(p_attempt_id,target.storage_owner_id,target.uploaded_by,'project-files',target.storage_path) THEN
+      RETURN false;
+    END IF;
   END IF;
 
   UPDATE public.project_files
@@ -672,6 +684,7 @@ BEGIN
   INTO target
   FROM public.project_files AS pf
   WHERE pf.project_id = authorized_project
+    AND pf.account_cleanup_user_id IS NULL
     AND (
       (
         pf.status IN ('pending', 'upload_failed', 'cleanup_failed')
@@ -813,7 +826,8 @@ GRANT EXECUTE ON FUNCTION public.fail_stale_project_file_cleanup(uuid, uuid)
 
 CREATE OR REPLACE FUNCTION public.finalize_stale_project_file_cleanup(
   p_file_id uuid,
-  p_attempt_id uuid
+  p_attempt_id uuid,
+  p_storage_removed boolean DEFAULT true
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -850,29 +864,8 @@ BEGIN
     RETURN jsonb_build_object('deleted', false);
   END IF;
 
-  -- The Project-deletion migration fences normal workspace writes while it
-  -- drains stale file operations. Mark this transaction before explicitly
-  -- deleting chunks so that fence can distinguish this exact service-role,
-  -- attempt-bound FK cleanup from a client mutation.
-  PERFORM pg_catalog.set_config(
-    'app.project_file_stale_cleanup_attempt',
-    p_attempt_id::text,
-    true
-  );
-  DELETE FROM public.project_file_chunks
-  WHERE file_id = target.id
-    AND project_id = target.project_id;
-
   DELETE FROM public.project_files WHERE id = target.id;
-  IF target.storage_charged
-    AND target.storage_owner_id IS NOT NULL
-    AND target.size_bytes > 0
-  THEN
-    UPDATE public.user_storage
-    SET bytes_used = greatest(0, bytes_used - target.size_bytes),
-        updated_at = now()
-    WHERE user_id = target.storage_owner_id;
-  END IF;
+  PERFORM public.settle_project_source_storage_charge(target.id,target.storage_path,target.storage_owner_id,target.size_bytes,target.storage_charged,p_storage_removed);
 
   RETURN jsonb_build_object(
     'deleted', true,
@@ -882,9 +875,9 @@ BEGIN
 END
 $$;
 
-REVOKE ALL ON FUNCTION public.finalize_stale_project_file_cleanup(uuid, uuid)
+REVOKE ALL ON FUNCTION public.finalize_stale_project_file_cleanup(uuid, uuid, boolean)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.finalize_stale_project_file_cleanup(uuid, uuid)
+GRANT EXECUTE ON FUNCTION public.finalize_stale_project_file_cleanup(uuid, uuid, boolean)
   TO service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_project_file_delete(
@@ -919,6 +912,7 @@ BEGIN
    AND pm.role IN ('owner', 'editor')
   WHERE pf.id = p_file_id
     AND pf.project_id = target_project_id
+    AND pf.account_cleanup_user_id IS NULL
     AND pf.status IN ('ready', 'deleting')
   FOR UPDATE OF pf;
 
@@ -990,7 +984,8 @@ GRANT EXECUTE ON FUNCTION public.restore_project_file_delete(uuid, uuid)
 
 CREATE OR REPLACE FUNCTION public.finalize_project_file_delete(
   p_file_id uuid,
-  p_attempt_id uuid
+  p_attempt_id uuid,
+  p_storage_removed boolean DEFAULT true
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -1025,11 +1020,7 @@ BEGIN
   END IF;
 
   DELETE FROM public.project_files WHERE id = target.id;
-  IF target.storage_charged AND target.storage_owner_id IS NOT NULL AND target.size_bytes > 0 THEN
-    UPDATE public.user_storage
-    SET bytes_used = greatest(0, bytes_used - target.size_bytes), updated_at = now()
-    WHERE user_id = target.storage_owner_id;
-  END IF;
+  PERFORM public.settle_project_source_storage_charge(target.id,target.storage_path,target.storage_owner_id,target.size_bytes,target.storage_charged,p_storage_removed);
 
   RETURN jsonb_build_object(
     'deleted', true,
@@ -1039,9 +1030,9 @@ BEGIN
 END
 $$;
 
-REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
+REVOKE ALL ON FUNCTION public.finalize_project_file_delete(uuid, uuid, boolean)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.finalize_project_file_delete(uuid, uuid)
+GRANT EXECUTE ON FUNCTION public.finalize_project_file_delete(uuid, uuid, boolean)
   TO service_role;
 
 CREATE OR REPLACE FUNCTION public.release_project_storage_bytes(

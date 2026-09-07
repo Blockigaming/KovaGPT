@@ -96,12 +96,23 @@ test("every direct work-store caller supplies the resolved user key", async () =
   assert.match(library, /principalRef\.current !== principal/);
 });
 
-test("every discovered work-store caller passes userKey to every storage call", async () => {
+test("every discovered work-store caller passes its verified principal to every storage call", async () => {
   const callers = await findWorkStoreCallers();
   const discoveredPaths = callers.map(({ path }) => path);
   for (const expected of callerPaths) assert.ok(discoveredPaths.includes(expected), expected);
 
   for (const { path, source } of callers) {
+    // The coordinator captures a validated UUID owner for its whole lifecycle.
+    // UI callers still use the resolved userKey; arbitrary aliases are rejected.
+    const principalName = path === "src/lib/work-sync-client.ts" ? "ownerId" : "userKey";
+    if (principalName === "ownerId") {
+      assert.match(source, /export function startWorkSync\(ownerId: string\)/);
+      assert.match(source, /session\?\.user\.id !== ownerId/);
+      assert.match(
+        source,
+        /if \(!alive\(\)\) return;\s*const initial = createWorkSyncState\(ownerId/,
+      );
+    }
     for (const name of [
       "loadWorkTasks",
       "saveWorkTasks",
@@ -112,9 +123,9 @@ test("every discovered work-store caller passes userKey to every storage call", 
     ]) {
       const allCalls = (source.match(new RegExp(`\\b${name}\\s*\\(`, "g")) ?? []).length;
       const scopedCalls = (
-        source.match(new RegExp(`\\b${name}\\s*\\(\\s*userKey(?=\\s*[,\\)])`, "g")) ?? []
+        source.match(new RegExp(`\\b${name}\\s*\\(\\s*${principalName}(?=\\s*[,\\)])`, "g")) ?? []
       ).length;
-      assert.equal(scopedCalls, allCalls, `${path}: ${name} must receive userKey first`);
+      assert.equal(scopedCalls, allCalls, `${path}: ${name} must receive ${principalName} first`);
     }
   }
 });

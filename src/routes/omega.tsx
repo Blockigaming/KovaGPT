@@ -267,6 +267,12 @@ function EnterprisePanel({ scope }: { scope: string }) {
       <h2 id="enterprise-title" className="text-lg font-semibold">
         Enterprise preparation
       </h2>
+      <a
+        href="/organization"
+        className="mt-3 inline-flex min-h-10 items-center rounded-lg border px-4 text-sm hover:bg-accent"
+      >
+        Open organization administration
+      </a>
       <div className="mt-3">{unavailable("Organization service")}</div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm">

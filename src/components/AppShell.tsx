@@ -18,6 +18,7 @@ import {
   chatStoragePrincipal,
   clearPendingActive,
   loadConversations,
+  subscribeToConversationChanges,
   saveConversations,
   savePendingActive,
 } from "@/lib/chat-store";
@@ -83,6 +84,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       items: loadConversations(userKey),
     });
   }, [isLoaded, storagePrincipal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    return subscribeToConversationChanges(userKey, (items) =>
+      setConversationState({ principal: storagePrincipal, items }),
+    );
+  }, [isLoaded, userKey, storagePrincipal]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -173,11 +181,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!principalReady) return;
     const next = conversations.filter((c) => c.id !== id);
+    if (!(await saveConversations(userKey, next))) return;
     setConversationState({ principal: storagePrincipal, items: next });
-    saveConversations(userKey, next);
   };
 
   return (

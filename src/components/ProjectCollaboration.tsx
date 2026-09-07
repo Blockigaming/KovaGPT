@@ -1,32 +1,47 @@
-import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { AtSign, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
-import {
-  addProjectComment,
-  deleteProjectComment,
-  listProjectComments,
-  type ProjectComment,
-} from "@/lib/professional.functions";
+import type { ProjectComment } from "@/lib/professional.functions";
+import { collaborationRequest, useCollaborationPresence } from "@/lib/collaboration";
+import { CollaborationStatus } from "@/components/CollaborationStatus";
 import type { ProjectMember } from "@/lib/projects.functions";
 import { toast } from "sonner";
-import { RealtimeReadiness } from "@/components/RealtimeReadiness";
+import { z } from "zod";
+const Comments = z
+  .array(
+    z.object({
+      id: z.string().uuid(),
+      project_id: z.string().uuid(),
+      author_id: z.string().uuid(),
+      body: z.string().max(8000),
+      anchor: z.string().max(400).nullable(),
+      mentions: z.array(z.string().uuid()).max(20),
+      created_at: z.string(),
+      updated_at: z.string(),
+    }),
+  )
+  .max(100);
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
-export function ProjectCollaboration({
+type Props = { projectId: string; members: ProjectMember[]; role: "owner" | "editor" | "viewer" };
+export function ProjectCollaboration(props: Props) {
+  const { user } = useUser();
+  return (
+    <ProjectCollaborationSession
+      key={JSON.stringify([props.projectId, user?.id])}
+      {...props}
+      userId={user?.id}
+    />
+  );
+}
+function ProjectCollaborationSession({
   projectId,
   members,
   role,
-}: {
-  projectId: string;
-  members: ProjectMember[];
-  role: "owner" | "editor" | "viewer";
-}) {
-  const { user } = useUser();
-  const list = useServerFn(listProjectComments),
-    add = useServerFn(addProjectComment),
-    remove = useServerFn(deleteProjectComment);
+  userId,
+}: Props & { userId?: string }) {
   const [comments, setComments] = useState<ProjectComment[]>([]),
     [loading, setLoading] = useState(true),
+    [denied, setDenied] = useState(false),
     [error, setError] = useState<string | null>(null),
     [body, setBody] = useState(""),
     [anchor, setAnchor] = useState("General"),
@@ -35,32 +50,88 @@ export function ProjectCollaboration({
     [onlyMentions, setOnlyMentions] = useState(false),
     [deletingComment, setDeletingComment] = useState<ProjectComment | null>(null),
     [deletePending, setDeletePending] = useState(false);
-  const userId = (user as { id?: string } | null)?.id;
+  const scopeKey = JSON.stringify([projectId, userId]);
+  const scopeRef = useRef(scopeKey);
+  scopeRef.current = scopeKey;
+  const attempt = useRef<{ key: string; id: string } | null>(null);
+  const refresh = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!userId) return;
+      const rows = await collaborationRequest(userId, "project_comments", { projectId }, signal);
+      if (scopeRef.current !== scopeKey || signal?.aborted) return;
+      const parsed = Comments.parse(rows);
+      if (parsed.some((comment) => comment.project_id !== projectId))
+        throw new Error("Comments could not be loaded.");
+      setComments(parsed);
+      setDenied(false);
+      setError(null);
+      setLoading(false);
+    },
+    [projectId, userId, scopeKey],
+  );
   useEffect(() => {
+    const controller = new AbortController();
+    setComments([]);
+    setDenied(false);
+    setError(null);
+    setBody("");
+    setMentions([]);
     setLoading(true);
-    list({ data: { project_id: projectId } })
-      .then(setComments)
-      .catch((e) => setError(e instanceof Error ? e.message : "Comments could not be loaded"))
-      .finally(() => setLoading(false));
-  }, [projectId, list]);
+    setSending(false);
+    setDeletePending(false);
+    setDeletingComment(null);
+    attempt.current = null;
+    void refresh(controller.signal).catch((error) => {
+      if (scopeRef.current === scopeKey && !controller.signal.aborted) {
+        setError(error instanceof Error ? error.message : "Comments could not be loaded.");
+        setLoading(false);
+      }
+    });
+    return () => {
+      scopeRef.current = "";
+      controller.abort();
+    };
+  }, [scopeKey, refresh]);
+  const presence = useCollaborationPresence({
+    kind: "project",
+    id: denied ? null : projectId,
+    userId: userId ?? null,
+    onRefresh: refresh,
+    onDenied: () => {
+      setDenied(true);
+      setComments([]);
+      setError("You no longer have access to this Project.");
+    },
+  });
   const visible = useMemo(
     () =>
       comments.filter((comment) => !onlyMentions || (userId && comment.mentions.includes(userId))),
     [comments, onlyMentions, userId],
   );
   const submit = async () => {
-    if (!body.trim() || role === "viewer") return;
+    if (!body.trim() || role === "viewer" || !userId) return;
     setSending(true);
     try {
-      const comment = await add({ data: { project_id: projectId, body, anchor, mentions } });
-      setComments((all) => [comment, ...all]);
+      const key = JSON.stringify([body, anchor, mentions]);
+      if (attempt.current?.key !== key) attempt.current = { key, id: crypto.randomUUID() };
+      const rows = await collaborationRequest(userId, "project_comment", {
+        projectId,
+        body,
+        anchor,
+        mentions,
+        commentId: attempt.current.id,
+      });
+      if (scopeRef.current !== scopeKey) return;
+      setComments(Comments.parse(rows));
+      attempt.current = null;
       setBody("");
       setMentions([]);
       toast.success("Comment posted");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Comment could not be posted");
+      if (scopeRef.current === scopeKey)
+        toast.error(e instanceof Error ? e.message : "Comment could not be posted");
     } finally {
-      setSending(false);
+      if (scopeRef.current === scopeKey) setSending(false);
     }
   };
   return (
@@ -71,11 +142,11 @@ export function ProjectCollaboration({
             Project collaboration
           </h2>
           <p className="text-sm text-muted-foreground">
-            Owners manage roles; editors contribute; viewers read. Comments refresh when this panel
-            opens and are ready for a future realtime subscription.
+            Owners manage roles; editors contribute; viewers read. The latest 100 comments update
+            live while this panel is open.
           </p>
         </div>
-        <RealtimeReadiness resource="Project" />
+        <CollaborationStatus {...presence} />
         <button
           aria-pressed={onlyMentions}
           onClick={() => setOnlyMentions((v) => !v)}
@@ -85,7 +156,7 @@ export function ProjectCollaboration({
           My mentions
         </button>
       </div>
-      {role !== "viewer" ? (
+      {role !== "viewer" && !denied ? (
         <div className="mt-4 rounded-2xl border p-4">
           <textarea
             value={body}
@@ -164,6 +235,12 @@ export function ProjectCollaboration({
       ) : error ? (
         <div role="alert" className="mt-4 rounded-xl border border-destructive/40 p-3">
           {error}
+          <button
+            className="ml-3 min-h-9 underline"
+            onClick={() => void refresh().catch(() => toast.error("Reconnect failed."))}
+          >
+            Reconnect
+          </button>
         </div>
       ) : visible.length === 0 ? (
         <div className="mt-4 rounded-2xl border p-8 text-center">
@@ -223,17 +300,22 @@ export function ProjectCollaboration({
         destructive
         disabled={deletePending}
         onConfirm={async () => {
-          if (!deletingComment || deletePending) return;
+          if (!deletingComment || deletePending || !userId) return;
           setDeletePending(true);
           try {
-            await remove({ data: { id: deletingComment.id } });
-            setComments((all) => all.filter((value) => value.id !== deletingComment.id));
+            const rows = await collaborationRequest(userId, "project_comment_delete", {
+              projectId,
+              commentId: deletingComment.id,
+            });
+            if (scopeRef.current !== scopeKey) return;
+            setComments(Comments.parse(rows));
             setDeletingComment(null);
             toast.success("Comment deleted");
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Comment could not be deleted");
+            if (scopeRef.current === scopeKey)
+              toast.error(error instanceof Error ? error.message : "Comment could not be deleted");
           } finally {
-            setDeletePending(false);
+            if (scopeRef.current === scopeKey) setDeletePending(false);
           }
         }}
       />

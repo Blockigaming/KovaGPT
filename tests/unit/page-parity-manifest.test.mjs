@@ -87,7 +87,7 @@ test("route manifest includes reusable public, publishing, developer, assistant 
   assert.equal(routes.reviewedPublicRouteCount, 87);
 });
 
-test("Maps preview is noindex, requests no location, and has an accessible status", () => {
+test("Local discovery is noindex, requests no device location, and preserves an accessible main", () => {
   const maps = read("src/routes/maps.tsx");
   assert.match(maps, /name: "robots", content: "noindex"/);
   assert.match(maps, /No location permission has been requested/);
@@ -182,5 +182,5 @@ test("release route manifest is generated from all route files and one sitemap s
       .every(({ sitemapIncluded }) => sitemapIncluded === false),
   );
   assert.match(read("src/routes/$slug.tsx"), /name: "robots", content: "noindex, follow"/u);
-  assert.match(read("src/routes/developers.$docSlug.tsx"), /content: "noindex, follow"/u);
+  assert.match(read("src/routes/developers.$docSlug.tsx"), /throw notFound\(\)/u);
 });

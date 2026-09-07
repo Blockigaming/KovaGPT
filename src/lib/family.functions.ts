@@ -63,24 +63,17 @@ export const createFamilyGroup = createServerFn({ method: "POST" })
     z.object({ name: z.string().trim().min(1).max(60).default("My Family") }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: existing } = await supabase
-      .from("family_groups")
-      .select("id")
-      .eq("owner_id", userId)
-      .maybeSingle();
-    if (existing) return { id: existing.id };
-    const { data: group, error } = await supabase
-      .from("family_groups")
-      .insert({ owner_id: userId, name: data.name })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    // Add owner as a member row so RLS treats them uniformly.
-    await supabase
-      .from("family_members")
-      .insert({ group_id: group.id, user_id: userId, role: "owner" });
-    return { id: group.id };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: groupId, error } = await supabaseAdmin.rpc("create_or_repair_family_group", {
+      p_owner_id: context.userId,
+      p_name: data.name,
+    });
+    if (error || typeof groupId !== "string") {
+      throw new Error(
+        "Family group could not be saved. If you belong to another family, leave it first.",
+      );
+    }
+    return { id: groupId };
   });
 
 export const createFamilyInvite = createServerFn({ method: "POST" })
@@ -108,52 +101,19 @@ export const createFamilyInvite = createServerFn({ method: "POST" })
 
 export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) => z.object({ token: z.string().min(8) }).parse(i))
+  .validator((i: unknown) => z.object({ token: z.string().regex(/^[0-9a-f]{48}$/u) }).parse(i))
   .handler(async ({ data, context }) => {
-    const { userId } = context;
-
-    // We need to READ any invite by token to validate. RLS only lets the owner
-    // read invites, so use the admin client for the read-only lookup.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: invite } = await supabaseAdmin
-      .from("family_invites")
-      .select("id, group_id, accepted_at, expires_at")
-      .eq("token", data.token)
-      .maybeSingle();
-    if (!invite) throw new Error("Invalid invite.");
-    if (invite.accepted_at) throw new Error("This invite has already been used.");
-    if (new Date(invite.expires_at).getTime() < Date.now()) throw new Error("Invite expired.");
-
-    // Atomically claim the invite BEFORE creating the membership row. Two
-    // concurrent redemptions of the same token would previously both see
-    // accepted_at === null and both create memberships; the UPDATE ... WHERE
-    // accepted_at IS NULL RETURNING pattern lets exactly one caller win.
-    const nowIso = new Date().toISOString();
-    const { data: claimed } = await supabaseAdmin
-      .from("family_invites")
-      .update({ accepted_at: nowIso, accepted_by: userId })
-      .eq("id", invite.id)
-      .is("accepted_at", null)
-      .select("id")
-      .maybeSingle();
-    if (!claimed) throw new Error("This invite has already been used.");
-
-    // Insert membership via the admin client - the RLS INSERT policy only
-    // permits the owner to add members; invite acceptance is authorized here
-    // by the atomic claim above.
-    const { error: mErr } = await supabaseAdmin
-      .from("family_members")
-      .insert({ group_id: invite.group_id, user_id: userId, role: "member" });
-    if (mErr) {
-      // Roll the claim back so a legitimate second attempt (e.g. cap trigger
-      // fired) isn't left with an unusable-but-consumed invite.
-      await supabaseAdmin
-        .from("family_invites")
-        .update({ accepted_at: null, accepted_by: null })
-        .eq("id", invite.id);
-      throw new Error(mErr.message);
+    const { data: groupId, error } = await supabaseAdmin.rpc("accept_family_invite_atomic", {
+      p_user_id: context.userId,
+      p_token: data.token,
+    });
+    if (error || typeof groupId !== "string") {
+      throw new Error(
+        "Invite could not be accepted. Check that it is current, matches your verified email, and that you are not already in a family.",
+      );
     }
-    return { group_id: invite.group_id };
+    return { group_id: groupId };
   });
 
 export const removeFamilyMember = createServerFn({ method: "POST" })

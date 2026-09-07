@@ -1,0 +1,94 @@
+name: Verify Continuation Transfer
+
+on:
+  push:
+    branches: [codex/integrate-automatic-i-20260904]
+    paths: [.github/workflows/publish-verified-continuation.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate immutable source transfer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/continuation-transfer"
+          cd "$RUNNER_TEMP/continuation-transfer"
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, urllib.request, zlib
+          binary = [
+              '328650e7d9f98096080dbfaadb2e948d3a14e7de',
+              '008a029967f3cd8bee1627073d26d29c53d4b64d',
+              '0005f289b455ca4d059864ac1625d0f3d53c8d53',
+              'a890ab113ae9199c23afc769879ce0499f5fddea',
+              '7b11a9ffdd6d3fd892f42d61c6b9263253fd9002',
+              'cd99b3b639e041705ffe7494c77be5ac5395230e',
+              '511bb6e4924845a5034d1ae0a8f27d2762c4ffda',
+              'efff68a0028d8c6be52f6bb741f8e6800f9c0a18',
+          ]
+          text = [
+              'a8607361627146858e1156c21c5461aec27e3ea2',
+              '0cdb3e6a93c1a2ea68c325115aed4d045053eb98',
+              '57f495011b8c277a9a2a5ad9c606154723ef417b',
+              'e4adc81672251d42aee6e1f8392858d0fce578f0',
+              '4502b744786a1c9784a054a2980e28fa9c3caa75',
+              '38e11728415fbf1eb058e4b61db7c509062ec5f5',
+              '2b98c27d37b1df4a6b7329e4def765220835c7c9',
+              'ac5a81f22485139da110012121b7dca9b9b50940',
+              '717fc3c1510cf3a5cb778cb523499364e98e319e',
+          ]
+          def fetch(sha):
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{os.environ['REPO']}/git/blobs/{sha}",
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                           'Accept': 'application/vnd.github+json'},
+              )
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  obj = json.load(response)
+              data = base64.b64decode(obj['content'])
+              actual = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+              assert actual == sha, f'blob mismatch: {sha}'
+              return data
+          parts = [fetch(sha) for sha in binary]
+          errors = []
+          for part, sha in enumerate(text, 4):
+              data = fetch(sha)
+              pathlib.Path(f'part-{part}.txt').write_bytes(data)
+              decoded = []
+              for line_number, line in enumerate(data.decode().splitlines(), 1):
+                  expected, value = line.strip().split(':', 1)
+                  try:
+                      record = base64.b64decode(value, validate=True)
+                      if f'{zlib.crc32(record):08x}' != expected:
+                          raise ValueError('record checksum mismatch')
+                      decoded.append(record)
+                  except Exception:
+                      errors.append({'part': part, 'line': line_number, 'crc': expected})
+              parts.append(b''.join(decoded))
+          pathlib.Path('errors.json').write_text(json.dumps(errors, indent=2))
+          print(json.dumps({'invalid_records': errors}, indent=2))
+          if errors:
+              raise SystemExit('Transfer validation failed; no source publication attempted.')
+          packed = b''.join(parts)
+          assert len(packed) == 62845
+          assert hashlib.sha256(packed).hexdigest() == 'a3cc98384a4b5e141b50e9c2e361a4001d61d7f494230c4df34a199eb290a01b'
+          pathlib.Path('verified-source.pack').write_bytes(packed)
+          print('Exact source-pack length and SHA-256 verified.')
+          PY
+
+      - name: Retain transfer diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: continuation-transfer-${{ github.sha }}
+          path: ${{ runner.temp }}/continuation-transfer/
+          if-no-files-found: error
+          retention-days: 1

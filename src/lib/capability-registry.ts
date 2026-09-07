@@ -236,7 +236,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       label: "Conversation history",
       availability: "limited",
       summary:
-        "Conversation history is stored on this device. Signing in does not currently promise cross-device chat synchronization.",
+        "Signed-in ordinary chats synchronize with your account when chat sync is available. Offline edits stay on this device until acknowledged; Temporary Chat stays out of history.",
     },
     library: {
       label: "Library",

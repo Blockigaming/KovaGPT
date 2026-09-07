@@ -13,7 +13,11 @@ export function extractTextDocument(
   text: string,
   category: DocumentExtraction["category"] = "text",
 ): DocumentExtraction {
-  const normalized = text.replace(/\r\n/g, "\n").slice(0, 500_000);
+  if (text.length > 500_000)
+    throw new Error(
+      "Document text exceeds 500,000 characters. Split the document; nothing has been truncated.",
+    );
+  const normalized = text.replace(/\r\n/g, "\n");
   return {
     fileId,
     category,
@@ -44,6 +48,8 @@ export function describePdfFailure(
   };
 }
 export function chunkDocument(extraction: DocumentExtraction, maxChars = 1800) {
+  if (!Number.isSafeInteger(maxChars) || maxChars < 1 || maxChars > 500_000)
+    throw new Error("Invalid document chunk size.");
   return extraction.pages.flatMap((page) => {
     const chunks: Array<{ pageNumber: number; text: string; citation: string }> = [];
     for (let i = 0; i < page.text.length; i += maxChars) {

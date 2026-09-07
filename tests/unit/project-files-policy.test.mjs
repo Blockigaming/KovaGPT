@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   inspectProjectFile,
+  normalizeProjectFileIdentity,
   MAX_PROJECT_FILE_BYTES,
   normalizeProjectFileName,
   ProjectFileInputError,
@@ -103,4 +104,13 @@ test("bounds declared and streamed request bodies before assembly", async () => 
     ),
     (error) => error instanceof ProjectFileInputError && error.code === "file_too_large",
   );
+});
+
+test("UUID headers normalize before comparing with canonical database values", () => {
+  const upper = "A23E4567-E89B-42D3-A456-426614174000";
+  assert.equal(normalizeProjectFileIdentity(upper), upper.toLowerCase());
+  assert.equal(normalizeProjectFileIdentity(upper.toLowerCase()), upper.toLowerCase());
+  for (const invalid of ["../" + upper, upper + "/object", " " + upper, null]) {
+    assert.throws(() => normalizeProjectFileIdentity(invalid), /invalid_project_file_identity/);
+  }
 });

@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "observedSourceCommit": "21e2a300ada52e3b8e9a50dd4654fd59f15c41b2",
+  "targetProjectRef": "mfbycmbjygcfkrsuepxf",
+  "observedRemoteMigrationCount": 98,
+  "observedSourceMigrationCount": 93,
+  "entries": [
+    {
+      "remoteVersion": "20260823092042",
+      "remoteName": "day13_goals",
+      "status": "equivalent",
+      "sourceVersion": "20260822122000",
+      "sourceFilename": "20260822122000_day13_goals.sql",
+      "sourceSha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e",
+      "comparison": "exact-content"
+    },
+    {
+      "remoteVersion": "20260823092107",
+      "remoteName": "day14_scheduled_execution",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260822143000"],
+      "reason": "The source reconciliation is not byte-equivalent to the observed production statement."
+    },
+    {
+      "remoteVersion": "20260823092405",
+      "remoteName": "day13_goals",
+      "status": "equivalent",
+      "sourceVersion": "20260822122000",
+      "sourceFilename": "20260822122000_day13_goals.sql",
+      "sourceSha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e",
+      "comparison": "exact-content"
+    },
+    {
+      "remoteVersion": "20260823092450",
+      "remoteName": "day14_scheduled_execution",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260822143000"],
+      "reason": "The source reconciliation is not byte-equivalent to the observed production statement."
+    },
+    {
+      "remoteVersion": "20260823100156",
+      "remoteName": "day13_goals",
+      "status": "equivalent",
+      "sourceVersion": "20260822122000",
+      "sourceFilename": "20260822122000_day13_goals.sql",
+      "sourceSha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e",
+      "comparison": "terminal-newline-only"
+    },
+    {
+      "remoteVersion": "20260823120804",
+      "remoteName": "day14_atomic_settlement",
+      "status": "equivalent",
+      "sourceVersion": "20260823113000",
+      "sourceFilename": "20260823113000_day14_atomic_settlement.sql",
+      "sourceSha256": "3f0e9a3ceb96c0354b1bc032df5a3b77cd02892e53c169c409c7edb303dd9189",
+      "comparison": "terminal-newline-only"
+    },
+    {
+      "remoteVersion": "20260823151901",
+      "remoteName": "day15_chat_edit_branch_rules_pinning",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": [
+        "20260823220701",
+        "20260823220805",
+        "20260824090000",
+        "20260824094500"
+      ],
+      "reason": "The source contract is a later reconciliation of multiple production changes."
+    },
+    {
+      "remoteVersion": "20260823151927",
+      "remoteName": "day15_chat_feature_hardening",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "reason": "The source contract is a later reconciliation of multiple production changes."
+    },
+    {
+      "remoteVersion": "20260823214802",
+      "remoteName": "day15_chat_workspace_security_hardening",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": [
+        "20260823220701",
+        "20260823220805",
+        "20260824090000",
+        "20260903145843"
+      ],
+      "reason": "Security semantics must be compared from normalized schema and ACL fingerprints."
+    },
+    {
+      "remoteVersion": "20260823215044",
+      "remoteName": "revoke_client_ddl_table_privileges",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903"],
+      "reason": "The source file consolidates several separately recorded production hardenings."
+    },
+    {
+      "remoteVersion": "20260823215132",
+      "remoteName": "harden_user_scoped_security_definer_helpers",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903", "20260903145843"],
+      "reason": "Function ownership, grants, and definitions need a schema fingerprint comparison."
+    },
+    {
+      "remoteVersion": "20260823215222",
+      "remoteName": "lock_down_trigger_only_functions",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903"],
+      "reason": "The source file consolidates several separately recorded production hardenings."
+    },
+    {
+      "remoteVersion": "20260823215259",
+      "remoteName": "explicitly_lock_server_only_tables",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903"],
+      "reason": "Table ACL and RLS equivalence is not proven by migration names."
+    },
+    {
+      "remoteVersion": "20260823215454",
+      "remoteName": "lock_down_postgres_client_defaults",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903"],
+      "reason": "Default-privilege equivalence requires an isolated database comparison."
+    },
+    {
+      "remoteVersion": "20260823215619",
+      "remoteName": "least_privilege_connector_table_grants",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903", "20260903145843"],
+      "reason": "Table and function grants must be compared from normalized ACL fingerprints."
+    },
+    {
+      "remoteVersion": "20260823215848",
+      "remoteName": "optimize_rls_auth_initplans",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220903", "20260903145843"],
+      "reason": "RLS expression equivalence requires a normalized policy comparison."
+    },
+    {
+      "remoteVersion": "20260824081357",
+      "remoteName": "day15_atomic_chat_workspace_rpcs",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220805", "20260824090000", "20260824094500"],
+      "reason": "The source reconciliation changes RPC signatures and must be proven against the deployed catalog."
+    },
+    {
+      "remoteVersion": "20260824081812",
+      "remoteName": "day15_message_version_branch_integrity",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "reason": "The source reconciliation is a later aggregate of production schema changes."
+    },
+    {
+      "remoteVersion": "20260824081926",
+      "remoteName": "day15_workspace_read_model_and_context_bounds",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "reason": "The source reconciliation is a later aggregate of production schema changes."
+    },
+    {
+      "remoteVersion": "20260824082127",
+      "remoteName": "day15_selected_range_version_metadata",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "reason": "The source reconciliation is a later aggregate of production schema changes."
+    },
+    {
+      "remoteVersion": "20260824084005",
+      "remoteName": "day15_utf16_selection_offsets",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "reason": "The source reconciliation is a later aggregate of production schema changes."
+    },
+    {
+      "remoteVersion": "20260824085042",
+      "remoteName": "remove_temporary_day15_source_export",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260824090000"],
+      "reason": "Removal safety depends on the deployed catalog and data shape."
+    },
+    {
+      "remoteVersion": "20260824085444",
+      "remoteName": "day15_chat_workspace_branch_rpcs",
+      "status": "requires_schema_proof",
+      "candidateSourceVersions": ["20260823220805", "20260824090000", "20260824094500"],
+      "reason": "The source reconciliation changes RPC signatures and must be proven against the deployed catalog."
+    },
+    {
+      "remoteVersion": "20260906024459",
+      "remoteName": "remediate_security_advisor_warnings",
+      "status": "equivalent",
+      "sourceVersion": "20260903145843",
+      "sourceFilename": "20260903145843_remediate_security_advisor_warnings.sql",
+      "sourceSha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d",
+      "comparison": "exact-content"
+    }
+  ],
+  "notes": [
+    "This is a read-only lineage inventory, not permission to run supabase db push or migration repair.",
+    "Only entries marked equivalent have direct content evidence. Every requires_schema_proof entry remains release-blocking until an isolated schema, ACL, RLS, and function-fingerprint rehearsal verifies it.",
+    "Production history repair, migration application, and backup/restore evidence remain owner-authorized manual actions."
+  ]
+}

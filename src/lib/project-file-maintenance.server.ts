@@ -1,4 +1,8 @@
 import {
+  projectFileStorageReference,
+  claimProjectStorageSourceCleanup,
+} from "./project-storage-references.server";
+import {
   assertProjectStoragePath,
   isMissingStorageObjectError,
   PROJECT_FILES_BUCKET,
@@ -14,6 +18,7 @@ type ProjectFileStorage = ProjectStorageAdapter & {
   download(path: string): DownloadResult;
 };
 export type ProjectFileMaintenanceClient = {
+  from(table: string): unknown;
   rpc(name: string, args: Record<string, unknown>): RpcResult;
   storage: { from(bucket: string): ProjectFileStorage };
 };
@@ -123,15 +128,21 @@ async function objectPresence(
 async function removeCanonicalObject(
   client: ProjectFileMaintenanceClient,
   item: Extract<CleanupClaim, { state: "claimed" }>,
-): Promise<void> {
-  if (item.kind === "agent-deliverable") return;
-  const path = assertProjectStoragePath(item.projectId, item.storagePath);
+): Promise<boolean> {
+  const source = await projectFileStorageReference(client, item.id);
+  if (source.bucket !== PROJECT_FILES_BUCKET) return false;
+  const path =
+    source.source === "canonical"
+      ? assertProjectStoragePath(item.projectId, source.path)
+      : source.path;
+  if ((await claimProjectStorageSourceCleanup(client, null, [path], [item.id])).has(path))
+    return false;
   const storage = client.storage.from(PROJECT_FILES_BUCKET);
   const removed = await storage.remove([path]);
-  if (!removed.error || isMissingStorageObjectError(removed.error)) return;
+  if (!removed.error || isMissingStorageObjectError(removed.error)) return true;
 
   const presence = await objectPresence(storage, path);
-  if (presence === "missing") return;
+  if (presence === "missing") return true;
   throw maintenanceError(
     presence === "present"
       ? "project_file_cleanup_storage_remove_failed"
@@ -144,12 +155,14 @@ async function finalizeCleanup(
   client: ProjectFileMaintenanceClient,
   fileId: string,
   attemptId: string,
+  storageRemoved: boolean,
 ): Promise<void> {
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const result = await client.rpc("finalize_stale_project_file_cleanup", {
       p_file_id: fileId,
       p_attempt_id: attemptId,
+      p_storage_removed: storageRemoved,
     });
     if (!result.error && record(result.data)?.deleted === true) return;
     lastError = result.error ?? result.data;
@@ -193,8 +206,8 @@ export async function reconcileProjectFileLifecycle({
         onProgress: () => renewCleanup(client, item.id, attemptId),
       });
       await renewCleanup(client, item.id, attemptId);
-      await removeCanonicalObject(client, item);
-      await finalizeCleanup(client, item.id, attemptId);
+      const storageRemoved = await removeCanonicalObject(client, item);
+      await finalizeCleanup(client, item.id, attemptId, storageRemoved);
       cleaned += 1;
     } catch (error) {
       await failCleanup(client, item.id, attemptId);

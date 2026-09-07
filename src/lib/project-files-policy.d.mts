@@ -7,6 +7,8 @@ export class ProjectFileInputError extends Error {
   constructor(status: number, code: string);
 }
 
+export function normalizeProjectFileIdentity(value: unknown): string;
+
 export function normalizeProjectFileName(value: unknown): string;
 
 export function inspectProjectFile(input: {

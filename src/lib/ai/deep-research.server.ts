@@ -89,7 +89,7 @@ async function createResearchRun(
 ): Promise<string | null> {
   if (!persistence || persistence.temporary) return null;
   try {
-    const { data } = await persistence.supabase
+    const { data, error } = await persistence.supabase
       .from("deep_research_runs")
       .insert({
         user_id: persistence.userId,
@@ -100,6 +100,10 @@ async function createResearchRun(
       })
       .select("id")
       .maybeSingle();
+    if (error) {
+      console.warn("[deep-research] failed to create run", error);
+      return null;
+    }
     return typeof data?.id === "string" ? data.id : null;
   } catch (error) {
     console.warn("[deep-research] failed to create run", error);
@@ -111,13 +115,33 @@ async function updateResearchRun(
   persistence: ResearchPersistence | undefined,
   runId: string | null,
   values: JsonObject,
-): Promise<void> {
-  if (!persistence || !runId || persistence.temporary) return;
+): Promise<boolean> {
+  if (!persistence || !runId || persistence.temporary) return true;
   try {
-    await persistence.supabase.from("deep_research_runs").update(values).eq("id", runId);
+    const { error } = await persistence.supabase
+      .from("deep_research_runs")
+      .update(values)
+      .eq("id", runId);
+    if (error) {
+      console.warn("[deep-research] failed to update run", error);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.warn("[deep-research] failed to update run", error);
+    return false;
   }
+}
+
+async function persistTerminalResearchRun(
+  persistence: ResearchPersistence | undefined,
+  runId: string | null,
+  values: JsonObject,
+): Promise<boolean> {
+  if (await updateResearchRun(persistence, runId, values)) return true;
+  // Terminal state is the durable source of truth. Retry once so a transient
+  // transport failure does not strand an otherwise completed run as running.
+  return updateResearchRun(persistence, runId, values);
 }
 
 async function insertResearchEvidence(
@@ -139,7 +163,8 @@ async function insertResearchEvidence(
         snippet: item.snippet,
       })),
     );
-    await insert;
+    const { error } = await insert;
+    if (error) console.warn("[deep-research] failed to insert evidence", error);
   } catch (error) {
     console.warn("[deep-research] failed to insert evidence", error);
   }
@@ -304,6 +329,7 @@ export async function runDeepResearch(
       plan = await makePlan(safeQuery, opts.signal);
     } catch (error) {
       if (opts.signal?.aborted) throw error;
+      if (error instanceof Error && error.name === "AbortError") throw error;
       plan = fallbackPlan(safeQuery);
     }
     await updateResearchRun(opts.persistence, runId, { plan });
@@ -393,51 +419,67 @@ export async function runDeepResearch(
       createToolActivityEvent("write_report", "Writing cited report", "running"),
     );
     const report = await writeReport(safeQuery, plan, evidence, opts.signal);
-    await updateResearchRun(opts.persistence, runId, {
+    const completionPersisted = await persistTerminalResearchRun(opts.persistence, runId, {
       status: "complete",
       report,
       sources,
       partial_failures: partialFailures,
       completed_at: new Date().toISOString(),
     });
+    if (!completionPersisted) {
+      throw new Error("Research completed, but its report could not be saved. Try again.");
+    }
     workflowComplete = true;
-    await emit(
-      {
-        id: "complete",
-        label: "Research complete",
-        status: "complete",
-        detail: `${sources.length} sources · ${evidence.length} evidence notes`,
-      },
-      1,
-      createToolActivityEvent("write_report", "Cited report complete", "complete"),
-    );
+    try {
+      await emit(
+        { id: "complete", label: "Research complete", status: "complete" },
+        1,
+        createToolActivityEvent("write_report", "Cited report complete", "complete"),
+      );
+    } catch (progressError) {
+      // Observer delivery happens after durable completion and cannot turn a
+      // completed run into a failed one.
+      console.warn("[deep-research] completion progress delivery failed", progressError);
+    }
 
     return { query: safeQuery, plan, evidence, report, sources, partialFailures };
   } catch (error) {
-    // A closed response stream can reject the final delivery callback after the
-    // completed report is already stored. Preserve that truthful terminal state.
     if (workflowComplete) throw error;
-    const canceled = opts.signal?.aborted === true;
-    await updateResearchRun(opts.persistence, runId, {
-      status: canceled ? "canceled" : "failed",
-      completed_at: new Date().toISOString(),
+    const canceled =
+      Boolean(opts.signal?.aborted) || (error instanceof Error && error.name === "AbortError");
+    const status = canceled ? "canceled" : "failed";
+    const completedAt = new Date().toISOString();
+    const persistenceFailure =
+      error instanceof Error && error.message.startsWith("Research completed, but its report");
+    const terminalPersisted = await persistTerminalResearchRun(opts.persistence, runId, {
+      status,
+      error: canceled
+        ? "Research was canceled by the user."
+        : persistenceFailure
+          ? "Research completed, but its report could not be saved."
+          : "Research could not complete because search or the AI provider failed.",
+      completed_at: completedAt,
     });
-    await emit(
-      {
-        id: canceled ? "canceled" : "failed",
-        label: canceled ? "Research canceled" : "Research could not complete",
-        status: canceled ? "canceled" : "failed",
-        ...(!canceled
-          ? { detail: "Search or the AI provider failed. You can retry this request." }
-          : {}),
-      },
-      currentProgress,
-      createToolActivityEvent(
-        "write_report",
-        canceled ? "Research canceled" : "Research failed",
-        canceled ? "canceled" : "failed",
-      ),
-    );
+    if (!terminalPersisted) {
+      console.error("[deep-research] terminal state could not be persisted", { runId, status });
+    }
+    try {
+      await emit(
+        {
+          id: status,
+          label: canceled ? "Research canceled" : "Research could not complete",
+          status: canceled ? "canceled" : "failed",
+        },
+        1,
+        createToolActivityEvent(
+          "write_report",
+          canceled ? "Research canceled" : "Research failed",
+          status,
+        ),
+      );
+    } catch {
+      // A progress-stream failure must not prevent terminal persistence.
+    }
     throw error;
   }
 }

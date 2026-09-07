@@ -19,6 +19,7 @@ ARG KOVA_VERIFY_BROWSER_CONFIG
 ARG KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS=
 ARG VITE_SUPABASE_URL=
 ARG VITE_SUPABASE_PUBLISHABLE_KEY=
+ARG VITE_PAYMENTS_CLIENT_TOKEN=
 WORKDIR /app
 ENV NODE_ENV=production \
     KOVA_BROWSER_PREVIEW=node \
@@ -27,7 +28,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
-RUN KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
+RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
       env \
@@ -40,6 +41,7 @@ RUN KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
         KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS" \
         VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
         VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+        VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" \
         node scripts/azure/verify-browser-config.mjs; \
     elif [ "$KOVA_VERIFY_BROWSER_CONFIG" != "false" ]; then \
       echo 'KOVA_VERIFY_BROWSER_CONFIG must be true or false' >&2; \

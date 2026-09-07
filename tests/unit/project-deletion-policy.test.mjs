@@ -87,17 +87,6 @@ test("bounded cleanup removes direct and nested objects without crossing prefixe
   assert.ok(progress.length >= 3);
 });
 
-test("cleanup reaches legacy folders beyond the retired depth cap", async () => {
-  const legacySegments = Array.from({ length: 17 }, (_, index) => `legacy-${index}`);
-  const legacyPath = `${PROJECT_ID}/${legacySegments.join("/")}/report.md`;
-  const storage = new FakeProjectStorage([legacyPath]);
-
-  const result = await purgeProjectStorageFolder({ storage, projectId: PROJECT_ID });
-
-  assert.deepEqual(result, { complete: true, removedCount: 1 });
-  assert.equal(storage.paths.size, 0);
-});
-
 test("cleanup fails closed on a remove error and a later attempt resumes", async () => {
   const paths = [`${PROJECT_ID}/one.txt`, `${PROJECT_ID}/two.txt`];
   const storage = new FakeProjectStorage(paths, {
@@ -245,4 +234,29 @@ test("stale upload cleanup stops at its per-pass cap and resumes safely", async 
   });
   assert.equal(retry.removedCount, 1);
   assert.equal(storage.paths.size, 0);
+});
+
+test("valid deeply nested legacy objects remain deletable", async () => {
+  const path = `${PROJECT_ID}/${Array(40).fill("nested").join("/")}/legacy.txt`;
+  const storage = new FakeProjectStorage([path]);
+  const result = await purgeProjectStorageFolder({ storage, projectId: PROJECT_ID });
+  assert.deepEqual(result, { complete: true, removedCount: 1 });
+  assert.equal(storage.paths.size, 0);
+});
+
+test("cleanup pages beyond preserved direct and nested source objects", async () => {
+  const keep = new Set([`${PROJECT_ID}/a-retained.txt`, `${PROJECT_ID}/nested/a-retained.txt`]);
+  const removable = [
+    `${PROJECT_ID}/b-remove.txt`,
+    `${PROJECT_ID}/nested/b-remove.txt`,
+    `${PROJECT_ID}/z-remove.txt`,
+  ];
+  const storage = new FakeProjectStorage([...keep, ...removable]);
+  const result = await purgeProjectStorageFolder({
+    storage,
+    projectId: PROJECT_ID,
+    protectedPaths: async (paths) => new Set(paths.filter((path) => keep.has(path))),
+  });
+  assert.deepEqual(result, { complete: true, removedCount: 3 });
+  assert.deepEqual(storage.paths, keep);
 });

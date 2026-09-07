@@ -48,9 +48,10 @@ test("GitHub OAuth navigation accepts only the provider authorization endpoint",
 test("Connector management keeps destructive state until the server confirms success", () => {
   assert.match(
     apps,
-    /await disconnect\(\{ data: \{ accountId, removeData \} \}\);\s+setDisconnectOpen\(false\)/,
+    /await disconnect\(\{ data: \{ accountId, removeData: false \} \}\);\s+setDisconnectAccount\(null\)/,
   );
-  assert.match(apps, /if \(!busy\) setDisconnectOpen\(nextOpen\)/);
-  assert.ok((apps.match(/className="min-h-11"/g) ?? []).length >= 3);
+  assert.match(apps, /if \(!open\) setDisconnectAccount\(null\)/);
+  assert.doesNotMatch(apps, /if \(!busy\) setDisconnect/);
+  assert.ok((apps.match(/className="min-h-11"/g) ?? []).length >= 2);
   assert.match(apps, /className="flex min-h-11 min-w-11 items-center justify-center"/);
 });

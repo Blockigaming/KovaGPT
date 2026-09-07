@@ -139,7 +139,7 @@ test("the core workspace layer owns shell and composer visual contracts", () => 
   assert.match(finalParityStyles, /grid-template-columns: 44px minmax\(0, 1fr\) auto !important/);
 });
 
-test("composer focus, menu placement, and truthful guest controls cannot regress", () => {
+test("composer focus, menu placement, and truthful guest controls cannot regress", async () => {
   assert.doesNotMatch(composer, /outlineWidth:\s*"2px"/);
   assert.doesNotMatch(composer, /outlineColor:\s*"currentColor"/);
   assert.match(composer, /surface\?: "empty" \| "conversation"/);
@@ -147,14 +147,21 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(composer, /bottom-\[calc\(100%\+1\.25rem\)\]/);
   assert.match(composer, /mobile \? "min-h-14[^"\n]+" : "min-h-11/);
   assert.match(home, /surface="empty"/);
-  assert.match(home, /EMPTY_STATE_STARTERS/);
-  assert.match(home, /setInput\(\(current\)/);
+  assert.match(home, /<HomeChatStarters setInput=\{setInput\}/);
+  assert.match(
+    await readFile("src/components/HomeChatStarters.tsx", "utf8"),
+    /EMPTY_STATE_STARTERS/,
+  );
+  assert.match(
+    await readFile("src/components/HomeChatStarters.tsx", "utf8"),
+    /setInput\(\(current\)/,
+  );
   assert.match(modelSelector, /kova-model-static/);
 
   const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
   assert.ok(lockedBranch, "locked model branch should remain explicit");
   assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /"Maps", Map, isOn\("\/maps"\), "Preview"/);
+  assert.match(sidebar, /"Discover", Globe, isOn\("\/discovery"\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

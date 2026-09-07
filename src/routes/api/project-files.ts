@@ -14,6 +14,7 @@ import { DAILY_UPLOAD_LIMIT_BY_TIER, STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import { PROJECT_LIMITS } from "@/lib/projects.functions";
 import {
   inspectProjectFile,
+  normalizeProjectFileIdentity,
   ProjectFileInputError,
   readProjectFileBody,
   sha256Hex,
@@ -24,6 +25,15 @@ import {
   type ProjectFileMaintenanceClient,
 } from "@/lib/project-file-maintenance.server";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
+import {
+  reserveAccountStorageArtifact,
+  retireAccountStorageArtifact,
+} from "@/lib/account-storage-artifacts.server";
+
+import {
+  projectFileStorageReference,
+  claimProjectStorageSourceCleanup,
+} from "@/lib/project-storage-references.server";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DELETE_BODY_LIMIT = 1_024;
@@ -72,11 +82,10 @@ function uploadMetadata(request: Request): {
   requestedKind: "file" | "image";
   idempotencyKey: string;
 } {
-  const projectId = headerValue(request, "x-kova-project-id", 36).toLowerCase();
-  const idempotencyKey = headerValue(request, "x-kova-idempotency-key", 36).toLowerCase();
-  if (!UUID_PATTERN.test(projectId) || !UUID_PATTERN.test(idempotencyKey)) {
-    throw new ProjectFileInputError(400, "invalid_project_file_identity");
-  }
+  const projectId = normalizeProjectFileIdentity(headerValue(request, "x-kova-project-id", 36));
+  const idempotencyKey = normalizeProjectFileIdentity(
+    headerValue(request, "x-kova-idempotency-key", 36),
+  );
   const encodedName = headerValue(request, "x-kova-file-name", 2_000);
   let fileName: string;
   try {
@@ -85,7 +94,12 @@ function uploadMetadata(request: Request): {
     throw new ProjectFileInputError(400, "invalid_file_name");
   }
   const requestedKind = request.headers.get("x-kova-file-kind") === "image" ? "image" : "file";
-  return { projectId, fileName, requestedKind, idempotencyKey };
+  return {
+    projectId,
+    fileName,
+    requestedKind,
+    idempotencyKey,
+  };
 }
 
 async function projectUploadAuthorization(
@@ -187,23 +201,6 @@ async function abortProjectFileUpload(
     { p_file_id: fileId, p_attempt_id: attemptId } as never,
   );
   return !error && record(data)?.aborted === true;
-}
-
-async function storedProjectFileMatches(
-  auth: AuthedCaller,
-  storagePath: string,
-  expectedBytes: number,
-  expectedSha256: string,
-): Promise<boolean> {
-  const { data, error } = await auth.supabaseAdmin.storage
-    .from("project-files")
-    .download(storagePath);
-  if (error || !data || data.size !== expectedBytes) return false;
-  try {
-    return (await sha256Hex(new Uint8Array(await data.arrayBuffer()))) === expectedSha256;
-  } catch {
-    return false;
-  }
 }
 
 async function projectFileObjectPresence(
@@ -370,10 +367,37 @@ async function upload(request: Request): Promise<Response> {
 
   let metadata;
   let bytes;
-  let inspected;
   try {
     metadata = uploadMetadata(request);
     bytes = await readProjectFileBody(request);
+  } catch (error) {
+    return inputError(error);
+  }
+
+  return publishProjectFileBytes(auth, metadata, bytes);
+}
+
+/** Shared by authenticated uploads and verified Work output publication. */
+export async function publishProjectFileBytes(
+  auth: AuthedCaller,
+  metadata: {
+    projectId: string;
+    fileName: string;
+    requestedKind: "file" | "image";
+    idempotencyKey: string;
+  },
+  bytes: Uint8Array,
+  verifyStoredDigest = false,
+  publishReady?: (fileId: string, attemptId: string) => Promise<boolean>,
+): Promise<Response> {
+  const banned = await assertNotBanned(auth);
+  if (banned) return banned;
+  const enabled = await assertFeatureEnabled(auth, "uploads");
+  if (enabled) return enabled;
+  let inspected;
+  try {
+    normalizeProjectFileIdentity(metadata.projectId);
+    normalizeProjectFileIdentity(metadata.idempotencyKey);
     inspected = inspectProjectFile({
       bytes,
       fileName: metadata.fileName,
@@ -382,7 +406,6 @@ async function upload(request: Request): Promise<Response> {
   } catch (error) {
     return inputError(error);
   }
-
   const authorization = await projectUploadAuthorization(auth, metadata.projectId);
   if (authorization instanceof Response) return authorization;
 
@@ -428,13 +451,27 @@ async function upload(request: Request): Promise<Response> {
   ) {
     return json({ error: "project_file_reservation_invalid" }, 503);
   }
-  const expectedPath = `${metadata.projectId}/${row.id}.${inspected.extension}`;
-  if (row.storage_path !== expectedPath) {
-    return json({ error: "project_file_reservation_invalid" }, 503);
+  if (row.status === "ready") {
+    if (verifyStoredDigest) {
+      const existing = await auth.supabaseAdmin.storage
+        .from("project-files")
+        .download(row.storage_path);
+      if (
+        existing.error ||
+        !existing.data ||
+        existing.data.size !== bytes.byteLength ||
+        (await sha256Hex(new Uint8Array(await existing.data.arrayBuffer()))) !== digest
+      )
+        return json({ error: "project_file_storage_verification_failed" }, 503);
+    }
+    return json({ file: row, idempotent: true });
   }
-  if (row.status === "ready") return json({ file: row, idempotent: true });
   if (row.inProgress) {
     return json({ error: "project_file_upload_in_progress" }, 409, { "Retry-After": "2" });
+  }
+  const expectedPath = `${metadata.projectId}/${attemptId}.${inspected.extension}`;
+  if (row.storage_path !== expectedPath) {
+    return json({ error: "project_file_reservation_invalid" }, 503);
   }
 
   if (
@@ -495,73 +532,67 @@ async function upload(request: Request): Promise<Response> {
     uploadQuotaAcquired = true;
   }
 
-  const temporaryPath = `${metadata.projectId}/.uploads/${row.id}/${attemptId}.${inspected.extension}`;
-  const stored = await auth.supabaseAdmin.storage
-    .from("project-files")
-    .upload(temporaryPath, bytes, {
-      contentType: inspected.mimeType,
-      upsert: false,
-    });
-  if (stored.error) {
-    const removed = await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
-    const clean = !removed.error || missingObject(removed.error);
-    if (row.reservationCreated && clean) {
-      if (await abortProjectFileUpload(auth, row.id, attemptId)) {
-        return json({ error: "project_file_storage_unavailable" }, 503, {
-          "Retry-After": "5",
-        });
+  // Every attempt owns a unique immutable path. A delayed upload can only
+  // recreate its own retired generation, which the durable sweeper can remove.
+  const artifact = {
+    generation: attemptId,
+    ownerId: authorization.ownerId,
+    requesterId: auth.userId,
+    bucket: "project-files" as const,
+    path: row.storage_path,
+  };
+  try {
+    await reserveAccountStorageArtifact(artifact);
+  } catch {
+    await abortProjectFileUpload(auth, row.id, attemptId);
+    return json({ error: "project_file_account_cleanup_pending" }, 409, { "Retry-After": "5" });
+  }
+  let published = false;
+  try {
+    const stored = await auth.supabaseAdmin.storage
+      .from("project-files")
+      .upload(row.storage_path, bytes, { contentType: inspected.mimeType, upsert: false });
+    if (stored.error) {
+      await setUploadState(auth, row.id, attemptId, "cleanup_failed");
+      return json({ error: "project_file_storage_unavailable" }, 503, { "Retry-After": "30" });
+    }
+    if (verifyStoredDigest) {
+      const verification = await auth.supabaseAdmin.storage
+        .from("project-files")
+        .download(row.storage_path);
+      if (
+        verification.error ||
+        !verification.data ||
+        verification.data.size !== bytes.byteLength ||
+        (await sha256Hex(new Uint8Array(await verification.data.arrayBuffer()))) !== digest
+      ) {
+        await setUploadState(auth, row.id, attemptId, "cleanup_failed");
+        return json({ error: "project_file_storage_verification_failed" }, 503);
       }
     }
-    await setUploadState(auth, row.id, attemptId, "cleanup_failed");
-    return json({ error: "project_file_storage_unavailable" }, 503, {
-      "Retry-After": "30",
-    });
-  }
-
-  if (!(await setUploadState(auth, row.id, attemptId, "pending"))) {
-    await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
-    return json({ error: "project_file_reservation_lost" }, 409);
-  }
-
-  const moved = await auth.supabaseAdmin.storage
-    .from("project-files")
-    .move(temporaryPath, row.storage_path);
-  if (moved.error) {
-    const canonicalMatches = await storedProjectFileMatches(
-      auth,
-      row.storage_path,
-      bytes.byteLength,
-      digest,
-    );
-    if (!canonicalMatches) {
-      await setUploadState(auth, row.id, attemptId, "cleanup_failed");
-      return json({ error: "project_file_storage_finalize_failed" }, 503, {
-        "Retry-After": "30",
-      });
+    // The ready-state transaction settles the generation under the same
+    // account-deletion lock; a fenced or retired attempt cannot publish.
+    published = publishReady
+      ? await publishReady(row.id, attemptId)
+      : await setUploadState(auth, row.id, attemptId, "ready");
+    if (!published) {
+      const { data: current } = await auth.supabaseAdmin
+        .from("project_files")
+        .select("status,content_sha256,storage_path")
+        .eq("id", row.id)
+        .maybeSingle();
+      published =
+        current?.status === "ready" &&
+        current.content_sha256 === digest &&
+        current.storage_path === row.storage_path;
+      if (!published)
+        return json({ error: "project_file_finalize_unavailable" }, 503, { "Retry-After": "5" });
     }
-    const removed = await auth.supabaseAdmin.storage.from("project-files").remove([temporaryPath]);
-    if (removed.error && !missingObject(removed.error)) {
-      await setUploadState(auth, row.id, attemptId, "cleanup_failed");
-      return json({ error: "project_file_temp_cleanup_failed" }, 503, {
-        "Retry-After": "30",
-      });
-    }
-  }
-
-  if (!(await setUploadState(auth, row.id, attemptId, "ready"))) {
-    const { data: current } = await auth.supabaseAdmin
-      .from("project_files")
-      .select("status,content_sha256,storage_path")
-      .eq("id", row.id)
-      .maybeSingle();
-    if (
-      current?.status !== "ready" ||
-      current.content_sha256 !== digest ||
-      current.storage_path !== row.storage_path
-    ) {
-      return json({ error: "project_file_finalize_unavailable" }, 503, {
-        "Retry-After": "5",
-      });
+  } finally {
+    if (!published) {
+      // Failure to reach this best-effort action is recoverable from the
+      // durable reservation and its expiring producer lease.
+      await retireAccountStorageArtifact(artifact).catch(() => undefined);
     }
   }
 
@@ -688,7 +719,12 @@ async function remove(request: Request): Promise<Response> {
     return json({ error: "project_file_path_invalid" }, 503);
   }
 
-  if (file.kind !== "agent-deliverable") {
+  const source = await projectFileStorageReference(auth.supabaseAdmin, file.id);
+  const surviving =
+    source.bucket === "project-files"
+      ? await claimProjectStorageSourceCleanup(auth.supabaseAdmin, null, [source.path], [file.id])
+      : new Set<string>();
+  if (source.bucket === "project-files" && !surviving.has(source.path)) {
     const removed = await auth.supabaseAdmin.storage
       .from("project-files")
       .remove([file.storagePath]);
@@ -700,16 +736,11 @@ async function remove(request: Request): Promise<Response> {
         });
       }
       if (presence === "present") {
-        const restored = await restoreProjectFileDelete(auth, file.id, attemptId);
-        return json(
-          {
-            error: restored
-              ? "project_file_storage_delete_failed"
-              : "project_file_delete_recovery_failed",
-          },
-          503,
-          { "Retry-After": "30" },
-        );
+        // Source retirement is durable: keep this row deleting for retry.
+        // Restoring it could admit a reference after an ambiguous remove.
+        return json({ error: "project_file_storage_delete_failed" }, 503, {
+          "Retry-After": "30",
+        });
       }
     }
   }
@@ -720,6 +751,7 @@ async function remove(request: Request): Promise<Response> {
       {
         p_file_id: file.id,
         p_attempt_id: attemptId,
+        p_storage_removed: source.bucket === "project-files" && !surviving.has(source.path),
       } as never,
     );
   let finalized = await finalize();
