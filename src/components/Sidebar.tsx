@@ -12,6 +12,7 @@ import {
   ImageIcon,
   LifeBuoy,
   Blocks,
+  BriefcaseBusiness,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -501,6 +502,7 @@ export function Sidebar({
                 <span className={labelClass}>Search</span>
               </button>
             ) : null}
+            {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {showSignedIn ? renderNavLink("/kovas", "Kovas", Blocks) : null}

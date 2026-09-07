@@ -59,6 +59,31 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
+  test("signed-in desktop navigation keeps Chat and Work one step apart", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAuthenticatedFixture(page);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await expect(chatNavigation).toBeVisible();
+    await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await chatNavigation.getByRole("link", { name: "Work" }).click();
+    await expect(page).toHaveURL(/\/work$/);
+    const workNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await expect(workNavigation).toBeVisible();
+    await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await workNavigation.getByRole("link", { name: "Chat" }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {

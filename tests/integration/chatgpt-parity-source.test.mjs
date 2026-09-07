@@ -15,6 +15,8 @@ const [
   searchServer,
   deepResearchServer,
   modes,
+  workspaceModeSwitch,
+  workRoute,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -28,7 +30,18 @@ const [
   readFile("src/lib/ai/search.server.ts", "utf8"),
   readFile("src/lib/ai/deep-research.server.ts", "utf8"),
   readFile("src/lib/modes.ts", "utf8"),
+  readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
+  readFile("src/routes/work.tsx", "utf8"),
 ]);
+
+test("signed-in users can move clearly between Chat and Work", () => {
+  assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
+  assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
+  assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
+  assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
+  assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
+  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+});
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
