@@ -59,6 +59,49 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
+  test("signed-in desktop navigation keeps Chat and Work one step apart", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAuthenticatedFixture(page);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    ).toBeVisible();
+
+    const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await expect(chatNavigation).toBeVisible();
+    await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await chatNavigation.getByRole("link", { name: "Work" }).click();
+    await expect(page).toHaveURL(/\/work$/);
+    const workNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await expect(workNavigation).toBeVisible();
+    await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await workNavigation.getByRole("link", { name: "Chat" }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("collapsed desktop navigation keeps Work one step away", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await installAuthenticatedFixture(page);
+    await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    ).toBeVisible();
+
+    const workLink = page.getByRole("link", { name: "Work" });
+    await expect(workLink).toBeVisible();
+    await workLink.click();
+    await expect(page).toHaveURL(/\/work$/);
+  });
+
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {

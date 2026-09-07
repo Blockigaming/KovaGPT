@@ -12,6 +12,7 @@ import {
   ImageIcon,
   LifeBuoy,
   Blocks,
+  BriefcaseBusiness,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -377,6 +378,14 @@ export function Sidebar({
             <Search className="h-[18px] w-[18px]" />
           </button>
           <Link
+            to="/work"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
+            aria-label="Work"
+            title="Work"
+          >
+            <BriefcaseBusiness className="h-[18px] w-[18px]" />
+          </Link>
+          <Link
             to="/images"
             className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
             aria-label="Images"
@@ -501,6 +510,7 @@ export function Sidebar({
                 <span className={labelClass}>Search</span>
               </button>
             ) : null}
+            {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {showSignedIn ? renderNavLink("/kovas", "Kovas", Blocks) : null}

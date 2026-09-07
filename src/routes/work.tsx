@@ -23,6 +23,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { WorkSessionPanel } from "@/components/WorkSessionPanel";
 import { WorkSyncStatus } from "@/components/WorkSyncStatus";
+import { WorkspaceModeSwitch } from "@/components/WorkspaceModeSwitch";
 import { recordWorkRecent } from "@/lib/work-sync-client";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
@@ -93,7 +94,7 @@ function factualStatus(run: WorkRun) {
 }
 
 function WorkRoute() {
-  const { isLoaded, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = browserStoragePrincipal(isLoaded ? userKey : undefined);
   const fetchRuns = useServerFn(listWorkRuns),
@@ -242,6 +243,11 @@ function WorkRoute() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-[1600px] p-3" aria-label="Work center">
+        {isLoaded && isSignedIn ? (
+          <div className="mb-3 hidden justify-center lg:flex">
+            <WorkspaceModeSwitch active="work" className="flex" />
+          </div>
+        ) : null}
         <WorkSyncStatus />
         {isLoaded && (
           <WorkSessionPanel key={principal} ownerId={userKey} prepared={preparedDraft} />

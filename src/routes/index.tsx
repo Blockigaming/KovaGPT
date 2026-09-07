@@ -35,6 +35,7 @@ import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import { ChatBranchBar } from "@/components/ChatBranchBar";
 import { useChatBranches } from "@/hooks/useChatBranches";
 import { NovaLogo } from "@/components/NovaLogo";
+import { WorkspaceModeSwitch } from "@/components/WorkspaceModeSwitch";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -1667,6 +1668,12 @@ function KovaGPT() {
           chatRulesActive={chatRulesActive}
         />
         <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
+          {isLoaded && isSignedIn ? (
+            <WorkspaceModeSwitch
+              active="chat"
+              className="absolute left-1/2 top-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 xl:flex"
+            />
+          ) : null}
           <div
             hidden={sidebarOpen || Boolean(isSignedIn)}
             className="flex items-center gap-1 mr-2 shrink-0"
