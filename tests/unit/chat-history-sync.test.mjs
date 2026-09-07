@@ -93,6 +93,59 @@ test("legacy migration requires an explicit choice and Temporary chats have no o
   assert.equal(state.records.secret, undefined);
   assert.throws(() => normalizeChatHistory({ ...chat(), temporary: true }, OWNER), /invalid/);
 });
+test("durable history preserves only terminal research and activity state", () => {
+  const normalized = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        {
+          id: "research",
+          role: "assistant",
+          content: "",
+          activities: [
+            { tool: "search_web", label: "Searching the web", status: "failed" },
+            { tool: "draft", label: "Drafting", status: "running" },
+          ],
+          researchProgress: {
+            stage: "searching",
+            label: "Research interrupted",
+            status: "failed",
+            detail: "This research stopped when the page reloaded. Retry to continue.",
+            progress: 0.4,
+            warnings: ["One source was unavailable"],
+          },
+        },
+      ],
+    },
+    OWNER,
+  );
+  assert.deepEqual(normalized.messages[0].activities, [
+    { tool: "search_web", label: "Searching the web", status: "failed" },
+  ]);
+  assert.equal(normalized.messages[0].researchProgress.label, "Research interrupted");
+  assert.equal(normalized.messages[0].researchProgress.status, "failed");
+
+  const running = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        {
+          id: "research",
+          role: "assistant",
+          content: "",
+          researchProgress: {
+            stage: "searching",
+            label: "Searching sources",
+            status: "running",
+            progress: 0.4,
+          },
+        },
+      ],
+    },
+    OWNER,
+  );
+  assert.equal(running.messages[0].researchProgress, undefined);
+});
 test("an ambiguous save retries the exact captured payload while a newer local edit survives its receipt", async () => {
   let state = await updateChatHistoryList(await loaded(), [chat()], false);
   const request = nextChatHistoryRequest(state);

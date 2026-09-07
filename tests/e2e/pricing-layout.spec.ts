@@ -17,7 +17,7 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(page.getByRole("heading", { level: 1, name: "Upgrade your plan" })).toBeVisible();
   await expect(page.locator("[data-pricing-plan]")).toHaveCount(4);
   await expect(page.getByText("$16", { exact: true })).toBeVisible();
-  await expect(page.getByText("$89", { exact: true })).toBeVisible();
+  await expect(page.getByText("$80", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start Plus" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toBeVisible();
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.

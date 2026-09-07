@@ -16,7 +16,7 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     registry,
-    /pro:\s*\{[\s\S]*?monthlyPriceUsd:\s*89,[\s\S]*?lookupKey:\s*BILLING_PLANS\.pro_monthly\.lookupKey/,
+    /pro:\s*\{[\s\S]*?monthlyPriceUsd:\s*80,[\s\S]*?lookupKey:\s*BILLING_PLANS\.pro_monthly\.lookupKey/,
   );
   assert.match(pricing, /useStripeCheckout\(\)/);
   assert.match(

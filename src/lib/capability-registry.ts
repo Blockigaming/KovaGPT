@@ -278,7 +278,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     pro: {
       tier: "pro",
       name: PLAN_LABELS.pro,
-      monthlyPriceUsd: 89,
+      monthlyPriceUsd: 80,
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
       description: "The highest published allowances and Pro-only reasoning modes.",

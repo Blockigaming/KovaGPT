@@ -41,6 +41,14 @@ before a write.
 | Stripe            | 2026-09-01: live account `acct_1UAeDgAEZlsb6DBY` contained active Plus price `price_1UAzhHAEZlsb6DBYWw2oUCeO` (`plus_monthly`, USD 16/month) and Pro price `price_1UAzhRAEZlsb6DBYlafU4mhc` (`pro_monthly`, USD 89/month). No live webhook endpoint or default Portal configuration existed. Stripe Tax was active but had zero registrations. | Do not duplicate prices. Keep automatic tax and customer charging disabled.                  |
 | Supabase/Auth     | 2026-09-01: production project `mfbycmbjygcfkrsuepxf` reported Google enabled, but no successful production OAuth round trip was captured.                                                                                                                                                                                                     | Provider configuration is not end-to-end proof.                                              |
 
+**Pricing decision recorded 2026-09-07:** publish Plus at USD 16/month and Pro at USD 80/month.
+The dated live evidence above remains intentionally unchanged: Stripe still has the existing USD
+89/month Pro price. Before any release can advertise or charge USD 80, an authorized operator must
+create a new immutable recurring Pro Price at USD 80, move the `pro_monthly` lookup key under a
+reviewed migration, preserve recognition of existing subscription price IDs, and complete the
+approved sandbox/reconciliation evidence. This record is preparation only; no live Stripe write or
+real checkout was authorized or performed.
+
 ## Non-negotiable entry gate
 
 Before any item marked `BLOCKED` is attempted, the release operator must record all of the
@@ -558,7 +566,8 @@ cancel/upgrade/downgrade outcomes, and legal/support link review. Official refer
 1. Complete/confirm Stripe activation and KYC directly in Stripe, including authorized
    representative, entity, ownership, address, banking/payout, statement descriptor, merchant
    category, support contact, and public business details. Never put those details in GitHub.
-2. Confirm in writing the existing prices—Plus USD 16/month and Pro USD 89/month—plus
+2. Confirm the recorded prices—Plus USD 16/month and Pro USD 80/month—and create a reviewed
+   transition plan from the existing immutable Pro USD 89/month Price. Include
    auto-renewal disclosure, free trial (if any), cancellation timing, refunds, failed-payment
    handling, support channel, and customer-communication/incident authority.
 3. Have a qualified adviser decide tax nexus, product/service tax classification, registrations,
