@@ -72,7 +72,7 @@ test("project context and RAG remain server-side and scoped to project membershi
   assert.match(chatRoute, /retrieveProjectContext/);
   assert.match(chatRoute, /Relevant excerpts from this project/);
   assert.match(rag, /match_project_chunks/);
-  assert.match(rag, /embeddings\(\{ model: embeddingModel\(\)/);
+  assert.match(rag, /embeddings\(\s*\{ model: embeddingModel\(\)/);
   assert.match(rag, /providerErrorFromResponse/);
   assert.doesNotMatch(rag, /LOVABLE|OPENAI_API_KEY|process\.env|response\.text\(/);
   assert.match(rag, /unsupported_type/);
@@ -101,7 +101,7 @@ test("library workspace supports filters, sorting, view preference, safe actions
   );
   assert.match(
     library,
-    /storageTotal !== null\s+\? `Known file storage: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
+    /storageTotal !== null\s+\? `Loaded file sizes: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
   );
   assert.doesNotMatch(library, /Storage totals require backend usage records/);
 });

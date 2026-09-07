@@ -18,7 +18,7 @@ export const MAX_LABEL_LENGTH = 120;
 export const MAX_VERSIONS_PER_MESSAGE = 50;
 export const MAX_BRANCHES_PER_CHAT = 40;
 export const MAX_PINS_PER_CHAT = 25;
-export const MAX_BRANCH_MESSAGE_IDS = 2_000;
+export const MAX_BRANCH_MESSAGE_IDS = 512;
 
 // Exactly the values the database CHECK constraint allows.
 export const MESSAGE_VERSION_SOURCES = Object.freeze([

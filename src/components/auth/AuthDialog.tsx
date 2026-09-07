@@ -7,7 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
+import {
+  getEmailAuthRedirectUri,
+  getOAuthRedirectUri,
+  rememberPostAuthRedirect,
+} from "@/lib/oauth-session";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
@@ -86,6 +90,7 @@ export function AuthDialog({
       toast.error("Please enter a valid email address.");
       return;
     }
+    rememberPostAuthRedirect();
     onOpenChange(false);
     void navigate({
       to: "/auth",
@@ -156,9 +161,10 @@ export function AuthDialog({
       if (cooldown > 0) return;
       if (!guard("email")) return;
       try {
+        rememberPostAuthRedirect();
         const { error } = await supabase.auth.signInWithOtp({
           email: email.trim().toLowerCase(),
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: { emailRedirectTo: getEmailAuthRedirectUri() },
         });
         if (error) throw error;
         setStep("magic-sent");

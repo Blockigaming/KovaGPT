@@ -26,6 +26,10 @@ test("does not expose a Checkout return URL browser input", async () => {
     pricingSource = await readFile(
       new URL("../../src/routes/pricing.tsx", import.meta.url),
       "utf8",
+    ),
+    returnSource = await readFile(
+      new URL("../../src/routes/checkout.return.tsx", import.meta.url),
+      "utf8",
     );
 
   assert.match(serverSource, /return_url: CHECKOUT_RETURN_URL/);
@@ -33,4 +37,6 @@ test("does not expose a Checkout return URL browser input", async () => {
   assert.doesNotMatch(componentSource, /\breturnUrl\b/);
   assert.doesNotMatch(hookSource, /\breturnUrl\b/);
   assert.doesNotMatch(pricingSource, /\breturnUrl\b|window\.location\.origin/);
+  assert.match(returnSource, /Checking your account|Verifying your subscription/);
+  assert.doesNotMatch(returnSource, /Subscription activated|Your subscription is active/);
 });

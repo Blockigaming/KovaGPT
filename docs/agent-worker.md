@@ -59,3 +59,11 @@ queues) has executable tests proving queue creation, ownership, bounded inputs a
 redirect/network policy, approval consumption, queued prompts and user questions, evidence storage,
 cancellation, background resume/recovery, notification delivery, retry semantics, and truthful
 client polling.
+
+Historical browser controls commit the run transition, child cancellation, bound approval denial,
+and safe audit event in one database transaction. Retrying a cancelled run repairs missing legacy
+cleanup/evidence. Pausing remains available for historical records; resuming remains disabled.
+`agent_run_approval_bindings` is service-owned and enforces matching run/approval ownership with
+foreign keys. Existing freeform event/request metadata is never treated as approval provenance or
+backfilled into bindings. Unbound legacy approvals cannot be denied through a run; cancellation
+remains available and leaves unrelated integration approvals unchanged.

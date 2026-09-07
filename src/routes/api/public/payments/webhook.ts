@@ -1,51 +1,62 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
-import { createStripeClient, type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  createStripeClient,
+  type StripeEnv,
+  StripeWebhookVerificationError,
+  verifyWebhook,
+  durableStripeBillingEnabled,
+} from "@/lib/stripe.server";
 import { resolveBillingPlan } from "@/lib/billing-plans";
 import { logOperationalEvent } from "@/lib/structured-log.server";
 import { correlationHeaders, correlationId as resolveCorrelationId } from "@/lib/correlation";
-import { billingOutcome, processStripeEvent } from "@/lib/webhook-reliability.mjs";
-
-let _supabase: ReturnType<typeof createClient<Database>> | null = null;
-function getSupabase() {
-  if (!_supabase) {
-    _supabase = createClient<Database>(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-  }
-  return _supabase;
-}
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { processStripeEvent, WebhookProcessingError } from "@/lib/webhook-reliability.mjs";
 
 type StripeLineItemLike = {
   price?: {
     lookup_key?: string | null;
     metadata?: { kova_plan?: string };
     id?: string;
-  } | null;
+  };
 };
 
-class StripeWebhookVerificationError extends Error {
-  constructor(cause: unknown) {
-    super("stripe_webhook_verification_failed", { cause });
-    this.name = "StripeWebhookVerificationError";
-  }
+export function billingOutcome(type: string): string {
+  if (type === "checkout.session.completed") return "verification_pending";
+  if (type === "checkout.session.expired") return "checkout_expired";
+  if (type === "invoice.paid") return "payment_confirmed";
+  if (type === "invoice.payment_failed") return "payment_failed";
+  if (type === "invoice.payment_action_required") return "payment_action_required";
+  if (["invoice.voided", "invoice.marked_uncollectible"].includes(type))
+    return "payment_uncollectible";
+  if (type === "customer.subscription.deleted") return "subscription_ended";
+  if (type.startsWith("customer.subscription.")) return "subscription_updated";
+  return "observed";
 }
-
-export { billingOutcome };
 
 export function normalizeStripeEnvironment(value: string | null): StripeEnv | null {
   return value === "sandbox" || value === "live" ? value : null;
 }
 
-function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
-  const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, item?.price?.id];
-  for (const candidate of candidates) {
-    const plan = resolveBillingPlan(candidate);
-    if (plan) return plan.lookupKey;
+async function priceIdFrom(value: unknown, environment: StripeEnv): Promise<string | undefined> {
+  const item = value as StripeLineItemLike | undefined;
+  const priceId = item?.price?.id;
+  if (!priceId || !/^price_[A-Za-z0-9]+$/u.test(priceId)) return undefined;
+
+  if (environment === "live") {
+    const { data, error } = await supabaseAdmin
+      .from("billing_plan_tiers")
+      .select("stripe_price_id")
+      .eq("environment", environment)
+      .eq("stripe_price_id", priceId)
+      .maybeSingle();
+    if (error) {
+      throw new WebhookProcessingError("stripe_price_registry_lookup_failed", 500, error);
+    }
+    return data?.stripe_price_id === priceId ? priceId : undefined;
   }
-  return undefined;
+
+  const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, priceId];
+  return candidates.some((candidate) => resolveBillingPlan(candidate)) ? priceId : undefined;
 }
 
 export async function handleWebhook(
@@ -53,35 +64,19 @@ export async function handleWebhook(
   env: StripeEnv,
   correlationId: string = crypto.randomUUID(),
 ) {
-  let event;
-  try {
-    event = await verifyWebhook(req, env);
-  } catch (error) {
-    throw new StripeWebhookVerificationError(error);
-  }
-
-  const result = await processStripeEvent({
-    supabase: getSupabase(),
+  const event = await verifyWebhook(req, env);
+  if (!durableStripeBillingEnabled())
+    throw new WebhookProcessingError("billing_rollout_pending", 503);
+  const stripe = createStripeClient(env);
+  return processStripeEvent({
+    supabase: supabaseAdmin,
     event,
     environment: env,
-    resolvePriceId: priceIdFrom,
-    retrieveSubscription: async (subscriptionId) =>
-      createStripeClient(env).subscriptions.retrieve(subscriptionId),
+    resolvePriceId: (item) => priceIdFrom(item, env),
+    retrieveSubscription: (subscriptionId) => stripe.subscriptions.retrieve(subscriptionId),
+    billingOutcome,
     correlationId,
   });
-
-  logOperationalEvent({
-    correlationId,
-    category: "billing",
-    operation: "stripe_webhook_processed",
-    metadata: {
-      eventType: event.type,
-      environment: env,
-      duplicate: result.duplicate,
-      applied: result.applied,
-    },
-  });
-  return result;
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
@@ -104,16 +99,23 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
             },
           );
         }
-
         try {
           const result = await handleWebhook(request, environment, correlationId);
-          return Response.json(
-            {
-              received: true,
-              duplicate: result.duplicate,
-              applied: result.applied,
-              correlationId,
+          logOperationalEvent({
+            correlationId,
+            category: "billing",
+            operation: "stripe_webhook_processed",
+            metadata: {
+              eventType: result.orphaned
+                ? "orphaned_customer"
+                : result.duplicate
+                  ? "duplicate"
+                  : "completed",
+              environment,
             },
+          });
+          return Response.json(
+            { received: true, duplicate: result.duplicate, correlationId },
             {
               headers: {
                 ...correlationHeaders(correlationId),
@@ -123,25 +125,27 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           );
         } catch (error) {
           const verificationFailure = error instanceof StripeWebhookVerificationError;
+          const retryableFailure =
+            error instanceof WebhookProcessingError ? error.status >= 500 : !verificationFailure;
           logOperationalEvent({
             correlationId,
             category: "billing",
-            operation: verificationFailure
-              ? "stripe_webhook_rejected"
-              : "stripe_webhook_processing_failed",
+            operation: retryableFailure
+              ? "stripe_webhook_retry_required"
+              : "stripe_webhook_rejected",
             metadata: { environment },
           });
           return Response.json(
             {
-              error: verificationFailure ? "webhook_rejected" : "webhook_processing_failed",
+              error: retryableFailure ? "webhook_retry_required" : "webhook_rejected",
               correlationId,
             },
             {
-              status: verificationFailure ? 400 : 503,
+              status: retryableFailure ? 503 : 400,
               headers: {
                 ...correlationHeaders(correlationId),
                 "Cache-Control": "no-store",
-                ...(verificationFailure ? {} : { "Retry-After": "5" }),
+                ...(retryableFailure ? { "Retry-After": "5" } : {}),
               },
             },
           );

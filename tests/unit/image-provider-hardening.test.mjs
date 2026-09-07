@@ -31,10 +31,21 @@ test("production IaC preserves a dedicated image provider across deployments", (
   );
   assert.match(
     bicep,
-    /resource azureOpenAiImageUser 'Microsoft\.Authorization\/roleAssignments@2022-04-01' = if \(useAzureOpenAiImageManagedIdentity\)/u,
+    /module azureOpenAiImageAccess 'cognitive-account-role\.bicep' = if \(useAzureOpenAiImageManagedIdentity\)/u,
   );
-  assert.match(bicep, /scope: azureOpenAiImage/u);
+  assert.match(bicep, /scope: resourceGroup\(azureOpenAiImageResourceGroupName\)/u);
   assert.match(bicep, /roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId/u);
+
+  const roleModule = read("infra/azure/production/cognitive-account-role.bicep");
+  assert.match(roleModule, /targetScope = 'resourceGroup'/u);
+  assert.match(roleModule, /resource account .* existing =/u);
+  assert.match(
+    roleModule,
+    /resource accountRole 'Microsoft\.Authorization\/roleAssignments@2022-04-01'/u,
+  );
+  assert.match(roleModule, /scope: account/u);
+  assert.match(roleModule, /principalId: principalId/u);
+  assert.match(roleModule, /roleDefinitionId: roleDefinitionId/u);
 
   const migration = read("docs/azure/MIGRATION.md");
   assert.match(migration, /`azureOpenAiImageAccountName`/u);

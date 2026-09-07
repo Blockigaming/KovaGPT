@@ -34,8 +34,8 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
     "authorization.ownerId",
     "unsupported_media_type",
     "upload_attempt_id",
-    "temporaryPath",
-    ".move(temporaryPath, row.storage_path)",
+    "reserveAccountStorageArtifact",
+    "retireAccountStorageArtifact",
     "project_file_delete_in_progress",
     "cleanupStaleProjectUploadObjects",
     "ProjectFileMaintenanceClient",
@@ -49,9 +49,9 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.doesNotMatch(route, /enforceQuota/);
   assert.doesNotMatch(route, /user_plan_tier/);
   assert.match(route, /getUserTier\(auth, project\.owner_id\)/);
-  assert.match(auth, /\.eq\("environment", BILLING_ENV\)/);
+  assert.match(auth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);
   assert.match(auth, /export async function getUserTier/);
-  assert.match(auth, /family_owner_of/);
+  assert.match(read("src/lib/billing-entitlement.server.ts"), /rpc\("effective_user_plan_tier"/);
   const uploadHandler = route.slice(
     route.indexOf("async function upload"),
     route.indexOf("function missingObject"),
@@ -66,14 +66,6 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(route, /storage_charged: row\.storage_charged/);
   assert.match(route, /owner_id,deletion_requested_at/);
   assert.match(route, /project\.deletion_requested_at[\s\S]*project_deletion_pending/);
-  assert.match(
-    route,
-    /const projectId = headerValue\(request, "x-kova-project-id", 36\)\.toLowerCase\(\)/,
-  );
-  assert.match(
-    route,
-    /const idempotencyKey = headerValue\(request, "x-kova-idempotency-key", 36\)\.toLowerCase\(\)/,
-  );
   assert.match(route, /file\.kind !== "agent-deliverable"/);
   assert.match(ui, /fetch\(\`\/api\/project-files\$\{search\}\`/);
   assert.match(ui, /X-Kova-Idempotency-Key/);
@@ -159,7 +151,7 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(migration, /claim_stale_project_file_cleanup[\s\S]*FOR UPDATE SKIP LOCKED/);
   assert.match(
     migration,
-    /finalize_stale_project_file_cleanup[\s\S]*greatest\(0, bytes_used - target\.size_bytes\)/,
+    /finalize_stale_project_file_cleanup[\s\S]*settle_project_source_storage_charge/,
   );
   assert.match(migration, /restore_project_file_delete[\s\S]*delete_lease_until = NULL/);
   assert.match(migration, /finalize_project_file_delete[\s\S]*'idempotent', true/);
@@ -192,8 +184,8 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(maintenance, /claim_stale_project_file_cleanup/);
   assert.match(maintenance, /renew_stale_project_file_cleanup/);
   assert.match(maintenance, /finalize_stale_project_file_cleanup/);
-  assert.match(maintenance, /item\.kind === "agent-deliverable"/);
-  assert.match(maintenance, /assertProjectStoragePath\(item\.projectId, item\.storagePath\)/);
+  assert.match(maintenance, /source\.bucket !== PROJECT_FILES_BUCKET/);
+  assert.match(maintenance, /assertProjectStoragePath\(item\.projectId, source\.path\)/);
   assert.match(ui, /Files could not be loaded because earlier storage cleanup is incomplete/);
   assert.match(ui, /role="alert"/);
   assert.match(ui, /className="mt-3 min-h-11"/);

@@ -9,13 +9,27 @@ const collect = (regex, index = 1) =>
     .map((m) => m[index].replaceAll('"', "").trim())
     .filter(Boolean)
     .sort();
+const indexes = [];
+for (const match of sql.matchAll(
+  /\b(?:create\s+(?:unique\s+)?index(?:\s+concurrently)?(?:\s+if\s+not\s+exists)?\s+(?:[\w"]+\.)?([\w"]+)|drop\s+index(?:\s+concurrently)?(?:\s+if\s+exists)?\s+(?:[\w"]+\.)?([\w"]+))/gi,
+)) {
+  const created = match[1]?.replaceAll('"', "").trim();
+  const dropped = match[2]?.replaceAll('"', "").trim();
+  if (created) indexes.push(created);
+  if (dropped) {
+    for (let index = indexes.length - 1; index >= 0; index -= 1) {
+      if (indexes[index] === dropped) indexes.splice(index, 1);
+    }
+  }
+}
 const contract = {
   schemaVersion: 1,
   marker: "20260803120000-v1",
   migrationCount: files.length,
   tables: collect(/create\s+table(?:\s+if\s+not\s+exists)?\s+(?:public\.)?([\w"]+)/gi),
+  views: collect(/create\s+(?:or\s+replace\s+)?view\s+public\.([\w"]+)/gi),
   functions: collect(/create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([\w"]+)/gi),
-  indexes: collect(/create\s+(?:unique\s+)?index(?:\s+if\s+not\s+exists)?\s+([\w"]+)/gi),
+  indexes: indexes.sort(),
   policies: collect(/create\s+policy\s+"?([^"\n]+?)"?\s+on/gi),
   triggers: collect(/create\s+trigger\s+([\w"]+)/gi),
   enums: collect(/create\s+type\s+(?:public\.)?([\w"]+)\s+as\s+enum/gi),

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -60,9 +60,10 @@ import {
 } from "@/lib/projects.functions";
 import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.functions";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { ProjectTemplatesDialog } from "@/components/ProjectTemplatesDialog";
 
 export const Route = createFileRoute("/projects")({
-  component: ProjectsPage,
+  component: ProjectsRoute,
   head: () => ({
     meta: [
       { title: "KovaGPT Projects" },
@@ -72,6 +73,15 @@ export const Route = createFileRoute("/projects")({
   }),
 });
 
+function ProjectsRoute() {
+  const projectMatch = useMatch({
+    from: "/projects/$projectId",
+    shouldThrow: false,
+  });
+
+  return projectMatch ? <Outlet /> : <ProjectsPage />;
+}
+
 function ProjectsPage() {
   const { isSignedIn, isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
@@ -80,6 +90,7 @@ function ProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -277,6 +288,7 @@ function ProjectsPage() {
     setShowArchived(false);
     setDropProjectId(null);
     setCreateOpen(false);
+    setTemplatesOpen(false);
     setName("");
     setDescription("");
     setBusy(false);
@@ -437,13 +449,22 @@ function ProjectsPage() {
           description="Shared workspaces for your chats, files, instructions, and team."
           actions={
             isSignedIn && !isLoading ? (
-              <Button
-                onClick={() => setCreateOpen(true)}
-                className="hidden min-h-11 lg:inline-flex"
-              >
-                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                New project
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => setTemplatesOpen(true)}
+                >
+                  Templates
+                </Button>
+                <Button
+                  onClick={() => setCreateOpen(true)}
+                  className="hidden min-h-11 lg:inline-flex"
+                >
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  New project
+                </Button>
+              </div>
             ) : null
           }
         />
@@ -921,6 +942,20 @@ function ProjectsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {isSignedIn && userKey && (
+        <ProjectTemplatesDialog
+          key={userKey}
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          userId={userKey}
+          onCopied={(projectId) => {
+            setTemplatesOpen(false);
+            void refresh();
+            void navigate({ to: "/projects/$projectId", params: { projectId } });
+          }}
+        />
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>

@@ -7,10 +7,10 @@ import {
   CreditCard,
   FolderKanban,
   FolderOpen,
+  Globe,
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  Map,
   Blocks,
   MoreHorizontal,
   PanelLeft,
@@ -181,6 +181,12 @@ export function Sidebar({
       aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+        />
+      ) : null}
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
       {badge && !collapsed ? (
@@ -207,6 +213,12 @@ export function Sidebar({
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
+      {activeId === c.id ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+        />
+      ) : null}
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
@@ -491,10 +503,12 @@ export function Sidebar({
             ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
+            {showSignedIn ? renderNavLink("/kovas", "Kovas", Blocks) : null}
+            {showSignedIn ? renderNavLink("/sites", "Sites", Globe) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Plugins", Blocks)}
             {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "Preview")}
+            {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
 
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(

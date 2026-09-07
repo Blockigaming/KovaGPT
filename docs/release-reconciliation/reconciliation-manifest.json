@@ -2,6 +2,67 @@
   "schemaVersion": 1,
   "reconciledAt": "2026-08-12",
   "branch": "work",
+  "currentCandidate": {
+    "recordedAt": "2026-09-07",
+    "validatedHead": "6c0562bad99a97bb8f33a783ed18e30bee4e727d",
+    "branch": "codex/consolidate-release-foundation-20260907-v4",
+    "publicationStatus": "local_only_not_pushed",
+    "productionStatus": "not_deployed",
+    "gates": {
+      "build": "passing",
+      "typecheck": "passing",
+      "lint": "passing",
+      "format": "passing",
+      "unit": {
+        "total": 1590,
+        "passing": 1590,
+        "failing": 0
+      },
+      "release": {
+        "total": 23,
+        "passing": 23,
+        "failing": 0,
+        "evidenceContractAfterReportUpdate": "24/24 passing"
+      },
+      "integration": {
+        "total": 484,
+        "passing": 483,
+        "failing": 1,
+        "sourceContractFailures": 0,
+        "environmentFailures": 1,
+        "environmentFailure": "Wrangler/workerd could not enumerate sandbox network interfaces: uv_interface_addresses returned Unknown system error 1"
+      },
+      "migrationPreflight": {
+        "sourceOnly": "passing",
+        "migrationFiles": 144,
+        "isolatedApply": "not_run_docker_unavailable"
+      }
+    },
+    "liveReadOnlyAudit": {
+      "url": "https://kovagpt.com/",
+      "hydrationFailureReproduced": true,
+      "reactError": "Minified React error #418",
+      "deployedBuildPredatesCandidateMetadata": true
+    },
+    "releaseDecision": "source_candidate_ready_for_hosted_ci_and_staged_validation_not_approved_for_production"
+  },
+  "postValidationUpdates": [
+    {
+      "recordedAt": "2026-09-07",
+      "sourceHead": "80fa6d5a",
+      "capability": "verified_work_to_sites_draft_bridge",
+      "gates": {
+        "build": "passing",
+        "typecheck": "passing",
+        "lint": "passing",
+        "focusedWorkSites": "25/25 passing",
+        "focusedProtocolAndLifecycle": "51/51 passing",
+        "aggregateIntegration": "not_rerun_environment_denied_network_capable_command_before_start"
+      },
+      "liveEffects": "none",
+      "publicationBoundary": "imports_create_unpublished_versions_and_publish_requires_a_separate_owner_confirmation"
+    }
+  ],
   "startingHead": "0df0f5dd188fa9cb6657570cc78ecc21677e5b95",
   "mergeBase": "f8280ea9f60dedb44d077bedf2659290d800254b",
   "workstreams": {

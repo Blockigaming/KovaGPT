@@ -35,6 +35,9 @@ test("Images starts closed, has no dead attachment control, and isolates generat
   assert.match(source, /kovagpt:v2:image-history:/);
   assert.doesNotMatch(source, /aria-label="Attach"|<Paperclip/);
   assert.doesNotMatch(source, /Create variation/);
-  assert.match(source, /aria-label="Describe the image to generate"/);
+  assert.match(
+    source,
+    /aria-label=\{[\s\S]*?editSelection \? "Describe the image edit" : "Describe the image to generate"/,
+  );
   assert.match(source, /nativeEvent\.isComposing/);
 });

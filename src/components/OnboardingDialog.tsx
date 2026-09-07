@@ -165,12 +165,13 @@ export function OnboardingDialog() {
   };
 
   const skip = async () => {
+    // Dismissing onboarding must never trap a signed-in user behind a failed
+    // best-effort persistence request. Keep the completion write, but release
+    // the interface immediately and let a later visit retry if necessary.
+    setOpen(false);
     setSaving(true);
     try {
       await doSkip();
-    } catch {
-      // A transient persistence failure must not trap the user in onboarding.
-      // The next signed-in visit can offer onboarding again.
     } finally {
       setOpen(false);
       setSaving(false);

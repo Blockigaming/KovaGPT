@@ -21,10 +21,26 @@ const user = {
   is_anonymous: false,
 };
 
-async function mockPlusUser(page: Page) {
+type StoredConversationSeed = {
+  conversationId: string;
+  conversations: Array<Record<string, unknown>>;
+};
+
+async function mockPlusUser(page: Page, seed?: StoredConversationSeed) {
   await page.addInitScript(
-    ({ storageKeyPatternSource, signedInUser }) => {
+    ({ storageKeyPatternSource, signedInUser, storedConversationSeed }) => {
       localStorage.clear();
+      if (storedConversationSeed) {
+        const principal = `user:${encodeURIComponent(signedInUser.id)}`;
+        localStorage.setItem(
+          `nova-gpt-conversations-v3:${principal}`,
+          JSON.stringify(storedConversationSeed.conversations),
+        );
+        localStorage.setItem(
+          `nova-gpt-pending-active:v2:${principal}`,
+          storedConversationSeed.conversationId,
+        );
+      }
       const base64Url = (value: unknown) =>
         btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
       const storageKeyPattern = new RegExp(storageKeyPatternSource);
@@ -53,7 +69,11 @@ async function mockPlusUser(page: Page) {
         });
       };
     },
-    { storageKeyPatternSource: supabaseAuthStorageKeyPattern.source, signedInUser: user },
+    {
+      storageKeyPatternSource: supabaseAuthStorageKeyPattern.source,
+      signedInUser: user,
+      storedConversationSeed: seed,
+    },
   );
 
   await page.route(supabaseRequestPattern, async (route) => {
@@ -80,11 +100,30 @@ async function mockPlusUser(page: Page) {
       });
       return;
     }
+    if (url.pathname === "/rest/v1/rpc/current_subscription_summary") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ effectiveTier: "plus" }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: url.pathname.includes("/rpc/") ? "null" : "[]",
     });
+  });
+}
+
+async function closeOnboardingAndWaitForAccount(page: Page) {
+  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole("button", { name: "Close" }).click();
+  }
+  await expect(page.locator('button[aria-label="Account menu"]:visible').first()).toBeVisible({
+    timeout: 15_000,
   });
 }
 
@@ -144,10 +183,7 @@ test("Deep Research renders its completed lifecycle and partial-source warning",
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   await expect(page.locator('button[aria-label="Start temporary chat"]').first()).toBeAttached();
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
@@ -190,10 +226,7 @@ test("Deep Research blocks attachments before creating a progress message", asyn
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.getByRole("button", { name: "Deep research" }).click();
@@ -219,42 +252,34 @@ test("Deep Research blocks attachments before creating a progress message", asyn
 
 test("interrupted progress-only research exposes a working retry", async ({ page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
-  await mockPlusUser(page);
-  await page.addInitScript(
-    ({ userId }) => {
-      const principal = `user:${encodeURIComponent(userId)}`;
-      const conversationId = "interrupted-research";
-      localStorage.setItem(
-        `nova-gpt-conversations-v3:${principal}`,
-        JSON.stringify([
+  const conversationId = "interrupted-research";
+  await mockPlusUser(page, {
+    conversationId,
+    conversations: [
+      {
+        id: conversationId,
+        title: "Interrupted research",
+        mode: "thinking",
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [
+          { id: "prompt", role: "user", content: "Research resilient systems" },
           {
-            id: conversationId,
-            title: "Interrupted research",
-            mode: "thinking",
-            createdAt: 1,
-            updatedAt: 2,
-            messages: [
-              { id: "prompt", role: "user", content: "Research resilient systems" },
-              {
-                id: "progress",
-                role: "assistant",
-                content: "",
-                researchProgress: {
-                  stage: "searching",
-                  label: "Searching sources",
-                  status: "running",
-                  progress: 0.4,
-                },
-                activities: [{ tool: "search_web", label: "Searching the web", status: "running" }],
-              },
-            ],
+            id: "progress",
+            role: "assistant",
+            content: "",
+            researchProgress: {
+              stage: "searching",
+              label: "Searching sources",
+              status: "running",
+              progress: 0.4,
+            },
+            activities: [{ tool: "search_web", label: "Searching the web", status: "running" }],
           },
-        ]),
-      );
-      localStorage.setItem(`nova-gpt-pending-active:v2:${principal}`, conversationId);
-    },
-    { userId: user.id },
-  );
+        ],
+      },
+    ],
+  });
 
   let requestBody: Record<string, unknown> | undefined;
   await page.route("**/api/chat", async (route) => {
@@ -277,10 +302,7 @@ test("interrupted progress-only research exposes a working retry", async ({ page
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   const progress = page.getByRole("region", { name: "Deep Research progress" });
   await expect(progress).toContainText("Research interrupted");

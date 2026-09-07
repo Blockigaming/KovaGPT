@@ -92,6 +92,16 @@ export class ProjectFileInputError extends Error {
   }
 }
 
+export function normalizeProjectFileIdentity(value) {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  ) {
+    throw new ProjectFileInputError(400, "invalid_project_file_identity");
+  }
+  return value.toLowerCase();
+}
+
 export function normalizeProjectFileName(value) {
   if (typeof value !== "string") throw new ProjectFileInputError(400, "invalid_file_name");
   const normalized = value

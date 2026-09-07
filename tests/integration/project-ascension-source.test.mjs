@@ -43,6 +43,9 @@ test("archived conversations can be discovered, restored, and permanently remove
   assert.match(settings, /Delete archived chat/);
   assert.match(store, /loadArchivedConversations/);
   assert.match(store, /removeArchivedConversation/);
-  assert.match(chat, /archiveConversation/);
-  assert.match(chat, /Undo/);
+  assert.match(chat, /historyAction\("archive", id\)/);
+  const history = await read("src/lib/home-chat-history-actions.ts");
+  assert.match(history, /archiveConversation/);
+  assert.match(history, /Undo/);
+  assert.match(history, /context\.current/);
 });

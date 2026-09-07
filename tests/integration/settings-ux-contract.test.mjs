@@ -101,8 +101,11 @@ test("theme changes cannot interpolate the Settings surface colors", () => {
 test("Settings polish retains the billing portal safety gates", () => {
   assert.match(
     settingsSource,
-    /if \(portalLoading \|\| !subSummary\?\.hasBillingAccount\) return;/,
+    /if \(portalLoading \|\| !subSummary\?\.hasBillingAccount \|\| !subSummary\.billingPortalAvailable\)/,
   );
   assert.match(settingsSource, /const portalUrl = parseAllowedBillingPortalUrl\(res\.url\);/);
-  assert.match(settingsSource, /!subSummary\?\.hasBillingAccount \|\|\s+inheritedSubscription/);
+  assert.match(
+    settingsSource,
+    /!subSummary\?\.hasBillingAccount[\s\S]{0,180}inheritedSubscription/,
+  );
 });

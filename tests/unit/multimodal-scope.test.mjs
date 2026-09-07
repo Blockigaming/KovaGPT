@@ -26,7 +26,9 @@ test("provider voice and browser read-aloud remain absent", () => {
 });
 
 test("image workflow maps settings to provider payload and metadata", () => {
-  const source = read("src/lib/multimodal/image-workflows.server.ts");
+  const source =
+    read("src/lib/multimodal/image-workflows.server.ts") +
+    read("src/lib/multimodal/image-request-policy.mjs");
   const route = read("src/routes/api/generate-image.ts");
   for (const token of [
     "ImageOperation",
@@ -41,5 +43,5 @@ test("image workflow maps settings to provider payload and metadata", () => {
     assert.match(source, new RegExp(`\\b${token}\\b`), `image workflow should include ${token}`);
   }
   assert.match(route, /normalizeImageSettings/);
-  assert.match(route, /metadata: imageResultMetadata/);
+  assert.match(route, /imageResultMetadata\(settings\)/);
 });

@@ -1,16 +1,18 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import {
   assertProjectStoragePath,
+  isMissingStorageObjectError,
   PROJECT_FILES_BUCKET,
   ProjectDeletionError,
   projectDeletionPublicMessage,
   purgeProjectStorageFolder,
   type ProjectStorageAdapter,
 } from "@/lib/project-deletion-policy.mjs";
+
 import {
-  reconcileProjectFileLifecycle,
-  type ProjectFileMaintenanceClient,
-} from "@/lib/project-file-maintenance.server";
+  resolveProjectStorageRows,
+  claimProjectStorageSourceCleanup,
+} from "./project-storage-references.server";
 
 const METADATA_PAGE_SIZE = 500;
 
@@ -41,46 +43,26 @@ function claimError(error: { code?: string; message?: string } | null): ProjectD
   return new ProjectDeletionError("project_deletion_claim_failed");
 }
 
-async function claimProjectDeletion(
-  admin: ProjectDeletionAdmin,
-  userId: string,
-  projectId: string,
-  attemptId: string,
-): Promise<{
-  claim: Record<string, unknown> | null;
-  state: string;
-  canonicalProjectId: string;
-}> {
-  const { data: claimValue, error: claimFailure } = await admin.rpc("claim_project_deletion", {
-    p_attempt_id: attemptId,
-    p_project_id: projectId,
-    p_user_id: userId,
-  });
-  if (claimFailure) throw claimError(claimFailure);
-
-  const claim = record(claimValue);
-  return {
-    claim,
-    state: typeof claim?.state === "string" ? claim.state : "",
-    canonicalProjectId:
-      typeof claim?.projectId === "string" ? claim.projectId : projectId.toLowerCase(),
-  };
-}
-
 async function verifyMetadataPaths(
   admin: ProjectDeletionAdmin,
   projectId: string,
   onPage: () => Promise<void>,
-): Promise<void> {
+): Promise<string[]> {
+  const promotedSources = new Set<string>();
   let start = 0;
   while (true) {
     const { data, error } = await admin
       .from("project_files")
-      .select("id,storage_path,kind")
+      .select("id,project_id,uploaded_by,storage_path,kind")
       .eq("project_id", projectId)
       .order("id", { ascending: true })
       .range(start, start + METADATA_PAGE_SIZE - 1);
     if (error) throw new ProjectDeletionError("project_metadata_read_failed");
+    const sources = await resolveProjectStorageRows(admin, data ?? []);
+    for (const source of sources) {
+      if (source.bucket === PROJECT_FILES_BUCKET && source.source === "promoted")
+        promotedSources.add(source.path);
+    }
     for (const row of data ?? []) {
       if (row.kind === "agent-deliverable") continue;
       if (row.kind !== "file" && row.kind !== "image") {
@@ -89,7 +71,7 @@ async function verifyMetadataPaths(
       assertProjectStoragePath(projectId, row.storage_path);
     }
     await onPage();
-    if (!data || data.length < METADATA_PAGE_SIZE) return;
+    if (!data || data.length < METADATA_PAGE_SIZE) return [...promotedSources];
     start += METADATA_PAGE_SIZE;
   }
 }
@@ -134,36 +116,25 @@ export async function deleteProjectStorageFirst({
   admin,
   userId,
   projectId,
+  deletingAccountUserId = null,
 }: {
   admin: ProjectDeletionAdmin;
   userId: string;
   projectId: string;
+  deletingAccountUserId?: string | null;
 }): Promise<DeletionOutcome> {
-  let attemptId = crypto.randomUUID();
-  let deletionClaim = await claimProjectDeletion(admin, userId, projectId, attemptId);
+  const attemptId = crypto.randomUUID();
+  const { data: claimValue, error: claimFailure } = await admin.rpc("claim_project_deletion", {
+    p_attempt_id: attemptId,
+    p_project_id: projectId,
+    p_user_id: userId,
+  });
+  if (claimFailure) throw claimError(claimFailure);
 
-  if (deletionClaim.state === "waiting_for_files") {
-    const maintenance = await reconcileProjectFileLifecycle({
-      client: admin as unknown as ProjectFileMaintenanceClient,
-      userId,
-      projectId: deletionClaim.canonicalProjectId,
-    });
-    if (!maintenance.complete) {
-      throw new ProjectDeletionError("project_file_operations_settling", 409, 5);
-    }
-
-    // Reclaim only after reconciliation. An active file operation still
-    // returns waiting_for_files; a clean prefix starts the bounded drain.
-    attemptId = crypto.randomUUID();
-    deletionClaim = await claimProjectDeletion(
-      admin,
-      userId,
-      deletionClaim.canonicalProjectId,
-      attemptId,
-    );
-  }
-
-  const { claim, state, canonicalProjectId } = deletionClaim;
+  const claim = record(claimValue);
+  const state = typeof claim?.state === "string" ? claim.state : "";
+  const canonicalProjectId =
+    typeof claim?.projectId === "string" ? claim.projectId : projectId.toLowerCase();
 
   if (state === "completed") {
     return { ok: true, alreadyDeleted: true, removedObjects: 0 };
@@ -183,15 +154,43 @@ export async function deleteProjectStorageFirst({
   }
 
   try {
-    await verifyMetadataPaths(admin, canonicalProjectId, () =>
+    const promotedSources = await verifyMetadataPaths(admin, canonicalProjectId, () =>
       renewDeletionLease(admin, userId, canonicalProjectId, attemptId),
     );
+    const retainedPaths = new Set<string>();
+    const retainSurvivingPaths = async (paths: string[]) => {
+      const retained = await claimProjectStorageSourceCleanup(
+        admin,
+        canonicalProjectId,
+        paths,
+        [],
+        deletingAccountUserId,
+      );
+      retained.forEach((path) => retainedPaths.add(path));
+      return retained;
+    };
     const storage = admin.storage.from(PROJECT_FILES_BUCKET) as unknown as ProjectStorageAdapter;
     const cleanup = await purgeProjectStorageFolder({
       storage,
       projectId: canonicalProjectId,
+      protectedPaths: retainSurvivingPaths,
       onProgress: () => renewDeletionLease(admin, userId, canonicalProjectId, attemptId),
     });
+    let promotedRemoved = 0;
+    for (let start = 0; start < promotedSources.length; start += 100) {
+      const paths = promotedSources
+        .slice(start, start + 100)
+        .filter((path) => !path.startsWith(`${canonicalProjectId}/`));
+      const surviving = await retainSurvivingPaths(paths);
+      const removable = paths.filter((path) => !surviving.has(path));
+      if (removable.length > 0) {
+        const result = await storage.remove(removable);
+        if (result.error && !isMissingStorageObjectError(result.error))
+          throw new ProjectDeletionError("project_storage_remove_failed");
+        promotedRemoved += removable.length;
+      }
+      await renewDeletionLease(admin, userId, canonicalProjectId, attemptId);
+    }
     await renewDeletionLease(admin, userId, canonicalProjectId, attemptId);
 
     const { data: finalizedValue, error: finalizeFailure } = await admin.rpc(
@@ -200,6 +199,7 @@ export async function deleteProjectStorageFirst({
         p_attempt_id: attemptId,
         p_project_id: canonicalProjectId,
         p_user_id: userId,
+        p_retained_paths: [...retainedPaths],
       },
     );
     const finalized = record(finalizedValue);
@@ -209,7 +209,7 @@ export async function deleteProjectStorageFirst({
     return {
       ok: true,
       alreadyDeleted: finalized.completed === true,
-      removedObjects: cleanup.removedCount,
+      removedObjects: cleanup.removedCount + promotedRemoved,
     };
   } catch (error) {
     const code =
@@ -245,7 +245,7 @@ export async function deleteOwnedProjectsBeforeAccountDeletion({
 
   let deletedProjects = 0;
   for (const projectId of projectIds) {
-    await deleteProjectStorageFirst({ admin, userId, projectId });
+    await deleteProjectStorageFirst({ admin, userId, projectId, deletingAccountUserId: userId });
     deletedProjects += 1;
   }
   return { deletedProjects };

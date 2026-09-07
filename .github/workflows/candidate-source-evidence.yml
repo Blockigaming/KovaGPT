@@ -1,0 +1,63 @@
+name: Candidate Source Evidence
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/candidate-source-evidence.yml
+  push:
+    branches:
+      - codex/integrate-automatic-i-20260904
+    paths:
+      - .github/workflows/candidate-source-evidence.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidate-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-evidence:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout candidate with repository ancestry
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Archive tracked source and record provenance
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          evidence="$RUNNER_TEMP/candidate-source-evidence"
+          mkdir -p "$evidence"
+          git archive --format=tar --prefix=candidate/ "$SOURCE_SHA" | gzip -n > "$evidence/candidate-source.tar.gz"
+          printf '%s\n' "$SOURCE_SHA" > "$evidence/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree.txt"
+          # A bundle contains only repository objects and refs, not checkout
+          # configuration, credentials, environment, or runner files.
+          git update-ref refs/heads/evidence-candidate "$SOURCE_SHA"
+          git bundle create "$evidence/candidate.bundle" --all
+          git bundle verify "$evidence/candidate.bundle"
+          git for-each-ref --format='%(objectname) %(refname)' > "$evidence/refs.txt"
+          cd "$evidence"
+          sha256sum candidate-source.tar.gz candidate.bundle > SHA256SUMS
+
+      - name: Upload exact-head source evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-source-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/candidate-source-evidence/
+          if-no-files-found: error
+          retention-days: 1

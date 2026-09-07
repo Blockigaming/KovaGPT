@@ -319,6 +319,7 @@ export function verifyBrowserConfig({
   bundleDir = process.env.KOVA_BROWSER_BUNDLE_DIR || "dist/client",
   supabaseUrl = process.env.VITE_SUPABASE_URL,
   publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  stripePublishableKey = process.env.VITE_PAYMENTS_CLIENT_TOKEN || "",
   sourceSha = process.env.KOVA_SOURCE_SHA,
   sourceTree = process.env.KOVA_SOURCE_TREE,
   sourceAttestationPath = process.env.KOVA_SOURCE_ATTESTATION_PATH,
@@ -330,6 +331,13 @@ export function verifyBrowserConfig({
 } = {}) {
   const { projectRef, normalizedUrl } = normalizeSupabaseUrl(supabaseUrl);
   const normalizedKey = normalizePublishableKey(publishableKey);
+  const stripeKey = String(stripePublishableKey);
+  assertCondition(
+    stripeKey === "" || /^pk_(?:live|test)_[A-Za-z0-9]{16,}$/u.test(stripeKey),
+    "The optional Stripe browser key must be a publishable key",
+  );
+  let stripeExecutableOccurrences = 0;
+  const discoveredStripeKeys = new Set();
   const normalizedSourceSha = normalizeSourceSha(sourceSha);
   const normalizedSourceTree = normalizeSourceTree(sourceTree);
   const sourceAttestation = readSourceAttestation(
@@ -393,10 +401,14 @@ export function verifyBrowserConfig({
     if (file.executable) {
       executableExpectedUrlOccurrences += urlOccurrences;
       executableExpectedKeyOccurrences += keyOccurrences;
+      if (stripeKey) stripeExecutableOccurrences += countOccurrences(text, stripeKey);
     }
 
     for (const match of text.matchAll(SUPABASE_URL_PATTERN)) {
       discoveredProjectRefs.add(match[1].toLowerCase());
+    }
+    for (const match of text.matchAll(/\bpk_(?:live|test)_[A-Za-z0-9]{16,}\b/gu)) {
+      discoveredStripeKeys.add(match[0]);
     }
     for (const match of text.matchAll(PUBLISHABLE_KEY_SCAN_PATTERN)) {
       discoveredPublishableKeys.add(match[0]);
@@ -456,6 +468,15 @@ export function verifyBrowserConfig({
     "An unexpected Supabase publishable key was detected in browser assets",
   );
 
+  assertCondition(
+    [...discoveredStripeKeys].every((key) => key === stripeKey),
+    "An unexpected Stripe publishable key was detected in browser assets",
+  );
+  assertCondition(
+    !stripeKey || stripeExecutableOccurrences > 0,
+    "The intended Stripe publishable key was not found in executable browser assets",
+  );
+
   const provenance = {
     schemaVersion: 3,
     verification: "verified-build-time-browser-config",
@@ -465,6 +486,7 @@ export function verifyBrowserConfig({
     supabaseProjectRef: projectRef,
     supabaseUrl: normalizedUrl,
     publishableKeySha256: sha256(normalizedKey),
+    stripePublishableKeySha256: stripeKey ? sha256(stripeKey) : null,
     browserBundleSha256: bundleHash.digest("hex"),
     scannedFiles: browserFiles.length,
     executableFiles: browserFiles.filter((file) => file.executable).length,

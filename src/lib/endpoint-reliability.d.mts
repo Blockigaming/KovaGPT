@@ -54,3 +54,9 @@ export function unsubscribeLinkState(options: {
 export function retryableUnavailable(error: string): Response;
 export function noStoreJson(body: unknown, init?: ResponseInit): Response;
 export function financeQueueUnavailableResponse(): Response;
+
+export function readResponseBytesBounded(
+  response: Pick<Response, "headers" | "body">,
+  maxBytes: number,
+  options?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<Uint8Array>;
