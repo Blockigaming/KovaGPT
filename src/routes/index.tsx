@@ -399,6 +399,7 @@ function KovaGPT() {
   const abortRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
   const retryTimerRef = useRef<number | null>(null);
+  const retryActionEpochRef = useRef(new Map<string, number>());
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -921,6 +922,13 @@ function KovaGPT() {
       });
       return;
     }
+    // A terminal-error toast can outlive the temporary request that created it.
+    // Invalidate only this conversation's old callback before it becomes regular
+    // so clicking that toast cannot replay the temporary-context closure.
+    retryActionEpochRef.current.set(
+      active.id,
+      (retryActionEpochRef.current.get(active.id) ?? 0) + 1,
+    );
     setConversations(nextConversations);
     setTempChat(false);
     setTempChatContext("clean");
@@ -1453,11 +1461,18 @@ function KovaGPT() {
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
+          const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {
               label: "Retry",
               onClick: () => {
+                if ((retryActionEpochRef.current.get(nextConvId) ?? 0) !== retryActionEpoch) {
+                  return;
+                }
+                // A retry toast is single-use. This also makes older toasts for
+                // the same conversation inert once a newer retry is scheduled.
+                retryActionEpochRef.current.set(nextConvId, retryActionEpoch + 1);
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === nextConvId
