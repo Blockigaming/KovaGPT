@@ -3,9 +3,13 @@ import test from "node:test";
 
 import {
   analyzeMigrationManifest,
+  assertLineageSourceVersionsRepaired,
+  assertRemoteLineageInventory,
   classifyRemoteMigrationLineage,
   normalizeRemoteVersions,
   reconcileMigrationVersions,
+  validateRemoteMigrationEvidence,
+  validateSchemaProofEvidence,
   validateMigrationLineage,
 } from "../../scripts/release/migration-preflight.mjs";
 import { assertSafeRlsTarget, validateRlsMatrix } from "../../scripts/release/rls-two-user.mjs";
@@ -73,6 +77,8 @@ test("migration lineage makes production drift explicit and blocks unproven mapp
   const lineage = {
     schemaVersion: 1,
     targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 4,
+    observedSourceMigrationCount: 2,
     entries: [
       {
         remoteVersion: "20260102000000",
@@ -94,8 +100,11 @@ test("migration lineage makes production drift explicit and blocks unproven mapp
   };
   assert.deepEqual(validateMigrationLineage(lineage, manifest), {
     targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 4,
+    observedSourceMigrationCount: 2,
     remoteVersions: ["20260102000000", "20260102000001"],
     equivalent: 1,
+    schemaProven: 0,
     requiresSchemaProof: 1,
   });
   assert.deepEqual(
@@ -103,8 +112,127 @@ test("migration lineage makes production drift explicit and blocks unproven mapp
     {
       unknownRemote: ["20260102000002"],
       equivalent: [{ remoteVersion: "20260102000000", sourceVersion: "20260101000000" }],
+      schemaProven: [],
       requiresSchemaProof: ["20260102000001"],
     },
+  );
+});
+
+test("migration lineage binds a complete remote export and permits clean targets", () => {
+  const manifest = {
+    migrations: [{ timestamp: "20260101000000" }, { timestamp: "20260101000001" }],
+  };
+  const cleanLineage = {
+    schemaVersion: 1,
+    targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 2,
+    observedSourceMigrationCount: 2,
+    entries: [],
+  };
+  const analysis = validateMigrationLineage(cleanLineage, manifest);
+  const remote = validateRemoteMigrationEvidence({
+    targetProjectRef: "abcdefghijklmnopqrst",
+    migrationCount: 2,
+    migrations: ["20260101000000", "20260101000001"],
+  });
+  const reconciliation = reconcileMigrationVersions(
+    ["20260101000000", "20260101000001"],
+    remote.versions,
+  );
+  assert.doesNotThrow(() => assertRemoteLineageInventory(analysis, remote, reconciliation));
+  assert.throws(
+    () => assertRemoteLineageInventory(analysis, { ...remote, migrationCount: 0 }, reconciliation),
+    /migration_lineage_remote_count_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      assertRemoteLineageInventory(analysis, remote, {
+        ...reconciliation,
+        unknownRemote: ["20260102000000"],
+      }),
+    /migration_lineage_remote_inventory_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      validateRemoteMigrationEvidence({
+        targetProjectRef: "abcdefghijklmnopqrst",
+        migrationCount: 1,
+        migrations: [],
+      }),
+    /remote_migration_evidence_count_invalid/u,
+  );
+});
+
+test("schema-proven lineage requires matching external fingerprint evidence and repaired history", () => {
+  const fingerprint = {
+    schemaSha256: "a".repeat(64),
+    aclSha256: "b".repeat(64),
+    rlsSha256: "c".repeat(64),
+    functionSha256: "d".repeat(64),
+  };
+  const lineage = {
+    schemaVersion: 1,
+    targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 3,
+    observedSourceMigrationCount: 1,
+    entries: [
+      {
+        remoteVersion: "20260102000000",
+        remoteName: "reconciled",
+        status: "schema_proven",
+        sourceVersions: ["20260101000000"],
+        comparison: "schema-acl-rls-function-fingerprint",
+        proofId: "proof-20260102000000",
+      },
+    ],
+  };
+  const manifest = { migrations: [{ timestamp: "20260101000000" }] };
+  const analysis = validateMigrationLineage(lineage, manifest);
+  assert.equal(analysis.schemaProven, 1);
+  const remote = {
+    targetProjectRef: "abcdefghijklmnopqrst",
+    migrationCount: 3,
+    versions: ["20260101000000", "20260102000000", "20260103000000"],
+  };
+  const proof = {
+    schemaVersion: 1,
+    targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 3,
+    proofs: [
+      {
+        proofId: "proof-20260102000000",
+        remoteVersion: "20260102000000",
+        sourceVersions: ["20260101000000"],
+        sourceFingerprint: fingerprint,
+        remoteFingerprint: { ...fingerprint },
+      },
+    ],
+  };
+  assert.deepEqual(validateSchemaProofEvidence(proof, lineage, remote), { proofCount: 1 });
+  assert.throws(
+    () =>
+      validateSchemaProofEvidence(
+        {
+          ...proof,
+          proofs: [
+            {
+              ...proof.proofs[0],
+              remoteFingerprint: { ...fingerprint, aclSha256: "e".repeat(64) },
+            },
+          ],
+        },
+        lineage,
+        remote,
+      ),
+    /migration_schema_proof_entry_invalid/u,
+  );
+  const remoteLineage = classifyRemoteMigrationLineage(["20260102000000"], lineage);
+  assert.throws(
+    () => assertLineageSourceVersionsRepaired(remoteLineage, ["20260102000000"]),
+    /remote_migration_source_history_unrepaired/u,
+  );
+  assert.doesNotThrow(() =>
+    assertLineageSourceVersionsRepaired(remoteLineage, ["20260101000000", "20260102000000"]),
   );
 });
 

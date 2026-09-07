@@ -20,11 +20,13 @@ test("the observed production migration drift is fully inventoried and conservat
   assert.equal(lineage.observedSourceMigrationCount, 93);
   assert.equal(analysis.remoteVersions.length, 24);
   assert.equal(analysis.equivalent, 5);
+  assert.equal(analysis.schemaProven, 0);
   assert.equal(analysis.requiresSchemaProof, 19);
 
   const classified = classifyRemoteMigrationLineage(analysis.remoteVersions, lineage);
   assert.deepEqual(classified.unknownRemote, []);
   assert.equal(classified.equivalent.length, 5);
+  assert.equal(classified.schemaProven.length, 0);
   assert.equal(classified.requiresSchemaProof.length, 19);
 
   const manifestAnalysis = analyzeMigrationManifest(manifest);
