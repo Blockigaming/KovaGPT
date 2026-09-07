@@ -63,6 +63,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    ).toBeVisible();
 
     const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
     await expect(chatNavigation).toBeVisible();
@@ -89,6 +92,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    ).toBeVisible();
 
     const workLink = page.getByRole("link", { name: "Work" });
     await expect(workLink).toBeVisible();
