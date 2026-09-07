@@ -10,3 +10,8 @@ test("KovaGPT authentication is Supabase-owned and Clerk-free", () => {
     assert.match(warning, /package-lock\.json:root:@clerk\/clerk-react/u);
   }
 });
+
+test("auth-provider source scan tolerates a tracked file deleted before staging", () => {
+  const result = inspectAuthProviderContract({ files: ["src/lib/deleted-before-stage.ts"] });
+  assert.deepEqual(result.errors, []);
+});

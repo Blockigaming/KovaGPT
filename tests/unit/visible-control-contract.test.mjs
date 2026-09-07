@@ -6,3 +6,10 @@ import { inspectVisibleControlContract } from "../../scripts/release/visible-con
 test("visible product controls are backed or explicitly absent", () => {
   assert.deepEqual(inspectVisibleControlContract(), []);
 });
+
+test("visible-control audit tolerates a tracked file deleted before staging", () => {
+  assert.deepEqual(
+    inspectVisibleControlContract({ files: ["src/lib/deleted-before-stage.ts"] }),
+    [],
+  );
+});
