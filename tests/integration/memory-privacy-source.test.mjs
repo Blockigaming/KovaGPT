@@ -82,6 +82,27 @@ test("Temporary Chat enforces clean or personalized context without new memory",
       retryCancellation > conversionStart &&
       retryCancellation < conversionBoundary,
   );
+  const retryInvalidation = page.indexOf("retryActionEpochRef.current.set(", conversionStart);
+  const conversionStateUpdate = page.indexOf(
+    "setConversations(nextConversations)",
+    conversionStart,
+  );
+  assert.ok(
+    retryInvalidation > retryCancellation && retryInvalidation < conversionStateUpdate,
+    "temporary-chat conversion must invalidate its stale retry action before state changes",
+  );
+  const retryActionStart = page.indexOf('label: "Retry"');
+  const retryActionEnd = page.indexOf("updateAssistant(", retryActionStart);
+  assert.ok(retryActionStart > -1 && retryActionEnd > retryActionStart);
+  const retryAction = page.slice(retryActionStart, retryActionEnd);
+  assert.match(
+    retryAction,
+    /retryActionEpochRef\.current\.get\(nextConvId\)[\s\S]*?!== retryActionEpoch/,
+  );
+  assert.match(
+    retryAction,
+    /retryActionEpochRef\.current\.set\(nextConvId, retryActionEpoch \+ 1\)/,
+  );
   assert.match(page, /disabled=\{isStreaming\}/);
   assert.match(page, /setTempChat\(false\)[\s\S]*?setTempChatContext\("clean"\)/);
   assert.match(
