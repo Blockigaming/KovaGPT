@@ -6,6 +6,7 @@ const styles = readFileSync("src/styles.css", "utf8");
 const runtime = readFileSync("src/components/PlatformRuntime.tsx", "utf8");
 const parity = readFileSync("src/styles/chatgpt-final-parity.css", "utf8");
 const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
+const mobileTopBar = readFileSync("src/components/MobileTopBar.tsx", "utf8");
 
 test("the final ChatGPT-first parity layer is loaded in every application route", () => {
   assert.match(styles, /@import "\.\/styles\/chatgpt-final-parity\.css"/u);
@@ -32,6 +33,10 @@ test("current signed-out ChatGPT reference surfaces remain represented with Kova
     assert.match(sidebar, new RegExp(label, "u"));
   assert.match(sidebar, /Get responses tailored to you/u);
   assert.doesNotMatch(sidebar, /OpenAI|ChatGPT logo/u);
+  assert.match(
+    mobileTopBar,
+    /rounded-full bg-foreground px-4[\s\S]*?text-background[\s\S]*?Log in/u,
+  );
 });
 
 test("sidebar and composer motion remain restrained and accessible", () => {

@@ -67,7 +67,7 @@ export function MobileTopBar({
         </div>
         {showAuth ? (
           <SignInButton mode="modal">
-            <button className="mr-1 min-h-11 justify-self-end whitespace-nowrap rounded-md px-3 text-[13px] font-medium text-foreground transition hover:bg-accent/60 active:bg-accent">
+            <button className="mr-1 min-h-11 justify-self-end whitespace-nowrap rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80">
               Log in
             </button>
           </SignInButton>
