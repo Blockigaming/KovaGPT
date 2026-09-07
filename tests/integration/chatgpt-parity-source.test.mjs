@@ -41,6 +41,10 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
   assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(
+    sidebar,
+    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
+  );
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {

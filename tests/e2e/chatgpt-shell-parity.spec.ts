@@ -84,6 +84,18 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test("collapsed desktop navigation keeps Work one step away", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await installAuthenticatedFixture(page);
+    await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const workLink = page.getByRole("link", { name: "Work" });
+    await expect(workLink).toBeVisible();
+    await workLink.click();
+    await expect(page).toHaveURL(/\/work$/);
+  });
+
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {
