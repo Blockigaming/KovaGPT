@@ -47,6 +47,18 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
+test("signed-in empty chat removes guest-only onboarding clutter", () => {
+  assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
+  assert.match(
+    route,
+    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
+  );
+  assert.match(
+    route,
+    /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
+  );
+});
+
 test("composer actions, message editing, and markdown stay reachable and lossless", () => {
   assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
   assert.match(
