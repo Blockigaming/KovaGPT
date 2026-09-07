@@ -48,14 +48,14 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
 });
 
 test("signed-in empty chat removes guest-only onboarding clutter", () => {
-  assert.match(route, /\{!isLoaded \|\| !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
+  assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
   assert.match(
     route,
-    /\{!isLoaded \|\| !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
+    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
   );
   assert.match(
     route,
-    /\{!isLoaded \|\| !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
+    /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
   );
 });
 

@@ -45,6 +45,20 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     }
   });
 
+  test("returning-user auth loading state stays visually calm", async ({ page }) => {
+    await installAuthenticatedFixture(page, { authUserDelayMs: 2_000 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("main")).toBeVisible();
+
+    expect(await page.locator(".kova-greeting-mark").count()).toBe(0);
+    expect(await page.locator(".kova-starter-grid").count()).toBe(0);
+    expect(
+      await page
+        .getByText("Think through a question, shape an idea, or get a polished first draft.")
+        .count(),
+    ).toBe(0);
+  });
+
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {

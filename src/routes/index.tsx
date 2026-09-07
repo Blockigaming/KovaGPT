@@ -1822,7 +1822,7 @@ function KovaGPT() {
           >
             <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
               <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6">
-                {!isLoaded || !isSignedIn ? (
+                {isLoaded && !isSignedIn ? (
                   <div className="kova-greeting-mark" aria-hidden="true">
                     <NovaLogo decorative mark className="h-5 w-5" />
                   </div>
@@ -1833,7 +1833,7 @@ function KovaGPT() {
                 >
                   {greeting}
                 </h1>
-                {!isLoaded || !isSignedIn ? (
+                {isLoaded && !isSignedIn ? (
                   <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
                     Think through a question, shape an idea, or get a polished first draft.
                   </p>
@@ -1867,7 +1867,7 @@ function KovaGPT() {
                   surface="empty"
                 />
               </div>
-              {!isLoaded || !isSignedIn ? (
+              {isLoaded && !isSignedIn ? (
                 <Suspense
                   fallback={<div aria-hidden="true" className="h-[128px] w-full max-w-[48rem]" />}
                 >
