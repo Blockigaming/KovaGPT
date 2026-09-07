@@ -996,7 +996,12 @@ export const Route = createFileRoute("/api/chat")({
             // Injects project instructions, project memory, and top-k retrieved
             // knowledge-base chunks matched against the user's last message.
             let projectBlock = "";
-            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            if (
+              auth &&
+              usesExistingContext &&
+              typeof projectId === "string" &&
+              /^[0-9a-f-]{36}$/i.test(projectId)
+            ) {
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.

@@ -125,6 +125,34 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(dialog, /Nothing from this temporary chat will be added to memory/);
 });
 
+test("clean Temporary Chat rejects custom-client project context while personalized mode may read it", () => {
+  const chatApi = read("src/routes/api/chat.ts");
+  const projectStart = chatApi.indexOf("// Project workspace context:");
+  const projectEnd = chatApi.indexOf("// Chat-scoped workspace context:", projectStart);
+  assert.ok(projectStart >= 0 && projectEnd > projectStart);
+  const projectContext = chatApi.slice(projectStart, projectEnd);
+
+  assert.match(
+    projectContext,
+    /if \(\s*auth &&\s*usesExistingContext &&\s*typeof projectId === "string"/,
+  );
+  assert.match(projectContext, /\.rpc\("is_project_member"/);
+  assert.match(projectContext, /\.from\("project_memory"\)/);
+  assert.match(projectContext, /retrieveProjectContext\(\{/);
+});
+
+test("normal project-chat UI remains an existing-context request", () => {
+  const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");
+  const requestStart = projectChat.indexOf('authFetch("/api/chat"');
+  const requestEnd = projectChat.indexOf("});", requestStart);
+  assert.ok(requestStart >= 0 && requestEnd > requestStart);
+  const request = projectChat.slice(requestStart, requestEnd);
+
+  assert.match(request, /projectId,/);
+  assert.doesNotMatch(request, /temporary\s*:/);
+  assert.doesNotMatch(request, /temporaryContext\s*:/);
+});
+
 test("saved-memory deletion is authenticated, serialized after writes, and truthful on failure", () => {
   const settings = read("src/components/SettingsDialog.tsx");
   const coordinator = read("src/lib/memory-write-coordinator.mjs");
