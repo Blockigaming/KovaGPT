@@ -35,7 +35,7 @@ test("current signed-out ChatGPT reference surfaces remain represented with Kova
   assert.doesNotMatch(sidebar, /OpenAI|ChatGPT logo/u);
   assert.match(
     mobileTopBar,
-    /rounded-full bg-foreground px-4[\\s\\S]*?text-background[\\s\\S]*?Log in/u,
+    /rounded-full bg-foreground px-4[\s\S]*?text-background[\s\S]*?Log in/u,
   );
 });
 
