@@ -1822,18 +1822,22 @@ function KovaGPT() {
           >
             <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
               <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6">
-                <div className="kova-greeting-mark" aria-hidden="true">
-                  <NovaLogo decorative mark className="h-5 w-5" />
-                </div>
+                {!isLoaded || !isSignedIn ? (
+                  <div className="kova-greeting-mark" aria-hidden="true">
+                    <NovaLogo decorative mark className="h-5 w-5" />
+                  </div>
+                ) : null}
                 <h1
                   id="chat-greeting"
                   className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
                 >
                   {greeting}
                 </h1>
-                <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                  Think through a question, shape an idea, or get a polished first draft.
-                </p>
+                {!isLoaded || !isSignedIn ? (
+                  <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                    Think through a question, shape an idea, or get a polished first draft.
+                  </p>
+                ) : null}
               </div>
 
               <div className="mx-auto w-full max-w-[48rem] px-1 sm:px-2">
@@ -1863,11 +1867,13 @@ function KovaGPT() {
                   surface="empty"
                 />
               </div>
-              <Suspense
-                fallback={<div aria-hidden="true" className="h-[128px] w-full max-w-[48rem]" />}
-              >
-                <HomeChatStarters setInput={setInput} />
-              </Suspense>
+              {!isLoaded || !isSignedIn ? (
+                <Suspense
+                  fallback={<div aria-hidden="true" className="h-[128px] w-full max-w-[48rem]" />}
+                >
+                  <HomeChatStarters setInput={setInput} />
+                </Suspense>
+              ) : null}
             </div>
             {!isLoaded || isSignedIn ? null : (
               <p className="kova-disclaimer mx-auto w-full max-w-[48rem] px-4 pb-3 text-center text-[11px] leading-4 text-muted-foreground/80">

@@ -50,6 +50,11 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     for (const theme of themes) {
       for (const width of widths) {
         await verifyConversationShell(page, width, theme);
+        await expect(page.locator(".kova-greeting-mark")).toHaveCount(0);
+        await expect(page.locator(".kova-starter-grid")).toHaveCount(0);
+        await expect(
+          page.getByText("Think through a question, shape an idea, or get a polished first draft."),
+        ).toHaveCount(0);
         if (width < 1024) {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
           await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
