@@ -80,11 +80,30 @@ async function mockPlusUser(page: Page) {
       });
       return;
     }
+    if (url.pathname === "/rest/v1/rpc/current_subscription_summary") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ effectiveTier: "plus" }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: url.pathname.includes("/rpc/") ? "null" : "[]",
     });
+  });
+}
+
+async function closeOnboardingAndWaitForAccount(page: Page) {
+  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
+  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole("button", { name: "Close" }).click();
+  }
+  await expect(page.locator('button[aria-label="Account menu"]:visible').first()).toBeVisible({
+    timeout: 15_000,
   });
 }
 
@@ -144,10 +163,7 @@ test("Deep Research renders its completed lifecycle and partial-source warning",
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   await expect(page.locator('button[aria-label="Start temporary chat"]').first()).toBeAttached();
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
@@ -190,10 +206,7 @@ test("Deep Research blocks attachments before creating a progress message", asyn
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.getByRole("button", { name: "Deep research" }).click();
@@ -277,10 +290,7 @@ test("interrupted progress-only research exposes a working retry", async ({ page
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const onboarding = page.getByRole("dialog", { name: "Welcome to KovaGPT" });
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false))
-    await onboarding.getByRole("button", { name: "Close" }).click();
+  await closeOnboardingAndWaitForAccount(page);
 
   const progress = page.getByRole("region", { name: "Deep Research progress" });
   await expect(progress).toContainText("Research interrupted");
