@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 93,
-  "latest": "20260904210000_project_deletion_storage_integrity.sql",
+  "count": 94,
+  "latest": "20260906234052_3594616d-47a6-4a2f-ad70-8af66d2c05d2.sql",
   "migrations": [
     {
       "order": 1,
@@ -1924,6 +1924,20 @@
       "rls": ["project_deletion_jobs"],
       "policies": [],
       "indexes": ["projects_owner_deletion_requested_idx", "project_deletion_jobs_retry_idx"]
+    },
+    {
+      "order": 94,
+      "filename": "20260906234052_3594616d-47a6-4a2f-ad70-8af66d2c05d2.sql",
+      "timestamp": "20260906234052",
+      "sha256": "bbc3f0781bd518bb6bdb99e8f732a9de63fc34e95c011edd3bfd22e644c134fb",
+      "tables": [],
+      "functions": ["kova_can_pin_source"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

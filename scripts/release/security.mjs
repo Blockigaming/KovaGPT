@@ -190,7 +190,10 @@ export function runReleaseSecurityAudit({ files = trackedFiles() } = {}) {
     ) {
       continue;
     }
-    inspectText(path, readFileSync(join(root, path), "utf8"), violations);
+    const sourcePath = join(root, path);
+    // git ls-files can retain a pending deletion until it is staged.
+    if (!existsSync(sourcePath)) continue;
+    inspectText(path, readFileSync(sourcePath, "utf8"), violations);
   }
 
   for (const directory of ["dist/client", "dist/server"]) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 93,
+  "migrationCount": 94,
   "tables": [
     "account_audit_entries",
     "account_export_jobs",
@@ -214,6 +214,7 @@
     "kova_accept_message_version",
     "kova_activate_chat_branch",
     "kova_activate_chat_branch",
+    "kova_can_pin_source",
     "kova_can_pin_source",
     "kova_chat_branch_lineage_guard",
     "kova_create_chat_branch",
@@ -1072,6 +1073,8 @@
     "execute on function public.kova_activate_chat_branch(text, uuid) to service_role",
     "execute on function public.kova_activate_chat_branch(text, uuid) to service_role",
     "execute on function public.kova_can_pin_source(text, uuid, uuid) to authenticated",
+    "execute on function public.kova_can_pin_source(text, uuid, uuid) to authenticated",
+    "execute on function public.kova_can_pin_source(text, uuid, uuid) to service_role",
     "execute on function public.kova_can_pin_source(text, uuid, uuid) to service_role",
     "execute on function public.kova_create_chat_branch(\n  text, text, uuid, text, text, integer, text[], text, boolean, integer) to authenticated",
     "execute on function public.kova_create_chat_branch(\n  text, text, uuid, text, text, integer, text[], text, boolean, integer) to service_role",
@@ -1305,6 +1308,8 @@
     "all on function public.kova_activate_chat_branch(text, uuid) from public",
     "all on function public.kova_activate_chat_branch(text, uuid) from public",
     "all on function public.kova_can_pin_source(text, uuid, uuid) from anon",
+    "all on function public.kova_can_pin_source(text, uuid, uuid) from anon",
+    "all on function public.kova_can_pin_source(text, uuid, uuid) from public",
     "all on function public.kova_can_pin_source(text, uuid, uuid) from public",
     "all on function public.kova_chat_branch_lineage_guard() from anon",
     "all on function public.kova_chat_branch_lineage_guard() from authenticated",
@@ -1398,5 +1403,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "6d54ae190609f7af0807126580d5ec3b1f9f4f222ff9f7360ba17c1a008a964b"
+  "sha256": "2d2689474cf8caa8e0277a274e67d6f79d4d098d6a342d2b206ee62e9e6ce3fe"
 }
