@@ -31,7 +31,8 @@ test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and f
     'renderNavLink("/projects"',
     'renderNavLink("/library"',
     'renderNavLink("/images"',
-    '"/scheduled-tasks",',
+    'aria-label="More destinations"',
+    '"Scheduled tasks status",',
   ];
   let cursor = -1;
   for (const marker of order) {

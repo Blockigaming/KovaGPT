@@ -45,8 +45,25 @@ for (const theme of themes) {
 
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
-      for (const label of ["New chat", "Search", "Images", "Plugins", "Deep research", "Maps"])
-        await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+      if (authenticated) {
+        for (const label of [
+          "New chat",
+          "Search",
+          "Work",
+          "Projects",
+          "Library",
+          "Images",
+          "Deep research",
+        ])
+          await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+        await page.getByRole("button", { name: "More", exact: true }).click();
+        await expect(page.getByRole("group", { name: "More destinations" })).toBeVisible();
+        for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
+          await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+      } else {
+        for (const label of ["New chat", "Images", "Plugins", "Deep research", "Maps"])
+          await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+      }
     } else {
       await expect(page.locator(".kova-topbar")).toBeVisible();
       const interactiveSizes = await page
