@@ -147,7 +147,7 @@ export function OnboardingDialog({
   }, [user?.id]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded || !isSignedIn || !user?.id) return;
     let cancelled = false;
     (async () => {
       try {
@@ -175,11 +175,11 @@ export function OnboardingDialog({
   };
 
   const finish = async (starter?: string) => {
-    if (!primaryUse) return;
+    if (!primaryUse || !user?.id) return;
     setSaving(true);
     setSaveError(null);
     try {
-      if (starter) saveDraft(user?.id ?? null, null, starter);
+      if (starter) saveDraft(user.id, null, starter);
       await persistOnboarding();
       onResponseLengthChange?.(RESPONSE_LENGTH_BY_STYLE[style]);
       if (starter) {
