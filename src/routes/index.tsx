@@ -19,8 +19,14 @@ import {
   type SetStateAction,
 } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, Share2, Download, Sliders } from "lucide-react";
+import { PanelLeft, Search, Share2, Download, Sliders, MoreHorizontal } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import {
@@ -1719,64 +1725,66 @@ function KovaGPT() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            {active && (
+            {active && isSignedIn ? (
               <>
-                {isSignedIn ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const transcript = active.messages
-                        .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
-                        .join("\n\n");
-                      const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `${active.title || "chat"}.md`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="hidden xl:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
-                    aria-label="Export chat"
-                    title="Export chat"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Export</span>
-                  </button>
-                ) : null}
-                {isSignedIn ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isSignedIn) {
-                        toast.message("Sign in to share chats");
-                        openSignUp();
-                        return;
+                <button
+                  type="button"
+                  onClick={() => setShareChatId(active.id)}
+                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+                  aria-label="Share chat"
+                  title="Share chat"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share</span>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={`hidden h-9 w-9 items-center justify-center rounded-lg text-foreground hover:bg-accent lg:inline-flex ${
+                        chatRulesActive ? "bg-primary/10 text-primary" : ""
+                      }`}
+                      aria-label={
+                        chatRulesActive
+                          ? "More chat actions, chat rules active"
+                          : "More chat actions"
                       }
-                      setShareChatId(active.id);
-                    }}
-                    className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
-                    aria-label="Share chat"
-                    title="Share chat"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span>Share</span>
-                  </button>
-                ) : null}
+                      title="More chat actions"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onSelect={() => setWorkspaceOpen(true)}>
+                      <Sliders className="mr-2 h-4 w-4" />
+                      <span>Chat settings</span>
+                      {chatRulesActive ? (
+                        <span className="ml-auto text-xs font-medium text-primary">Rules on</span>
+                      ) : null}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        const transcript = active.messages
+                          .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
+                          .join("\n\n");
+                        const blob = new Blob([transcript], {
+                          type: "text/markdown;charset=utf-8",
+                        });
+                        const url = URL.createObjectURL(blob);
+                        const anchor = document.createElement("a");
+                        anchor.href = url;
+                        anchor.download = `${active.title || "chat"}.md`;
+                        anchor.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
-            )}
-            {active && (
-              <button
-                type="button"
-                onClick={() => setWorkspaceOpen(true)}
-                className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
-                aria-label="Chat settings: rules and pinned files"
-                title="Chat settings"
-              >
-                <Sliders className="h-4 w-4" />
-                <span>{chatRulesActive ? "Rules on" : "Chat settings"}</span>
-              </button>
-            )}
+            ) : null}
             {isLoaded && isSignedIn && (
               <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
                 <TemporaryChatToggle
