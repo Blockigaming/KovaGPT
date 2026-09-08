@@ -9,7 +9,6 @@ import {
   Bookmark,
   FileEdit,
   Code2,
-  Eye,
   MoreHorizontal,
   Share2,
   Pencil,
@@ -39,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
+import { submitResponseFeedback } from "@/lib/feedback.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
@@ -203,35 +203,104 @@ function ChatMessageInner({
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
+  const { isSignedIn } = useUser();
+  const feedbackFn = useServerFn(submitResponseFeedback);
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
-  const feedbackKey = message.id ? `kova-message-feedback:${message.id}` : null;
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(() => {
-    if (!feedbackKey) return null;
-    const stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey);
-    return stored === "up" || stored === "down" ? stored : null;
-  });
-  const persistFeedback = (next: "up" | "down" | null) => {
-    setFeedback(next);
-    if (!feedbackKey) return;
-    const storage = safeBrowserStorage("localStorage");
-    if (next) storage?.setItem(feedbackKey, next);
-    else storage?.removeItem(feedbackKey);
-    toast.success("Rating saved on this device");
+  const feedbackKey =
+    principalResolved && message.id
+      ? principalScopedStorageKey(
+          `kova-message-feedback:${encodeURIComponent(message.id)}`,
+          userKey,
+        )
+      : null;
+  const [feedbackState, setFeedbackState] = useState<{
+    key: string | null;
+    value: "up" | "down" | null;
+  }>({ key: null, value: null });
+  const feedback = feedbackState.key === feedbackKey ? feedbackState.value : null;
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = feedbackKey
+        ? (safeBrowserStorage("localStorage")?.getItem(feedbackKey) ?? null)
+        : null;
+    } catch {
+      /* Keep feedback session-only when browser storage is unavailable. */
+    }
+    setFeedbackState({
+      key: feedbackKey,
+      value: stored === "up" || stored === "down" ? stored : null,
+    });
+    setFeedbackSaving(false);
+  }, [feedbackKey]);
+
+  const persistFeedback = async (next: "up" | "down" | null) => {
+    if (!feedbackKey) {
+      toast.error("Your account is still loading. Try again.");
+      return;
+    }
+    const previous = feedback;
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
+    setFeedbackState({ key: feedbackKey, value: next });
+    setFeedbackSaving(true);
+
+    if (isSignedIn) {
+      try {
+        await feedbackFn({ data: { messageId: message.id, rating: next } });
+        if (!isCurrent()) return;
+        try {
+          const storage = safeBrowserStorage("localStorage");
+          if (next) storage?.setItem(feedbackKey, next);
+          else storage?.removeItem(feedbackKey);
+        } catch {
+          /* The authenticated feedback row remains authoritative. */
+        }
+        toast.success(next ? "Feedback saved" : "Feedback removed");
+      } catch (error) {
+        if (!isCurrent()) return;
+        setFeedbackState({ key: feedbackKey, value: previous });
+        toast.error(error instanceof Error ? error.message : "Feedback could not be saved.");
+      } finally {
+        if (isCurrent()) setFeedbackSaving(false);
+      }
+      return;
+    }
+
+    let persisted = false;
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (next) storage?.setItem(feedbackKey, next);
+      else storage?.removeItem(feedbackKey);
+      persisted = Boolean(storage);
+    } catch {
+      /* The visible rating can remain session-only. */
+    }
+    toast.success(
+      next
+        ? persisted
+          ? "Rating saved on this device"
+          : "Rating applied for this session"
+        : "Rating removed",
+    );
+    setFeedbackSaving(false);
   };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const pressTimer = useRef<number | null>(null);
-  const pressFired = useRef(false);
   const startLongPress = useCallback(() => {
     if (!isMobile) return;
-    pressFired.current = false;
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
     pressTimer.current = window.setTimeout(() => {
-      pressFired.current = true;
       try {
         navigator.vibrate?.(12);
       } catch {
@@ -268,7 +337,6 @@ function ChatMessageInner({
   useEffect(closeMemory, [closeMemory, principal, message.id]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const lastSelectionRef = useRef<string>("");
-  const { isSignedIn } = useUser();
 
   // Remember the rendered selection while the user still has it: opening a menu
   // clears the DOM selection in most browsers.
@@ -335,9 +403,31 @@ function ChatMessageInner({
   );
 
   const copy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Couldn't copy this response");
+    }
+  };
+
+  const share = async () => {
+    const text = message.content;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ text, title: "KovaGPT response" });
+        return;
+      } catch {
+        /* Fall back to copying unless the browser completed a share. */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Response copied to clipboard");
+    } catch {
+      toast.error("Couldn't share");
+    }
   };
 
   const saveItem = async () => {
@@ -631,7 +721,11 @@ function ChatMessageInner({
       <div className="mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
+            <div
+              className="kova-message-actions mt-1 max-w-full overflow-x-auto"
+              role="toolbar"
+              aria-label="Response actions"
+            >
               {memorySources && (
                 <button
                   type="button"
@@ -642,6 +736,7 @@ function ChatMessageInner({
                 </button>
               )}
               <button
+                type="button"
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
                 title={copied ? "Copied" : "Copy"}
@@ -655,28 +750,31 @@ function ChatMessageInner({
               </button>
 
               <button
-                onClick={async () => {
-                  const text = message.content;
-                  if (typeof navigator !== "undefined" && navigator.share) {
-                    try {
-                      await navigator.share({ text, title: "KovaGPT response" });
-                      return;
-                    } catch {
-                      /* user cancelled */
-                    }
-                  }
-                  try {
-                    await navigator.clipboard.writeText(text);
-                    toast.success("Response copied to clipboard");
-                  } catch {
-                    toast.error("Couldn't share");
-                  }
-                }}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
-                title="Share"
-                aria-label="Share"
+                type="button"
+                onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
+                disabled={feedbackSaving}
+                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                  feedback === "up" ? "bg-accent text-foreground" : ""
+                }`}
+                title="Good response"
+                aria-label="Good response"
+                aria-pressed={feedback === "up"}
               >
-                <Share2 className="w-4 h-4" />
+                <ThumbsUp className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
+                disabled={feedbackSaving}
+                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                  feedback === "down" ? "bg-accent text-foreground" : ""
+                }`}
+                title="Bad response"
+                aria-label="Bad response"
+                aria-pressed={feedback === "down"}
+              >
+                <ThumbsDown className="h-4 w-4" />
               </button>
 
               {email && (
@@ -751,17 +849,34 @@ function ChatMessageInner({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const sourceActivity = message.activities?.find((activity) =>
-                        /search|source|web/i.test(activity.tool + activity.label),
-                      );
-                      if (sourceActivity) toast.message(sourceActivity.label);
-                      else toast.message("No linked sources for this response");
-                    }}
-                  >
-                    <Globe className="mr-2 h-4 w-4" /> View sources
+                  <DropdownMenuItem onSelect={() => void share()}>
+                    <Share2 className="mr-2 h-4 w-4" /> Share
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void saveItem()} disabled={saving}>
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : saved ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Bookmark className="mr-2 h-4 w-4" />
+                    )}
+                    {saving ? "Saving…" : saved ? "Saved to Library" : "Save to Library"}
+                  </DropdownMenuItem>
+                  {message.activities?.some((activity) =>
+                    /search|source|web/i.test(activity.tool + activity.label),
+                  ) && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const sourceActivity = message.activities?.find((activity) =>
+                          /search|source|web/i.test(activity.tool + activity.label),
+                        );
+                        if (sourceActivity) toast.message(sourceActivity.label);
+                      }}
+                    >
+                      <Globe className="mr-2 h-4 w-4" /> View sources
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(event) => {
                       event.preventDefault();
@@ -858,21 +973,7 @@ function ChatMessageInner({
                 icon: Share2,
                 onClick: async () => {
                   setMobileSheetOpen(false);
-                  const text = message.content;
-                  if (typeof navigator !== "undefined" && navigator.share) {
-                    try {
-                      await navigator.share({ text, title: "KovaGPT response" });
-                      return;
-                    } catch {
-                      /* cancel */
-                    }
-                  }
-                  try {
-                    await navigator.clipboard.writeText(text);
-                    toast.success("Response copied");
-                  } catch {
-                    toast.error("Couldn't share");
-                  }
+                  await share();
                 },
               },
               ...(onReplaceContent

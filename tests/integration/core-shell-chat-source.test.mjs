@@ -113,6 +113,18 @@ test("message component keeps reachable assistant actions and safe streaming sta
   // Local browser read-aloud is an accessibility aid, not full-duplex provider Voice.
   assert.doesNotMatch(message, /getUserMedia|MediaRecorder|voice_session/);
   assert.match(message, /saveItem/);
+  assert.match(message, /aria-label="Response actions"/);
+  assert.match(message, /aria-label="Good response"/);
+  assert.match(message, /aria-label="Bad response"/);
+  assert.match(message, /principalScopedStorageKey\([\s\S]{0,100}`kova-message-feedback:/);
+  assert.match(message, /useServerFn\(submitResponseFeedback\)/);
+  assert.match(
+    message,
+    /await feedbackFn\(\{ data: \{ messageId: message\.id, rating: next \} \}\)/,
+  );
+  assert.match(message, /requestPrincipal === principalRef\.current/);
+  assert.match(message, />\s*Share\s*</);
+  assert.match(message, /Save to Library/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);
 });
