@@ -23,6 +23,7 @@ import {
   savePendingActive,
 } from "@/lib/chat-store";
 import { useNovaSettings } from "@/lib/use-nova-settings";
+import { saveStoredSettings } from "@/lib/settings-storage";
 import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
@@ -265,9 +266,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         )}
         <OnboardingDialog
-          onResponseLengthChange={(responseLength) =>
-            setSettings((previous) => ({ ...previous, responseLength }))
-          }
+          onResponseLengthChange={(responseLength) => {
+            const next = { ...settings, responseLength };
+            setSettings(next);
+            try {
+              saveStoredSettings(userKey, next);
+            } catch {
+              /* The in-memory preference still applies until navigation. */
+            }
+          }}
         />
       </Suspense>
       <TimersWidget

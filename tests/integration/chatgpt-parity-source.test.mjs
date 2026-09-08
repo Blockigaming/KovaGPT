@@ -106,6 +106,7 @@ test("signed-in onboarding hands real choices to the authenticated composer", ()
   assert.match(onboarding, /setPrimaryUse\(null\);[\s\S]{0,160}\}, \[user\?\.id\]\);/);
   assert.match(route, /<OnboardingDialog[\s\S]{0,320}onStarterSelected=\{\(starter\)/);
   assert.match(appShell, /<OnboardingDialog[\s\S]{0,240}onResponseLengthChange=/);
+  assert.match(appShell, /saveStoredSettings\(userKey, next\)/);
 });
 
 test("active desktop chat keeps one primary action and groups secondary controls", () => {
