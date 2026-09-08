@@ -929,6 +929,13 @@ function KovaGPT() {
       active.id,
       (retryActionEpochRef.current.get(active.id) ?? 0) + 1,
     );
+    const draftKey = draftStorageKey(userKey, active.id);
+    try {
+      saveDraft(userKey, active.id, input);
+    } catch {
+      /* The in-memory draft remains authoritative until persistence retries. */
+    }
+    lastLoadedDraftRef.current = draftKey;
     setConversations(nextConversations);
     setTempChat(false);
     setTempChatContext("clean");
@@ -936,7 +943,7 @@ function KovaGPT() {
       description:
         "Future messages continue as a regular chat. Earlier temporary turns stay out of saved memory.",
     });
-  }, [active, conversations, isStreaming, setConversations, userKey]);
+  }, [active, conversations, input, isStreaming, setConversations, userKey]);
 
   const openCommandPalette = useCallback(() => {
     commandReturnFocusRef.current =

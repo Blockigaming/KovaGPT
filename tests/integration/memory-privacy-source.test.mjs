@@ -141,6 +141,30 @@ test("clean Temporary Chat rejects custom-client project context while personali
   assert.match(projectContext, /retrieveProjectContext\(\{/);
 });
 
+test("clean Temporary Chat strips project relations before Deep Research authorization", () => {
+  const chatApi = read("src/routes/api/chat.ts");
+  const authorizationStart = chatApi.indexOf("await authorizeResearchPersistence({");
+  const authorizationEnd = chatApi.indexOf("});", authorizationStart);
+  assert.ok(authorizationStart >= 0 && authorizationEnd > authorizationStart);
+  const authorization = chatApi.slice(authorizationStart, authorizationEnd);
+
+  assert.match(authorization, /projectId: usesExistingContext \? projectId : undefined/);
+});
+
+test("saving a Temporary Chat preserves its unsent composer draft", () => {
+  const page = read("src/routes/index.tsx");
+  const conversionStart = page.indexOf("const saveTemporaryChat");
+  const conversionEnd = page.indexOf("const openCommandPalette", conversionStart);
+  assert.ok(conversionStart >= 0 && conversionEnd > conversionStart);
+  const conversion = page.slice(conversionStart, conversionEnd);
+  const saveDraftAt = conversion.indexOf("saveDraft(userKey, active.id, input)");
+  const markLoadedAt = conversion.indexOf("lastLoadedDraftRef.current = draftKey");
+  const leaveTemporaryAt = conversion.indexOf("setTempChat(false)");
+
+  assert.ok(saveDraftAt >= 0 && saveDraftAt < leaveTemporaryAt);
+  assert.ok(markLoadedAt > saveDraftAt && markLoadedAt < leaveTemporaryAt);
+});
+
 test("normal project-chat UI remains an existing-context request", () => {
   const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");
   const requestStart = projectChat.indexOf('authFetch("/api/chat"');

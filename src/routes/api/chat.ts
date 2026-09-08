@@ -658,7 +658,7 @@ export const Route = createFileRoute("/api/chat")({
                 authorizedResearchReferences = await authorizeResearchPersistence({
                   supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
                   chatId,
-                  projectId,
+                  projectId: usesExistingContext ? projectId : undefined,
                 });
               } catch (error) {
                 if (error instanceof ResearchPersistenceAuthorizationError) {
