@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "suite": "KovaEval-v0.1",
+  "suite_commit": "REPLACE_WITH_GIT_SHA",
+  "run_id": "REPLACE_WITH_UNIQUE_RUN_ID",
+  "started_at": "REPLACE_WITH_ISO_8601",
+  "candidate": {
+    "provider": "REPLACE_WITH_PROVIDER",
+    "model": "REPLACE_WITH_EXACT_MODEL_ID",
+    "revision": "REPLACE_WHEN_AVAILABLE",
+    "role": "baseline-or-candidate"
+  },
+  "generation": {
+    "temperature": 0,
+    "max_output_tokens": 4096,
+    "reasoning_effort": "RECORD_EXACT_SETTING_OR_NULL",
+    "tool_policy": "same-contract-across-candidates"
+  },
+  "scoring": {
+    "blind_candidate_identity": true,
+    "failed_requests_score_zero": true,
+    "timeout_requests_score_zero": true
+  },
+  "notes": "Never include API keys, secrets, private user conversations, or chain-of-thought."
+}
