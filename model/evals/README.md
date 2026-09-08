@@ -7,11 +7,12 @@ The default suite is `kovaeval-v0.1.jsonl`: 30 public, model-authored smoke case
 for traceability. The suite is not a private held-out benchmark and does not
 establish statistical parity with GPT-5.6 Sol.
 
-The agent, tool, research, long-context, and multi-turn labels describe the topics
-of these smoke prompts. The current cases mainly ask for descriptions, short
-context reading, or transcript-based answers. They do not execute tools, run
-candidate code in a sandbox, exercise a real agent loop, test million-token
-contexts, or evaluate images. Those are separate acceptance-suite requirements.
+The agent, tool, research, and multi-turn labels describe the topics of these
+smoke prompts. The two frozen long-context cases each contain more than 32,768
+characters and place answer-bearing evidence after the first 24,000 characters;
+they remain smoke retrieval checks, not million-token coverage. The suite does
+not execute tools, run candidate code in a sandbox, exercise a real agent loop,
+or evaluate images. Those are separate acceptance-suite requirements.
 
 No real baseline, candidate inference, model training, or production replacement
 has been verified by this source change. A passing infrastructure unit test is
