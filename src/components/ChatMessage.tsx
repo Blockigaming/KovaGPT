@@ -38,7 +38,7 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { submitResponseFeedback } from "@/lib/feedback.functions";
+import { getResponseFeedback, submitResponseFeedback } from "@/lib/feedback.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
@@ -204,19 +204,18 @@ function ChatMessageInner({
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
   const { isSignedIn } = useUser();
+  const getFeedbackFn = useServerFn(getResponseFeedback);
   const feedbackFn = useServerFn(submitResponseFeedback);
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const feedbackBaseKey = principalResolved
+    ? principalScopedStorageKey("kova-message-feedback", userKey)
+    : null;
   const feedbackKey =
-    principalResolved && message.id
-      ? principalScopedStorageKey(
-          `kova-message-feedback:${encodeURIComponent(message.id)}`,
-          userKey,
-        )
-      : null;
+    feedbackBaseKey && message.id ? `${feedbackBaseKey}:${encodeURIComponent(message.id)}` : null;
   const [feedbackState, setFeedbackState] = useState<{
     key: string | null;
     value: "up" | "down" | null;
@@ -225,20 +224,65 @@ function ChatMessageInner({
   const [feedbackSaving, setFeedbackSaving] = useState(false);
 
   useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = feedbackKey
-        ? (safeBrowserStorage("localStorage")?.getItem(feedbackKey) ?? null)
-        : null;
-    } catch {
-      /* Keep feedback session-only when browser storage is unavailable. */
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    let cancelled = false;
+    const isCurrent = () =>
+      !cancelled &&
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
+
+    if (!feedbackKey) {
+      setFeedbackState({ key: null, value: null });
+      setFeedbackSaving(false);
+      return () => {
+        cancelled = true;
+      };
     }
-    setFeedbackState({
-      key: feedbackKey,
-      value: stored === "up" || stored === "down" ? stored : null,
-    });
-    setFeedbackSaving(false);
-  }, [feedbackKey]);
+
+    if (!isSignedIn || !userKey) {
+      let stored: string | null = null;
+      try {
+        stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey) ?? null;
+      } catch {
+        /* Keep guest feedback session-only when browser storage is unavailable. */
+      }
+      setFeedbackState({
+        key: feedbackKey,
+        value: stored === "up" || stored === "down" ? stored : null,
+      });
+      setFeedbackSaving(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setFeedbackState({ key: feedbackKey, value: null });
+    setFeedbackSaving(true);
+    void (async () => {
+      try {
+        const result = await getFeedbackFn({
+          data: { expectedOwnerId: userKey, messageId: message.id },
+        });
+        if (!isCurrent()) return;
+        setFeedbackState({ key: feedbackKey, value: result.rating });
+        try {
+          const storage = safeBrowserStorage("localStorage");
+          if (result.rating) storage?.setItem(feedbackKey, result.rating);
+          else storage?.removeItem(feedbackKey);
+        } catch {
+          /* The authenticated feedback row remains authoritative. */
+        }
+      } catch {
+        if (isCurrent()) setFeedbackState({ key: feedbackKey, value: null });
+      } finally {
+        if (isCurrent()) setFeedbackSaving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [feedbackKey, getFeedbackFn, isSignedIn, message.id, principal, userKey]);
 
   const persistFeedback = async (next: "up" | "down" | null) => {
     if (!feedbackKey) {
@@ -255,8 +299,16 @@ function ChatMessageInner({
     setFeedbackSaving(true);
 
     if (isSignedIn) {
+      if (!userKey) {
+        setFeedbackState({ key: feedbackKey, value: previous });
+        setFeedbackSaving(false);
+        toast.error("Your account is still loading. Try again.");
+        return;
+      }
       try {
-        await feedbackFn({ data: { messageId: message.id, rating: next } });
+        await feedbackFn({
+          data: { expectedOwnerId: userKey, messageId: message.id, rating: next },
+        });
         if (!isCurrent()) return;
         try {
           const storage = safeBrowserStorage("localStorage");

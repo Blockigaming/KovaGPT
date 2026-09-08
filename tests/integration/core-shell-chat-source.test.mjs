@@ -91,6 +91,9 @@ test("response feedback is authenticated and durable rather than a decorative lo
   assert.match(feedback, /feedback_submissions/);
   assert.match(feedback, /duplicate_key/);
   assert.match(feedback, /createHash\("sha256"\)/);
+  assert.match(feedback, /export const getResponseFeedback/);
+  assert.match(feedback, /expectedOwnerId !== actualOwnerId/);
+  assert.match(feedback, /Your account changed\. Please try again\./);
 });
 
 test("destructive chat actions use an accessible confirmation dialog", () => {
@@ -116,11 +119,17 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /aria-label="Response actions"/);
   assert.match(message, /aria-label="Good response"/);
   assert.match(message, /aria-label="Bad response"/);
-  assert.match(message, /principalScopedStorageKey\([\s\S]{0,100}`kova-message-feedback:/);
+  assert.match(message, /principalScopedStorageKey\("kova-message-feedback", userKey\)/);
+  assert.match(message, /`\$\{feedbackBaseKey\}:\$\{encodeURIComponent\(message\.id\)\}`/);
+  assert.match(message, /useServerFn\(getResponseFeedback\)/);
   assert.match(message, /useServerFn\(submitResponseFeedback\)/);
   assert.match(
     message,
-    /await feedbackFn\(\{ data: \{ messageId: message\.id, rating: next \} \}\)/,
+    /await getFeedbackFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageId: message\.id/,
+  );
+  assert.match(
+    message,
+    /await feedbackFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageId: message\.id[\s\S]{0,100}rating: next/,
   );
   assert.match(message, /requestPrincipal === principalRef\.current/);
   assert.match(message, />\s*Share\s*</);
