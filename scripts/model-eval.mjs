@@ -1,6 +1,13 @@
 import {
-  DEFAULT_CASES, digest, indexRows, isMain, parseArgs, readJsonl,
-  summarizeRows, validateCases, writeJson,
+  DEFAULT_CASES,
+  digest,
+  indexRows,
+  isMain,
+  parseArgs,
+  readJsonl,
+  summarizeRows,
+  validateCases,
+  writeJson,
 } from "./model-eval-contract.mjs";
 
 export function scoreRun(cases, responses) {
@@ -29,9 +36,19 @@ async function main() {
   const cases = await readJsonl(args.get("cases") ?? DEFAULT_CASES);
   validateCases(cases);
   if (!args.has("responses")) {
-    console.log(JSON.stringify({ valid: true, cases: cases.length, suite_sha256: digest(cases),
-      categories: [...new Set(cases.map((item) => item.category))].sort(),
-      replacement_eligible: false }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          valid: true,
+          cases: cases.length,
+          suite_sha256: digest(cases),
+          categories: [...new Set(cases.map((item) => item.category))].sort(),
+          replacement_eligible: false,
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
   const report = scoreRun(cases, await readJsonl(args.get("responses")));

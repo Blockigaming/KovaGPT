@@ -4,7 +4,8 @@ import { buildBlindJudgeInput, parseJudgeResult } from "../../scripts/model-eval
 
 test("blind judge payload omits candidate identity", () => {
   const text = buildBlindJudgeInput(
-    { prompt: "Explain X", grader: { criteria: ["correct", "clear"] } }, "Answer A",
+    { prompt: "Explain X", grader: { criteria: ["correct", "clear"] } },
+    "Answer A",
   );
   const payload = JSON.parse(text);
   assert.equal(payload.task, "Explain X");
@@ -16,7 +17,8 @@ test("blind judge payload omits candidate identity", () => {
 
 test("judge parser accepts bounded score and rejects invalid score", () => {
   assert.deepEqual(parseJudgeResult('{"score":0.75,"rationale":"Mostly correct"}'), {
-    score: 0.75, rationale: "Mostly correct",
+    score: 0.75,
+    rationale: "Mostly correct",
   });
   assert.throws(() => parseJudgeResult('{"score":1.5,"rationale":"bad"}'), /between 0 and 1/u);
 });

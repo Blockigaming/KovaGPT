@@ -15,13 +15,14 @@ test("compares quality, cost, latency and category deltas", () => {
   assert.equal(result.relative_quality, 0.95);
   assert.equal(result.cost_ratio, 0.5);
   assert.equal(result.latency_ratio, 2 / 3);
-  assert.ok(Math.abs(result.category_delta.coding - (-0.1)) < 1e-12);
+  assert.ok(Math.abs(result.category_delta.coding - -0.1) < 1e-12);
   assert.equal(result.category_delta.safety_privacy, 0);
 });
 
 test("refuses incomparable case sets", () => {
   assert.throws(
-    () => compareRuns([{ id: "a", category: "x", score: 1 }], [{ id: "b", category: "x", score: 1 }]),
+    () =>
+      compareRuns([{ id: "a", category: "x", score: 1 }], [{ id: "b", category: "x", score: 1 }]),
     /must match exactly/u,
   );
 });

@@ -5,7 +5,12 @@ import { pathToFileURL } from "node:url";
 
 export const DEFAULT_CASES = "model/evals/kovaeval-v0.1.jsonl";
 export const FAILURE_STATUSES = new Set([
-  "error", "timeout", "failed", "cancelled", "incomplete", "missing",
+  "error",
+  "timeout",
+  "failed",
+  "cancelled",
+  "incomplete",
+  "missing",
 ]);
 export const isMain = (url) =>
   Boolean(process.argv[1]) && url === pathToFileURL(path.resolve(process.argv[1])).href;
@@ -18,11 +23,17 @@ export function digest(value) {
   const stable = (x) => {
     if (Array.isArray(x)) return x.map(stable);
     if (x !== null && typeof x === "object") {
-      return Object.fromEntries(Object.keys(x).sort().map((key) => [key, stable(x[key])]));
+      return Object.fromEntries(
+        Object.keys(x)
+          .sort()
+          .map((key) => [key, stable(x[key])]),
+      );
     }
     return x;
   };
-  return createHash("sha256").update(JSON.stringify(stable(value))).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(stable(value)))
+    .digest("hex");
 }
 
 export function parseArgs(argv, allowed) {
@@ -76,7 +87,8 @@ export function validateCases(cases) {
     if (!nonempty(item.category) || !nonempty(item.prompt) || !item.grader) {
       throw new Error(`Invalid eval case: ${item.id}`);
     }
-    if (!positiveWeight(item.weight === undefined ? 1 : item.weight)) throw new Error(`Invalid weight for ${item.id}`);
+    if (!positiveWeight(item.weight === undefined ? 1 : item.weight))
+      throw new Error(`Invalid weight for ${item.id}`);
     const { type, answer, criteria } = item.grader;
     if (["exact", "exact_semantic"].includes(type)) {
       if (!nonempty(answer)) throw new Error(`Missing reference answer for ${item.id}`);
@@ -105,12 +117,16 @@ export function metricSummary(rows, key, integer = false) {
   if (!Number.isFinite(observedSum)) throw new Error(`Overflow in ${key}`);
   const complete = rows.length > 0 && values.length === rows.length;
   const sorted = [...values].sort((a, b) => a - b);
-  const percentile = (p) => complete ? sorted[Math.ceil(sorted.length * p) - 1] : null;
+  const percentile = (p) => (complete ? sorted[Math.ceil(sorted.length * p) - 1] : null);
   return {
-    complete, observed_count: values.length, expected_count: rows.length,
-    observed_sum: observedSum, total: complete ? observedSum : null,
+    complete,
+    observed_count: values.length,
+    expected_count: rows.length,
+    observed_sum: observedSum,
+    total: complete ? observedSum : null,
     mean: complete ? observedSum / values.length : null,
-    p50: percentile(0.5), p95: percentile(0.95),
+    p50: percentile(0.5),
+    p95: percentile(0.95),
   };
 }
 
@@ -119,8 +135,13 @@ export function summarizeRows(rows) {
   for (const row of rows) {
     if (!nonempty(row.category)) throw new Error(`Missing category for ${row.id}`);
     if (!validScore(row.score)) throw new Error(`Missing/invalid 0..1 score for ${row.id}`);
-    if (!positiveWeight(row.weight === undefined ? 1 : row.weight)) throw new Error(`Invalid weight for ${row.id}`);
-    if (row.status !== undefined && row.status !== "completed" && !FAILURE_STATUSES.has(row.status)) {
+    if (!positiveWeight(row.weight === undefined ? 1 : row.weight))
+      throw new Error(`Invalid weight for ${row.id}`);
+    if (
+      row.status !== undefined &&
+      row.status !== "completed" &&
+      !FAILURE_STATUSES.has(row.status)
+    ) {
       throw new Error(`Unknown response status for ${row.id}`);
     }
     if (FAILURE_STATUSES.has(row.status) && row.score !== 0) {
@@ -133,9 +154,9 @@ export function summarizeRows(rows) {
     return items.reduce((sum, row) => sum + row.score * ((row.weight ?? 1) / total), 0);
   };
   const categoryScores = Object.fromEntries(
-    [...new Set(rows.map((row) => row.category))].sort().map((category) => [
-      category, weighted(rows.filter((row) => row.category === category)),
-    ]),
+    [...new Set(rows.map((row) => row.category))]
+      .sort()
+      .map((category) => [category, weighted(rows.filter((row) => row.category === category))]),
   );
   const cost = metricSummary(rows, "cost_usd");
   const latency = metricSummary(rows, "latency_ms");
@@ -143,15 +164,26 @@ export function summarizeRows(rows) {
   const output = metricSummary(rows, "output_tokens", true);
   const judgeCost = metricSummary(rows, "judge_cost_usd");
   return {
-    cases: rows.length, overall_score: weighted(rows), categories: categoryScores,
+    cases: rows.length,
+    overall_score: weighted(rows),
+    categories: categoryScores,
     score_kind: "case-weighted-smoke-score-not-replacement-gate",
     replacement_eligible: false,
     operational: {
-      total_cost_usd: cost.total, total_judge_cost_usd: judgeCost.total,
-      total_input_tokens: input.total, total_output_tokens: output.total,
-      mean_latency_ms: latency.mean, p50_latency_ms: latency.p50, p95_latency_ms: latency.p95,
-      completeness: { cost_usd: cost, judge_cost_usd: judgeCost, latency_ms: latency,
-        input_tokens: input, output_tokens: output },
+      total_cost_usd: cost.total,
+      total_judge_cost_usd: judgeCost.total,
+      total_input_tokens: input.total,
+      total_output_tokens: output.total,
+      mean_latency_ms: latency.mean,
+      p50_latency_ms: latency.p50,
+      p95_latency_ms: latency.p95,
+      completeness: {
+        cost_usd: cost,
+        judge_cost_usd: judgeCost,
+        latency_ms: latency,
+        input_tokens: input,
+        output_tokens: output,
+      },
     },
   };
 }
@@ -163,6 +195,8 @@ export async function writeJson(file, value) {
 
 export async function writeJsonl(file, rows) {
   await fs.mkdir(path.dirname(path.resolve(file)), { recursive: true });
-  await fs.writeFile(file, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
-    { flag: "wx", mode: 0o600 });
+  await fs.writeFile(file, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`, {
+    flag: "wx",
+    mode: 0o600,
+  });
 }

@@ -1,19 +1,57 @@
 import {
-  DEFAULT_CASES, FAILURE_STATUSES, digest, indexRows, isMain, parseArgs,
-  readJsonl, validateCases, writeJsonl,
+  DEFAULT_CASES,
+  FAILURE_STATUSES,
+  digest,
+  indexRows,
+  isMain,
+  parseArgs,
+  readJsonl,
+  validateCases,
+  writeJsonl,
 } from "./model-eval-contract.mjs";
 
 export const SCORING_VERSION = "kova-smoke-grading-v2";
 const FRUITS = new Set([
-  "apple", "apricot", "avocado", "banana", "blackberry", "blueberry", "cherry",
-  "coconut", "cranberry", "date", "fig", "grape", "grapefruit", "guava", "kiwi",
-  "lemon", "lime", "lychee", "mango", "melon", "nectarine", "orange", "papaya",
-  "peach", "pear", "pineapple", "plum", "pomegranate", "raspberry", "strawberry",
-  "tangerine", "watermelon",
+  "apple",
+  "apricot",
+  "avocado",
+  "banana",
+  "blackberry",
+  "blueberry",
+  "cherry",
+  "coconut",
+  "cranberry",
+  "date",
+  "fig",
+  "grape",
+  "grapefruit",
+  "guava",
+  "kiwi",
+  "lemon",
+  "lime",
+  "lychee",
+  "mango",
+  "melon",
+  "nectarine",
+  "orange",
+  "papaya",
+  "peach",
+  "pear",
+  "pineapple",
+  "plum",
+  "pomegranate",
+  "raspberry",
+  "strawberry",
+  "tangerine",
+  "watermelon",
 ]);
 
 export function normalize(text) {
-  return String(text ?? "").trim().toLowerCase().replace(/^\$/u, "").replace(/\s+/gu, " ");
+  return String(text ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^\$/u, "")
+    .replace(/\s+/gu, " ");
 }
 
 export function gradeDeterministic(item, output) {
@@ -25,7 +63,10 @@ export function gradeDeterministic(item, output) {
     if (actual === expected) return { score: 1, method: "deterministic-exact" };
     if (/^-?\d+(?:\.\d+)?$/u.test(expected)) {
       if (/^-?\d+(?:\.\d+)?$/u.test(actual)) {
-        return { score: Number(actual) === Number(expected) ? 1 : 0, method: "deterministic-numeric" };
+        return {
+          score: Number(actual) === Number(expected) ? 1 : 0,
+          method: "deterministic-numeric",
+        };
       }
       // Mentioning a correct number in an explanation does not prove the conclusion is correct.
       return null;
@@ -35,10 +76,21 @@ export function gradeDeterministic(item, output) {
   // Natural-language equivalence cannot be established using substring tests.
   if (grader.type === "exact_semantic") return null;
   if (grader.type === "constraints") {
-    const supported = ["exactly three lines", "lowercase only", "one fruit per line", "no extra text"];
-    if (!Array.isArray(grader.criteria) || grader.criteria.length !== supported.length ||
-      !supported.every((criterion) => grader.criteria.includes(criterion))) return null;
-    const text = String(output ?? "").replace(/\r\n/gu, "\n").replace(/\n$/u, "");
+    const supported = [
+      "exactly three lines",
+      "lowercase only",
+      "one fruit per line",
+      "no extra text",
+    ];
+    if (
+      !Array.isArray(grader.criteria) ||
+      grader.criteria.length !== supported.length ||
+      !supported.every((criterion) => grader.criteria.includes(criterion))
+    )
+      return null;
+    const text = String(output ?? "")
+      .replace(/\r\n/gu, "\n")
+      .replace(/\n$/u, "");
     const lines = text.split("\n");
     if (lines.length !== 3 || !lines.every((line) => /^[a-z]+$/u.test(line))) {
       return { score: 0, method: "deterministic-constraints" };
@@ -53,7 +105,8 @@ export function gradeDeterministic(item, output) {
 export function gradeRows(cases, responses) {
   const caseById = validateCases(cases);
   const byId = indexRows(responses);
-  for (const id of byId.keys()) if (!caseById.has(id)) throw new Error(`Unknown response id: ${id}`);
+  for (const id of byId.keys())
+    if (!caseById.has(id)) throw new Error(`Unknown response id: ${id}`);
   const suiteHash = digest(cases);
   return cases.map((item) => {
     const response = byId.get(item.id) ?? { id: item.id, status: "missing", output: "" };
@@ -67,19 +120,28 @@ export function gradeRows(cases, responses) {
       throw new Error(`Suite content mismatch for ${item.id}`);
     }
     const grade = FAILURE_STATUSES.has(response.status)
-      ? { score: 0, method: "request-failure" } : gradeDeterministic(item, response.output);
-    return { ...response, category: item.category, weight: item.weight ?? 1,
-      case_sha256: digest(item), suite_sha256: suiteHash,
+      ? { score: 0, method: "request-failure" }
+      : gradeDeterministic(item, response.output);
+    return {
+      ...response,
+      category: item.category,
+      weight: item.weight ?? 1,
+      case_sha256: digest(item),
+      suite_sha256: suiteHash,
       scoring_sha256: digest(SCORING_VERSION),
-      score: grade?.score ?? null, grade_method: grade?.method ?? "requires-blind-rubric-judge",
-      judge_cost_usd: grade ? 0 : null };
+      score: grade?.score ?? null,
+      grade_method: grade?.method ?? "requires-blind-rubric-judge",
+      judge_cost_usd: grade ? 0 : null,
+    };
   });
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2), ["cases", "responses", "out"]);
-  const rows = gradeRows(await readJsonl(args.get("cases") ?? DEFAULT_CASES),
-    await readJsonl(args.get("responses") ?? "artifacts/model-eval/raw.jsonl"));
+  const rows = gradeRows(
+    await readJsonl(args.get("cases") ?? DEFAULT_CASES),
+    await readJsonl(args.get("responses") ?? "artifacts/model-eval/raw.jsonl"),
+  );
   await writeJsonl(args.get("out") ?? "artifacts/model-eval/deterministic-grades.jsonl", rows);
   const pending = rows.filter((row) => row.score === null).length;
   console.log(`Graded ${rows.length - pending}/${rows.length}; ${pending} require rubric review.`);
