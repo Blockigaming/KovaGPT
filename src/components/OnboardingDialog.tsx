@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -124,6 +124,8 @@ export function OnboardingDialog({
 } = {}) {
   const navigate = useNavigate();
   const { isSignedIn, isLoaded, user } = useUser();
+  const ownerIdRef = useRef(user?.id ?? null);
+  ownerIdRef.current = user?.id ?? null;
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [primaryUse, setPrimaryUse] = useState<string | null>(null);
@@ -176,11 +178,19 @@ export function OnboardingDialog({
 
   const finish = async (starter?: string) => {
     if (!primaryUse || !user?.id) return;
+    const initiatingOwnerId = user.id;
     setSaving(true);
     setSaveError(null);
     try {
-      if (starter) saveDraft(user.id, null, starter);
       await persistOnboarding();
+      if (ownerIdRef.current !== initiatingOwnerId) return;
+      if (starter) {
+        try {
+          saveDraft(initiatingOwnerId, null, starter);
+        } catch {
+          /* The in-memory home composer can still receive the starter. */
+        }
+      }
       onResponseLengthChange?.(RESPONSE_LENGTH_BY_STYLE[style]);
       if (starter) {
         onStarterSelected?.(starter);
@@ -193,9 +203,11 @@ export function OnboardingDialog({
           ?.focus({ preventScroll: true });
       });
     } catch {
-      setSaveError("We couldn't save your choices. Try again or skip setup for now.");
+      if (ownerIdRef.current === initiatingOwnerId) {
+        setSaveError("We couldn't save your choices. Try again or skip setup for now.");
+      }
     } finally {
-      setSaving(false);
+      if (ownerIdRef.current === initiatingOwnerId) setSaving(false);
     }
   };
 

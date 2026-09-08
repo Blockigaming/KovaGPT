@@ -96,7 +96,16 @@ test("signed-in empty chat removes guest-only onboarding clutter", () => {
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {
   assert.match(onboarding, /if \(!primaryUse \|\| !user\?\.id\) return/);
-  assert.match(onboarding, /saveDraft\(user\.id, null, starter\)/);
+  assert.match(onboarding, /const initiatingOwnerId = user\.id/);
+  assert.match(
+    onboarding,
+    /await persistOnboarding\(\);[\s\S]{0,100}ownerIdRef\.current !== initiatingOwnerId/,
+  );
+  assert.match(onboarding, /saveDraft\(initiatingOwnerId, null, starter\)/);
+  assert.ok(
+    onboarding.indexOf("await persistOnboarding();") <
+      onboarding.indexOf("saveDraft(initiatingOwnerId, null, starter)"),
+  );
   assert.doesNotMatch(onboarding, /localStorage\.setItem\("kova-draft:__new__"/);
   assert.match(onboarding, /onStarterSelected\?\.\(starter\)/);
   assert.match(onboarding, /onResponseLengthChange\?\.\(RESPONSE_LENGTH_BY_STYLE\[style\]\)/);
