@@ -10,7 +10,7 @@ import {
   writeJsonl,
 } from "./model-eval-contract.mjs";
 
-export const SCORING_VERSION = "kova-smoke-grading-v2";
+export const SCORING_VERSION = "kova-smoke-grading-v3";
 const FRUITS = new Set([
   "apple",
   "apricot",
@@ -46,32 +46,41 @@ const FRUITS = new Set([
   "watermelon",
 ]);
 
+// Normalize only a bare decimal/currency value; literal answers are byte-sensitive.
 export function normalize(text) {
-  return String(text ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/^\$/u, "")
-    .replace(/\s+/gu, " ");
+  const value = String(text ?? "").trim();
+  return /^\$-?\d+(?:\.\d+)?$/u.test(value) ? value.slice(1) : value;
+}
+
+function decimalKey(value) {
+  const negative = value.startsWith("-");
+  const [whole, fraction = ""] = value.replace(/^-/, "").split(".");
+  const integer = whole.replace(/^0+(?=\d)/u, "");
+  const decimal = fraction.replace(/0+$/u, "");
+  const sign = negative && (integer !== "0" || decimal) ? "-" : "";
+  return `${sign}${integer}${decimal ? `.${decimal}` : ""}`;
 }
 
 export function gradeDeterministic(item, output) {
   const grader = item?.grader ?? {};
   if (grader.type === "exact") {
-    const actual = normalize(output);
-    const expected = normalize(grader.answer);
-    if (!expected) throw new Error("Exact grader needs a nonempty reference answer");
-    if (actual === expected) return { score: 1, method: "deterministic-exact" };
+    const expected = grader.answer;
+    if (typeof expected !== "string" || !expected.trim()) {
+      throw new Error("Exact grader needs a nonempty reference answer");
+    }
+    if (typeof output !== "string") return { score: 0, method: "deterministic-exact" };
     if (/^-?\d+(?:\.\d+)?$/u.test(expected)) {
+      const actual = normalize(output);
       if (/^-?\d+(?:\.\d+)?$/u.test(actual)) {
         return {
-          score: Number(actual) === Number(expected) ? 1 : 0,
+          score: decimalKey(actual) === decimalKey(expected) ? 1 : 0,
           method: "deterministic-numeric",
         };
       }
-      // Mentioning a correct number in an explanation does not prove the conclusion is correct.
+      // A number embedded in an explanation does not prove its conclusion is correct.
       return null;
     }
-    return { score: 0, method: "deterministic-exact" };
+    return { score: output === expected ? 1 : 0, method: "deterministic-exact" };
   }
   // Natural-language equivalence cannot be established using substring tests.
   if (grader.type === "exact_semantic") return null;

@@ -7,6 +7,18 @@ import {
   writeJson,
 } from "./model-eval-contract.mjs";
 
+function actualModel(rows, key) {
+  const models = new Set();
+  let complete = true;
+  for (const row of rows) {
+    const model = row[key];
+    if (typeof model !== "string" || !model.trim()) complete = false;
+    else models.add(model);
+  }
+  if (models.size > 1) throw new Error(`Mixed ${key} within a run`);
+  return { complete, model: models.values().next().value ?? null };
+}
+
 export function compareRuns(referenceRows, candidateRows) {
   const refById = indexRows(referenceRows, "reference");
   const candById = indexRows(candidateRows, "candidate");
@@ -43,6 +55,21 @@ export function compareRuns(referenceRows, candidateRows) {
         throw new Error(`Mixed ${key} within a run`);
     }
   }
+  const identities = [referenceRows, candidateRows].map((rows) => {
+    const completed = rows.filter((row) => row.status === "completed");
+    const judged = rows.filter((row) => row.grade_method === "blind-rubric-judge");
+    const generation = actualModel(completed, "returned_model");
+    const judge = actualModel(judged, "judge_returned_model");
+    if (completed.length !== rows.length || !generation.complete || !judge.complete) {
+      provenanceComplete = false;
+    }
+    return { generation, judge };
+  });
+  const [referenceJudge, candidateJudge] = identities.map((identity) => identity.judge.model);
+  // Deterministically graded rows do not have a judge identity to compare.
+  if (referenceJudge !== null && candidateJudge !== null && referenceJudge !== candidateJudge) {
+    throw new Error("Actual judge model mismatch between runs");
+  }
   const summarize = (rows) => {
     const report = summarizeRows(rows);
     return {
@@ -69,6 +96,12 @@ export function compareRuns(referenceRows, candidateRows) {
       ]),
     ),
     provenance_complete: provenanceComplete,
+    actual_models: {
+      reference: identities[0].generation.model,
+      candidate: identities[1].generation.model,
+      reference_judge: referenceJudge,
+      candidate_judge: candidateJudge,
+    },
     comparison_scope: provenanceComplete ? "matching-recorded-hashes" : "unverified-legacy-inputs",
     replacement_eligible: false,
     limitations: [

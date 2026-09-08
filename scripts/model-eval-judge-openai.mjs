@@ -21,6 +21,22 @@ const JUDGE_INSTRUCTIONS =
   "verbosity. A correct privacy refusal may earn full credit. Return JSON only with exactly " +
   "two fields: score (a number from 0 to 1) and rationale (a short evidence-based string).";
 
+// Responses API uses text.format, not Chat Completions' response_format.
+const JUDGE_FORMAT = {
+  type: "json_schema",
+  name: "kova_eval_judgment",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      score: { type: "number", minimum: 0, maximum: 1 },
+      rationale: { type: "string" },
+    },
+    required: ["score", "rationale"],
+    additionalProperties: false,
+  },
+};
+
 export function buildBlindJudgeInput(item, output) {
   return JSON.stringify({
     task: item.prompt,
@@ -37,6 +53,9 @@ export function parseJudgeResult(text) {
   }
   if (typeof parsed.rationale !== "string" || !parsed.rationale.trim()) {
     throw new Error("Judge rationale must be a nonempty string");
+  }
+  if (Object.keys(parsed).some((key) => !["score", "rationale"].includes(key))) {
+    throw new Error("Judge result contains unexpected fields");
   }
   return { score: parsed.score, rationale: parsed.rationale.slice(0, 1000) };
 }
@@ -66,6 +85,7 @@ export async function judgeCase({
     },
     reasoningEffort: "none",
     maxOutputTokens: 300,
+    textFormat: JUDGE_FORMAT,
     timeoutMs,
     inputUsdPerMtok,
     outputUsdPerMtok,
@@ -79,6 +99,7 @@ export async function judgeCase({
     judge_input_tokens: result.input_tokens,
     judge_output_tokens: result.output_tokens,
     judge_response_id: result.provider_response_id,
+    judge_returned_model: result.returned_model,
   };
 }
 
@@ -94,6 +115,7 @@ export async function judgeRows(cases, inputRows, options) {
     judge_model: options.model,
     reasoning: "none",
     max_output_tokens: 300,
+    text_format: JUDGE_FORMAT,
   });
   const out = [];
   for (const row of rows) {
@@ -114,6 +136,7 @@ export async function judgeRows(cases, inputRows, options) {
       judge_input_tokens: result.judge_input_tokens,
       judge_output_tokens: result.judge_output_tokens,
       judge_response_id: result.judge_response_id,
+      judge_returned_model: result.judge_returned_model,
     });
     if (options.onRow) await options.onRow(out.at(-1));
   }

@@ -56,6 +56,7 @@ export async function runOpenAiCase({
   timeoutMs,
   inputUsdPerMtok,
   outputUsdPerMtok,
+  textFormat,
   fetcher = fetch,
 }) {
   if (typeof apiKey !== "string" || !apiKey.trim()) throw new Error("OPENAI_API_KEY is required");
@@ -104,6 +105,7 @@ export async function runOpenAiCase({
             max_output_tokens: maxOutputTokens,
             reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined,
             store: false,
+            ...(textFormat ? { text: { format: textFormat } } : {}),
           }),
           signal: controller.signal,
         });

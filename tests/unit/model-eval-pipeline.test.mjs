@@ -15,7 +15,13 @@ const pricing = { inputUsdPerMtok: 2, outputUsdPerMtok: 8 };
 // These fabricated fixtures exercise software contracts, not model intelligence.
 function mockResponse(output, usage = { input_tokens: 100, output_tokens: 25 }) {
   return new Response(
-    JSON.stringify({ id: "fixture-response", status: "completed", output_text: output, usage }),
+    JSON.stringify({
+      id: "fixture-response",
+      status: "completed",
+      model: "fixture-returned-model",
+      output_text: output,
+      usage,
+    }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
 }
