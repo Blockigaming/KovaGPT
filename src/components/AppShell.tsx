@@ -24,6 +24,7 @@ import {
 } from "@/lib/chat-store";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
+import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
 import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
@@ -266,7 +267,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         )}
         <OnboardingDialog
-          onResponseLengthChange={(responseLength) => {
+          onCompletion={(completion) => {
+            const { responseLength } = completion;
             const next = { ...settings, responseLength };
             setSettings(next);
             try {
@@ -274,6 +276,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             } catch {
               /* The in-memory preference still applies until navigation. */
             }
+            stageOnboardingHandoff(completion);
           }}
         />
       </Suspense>

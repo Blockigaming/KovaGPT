@@ -33,6 +33,12 @@ const STYLES = [
 
 export type OnboardingResponseLength = "short" | "medium" | "long";
 
+export interface OnboardingCompletion {
+  ownerId: string;
+  responseLength: OnboardingResponseLength;
+  starter?: string;
+}
+
 const RESPONSE_LENGTH_BY_STYLE: Record<(typeof STYLES)[number]["id"], OnboardingResponseLength> = {
   concise: "short",
   balanced: "medium",
@@ -118,14 +124,17 @@ function pickStarters(useId: string | null, count = 4): string[] {
 export function OnboardingDialog({
   onStarterSelected,
   onResponseLengthChange,
+  onCompletion,
 }: {
   onStarterSelected?: (starter: string) => void;
   onResponseLengthChange?: (responseLength: OnboardingResponseLength) => void;
+  onCompletion?: (completion: OnboardingCompletion) => void;
 } = {}) {
   const navigate = useNavigate();
   const { isSignedIn, isLoaded, user } = useUser();
   const ownerIdRef = useRef(user?.id ?? null);
   ownerIdRef.current = user?.id ?? null;
+  const operationRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [primaryUse, setPrimaryUse] = useState<string | null>(null);
@@ -139,6 +148,7 @@ export function OnboardingDialog({
   const doSkip = useServerFn(skipOnboarding);
 
   useEffect(() => {
+    operationRef.current += 1;
     setOpen(false);
     setStep(1);
     setPrimaryUse(null);
@@ -179,11 +189,13 @@ export function OnboardingDialog({
   const finish = async (starter?: string) => {
     if (!primaryUse || !user?.id) return;
     const initiatingOwnerId = user.id;
+    const operation = operationRef.current + 1;
+    operationRef.current = operation;
     setSaving(true);
     setSaveError(null);
     try {
       await persistOnboarding();
-      if (ownerIdRef.current !== initiatingOwnerId) return;
+      if (ownerIdRef.current !== initiatingOwnerId || operationRef.current !== operation) return;
       if (starter) {
         try {
           saveDraft(initiatingOwnerId, null, starter);
@@ -191,7 +203,9 @@ export function OnboardingDialog({
           /* The in-memory home composer can still receive the starter. */
         }
       }
-      onResponseLengthChange?.(RESPONSE_LENGTH_BY_STYLE[style]);
+      const responseLength = RESPONSE_LENGTH_BY_STYLE[style];
+      onCompletion?.({ ownerId: initiatingOwnerId, responseLength, starter });
+      onResponseLengthChange?.(responseLength);
       if (starter) {
         onStarterSelected?.(starter);
       }
@@ -203,11 +217,13 @@ export function OnboardingDialog({
           ?.focus({ preventScroll: true });
       });
     } catch {
-      if (ownerIdRef.current === initiatingOwnerId) {
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
         setSaveError("We couldn't save your choices. Try again or skip setup for now.");
       }
     } finally {
-      if (ownerIdRef.current === initiatingOwnerId) setSaving(false);
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
+        setSaving(false);
+      }
     }
   };
 
@@ -215,6 +231,9 @@ export function OnboardingDialog({
     // Dismissing onboarding must never trap a signed-in user behind a failed
     // best-effort persistence request. Keep the completion write, but release
     // the interface immediately and let a later visit retry if necessary.
+    const initiatingOwnerId = ownerIdRef.current;
+    const operation = operationRef.current + 1;
+    operationRef.current = operation;
     setOpen(false);
     setSaving(true);
     try {
@@ -222,8 +241,10 @@ export function OnboardingDialog({
     } catch {
       /* The dialog is already released; a future visit can retry persistence. */
     } finally {
-      setOpen(false);
-      setSaving(false);
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
+        setOpen(false);
+        setSaving(false);
+      }
     }
   };
 
