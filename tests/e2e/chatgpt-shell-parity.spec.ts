@@ -134,6 +134,26 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
   });
 
+  test("active guest desktop chat keeps its local settings action", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route("**/api/chat", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: 'data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: [DONE]\n\n',
+      });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+    await input.fill("Keep guest settings available");
+    await page.getByRole("button", { name: "Send message" }).click();
+
+    await expect(page.getByRole("button", { name: "Share chat" })).toHaveCount(0);
+    await page.getByRole("button", { name: "More chat actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
+  });
+
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {

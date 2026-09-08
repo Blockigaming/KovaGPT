@@ -1725,18 +1725,20 @@ function KovaGPT() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            {active && isSignedIn ? (
+            {active ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => setShareChatId(active.id)}
-                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
-                  aria-label="Share chat"
-                  title="Share chat"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span>Share</span>
-                </button>
+                {isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => setShareChatId(active.id)}
+                    className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    aria-label="Share chat"
+                    title="Share chat"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share</span>
+                  </button>
+                ) : null}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -1762,25 +1764,27 @@ function KovaGPT() {
                         <span className="ml-auto text-xs font-medium text-primary">Rules on</span>
                       ) : null}
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        const transcript = active.messages
-                          .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
-                          .join("\n\n");
-                        const blob = new Blob([transcript], {
-                          type: "text/markdown;charset=utf-8",
-                        });
-                        const url = URL.createObjectURL(blob);
-                        const anchor = document.createElement("a");
-                        anchor.href = url;
-                        anchor.download = `${active.title || "chat"}.md`;
-                        anchor.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Export chat
-                    </DropdownMenuItem>
+                    {isSignedIn ? (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          const transcript = active.messages
+                            .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
+                            .join("\n\n");
+                          const blob = new Blob([transcript], {
+                            type: "text/markdown;charset=utf-8",
+                          });
+                          const url = URL.createObjectURL(blob);
+                          const anchor = document.createElement("a");
+                          anchor.href = url;
+                          anchor.download = `${active.title || "chat"}.md`;
+                          anchor.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export chat
+                      </DropdownMenuItem>
+                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
