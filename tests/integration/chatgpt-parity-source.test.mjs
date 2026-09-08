@@ -17,6 +17,7 @@ const [
   modes,
   workspaceModeSwitch,
   workRoute,
+  onboarding,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -32,6 +33,7 @@ const [
   readFile("src/lib/modes.ts", "utf8"),
   readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
+  readFile("src/components/OnboardingDialog.tsx", "utf8"),
 ]);
 
 test("signed-in users can move clearly between Chat and Work", () => {
@@ -89,6 +91,42 @@ test("signed-in empty chat removes guest-only onboarding clutter", () => {
   assert.match(
     route,
     /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
+  );
+});
+
+test("signed-in onboarding hands real choices to the authenticated composer", () => {
+  assert.match(onboarding, /if \(!primaryUse \|\| !user\?\.id\) return/);
+  assert.match(onboarding, /const initiatingOwnerId = user\.id/);
+  assert.match(
+    onboarding,
+    /await persistOnboarding\(\);[\s\S]{0,180}operationRef\.current !== operation/,
+  );
+  assert.match(onboarding, /saveDraft\(initiatingOwnerId, null, starter\)/);
+  assert.ok(
+    onboarding.indexOf("await persistOnboarding();") <
+      onboarding.indexOf("saveDraft(initiatingOwnerId, null, starter)"),
+  );
+  assert.doesNotMatch(onboarding, /localStorage\.setItem\("kova-draft:__new__"/);
+  assert.match(onboarding, /onStarterSelected\?\.\(starter\)/);
+  assert.match(onboarding, /const responseLength = RESPONSE_LENGTH_BY_STYLE\[style\]/);
+  assert.match(onboarding, /onResponseLengthChange\?\.\(responseLength\)/);
+  assert.match(onboarding, /role="progressbar"/);
+  assert.match(onboarding, /aria-pressed=\{primaryUse === u\.id\}/);
+  assert.match(onboarding, /aria-pressed=\{style === s\.id\}/);
+  assert.match(onboarding, /We couldn't save your choices/);
+  assert.match(onboarding, /setPrimaryUse\(null\);[\s\S]{0,160}\}, \[user\?\.id\]\);/);
+  assert.match(route, /<OnboardingDialog[\s\S]{0,320}onStarterSelected=\{\(starter\)/);
+  assert.match(appShell, /<OnboardingDialog[\s\S]{0,240}onCompletion=/);
+  assert.match(appShell, /saveStoredSettings\(userKey, next\)/);
+  assert.match(appShell, /stageOnboardingHandoff\(completion\)/);
+  assert.match(route, /consumeOnboardingHandoff\(userKey\)/);
+  assert.match(
+    onboarding,
+    /const skip = async \(\) => \{[\s\S]{0,500}operationRef\.current = operation/,
+  );
+  assert.match(
+    onboarding,
+    /const skip = async \(\) => \{[\s\S]{0,900}finally \{[\s\S]{0,180}ownerIdRef\.current === initiatingOwnerId[\s\S]{0,100}operationRef\.current === operation/,
   );
 });
 

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { getOnboarding, saveOnboarding, skipOnboarding } from "@/lib/onboarding.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { Sparkles } from "lucide-react";
+import { saveDraft } from "@/lib/chat-store";
+import { ArrowLeft, Check, Sparkles } from "lucide-react";
 
 const USES = [
   { id: "school", label: "School & studying" },
@@ -24,10 +26,24 @@ const USES = [
   { id: "planning", label: "Personal planning" },
 ];
 const STYLES = [
-  { id: "concise", label: "Concise" },
-  { id: "balanced", label: "Balanced" },
-  { id: "detailed", label: "Detailed" },
-];
+  { id: "concise", label: "Concise", hint: "Short and direct" },
+  { id: "balanced", label: "Balanced", hint: "Clear with useful context" },
+  { id: "detailed", label: "Detailed", hint: "Thorough and comprehensive" },
+] as const;
+
+export type OnboardingResponseLength = "short" | "medium" | "long";
+
+export interface OnboardingCompletion {
+  ownerId: string;
+  responseLength: OnboardingResponseLength;
+  starter?: string;
+}
+
+const RESPONSE_LENGTH_BY_STYLE: Record<(typeof STYLES)[number]["id"], OnboardingResponseLength> = {
+  concise: "short",
+  balanced: "medium",
+  detailed: "long",
+};
 
 // Starter prompts tailored to each primary use. On step 3 we show a rotating
 // pool so returning users see fresh ideas; clicking one seeds the composer
@@ -60,7 +76,7 @@ const STARTERS: Record<string, string[]> = {
   research: [
     "Compare the pros and cons of solar vs wind energy",
     "Give me a literature summary on remote work productivity",
-    "What are the leading theories on consciousness in 2025?",
+    "What are the leading theories on consciousness?",
     "Help me build a research question about urban housing",
     "Find counterarguments to this claim so I can strengthen it",
     "Summarize the latest thinking on gut microbiome and mood",
@@ -105,13 +121,26 @@ function pickStarters(useId: string | null, count = 4): string[] {
   return shuffled.slice(0, count);
 }
 
-export function OnboardingDialog() {
-  const { isSignedIn, isLoaded } = useUser();
+export function OnboardingDialog({
+  onStarterSelected,
+  onResponseLengthChange,
+  onCompletion,
+}: {
+  onStarterSelected?: (starter: string) => void;
+  onResponseLengthChange?: (responseLength: OnboardingResponseLength) => void;
+  onCompletion?: (completion: OnboardingCompletion) => void;
+} = {}) {
+  const navigate = useNavigate();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const ownerIdRef = useRef(user?.id ?? null);
+  ownerIdRef.current = user?.id ?? null;
+  const operationRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [primaryUse, setPrimaryUse] = useState<string | null>(null);
-  const [style, setStyle] = useState<string>("balanced");
+  const [style, setStyle] = useState<(typeof STYLES)[number]["id"]>("balanced");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [rotateKey, setRotateKey] = useState(0);
 
   const fetchOnboarding = useServerFn(getOnboarding);
@@ -119,7 +148,18 @@ export function OnboardingDialog() {
   const doSkip = useServerFn(skipOnboarding);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+    operationRef.current += 1;
+    setOpen(false);
+    setStep(1);
+    setPrimaryUse(null);
+    setStyle("balanced");
+    setSaving(false);
+    setSaveError(null);
+    setRotateKey(0);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !user?.id) return;
     let cancelled = false;
     (async () => {
       try {
@@ -132,7 +172,7 @@ export function OnboardingDialog() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, fetchOnboarding]);
+  }, [isLoaded, isSignedIn, user?.id, fetchOnboarding]);
 
   const starters = useMemo(
     () => pickStarters(primaryUse),
@@ -147,20 +187,43 @@ export function OnboardingDialog() {
   };
 
   const finish = async (starter?: string) => {
-    if (!primaryUse) return;
+    if (!primaryUse || !user?.id) return;
+    const initiatingOwnerId = user.id;
+    const operation = operationRef.current + 1;
+    operationRef.current = operation;
     setSaving(true);
+    setSaveError(null);
     try {
       await persistOnboarding();
+      if (ownerIdRef.current !== initiatingOwnerId || operationRef.current !== operation) return;
       if (starter) {
         try {
-          localStorage.setItem("kova-draft:__new__", starter);
+          saveDraft(initiatingOwnerId, null, starter);
         } catch {
-          /* ignore */
+          /* The in-memory home composer can still receive the starter. */
         }
       }
+      const responseLength = RESPONSE_LENGTH_BY_STYLE[style];
+      onCompletion?.({ ownerId: initiatingOwnerId, responseLength, starter });
+      onResponseLengthChange?.(responseLength);
+      if (starter) {
+        onStarterSelected?.(starter);
+      }
       setOpen(false);
+      await navigate({ to: "/" });
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+          ?.focus({ preventScroll: true });
+      });
+    } catch {
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
+        setSaveError("We couldn't save your choices. Try again or skip setup for now.");
+      }
     } finally {
-      setSaving(false);
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
+        setSaving(false);
+      }
     }
   };
 
@@ -168,13 +231,20 @@ export function OnboardingDialog() {
     // Dismissing onboarding must never trap a signed-in user behind a failed
     // best-effort persistence request. Keep the completion write, but release
     // the interface immediately and let a later visit retry if necessary.
+    const initiatingOwnerId = ownerIdRef.current;
+    const operation = operationRef.current + 1;
+    operationRef.current = operation;
     setOpen(false);
     setSaving(true);
     try {
       await doSkip();
+    } catch {
+      /* The dialog is already released; a future visit can retry persistence. */
     } finally {
-      setOpen(false);
-      setSaving(false);
+      if (ownerIdRef.current === initiatingOwnerId && operationRef.current === operation) {
+        setOpen(false);
+        setSaving(false);
+      }
     }
   };
 
@@ -195,81 +265,149 @@ export function OnboardingDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && skip()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{titles[step].title}</DialogTitle>
-          <DialogDescription>{titles[step].desc}</DialogDescription>
-        </DialogHeader>
-
-        {step === 1 && (
-          <div className="grid grid-cols-2 gap-2 py-2">
-            {USES.map((u) => (
-              <button
-                key={u.id}
-                onClick={() => setPrimaryUse(u.id)}
-                className={`rounded-lg border px-3 py-2 text-sm text-left transition ${
-                  primaryUse === u.id
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:bg-muted"
-                }`}
-              >
-                {u.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="flex flex-col gap-2 py-2">
-            {STYLES.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setStyle(s.id)}
-                className={`rounded-lg border px-3 py-2 text-sm text-left transition ${
-                  style === s.id ? "border-primary bg-primary/10" : "border-border hover:bg-muted"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="flex flex-col gap-2 py-2">
-            {starters.map((s) => (
-              <button
-                key={s}
-                onClick={() => finish(s)}
-                disabled={saving}
-                className="group rounded-xl border border-border px-3 py-2.5 text-sm text-left transition hover:bg-muted hover:border-muted-foreground/40 disabled:opacity-60"
-              >
-                <span className="flex items-start gap-2">
-                  <Sparkles className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground transition" />
-                  <span className="flex-1">{s}</span>
-                </span>
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setRotateKey((n) => n + 1)}
-              className="mt-1 text-xs text-muted-foreground hover:text-foreground transition text-left"
+      <DialogContent className="gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2">
+        <div className="border-b border-border/60 pb-4 pl-5 pr-16 pt-5 sm:pl-6 sm:pr-16">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <span className="text-xs font-medium text-muted-foreground">Step {step} of 3</span>
+            <div
+              role="progressbar"
+              aria-label="Setup progress"
+              aria-valuemin={1}
+              aria-valuemax={3}
+              aria-valuenow={step}
+              className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"
             >
-              Show me different ideas
-            </button>
+              <span
+                className="block h-full rounded-full bg-primary transition-[width] duration-200"
+                style={{ width: `${(step / 3) * 100}%` }}
+              />
+            </div>
           </div>
-        )}
+          <DialogHeader>
+            <DialogTitle>{titles[step].title}</DialogTitle>
+            <DialogDescription>{titles[step].desc}</DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <DialogFooter className="gap-2 sm:justify-between">
-          <Button variant="ghost" onClick={skip} disabled={saving}>
-            Skip
+        <div className="px-5 py-4 sm:px-6">
+          {step === 1 && (
+            <div className="grid grid-cols-2 gap-2">
+              {USES.map((u) => (
+                <button
+                  type="button"
+                  key={u.id}
+                  aria-pressed={primaryUse === u.id}
+                  onClick={() => {
+                    setPrimaryUse(u.id);
+                    setSaveError(null);
+                  }}
+                  className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                    primaryUse === u.id
+                      ? "border-primary/60 bg-primary/10 text-foreground"
+                      : "border-border/70 hover:border-border hover:bg-muted/70"
+                  }`}
+                >
+                  <span>{u.label}</span>
+                  {primaryUse === u.id ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="flex flex-col gap-2">
+              {STYLES.map((s) => (
+                <button
+                  type="button"
+                  key={s.id}
+                  aria-pressed={style === s.id}
+                  onClick={() => {
+                    setStyle(s.id);
+                    setSaveError(null);
+                  }}
+                  className={`flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                    style === s.id
+                      ? "border-primary/60 bg-primary/10"
+                      : "border-border/70 hover:border-border hover:bg-muted/70"
+                  }`}
+                >
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">{s.label}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{s.hint}</span>
+                  </span>
+                  {style === s.id ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex flex-col gap-2 py-2">
+              {starters.map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  onClick={() => finish(s)}
+                  disabled={saving}
+                  className="group min-h-12 rounded-xl border border-border/70 px-3 py-2.5 text-left text-sm transition hover:border-border hover:bg-muted/70 disabled:opacity-60"
+                >
+                  <span className="flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground transition" />
+                    <span className="flex-1">{s}</span>
+                  </span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setRotateKey((n) => n + 1);
+                  setSaveError(null);
+                }}
+                className="mt-1 min-h-11 rounded-lg px-2 text-left text-xs text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+              >
+                Show me different ideas
+              </button>
+            </div>
+          )}
+
+          {saveError ? (
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {saveError}
+            </p>
+          ) : null}
+        </div>
+
+        <DialogFooter className="border-t border-border/60 bg-muted/20 px-5 py-4 sm:justify-between sm:px-6">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSaveError(null);
+              if (step === 1) void skip();
+              else setStep((current) => Math.max(1, current - 1));
+            }}
+            disabled={saving}
+          >
+            {step === 1 ? null : <ArrowLeft className="mr-1.5 h-4 w-4" />}
+            {step === 1 ? "Skip for now" : "Back"}
           </Button>
           {step === 1 ? (
-            <Button onClick={() => setStep(2)} disabled={!primaryUse}>
+            <Button
+              onClick={() => {
+                setSaveError(null);
+                setStep(2);
+              }}
+              disabled={!primaryUse}
+            >
               Continue
             </Button>
           ) : step === 2 ? (
-            <Button onClick={() => setStep(3)} disabled={saving}>
+            <Button
+              onClick={() => {
+                setSaveError(null);
+                setStep(3);
+              }}
+              disabled={saving}
+            >
               Continue
             </Button>
           ) : (

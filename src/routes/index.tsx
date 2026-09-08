@@ -88,6 +88,7 @@ const COMPLETE = "complete" as const;
 const RESEARCH_CANCELED = "canceled" as const;
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
+import { consumeOnboardingHandoff } from "@/lib/onboarding-handoff";
 import {
   blockMemoryWrites,
   configureMemoryWrites,
@@ -841,6 +842,15 @@ function KovaGPT() {
     setAttachments([]);
     setEditingMessage(null);
   }, [setConversations]);
+
+  useEffect(() => {
+    if (!settingsReady || !userKey) return;
+    const handoff = consumeOnboardingHandoff(userKey);
+    if (!handoff) return;
+    newChat();
+    setSettings((previous) => ({ ...previous, responseLength: handoff.responseLength }));
+    if (handoff.starter) setInput(handoff.starter);
+  }, [newChat, settingsReady, userKey]);
 
   const startTemporaryChat = useCallback(
     (context: TemporaryChatContext) => {
@@ -2248,7 +2258,15 @@ function KovaGPT() {
           />
         )}
 
-        <OnboardingDialog />
+        <OnboardingDialog
+          onStarterSelected={(starter) => {
+            newChat();
+            setInput(starter);
+          }}
+          onResponseLengthChange={(responseLength) =>
+            setSettings((previous) => ({ ...previous, responseLength }))
+          }
+        />
 
         {tempChatStartOpen && (
           <TemporaryChatStartDialog
