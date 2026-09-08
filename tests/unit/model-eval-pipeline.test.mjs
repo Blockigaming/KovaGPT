@@ -72,7 +72,10 @@ test("all 30 smoke cases survive mocked runner, grader, judge, score and compari
   const report = scoreRun(cases, reference);
   assert.equal(report.cases, 30);
   assert.equal(Object.keys(report.categories).length, 12);
-  assert.deepEqual(reference.map((row) => row.id), cases.map((item) => item.id));
+  assert.deepEqual(
+    reference.map((row) => row.id),
+    cases.map((item) => item.id),
+  );
   assert.ok(reference.every((row) => row.category !== undefined && row.weight === 1));
   assert.equal(report.operational.completeness.cost_usd.complete, true);
   assert.equal(report.operational.completeness.judge_cost_usd.complete, true);
