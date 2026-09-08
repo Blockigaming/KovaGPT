@@ -40,3 +40,29 @@ limits and estimated costs must not be described as a complete billing cap.
 Only after reliable reference/candidate results exist should model selection or
 training spend be decided. Preserve this distinction between evaluation-software
 progress and actual trained-model capability in every status update.
+
+## Percentage convention requested by Zachary
+
+**KovaGPT Model progress: 5% (1 of 20 recorded engineering checkpoints).**
+
+The machine-readable ledger is `model/evals/program-progress.json`. Run
+`node scripts/model-eval-progress.mjs` to calculate its percentage. A verified
+checkpoint contributes five percentage points; pending or blocked work contributes
+zero. This is a count of engineering milestones, not a claim that Kova has 5% of
+Sol's intelligence, or that 5% of the required time, money, or effort has elapsed.
+Evidence entries record why a checkpoint was marked verified; the command does not
+contact GitHub or independently authenticate those entries.
+
+The first checkpoint covers offline evaluation integrity. On source head
+`18cac41f18fdf06510cb78535b9aeedb2fa40a3c`, the model-source workflow
+`34240975060` passed. Its artifact was downloaded, checked against its SHA-256,
+and its 51 tests reproduced locally. Six additional end-to-end regression tests
+exercise all 30 smoke cases through mocked generation, deterministic grading,
+mock rubric judging, scoring and comparison. They also cover missing cases,
+pending grades, mismatched hashes, checkpoint preservation and unknown judge costs.
+Three progress-ledger tests verify the percentage calculation and evidence checks.
+
+These are software tests, not additional benchmark answers or trained weights.
+No paid baseline, candidate run, training, merge or production change was performed.
+Full exact-head CI and independent review remain separate, unverified milestones.
+Reaching 100% in the ledger never authorizes a merge, purchase or deployment.

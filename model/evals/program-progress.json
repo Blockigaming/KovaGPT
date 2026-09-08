@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "metric": "engineering_checkpoints",
+  "recorded_on": "2026-09-08",
+  "definition": "Each verified checkpoint contributes 5 percentage points. This is not a measure of model capability, remaining effort, time, or budget.",
+  "capability_comparison": "unmeasured",
+  "live_baseline_evidence": [],
+  "trained_checkpoint_evidence": [],
+  "checkpoints": [
+    {
+      "id": "offline-integrity",
+      "title": "Offline evaluation integrity and end-to-end mock pipeline",
+      "status": "verified",
+      "evidence": [
+        "GitHub PR #312 source head 18cac41f18fdf06510cb78535b9aeedb2fa40a3c",
+        "Kova Model Evaluation Source workflow run 34240975060: success",
+        "Exact-head source artifact 10061938993 SHA-256 07c37d5106c87f2d74d5fc5ac92945a6ed78b7b1ee02a79241f8d25e8fecc8fd",
+        "Reproduced 51 existing model-only tests on Node 22.16.0; all passed",
+        "tests/unit/model-eval-pipeline.test.mjs: six offline end-to-end regression tests passed"
+      ]
+    },
+    {
+      "id": "reviewed-source",
+      "title": "Exact-head repository CI and independent review cleared",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "execution-evaluations",
+      "title": "Executable coding, tool and agent evaluation harnesses",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "private-holdouts",
+      "title": "Independent private holdouts and contamination checks",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "judge-calibration",
+      "title": "Judging calibrated against independent human labels",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "approved-pilot",
+      "title": "Authorized credentials, pricing and enforced pilot spending cap",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "reference-baseline",
+      "title": "Reproducible baseline on the intended reference serving path",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "candidate-audit",
+      "title": "Open-weight candidate licensing and hardware requirements audited",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "candidate-baselines",
+      "title": "Untouched candidate baselines measured on the same tasks",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "base-selection",
+      "title": "Starting model selected from measured gaps and total cost",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "training-data",
+      "title": "Rights-cleared training dataset with provenance and privacy checks",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "trained-checkpoint",
+      "title": "First actual trained Kova checkpoint and held-out evaluation",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "repeatable-training",
+      "title": "Repeatable training, checkpoint recovery and experiment records",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "general-capabilities",
+      "title": "Required general, reasoning and factuality acceptance targets met",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "safety-privacy",
+      "title": "Independent safety, privacy and adversarial acceptance targets met",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "tool-agent-reliability",
+      "title": "Real tool and agent task-success acceptance targets met",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "context-modalities",
+      "title": "Required long-context, multi-turn and multimodal targets met",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "serving-economics",
+      "title": "Serving cost, reliability and tail-latency acceptance targets met",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "shadow-canary",
+      "title": "Authorized shadow and canary evidence accepted",
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "replacement-readiness",
+      "title": "Owner-approved replacement readiness and tested fallback",
+      "status": "pending",
+      "evidence": []
+    }
+  ]
+}
