@@ -17,6 +17,7 @@ const [
   modes,
   workspaceModeSwitch,
   workRoute,
+  onboarding,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -32,6 +33,7 @@ const [
   readFile("src/lib/modes.ts", "utf8"),
   readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
+  readFile("src/components/OnboardingDialog.tsx", "utf8"),
 ]);
 
 test("signed-in users can move clearly between Chat and Work", () => {
@@ -90,6 +92,20 @@ test("signed-in empty chat removes guest-only onboarding clutter", () => {
     route,
     /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
   );
+});
+
+test("signed-in onboarding hands real choices to the authenticated composer", () => {
+  assert.match(onboarding, /saveDraft\(user\?\.id \?\? null, null, starter\)/);
+  assert.doesNotMatch(onboarding, /localStorage\.setItem\("kova-draft:__new__"/);
+  assert.match(onboarding, /onStarterSelected\?\.\(starter\)/);
+  assert.match(onboarding, /onResponseLengthChange\?\.\(RESPONSE_LENGTH_BY_STYLE\[style\]\)/);
+  assert.match(onboarding, /role="progressbar"/);
+  assert.match(onboarding, /aria-pressed=\{primaryUse === u\.id\}/);
+  assert.match(onboarding, /aria-pressed=\{style === s\.id\}/);
+  assert.match(onboarding, /We couldn't save your choices/);
+  assert.match(onboarding, /setPrimaryUse\(null\);[\s\S]{0,160}\}, \[user\?\.id\]\);/);
+  assert.match(route, /<OnboardingDialog[\s\S]{0,320}onStarterSelected=\{\(starter\)/);
+  assert.match(appShell, /<OnboardingDialog[\s\S]{0,240}onResponseLengthChange=/);
 });
 
 test("active desktop chat keeps one primary action and groups secondary controls", () => {

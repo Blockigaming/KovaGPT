@@ -2248,7 +2248,15 @@ function KovaGPT() {
           />
         )}
 
-        <OnboardingDialog />
+        <OnboardingDialog
+          onStarterSelected={(starter) => {
+            newChat();
+            setInput(starter);
+          }}
+          onResponseLengthChange={(responseLength) =>
+            setSettings((previous) => ({ ...previous, responseLength }))
+          }
+        />
 
         {tempChatStartOpen && (
           <TemporaryChatStartDialog

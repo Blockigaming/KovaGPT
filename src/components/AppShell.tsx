@@ -264,7 +264,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             initialTab={settingsTab}
           />
         )}
-        <OnboardingDialog />
+        <OnboardingDialog
+          onResponseLengthChange={(responseLength) =>
+            setSettings((previous) => ({ ...previous, responseLength }))
+          }
+        />
       </Suspense>
       <TimersWidget
         userKey={userKey}
