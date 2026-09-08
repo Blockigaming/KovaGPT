@@ -52,10 +52,10 @@ function feedbackDatabase(initialRating = null) {
       filters.push([column, value]);
       return query;
     },
-    maybeSingle: async () => ({
-      data: rating ? { rating } : null,
-      error: null,
-    }),
+    in: (column, values) => {
+      filters.push([column, values]);
+      return query;
+    },
     upsert: async (value) => {
       mutations++;
       rating = value.rating;
@@ -66,7 +66,11 @@ function feedbackDatabase(initialRating = null) {
       rating = null;
       return query;
     },
-    then: (resolve) => resolve({ error: null }),
+    then: (resolve) =>
+      resolve({
+        data: rating ? [{ message_id: "message-1", rating }] : [],
+        error: null,
+      }),
   };
   return {
     supabase: { from: () => query },
@@ -84,12 +88,15 @@ const ownerA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ownerB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 test("feedback reads and writes fail before database access after an account switch", async () => {
-  const { getResponseFeedback, submitResponseFeedback } = loadFeedbackFunctions();
+  const { getResponseFeedbackBatch, submitResponseFeedback } = loadFeedbackFunctions();
   const db = feedbackDatabase("up");
   const context = { supabase: db.supabase, userId: ownerB };
 
   await assert.rejects(
-    getResponseFeedback({ data: { expectedOwnerId: ownerA, messageId: "message-1" }, context }),
+    getResponseFeedbackBatch({
+      data: { expectedOwnerId: ownerA, messageIds: ["message-1"] },
+      context,
+    }),
     /account changed/,
   );
   await assert.rejects(
@@ -104,16 +111,17 @@ test("feedback reads and writes fail before database access after an account swi
 });
 
 test("feedback hydration reads the authenticated owner's durable rating", async () => {
-  const { getResponseFeedback } = loadFeedbackFunctions();
+  const { getResponseFeedbackBatch } = loadFeedbackFunctions();
   const db = feedbackDatabase("down");
-  const result = await getResponseFeedback({
-    data: { expectedOwnerId: ownerA, messageId: "message-1" },
+  const result = await getResponseFeedbackBatch({
+    data: { expectedOwnerId: ownerA, messageIds: ["message-1", "message-1"] },
     context: { supabase: db.supabase, userId: ownerA },
   });
 
-  assert.equal(result.rating, "down");
+  assert.equal(result.ratings["message-1"], "down");
   assert.deepEqual(db.filters[0], ["owner_id", ownerA]);
-  assert.match(String(db.filters[1][1]), /^[0-9a-f]{64}$/);
+  assert.equal(db.filters[1][0], "message_id");
+  assert.deepEqual([...db.filters[1][1]], ["message-1"]);
 });
 
 test("feedback mutation accepts only the matching owner", async () => {

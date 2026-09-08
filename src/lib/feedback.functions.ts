@@ -11,10 +11,7 @@ type FeedbackQuery = {
   ) => Promise<{ error: unknown }>;
   delete: () => FeedbackQuery;
   eq: (column: string, value: unknown) => FeedbackQuery;
-  maybeSingle: () => Promise<{
-    data: { rating?: unknown } | null;
-    error: unknown;
-  }>;
+  in: (column: string, values: unknown[]) => FeedbackQuery;
   then: PromiseLike<{ error: unknown }>["then"];
 };
 
@@ -25,7 +22,14 @@ const FeedbackInput = z.object({
   contextExcerpt: z.string().max(2_000).optional(),
 });
 
-const FeedbackLookupInput = FeedbackInput.pick({ expectedOwnerId: true, messageId: true });
+const FeedbackBatchInput = z.object({
+  expectedOwnerId: z.string().uuid(),
+  messageIds: z
+    .array(z.string().trim().min(1).max(200))
+    .min(1)
+    .max(200)
+    .transform((messageIds) => [...new Set(messageIds)]),
+});
 
 function feedbackKey(ownerId: string, messageId: string): string {
   return createHash("sha256").update(`${ownerId}:${messageId}`).digest("hex");
@@ -37,21 +41,34 @@ function assertExpectedOwner(expectedOwnerId: string, actualOwnerId: string): vo
   }
 }
 
-export const getResponseFeedback = createServerFn({ method: "GET" })
+export const getResponseFeedbackBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => FeedbackLookupInput.parse(input))
-  .handler(async ({ data, context }): Promise<{ rating: "up" | "down" | null }> => {
+  .validator((input: unknown) => FeedbackBatchInput.parse(input))
+  .handler(async ({ data, context }): Promise<{ ratings: Record<string, "up" | "down"> }> => {
     assertExpectedOwner(data.expectedOwnerId, context.userId);
     const table = (context.supabase as unknown as { from: (name: string) => FeedbackQuery }).from(
       "feedback_submissions",
     );
-    const { data: row, error } = await table
-      .select("rating")
+    const { data: rows, error } = await (table
+      .select("message_id,rating")
       .eq("owner_id", context.userId)
-      .eq("duplicate_key", feedbackKey(context.userId, data.messageId))
-      .maybeSingle();
+      .in("message_id", data.messageIds) as unknown as Promise<{
+      data: { message_id?: unknown; rating?: unknown }[] | null;
+      error: unknown;
+    }>);
     if (error) throw new Error("Feedback could not be loaded.");
-    return { rating: row?.rating === "up" || row?.rating === "down" ? row.rating : null };
+    const requested = new Set(data.messageIds);
+    const ratings = Object.create(null) as Record<string, "up" | "down">;
+    for (const row of rows ?? []) {
+      if (
+        typeof row.message_id === "string" &&
+        requested.has(row.message_id) &&
+        (row.rating === "up" || row.rating === "down")
+      ) {
+        ratings[row.message_id] = row.rating;
+      }
+    }
+    return { ratings };
   });
 
 export const submitResponseFeedback = createServerFn({ method: "POST" })

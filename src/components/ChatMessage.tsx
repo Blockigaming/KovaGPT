@@ -38,7 +38,8 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { getResponseFeedback, submitResponseFeedback } from "@/lib/feedback.functions";
+import { getResponseFeedbackBatch, submitResponseFeedback } from "@/lib/feedback.functions";
+import { loadResponseFeedbackBatched } from "@/lib/feedback-batch";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
@@ -204,7 +205,7 @@ function ChatMessageInner({
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
   const { isSignedIn } = useUser();
-  const getFeedbackFn = useServerFn(getResponseFeedback);
+  const getFeedbackBatchFn = useServerFn(getResponseFeedbackBatch);
   const feedbackFn = useServerFn(submitResponseFeedback);
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
@@ -223,32 +224,7 @@ function ChatMessageInner({
   const feedback = feedbackState.key === feedbackKey ? feedbackState.value : null;
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
-  const [feedbackHydrationRequested, setFeedbackHydrationRequested] = useState(false);
   const [feedbackReload, setFeedbackReload] = useState(0);
-  const responseActionsRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (isUser || !isSignedIn) {
-      setFeedbackHydrationRequested(false);
-      return;
-    }
-    const target = responseActionsRef.current;
-    if (!target || typeof IntersectionObserver === "undefined") {
-      setFeedbackHydrationRequested(true);
-      return;
-    }
-    setFeedbackHydrationRequested(false);
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        setFeedbackHydrationRequested(true);
-        observer.disconnect();
-      },
-      { rootMargin: "160px" },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [isSignedIn, isUser, message.id, principal]);
 
   useEffect(() => {
     const requestGeneration = lifecycleGenerationRef.current;
@@ -259,7 +235,7 @@ function ChatMessageInner({
       requestGeneration === lifecycleGenerationRef.current &&
       requestPrincipal === principalRef.current;
 
-    if (!feedbackKey || isUser) {
+    if (isUser || !feedbackKey) {
       setFeedbackState({ key: null, value: null });
       setFeedbackSaving(false);
       setFeedbackLoadFailed(false);
@@ -286,28 +262,26 @@ function ChatMessageInner({
       };
     }
 
-    if (!feedbackHydrationRequested) {
-      setFeedbackState({ key: feedbackKey, value: null });
-      setFeedbackSaving(true);
-      setFeedbackLoadFailed(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
     setFeedbackState({ key: feedbackKey, value: null });
     setFeedbackSaving(true);
     setFeedbackLoadFailed(false);
     void (async () => {
       try {
-        const result = await getFeedbackFn({
-          data: { expectedOwnerId: userKey, messageId: message.id },
-        });
+        const rating = await loadResponseFeedbackBatched(
+          userKey,
+          message.id,
+          async (messageIds) => {
+            const result = await getFeedbackBatchFn({
+              data: { expectedOwnerId: userKey, messageIds },
+            });
+            return result.ratings;
+          },
+        );
         if (!isCurrent()) return;
-        setFeedbackState({ key: feedbackKey, value: result.rating });
+        setFeedbackState({ key: feedbackKey, value: rating });
         try {
           const storage = safeBrowserStorage("localStorage");
-          if (result.rating) storage?.setItem(feedbackKey, result.rating);
+          if (rating) storage?.setItem(feedbackKey, rating);
           else storage?.removeItem(feedbackKey);
         } catch {
           /* The authenticated feedback row remains authoritative. */
@@ -325,10 +299,9 @@ function ChatMessageInner({
       cancelled = true;
     };
   }, [
-    feedbackHydrationRequested,
     feedbackKey,
     feedbackReload,
-    getFeedbackFn,
+    getFeedbackBatchFn,
     isSignedIn,
     isUser,
     message.id,
@@ -476,12 +449,13 @@ function ChatMessageInner({
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       lifecycleGenerationRef.current += 1;
-      setFeedbackSaving(false);
-      setFeedbackLoadFailed(false);
-      setFeedbackReload((generation) => generation + 1);
       setSaving(false);
       setSaved(false);
       setCopied(false);
+      setFeedbackSaving(Boolean(isSignedIn && !isUser));
+      setFeedbackLoadFailed(false);
+      setFeedbackState({ key: feedbackKey, value: null });
+      setFeedbackReload((current) => current + 1);
       setEditorOpen(false);
       setMemoryOpenFor(null);
       setMobileSheetOpen(false);
@@ -489,7 +463,7 @@ function ChatMessageInner({
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
-  }, [cancelLongPress, principal, principalResolved, userKey]);
+  }, [cancelLongPress, feedbackKey, isSignedIn, isUser, principal, principalResolved, userKey]);
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -829,7 +803,6 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div
-              ref={responseActionsRef}
               className="kova-message-actions mt-1 max-w-full overflow-x-auto"
               role="toolbar"
               aria-label="Response actions"
@@ -888,12 +861,13 @@ function ChatMessageInner({
               {feedbackLoadFailed && (
                 <button
                   type="button"
-                  onClick={() => setFeedbackReload((generation) => generation + 1)}
-                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  title="Retry loading feedback"
-                  aria-label="Retry loading feedback"
+                  onClick={() => setFeedbackReload((current) => current + 1)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  title="Retry loading response feedback"
+                  aria-label="Retry loading response feedback"
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Retry rating
                 </button>
               )}
 
