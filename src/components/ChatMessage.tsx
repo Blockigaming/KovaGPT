@@ -222,6 +222,33 @@ function ChatMessageInner({
   }>({ key: null, value: null });
   const feedback = feedbackState.key === feedbackKey ? feedbackState.value : null;
   const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
+  const [feedbackHydrationRequested, setFeedbackHydrationRequested] = useState(false);
+  const [feedbackReload, setFeedbackReload] = useState(0);
+  const responseActionsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isUser || !isSignedIn) {
+      setFeedbackHydrationRequested(false);
+      return;
+    }
+    const target = responseActionsRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      setFeedbackHydrationRequested(true);
+      return;
+    }
+    setFeedbackHydrationRequested(false);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setFeedbackHydrationRequested(true);
+        observer.disconnect();
+      },
+      { rootMargin: "160px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isSignedIn, isUser, message.id, principal]);
 
   useEffect(() => {
     const requestGeneration = lifecycleGenerationRef.current;
@@ -232,9 +259,10 @@ function ChatMessageInner({
       requestGeneration === lifecycleGenerationRef.current &&
       requestPrincipal === principalRef.current;
 
-    if (!feedbackKey) {
+    if (!feedbackKey || isUser) {
       setFeedbackState({ key: null, value: null });
       setFeedbackSaving(false);
+      setFeedbackLoadFailed(false);
       return () => {
         cancelled = true;
       };
@@ -252,6 +280,16 @@ function ChatMessageInner({
         value: stored === "up" || stored === "down" ? stored : null,
       });
       setFeedbackSaving(false);
+      setFeedbackLoadFailed(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!feedbackHydrationRequested) {
+      setFeedbackState({ key: feedbackKey, value: null });
+      setFeedbackSaving(true);
+      setFeedbackLoadFailed(false);
       return () => {
         cancelled = true;
       };
@@ -259,6 +297,7 @@ function ChatMessageInner({
 
     setFeedbackState({ key: feedbackKey, value: null });
     setFeedbackSaving(true);
+    setFeedbackLoadFailed(false);
     void (async () => {
       try {
         const result = await getFeedbackFn({
@@ -274,7 +313,10 @@ function ChatMessageInner({
           /* The authenticated feedback row remains authoritative. */
         }
       } catch {
-        if (isCurrent()) setFeedbackState({ key: feedbackKey, value: null });
+        if (isCurrent()) {
+          setFeedbackState({ key: feedbackKey, value: null });
+          setFeedbackLoadFailed(true);
+        }
       } finally {
         if (isCurrent()) setFeedbackSaving(false);
       }
@@ -282,7 +324,17 @@ function ChatMessageInner({
     return () => {
       cancelled = true;
     };
-  }, [feedbackKey, getFeedbackFn, isSignedIn, message.id, principal, userKey]);
+  }, [
+    feedbackHydrationRequested,
+    feedbackKey,
+    feedbackReload,
+    getFeedbackFn,
+    isSignedIn,
+    isUser,
+    message.id,
+    principal,
+    userKey,
+  ]);
 
   const persistFeedback = async (next: "up" | "down" | null) => {
     if (!feedbackKey) {
@@ -424,6 +476,9 @@ function ChatMessageInner({
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       lifecycleGenerationRef.current += 1;
+      setFeedbackSaving(false);
+      setFeedbackLoadFailed(false);
+      setFeedbackReload((generation) => generation + 1);
       setSaving(false);
       setSaved(false);
       setCopied(false);
@@ -774,6 +829,7 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div
+              ref={responseActionsRef}
               className="kova-message-actions mt-1 max-w-full overflow-x-auto"
               role="toolbar"
               aria-label="Response actions"
@@ -804,7 +860,7 @@ function ChatMessageInner({
               <button
                 type="button"
                 onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
-                disabled={feedbackSaving}
+                disabled={feedbackSaving || feedbackLoadFailed}
                 className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "up" ? "bg-accent text-foreground" : ""
                 }`}
@@ -818,7 +874,7 @@ function ChatMessageInner({
               <button
                 type="button"
                 onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
-                disabled={feedbackSaving}
+                disabled={feedbackSaving || feedbackLoadFailed}
                 className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "down" ? "bg-accent text-foreground" : ""
                 }`}
@@ -828,6 +884,18 @@ function ChatMessageInner({
               >
                 <ThumbsDown className="h-4 w-4" />
               </button>
+
+              {feedbackLoadFailed && (
+                <button
+                  type="button"
+                  onClick={() => setFeedbackReload((generation) => generation + 1)}
+                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  title="Retry loading feedback"
+                  aria-label="Retry loading feedback"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
 
               {email && (
                 <DropdownMenu>

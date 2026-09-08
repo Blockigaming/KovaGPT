@@ -122,6 +122,13 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /principalScopedStorageKey\("kova-message-feedback", userKey\)/);
   assert.match(message, /`\$\{feedbackBaseKey\}:\$\{encodeURIComponent\(message\.id\)\}`/);
   assert.match(message, /useServerFn\(getResponseFeedback\)/);
+  assert.match(message, /if \(!feedbackKey \|\| isUser\)/);
+  assert.match(message, /new IntersectionObserver\(/);
+  assert.match(message, /if \(!feedbackHydrationRequested\)/);
+  assert.match(message, /setFeedbackLoadFailed\(true\)/);
+  assert.match(message, /disabled=\{feedbackSaving \|\| feedbackLoadFailed\}/);
+  assert.match(message, /aria-label="Retry loading feedback"/);
+  assert.match(message, /setFeedbackReload\(\(generation\) => generation \+ 1\)/);
   assert.match(message, /useServerFn\(submitResponseFeedback\)/);
   assert.match(
     message,
