@@ -29,7 +29,7 @@ const TOOLS = [
 const PROMPT =
   "In this synthetic test, the user has the plus plan and workspace fixture-workspace. " +
   "Use both read-only tools to find how many more projects fit. Then return only JSON " +
-  'with one integer field, remaining. Do not infer limits or counts from prior knowledge.';
+  "with one integer field, remaining. Do not infer limits or counts from prior knowledge.";
 
 // The model never receives these values until it issues valid calls.
 const FIXTURES = new Map([
@@ -52,7 +52,12 @@ export async function runToolProbe(respond, { timeoutMs = 1000 } = {}) {
   const returnedModels = new Set();
   let modelIdentityComplete = true;
   let turns = 0;
-  const protocolHash = digest({ version: 1, prompt: PROMPT, tools: TOOLS, fixtures: [...FIXTURES] });
+  const protocolHash = digest({
+    version: 1,
+    prompt: PROMPT,
+    tools: TOOLS,
+    fixtures: [...FIXTURES],
+  });
   const input = [{ role: "user", content: PROMPT }];
   const fail = (reason) => ({ score: 0, reason });
   const deadline = new Promise((resolve) => {
@@ -152,9 +157,14 @@ export async function runToolProbe(respond, { timeoutMs = 1000 } = {}) {
       scope: "One public synthetic tool-conformance probe, not a capability benchmark",
     };
   } catch {
-    return { id: "project-capacity-tool-probe-v1", ...fail("responder_error"),
-      turns, trace: structuredClone(trace), protocol_sha256: protocolHash,
-      replacement_eligible: false };
+    return {
+      id: "project-capacity-tool-probe-v1",
+      ...fail("responder_error"),
+      turns,
+      trace: structuredClone(trace),
+      protocol_sha256: protocolHash,
+      replacement_eligible: false,
+    };
   } finally {
     active = false;
     controller.abort();
