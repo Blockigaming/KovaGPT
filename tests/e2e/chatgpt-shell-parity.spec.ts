@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { waitForKovaHydration } from "./hydration";
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
 const themes = ["light", "dark"] as const;
@@ -100,6 +101,67 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(workLink).toBeVisible();
     await workLink.click();
     await expect(page).toHaveURL(/\/work$/);
+  });
+
+  test("active desktop chat keeps secondary actions in one overflow menu", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440x900");
+    await installAuthenticatedFixture(page);
+    await page.route("**/api/chat", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: 'data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: [DONE]\n\n',
+      });
+    });
+    await page.route("**/api/title", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ title: "Header hierarchy" }),
+      });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    ).toBeVisible();
+    const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+    await input.fill("Check the header");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Share chat" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "More chat actions" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "More chat actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
+  });
+
+  test("active guest desktop chat keeps its local settings action", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440x900");
+    await page.route("**/api/chat", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: 'data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: [DONE]\n\n',
+      });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+    await expect(input).toBeEnabled();
+    await input.fill("Keep guest settings available");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Share chat" })).toHaveCount(0);
+    await page.getByRole("button", { name: "More chat actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
   });
 
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {

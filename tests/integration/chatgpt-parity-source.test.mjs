@@ -92,6 +92,19 @@ test("signed-in empty chat removes guest-only onboarding clutter", () => {
   );
 });
 
+test("active desktop chat keeps one primary action and groups secondary controls", () => {
+  assert.match(route, /aria-label="Share chat"/);
+  assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
+  assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);
+  assert.match(route, /<DropdownMenuContent align="end" className="w-56">/);
+  assert.match(
+    route,
+    /<DropdownMenuItem onSelect=\{\(\) => setWorkspaceOpen\(true\)\}>[\s\S]*?Chat settings/,
+  );
+  assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
+  assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
+});
+
 test("composer actions, message editing, and markdown stay reachable and lossless", () => {
   assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
   assert.match(
