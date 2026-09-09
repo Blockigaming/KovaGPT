@@ -68,6 +68,7 @@ async function checkout({
     },
   };
   const context = {
+    loose: (client) => client,
     createStripeClient: () => stripe,
     durableStripeBillingEnabled: () => enabled,
     resolveStripeCustomerId: async () => "cus_Fixture",
