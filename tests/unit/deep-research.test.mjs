@@ -60,7 +60,11 @@ test("chat UI consumes and renders Deep Research lifecycle events", () => {
   assert.match(store, /label: "Research canceled"/);
   assert.match(progressCard, /aria-label="Deep Research progress"/);
   assert.match(progressCard, /role="progressbar"/);
-  assert.match(message, /streaming && !message\.content && !message\.researchProgress/);
+  assert.match(
+    message,
+    /streaming && !message\.content && !message\.pendingImage && !message\.researchProgress/,
+  );
+  assert.match(message, /waitingForFirstToken \?/);
   assert.match(client, /activity\.status === "running"/);
   assert.match(route, /markAssistantStopped\(conversation\.messages, target\.assistantMessageId\)/);
   assert.match(store, /Research interrupted/);

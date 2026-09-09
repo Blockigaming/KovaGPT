@@ -185,9 +185,23 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 });
 
 test("streaming status reports only real activity instead of invented progression", () => {
-  assert.match(message, /let label = "Thinking"/);
+  assert.match(message, /CONTINUED_WAIT_MS = 8_000/);
+  assert.match(message, /EXTENDED_WAIT_MS = 30_000/);
+  assert.match(message, /Date\.now\(\) - startedAt/);
+  assert.match(message, /activity\.status === "running"/);
+  assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
+  assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
+  assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
+  assert.match(home, /startedAt: Date\.now\(\)/);
+  assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
+  assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
+  assert.match(message, /"Still thinking"/);
+  assert.match(message, /"Taking a little longer"/);
   assert.doesNotMatch(message, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(message, /kova-thinking-indicator/);
+  assert.match(message, /role="status"/);
+  assert.match(message, /aria-atomic="true"/);
+  assert.match(message, /activity\.status !== "running"/);
 });
 
 test("the public visual gate executes the focused Chromium interactions and screenshots", () => {

@@ -142,10 +142,55 @@ function cleanAssistantText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 
-function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
-  const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
-  const tool = (last?.tool ?? "").toLowerCase();
-  let label = "Thinking";
+const CONTINUED_WAIT_MS = 8_000;
+const EXTENDED_WAIT_MS = 30_000;
+
+type WaitStage = "initial" | "continued" | "extended";
+
+function waitStageAt(startedAt: number): WaitStage {
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  if (elapsed >= EXTENDED_WAIT_MS) return "extended";
+  if (elapsed >= CONTINUED_WAIT_MS) return "continued";
+  return "initial";
+}
+
+function StreamingStatus({
+  activities,
+  startedAt,
+}: {
+  activities?: import("@/lib/chat-store").Activity[];
+  startedAt: number;
+}) {
+  const [waitStage, setWaitStage] = useState<WaitStage>(() => waitStageAt(startedAt));
+  useEffect(() => {
+    const elapsed = Math.max(0, Date.now() - startedAt);
+    setWaitStage(waitStageAt(startedAt));
+    const continuedTimer =
+      elapsed < CONTINUED_WAIT_MS
+        ? window.setTimeout(() => setWaitStage("continued"), CONTINUED_WAIT_MS - elapsed)
+        : null;
+    const extendedTimer =
+      elapsed < EXTENDED_WAIT_MS
+        ? window.setTimeout(() => setWaitStage("extended"), EXTENDED_WAIT_MS - elapsed)
+        : null;
+    return () => {
+      if (continuedTimer !== null) window.clearTimeout(continuedTimer);
+      if (extendedTimer !== null) window.clearTimeout(extendedTimer);
+    };
+  }, [startedAt]);
+
+  const active =
+    activities
+      ?.slice()
+      .reverse()
+      .find((activity) => activity.status === "running") ?? null;
+  const tool = (active?.tool ?? "").toLowerCase();
+  let label =
+    waitStage === "extended"
+      ? "Taking a little longer"
+      : waitStage === "continued"
+        ? "Still thinking"
+        : "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -156,11 +201,21 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else if (tool.includes("search") || tool.includes("web") || tool.includes("browse"))
       label = "Searching the web";
     else if (tool.includes("write")) label = "Writing draft";
-    else label = last?.label ?? "Working";
+    else label = active?.label ?? "Working";
   }
   return (
-    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
-      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
+    <div
+      className="kova-thinking-indicator flex min-h-8 items-center gap-2 py-1"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      data-wait-stage={waitStage}
+    >
+      <span className="kova-thinking-signal" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
       <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
@@ -171,6 +226,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
 function ChatMessageInner({
   message,
   streaming,
+  streamingStartedAt,
   onFollowUp,
   onRetry,
   onBranch,
@@ -185,6 +241,8 @@ function ChatMessageInner({
 }: {
   message: Message;
   streaming?: boolean;
+  /** Request start time survives chat navigation while the response remains active. */
+  streamingStartedAt?: number;
   onFollowUp?: (prompt: string) => void;
   onRetry?: () => void;
   onBranch?: () => void;
@@ -225,6 +283,18 @@ function ChatMessageInner({
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
   const [feedbackReload, setFeedbackReload] = useState(0);
+  const localStreamingStartedAtRef = useRef<number | null>(null);
+  if (!streaming) localStreamingStartedAtRef.current = null;
+  else if (localStreamingStartedAtRef.current === null)
+    localStreamingStartedAtRef.current = Date.now();
+  const resolvedStreamingStartedAt =
+    streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
+  const waitingForFirstToken = Boolean(
+    streaming && !message.content && !message.pendingImage && !message.researchProgress,
+  );
+  const visibleActivities = waitingForFirstToken
+    ? message.activities?.filter((activity) => activity.status !== "running")
+    : message.activities;
 
   useEffect(() => {
     const requestGeneration = lifecycleGenerationRef.current;
@@ -693,9 +763,9 @@ function ChatMessageInner({
                 <ResearchProgressCard progress={message.researchProgress} onRetry={onRetry} />
               </Suspense>
             )}
-            {message.activities && message.activities.length > 0 && (
+            {visibleActivities && visibleActivities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {message.activities.map((activity, index) => (
+                {visibleActivities.map((activity, index) => (
                   <span
                     key={index}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
@@ -756,8 +826,11 @@ function ChatMessageInner({
                     </div>
                   </div>
                 </div>
-              ) : streaming && !message.content && !message.researchProgress ? (
-                <StreamingStatus activities={message.activities} />
+              ) : waitingForFirstToken ? (
+                <StreamingStatus
+                  activities={message.activities}
+                  startedAt={resolvedStreamingStartedAt}
+                />
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
