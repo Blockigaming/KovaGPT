@@ -146,7 +146,7 @@ test("durable history preserves only terminal research and activity state", () =
   );
   assert.equal(running.messages[0].researchProgress, undefined);
 });
-test("durable history validates and preserves only assistant stopped state", () => {
+test("durable history validates and preserves assistant retry states", () => {
   const stopped = normalizeChatHistory(
     {
       ...chat(),
@@ -165,6 +165,22 @@ test("durable history validates and preserves only assistant stopped state", () 
   );
   assert.equal(stopped.messages[1].generationStatus, "stopped");
   assert.equal(stopped.messages[1].requestedTool, "image");
+  const failed = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        { id: "prompt", role: "user", content: "Help" },
+        {
+          id: "response",
+          role: "assistant",
+          content: "The request failed. Retry.",
+          generationStatus: "failed",
+        },
+      ],
+    },
+    OWNER,
+  );
+  assert.equal(failed.messages[1].generationStatus, "failed");
   assert.throws(
     () =>
       normalizeChatHistory(

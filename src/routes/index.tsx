@@ -1492,6 +1492,7 @@ function KovaGPT() {
             );
           }
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
+          updateAssistantMessage((message) => ({ ...message, generationStatus: "failed" }));
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {

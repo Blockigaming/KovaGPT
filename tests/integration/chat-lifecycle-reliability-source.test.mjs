@@ -81,10 +81,13 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
     /markAssistantStopped\(conversation\.messages, target\.assistantMessageId\)/u,
   );
   assert.match(homeChat, /!assembledReply\.trim\(\) && !stoppedByUser/u);
-  assert.match(store, /generationStatus\?: "stopped"/u);
+  assert.match(store, /generationStatus\?: "stopped" \| "failed"/u);
   assert.match(store, /pendingImage: _pendingImage/u);
   assert.match(message, />Response stopped</u);
   assert.match(message, /aria-label="Retry stopped response"/u);
+  assert.match(message, /message\.generationStatus !== "stopped"/u);
+  assert.match(message, /message\.generationStatus \? "Retry response" : "Regenerate response"/u);
+  assert.match(homeChat, /generationStatus: "failed"/u);
 });
 
 test("all chat clients share strict terminal SSE consumption", () => {

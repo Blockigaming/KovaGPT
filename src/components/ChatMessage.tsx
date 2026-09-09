@@ -269,6 +269,7 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
+  const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const feedbackBaseKey = principalResolved
     ? principalScopedStorageKey("kova-message-feedback", userKey)
@@ -949,13 +950,13 @@ function ChatMessageInner({
                 <ThumbsDown className="h-4 w-4" />
               </button>
 
-              {onRetry && (
+              {onRetry && message.generationStatus !== "stopped" && (
                 <button
                   type="button"
                   onClick={onRetry}
                   className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
-                  title="Regenerate response"
-                  aria-label="Regenerate response"
+                  title={retryActionLabel}
+                  aria-label={retryActionLabel}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -1209,7 +1210,7 @@ function ChatMessageInner({
               ...(onRetry
                 ? [
                     {
-                      label: "Regenerate response",
+                      label: retryActionLabel,
                       icon: RefreshCw,
                       onClick: () => {
                         onRetry();
