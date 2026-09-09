@@ -402,6 +402,7 @@ function KovaGPT() {
     controller: AbortController;
     conversationId: string;
     assistantMessageId: string;
+    startedAt: number;
     flushPendingContent: () => void;
   } | null>(null);
   const inFlightRef = useRef(false);
@@ -1187,6 +1188,7 @@ function KovaGPT() {
         controller,
         conversationId: nextConvId,
         assistantMessageId: assistantMsg.id,
+        startedAt: Date.now(),
         flushPendingContent: () => {
           if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
           flushAssistant();
@@ -2018,6 +2020,14 @@ function KovaGPT() {
                     userKey={userKey}
                     principalResolved={isLoaded}
                     streaming={isStreaming && isLastAssistant}
+                    streamingStartedAt={
+                      isStreaming &&
+                      isLastAssistant &&
+                      inFlightTargetRef.current?.conversationId === active.id &&
+                      inFlightTargetRef.current.assistantMessageId === m.id
+                        ? inFlightTargetRef.current.startedAt
+                        : undefined
+                    }
                     onUpdatePendingConfirm={(messageId, next) => {
                       setConversations((prev) =>
                         prev.map((c) => {

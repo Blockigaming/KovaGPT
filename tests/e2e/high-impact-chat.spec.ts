@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
@@ -151,7 +152,10 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
   );
 });
 
-test("a longer first-token wait stays calm, truthful, and stoppable", async ({ page }) => {
+test("a longer first-token wait stays calm, truthful, and stoppable", async ({
+  page,
+}, testInfo) => {
+  await installAuthenticatedFixture(page);
   await page.addInitScript(() => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input, init) => {
@@ -161,6 +165,11 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({ p
       return new Response(
         new ReadableStream({
           start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Search complete","status":"done"}}]}\n\n',
+              ),
+            );
             const abort = () =>
               controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
             if (signal?.aborted) abort();
@@ -180,12 +189,24 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({ p
 
   const status = page.getByRole("status").filter({ hasText: "Thinking" });
   await expect(status).toHaveText("Thinking…");
+  await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
   await page.clock.fastForward(8_000);
   await expect(status).toHaveText("Still thinking…");
   await page.clock.fastForward(22_000);
   await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
     "Taking a little longer…",
   );
+
+  if (testInfo.project.name === "desktop-1440x900") {
+    await page.getByRole("button", { name: "New chat", exact: true }).click();
+    await page
+      .getByRole("button", { name: /^Open chat / })
+      .first()
+      .click();
+    await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
+      "Taking a little longer…",
+    );
+  }
   await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();

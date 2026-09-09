@@ -145,20 +145,46 @@ function cleanAssistantText(text: string): string {
 const CONTINUED_WAIT_MS = 8_000;
 const EXTENDED_WAIT_MS = 30_000;
 
-function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
-  const [waitStage, setWaitStage] = useState<"initial" | "continued" | "extended">("initial");
-  useEffect(() => {
-    setWaitStage("initial");
-    const continuedTimer = window.setTimeout(() => setWaitStage("continued"), CONTINUED_WAIT_MS);
-    const extendedTimer = window.setTimeout(() => setWaitStage("extended"), EXTENDED_WAIT_MS);
-    return () => {
-      window.clearTimeout(continuedTimer);
-      window.clearTimeout(extendedTimer);
-    };
-  }, []);
+type WaitStage = "initial" | "continued" | "extended";
 
-  const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
-  const tool = (last?.tool ?? "").toLowerCase();
+function waitStageAt(startedAt: number): WaitStage {
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  if (elapsed >= EXTENDED_WAIT_MS) return "extended";
+  if (elapsed >= CONTINUED_WAIT_MS) return "continued";
+  return "initial";
+}
+
+function StreamingStatus({
+  activities,
+  startedAt,
+}: {
+  activities?: import("@/lib/chat-store").Activity[];
+  startedAt: number;
+}) {
+  const [waitStage, setWaitStage] = useState<WaitStage>(() => waitStageAt(startedAt));
+  useEffect(() => {
+    const elapsed = Math.max(0, Date.now() - startedAt);
+    setWaitStage(waitStageAt(startedAt));
+    const continuedTimer =
+      elapsed < CONTINUED_WAIT_MS
+        ? window.setTimeout(() => setWaitStage("continued"), CONTINUED_WAIT_MS - elapsed)
+        : null;
+    const extendedTimer =
+      elapsed < EXTENDED_WAIT_MS
+        ? window.setTimeout(() => setWaitStage("extended"), EXTENDED_WAIT_MS - elapsed)
+        : null;
+    return () => {
+      if (continuedTimer !== null) window.clearTimeout(continuedTimer);
+      if (extendedTimer !== null) window.clearTimeout(extendedTimer);
+    };
+  }, [startedAt]);
+
+  const active =
+    activities
+      ?.slice()
+      .reverse()
+      .find((activity) => activity.status === "running") ?? null;
+  const tool = (active?.tool ?? "").toLowerCase();
   let label =
     waitStage === "extended"
       ? "Taking a little longer"
@@ -175,7 +201,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else if (tool.includes("search") || tool.includes("web") || tool.includes("browse"))
       label = "Searching the web";
     else if (tool.includes("write")) label = "Writing draft";
-    else label = last?.label ?? "Working";
+    else label = active?.label ?? "Working";
   }
   return (
     <div
@@ -200,6 +226,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
 function ChatMessageInner({
   message,
   streaming,
+  streamingStartedAt,
   onFollowUp,
   onRetry,
   onBranch,
@@ -214,6 +241,8 @@ function ChatMessageInner({
 }: {
   message: Message;
   streaming?: boolean;
+  /** Request start time survives chat navigation while the response remains active. */
+  streamingStartedAt?: number;
   onFollowUp?: (prompt: string) => void;
   onRetry?: () => void;
   onBranch?: () => void;
@@ -792,7 +821,10 @@ function ChatMessageInner({
                   </div>
                 </div>
               ) : waitingForFirstToken ? (
-                <StreamingStatus activities={message.activities} />
+                <StreamingStatus
+                  activities={message.activities}
+                  startedAt={streamingStartedAt ?? Date.now()}
+                />
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
