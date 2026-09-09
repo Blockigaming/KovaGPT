@@ -1,3 +1,4 @@
+import { loose } from "@/lib/supabase-loose";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -297,7 +298,7 @@ export const listFiles = createServerFn({ method: "GET" })
       throw new Error("Project file cleanup is incomplete. Retry shortly.", { cause: error });
     }
 
-    let q = context.supabase
+    let q = loose(context.supabase)
       .from("project_files")
       .select("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at")
       .eq("project_id", data.project_id)
@@ -508,7 +509,7 @@ export const searchProject = createServerFn({ method: "GET" })
         .eq("project_id", data.project_id)
         .ilike("title", like)
         .limit(20),
-      context.supabase
+      loose(context.supabase)
         .from("project_files")
         .select("id, name")
         .eq("project_id", data.project_id)

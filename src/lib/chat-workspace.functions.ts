@@ -1,3 +1,4 @@
+import { loose } from "@/lib/supabase-loose";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -717,7 +718,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
       }
 
       // project_file: visibility is enforced by project_files RLS (membership).
-      const { data: file } = await context.supabase
+      const { data: file } = await loose(context.supabase)
         .from("project_files")
         .select("id, name, project_id")
         .eq("project_id", pin.project_id ?? "")

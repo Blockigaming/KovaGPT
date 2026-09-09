@@ -1,3 +1,4 @@
+import { loose } from "@/lib/supabase-loose";
 import { createFileRoute } from "@tanstack/react-router";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import {
@@ -117,7 +118,7 @@ async function projectUploadAuthorization(
     return json({ error: "project_not_found" }, 404);
   }
 
-  const { data: project, error: projectError } = await auth.supabaseAdmin
+  const { data: project, error: projectError } = await loose(auth.supabaseAdmin)
     .from("projects")
     .select("owner_id,deletion_requested_at")
     .eq("id", projectId)
@@ -290,7 +291,7 @@ async function acquireUploadQuota(
 
   // The RPC response may be lost after its transaction commits. Reconcile the
   // durable marker before deciding whether a retry would double-charge quota.
-  const current = await auth.supabaseAdmin
+  const current = await loose(auth.supabaseAdmin)
     .from("project_files")
     .select("status,upload_attempt_id,upload_quota_acquired")
     .eq("id", row.id)
@@ -576,7 +577,7 @@ export async function publishProjectFileBytes(
       ? await publishReady(row.id, attemptId)
       : await setUploadState(auth, row.id, attemptId, "ready");
     if (!published) {
-      const { data: current } = await auth.supabaseAdmin
+      const { data: current } = await loose(auth.supabaseAdmin)
         .from("project_files")
         .select("status,content_sha256,storage_path")
         .eq("id", row.id)
@@ -796,7 +797,7 @@ async function sign(request: Request): Promise<Response> {
     );
   }
 
-  const { data: file, error } = await auth.supabaseUser
+  const { data: file, error } = await loose(auth.supabaseUser)
     .from("project_files")
     .select("id,storage_path,status")
     .eq("id", fileId)
