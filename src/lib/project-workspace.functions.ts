@@ -333,7 +333,7 @@ export const reindexProjectFile = createServerFn({ method: "POST" })
   .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(
     async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
-      const { data: row, error } = await context.supabase
+      const { data: row, error } = await loose(context.supabase)
         .from("project_files")
         .select("id, project_id, name, storage_path, mime_type, kind, status")
         .eq("id", data.id)
