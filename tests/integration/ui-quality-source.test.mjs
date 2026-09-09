@@ -185,9 +185,15 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 });
 
 test("streaming status reports only real activity instead of invented progression", () => {
-  assert.match(message, /let label = "Thinking"/);
+  assert.match(message, /CONTINUED_WAIT_MS = 8_000/);
+  assert.match(message, /EXTENDED_WAIT_MS = 30_000/);
+  assert.match(message, /"Still thinking"/);
+  assert.match(message, /"Taking a little longer"/);
   assert.doesNotMatch(message, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(message, /kova-thinking-indicator/);
+  assert.match(message, /role="status"/);
+  assert.match(message, /aria-atomic="true"/);
+  assert.match(message, /activity\.status !== "running"/);
 });
 
 test("the public visual gate executes the focused Chromium interactions and screenshots", () => {

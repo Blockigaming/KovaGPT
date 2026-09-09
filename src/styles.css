@@ -1963,9 +1963,33 @@ body {
     background: var(--accent) !important;
   }
 
-  .kova-thinking-indicator > :first-child {
+  .kova-thinking-signal > span {
     animation: kova-status-pulse 1.4s var(--ease-standard) infinite;
   }
+
+  .kova-thinking-signal > span:nth-child(2) {
+    animation-delay: 140ms;
+  }
+
+  .kova-thinking-signal > span:nth-child(3) {
+    animation-delay: 280ms;
+  }
+}
+
+.kova-thinking-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  min-width: 1.3125rem;
+}
+
+.kova-thinking-signal > span {
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  background: currentColor;
+  color: var(--color-foreground);
+  opacity: 0.45;
 }
 
 @keyframes kova-status-pulse {
@@ -2018,9 +2042,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kova-thinking-indicator > :first-child {
+  .kova-thinking-signal > span {
     animation: none;
-    opacity: 1;
+    opacity: 0.7;
   }
 
   .kova-capability-card:hover,

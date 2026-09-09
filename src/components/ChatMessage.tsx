@@ -142,10 +142,29 @@ function cleanAssistantText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 
+const CONTINUED_WAIT_MS = 8_000;
+const EXTENDED_WAIT_MS = 30_000;
+
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
+  const [waitStage, setWaitStage] = useState<"initial" | "continued" | "extended">("initial");
+  useEffect(() => {
+    setWaitStage("initial");
+    const continuedTimer = window.setTimeout(() => setWaitStage("continued"), CONTINUED_WAIT_MS);
+    const extendedTimer = window.setTimeout(() => setWaitStage("extended"), EXTENDED_WAIT_MS);
+    return () => {
+      window.clearTimeout(continuedTimer);
+      window.clearTimeout(extendedTimer);
+    };
+  }, []);
+
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
-  let label = "Thinking";
+  let label =
+    waitStage === "extended"
+      ? "Taking a little longer"
+      : waitStage === "continued"
+        ? "Still thinking"
+        : "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -159,8 +178,18 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else label = last?.label ?? "Working";
   }
   return (
-    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
-      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
+    <div
+      className="kova-thinking-indicator flex min-h-8 items-center gap-2 py-1"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      data-wait-stage={waitStage}
+    >
+      <span className="kova-thinking-signal" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
       <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
@@ -225,6 +254,12 @@ function ChatMessageInner({
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
   const [feedbackReload, setFeedbackReload] = useState(0);
+  const waitingForFirstToken = Boolean(
+    streaming && !message.content && !message.pendingImage && !message.researchProgress,
+  );
+  const visibleActivities = waitingForFirstToken
+    ? message.activities?.filter((activity) => activity.status !== "running")
+    : message.activities;
 
   useEffect(() => {
     const requestGeneration = lifecycleGenerationRef.current;
@@ -693,9 +728,9 @@ function ChatMessageInner({
                 <ResearchProgressCard progress={message.researchProgress} onRetry={onRetry} />
               </Suspense>
             )}
-            {message.activities && message.activities.length > 0 && (
+            {visibleActivities && visibleActivities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {message.activities.map((activity, index) => (
+                {visibleActivities.map((activity, index) => (
                   <span
                     key={index}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
@@ -756,7 +791,7 @@ function ChatMessageInner({
                     </div>
                   </div>
                 </div>
-              ) : streaming && !message.content && !message.researchProgress ? (
+              ) : waitingForFirstToken ? (
                 <StreamingStatus activities={message.activities} />
               ) : (
                 (() => {

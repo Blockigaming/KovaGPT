@@ -151,6 +151,46 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
   );
 });
 
+test("a longer first-token wait stays calm, truthful, and stoppable", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      const signal = init?.signal;
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            const abort = () =>
+              controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            if (signal?.aborted) abort();
+            else signal?.addEventListener("abort", abort, { once: true });
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.clock.install();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Work through this carefully");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  const status = page.getByRole("status").filter({ hasText: "Thinking" });
+  await expect(status).toHaveText("Thinking…");
+  await page.clock.fastForward(8_000);
+  await expect(status).toHaveText("Still thinking…");
+  await page.clock.fastForward(22_000);
+  await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
+    "Taking a little longer…",
+  );
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop generating" }).click();
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+});
+
 async function startAttachedConversation(
   page: import("@playwright/test").Page,
   expectedResponse: string,
