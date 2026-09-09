@@ -123,6 +123,7 @@ import {
   subscribeToConversationChanges,
   loadArchivedConversations,
   loadPendingActive,
+  markLatestAssistantStopped,
   newId,
   saveConversations,
   persistTemporaryConversation,
@@ -137,6 +138,8 @@ import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const USER_STOP_REASON = "kova_user_stopped_generation";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -1358,7 +1361,8 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         if ((e as Error).name === "AbortError") {
-          if (!assembledReply.trim()) {
+          const stoppedByUser = controller.signal.reason?.message === USER_STOP_REASON;
+          if (!assembledReply.trim() && !stoppedByUser) {
             setConversations((prev) =>
               prev.map((conversation) =>
                 conversation.id === nextConvId
@@ -1537,7 +1541,7 @@ function KovaGPT() {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    abortRef.current?.abort();
+    abortRef.current?.abort(new DOMException(USER_STOP_REASON, "AbortError"));
     abortRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
@@ -1546,24 +1550,7 @@ function KovaGPT() {
         if (conversation.id !== activeIdRef.current) return conversation;
         return {
           ...conversation,
-          messages: conversation.messages.map((message) =>
-            message.researchProgress &&
-            ![COMPLETE, "failed", RESEARCH_CANCELED].includes(message.researchProgress.status)
-              ? {
-                  ...message,
-                  activities: message.activities?.map((activity) =>
-                    activity.status === "running"
-                      ? { ...activity, status: RESEARCH_CANCELED }
-                      : activity,
-                  ),
-                  researchProgress: {
-                    ...message.researchProgress,
-                    label: "Research canceled",
-                    status: RESEARCH_CANCELED,
-                  },
-                }
-              : message,
-          ),
+          messages: markLatestAssistantStopped(conversation.messages),
         };
       }),
     );

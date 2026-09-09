@@ -59,7 +59,43 @@ export type Message = {
   activities?: Activity[];
   researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
+  /** A user-stopped response remains retryable, including before its first token. */
+  generationStatus?: "stopped";
 };
+
+export function markLatestAssistantStopped(messages: Message[]): Message[] {
+  let assistantIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "assistant") {
+      assistantIndex = index;
+      break;
+    }
+  }
+  if (assistantIndex === -1) return messages;
+
+  return messages.map((message, index) => {
+    if (index !== assistantIndex) return message;
+    const researchRunning =
+      message.researchProgress &&
+      !["complete", "failed", "canceled"].includes(message.researchProgress.status);
+    return {
+      ...message,
+      generationStatus: "stopped" as const,
+      activities: message.activities?.map((activity) =>
+        activity.status === "running" ? { ...activity, status: "canceled" as const } : activity,
+      ),
+      ...(researchRunning && message.researchProgress
+        ? {
+            researchProgress: {
+              ...message.researchProgress,
+              label: "Research canceled",
+              status: "canceled" as const,
+            },
+          }
+        : {}),
+    };
+  });
+}
 /** Only content is replayed; attribution IDs and other response metadata stay private. */
 export function chatRequestMessages(previous: Message[], latest: Message) {
   return [
@@ -246,12 +282,18 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const { memorySources: rawSources, ...rest } = message;
+    const { memorySources: rawSources, generationStatus, ...rest } = message;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
-    return { ...rest, ...(memorySources ? { memorySources } : {}) };
+    return {
+      ...rest,
+      ...(memorySources ? { memorySources } : {}),
+      ...(message.role === "assistant" && generationStatus === "stopped"
+        ? { generationStatus }
+        : {}),
+    };
   });
 }
 

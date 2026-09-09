@@ -796,6 +796,24 @@ function ChatMessageInner({
               )}
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
+            {!streaming && message.generationStatus === "stopped" && (
+              <div
+                className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
+                role="status"
+              >
+                <span>Response stopped</span>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Retry stopped response"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -66,6 +66,17 @@ test("main chat preserves the plan-limit dialog for authoritative 429 responses"
   assert.match(homeChat, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
 });
 
+test("manual stop preserves a truthful retryable assistant turn", () => {
+  const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
+  const store = readFileSync("src/lib/chat-store.ts", "utf8");
+  assert.match(homeChat, /abort\(new DOMException\(USER_STOP_REASON, "AbortError"\)\)/u);
+  assert.match(homeChat, /markLatestAssistantStopped\(conversation\.messages\)/u);
+  assert.match(homeChat, /!assembledReply\.trim\(\) && !stoppedByUser/u);
+  assert.match(store, /generationStatus\?: "stopped"/u);
+  assert.match(message, />Response stopped</u);
+  assert.match(message, /aria-label="Retry stopped response"/u);
+});
+
 test("all chat clients share strict terminal SSE consumption", () => {
   for (const source of [homeChat, projectChat]) {
     assert.match(source, /consumeChatSse\(/u);

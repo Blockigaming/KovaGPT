@@ -11,6 +11,7 @@ import {
   loadConversations,
   loadDraft,
   loadPendingActive,
+  markLatestAssistantStopped,
   pendingActiveStorageKey,
   saveArchivedConversations,
   saveConversations,
@@ -67,6 +68,61 @@ function conversation(id, title = id) {
 }
 
 beforeEach(() => storage.clear());
+
+test("stopping preserves the latest assistant turn and closes only its active work", () => {
+  const messages = [
+    { id: "user", role: "user", content: "Explain this" },
+    {
+      id: "assistant",
+      role: "assistant",
+      content: "Partial answer",
+      activities: [
+        { tool: "search", label: "Searching", status: "running" },
+        { tool: "read", label: "Source ready", status: "done" },
+      ],
+      researchProgress: {
+        stage: "searching",
+        label: "Searching sources",
+        status: "running",
+        progress: 0.4,
+      },
+    },
+  ];
+
+  const stopped = markLatestAssistantStopped(messages);
+
+  assert.notEqual(stopped, messages);
+  assert.equal(stopped[0], messages[0]);
+  assert.equal(stopped[1].generationStatus, "stopped");
+  assert.deepEqual(
+    stopped[1].activities.map(({ status }) => status),
+    ["canceled", "done"],
+  );
+  assert.deepEqual(stopped[1].researchProgress, {
+    stage: "searching",
+    label: "Research canceled",
+    status: "canceled",
+    progress: 0.4,
+  });
+});
+
+test("a response stopped before its first token remains durable and retryable", () => {
+  const chat = {
+    ...conversation("stopped-chat"),
+    messages: markLatestAssistantStopped([
+      { id: "user", role: "user", content: "Help" },
+      { id: "assistant", role: "assistant", content: "" },
+    ]),
+  };
+
+  assert.equal(saveConversations("account-a", [chat]), true);
+  assert.deepEqual(loadConversations("account-a")[0].messages.at(-1), {
+    id: "assistant",
+    role: "assistant",
+    content: "",
+    generationStatus: "stopped",
+  });
+});
 
 test("account switches isolate active chats, archives, drafts, and pending selection", () => {
   const accountA = "account-a";
