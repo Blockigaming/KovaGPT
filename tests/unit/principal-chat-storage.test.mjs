@@ -11,7 +11,7 @@ import {
   loadConversations,
   loadDraft,
   loadPendingActive,
-  markLatestAssistantStopped,
+  markAssistantStopped,
   pendingActiveStorageKey,
   saveArchivedConversations,
   saveConversations,
@@ -89,7 +89,7 @@ test("stopping preserves the latest assistant turn and closes only its active wo
     },
   ];
 
-  const stopped = markLatestAssistantStopped(messages);
+  const stopped = markAssistantStopped(messages, "assistant");
 
   assert.notEqual(stopped, messages);
   assert.equal(stopped[0], messages[0]);
@@ -109,10 +109,13 @@ test("stopping preserves the latest assistant turn and closes only its active wo
 test("a response stopped before its first token remains durable and retryable", () => {
   const chat = {
     ...conversation("stopped-chat"),
-    messages: markLatestAssistantStopped([
-      { id: "user", role: "user", content: "Help" },
-      { id: "assistant", role: "assistant", content: "" },
-    ]),
+    messages: markAssistantStopped(
+      [
+        { id: "user", role: "user", content: "Help" },
+        { id: "assistant", role: "assistant", content: "", pendingImage: true },
+      ],
+      "assistant",
+    ),
   };
 
   assert.equal(saveConversations("account-a", [chat]), true);
@@ -122,6 +125,20 @@ test("a response stopped before its first token remains durable and retryable", 
     content: "",
     generationStatus: "stopped",
   });
+});
+
+test("stopping targets the in-flight assistant and clears image progress", () => {
+  const messages = [
+    { id: "older", role: "assistant", content: "Complete answer" },
+    { id: "user", role: "user", content: "Create an image" },
+    { id: "in-flight", role: "assistant", content: "", pendingImage: true },
+  ];
+
+  const stopped = markAssistantStopped(messages, "in-flight");
+
+  assert.equal(stopped[0], messages[0]);
+  assert.equal(stopped[2].generationStatus, "stopped");
+  assert.equal(stopped[2].pendingImage, undefined);
 });
 
 test("account switches isolate active chats, archives, drafts, and pending selection", () => {

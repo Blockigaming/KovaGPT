@@ -70,9 +70,14 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
   const store = readFileSync("src/lib/chat-store.ts", "utf8");
   assert.match(homeChat, /abort\(new DOMException\(USER_STOP_REASON, "AbortError"\)\)/u);
-  assert.match(homeChat, /markLatestAssistantStopped\(conversation\.messages\)/u);
+  assert.match(homeChat, /conversation\.id !== target\.conversationId/u);
+  assert.match(
+    homeChat,
+    /markAssistantStopped\(conversation\.messages, target\.assistantMessageId\)/u,
+  );
   assert.match(homeChat, /!assembledReply\.trim\(\) && !stoppedByUser/u);
   assert.match(store, /generationStatus\?: "stopped"/u);
+  assert.match(store, /pendingImage: _pendingImage/u);
   assert.match(message, />Response stopped</u);
   assert.match(message, /aria-label="Retry stopped response"/u);
 });

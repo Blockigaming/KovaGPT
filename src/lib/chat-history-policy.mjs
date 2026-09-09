@@ -111,6 +111,11 @@ export function normalizeChatHistory(value, ownerId) {
       }
       const sources = normalizeMemorySources(message.memorySources, ownerId);
       if (sources && message.role === "assistant") item.memorySources = sources;
+      if (message.generationStatus !== undefined) {
+        if (message.role !== "assistant" || message.generationStatus !== "stopped")
+          throw new Error("chat_history_invalid");
+        item.generationStatus = "stopped";
+      }
       // Running request state is never durable completion evidence. Terminal activity and
       // research state must survive refresh so completed work stays attributable and an
       // interrupted research response can render an honest, retryable failure instead of

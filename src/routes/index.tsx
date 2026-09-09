@@ -123,7 +123,7 @@ import {
   subscribeToConversationChanges,
   loadArchivedConversations,
   loadPendingActive,
-  markLatestAssistantStopped,
+  markAssistantStopped,
   newId,
   saveConversations,
   persistTemporaryConversation,
@@ -398,6 +398,11 @@ function KovaGPT() {
     message?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
+  const inFlightTargetRef = useRef<{
+    controller: AbortController;
+    conversationId: string;
+    assistantMessageId: string;
+  } | null>(null);
   const inFlightRef = useRef(false);
   const retryGenerationRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
@@ -423,6 +428,7 @@ function KovaGPT() {
     storageGenerationRef.current += 1;
     abortRef.current?.abort();
     abortRef.current = null;
+    inFlightTargetRef.current = null;
     inFlightRef.current = false;
     if (retryTimerRef.current !== null) {
       window.clearTimeout(retryTimerRef.current);
@@ -530,6 +536,7 @@ function KovaGPT() {
       storageGenerationRef.current += 1;
       abortRef.current?.abort();
       abortRef.current = null;
+      inFlightTargetRef.current = null;
       inFlightRef.current = false;
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
@@ -1149,6 +1156,11 @@ function KovaGPT() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      inFlightTargetRef.current = {
+        controller,
+        conversationId: nextConvId,
+        assistantMessageId: assistantMsg.id,
+      };
 
       let pendingContent = "";
       let assistantFrame: number | null = null;
@@ -1427,6 +1439,8 @@ function KovaGPT() {
             );
             setIsStreaming(false);
             abortRef.current = null;
+            if (inFlightTargetRef.current?.controller === controller)
+              inFlightTargetRef.current = null;
             inFlightRef.current = false;
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
@@ -1514,6 +1528,8 @@ function KovaGPT() {
           setIsStreaming(false);
           setSelectedTool(null);
           if (abortRef.current === controller) abortRef.current = null;
+          if (inFlightTargetRef.current?.controller === controller)
+            inFlightTargetRef.current = null;
           inFlightRef.current = false;
         }
       }
@@ -1541,16 +1557,19 @@ function KovaGPT() {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    abortRef.current?.abort(new DOMException(USER_STOP_REASON, "AbortError"));
+    const target = inFlightTargetRef.current;
+    target?.controller.abort(new DOMException(USER_STOP_REASON, "AbortError"));
     abortRef.current = null;
+    inFlightTargetRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
+    if (!target) return;
     setConversations((previous) =>
       previous.map((conversation) => {
-        if (conversation.id !== activeIdRef.current) return conversation;
+        if (conversation.id !== target.conversationId) return conversation;
         return {
           ...conversation,
-          messages: markLatestAssistantStopped(conversation.messages),
+          messages: markAssistantStopped(conversation.messages, target.assistantMessageId),
         };
       }),
     );
@@ -2219,6 +2238,7 @@ function KovaGPT() {
               storageGenerationRef.current += 1;
               abortRef.current?.abort();
               abortRef.current = null;
+              inFlightTargetRef.current = null;
               inFlightRef.current = false;
               if (retryTimerRef.current !== null) {
                 window.clearTimeout(retryTimerRef.current);

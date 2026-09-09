@@ -30,7 +30,7 @@ test("stopping before the first token preserves an honest response with immediat
           start(controller) {
             controller.enqueue(
               new TextEncoder().encode(
-                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\n',
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\ndata: {"choices":[{"delta":{"kind":"image_pending"}}]}\n\n',
               ),
             );
             const abort = () =>
@@ -49,9 +49,11 @@ test("stopping before the first token preserves an honest response with immediat
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Explain the result");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
+  await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
 

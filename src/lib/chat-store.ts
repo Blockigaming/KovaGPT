@@ -63,23 +63,20 @@ export type Message = {
   generationStatus?: "stopped";
 };
 
-export function markLatestAssistantStopped(messages: Message[]): Message[] {
-  let assistantIndex = -1;
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === "assistant") {
-      assistantIndex = index;
-      break;
-    }
-  }
+export function markAssistantStopped(messages: Message[], assistantMessageId: string): Message[] {
+  const assistantIndex = messages.findIndex(
+    (message) => message.id === assistantMessageId && message.role === "assistant",
+  );
   if (assistantIndex === -1) return messages;
 
   return messages.map((message, index) => {
     if (index !== assistantIndex) return message;
+    const { pendingImage: _pendingImage, ...terminalMessage } = message;
     const researchRunning =
       message.researchProgress &&
       !["complete", "failed", "canceled"].includes(message.researchProgress.status);
     return {
-      ...message,
+      ...terminalMessage,
       generationStatus: "stopped" as const,
       activities: message.activities?.map((activity) =>
         activity.status === "running" ? { ...activity, status: "canceled" as const } : activity,
