@@ -86,6 +86,8 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   assert.match(message, />Response stopped</u);
   assert.match(message, /aria-label="Retry stopped response"/u);
   assert.match(message, /message\.generationStatus !== "stopped"/u);
+  assert.match(message, /!researchOwnsRetry/u);
+  assert.match(message, /message\.researchProgress\.status !== "complete"/u);
   assert.match(message, /message\.generationStatus \? "Retry response" : "Regenerate response"/u);
   assert.match(homeChat, /generationStatus: "failed"/u);
 });

@@ -269,6 +269,9 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
+  const researchOwnsRetry = Boolean(
+    message.researchProgress && message.researchProgress.status !== "complete",
+  );
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const feedbackBaseKey = principalResolved
@@ -950,7 +953,7 @@ function ChatMessageInner({
                 <ThumbsDown className="h-4 w-4" />
               </button>
 
-              {onRetry && message.generationStatus !== "stopped" && (
+              {onRetry && message.generationStatus !== "stopped" && !researchOwnsRetry && (
                 <button
                   type="button"
                   onClick={onRetry}
@@ -1207,7 +1210,7 @@ function ChatMessageInner({
                     },
                   ]
                 : []),
-              ...(onRetry
+              ...(onRetry && !researchOwnsRetry
                 ? [
                     {
                       label: retryActionLabel,
