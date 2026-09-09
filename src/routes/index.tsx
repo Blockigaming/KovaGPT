@@ -402,6 +402,7 @@ function KovaGPT() {
     controller: AbortController;
     conversationId: string;
     assistantMessageId: string;
+    flushPendingContent: () => void;
   } | null>(null);
   const inFlightRef = useRef(false);
   const retryGenerationRef = useRef(0);
@@ -1157,11 +1158,6 @@ function KovaGPT() {
 
       const controller = new AbortController();
       abortRef.current = controller;
-      inFlightTargetRef.current = {
-        controller,
-        conversationId: nextConvId,
-        assistantMessageId: assistantMsg.id,
-      };
 
       let pendingContent = "";
       let assistantFrame: number | null = null;
@@ -1186,6 +1182,15 @@ function KovaGPT() {
       const updateAssistant = (chunk: string) => {
         pendingContent += chunk;
         if (assistantFrame === null) assistantFrame = requestAnimationFrame(flushAssistant);
+      };
+      inFlightTargetRef.current = {
+        controller,
+        conversationId: nextConvId,
+        assistantMessageId: assistantMsg.id,
+        flushPendingContent: () => {
+          if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
+          flushAssistant();
+        },
       };
 
       const updateAssistantMessage = (update: (message: Message) => Message) => {
@@ -1559,6 +1564,7 @@ function KovaGPT() {
       retryTimerRef.current = null;
     }
     const target = inFlightTargetRef.current;
+    target?.flushPendingContent();
     // Preflight work may not observe AbortSignal immediately. Invalidate the old
     // closure before exposing Retry so its catch/finally cannot clear a replacement.
     retryGenerationRef.current += 1;
@@ -1567,6 +1573,7 @@ function KovaGPT() {
     inFlightTargetRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
+    setSelectedTool(null);
     if (!target) return;
     setConversations((previous) =>
       previous.map((conversation) => {

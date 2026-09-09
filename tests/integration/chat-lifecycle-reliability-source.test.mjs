@@ -72,8 +72,9 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   assert.match(homeChat, /abort\(new DOMException\(USER_STOP_REASON, "AbortError"\)\)/u);
   assert.match(
     homeChat,
-    /const stop = useCallback\(\(\) => \{[\s\S]{0,400}retryGenerationRef\.current \+= 1;[\s\S]{0,200}target\?\.controller\.abort/u,
+    /const stop = useCallback\(\(\) => \{[\s\S]{0,400}target\?\.flushPendingContent\(\);[\s\S]{0,200}retryGenerationRef\.current \+= 1;[\s\S]{0,200}target\?\.controller\.abort/u,
   );
+  assert.match(homeChat, /setIsStreaming\(false\);\s*setSelectedTool\(null\);/u);
   assert.match(homeChat, /conversation\.id !== target\.conversationId/u);
   assert.match(
     homeChat,

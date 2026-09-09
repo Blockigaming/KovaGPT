@@ -33,7 +33,7 @@ test("stopping before the first token preserves an honest response with immediat
           start(controller) {
             controller.enqueue(
               new TextEncoder().encode(
-                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\ndata: {"choices":[{"delta":{"kind":"image_pending"}}]}\n\n',
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\ndata: {"choices":[{"delta":{"kind":"image_pending"}}]}\n\ndata: {"choices":[{"delta":{"content":"Partial response"}}]}\n\n',
               ),
             );
             const abort = () =>
@@ -49,6 +49,10 @@ test("stopping before the first token preserves an honest response with immediat
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await page.evaluate(() => {
+    window.requestAnimationFrame = (callback) =>
+      window.setTimeout(() => callback(performance.now()), 1_000);
+  });
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.getByRole("button", { name: "Create Image" }).click();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("A sunset over mountains");
@@ -58,7 +62,9 @@ test("stopping before the first token preserves an honest response with immediat
   await page.getByRole("button", { name: "Stop generating" }).click();
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
   await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Create Image" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
 
