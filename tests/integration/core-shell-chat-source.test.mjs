@@ -10,6 +10,7 @@ const temporaryControls = await readFile("src/components/TemporaryChatStartDialo
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const feedback = await readFile("src/lib/feedback.functions.ts", "utf8");
+const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
 
 test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap", () => {
@@ -91,6 +92,12 @@ test("response feedback is authenticated and durable rather than a decorative lo
   assert.match(feedback, /feedback_submissions/);
   assert.match(feedback, /duplicate_key/);
   assert.match(feedback, /createHash\("sha256"\)/);
+  assert.match(feedback, /export const getResponseFeedbackBatch/);
+  assert.match(feedback, /getResponseFeedbackBatch = createServerFn\(\{ method: "POST" \}\)/);
+  assert.match(feedback, /\.max\(200\)/);
+  assert.match(feedback, /\.in\("message_id", data\.messageIds\)/);
+  assert.match(feedback, /expectedOwnerId !== actualOwnerId/);
+  assert.match(feedback, /Your account changed\. Please try again\./);
 });
 
 test("destructive chat actions use an accessible confirmation dialog", () => {
@@ -113,6 +120,33 @@ test("message component keeps reachable assistant actions and safe streaming sta
   // Local browser read-aloud is an accessibility aid, not full-duplex provider Voice.
   assert.doesNotMatch(message, /getUserMedia|MediaRecorder|voice_session/);
   assert.match(message, /saveItem/);
+  assert.match(message, /aria-label="Response actions"/);
+  assert.match(message, /aria-label="Good response"/);
+  assert.match(message, /aria-label="Bad response"/);
+  assert.match(message, /principalScopedStorageKey\("kova-message-feedback", userKey\)/);
+  assert.match(message, /`\$\{feedbackBaseKey\}:\$\{encodeURIComponent\(message\.id\)\}`/);
+  assert.match(message, /useServerFn\(getResponseFeedbackBatch\)/);
+  assert.match(message, /if \(isUser \|\| !feedbackKey\)/);
+  assert.match(message, /loadResponseFeedbackBatched\(/);
+  assert.match(feedbackBatch, /const MAX_BATCH_SIZE = 200/);
+  assert.match(feedbackBatch, /pendingByOwner/);
+  assert.match(message, /useServerFn\(submitResponseFeedback\)/);
+  assert.match(
+    message,
+    /await getFeedbackBatchFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageIds/,
+  );
+  assert.match(
+    message,
+    /await feedbackFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageId: message\.id[\s\S]{0,100}rating: next/,
+  );
+  assert.match(message, /requestPrincipal === principalRef\.current/);
+  assert.match(message, /setFeedbackLoadFailed\(true\)/);
+  assert.match(message, /disabled=\{feedbackSaving \|\| feedbackLoadFailed\}/);
+  assert.match(message, /Retry loading response feedback/);
+  assert.match(message, /setFeedbackReload\(\(current\) => current \+ 1\)/);
+  assert.match(message, /setFeedbackSaving\(Boolean\(isSignedIn && !isUser\)\)/);
+  assert.match(message, />\s*Share\s*</);
+  assert.match(message, /Save to Library/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);
 });
