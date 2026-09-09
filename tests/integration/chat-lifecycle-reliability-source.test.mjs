@@ -66,6 +66,27 @@ test("main chat preserves the plan-limit dialog for authoritative 429 responses"
   assert.match(homeChat, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
 });
 
+test("manual stop preserves a truthful retryable assistant turn", () => {
+  const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
+  const store = readFileSync("src/lib/chat-store.ts", "utf8");
+  assert.match(homeChat, /abort\(new DOMException\(USER_STOP_REASON, "AbortError"\)\)/u);
+  assert.match(
+    homeChat,
+    /const stop = useCallback\(\(\) => \{[\s\S]{0,400}target\?\.flushPendingContent\(\);[\s\S]{0,200}retryGenerationRef\.current \+= 1;[\s\S]{0,200}target\?\.controller\.abort/u,
+  );
+  assert.match(homeChat, /setIsStreaming\(false\);\s*setSelectedTool\(null\);/u);
+  assert.match(homeChat, /conversation\.id !== target\.conversationId/u);
+  assert.match(
+    homeChat,
+    /markAssistantStopped\(conversation\.messages, target\.assistantMessageId\)/u,
+  );
+  assert.match(homeChat, /!assembledReply\.trim\(\) && !stoppedByUser/u);
+  assert.match(store, /generationStatus\?: "stopped"/u);
+  assert.match(store, /pendingImage: _pendingImage/u);
+  assert.match(message, />Response stopped</u);
+  assert.match(message, /aria-label="Retry stopped response"/u);
+});
+
 test("all chat clients share strict terminal SSE consumption", () => {
   for (const source of [homeChat, projectChat]) {
     assert.match(source, /consumeChatSse\(/u);

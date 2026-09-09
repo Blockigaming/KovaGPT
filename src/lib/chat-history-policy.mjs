@@ -23,6 +23,14 @@ const text = (v, max) => typeof v === "string" && v.length <= max;
 const time = (v) => Number.isSafeInteger(v) && v >= 0 && v <= 8_640_000_000_000_000;
 const TERMINAL_ACTIVITY_STATUSES = new Set(["done", "failed", "canceled"]);
 const TERMINAL_RESEARCH_STATUSES = new Set(["complete", "failed", "canceled"]);
+const COMPOSER_TOOL_IDS = new Set([
+  "web_search",
+  "deep_research",
+  "image",
+  "study",
+  "data_analysis",
+  "file_analysis",
+]);
 export function chatHistoryUuid(value) {
   if (typeof value !== "string" || !UUID.test(value)) throw new Error("chat_history_invalid");
   return value.toLowerCase();
@@ -111,6 +119,16 @@ export function normalizeChatHistory(value, ownerId) {
       }
       const sources = normalizeMemorySources(message.memorySources, ownerId);
       if (sources && message.role === "assistant") item.memorySources = sources;
+      if (message.generationStatus !== undefined) {
+        if (message.role !== "assistant" || message.generationStatus !== "stopped")
+          throw new Error("chat_history_invalid");
+        item.generationStatus = "stopped";
+      }
+      if (message.requestedTool !== undefined) {
+        if (message.role !== "assistant" || !COMPOSER_TOOL_IDS.has(message.requestedTool))
+          throw new Error("chat_history_invalid");
+        item.requestedTool = message.requestedTool;
+      }
       // Running request state is never durable completion evidence. Terminal activity and
       // research state must survive refresh so completed work stays attributable and an
       // interrupted research response can render an honest, retryable failure instead of

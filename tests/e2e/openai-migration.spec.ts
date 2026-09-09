@@ -105,7 +105,7 @@ test("kill-switch error is shown once without automatic retry or horizontal over
   expect(overflow).toBe(false);
 });
 
-test("Stop aborts a slow generation without duplicating the assistant message", async ({
+test("Stop aborts a slow generation and preserves one retryable assistant message", async ({
   page,
 }) => {
   await page.route("**/api/chat", async (route) => {
@@ -124,5 +124,7 @@ test("Stop aborts a slow generation without duplicating the assistant message", 
   await stop.click();
   await expect(stop).toHaveCount(0);
   await expect(page.getByText("too late")).toHaveCount(0);
-  await expect(page.locator("article[aria-label='KovaGPT response']")).toHaveCount(0);
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
+  await expect(page.locator("article[aria-label='KovaGPT response']")).toHaveCount(1);
 });

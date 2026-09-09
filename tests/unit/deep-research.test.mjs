@@ -57,12 +57,12 @@ test("chat UI consumes and renders Deep Research lifecycle events", () => {
   const store = read("src/lib/chat-store.ts");
   assert.match(route, /delta\?\.kind === "research_progress"/);
   assert.match(route, /delta\?\.kind === "research_warning"/);
-  assert.match(route, /label: "Research canceled"/);
+  assert.match(store, /label: "Research canceled"/);
   assert.match(progressCard, /aria-label="Deep Research progress"/);
   assert.match(progressCard, /role="progressbar"/);
   assert.match(message, /streaming && !message\.content && !message\.researchProgress/);
   assert.match(client, /activity\.status === "running"/);
-  assert.match(route, /message\.researchProgress\?\.status === RESEARCH_CANCELED/);
+  assert.match(route, /markAssistantStopped\(conversation\.messages, target\.assistantMessageId\)/);
   assert.match(store, /Research interrupted/);
   assert.match(store, /Array\.isArray\(candidate\.warnings\)/);
   assert.match(store, /researchProgress\?: ResearchProgress/);
@@ -195,7 +195,7 @@ test("deep research selection and retry mode are race-safe", () => {
   const composer = read("src/components/ChatInput.tsx");
   assert.match(composer, /onSubmit\(selectedToolRef\.current\)/);
   assert.match(composer, /selectedToolRef\.current = next/);
-  assert.match(route, /m\.researchProgress \? "deep_research" : null/);
+  assert.match(route, /m\.requestedTool \?\? \(m\.researchProgress \? "deep_research" : null\)/);
 });
 
 test("deep research rejects attachments before starting and at the API boundary", () => {
@@ -217,7 +217,9 @@ test("canceled and interrupted progress-only research remains actionable", () =>
   const route = read("src/routes/index.tsx");
   const message = read("src/components/ChatMessage.tsx");
   const progressCard = read("src/components/ResearchProgressCard.tsx");
-  assert.match(route, /activity\.status === "running"[\s\S]{0,100}status: RESEARCH_CANCELED/);
+  const store = read("src/lib/chat-store.ts");
+  assert.match(store, /activity\.status === "running"[\s\S]{0,100}status: "canceled"/);
+  assert.match(route, /markAssistantStopped/);
   assert.match(message, /onRetry=\{onRetry\}/);
   assert.match(progressCard, /aria-label="Retry Deep Research"/);
   assert.match(progressCard, /progress\.status !== "complete" && onRetry/);

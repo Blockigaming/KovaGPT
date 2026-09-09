@@ -146,6 +146,48 @@ test("durable history preserves only terminal research and activity state", () =
   );
   assert.equal(running.messages[0].researchProgress, undefined);
 });
+test("durable history validates and preserves only assistant stopped state", () => {
+  const stopped = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        { id: "prompt", role: "user", content: "Help" },
+        {
+          id: "response",
+          role: "assistant",
+          content: "",
+          generationStatus: "stopped",
+          requestedTool: "image",
+        },
+      ],
+    },
+    OWNER,
+  );
+  assert.equal(stopped.messages[1].generationStatus, "stopped");
+  assert.equal(stopped.messages[1].requestedTool, "image");
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [{ id: "prompt", role: "user", content: "Help", generationStatus: "stopped" }],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [{ id: "prompt", role: "user", content: "Help", requestedTool: "image" }],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
+});
 test("an ambiguous save retries the exact captured payload while a newer local edit survives its receipt", async () => {
   let state = await updateChatHistoryList(await loaded(), [chat()], false);
   const request = nextChatHistoryRequest(state);

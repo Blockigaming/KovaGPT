@@ -10,6 +10,19 @@ import {
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
+export type ComposerToolId =
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+const COMPOSER_TOOL_IDS = new Set<ComposerToolId>([
+  "web_search",
+  "deep_research",
+  "image",
+  "study",
+  "data_analysis",
+  "file_analysis",
+]);
+export function isComposerToolId(value: unknown): value is ComposerToolId {
+  return typeof value === "string" && COMPOSER_TOOL_IDS.has(value as ComposerToolId);
+}
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
@@ -59,7 +72,42 @@ export type Message = {
   activities?: Activity[];
   researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
+  /** A user-stopped response remains retryable, including before its first token. */
+  generationStatus?: "stopped";
+  /** The explicit composer operation that created this response, retained for faithful retry. */
+  requestedTool?: ComposerToolId;
 };
+
+export function markAssistantStopped(messages: Message[], assistantMessageId: string): Message[] {
+  const assistantIndex = messages.findIndex(
+    (message) => message.id === assistantMessageId && message.role === "assistant",
+  );
+  if (assistantIndex === -1) return messages;
+
+  return messages.map((message, index) => {
+    if (index !== assistantIndex) return message;
+    const { pendingImage: _pendingImage, ...terminalMessage } = message;
+    const researchRunning =
+      message.researchProgress &&
+      !["complete", "failed", "canceled"].includes(message.researchProgress.status);
+    return {
+      ...terminalMessage,
+      generationStatus: "stopped" as const,
+      activities: message.activities?.map((activity) =>
+        activity.status === "running" ? { ...activity, status: "canceled" as const } : activity,
+      ),
+      ...(researchRunning && message.researchProgress
+        ? {
+            researchProgress: {
+              ...message.researchProgress,
+              label: "Research canceled",
+              status: "canceled" as const,
+            },
+          }
+        : {}),
+    };
+  });
+}
 /** Only content is replayed; attribution IDs and other response metadata stay private. */
 export function chatRequestMessages(previous: Message[], latest: Message) {
   return [
@@ -246,12 +294,19 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const { memorySources: rawSources, ...rest } = message;
+    const { memorySources: rawSources, generationStatus, requestedTool, ...rest } = message;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
-    return { ...rest, ...(memorySources ? { memorySources } : {}) };
+    return {
+      ...rest,
+      ...(memorySources ? { memorySources } : {}),
+      ...(message.role === "assistant" && generationStatus === "stopped"
+        ? { generationStatus }
+        : {}),
+      ...(message.role === "assistant" && isComposerToolId(requestedTool) ? { requestedTool } : {}),
+    };
   });
 }
 

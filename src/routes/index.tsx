@@ -123,6 +123,7 @@ import {
   subscribeToConversationChanges,
   loadArchivedConversations,
   loadPendingActive,
+  markAssistantStopped,
   newId,
   saveConversations,
   persistTemporaryConversation,
@@ -137,6 +138,8 @@ import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const USER_STOP_REASON = "kova_user_stopped_generation";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -395,6 +398,12 @@ function KovaGPT() {
     message?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
+  const inFlightTargetRef = useRef<{
+    controller: AbortController;
+    conversationId: string;
+    assistantMessageId: string;
+    flushPendingContent: () => void;
+  } | null>(null);
   const inFlightRef = useRef(false);
   const retryGenerationRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
@@ -420,6 +429,7 @@ function KovaGPT() {
     storageGenerationRef.current += 1;
     abortRef.current?.abort();
     abortRef.current = null;
+    inFlightTargetRef.current = null;
     inFlightRef.current = false;
     if (retryTimerRef.current !== null) {
       window.clearTimeout(retryTimerRef.current);
@@ -527,6 +537,7 @@ function KovaGPT() {
       storageGenerationRef.current += 1;
       abortRef.current?.abort();
       abortRef.current = null;
+      inFlightTargetRef.current = null;
       inFlightRef.current = false;
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
@@ -1082,6 +1093,7 @@ function KovaGPT() {
         id: newId(),
         role: "assistant",
         content: "",
+        ...(retryTool ? { requestedTool: retryTool } : {}),
         ...(retryTool === "deep_research"
           ? {
               researchProgress: {
@@ -1170,6 +1182,15 @@ function KovaGPT() {
       const updateAssistant = (chunk: string) => {
         pendingContent += chunk;
         if (assistantFrame === null) assistantFrame = requestAnimationFrame(flushAssistant);
+      };
+      inFlightTargetRef.current = {
+        controller,
+        conversationId: nextConvId,
+        assistantMessageId: assistantMsg.id,
+        flushPendingContent: () => {
+          if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
+          flushAssistant();
+        },
       };
 
       const updateAssistantMessage = (update: (message: Message) => Message) => {
@@ -1358,7 +1379,8 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         if ((e as Error).name === "AbortError") {
-          if (!assembledReply.trim()) {
+          const stoppedByUser = controller.signal.reason?.message === USER_STOP_REASON;
+          if (!assembledReply.trim() && !stoppedByUser) {
             setConversations((prev) =>
               prev.map((conversation) =>
                 conversation.id === nextConvId
@@ -1423,6 +1445,8 @@ function KovaGPT() {
             );
             setIsStreaming(false);
             abortRef.current = null;
+            if (inFlightTargetRef.current?.controller === controller)
+              inFlightTargetRef.current = null;
             inFlightRef.current = false;
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
@@ -1510,6 +1534,8 @@ function KovaGPT() {
           setIsStreaming(false);
           setSelectedTool(null);
           if (abortRef.current === controller) abortRef.current = null;
+          if (inFlightTargetRef.current?.controller === controller)
+            inFlightTargetRef.current = null;
           inFlightRef.current = false;
         }
       }
@@ -1537,33 +1563,24 @@ function KovaGPT() {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    abortRef.current?.abort();
+    const target = inFlightTargetRef.current;
+    target?.flushPendingContent();
+    // Preflight work may not observe AbortSignal immediately. Invalidate the old
+    // closure before exposing Retry so its catch/finally cannot clear a replacement.
+    retryGenerationRef.current += 1;
+    target?.controller.abort(new DOMException(USER_STOP_REASON, "AbortError"));
     abortRef.current = null;
+    inFlightTargetRef.current = null;
     inFlightRef.current = false;
     setIsStreaming(false);
+    setSelectedTool(null);
+    if (!target) return;
     setConversations((previous) =>
       previous.map((conversation) => {
-        if (conversation.id !== activeIdRef.current) return conversation;
+        if (conversation.id !== target.conversationId) return conversation;
         return {
           ...conversation,
-          messages: conversation.messages.map((message) =>
-            message.researchProgress &&
-            ![COMPLETE, "failed", RESEARCH_CANCELED].includes(message.researchProgress.status)
-              ? {
-                  ...message,
-                  activities: message.activities?.map((activity) =>
-                    activity.status === "running"
-                      ? { ...activity, status: RESEARCH_CANCELED }
-                      : activity,
-                  ),
-                  researchProgress: {
-                    ...message.researchProgress,
-                    label: "Research canceled",
-                    status: RESEARCH_CANCELED,
-                  },
-                }
-              : message,
-          ),
+          messages: markAssistantStopped(conversation.messages, target.assistantMessageId),
         };
       }),
     );
@@ -2110,7 +2127,7 @@ function KovaGPT() {
                                         status: COMPLETE,
                                       },
                               ),
-                              m.researchProgress ? "deep_research" : null,
+                              m.requestedTool ?? (m.researchProgress ? "deep_research" : null),
                               0,
                               active.id,
                               retryHistory,
@@ -2232,6 +2249,7 @@ function KovaGPT() {
               storageGenerationRef.current += 1;
               abortRef.current?.abort();
               abortRef.current = null;
+              inFlightTargetRef.current = null;
               inFlightRef.current = false;
               if (retryTimerRef.current !== null) {
                 window.clearTimeout(retryTimerRef.current);

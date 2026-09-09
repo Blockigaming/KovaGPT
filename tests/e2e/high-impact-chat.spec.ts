@@ -7,6 +7,150 @@ test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
 });
 
+test("stopping before the first token preserves an honest response with immediate retry", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let chatRequests = 0;
+    const requestTools: unknown[] = [];
+    Reflect.defineProperty(window, "__kovaRequestTools", { value: requestTools });
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      if (typeof init?.body === "string") requestTools.push(JSON.parse(init.body).clientTool);
+      chatRequests += 1;
+      if (chatRequests > 1) {
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"Recovered response"}}]}\n\ndata: [DONE]\n\n',
+          { status: 200, headers: { "Content-Type": "text/event-stream" } },
+        );
+      }
+
+      const signal = init?.signal;
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\ndata: {"choices":[{"delta":{"kind":"image_pending"}}]}\n\ndata: {"choices":[{"delta":{"content":"Partial response"}}]}\n\n',
+              ),
+            );
+            const abort = () =>
+              controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            if (signal?.aborted) abort();
+            else signal?.addEventListener("abort", abort, { once: true });
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.evaluate(() => {
+    window.requestAnimationFrame = (callback) =>
+      window.setTimeout(() => callback(performance.now()), 1_000);
+  });
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Search the web" }).click();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
+  await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Stop generating" }).click();
+
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
+  await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Retry stopped response" }).click();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("Recovered response");
+  await expect(page.getByText("Response stopped", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".kova-user-message")).toHaveCount(1);
+  await expect(page.locator(".kova-assistant-message")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { __kovaRequestTools: unknown[] }).__kovaRequestTools.slice(),
+      ),
+    )
+    .toEqual(["web_search", "web_search"]);
+});
+
+test("a late stopped request cannot clear the streaming state of its retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let chatRequests = 0;
+    const requestState = { count: 0 };
+    Reflect.defineProperty(window, "__kovaChatRequestState", { value: requestState });
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      chatRequests += 1;
+      requestState.count = chatRequests;
+      if (chatRequests === 1) {
+        // Model an abort-insensitive auth/preflight wait that settles after Retry starts.
+        await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+        return new Response("data: [DONE]\n\n", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            window.setTimeout(() => {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'data: {"choices":[{"delta":{"content":"Replacement complete"}}]}\n\ndata: [DONE]\n\n',
+                ),
+              );
+              controller.close();
+            }, 3_500);
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Explain this safely");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __kovaChatRequestState: { count: number } })
+            .__kovaChatRequestState.count,
+      ),
+    )
+    .toBe(1);
+  await page.getByRole("button", { name: "Stop generating" }).click();
+  await page.getByRole("button", { name: "Retry stopped response" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __kovaChatRequestState: { count: number } })
+            .__kovaChatRequestState.count,
+      ),
+    )
+    .toBe(2);
+
+  await page.waitForTimeout(1_800);
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText(
+    "Replacement complete",
+  );
+});
+
 async function startAttachedConversation(
   page: import("@playwright/test").Page,
   expectedResponse: string,
