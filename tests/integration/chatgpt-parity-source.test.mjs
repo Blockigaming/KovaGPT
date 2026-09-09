@@ -133,8 +133,8 @@ test("signed-in onboarding hands real choices to the authenticated composer", ()
 });
 
 test("active desktop chat keeps one primary action and groups secondary controls", () => {
-  assert.match(shellSpec, /removeLocatorHandler\(onboarding\)/);
-  assert.match(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
+  assert.doesNotMatch(shellSpec, /removeLocatorHandler\(onboarding\)/);
+  assert.doesNotMatch(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
   assert.match(route, /aria-label="Share chat"/);
   assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
   assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);

@@ -1210,7 +1210,7 @@ function ChatMessageInner({
                     },
                   ]
                 : []),
-              ...(onRetry && !researchOwnsRetry
+              ...(onRetry && message.generationStatus !== "stopped" && !researchOwnsRetry
                 ? [
                     {
                       label: retryActionLabel,
