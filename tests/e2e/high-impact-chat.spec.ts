@@ -54,8 +54,8 @@ test("stopping before the first token preserves an honest response with immediat
       window.setTimeout(() => callback(performance.now()), 1_000);
   });
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
-  await page.getByRole("button", { name: "Create Image" }).click();
-  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("A sunset over mountains");
+  await page.getByRole("button", { name: "Search the web" }).click();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
   await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
@@ -64,7 +64,7 @@ test("stopping before the first token preserves an honest response with immediat
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
   await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Remove Create Image" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
 
@@ -79,7 +79,7 @@ test("stopping before the first token preserves an honest response with immediat
         (window as unknown as { __kovaRequestTools: unknown[] }).__kovaRequestTools.slice(),
       ),
     )
-    .toEqual(["image", "image"]);
+    .toEqual(["web_search", "web_search"]);
 });
 
 test("a late stopped request cannot clear the streaming state of its retry", async ({ page }) => {
