@@ -37,6 +37,15 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
 
 async function expectAuthenticatedDesktopReady(page: Page) {
   await waitForKovaHydration(page);
+  const onboarding = page
+    .locator('[role="dialog"][data-state="open"]')
+    .filter({ hasText: "Welcome to KovaGPT" });
+  await page.removeLocatorHandler(onboarding);
+  await onboarding.waitFor({ state: "visible", timeout: 10_000 }).catch(() => undefined);
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(onboarding).toHaveCount(0);
+  }
   await expect(
     page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
   ).toBeVisible({ timeout: 15_000 });

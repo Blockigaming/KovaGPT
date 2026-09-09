@@ -18,6 +18,7 @@ const [
   workspaceModeSwitch,
   workRoute,
   onboarding,
+  shellSpec,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -34,6 +35,7 @@ const [
   readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
   readFile("src/components/OnboardingDialog.tsx", "utf8"),
+  readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
 ]);
 
 test("signed-in users can move clearly between Chat and Work", () => {
@@ -131,6 +133,8 @@ test("signed-in onboarding hands real choices to the authenticated composer", ()
 });
 
 test("active desktop chat keeps one primary action and groups secondary controls", () => {
+  assert.match(shellSpec, /removeLocatorHandler\(onboarding\)/);
+  assert.match(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
   assert.match(route, /aria-label="Share chat"/);
   assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
   assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);
