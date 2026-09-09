@@ -11,7 +11,6 @@ const compiled = ts.transpileModule(
 async function tier(summary) {
   const state = [];
   const context = {
-    loose: (client) => client,
     useState: (value) => {
       const index = state.length;
       state.push(value);
