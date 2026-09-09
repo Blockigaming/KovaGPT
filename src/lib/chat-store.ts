@@ -72,8 +72,8 @@ export type Message = {
   activities?: Activity[];
   researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
-  /** A user-stopped response remains retryable, including before its first token. */
-  generationStatus?: "stopped";
+  /** A stopped or failed response remains retryable instead of reading as a completed answer. */
+  generationStatus?: "stopped" | "failed";
   /** The explicit composer operation that created this response, retained for faithful retry. */
   requestedTool?: ComposerToolId;
 };
@@ -302,7 +302,8 @@ function sanitizeMessageMemorySources(
     return {
       ...rest,
       ...(memorySources ? { memorySources } : {}),
-      ...(message.role === "assistant" && generationStatus === "stopped"
+      ...(message.role === "assistant" &&
+      (generationStatus === "stopped" || generationStatus === "failed")
         ? { generationStatus }
         : {}),
       ...(message.role === "assistant" && isComposerToolId(requestedTool) ? { requestedTool } : {}),

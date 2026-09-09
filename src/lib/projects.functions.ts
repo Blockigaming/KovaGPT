@@ -1,4 +1,3 @@
-import { loose } from "@/lib/supabase-loose";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -117,7 +116,7 @@ export const listProjects = createServerFn({ method: "GET" })
     }
     const ids = (memberships ?? []).map((m) => m.project_id);
     if (ids.length === 0) return [];
-    const { data: projects, error: pErr } = await loose(context.supabase)
+    const { data: projects, error: pErr } = await context.supabase
       .from("projects")
       .select(
         "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
@@ -132,7 +131,7 @@ export const listProjects = createServerFn({ method: "GET" })
     const [{ data: counts }, { data: chats }, { data: files }] = await Promise.all([
       context.supabase.from("project_members").select("project_id").in("project_id", ids),
       context.supabase.from("project_chats").select("project_id").in("project_id", ids),
-      loose(context.supabase)
+      context.supabase
         .from("project_files")
         .select("project_id")
         .in("project_id", ids)
@@ -287,7 +286,7 @@ export const getProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectDetail | null> => {
-    const { data: p, error } = await loose(context.supabase)
+    const { data: p, error } = await context.supabase
       .from("projects")
       .select(
         "id, name, description, system_prompt, color, owner_id, created_at, updated_at, archived_at, deletion_requested_at",

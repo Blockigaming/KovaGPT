@@ -120,9 +120,12 @@ export function normalizeChatHistory(value, ownerId) {
       const sources = normalizeMemorySources(message.memorySources, ownerId);
       if (sources && message.role === "assistant") item.memorySources = sources;
       if (message.generationStatus !== undefined) {
-        if (message.role !== "assistant" || message.generationStatus !== "stopped")
+        if (
+          message.role !== "assistant" ||
+          !["stopped", "failed"].includes(message.generationStatus)
+        )
           throw new Error("chat_history_invalid");
-        item.generationStatus = "stopped";
+        item.generationStatus = message.generationStatus;
       }
       if (message.requestedTool !== undefined) {
         if (message.role !== "assistant" || !COMPOSER_TOOL_IDS.has(message.requestedTool))

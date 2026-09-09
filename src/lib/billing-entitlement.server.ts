@@ -1,4 +1,3 @@
-import { loose } from "@/lib/supabase-loose";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { BillingTier } from "@/lib/billing-plans";
@@ -11,7 +10,7 @@ export async function resolveUserBillingTier(
   supabaseAdmin: SupabaseClient<Database>,
   userId: string,
 ): Promise<BillingTier> {
-  const { data, error } = await loose(supabaseAdmin).rpc("billing_user_plan_tier", {
+  const { data, error } = await supabaseAdmin.rpc("billing_user_plan_tier", {
     _user_id: userId,
   });
   if (error) {
@@ -25,7 +24,7 @@ export async function resolveEffectiveBillingTier(
   supabaseAdmin: SupabaseClient<Database>,
   userId: string,
 ): Promise<BillingTier> {
-  const { data, error } = await loose(supabaseAdmin).rpc("effective_user_plan_tier", {
+  const { data, error } = await supabaseAdmin.rpc("effective_user_plan_tier", {
     _user_id: userId,
   });
   if (error) {

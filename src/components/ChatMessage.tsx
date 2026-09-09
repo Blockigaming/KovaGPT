@@ -269,6 +269,10 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
+  const researchOwnsRetry = Boolean(
+    message.researchProgress && message.researchProgress.status !== "complete",
+  );
+  const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const feedbackBaseKey = principalResolved
     ? principalScopedStorageKey("kova-message-feedback", userKey)
@@ -949,6 +953,18 @@ function ChatMessageInner({
                 <ThumbsDown className="h-4 w-4" />
               </button>
 
+              {onRetry && message.generationStatus !== "stopped" && !researchOwnsRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+                  title={retryActionLabel}
+                  aria-label={retryActionLabel}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
+
               {feedbackLoadFailed && (
                 <button
                   type="button"
@@ -1077,9 +1093,6 @@ function ChatMessageInner({
                   >
                     <History className="mr-2 h-4 w-4" /> Version history
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onRetry} disabled={!onRetry}>
-                    <RefreshCw className="mr-2 h-4 w-4" /> Retry
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
@@ -1197,10 +1210,10 @@ function ChatMessageInner({
                     },
                   ]
                 : []),
-              ...(onRetry
+              ...(onRetry && message.generationStatus !== "stopped" && !researchOwnsRetry
                 ? [
                     {
-                      label: "Retry",
+                      label: retryActionLabel,
                       icon: RefreshCw,
                       onClick: () => {
                         onRetry();

@@ -35,6 +35,16 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
   expect(unnamedVisibleButtons, `${width}px ${theme}: unnamed visible buttons`).toBe(0);
 }
 
+async function expectAuthenticatedDesktopReady(page: Page) {
+  await waitForKovaHydration(page);
+  // installAuthenticatedFixture owns the late onboarding dialog through its
+  // locator handler. Keeping that handler installed settles the overlay only
+  // when it appears, without delaying returning users when it is absent.
+  await expect(
+    page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
 test.describe("ChatGPT-like Kova conversation shell", () => {
   test.describe.configure({ timeout: 120_000 });
 
@@ -64,9 +74,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(
-      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
-    ).toBeVisible();
+    await expectAuthenticatedDesktopReady(page);
 
     const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
     await expect(chatNavigation).toBeVisible();
@@ -93,9 +101,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(
-      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
-    ).toBeVisible();
+    await expectAuthenticatedDesktopReady(page);
 
     const workLink = page.getByRole("link", { name: "Work" });
     await expect(workLink).toBeVisible();
@@ -123,9 +129,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(
-      page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
-    ).toBeVisible();
+    await expectAuthenticatedDesktopReady(page);
     const input = page.getByRole("textbox", { name: "Message KovaGPT" });
     await input.fill("Check the header");
     await page.getByRole("button", { name: "Send message" }).click();

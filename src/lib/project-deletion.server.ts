@@ -1,4 +1,3 @@
-import { loose } from "@/lib/supabase-loose";
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import {
   assertProjectStoragePath,
@@ -85,7 +84,7 @@ async function markDeletionFailed(
   code: string,
 ): Promise<void> {
   try {
-    await loose(admin).rpc("fail_project_deletion", {
+    await admin.rpc("fail_project_deletion", {
       p_attempt_id: attemptId,
       p_error_code: /^[a-z0-9_]{1,80}$/.test(code) ? code : "project_storage_cleanup_failed",
       p_project_id: projectId,
@@ -103,7 +102,7 @@ async function renewDeletionLease(
   projectId: string,
   attemptId: string,
 ): Promise<void> {
-  const { data: renewed, error } = await loose(admin).rpc("renew_project_deletion", {
+  const { data: renewed, error } = await admin.rpc("renew_project_deletion", {
     p_attempt_id: attemptId,
     p_project_id: projectId,
     p_user_id: userId,
@@ -125,7 +124,7 @@ export async function deleteProjectStorageFirst({
   deletingAccountUserId?: string | null;
 }): Promise<DeletionOutcome> {
   const attemptId = crypto.randomUUID();
-  const { data: claimValue, error: claimFailure } = await loose(admin).rpc("claim_project_deletion", {
+  const { data: claimValue, error: claimFailure } = await admin.rpc("claim_project_deletion", {
     p_attempt_id: attemptId,
     p_project_id: projectId,
     p_user_id: userId,
@@ -194,7 +193,7 @@ export async function deleteProjectStorageFirst({
     }
     await renewDeletionLease(admin, userId, canonicalProjectId, attemptId);
 
-    const { data: finalizedValue, error: finalizeFailure } = await loose(admin).rpc(
+    const { data: finalizedValue, error: finalizeFailure } = await admin.rpc(
       "finalize_project_deletion",
       {
         p_attempt_id: attemptId,
