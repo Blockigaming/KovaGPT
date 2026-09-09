@@ -189,6 +189,9 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(message, /EXTENDED_WAIT_MS = 30_000/);
   assert.match(message, /Date\.now\(\) - startedAt/);
   assert.match(message, /activity\.status === "running"/);
+  assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
+  assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
+  assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
   assert.match(home, /startedAt: Date\.now\(\)/);
   assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);

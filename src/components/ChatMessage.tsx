@@ -283,6 +283,12 @@ function ChatMessageInner({
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
   const [feedbackReload, setFeedbackReload] = useState(0);
+  const localStreamingStartedAtRef = useRef<number | null>(null);
+  if (!streaming) localStreamingStartedAtRef.current = null;
+  else if (localStreamingStartedAtRef.current === null)
+    localStreamingStartedAtRef.current = Date.now();
+  const resolvedStreamingStartedAt =
+    streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
   const waitingForFirstToken = Boolean(
     streaming && !message.content && !message.pendingImage && !message.researchProgress,
   );
@@ -823,7 +829,7 @@ function ChatMessageInner({
               ) : waitingForFirstToken ? (
                 <StreamingStatus
                   activities={message.activities}
-                  startedAt={streamingStartedAt ?? Date.now()}
+                  startedAt={resolvedStreamingStartedAt}
                 />
               ) : (
                 (() => {
