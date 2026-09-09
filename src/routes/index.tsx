@@ -1092,6 +1092,7 @@ function KovaGPT() {
         id: newId(),
         role: "assistant",
         content: "",
+        ...(retryTool ? { requestedTool: retryTool } : {}),
         ...(retryTool === "deep_research"
           ? {
               researchProgress: {
@@ -2116,7 +2117,7 @@ function KovaGPT() {
                                         status: COMPLETE,
                                       },
                               ),
-                              m.researchProgress ? "deep_research" : null,
+                              m.requestedTool ?? (m.researchProgress ? "deep_research" : null),
                               0,
                               active.id,
                               retryHistory,

@@ -157,18 +157,31 @@ test("durable history validates and preserves only assistant stopped state", () 
           role: "assistant",
           content: "",
           generationStatus: "stopped",
+          requestedTool: "image",
         },
       ],
     },
     OWNER,
   );
   assert.equal(stopped.messages[1].generationStatus, "stopped");
+  assert.equal(stopped.messages[1].requestedTool, "image");
   assert.throws(
     () =>
       normalizeChatHistory(
         {
           ...chat(),
           messages: [{ id: "prompt", role: "user", content: "Help", generationStatus: "stopped" }],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [{ id: "prompt", role: "user", content: "Help", requestedTool: "image" }],
         },
         OWNER,
       ),

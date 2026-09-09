@@ -13,9 +13,12 @@ test("stopping before the first token preserves an honest response with immediat
   await page.addInitScript(() => {
     const originalFetch = window.fetch.bind(window);
     let chatRequests = 0;
+    const requestTools: unknown[] = [];
+    Reflect.defineProperty(window, "__kovaRequestTools", { value: requestTools });
     window.fetch = async (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      if (typeof init?.body === "string") requestTools.push(JSON.parse(init.body).clientTool);
       chatRequests += 1;
       if (chatRequests > 1) {
         return new Response(
@@ -46,7 +49,9 @@ test("stopping before the first token preserves an honest response with immediat
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Explain the result");
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Create Image" }).click();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("A sunset over mountains");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
   await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
@@ -62,6 +67,13 @@ test("stopping before the first token preserves an honest response with immediat
   await expect(page.getByText("Response stopped", { exact: true })).toHaveCount(0);
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
   await expect(page.locator(".kova-assistant-message")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { __kovaRequestTools: unknown[] }).__kovaRequestTools.slice(),
+      ),
+    )
+    .toEqual(["image", "image"]);
 });
 
 async function startAttachedConversation(

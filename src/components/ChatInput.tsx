@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
+import type { ComposerToolId } from "@/lib/chat-store";
 
 const ComposerPasteOffer = lazy(() => import("@/components/ComposerPasteOffer"));
 
@@ -58,8 +59,7 @@ export type RecentLibraryFile = {
   createdAt?: string | null;
   projectName?: string | null;
 };
-export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+export type { ComposerToolId } from "@/lib/chat-store";
 
 type ComposerAction = {
   id: ComposerToolId;

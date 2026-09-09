@@ -195,7 +195,7 @@ test("deep research selection and retry mode are race-safe", () => {
   const composer = read("src/components/ChatInput.tsx");
   assert.match(composer, /onSubmit\(selectedToolRef\.current\)/);
   assert.match(composer, /selectedToolRef\.current = next/);
-  assert.match(route, /m\.researchProgress \? "deep_research" : null/);
+  assert.match(route, /m\.requestedTool \?\? \(m\.researchProgress \? "deep_research" : null\)/);
 });
 
 test("deep research rejects attachments before starting and at the API boundary", () => {

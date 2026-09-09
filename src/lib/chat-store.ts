@@ -10,6 +10,19 @@ import {
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
+export type ComposerToolId =
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+const COMPOSER_TOOL_IDS = new Set<ComposerToolId>([
+  "web_search",
+  "deep_research",
+  "image",
+  "study",
+  "data_analysis",
+  "file_analysis",
+]);
+export function isComposerToolId(value: unknown): value is ComposerToolId {
+  return typeof value === "string" && COMPOSER_TOOL_IDS.has(value as ComposerToolId);
+}
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
@@ -61,6 +74,8 @@ export type Message = {
   pendingConfirms?: PendingConfirm[];
   /** A user-stopped response remains retryable, including before its first token. */
   generationStatus?: "stopped";
+  /** The explicit composer operation that created this response, retained for faithful retry. */
+  requestedTool?: ComposerToolId;
 };
 
 export function markAssistantStopped(messages: Message[], assistantMessageId: string): Message[] {
@@ -279,7 +294,7 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const { memorySources: rawSources, generationStatus, ...rest } = message;
+    const { memorySources: rawSources, generationStatus, requestedTool, ...rest } = message;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
@@ -290,6 +305,7 @@ function sanitizeMessageMemorySources(
       ...(message.role === "assistant" && generationStatus === "stopped"
         ? { generationStatus }
         : {}),
+      ...(message.role === "assistant" && isComposerToolId(requestedTool) ? { requestedTool } : {}),
     };
   });
 }

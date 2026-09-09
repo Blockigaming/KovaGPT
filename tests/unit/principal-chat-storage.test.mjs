@@ -112,7 +112,13 @@ test("a response stopped before its first token remains durable and retryable", 
     messages: markAssistantStopped(
       [
         { id: "user", role: "user", content: "Help" },
-        { id: "assistant", role: "assistant", content: "", pendingImage: true },
+        {
+          id: "assistant",
+          role: "assistant",
+          content: "",
+          pendingImage: true,
+          requestedTool: "image",
+        },
       ],
       "assistant",
     ),
@@ -124,6 +130,7 @@ test("a response stopped before its first token remains durable and retryable", 
     role: "assistant",
     content: "",
     generationStatus: "stopped",
+    requestedTool: "image",
   });
 });
 
