@@ -70,6 +70,10 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
   const store = readFileSync("src/lib/chat-store.ts", "utf8");
   assert.match(homeChat, /abort\(new DOMException\(USER_STOP_REASON, "AbortError"\)\)/u);
+  assert.match(
+    homeChat,
+    /const stop = useCallback\(\(\) => \{[\s\S]{0,400}retryGenerationRef\.current \+= 1;[\s\S]{0,200}target\?\.controller\.abort/u,
+  );
   assert.match(homeChat, /conversation\.id !== target\.conversationId/u);
   assert.match(
     homeChat,

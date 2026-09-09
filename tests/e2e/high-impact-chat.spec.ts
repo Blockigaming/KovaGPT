@@ -76,6 +76,54 @@ test("stopping before the first token preserves an honest response with immediat
     .toEqual(["image", "image"]);
 });
 
+test("a late stopped request cannot clear the streaming state of its retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let chatRequests = 0;
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      chatRequests += 1;
+      if (chatRequests === 1) {
+        // Model an abort-insensitive auth/preflight wait that settles after Retry starts.
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+        return new Response("data: [DONE]\n\n", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            window.setTimeout(() => {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'data: {"choices":[{"delta":{"content":"Replacement complete"}}]}\n\ndata: [DONE]\n\n',
+                ),
+              );
+              controller.close();
+            }, 700);
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Explain this safely");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await page.getByRole("button", { name: "Stop generating" }).click();
+  await page.getByRole("button", { name: "Retry stopped response" }).click();
+
+  await page.waitForTimeout(450);
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText(
+    "Replacement complete",
+  );
+});
+
 async function startAttachedConversation(
   page: import("@playwright/test").Page,
   expectedResponse: string,

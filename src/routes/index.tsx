@@ -1559,6 +1559,9 @@ function KovaGPT() {
       retryTimerRef.current = null;
     }
     const target = inFlightTargetRef.current;
+    // Preflight work may not observe AbortSignal immediately. Invalidate the old
+    // closure before exposing Retry so its catch/finally cannot clear a replacement.
+    retryGenerationRef.current += 1;
     target?.controller.abort(new DOMException(USER_STOP_REASON, "AbortError"));
     abortRef.current = null;
     inFlightTargetRef.current = null;
