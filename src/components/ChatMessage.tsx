@@ -949,6 +949,18 @@ function ChatMessageInner({
                 <ThumbsDown className="h-4 w-4" />
               </button>
 
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+                  title="Regenerate response"
+                  aria-label="Regenerate response"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
+
               {feedbackLoadFailed && (
                 <button
                   type="button"
@@ -1077,9 +1089,6 @@ function ChatMessageInner({
                   >
                     <History className="mr-2 h-4 w-4" /> Version history
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onRetry} disabled={!onRetry}>
-                    <RefreshCw className="mr-2 h-4 w-4" /> Retry
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
@@ -1200,7 +1209,7 @@ function ChatMessageInner({
               ...(onRetry
                 ? [
                     {
-                      label: "Retry",
+                      label: "Regenerate response",
                       icon: RefreshCw,
                       onClick: () => {
                         onRetry();

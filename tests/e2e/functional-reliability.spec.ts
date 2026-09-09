@@ -44,6 +44,7 @@ test("real sharing remains available without the misleading local-member flow", 
   const badResponse = responseActions.getByRole("button", { name: "Bad response" });
   await expect(goodResponse).toBeVisible();
   await expect(badResponse).toBeVisible();
+  await expect(responseActions.getByRole("button", { name: "Regenerate response" })).toBeVisible();
   await expect(responseActions.getByRole("button", { name: "Share" })).toHaveCount(0);
   await goodResponse.click();
   await expect(goodResponse).toHaveAttribute("aria-pressed", "true");

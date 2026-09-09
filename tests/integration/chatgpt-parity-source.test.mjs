@@ -157,6 +157,12 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
+  assert.match(chatMessage, /aria-label="Regenerate response"/);
+  assert.ok(
+    chatMessage.indexOf('aria-label="Regenerate response"') <
+      chatMessage.indexOf('aria-label="More actions"'),
+  );
+  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
   assert.match(route, /setInput\(m\.content\);/);
   assert.match(
     route,
