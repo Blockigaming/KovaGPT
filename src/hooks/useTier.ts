@@ -1,5 +1,6 @@
 // Client display helper. Authorization remains server-side; this cached label
 // comes from an authenticated wrapper around the exact database resolver.
+import { loose } from "@/lib/supabase-loose";
 import { useEffect, useState } from "react";
 import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import type { BillingTier } from "@/lib/billing-plans";
@@ -29,7 +30,7 @@ export function useTier(): { tier: Tier; loading: boolean } {
         return;
       }
 
-      const { data, error } = await supabase.rpc("current_subscription_summary");
+      const { data, error } = await loose(supabase).rpc("current_subscription_summary");
       const summary =
         !error && data && typeof data === "object" && !Array.isArray(data)
           ? (data as Record<string, unknown>)
