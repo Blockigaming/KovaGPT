@@ -22,6 +22,13 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const specialistMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260910143000_work_specialist_state_transitions.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 async function fixture() {
   const db = new PGlite();
   try {
@@ -52,6 +59,7 @@ async function fixture() {
   `);
     await db.query("INSERT INTO auth.users(id) VALUES($1),($2)", [OWNER, OTHER]);
     await db.exec(migration);
+    await db.exec(specialistMigration);
     return db;
   } catch (error) {
     await db.close();
@@ -258,6 +266,45 @@ test("CAS and immutable owner/model/request boundaries reject stale or rewritten
     );
     await commit(db, next, { mutation: crypto.randomUUID() });
     await assert.rejects(commit(db, next, { mutation: crypto.randomUUID() }), /revision_conflict/);
+  } finally {
+    await db.close();
+  }
+});
+test("database commits validated specialist lifecycle state and upgrades runs without the field", async () => {
+  const db = await fixture();
+  try {
+    const state = await run();
+    delete state.specialists;
+    await commit(db, state);
+    const upgraded = {
+      ...state,
+      specialists: [],
+      revision: 2,
+      event: { kind: "claimed", detail: {} },
+    };
+    await commit(db, upgraded, { mutation: crypto.randomUUID() });
+    const planned = {
+      ...upgraded,
+      specialists: [
+        {
+          id: SESSION,
+          role: "review",
+          objective: "Review the bounded result",
+          context: [],
+          tools: [],
+          status: "queued",
+          createdAt: Date.now(),
+          startedAt: null,
+          completedAt: null,
+          result: null,
+        },
+      ],
+      revision: 3,
+      event: { kind: "step_finished", detail: {} },
+    };
+    const committed = await commit(db, planned, { mutation: crypto.randomUUID() });
+    assert.equal(committed.state.specialists.length, 1);
+    assert.equal(committed.state.specialists[0].status, "queued");
   } finally {
     await db.close();
   }

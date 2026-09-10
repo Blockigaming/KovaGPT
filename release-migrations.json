@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 144,
-  "latest": "20260906234052_3594616d-47a6-4a2f-ad70-8af66d2c05d2.sql",
+  "count": 145,
+  "latest": "20260910143000_work_specialist_state_transitions.sql",
   "migrations": [
     {
       "order": 1,
@@ -2916,6 +2916,20 @@
       "functions": ["kova_can_pin_source"],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 145,
+      "filename": "20260910143000_work_specialist_state_transitions.sql",
+      "timestamp": "20260910143000",
+      "sha256": "75f9f68c264620470a8c32075a1b0eef6bdc342f6fb4b6ce9010ee12de2f8d66",
+      "tables": [],
+      "functions": ["commit_work_execution"],
+      "destructive": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

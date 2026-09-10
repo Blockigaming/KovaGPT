@@ -1110,6 +1110,7 @@ export function reconcileUndispatchedWorkRun(
     now,
   );
   // Retain the attempt/action IDs so the old approval can never be executed later.
+  reconciled.usage.actions = Math.max(0, reconciled.usage.actions - 1);
   reconciled.usage.tokens = Math.max(0, reconciled.usage.tokens - step.tokens);
   reconciled.usage.costMicros = Math.max(0, reconciled.usage.costMicros - step.costMicros);
   const specialistId = step.input?.phase === "specialist" ? step.input.specialist?.id : null;

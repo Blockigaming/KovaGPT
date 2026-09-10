@@ -997,9 +997,26 @@ test("proven-undispatched specialist work returns to queued while the parent is 
   const attempt = { ...receipt, attemptId: crypto.randomUUID(), status: "not_executed", receipt };
   run = reconcileUndispatchedWorkRun(run, attempt, true, now);
   assert.equal(run.status, "paused");
+  assert.equal(run.usage.actions, 1);
   assert.equal(run.specialists[0].status, "queued");
   assert.equal(run.specialists[0].startedAt, null);
   assert.equal(run.specialists[0].completedAt, null);
+  run = await transitionWorkRun(
+    run,
+    { type: "resume" },
+    { ...owner(run), runner: heartbeat() },
+    now,
+  );
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistId,
+    summary: "Review complete after verified nonexecution",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  assert.equal(step.run.step.input.phase, "synthesis");
+  assert.equal(step.run.usage.actions, 3);
 });
 
 async function fakeDriver(options = {}) {
@@ -1199,6 +1216,7 @@ test("a lost begin-step commit response preserves its exact reservation for veri
   const recovered = reconcileUndispatchedWorkRun(paused, attempt, true);
   assert.equal(recovered.status, "paused");
   assert.equal(recovered.step, null);
+  assert.equal(recovered.usage.actions, 0);
   assert.equal(recovered.usage.tokens, 0);
   assert.equal(recovered.usage.costMicros, 0);
   assert.deepEqual(recovered.reservationIds, [RES]);
