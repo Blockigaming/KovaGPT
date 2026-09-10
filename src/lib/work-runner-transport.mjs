@@ -226,10 +226,15 @@ function validateAttempt(result, binding) {
     const directive = receipt.directive;
     if (status === "delegated" && directive?.kind !== "specialists")
       fail("work_runner_directive_invalid");
-    if (status === "delegated") parseWorkSpecialistPlan(directive);
+    if (status === "delegated" || (status === "cancelled" && directive?.kind === "specialists"))
+      parseWorkSpecialistPlan(directive);
     if (status === "specialist_completed" && directive?.kind !== "specialist_result")
       fail("work_runner_directive_invalid");
-    if (status === "specialist_completed") parseWorkSpecialistResult(directive);
+    if (
+      status === "specialist_completed" ||
+      (status === "cancelled" && directive?.kind === "specialist_result")
+    )
+      parseWorkSpecialistResult(directive);
     if (
       status === "question" &&
       (directive?.kind !== "question" ||
@@ -254,7 +259,7 @@ function validateAttempt(result, binding) {
     if (directive && !["failure", "specialists"].includes(directive.kind)) workUuid(directive.id);
     if (
       ["specialists", "specialist_result"].includes(directive?.kind) &&
-      !["delegated", "specialist_completed"].includes(status)
+      !["delegated", "specialist_completed", "cancelled"].includes(status)
     )
       fail("work_runner_directive_invalid");
     if (status === "completed" && directive) fail("work_runner_directive_invalid");

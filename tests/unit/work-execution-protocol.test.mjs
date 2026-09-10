@@ -689,6 +689,31 @@ test("a specialist plan must leave minimum token budget for every remaining phas
   assert.match(run.evidence[0], /remaining token budget/);
 });
 
+test("a specialist plan durably rejects an individually oversized specialist input", async () => {
+  let run = await admitWorkRun(
+    { ...submission(), objective: "界".repeat(10050) },
+    { ...policy(), maxActions: 3, maxTokens: 100000 },
+    heartbeat(),
+    now,
+  );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "Check the bounded source material",
+        context: ["a".repeat(500), "b".repeat(500), "c".repeat(500), "d".repeat(500)],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.equal(run.step, null);
+  assert.match(run.evidence[0], /bounded specialist input/);
+});
+
 test("aggregate specialist results fail durably before an oversized synthesis step", async () => {
   let run = await admitWorkRun(
     { ...submission(), objective: "p".repeat(12000) },
@@ -787,6 +812,53 @@ test("a recovered specialist receipt exits reconciliation before the next phase"
   run = await claim(run);
   step = await beginSpecialistTestStep(run);
   assert.equal(step.run.step.input.phase, "synthesis");
+});
+
+test("proven-undispatched specialist work returns to queued while the parent is paused", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await transitionWorkRun(step.run, { type: "pause" }, owner(step.run), now);
+  assert.equal(run.specialists[0].status, "running");
+  const receipt = {
+    ownerId: OWNER,
+    runId: RUN,
+    epoch: run.step.epoch,
+    stepId: run.step.id,
+    inputHash: run.step.inputHash,
+    reservationId: run.step.reservationId,
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    latencyMs: 0,
+    costMicros: 0,
+    outputs: [],
+  };
+  const attempt = { ...receipt, attemptId: crypto.randomUUID(), status: "not_executed", receipt };
+  run = reconcileUndispatchedWorkRun(run, attempt, true, now);
+  assert.equal(run.status, "paused");
+  assert.equal(run.specialists[0].status, "queued");
+  assert.equal(run.specialists[0].startedAt, null);
+  assert.equal(run.specialists[0].completedAt, null);
 });
 
 async function fakeDriver(options = {}) {

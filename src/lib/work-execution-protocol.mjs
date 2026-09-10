@@ -264,6 +264,28 @@ function specialistPhasesExceedTokenBudget(run) {
   return run.usage.tokens + minimum > run.limits.maxTokens;
 }
 
+function workInputTooLarge(input) {
+  try {
+    canonicalWorkInput(input);
+    return false;
+  } catch (error) {
+    if (error instanceof Error && error.message === "work_input_too_large") return true;
+    throw error;
+  }
+}
+
+function specialistStepInputTooLarge(run) {
+  const cost = projectedWorkCost(run, true);
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
+  return run.specialists
+    .filter((specialist) => ["queued", "running"].includes(specialist.status))
+    .some((specialist) =>
+      workInputTooLarge(
+        buildWorkStepInput(projectedRun, WORK_INPUT_PROJECTION_ID, cost, "specialist", specialist),
+      ),
+    );
+}
+
 function specialistSynthesisInputTooLarge(run) {
   const projected = buildWorkStepInput(
     { ...run, epoch: Number.MAX_SAFE_INTEGER },
@@ -272,13 +294,7 @@ function specialistSynthesisInputTooLarge(run) {
     "synthesis",
     null,
   );
-  try {
-    canonicalWorkInput(projected);
-    return false;
-  } catch (error) {
-    if (error instanceof Error && error.message === "work_input_too_large") return true;
-    throw error;
-  }
+  return workInputTooLarge(projected);
 }
 export function runnerReady(runner, now = Date.now()) {
   return Boolean(
@@ -716,7 +732,12 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           completedAt: null,
           result: null,
         }));
-        if (specialistSynthesisInputTooLarge(run)) {
+        if (specialistStepInputTooLarge(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the bounded specialist input."];
+        } else if (specialistSynthesisInputTooLarge(run)) {
           run.status = "failed";
           run.lease = null;
           failSpecialists(run, now);
@@ -1043,6 +1064,13 @@ export function reconcileUndispatchedWorkRun(
   // Retain the attempt/action IDs so the old approval can never be executed later.
   reconciled.usage.tokens = Math.max(0, reconciled.usage.tokens - step.tokens);
   reconciled.usage.costMicros = Math.max(0, reconciled.usage.costMicros - step.costMicros);
+  const specialistId = step.input?.phase === "specialist" ? step.input.specialist?.id : null;
+  const specialist = reconciled.specialists?.find((item) => item.id === specialistId);
+  if (reconciled.status === "paused" && specialist?.status === "running") {
+    specialist.status = "queued";
+    specialist.startedAt = null;
+    specialist.completedAt = null;
+  }
   reconciled.event = { kind: "undispatched_step_reconciled", at: now, detail: { stepId: step.id } };
   return reconciled;
 }

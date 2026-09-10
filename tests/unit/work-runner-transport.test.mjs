@@ -217,6 +217,44 @@ test("specialist attempt statuses require their exact bounded directives", async
     }),
   }));
   assert.equal((await completed.transport.submit(input())).status, "specialist_completed");
+  for (const directive of [
+    {
+      kind: "specialists",
+      tasks: [
+        {
+          id: specialistId,
+          role: "review",
+          objective: "Review bounded text",
+          context: [],
+          tools: [],
+        },
+      ],
+    },
+    {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "Late review complete",
+      evidence: [],
+    },
+  ]) {
+    const cancelled = fetchFixture((request) => ({
+      ...attempt(request, "cancelled"),
+      receipt: receipt(request, directive),
+    }));
+    assert.equal((await cancelled.transport.submit(input())).status, "cancelled");
+  }
+  await assert.rejects(
+    fetchFixture((request) => ({
+      ...attempt(request, "cancelled"),
+      receipt: receipt(request, {
+        kind: "specialist_result",
+        id: specialistId,
+        summary: "x".repeat(3001),
+        evidence: [],
+      }),
+    })).transport.submit(input()),
+    /specialist_result_invalid/,
+  );
   await assert.rejects(
     fetchFixture((request) => ({
       ...attempt(request, "question"),
