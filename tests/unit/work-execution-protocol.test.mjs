@@ -378,6 +378,220 @@ test("deadlines are terminal on recovery; pause revokes the current epoch", asyn
   assert.equal(run.status, "failed");
 });
 
+async function beginSpecialistTestStep(run) {
+  if (run.status === "queued") run = await claim(run);
+  const id = crypto.randomUUID();
+  run = await transitionWorkRun(
+    run,
+    { type: "begin_step", id },
+    {
+      ...worker(run),
+      costReservation: { ...cost(run), id: crypto.randomUUID() },
+    },
+    now,
+  );
+  return { run, id };
+}
+
+async function finishSpecialistTestStep(run, id, directive) {
+  run = await transitionWorkRun(
+    run,
+    {
+      type: "record_step_receipt",
+      receipt: {
+        ownerId: OWNER,
+        runId: RUN,
+        epoch: run.epoch,
+        stepId: id,
+        reservationId: run.step.reservationId,
+        inputHash: run.step.inputHash,
+        outputs: [],
+        directive,
+      },
+    },
+    { ...worker(run), accountingSettled: true },
+    now,
+  );
+  return transitionWorkRun(
+    run,
+    { type: "finish_step", id },
+    { ...worker(run), accountingSettled: true, outputsVerified: true },
+    now,
+  );
+}
+
+test("bounded specialists run sequentially with narrow context and immutable results before synthesis", async () => {
+  const firstId = crypto.randomUUID();
+  const secondId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    { ...submission(), sessionId: ID, sessionRevision: 1 },
+    {
+      ...policy(),
+      maxActions: 5,
+      sessionContext: { privateConversation: "coordinator only" },
+    },
+    heartbeat(),
+    now,
+  );
+  assert.deepEqual(run.specialists, []);
+
+  let step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "coordinator");
+  assert.deepEqual(run.step.input.sessionContext, { privateConversation: "coordinator only" });
+  run = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: firstId,
+        role: "research",
+        objective: "Check the supplied evidence",
+        context: ["Only this fact"],
+        tools: [],
+      },
+      {
+        id: secondId,
+        role: "review",
+        objective: "Review the proposed conclusion",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.deepEqual(
+    run.specialists.map((item) => item.status),
+    ["queued", "queued"],
+  );
+
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "specialist");
+  assert.equal(run.step.input.specialist.id, firstId);
+  assert.equal(run.step.input.objective, "Check the supplied evidence");
+  assert.equal(run.step.input.sessionContext, null);
+  assert.deepEqual(run.step.input.specialist.tools, []);
+  assert.deepEqual(run.step.input.specialistResults, []);
+  const rejectedSpecialist = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialist_result",
+    id: secondId,
+    summary: "Wrong specialist",
+    evidence: [],
+  });
+  assert.equal(rejectedSpecialist.status, "failed");
+  assert.equal(rejectedSpecialist.specialists[0].status, "failed");
+  assert.equal(rejectedSpecialist.specialists[0].result, null);
+  const overreachingSpecialist = await finishSpecialistTestStep(run, step.id, {
+    kind: "approval",
+    id: crypto.randomUUID(),
+    action: "send_email",
+    input: { to: "someone@example.test" },
+  });
+  assert.equal(overreachingSpecialist.status, "failed");
+  assert.match(overreachingSpecialist.evidence[0], /exceeded this step's authority/);
+  run = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialist_result",
+    id: firstId,
+    summary: "Evidence checked",
+    evidence: ["Fact matches the supplied record"],
+  });
+  assert.equal(run.specialists[0].status, "completed");
+  assert.equal(run.specialists[0].result.summary, "Evidence checked");
+
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: secondId,
+    summary: "Conclusion reviewed",
+    evidence: [],
+  });
+  assert.deepEqual(
+    run.specialists.map((item) => item.status),
+    ["completed", "completed"],
+  );
+
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "synthesis");
+  assert.equal(run.step.input.sessionContext, null);
+  assert.equal(run.step.input.specialistResults.length, 2);
+  assert.equal(run.step.input.specialistResults[0].result.summary, "Evidence checked");
+  await assert.rejects(
+    transitionWorkRun(
+      run,
+      { type: "complete", outputRefs: [{ kind: "library", id: ID }] },
+      { ...worker(run), outputsVerified: true },
+      now,
+    ),
+    /step_unsettled/,
+  );
+});
+
+test("cancelling a parent run cascades only to open specialists", async () => {
+  const completedId = crypto.randomUUID();
+  const queuedId = crypto.randomUUID();
+  let run = await admitWorkRun(submission(), { ...policy(), maxActions: 5 }, heartbeat(), now);
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: completedId,
+        role: "writing",
+        objective: "Draft a section",
+        context: [],
+        tools: [],
+      },
+      {
+        id: queuedId,
+        role: "review",
+        objective: "Review the section",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: completedId,
+    summary: "Draft complete",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await transitionWorkRun(step.run, { type: "cancel" }, owner(step.run), now);
+  assert.equal(run.status, "cancelled");
+  assert.equal(run.specialists[0].status, "completed");
+  assert.equal(run.specialists[0].result.summary, "Draft complete");
+  assert.equal(run.specialists[1].status, "cancelled");
+});
+
+test("a specialist plan must leave parent action budget for every task and synthesis", async () => {
+  let run = await fresh();
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "First task",
+        context: [],
+        tools: [],
+      },
+      {
+        id: crypto.randomUUID(),
+        role: "review",
+        objective: "Second task",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.deepEqual(run.specialists, []);
+  assert.match(run.evidence[0], /parent run's remaining action budget/);
+});
+
 async function fakeDriver(options = {}) {
   let state = await claim(await fresh());
   let called = 0,

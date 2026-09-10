@@ -160,7 +160,12 @@ test("actual provider sends only explicitly supported effort and preserves exact
     reasoningEffort: "high",
     maxOutputTokens: 4096,
     reservationId: crypto.randomUUID(),
+    phase: "coordinator",
+    coordinatorObjective: "Draft",
     objective: "Draft",
+    sessionContext: null,
+    specialist: null,
+    specialistResults: [],
     directions: [],
   };
   await provider.reason(input, { signal: new AbortController().signal });

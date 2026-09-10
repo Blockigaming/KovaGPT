@@ -47,12 +47,42 @@ export async function executeConfiguredWorkRun(caller: AuthedCaller, runId: stri
       adapter,
       costBroker: {
         async reserve(current, stepId) {
-          const inputChars = canonicalWorkInput({
-            objective: current.request.objective,
-            sessionContext: current.sessionContext,
-            directions: current.directions,
-            answer: current.question?.answer ?? null,
-          }).length;
+          const specialists = current.specialists ?? [];
+          const specialist =
+            specialists.find((item) => item.status === "running") ??
+            specialists.find((item) => item.status === "queued");
+          const inputChars = canonicalWorkInput(
+            specialist
+              ? {
+                  phase: "specialist",
+                  objective: specialist.objective,
+                  context: specialist.context,
+                }
+              : specialists.length
+                ? {
+                    phase: "synthesis",
+                    objective: current.request.objective,
+                    specialistResults: specialists.map((item) => ({
+                      id: item.id,
+                      role: item.role,
+                      objective: item.objective,
+                      result: item.result,
+                    })),
+                    directions: current.directions,
+                    effectResult:
+                      current.effect && current.effect.status !== "started" ? current.effect : null,
+                  }
+                : {
+                    phase: "coordinator",
+                    objective: current.request.objective,
+                    sessionContext: current.sessionContext,
+                    directions: current.directions,
+                    answer: current.question?.answer ?? null,
+                    approval: current.approval?.status === "approved" ? current.approval : null,
+                    effectResult:
+                      current.effect && current.effect.status !== "started" ? current.effect : null,
+                  },
+          ).length;
           const estimatedInputTokens = Math.max(1, Math.ceil(inputChars / 3) + 512);
           const outputTokens = Math.min(
             current.modelSelection?.maxOutputTokens ?? 2048,
@@ -201,6 +231,8 @@ export async function recoverConfiguredWorkRun(caller: AuthedCaller, runId: stri
       "question",
       "approval_required",
       "effect_completed",
+      "delegated",
+      "specialist_completed",
       "failed",
       "cancelled",
     ].includes(receipt.status) ||

@@ -177,6 +177,59 @@ test("completed receipts verify usage bounds and reject URL-shaped output proven
   }));
   await assert.rejects(fixture.transport.submit(input()), /artifact_invalid/);
 });
+test("specialist attempt statuses require their exact bounded directives", async () => {
+  const specialistId = crypto.randomUUID();
+  const receipt = (request, directive) => ({
+    ...attempt(request),
+    reservationId: RES,
+    inputTokens: 1,
+    outputTokens: 2,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    latencyMs: 3,
+    costMicros: 1,
+    outputs: [],
+    directive,
+  });
+  const delegated = fetchFixture((request) => ({
+    ...attempt(request, "delegated"),
+    receipt: receipt(request, {
+      kind: "specialists",
+      tasks: [
+        {
+          id: specialistId,
+          role: "review",
+          objective: "Review bounded text",
+          context: [],
+          tools: [],
+        },
+      ],
+    }),
+  }));
+  assert.equal((await delegated.transport.submit(input())).status, "delegated");
+  const completed = fetchFixture((request) => ({
+    ...attempt(request, "specialist_completed"),
+    receipt: receipt(request, {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "Review complete",
+      evidence: [],
+    }),
+  }));
+  assert.equal((await completed.transport.submit(input())).status, "specialist_completed");
+  await assert.rejects(
+    fetchFixture((request) => ({
+      ...attempt(request, "question"),
+      receipt: receipt(request, {
+        kind: "specialist_result",
+        id: specialistId,
+        summary: "Wrong status",
+        evidence: [],
+      }),
+    })).transport.submit(input()),
+    /directive_invalid/,
+  );
+});
 test("output bytes are bound to the exact attempt, MIME, length and independently calculated SHA-256", async () => {
   const text = "Verified output bytes";
   const bytes = new TextEncoder().encode(text);

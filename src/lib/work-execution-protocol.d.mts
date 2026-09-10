@@ -7,6 +7,19 @@ import type {
 export const WORK_EXECUTION_PROTOCOL: "kova-work-v1";
 export const WORK_RUNNER_CAPABILITIES: readonly string[];
 export const WORK_TERMINAL: readonly string[];
+export const WORK_SPECIALIST_ROLES: readonly string[];
+export type WorkSpecialist = {
+  id: string;
+  role: string;
+  objective: string;
+  context: string[];
+  tools: [];
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  result: { summary: string; evidence: string[] } | null;
+};
 export type WorkRunner = {
   id: string;
   protocol: string;
@@ -84,6 +97,7 @@ export type WorkRun = {
   stepIds: string[];
   outputRefs: { kind: "library"; id: string }[];
   evidence: string[];
+  specialists: WorkSpecialist[];
   event: { kind: string; at: number; detail: Record<string, unknown> };
 };
 export function workUuid(value: unknown): string;
@@ -96,6 +110,18 @@ export function workStepInput(
 ): Record<string, unknown>;
 export function runnerReady(runner: WorkRunner | null | undefined, now?: number): boolean;
 export function parseWorkSubmission(input: unknown): WorkSubmission;
+export function parseWorkSpecialistPlan(input: unknown): Array<{
+  id: string;
+  role: string;
+  objective: string;
+  context: string[];
+  tools: [];
+}>;
+export function parseWorkSpecialistResult(input: unknown): {
+  id: string;
+  summary: string;
+  evidence: string[];
+};
 export function admitWorkRun(
   input: unknown,
   policy: {

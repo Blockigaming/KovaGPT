@@ -84,9 +84,15 @@ export function configuredWorkRunnerAdapter() {
           attempt = await transport.status(binding, guards.signal);
         }
         if (
-          !["completed", "question", "approval_required", "effect_completed", "failed"].includes(
-            attempt.status,
-          ) ||
+          ![
+            "completed",
+            "question",
+            "approval_required",
+            "effect_completed",
+            "delegated",
+            "specialist_completed",
+            "failed",
+          ].includes(attempt.status) ||
           !attempt.receipt
         )
           throw new Error("work_attempt_unconfirmed");

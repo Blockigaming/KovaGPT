@@ -100,7 +100,12 @@ const input = () => ({
   stepId: uuid(),
   reservationId: uuid(),
   model: "gpt-5.6-luna",
+  phase: "coordinator",
+  coordinatorObjective: "Prepare output",
   objective: "Prepare output",
+  sessionContext: null,
+  specialist: null,
+  specialistResults: [],
   directions: [],
   answer: null,
   approval: null,
@@ -138,6 +143,105 @@ test("real signed service requires current readiness and preserves private durab
     f.transport.artifact({ ...binding(finished), ownerId: uuid() }, finished.receipt.outputs[0]),
     /unavailable/,
   );
+});
+
+test("provider delegates bounded specialists, withholds tools, and accepts synthesis only afterward", async (t) => {
+  const f = await fixture(t, {
+    results: [
+      {
+        kind: "delegate",
+        specialists: [
+          {
+            role: "research",
+            objective: "Check one supplied claim",
+            context: ["Bounded claim"],
+          },
+        ],
+      },
+      {
+        kind: "specialist_result",
+        summary: "The claim was checked",
+        evidence: ["Bounded claim is internally consistent"],
+      },
+      {
+        kind: "outputs",
+        artifacts: [{ format: "text", title: "Synthesis", content: "Final result" }],
+      },
+    ],
+  });
+  const coordinator = await terminal(f.transport, input());
+  assert.equal(coordinator.status, "delegated");
+  assert.equal(coordinator.receipt.directive.kind, "specialists");
+  const specialist = coordinator.receipt.directive.tasks[0];
+  assert.deepEqual(specialist.tools, []);
+
+  const specialistAttempt = await terminal(f.transport, {
+    ...input(),
+    stepId: uuid(),
+    reservationId: uuid(),
+    phase: "specialist",
+    objective: specialist.objective,
+    sessionContext: null,
+    specialist,
+  });
+  assert.equal(specialistAttempt.status, "specialist_completed");
+  assert.equal(specialistAttempt.receipt.directive.id, specialist.id);
+  const specialistPrompt = JSON.parse(
+    JSON.parse(f.requests[1].body).input.find((item) => item.role === "user").content,
+  );
+  assert.equal(specialistPrompt.sessionContext, null);
+  assert.deepEqual(specialistPrompt.availableOperations, []);
+  assert.deepEqual(specialistPrompt.terminalCommands, []);
+
+  const result = {
+    summary: specialistAttempt.receipt.directive.summary,
+    evidence: specialistAttempt.receipt.directive.evidence,
+  };
+  const synthesis = await terminal(f.transport, {
+    ...input(),
+    stepId: uuid(),
+    reservationId: uuid(),
+    phase: "synthesis",
+    sessionContext: null,
+    specialistResults: [
+      {
+        id: specialist.id,
+        role: specialist.role,
+        objective: specialist.objective,
+        result,
+      },
+    ],
+  });
+  assert.equal(synthesis.status, "completed");
+  assert.equal(synthesis.receipt.outputs.length, 1);
+});
+
+test("specialist phase rejects output or delegation attempts", async (t) => {
+  const specialist = {
+    id: uuid(),
+    role: "review",
+    objective: "Review bounded text",
+    context: [],
+    tools: [],
+  };
+  for (const result of [
+    {
+      kind: "outputs",
+      artifacts: [{ format: "text", title: "Not allowed", content: "No" }],
+    },
+    { kind: "delegate", specialists: [] },
+  ]) {
+    const f = await fixture(t, { results: [result] });
+    const outcome = await terminal(f.transport, {
+      ...input(),
+      phase: "specialist",
+      objective: specialist.objective,
+      sessionContext: null,
+      specialist,
+    });
+    assert.equal(outcome.status, "failed");
+    assert.equal(outcome.receipt.directive.kind, "failure");
+  }
 });
 
 test("fake provider drives actual service, protocol, approvals, question and private publisher lifecycle", async (t) => {
@@ -669,7 +773,13 @@ test("separate service instances atomically arbitrate submit versus nonexecution
       assert.equal(calls, before);
     } else {
       assert.notEqual(submitted.status, "not_executed");
-      for (let j = 0; j < 100 && calls === before; j++) await pause();
+      let current = submitted;
+      const deadline = Date.now() + 10000;
+      while (["accepted", "running"].includes(current.status) && Date.now() < deadline) {
+        await pause();
+        current = await f.transport.status(binding(submitted));
+      }
+      assert.ok(!["accepted", "running"].includes(current.status));
       assert.equal(calls, before + 1);
     }
   }

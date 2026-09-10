@@ -341,6 +341,35 @@ export function WorkExecutionPanel({
           <p className="text-sm">
             Status: {run.status.replaceAll("_", " ")} · Revision {run.revision}
           </p>
+          {(run.specialists ?? []).length > 0 && (
+            <section className="rounded border p-3" aria-label="Specialist progress">
+              <h3 className="font-medium">Specialist progress</h3>
+              <p className="text-sm text-muted-foreground">
+                These bounded tasks run one at a time under this run's existing limits.
+              </p>
+              <ol className="mt-2 space-y-2">
+                {(run.specialists ?? []).map((specialist) => (
+                  <li key={specialist.id} className="text-sm">
+                    <p>
+                      <span className="font-medium">{specialist.role}</span> ·{" "}
+                      {specialist.status.replaceAll("_", " ")}
+                    </p>
+                    <p className="whitespace-pre-wrap">{specialist.objective}</p>
+                    {specialist.result && (
+                      <div className="mt-1 border-l pl-2">
+                        <p className="whitespace-pre-wrap">{specialist.result.summary}</p>
+                        {specialist.result.evidence.map((item, index) => (
+                          <p key={index} className="whitespace-pre-wrap text-muted-foreground">
+                            Evidence: {item}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {(run.step || run.effect?.status === "started") && run.status !== "running" && (
             <p className="text-sm">
               An interrupted action needs verified reconciliation before it can resume.
