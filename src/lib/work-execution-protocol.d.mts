@@ -108,6 +108,7 @@ export function workStepInput(
   stepId: string,
   cost: Record<string, unknown>,
 ): Record<string, unknown>;
+export function estimateWorkStepInputTokens(run: WorkRun, stepId: string): number;
 export function runnerReady(runner: WorkRunner | null | undefined, now?: number): boolean;
 export function parseWorkSubmission(input: unknown): WorkSubmission;
 export function parseWorkSpecialistPlan(input: unknown): Array<{

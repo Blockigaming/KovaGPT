@@ -23,6 +23,8 @@ export const WORK_SPECIALIST_ROLES = Object.freeze([
   "review",
 ]);
 const WORK_SPECIALIST_ROLE_SET = new Set(WORK_SPECIALIST_ROLES);
+const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
+const WORK_INPUT_PROJECTION_ID = "00000000-0000-4000-8000-000000000001";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set([
   "browser_interact",
@@ -143,10 +145,8 @@ export async function workInputHash(value) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-export function workStepInput(run, stepId, cost) {
+function buildWorkStepInput(run, stepId, cost, phase, specialist) {
   const specialists = Array.isArray(run.specialists) ? run.specialists : [];
-  const specialist = specialists.find((item) => item.status === "running") ?? null;
-  const phase = specialist ? "specialist" : specialists.length ? "synthesis" : "coordinator";
   return {
     runId: run.id,
     ownerId: run.ownerId,
@@ -157,7 +157,12 @@ export function workStepInput(run, stepId, cost) {
     ...(run.modelSelection ? { reasoningEffort: run.modelSelection.reasoningEffort } : {}),
     phase,
     coordinatorObjective: run.request.objective,
-    objective: specialist?.objective ?? run.request.objective,
+    objective:
+      phase === "specialist"
+        ? specialist.objective
+        : phase === "synthesis"
+          ? WORK_SYNTHESIS_OBJECTIVE
+          : run.request.objective,
     sessionContext: phase === "coordinator" ? run.sessionContext : null,
     specialist: specialist
       ? {
@@ -191,6 +196,54 @@ export function workStepInput(run, stepId, cost) {
         : null,
     maxCostMicros: cost.costMicros,
   };
+}
+
+export function workStepInput(run, stepId, cost) {
+  const specialists = Array.isArray(run.specialists) ? run.specialists : [];
+  const specialist =
+    specialists.find((item) => item.status === "running") ??
+    specialists.find((item) => item.status === "queued") ??
+    null;
+  const phase = specialist ? "specialist" : specialists.length ? "synthesis" : "coordinator";
+  return buildWorkStepInput(run, stepId, cost, phase, specialist);
+}
+
+export function estimateWorkStepInputTokens(run, stepId) {
+  const remainingTokens = Math.max(1, run.limits.maxTokens - run.usage.tokens);
+  const outputTokens = Math.max(
+    1,
+    Math.min(run.modelSelection?.maxOutputTokens ?? 2048, remainingTokens),
+  );
+  const input = workStepInput(run, stepId, {
+    id: WORK_INPUT_PROJECTION_ID,
+    tokens: run.limits.maxTokens,
+    outputTokens,
+    costMicros: run.limits.maxCostMicros,
+  });
+  const inputBytes = new TextEncoder().encode(canonicalWorkInput(input)).length;
+  return Math.max(1, Math.ceil(inputBytes / 3) + 512);
+}
+
+function specialistSynthesisInputTooLarge(run) {
+  const projected = buildWorkStepInput(
+    { ...run, epoch: Number.MAX_SAFE_INTEGER },
+    WORK_INPUT_PROJECTION_ID,
+    {
+      id: WORK_INPUT_PROJECTION_ID,
+      tokens: Number.MAX_SAFE_INTEGER,
+      outputTokens: Number.MAX_SAFE_INTEGER,
+      costMicros: Number.MAX_SAFE_INTEGER,
+    },
+    "synthesis",
+    null,
+  );
+  try {
+    canonicalWorkInput(projected);
+    return false;
+  } catch (error) {
+    if (error instanceof Error && error.message === "work_input_too_large") return true;
+    throw error;
+  }
 }
 export function runnerReady(runner, now = Date.now()) {
   return Boolean(
@@ -372,6 +425,8 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       if (run.directions.length >= 64) fail("work_direction_limit");
       if (run.directions.some((item) => item.id === command.id)) fail("work_direction_duplicate");
       run.directions.push({ id: workUuid(command.id), text: bounded(command.text, 4000), at: now });
+      if (run.specialists.length && specialistSynthesisInputTooLarge(run))
+        fail("work_specialist_synthesis_too_large");
       return update(run, now, "direction_queued", { id: command.id });
     }
     if (command.type === "edit_direction" || command.type === "remove_direction") {
@@ -380,6 +435,12 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       if (command.type === "edit_direction")
         run.directions[index].text = bounded(command.text, 4000);
       else run.directions.splice(index, 1);
+      if (
+        command.type === "edit_direction" &&
+        run.specialists.length &&
+        specialistSynthesisInputTooLarge(run)
+      )
+        fail("work_specialist_synthesis_too_large");
       return update(
         run,
         now,
@@ -612,8 +673,15 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           completedAt: null,
           result: null,
         }));
-        run.status = "queued";
-        run.lease = null;
+        if (specialistSynthesisInputTooLarge(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the bounded synthesis input."];
+        } else {
+          run.status = "queued";
+          run.lease = null;
+        }
       }
     } else if (directive?.kind === "specialist_result") {
       const result = parseWorkSpecialistResult(directive);
@@ -633,8 +701,15 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
         specialist.status = "completed";
         specialist.completedAt = now;
         specialist.result = { summary: result.summary, evidence: result.evidence };
-        run.status = "queued";
-        run.lease = null;
+        if (specialistSynthesisInputTooLarge(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist results exceeded the bounded synthesis input."];
+        } else {
+          run.status = "queued";
+          run.lease = null;
+        }
       }
     } else if (directive?.kind === "question") {
       if (run.effect?.status === "started") fail("work_effect_unresolved");
@@ -708,6 +783,7 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     const sentIds = new Set((run.step.input.directions ?? []).map((item) => item.id));
     run.directions = run.directions.filter((item) => !sentIds.has(item.id));
     run.step = null;
+    run.reconciling = false;
     return update(run, now, "step_completed", { id: command.id, result: run.status });
   }
   if (command.type === "record_step_receipt") {
