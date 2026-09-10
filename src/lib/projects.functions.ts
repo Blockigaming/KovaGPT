@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 import { z } from "zod";
 
 export type ProjectRole = "owner" | "editor" | "viewer";
@@ -81,7 +82,11 @@ export type ProjectChatSummary = {
   created_by: string;
 };
 
-export type ProjectChatMessage = { role: "user" | "assistant" | "system"; content: string };
+export type ProjectChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+  sources?: ResponseSource[];
+};
 export type ProjectChatDetail = ProjectChatSummary & {
   snapshot: { messages: ProjectChatMessage[] };
   project_id: string;
@@ -96,10 +101,46 @@ export type PendingInvite = {
   created_at: string;
 };
 
-const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().max(100_000),
-});
+const ResponseSourceSchema = z
+  .object({
+    id: z.string().max(80),
+    title: z.string().max(180),
+    url: z.string().max(2_048),
+    domain: z.string().max(120),
+    snippet: z.string().max(500).optional(),
+    publishedAt: z.string().max(80).optional(),
+  })
+  .strict()
+  .transform((source, context): ResponseSource => {
+    const normalized = normalizeResponseSources([source])?.[0];
+    if (!normalized) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid response source" });
+      return z.NEVER;
+    }
+    return normalized;
+  });
+
+const MessageSchema = z
+  .object({
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.string().max(100_000),
+    sources: z.array(ResponseSourceSchema).max(12).optional(),
+  })
+  .strict()
+  .superRefine((message, context) => {
+    if (message.sources !== undefined && message.role !== "assistant") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Only responses can have sources" });
+    }
+  });
+
+function projectChatSnapshot(value: unknown): { messages: ProjectChatMessage[] } {
+  const messages =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as { messages?: unknown }).messages
+      : undefined;
+  const parsed = z.array(MessageSchema).max(500).safeParse(messages);
+  return { messages: parsed.success ? parsed.data : [] };
+}
 
 // -------- Projects CRUD --------
 
@@ -651,7 +692,7 @@ export const getProjectChat = createServerFn({ method: "GET" })
     if (error || !row) return null;
     return {
       ...row,
-      snapshot: (row.snapshot as { messages: ProjectChatMessage[] }) ?? { messages: [] },
+      snapshot: projectChatSnapshot(row.snapshot),
     } as ProjectChatDetail;
   });
 

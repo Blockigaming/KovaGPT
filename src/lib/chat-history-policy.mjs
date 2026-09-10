@@ -94,6 +94,7 @@ function responseSource(value, index) {
   url.username = "";
   url.password = "";
   url.hash = "";
+  if (url.toString().length > 2048) throw new Error("chat_history_invalid");
   const clean = (candidate, max) =>
     text(candidate, max) ? candidate.replace(/\p{Cc}/gu, " ").trim() : "";
   const title = clean(value.title, 180) || url.hostname;

@@ -9,12 +9,48 @@ test.beforeEach(({ page: _page }, testInfo) => {
 });
 
 test("web answers expose their real sources instead of a placeholder action", async ({ page }) => {
+  const sourcesEvent = {
+    choices: [
+      {
+        delta: {
+          kind: "web_sources",
+          sources: [
+            {
+              id: "src-1",
+              title: "Launch report",
+              url: "https://reader:secret@example.com/report#details",
+              domain: "spoofed.invalid",
+              snippet: "Verified launch details.",
+            },
+            {
+              id: "src-2",
+              title: "Pricing page",
+              url: "https://docs.example.org/pricing",
+              domain: "docs.example.org",
+            },
+            {
+              id: "unsafe",
+              title: "Unsafe result",
+              url: "javascript:alert(1)",
+              domain: "unsafe.invalid",
+            },
+            {
+              id: "expanded",
+              title: "Expanded URL",
+              url: `https://example.net/${"é".repeat(400)}`,
+              domain: "example.net",
+            },
+          ],
+        },
+      },
+    ],
+  };
   await page.route("**/api/chat", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/event-stream",
       body:
-        'data: {"choices":[{"delta":{"kind":"web_sources","sources":[{"id":"src-1","title":"Launch report","url":"https://reader:secret@example.com/report#details","domain":"spoofed.invalid","snippet":"Verified launch details."},{"id":"src-2","title":"Pricing page","url":"https://docs.example.org/pricing","domain":"docs.example.org"},{"id":"unsafe","title":"Unsafe result","url":"javascript:alert(1)","domain":"unsafe.invalid"}]}}]}\n\n' +
+        `data: ${JSON.stringify(sourcesEvent)}\n\n` +
         'data: {"choices":[{"delta":{"content":"The launch report confirms the update."}}]}\n\ndata: [DONE]\n\n',
     });
   });
@@ -36,6 +72,7 @@ test("web answers expose their real sources instead of a placeholder action", as
   await expect(sources.getByText("example.com", { exact: true })).toBeVisible();
   await expect(sources).not.toContainText("spoofed.invalid");
   await expect(sources).not.toContainText("Unsafe result");
+  await expect(sources).not.toContainText("Expanded URL");
   await expect(sources.getByText("docs.example.org", { exact: true })).toBeVisible();
 });
 

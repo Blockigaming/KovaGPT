@@ -960,7 +960,7 @@ function ChatMessageInner({
                 <button
                   type="button"
                   onClick={() => setSourcesOpen((open) => !open)}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="kova-message-source-toggle inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   aria-expanded={sourcesOpen}
                   aria-controls={`message-sources-${message.id}`}
                 >

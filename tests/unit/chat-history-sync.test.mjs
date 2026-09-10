@@ -203,6 +203,31 @@ test("durable history validates and preserves assistant retry states", () => {
       ),
     /invalid/,
   );
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [
+            {
+              id: "response",
+              role: "assistant",
+              content: "Expanded URL",
+              sources: [
+                {
+                  id: "expanded",
+                  title: "Expanded URL",
+                  url: `https://example.com/${"é".repeat(400)}`,
+                  domain: "example.com",
+                },
+              ],
+            },
+          ],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
 });
 test("durable history preserves bounded safe web sources only on assistant responses", () => {
   const normalized = normalizeChatHistory(

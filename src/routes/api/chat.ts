@@ -1927,9 +1927,6 @@ export const Route = createFileRoute("/api/chat")({
                 const enc = new TextEncoder();
                 const stream = new ReadableStream({
                   start(controller) {
-                    if (webSources.length) {
-                      controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(webSources))));
-                    }
                     for (const a of activityEvents) {
                       controller.enqueue(
                         enc.encode(

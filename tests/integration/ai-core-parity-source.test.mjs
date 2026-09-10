@@ -58,6 +58,8 @@ test("web and Deep Research responses stream bounded source records to the messa
   const home = read("src/routes/index.tsx");
   const message = read("src/components/ChatMessage.tsx");
   const history = read("src/lib/chat-history-policy.mjs");
+  const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");
+  const styles = read("src/styles/chatgpt-parity.css");
 
   assert.match(chat, /kind: "web_sources"/u);
   assert.match(chat, /responseSourcesDelta\(result\.sources\)/u);
@@ -65,6 +67,12 @@ test("web and Deep Research responses stream bounded source records to the messa
   assert.match(home, /normalizeResponseSources\(delta\.sources\)/u);
   assert.match(message, /Sources for this response/iu);
   assert.match(history, /item\.sources = message\.sources\.map\(responseSource\)/u);
+  assert.match(projectChat, /normalizeResponseSources\(delta\.sources\)/u);
+  assert.match(styles, /button\.kova-message-source-toggle\s*\{[\s\S]*?width: auto/u);
+  assert.doesNotMatch(
+    chat,
+    /if \(!upstream\.ok\)[\s\S]*?start\(controller\) \{\s*if \(webSources\.length\)/u,
+  );
   assert.doesNotMatch(message, /if \(sourceActivity\) toast\.message\(sourceActivity\.label\)/u);
 });
 
