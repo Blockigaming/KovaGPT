@@ -26,6 +26,7 @@ const WORK_SPECIALIST_ROLE_SET = new Set(WORK_SPECIALIST_ROLES);
 export const WORK_COORDINATOR_OBJECTIVE = "Complete the coordinator objective.";
 export const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
 const WORK_INPUT_PROJECTION_ID = "00000000-0000-4000-8000-000000000001";
+const WORK_INPUT_HASH_PROJECTION = "f".repeat(64);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set([
   "browser_interact",
@@ -141,6 +142,17 @@ export function canonicalWorkInput(value) {
   if (new TextEncoder().encode(encoded).length > 32768) fail("work_input_too_large");
   return encoded;
 }
+export function canonicalWorkRunnerRequest({ runnerId, build, requestId, at, operation, payload }) {
+  return canonicalWorkInput({
+    protocol: WORK_EXECUTION_PROTOCOL,
+    runnerId,
+    build,
+    requestId,
+    at,
+    operation,
+    payload,
+  });
+}
 export async function workInputHash(value) {
   const bytes = new TextEncoder().encode(canonicalWorkInput(value));
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -239,7 +251,11 @@ export function remainingWorkPhaseInputTokens(run, stepId = WORK_INPUT_PROJECTIO
   const specialists = Array.isArray(run.specialists) ? run.specialists : [];
   if (!specialists.length) return [estimateWorkStepInputTokens(run, stepId)];
   const cost = projectedWorkCost(run);
-  const open = specialists.filter((item) => ["queued", "running"].includes(item.status));
+  const reservedSpecialistId =
+    run.step?.input?.phase === "specialist" ? run.step.input.specialist?.id : null;
+  const open = specialists.filter(
+    (item) => ["queued", "running"].includes(item.status) && item.id !== reservedSpecialistId,
+  );
   const estimates = open.map((specialist) =>
     estimateWorkInputTokens(buildWorkStepInput(run, stepId, cost, "specialist", specialist)),
   );
@@ -264,9 +280,16 @@ function specialistPhasesExceedTokenBudget(run) {
   return run.usage.tokens + minimum > run.limits.maxTokens;
 }
 
-function workInputTooLarge(input) {
+function workSubmitInputTooLarge(run, input) {
   try {
-    canonicalWorkInput(input);
+    canonicalWorkRunnerRequest({
+      runnerId: run.runnerId,
+      build: run.runnerBuild,
+      requestId: WORK_INPUT_PROJECTION_ID,
+      at: Number.MAX_SAFE_INTEGER,
+      operation: "submit",
+      payload: { ...input, inputHash: WORK_INPUT_HASH_PROJECTION },
+    });
     return false;
   } catch (error) {
     if (error instanceof Error && error.message === "work_input_too_large") return true;
@@ -280,21 +303,30 @@ function specialistStepInputTooLarge(run) {
   return run.specialists
     .filter((specialist) => ["queued", "running"].includes(specialist.status))
     .some((specialist) =>
-      workInputTooLarge(
+      workSubmitInputTooLarge(
+        projectedRun,
         buildWorkStepInput(projectedRun, WORK_INPUT_PROJECTION_ID, cost, "specialist", specialist),
       ),
     );
 }
 
 function specialistSynthesisInputTooLarge(run) {
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
   const projected = buildWorkStepInput(
-    { ...run, epoch: Number.MAX_SAFE_INTEGER },
+    projectedRun,
     WORK_INPUT_PROJECTION_ID,
     projectedWorkCost(run, true),
     "synthesis",
     null,
   );
-  return workInputTooLarge(projected);
+  return workSubmitInputTooLarge(projectedRun, projected);
+}
+
+function withoutSentDirections(run) {
+  const sentIds = new Set((run.step?.input?.directions ?? []).map((item) => item.id));
+  return sentIds.size
+    ? { ...run, directions: run.directions.filter((item) => !sentIds.has(item.id)) }
+    : run;
 }
 export function runnerReady(runner, now = Date.now()) {
   return Boolean(
@@ -373,7 +405,7 @@ export async function admitWorkRun(input, policy, runner, now = Date.now()) {
     maxCostMicros: integer(policy.maxCostMicros, 1, 10000000),
     runtimeMs: integer(policy.runtimeMs, 1000, 3600000),
   };
-  return {
+  const run = {
     protocol: WORK_EXECUTION_PROTOCOL,
     id: workUuid(policy.runId),
     ownerId: workUuid(policy.ownerId),
@@ -408,6 +440,21 @@ export async function admitWorkRun(input, policy, runner, now = Date.now()) {
     specialists: [],
     event: { kind: "admitted", at: now, detail: { source: request.source } },
   };
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
+  if (
+    workSubmitInputTooLarge(
+      projectedRun,
+      buildWorkStepInput(
+        projectedRun,
+        WORK_INPUT_PROJECTION_ID,
+        projectedWorkCost(run, true),
+        "coordinator",
+        null,
+      ),
+    )
+  )
+    fail("work_input_too_large");
+  return run;
 }
 function active(run, now) {
   if (WORK_TERMINAL.includes(run.status)) fail("work_run_terminal");
@@ -732,17 +779,18 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           completedAt: null,
           result: null,
         }));
-        if (specialistStepInputTooLarge(run)) {
+        const remainingRun = withoutSentDirections(run);
+        if (specialistStepInputTooLarge(remainingRun)) {
           run.status = "failed";
           run.lease = null;
           failSpecialists(run, now);
           run.evidence = ["The specialist plan exceeded the bounded specialist input."];
-        } else if (specialistSynthesisInputTooLarge(run)) {
+        } else if (specialistSynthesisInputTooLarge(remainingRun)) {
           run.status = "failed";
           run.lease = null;
           failSpecialists(run, now);
           run.evidence = ["The specialist plan exceeded the bounded synthesis input."];
-        } else if (specialistPhasesExceedTokenBudget(run)) {
+        } else if (specialistPhasesExceedTokenBudget(remainingRun)) {
           run.status = "failed";
           run.lease = null;
           failSpecialists(run, now);

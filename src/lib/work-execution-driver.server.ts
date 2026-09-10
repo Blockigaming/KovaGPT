@@ -130,7 +130,7 @@ export async function executeConfiguredWorkRun(caller: AuthedCaller, runId: stri
   return finishVerifiedReceipt(caller, result.state, result.receipt, result.budgetViolation);
 }
 
-async function finishVerifiedReceipt(
+export async function finishVerifiedReceipt(
   caller: AuthedCaller,
   run: WorkRun,
   receipt: RunnerReceipt,
@@ -138,7 +138,11 @@ async function finishVerifiedReceipt(
 ) {
   const repository = createWorkExecutionRepository(caller);
   const outputs =
-    !budgetViolation && !receipt.directive && receipt.outputs.length
+    !budgetViolation &&
+    run.step?.id === receipt.stepId &&
+    run.step.input.phase !== "specialist" &&
+    !receipt.directive &&
+    receipt.outputs.length
       ? await publishVerifiedWorkOutputs(caller, run, receipt)
       : [];
   let current = await repository.load(run.id);

@@ -3,10 +3,12 @@ import test from "node:test";
 import {
   admitWorkRun,
   canonicalWorkInput,
+  canonicalWorkRunnerRequest,
   estimateWorkStepInputTokens,
   parseWorkSubmission,
   reconcileWorkRun,
   reconcileUndispatchedWorkRun,
+  remainingWorkPhaseInputTokens,
   runnerReady,
   transitionWorkRun,
   workStepInput,
@@ -477,6 +479,15 @@ test("multilingual coordinator objectives are carried once in bounded step input
   assert.equal(input.coordinatorObjective, coordinatorObjective);
   assert.doesNotThrow(() => canonicalWorkInput(input));
   assert.doesNotThrow(() => estimateWorkStepInputTokens(run, crypto.randomUUID()));
+  await assert.rejects(
+    admitWorkRun(
+      { ...submission(), objective: "界".repeat(10650) },
+      { ...policy(), maxTokens: 20000 },
+      heartbeat(),
+      now,
+    ),
+    /work_input_too_large/,
+  );
 });
 
 test("bounded specialists run sequentially with narrow context and immutable results before synthesis", async () => {
@@ -587,6 +598,36 @@ test("bounded specialists run sequentially with narrow context and immutable res
   );
 });
 
+test("consumed coordinator directions are excluded from specialist phase projections", async () => {
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 6, maxTokens: 500000 },
+    heartbeat(),
+    now,
+  );
+  for (let index = 0; index < 7; index++)
+    run = await transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: String(index).repeat(3500) },
+      owner(run),
+      now,
+    );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: Array.from({ length: 4 }, (_, index) => ({
+      id: crypto.randomUUID(),
+      role: "research",
+      objective: String(index).repeat(2000),
+      context: [],
+      tools: [],
+    })),
+  });
+  assert.equal(run.status, "queued");
+  assert.equal(run.directions.length, 0);
+  assert.equal(run.specialists.length, 4);
+});
+
 test("cancelling a parent run cascades only to open specialists", async () => {
   const completedId = crypto.randomUUID();
   const queuedId = crypto.randomUUID();
@@ -629,6 +670,42 @@ test("cancelling a parent run cascades only to open specialists", async () => {
   assert.equal(run.specialists[0].status, "completed");
   assert.equal(run.specialists[0].result.summary, "Draft complete");
   assert.equal(run.specialists[1].status, "cancelled");
+});
+
+test("a reserved running specialist is excluded from later remaining-phase checks", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  const remaining = remainingWorkPhaseInputTokens(run);
+  assert.equal(remaining.length, 1);
+  run.limits.maxTokens = run.usage.tokens + remaining[0] + 100;
+  run = await transitionWorkRun(
+    run,
+    { type: "direction", id: crypto.randomUUID(), text: "Use concise citations" },
+    owner(run),
+    now,
+  );
+  assert.equal(run.status, "running");
+  assert.equal(run.directions.length, 1);
 });
 
 test("a specialist plan must leave parent action budget for every task and synthesis", async () => {
@@ -747,6 +824,70 @@ test("aggregate specialist results fail durably before an oversized synthesis st
   assert.equal(run.step, null);
   assert.match(run.evidence[0], /bounded synthesis input/);
   assert.ok(run.specialists.some((item) => item.result?.summary.length === 3000));
+});
+
+test("synthesis projections include the complete signed submit envelope", async () => {
+  const specialistIds = Array.from({ length: 4 }, () => crypto.randomUUID());
+  let run = await admitWorkRun(
+    { ...submission(), objective: "p".repeat(12000) },
+    { ...policy(), maxActions: 6, maxTokens: 500000, maxCostMicros: 10000000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: specialistIds.map((id, index) => ({
+      id,
+      role: "research",
+      objective: String(index).repeat(2000),
+      context: [],
+      tools: [],
+    })),
+  });
+  for (let index = 0; index < specialistIds.length - 1; index++) {
+    step = await beginSpecialistTestStep(run);
+    run = await finishSpecialistTestStep(step.run, step.id, {
+      kind: "specialist_result",
+      id: specialistIds[index],
+      summary: "s".repeat(2864),
+      evidence: [],
+    });
+    assert.equal(run.status, "queued");
+  }
+  step = await beginSpecialistTestStep(run);
+  const projectedRun = structuredClone(step.run);
+  const last = projectedRun.specialists.find((item) => item.id === specialistIds.at(-1));
+  last.status = "completed";
+  last.result = { summary: "s".repeat(2864), evidence: [] };
+  const projectionId = "00000000-0000-4000-8000-000000000001";
+  const input = workStepInput(projectedRun, projectionId, {
+    id: projectionId,
+    tokens: projectedRun.limits.maxTokens,
+    outputTokens: 2048,
+    costMicros: projectedRun.limits.maxCostMicros,
+  });
+  assert.doesNotThrow(() => canonicalWorkInput(input));
+  assert.throws(
+    () =>
+      canonicalWorkRunnerRequest({
+        runnerId: projectedRun.runnerId,
+        build: projectedRun.runnerBuild,
+        requestId: projectionId,
+        at: Number.MAX_SAFE_INTEGER,
+        operation: "submit",
+        payload: { ...input, inputHash: "f".repeat(64) },
+      }),
+    /work_input_too_large/,
+  );
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistIds.at(-1),
+    summary: "s".repeat(2864),
+    evidence: [],
+  });
+  assert.equal(run.status, "failed");
+  assert.match(run.evidence[0], /bounded synthesis input/);
 });
 
 test("a recovered specialist receipt exits reconciliation before the next phase", async () => {

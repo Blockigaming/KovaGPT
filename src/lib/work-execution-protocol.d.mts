@@ -104,6 +104,14 @@ export type WorkRun = {
 };
 export function workUuid(value: unknown): string;
 export function canonicalWorkInput(value: unknown): string;
+export function canonicalWorkRunnerRequest(input: {
+  runnerId: string;
+  build: string;
+  requestId: string;
+  at: number;
+  operation: string;
+  payload: Record<string, unknown>;
+}): string;
 export function workInputHash(value: unknown): Promise<string>;
 export function workStepInput(
   run: WorkRun,

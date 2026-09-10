@@ -1,6 +1,7 @@
 import { parseWorkModelCapabilities } from "./work-model-policy.mjs";
 import {
   canonicalWorkInput,
+  canonicalWorkRunnerRequest,
   parseWorkSpecialistPlan,
   parseWorkSpecialistResult,
   workInputHash,
@@ -322,7 +323,7 @@ export function createWorkRunnerTransport(configuration, fetcher = fetch) {
       operation,
       payload,
     };
-    const body = canonicalWorkInput(envelope);
+    const body = canonicalWorkRunnerRequest(envelope);
     const response = await fetcher(`${config.origin}/v1/work/${operation}`, {
       method: "POST",
       redirect: "error",
