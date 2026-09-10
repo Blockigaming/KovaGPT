@@ -3,12 +3,18 @@ import test from "node:test";
 import {
   admitWorkRun,
   canonicalWorkInput,
+  canonicalWorkRunnerRequest,
+  estimateWorkStepInputTokens,
   parseWorkSubmission,
   reconcileWorkRun,
   reconcileUndispatchedWorkRun,
+  remainingWorkPhaseInputTokens,
   runnerReady,
   transitionWorkRun,
+  workStepInput,
+  WORK_COORDINATOR_OBJECTIVE,
   WORK_RUNNER_CAPABILITIES,
+  WORK_SYNTHESIS_OBJECTIVE,
 } from "../../src/lib/work-execution-protocol.mjs";
 import { executeIsolatedWorkStep } from "../../src/lib/work-runner-protocol.mjs";
 
@@ -378,6 +384,690 @@ test("deadlines are terminal on recovery; pause revokes the current epoch", asyn
   assert.equal(run.status, "failed");
 });
 
+async function beginSpecialistTestStep(run) {
+  if (run.status === "queued") run = await claim(run);
+  const id = crypto.randomUUID();
+  run = await transitionWorkRun(
+    run,
+    { type: "begin_step", id },
+    {
+      ...worker(run),
+      costReservation: { ...cost(run), id: crypto.randomUUID() },
+    },
+    now,
+  );
+  return { run, id };
+}
+
+async function finishSpecialistTestStep(run, id, directive) {
+  run = await transitionWorkRun(
+    run,
+    {
+      type: "record_step_receipt",
+      receipt: {
+        ownerId: OWNER,
+        runId: RUN,
+        epoch: run.epoch,
+        stepId: id,
+        reservationId: run.step.reservationId,
+        inputHash: run.step.inputHash,
+        outputs: [],
+        directive,
+      },
+    },
+    { ...worker(run), accountingSettled: true },
+    now,
+  );
+  return transitionWorkRun(
+    run,
+    { type: "finish_step", id },
+    { ...worker(run), accountingSettled: true, outputsVerified: true },
+    now,
+  );
+}
+
+test("specialist cost estimates include the exact long coordinator objective", async () => {
+  const coordinatorObjective = "c".repeat(12000);
+  let run = await admitWorkRun(
+    { ...submission(), objective: coordinatorObjective },
+    { ...policy(), maxActions: 3, maxTokens: 20000 },
+    heartbeat(),
+    now,
+  );
+  const coordinator = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(coordinator.run, coordinator.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "Check one fact",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  const stepId = crypto.randomUUID();
+  const projection = workStepInput(run, stepId, {
+    id: "00000000-0000-4000-8000-000000000001",
+    tokens: run.limits.maxTokens,
+    outputTokens: 2048,
+    costMicros: run.limits.maxCostMicros,
+  });
+  assert.equal(projection.phase, "specialist");
+  assert.equal(projection.coordinatorObjective, coordinatorObjective);
+  const bytes = new TextEncoder().encode(canonicalWorkInput(projection)).length;
+  assert.equal(estimateWorkStepInputTokens(run, stepId), Math.ceil(bytes / 3) + 512);
+  assert.ok(estimateWorkStepInputTokens(run, stepId) > 4500);
+});
+
+test("multilingual coordinator objectives are carried once in bounded step input", async () => {
+  const coordinatorObjective = "界".repeat(10000);
+  const run = await admitWorkRun(
+    { ...submission(), objective: coordinatorObjective },
+    { ...policy(), maxTokens: 20000 },
+    heartbeat(),
+    now,
+  );
+  const input = workStepInput(run, crypto.randomUUID(), {
+    id: crypto.randomUUID(),
+    tokens: run.limits.maxTokens,
+    outputTokens: 2048,
+    costMicros: run.limits.maxCostMicros,
+  });
+  assert.equal(input.objective, WORK_COORDINATOR_OBJECTIVE);
+  assert.equal(input.coordinatorObjective, coordinatorObjective);
+  assert.doesNotThrow(() => canonicalWorkInput(input));
+  assert.doesNotThrow(() => estimateWorkStepInputTokens(run, crypto.randomUUID()));
+  await assert.rejects(
+    admitWorkRun(
+      { ...submission(), objective: "界".repeat(10650) },
+      { ...policy(), maxTokens: 20000 },
+      heartbeat(),
+      now,
+    ),
+    /work_input_too_large/,
+  );
+});
+
+test("bounded specialists run sequentially with narrow context and immutable results before synthesis", async () => {
+  const firstId = crypto.randomUUID();
+  const secondId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    { ...submission(), sessionId: ID, sessionRevision: 1 },
+    {
+      ...policy(),
+      maxActions: 5,
+      maxTokens: 10000,
+      sessionContext: { privateConversation: "coordinator only" },
+    },
+    heartbeat(),
+    now,
+  );
+  assert.deepEqual(run.specialists, []);
+
+  let step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "coordinator");
+  assert.deepEqual(run.step.input.sessionContext, { privateConversation: "coordinator only" });
+  run = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: firstId,
+        role: "research",
+        objective: "Check the supplied evidence",
+        context: ["Only this fact"],
+        tools: [],
+      },
+      {
+        id: secondId,
+        role: "review",
+        objective: "Review the proposed conclusion",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.deepEqual(
+    run.specialists.map((item) => item.status),
+    ["queued", "queued"],
+  );
+
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "specialist");
+  assert.equal(run.step.input.specialist.id, firstId);
+  assert.equal(run.step.input.objective, "Check the supplied evidence");
+  assert.equal(run.step.input.sessionContext, null);
+  assert.deepEqual(run.step.input.specialist.tools, []);
+  assert.deepEqual(run.step.input.specialistResults, []);
+  const rejectedSpecialist = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialist_result",
+    id: secondId,
+    summary: "Wrong specialist",
+    evidence: [],
+  });
+  assert.equal(rejectedSpecialist.status, "failed");
+  assert.equal(rejectedSpecialist.specialists[0].status, "failed");
+  assert.equal(rejectedSpecialist.specialists[0].result, null);
+  const overreachingSpecialist = await finishSpecialistTestStep(run, step.id, {
+    kind: "approval",
+    id: crypto.randomUUID(),
+    action: "send_email",
+    input: { to: "someone@example.test" },
+  });
+  assert.equal(overreachingSpecialist.status, "failed");
+  assert.match(overreachingSpecialist.evidence[0], /exceeded this step's authority/);
+  run = await finishSpecialistTestStep(run, step.id, {
+    kind: "specialist_result",
+    id: firstId,
+    summary: "Evidence checked",
+    evidence: ["Fact matches the supplied record"],
+  });
+  assert.equal(run.specialists[0].status, "completed");
+  assert.equal(run.specialists[0].result.summary, "Evidence checked");
+
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: secondId,
+    summary: "Conclusion reviewed",
+    evidence: [],
+  });
+  assert.deepEqual(
+    run.specialists.map((item) => item.status),
+    ["completed", "completed"],
+  );
+
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  assert.equal(run.step.input.phase, "synthesis");
+  assert.equal(run.step.input.objective, WORK_SYNTHESIS_OBJECTIVE);
+  assert.equal(run.step.input.sessionContext, null);
+  assert.equal(run.step.input.specialistResults.length, 2);
+  assert.equal(run.step.input.specialistResults[0].result.summary, "Evidence checked");
+  await assert.rejects(
+    transitionWorkRun(
+      run,
+      { type: "complete", outputRefs: [{ kind: "library", id: ID }] },
+      { ...worker(run), outputsVerified: true },
+      now,
+    ),
+    /step_unsettled/,
+  );
+});
+
+test("consumed coordinator directions are excluded from specialist phase projections", async () => {
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 6, maxTokens: 500000 },
+    heartbeat(),
+    now,
+  );
+  for (let index = 0; index < 7; index++)
+    run = await transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: String(index).repeat(3500) },
+      owner(run),
+      now,
+    );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: Array.from({ length: 4 }, (_, index) => ({
+      id: crypto.randomUUID(),
+      role: "research",
+      objective: String(index).repeat(2000),
+      context: [],
+      tools: [],
+    })),
+  });
+  assert.equal(run.status, "queued");
+  assert.equal(run.directions.length, 0);
+  assert.equal(run.specialists.length, 4);
+});
+
+test("post-delegation directions cannot exceed the synthesis runner limit", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 500000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  for (let index = 0; index < 20; index++)
+    run = await transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: `Direction ${index}` },
+      owner(run),
+      now,
+    );
+  await assert.rejects(
+    transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: "Direction 21" },
+      owner(run),
+      now,
+    ),
+    /work_direction_limit/,
+  );
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistId,
+    summary: "Review complete",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  assert.equal(step.run.step.input.phase, "synthesis");
+  assert.equal(step.run.step.input.directions.length, 20);
+});
+
+test("cancelling a parent run cascades only to open specialists", async () => {
+  const completedId = crypto.randomUUID();
+  const queuedId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 5, maxTokens: 10000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: completedId,
+        role: "writing",
+        objective: "Draft a section",
+        context: [],
+        tools: [],
+      },
+      {
+        id: queuedId,
+        role: "review",
+        objective: "Review the section",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: completedId,
+    summary: "Draft complete",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await transitionWorkRun(step.run, { type: "cancel" }, owner(step.run), now);
+  assert.equal(run.status, "cancelled");
+  assert.equal(run.specialists[0].status, "completed");
+  assert.equal(run.specialists[0].result.summary, "Draft complete");
+  assert.equal(run.specialists[1].status, "cancelled");
+});
+
+test("a reserved running specialist is excluded from later remaining-phase checks", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  const remaining = remainingWorkPhaseInputTokens(run);
+  assert.equal(remaining.length, 1);
+  run.limits.maxTokens = run.usage.tokens + remaining[0] + 100;
+  run = await transitionWorkRun(
+    run,
+    { type: "direction", id: crypto.randomUUID(), text: "Use concise citations" },
+    owner(run),
+    now,
+  );
+  assert.equal(run.status, "running");
+  assert.equal(run.directions.length, 1);
+});
+
+test("a specialist plan must leave parent action budget for every task and synthesis", async () => {
+  let run = await fresh();
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "First task",
+        context: [],
+        tools: [],
+      },
+      {
+        id: crypto.randomUUID(),
+        role: "review",
+        objective: "Second task",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.deepEqual(run.specialists, []);
+  assert.match(run.evidence[0], /parent run's remaining action budget/);
+});
+
+test("a specialist plan must leave minimum token budget for every remaining phase", async () => {
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 4, maxTokens: 1200 },
+    heartbeat(),
+    now,
+  );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "First task",
+        context: [],
+        tools: [],
+      },
+      {
+        id: crypto.randomUUID(),
+        role: "review",
+        objective: "Second task",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.match(run.evidence[0], /remaining token budget/);
+});
+
+test("a specialist plan durably rejects an individually oversized specialist input", async () => {
+  let run = await admitWorkRun(
+    { ...submission(), objective: "界".repeat(10050) },
+    { ...policy(), maxActions: 3, maxTokens: 100000 },
+    heartbeat(),
+    now,
+  );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "Check the bounded source material",
+        context: ["a".repeat(500), "b".repeat(500), "c".repeat(500), "d".repeat(500)],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.equal(run.step, null);
+  assert.match(run.evidence[0], /bounded specialist input/);
+});
+
+test("aggregate specialist results fail durably before an oversized synthesis step", async () => {
+  let run = await admitWorkRun(
+    { ...submission(), objective: "p".repeat(12000) },
+    { ...policy(), maxActions: 6, maxTokens: 100000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: Array.from({ length: 4 }, (_, index) => ({
+      id: crypto.randomUUID(),
+      role: "research",
+      objective: String(index).repeat(2000),
+      context: [],
+      tools: [],
+    })),
+  });
+  assert.equal(run.status, "queued");
+  while (run.status === "queued") {
+    step = await beginSpecialistTestStep(run);
+    const specialistId = step.run.step.input.specialist.id;
+    run = await finishSpecialistTestStep(step.run, step.id, {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "s".repeat(3000),
+      evidence: Array.from({ length: 4 }, () => "e".repeat(500)),
+    });
+  }
+  assert.equal(run.status, "failed");
+  assert.equal(run.step, null);
+  assert.match(run.evidence[0], /bounded synthesis input/);
+  assert.ok(run.specialists.some((item) => item.result?.summary.length === 3000));
+});
+
+test("synthesis projections include the complete signed submit envelope", async () => {
+  const specialistIds = Array.from({ length: 4 }, () => crypto.randomUUID());
+  let run = await admitWorkRun(
+    { ...submission(), objective: "p".repeat(12000) },
+    { ...policy(), maxActions: 6, maxTokens: 500000, maxCostMicros: 10000000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: specialistIds.map((id, index) => ({
+      id,
+      role: "research",
+      objective: String(index).repeat(2000),
+      context: [],
+      tools: [],
+    })),
+  });
+  for (let index = 0; index < specialistIds.length - 1; index++) {
+    step = await beginSpecialistTestStep(run);
+    run = await finishSpecialistTestStep(step.run, step.id, {
+      kind: "specialist_result",
+      id: specialistIds[index],
+      summary: "s".repeat(2864),
+      evidence: [],
+    });
+    assert.equal(run.status, "queued");
+  }
+  step = await beginSpecialistTestStep(run);
+  const projectedRun = structuredClone(step.run);
+  const last = projectedRun.specialists.find((item) => item.id === specialistIds.at(-1));
+  last.status = "completed";
+  last.result = { summary: "s".repeat(2864), evidence: [] };
+  const projectionId = "00000000-0000-4000-8000-000000000001";
+  const input = workStepInput(projectedRun, projectionId, {
+    id: projectionId,
+    tokens: projectedRun.limits.maxTokens,
+    outputTokens: 2048,
+    costMicros: projectedRun.limits.maxCostMicros,
+  });
+  assert.doesNotThrow(() => canonicalWorkInput(input));
+  assert.throws(
+    () =>
+      canonicalWorkRunnerRequest({
+        runnerId: projectedRun.runnerId,
+        build: projectedRun.runnerBuild,
+        requestId: projectionId,
+        at: Number.MAX_SAFE_INTEGER,
+        operation: "submit",
+        payload: { ...input, inputHash: "f".repeat(64) },
+      }),
+    /work_input_too_large/,
+  );
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistIds.at(-1),
+    summary: "s".repeat(2864),
+    evidence: [],
+  });
+  assert.equal(run.status, "failed");
+  assert.match(run.evidence[0], /bounded synthesis input/);
+});
+
+test("a recovered specialist receipt exits reconciliation before the next phase", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = step.run;
+  const receipt = {
+    ownerId: OWNER,
+    runId: RUN,
+    epoch: run.step.epoch,
+    stepId: step.id,
+    reservationId: run.step.reservationId,
+    inputHash: run.step.inputHash,
+    outputs: [],
+    directive: {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "Review complete",
+      evidence: [],
+    },
+  };
+  run = await transitionWorkRun(run, { type: "pause" }, owner(run), now);
+  run = await transitionWorkRun(
+    run,
+    { type: "claim_reconciliation" },
+    { ...worker(run), runner: heartbeat() },
+    now,
+  );
+  assert.equal(run.reconciling, true);
+  run = await transitionWorkRun(
+    run,
+    { type: "record_step_receipt", receipt },
+    { ...worker(run), accountingSettled: true },
+    now,
+  );
+  run = await transitionWorkRun(
+    run,
+    { type: "finish_step", id: step.id },
+    { ...worker(run), accountingSettled: true, outputsVerified: true },
+    now,
+  );
+  assert.equal(run.status, "queued");
+  assert.equal(run.reconciling, false);
+  run = await claim(run);
+  step = await beginSpecialistTestStep(run);
+  assert.equal(step.run.step.input.phase, "synthesis");
+});
+
+test("proven-undispatched specialist work returns to queued while the parent is paused", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  step = await beginSpecialistTestStep(run);
+  run = await transitionWorkRun(step.run, { type: "pause" }, owner(step.run), now);
+  assert.equal(run.specialists[0].status, "running");
+  const receipt = {
+    ownerId: OWNER,
+    runId: RUN,
+    epoch: run.step.epoch,
+    stepId: run.step.id,
+    inputHash: run.step.inputHash,
+    reservationId: run.step.reservationId,
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    latencyMs: 0,
+    costMicros: 0,
+    outputs: [],
+  };
+  const attempt = { ...receipt, attemptId: crypto.randomUUID(), status: "not_executed", receipt };
+  run = reconcileUndispatchedWorkRun(run, attempt, true, now);
+  assert.equal(run.status, "paused");
+  assert.equal(run.usage.actions, 1);
+  assert.equal(run.specialists[0].status, "queued");
+  assert.equal(run.specialists[0].startedAt, null);
+  assert.equal(run.specialists[0].completedAt, null);
+  run = await transitionWorkRun(
+    run,
+    { type: "resume" },
+    { ...owner(run), runner: heartbeat() },
+    now,
+  );
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistId,
+    summary: "Review complete after verified nonexecution",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  assert.equal(step.run.step.input.phase, "synthesis");
+  assert.equal(step.run.usage.actions, 3);
+});
+
 async function fakeDriver(options = {}) {
   let state = await claim(await fresh());
   let called = 0,
@@ -575,6 +1265,7 @@ test("a lost begin-step commit response preserves its exact reservation for veri
   const recovered = reconcileUndispatchedWorkRun(paused, attempt, true);
   assert.equal(recovered.status, "paused");
   assert.equal(recovered.step, null);
+  assert.equal(recovered.usage.actions, 0);
   assert.equal(recovered.usage.tokens, 0);
   assert.equal(recovered.usage.costMicros, 0);
   assert.deepEqual(recovered.reservationIds, [RES]);

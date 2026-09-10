@@ -177,6 +177,97 @@ test("completed receipts verify usage bounds and reject URL-shaped output proven
   }));
   await assert.rejects(fixture.transport.submit(input()), /artifact_invalid/);
 });
+test("specialist attempt statuses require their exact bounded directives", async () => {
+  const specialistId = crypto.randomUUID();
+  const receipt = (request, directive) => ({
+    ...attempt(request),
+    reservationId: RES,
+    inputTokens: 1,
+    outputTokens: 2,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    latencyMs: 3,
+    costMicros: 1,
+    outputs: [],
+    directive,
+  });
+  const delegated = fetchFixture((request) => ({
+    ...attempt(request, "delegated"),
+    receipt: receipt(request, {
+      kind: "specialists",
+      tasks: [
+        {
+          id: specialistId,
+          role: "review",
+          objective: "Review bounded text",
+          context: [],
+          tools: [],
+        },
+      ],
+    }),
+  }));
+  assert.equal((await delegated.transport.submit(input())).status, "delegated");
+  const completed = fetchFixture((request) => ({
+    ...attempt(request, "specialist_completed"),
+    receipt: receipt(request, {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "Review complete",
+      evidence: [],
+    }),
+  }));
+  assert.equal((await completed.transport.submit(input())).status, "specialist_completed");
+  for (const directive of [
+    {
+      kind: "specialists",
+      tasks: [
+        {
+          id: specialistId,
+          role: "review",
+          objective: "Review bounded text",
+          context: [],
+          tools: [],
+        },
+      ],
+    },
+    {
+      kind: "specialist_result",
+      id: specialistId,
+      summary: "Late review complete",
+      evidence: [],
+    },
+  ]) {
+    const cancelled = fetchFixture((request) => ({
+      ...attempt(request, "cancelled"),
+      receipt: receipt(request, directive),
+    }));
+    assert.equal((await cancelled.transport.submit(input())).status, "cancelled");
+  }
+  await assert.rejects(
+    fetchFixture((request) => ({
+      ...attempt(request, "cancelled"),
+      receipt: receipt(request, {
+        kind: "specialist_result",
+        id: specialistId,
+        summary: "x".repeat(3001),
+        evidence: [],
+      }),
+    })).transport.submit(input()),
+    /specialist_result_invalid/,
+  );
+  await assert.rejects(
+    fetchFixture((request) => ({
+      ...attempt(request, "question"),
+      receipt: receipt(request, {
+        kind: "specialist_result",
+        id: specialistId,
+        summary: "Wrong status",
+        evidence: [],
+      }),
+    })).transport.submit(input()),
+    /directive_invalid/,
+  );
+});
 test("output bytes are bound to the exact attempt, MIME, length and independently calculated SHA-256", async () => {
   const text = "Verified output bytes";
   const bytes = new TextEncoder().encode(text);

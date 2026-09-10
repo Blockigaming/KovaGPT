@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 144,
+  "migrationCount": 145,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -320,6 +320,7 @@
     "cleanup_kova_site_versions",
     "collaboration_rpc",
     "command_trusted_contact",
+    "commit_work_execution",
     "commit_work_execution",
     "complete_agent_job",
     "complete_agent_job",
@@ -1807,6 +1808,7 @@
     "execute on function public.claim_stripe_customer_creation(uuid, text) to service_role",
     "execute on function public.claim_workspace_search_jobs(text) to service_role",
     "execute on function public.commit_work_execution(uuid,uuid,uuid,text,bigint,jsonb,timestamptz,integer) to service_role",
+    "execute on function public.commit_work_execution(uuid,uuid,uuid,text,bigint,jsonb,timestamptz,integer) to service_role",
     "execute on function public.complete_agent_job(uuid, text, jsonb) to service_role",
     "execute on function public.complete_agent_job(uuid,text,jsonb) to service_role",
     "execute on function public.complete_scheduled_task_execution(\n  uuid,\n  text,\n  timestamptz,\n  text\n) to service_role",
@@ -2317,6 +2319,7 @@
     "all on function public.claim_stripe_customer_creation(uuid, text) from public, anon, authenticated",
     "all on function public.claim_workspace_search_jobs(text) from public,anon,authenticated",
     "all on function public.commit_work_execution(uuid,uuid,uuid,text,bigint,jsonb,timestamptz,integer) from public,anon,authenticated",
+    "all on function public.commit_work_execution(uuid,uuid,uuid,text,bigint,jsonb,timestamptz,integer) from public,anon,authenticated",
     "all on function public.complete_agent_job(uuid, text, jsonb)\n  from public, anon, authenticated",
     "all on function public.complete_agent_job(uuid,text,jsonb) from public, anon, authenticated",
     "all on function public.complete_scheduled_task_execution(\n  uuid,\n  text,\n  timestamptz,\n  text\n) from public, anon, authenticated",
@@ -2590,5 +2593,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "6d4d9935049d90d9992eb8134f498e58a824ecd8f1a73c30e7e3eca4ebd8c179"
+  "sha256": "f6a928f29cb168dca4093a260f52986cdfdc72727662d6ef85f35079966c85fe"
 }

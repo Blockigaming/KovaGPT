@@ -1,10 +1,14 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import {
   canonicalWorkInput,
+  parseWorkSpecialistPlan,
+  parseWorkSpecialistResult,
   workInputHash,
   workUuid,
   WORK_RUNNER_CAPABILITIES,
   WORK_EXECUTION_PROTOCOL,
+  WORK_COORDINATOR_OBJECTIVE,
+  WORK_SYNTHESIS_OBJECTIVE,
 } from "../src/lib/work-execution-protocol.mjs";
 import { signRunnerEnvelope } from "../src/lib/work-runner-transport.mjs";
 
@@ -120,6 +124,8 @@ export function createWorkRunnerService({
                 "question",
                 "approval_required",
                 "effect_completed",
+                "delegated",
+                "specialist_completed",
                 "failed",
               ].includes(result.status)
             )
@@ -264,6 +270,10 @@ export function createWorkRunnerService({
             "maxCostMicros",
             "approval",
             "effectResult",
+            "phase",
+            "coordinatorObjective",
+            "specialist",
+            "specialistResults",
           ];
           if (
             Object.keys(unsigned).some((name) => !fields.includes(name)) ||
@@ -283,6 +293,78 @@ export function createWorkRunnerService({
           )
             throw new Error("input_invalid");
           workUuid(input.reservationId);
+          if (
+            !["coordinator", "specialist", "synthesis"].includes(input.phase) ||
+            typeof input.coordinatorObjective !== "string" ||
+            !input.coordinatorObjective.trim() ||
+            input.coordinatorObjective.length > 12000 ||
+            !Array.isArray(input.specialistResults)
+          )
+            throw new Error("input_invalid");
+          if (input.phase === "specialist") {
+            const specialist = input.specialist;
+            parseWorkSpecialistPlan({ kind: "specialists", tasks: [specialist] });
+            if (
+              specialist.objective !== input.objective ||
+              input.sessionContext !== null ||
+              input.specialistResults.length ||
+              input.directions.length ||
+              input.answer !== null ||
+              input.approval !== null ||
+              input.effectResult !== null
+            )
+              throw new Error("input_invalid");
+          } else if (input.specialist !== null) throw new Error("input_invalid");
+          if (input.phase === "synthesis") {
+            if (
+              input.objective !== WORK_SYNTHESIS_OBJECTIVE ||
+              input.sessionContext !== null ||
+              input.answer !== null ||
+              input.approval !== null ||
+              !input.specialistResults.length ||
+              input.specialistResults.length > 4
+            )
+              throw new Error("input_invalid");
+            const resultIds = new Set();
+            for (const specialist of input.specialistResults) {
+              if (
+                !specialist ||
+                typeof specialist !== "object" ||
+                Array.isArray(specialist) ||
+                Object.keys(specialist).some(
+                  (key) => !["id", "role", "objective", "result"].includes(key),
+                ) ||
+                !specialist.result ||
+                typeof specialist.result !== "object" ||
+                Array.isArray(specialist.result)
+              )
+                throw new Error("input_invalid");
+              if (resultIds.has(specialist.id)) throw new Error("input_invalid");
+              resultIds.add(specialist.id);
+              parseWorkSpecialistPlan({
+                kind: "specialists",
+                tasks: [
+                  {
+                    id: specialist.id,
+                    role: specialist.role,
+                    objective: specialist.objective,
+                    context: [],
+                    tools: [],
+                  },
+                ],
+              });
+              parseWorkSpecialistResult({
+                ...specialist.result,
+                kind: "specialist_result",
+                id: specialist.id,
+              });
+            }
+          } else if (input.specialistResults.length) throw new Error("input_invalid");
+          if (
+            input.phase === "coordinator" &&
+            (input.objective !== WORK_COORDINATOR_OBJECTIVE || input.specialist !== null)
+          )
+            throw new Error("input_invalid");
           if (input.approval) {
             const approval = input.approval;
             workUuid(approval.id);

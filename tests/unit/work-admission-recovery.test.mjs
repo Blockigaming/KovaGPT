@@ -204,3 +204,163 @@ test("unknown execution, unsettled accounting and a changed runner build never b
   assert.deepEqual(changed.calls, []);
   assert.ok(changed.state().step);
 });
+
+test("specialist artifacts are rejected before any output publication", async () => {
+  const now = Date.now();
+  const specialistId = crypto.randomUUID();
+  const liveRunner = { ...runner(), heartbeatAt: now, expiresAt: now + 45000 };
+  let state = await protocol.admitWorkRun(
+    {
+      mutationId: crypto.randomUUID(),
+      objective: "Prepare a bounded report",
+      source: "work",
+      sessionId: null,
+      sessionRevision: null,
+    },
+    {
+      runId,
+      ownerId: owner,
+      model: "gpt-5.6-luna",
+      plan: "plus",
+      accountActive: true,
+      lockdownAllowed: true,
+      costAllowed: true,
+      maxActions: 3,
+      maxTokens: 5000,
+      maxCostMicros: 100000,
+      runtimeMs: 900000,
+    },
+    liveRunner,
+    now,
+  );
+  const context = () => ({
+    actor: "runner",
+    runnerId,
+    epoch: state.epoch,
+    expectedRevision: state.revision,
+    runner: liveRunner,
+  });
+  const begin = async () => {
+    state = await protocol.transitionWorkRun(state, { type: "claim" }, context(), now);
+    const stepId = crypto.randomUUID();
+    state = await protocol.transitionWorkRun(
+      state,
+      { type: "begin_step", id: stepId },
+      {
+        ...context(),
+        costReservation: {
+          id: crypto.randomUUID(),
+          ownerId: owner,
+          runId,
+          epoch: state.epoch,
+          model: state.model,
+          verified: true,
+          tokens: 500,
+          outputTokens: 100,
+          costMicros: 1000,
+          expiresAt: now + 45000,
+        },
+      },
+      now,
+    );
+    return stepId;
+  };
+  let stepId = await begin();
+  const planReceipt = {
+    ownerId: owner,
+    runId,
+    epoch: state.step.epoch,
+    stepId,
+    reservationId: state.step.reservationId,
+    inputHash: state.step.inputHash,
+    outputs: [],
+    directive: {
+      kind: "specialists",
+      tasks: [
+        {
+          id: specialistId,
+          role: "research",
+          objective: "Research without publishing",
+          context: [],
+          tools: [],
+        },
+      ],
+    },
+  };
+  state = await protocol.transitionWorkRun(
+    state,
+    { type: "record_step_receipt", receipt: planReceipt },
+    { ...context(), accountingSettled: true },
+    now,
+  );
+  state = await protocol.transitionWorkRun(
+    state,
+    { type: "finish_step", id: stepId },
+    { ...context(), accountingSettled: true, outputsVerified: true },
+    now,
+  );
+  stepId = await begin();
+  const receipt = {
+    ownerId: owner,
+    runId,
+    epoch: state.step.epoch,
+    stepId,
+    reservationId: state.step.reservationId,
+    inputHash: state.step.inputHash,
+    inputTokens: 1,
+    outputTokens: 1,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    latencyMs: 1,
+    costMicros: 1,
+    outputs: [
+      {
+        artifactId: crypto.randomUUID(),
+        sha256: "a".repeat(64),
+        bytes: 10,
+        mimeType: "text/plain",
+      },
+    ],
+  };
+  state = await protocol.transitionWorkRun(
+    state,
+    { type: "record_step_receipt", receipt },
+    { ...context(), accountingSettled: true },
+    now,
+  );
+  let published = 0;
+  const repository = {
+    load: async () => structuredClone(state),
+    assertLease: async () => undefined,
+    commit: async (next, revision) => {
+      assert.equal(revision, state.revision);
+      state = next;
+      return next;
+    },
+  };
+  const exports = {};
+  const modules = {
+    "@/lib/ai/accounting.server": {},
+    "@/lib/ai/model-catalog.server": {},
+    "@/lib/work-runner.server": {},
+    "@/lib/work-execution.server": { createWorkExecutionRepository: () => repository },
+    "@/lib/work-runner-protocol.mjs": {},
+    "@/lib/work-execution-protocol.mjs": protocol,
+    "@/lib/work-output-publisher.server": {
+      publishVerifiedWorkOutputs: async () => {
+        published++;
+        return [{ kind: "library", id: crypto.randomUUID() }];
+      },
+    },
+  };
+  vm.runInNewContext(
+    ts.transpileModule(readFileSync("src/lib/work-execution-driver.server.ts", "utf8"), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+    { exports, require: (name) => modules[name], crypto, Date, Error, Math },
+  );
+  const result = await exports.finishVerifiedReceipt({ userId: owner }, state, receipt);
+  assert.equal(published, 0);
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.outputRefs, []);
+});

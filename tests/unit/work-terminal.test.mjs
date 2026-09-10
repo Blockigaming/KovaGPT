@@ -107,7 +107,19 @@ test("provider terminal output uses the configured sandbox and retains metered e
       }),
   );
   const result = await provider.reason(
-    { model: "model", stepId: "step", maxOutputTokens: 100, reservationId: "reservation" },
+    {
+      model: "model",
+      stepId: "step",
+      maxOutputTokens: 100,
+      reservationId: "reservation",
+      phase: "coordinator",
+      coordinatorObjective: "Count lines",
+      objective: "Count lines",
+      sessionContext: null,
+      specialist: null,
+      specialistResults: [],
+      directions: [],
+    },
     { signal: new AbortController().signal },
   );
   assert.equal(calls, 1);

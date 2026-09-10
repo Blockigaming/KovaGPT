@@ -124,6 +124,34 @@ the server catalog. `settle_work_accounting` is evidence-bound and idempotent af
 crashes, stale reservations, and earlier canonical completion; changed totals
 reject. An overrun is recorded before the Work run fails.
 
+## Bounded specialist subruns
+
+The same durable run may ask for one to four sequential specialist steps before
+its final synthesis. This is not the legacy `agent_runs` team queue: specialist
+state lives inside the parent `work_execution_runs.state` document and uses the
+parent owner, runner, deadline, model, action count, token budget, cost budget,
+lease, receipts, CAS revisions, and account-deletion lifecycle. The runner must
+advertise the `specialist-subruns` capability before any new Work run is admitted.
+
+The coordinator may return a validated `specialists` plan containing a unique ID,
+an allowlisted role, a bounded objective, up to four short context strings, and an
+exact empty tool list for each assignment. Tasks execute one at a time. A
+specialist receives only its coordinator objective, assigned objective, role, and
+bounded context. It receives no session context, queued directions, question
+answer, action approval, effect result, operation catalog, terminal commands, or
+other specialist results. The durable state machine enforces this phase boundary
+independently of the model prompt and runner parser.
+
+Each specialist can return only a bounded `specialist_result` for its exact task
+ID. Once stored, that result is immutable. After every specialist completes, a
+separate synthesis step receives their bounded results and may create the normal
+verified artifacts; it cannot delegate, ask a question, or request an action.
+Parent cancellation cancels queued/running specialists while preserving completed
+results. Parent failure marks the active specialist failed and cancels the rest.
+Deleting the parent removes the embedded specialist state and the existing
+owner-retirement path erases its private runner receipt. The execution panel shows
+each real specialist status and completed result without estimating progress.
+
 A settled question or approval request and removal of its step happen in one
 state commit. Owner approval binds the exact canonical input and revision. Starting
 the approved step atomically consumes it and records the effect. Its verified

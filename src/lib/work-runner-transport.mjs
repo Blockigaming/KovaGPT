@@ -1,6 +1,9 @@
 import { parseWorkModelCapabilities } from "./work-model-policy.mjs";
 import {
   canonicalWorkInput,
+  canonicalWorkRunnerRequest,
+  parseWorkSpecialistPlan,
+  parseWorkSpecialistResult,
   workInputHash,
   workUuid,
   WORK_EXECUTION_PROTOCOL,
@@ -184,6 +187,8 @@ function validateAttempt(result, binding) {
       "question",
       "approval_required",
       "effect_completed",
+      "delegated",
+      "specialist_completed",
       "cancelled",
       "failed",
       "unknown",
@@ -195,9 +200,15 @@ function validateAttempt(result, binding) {
     if (result[key] !== value) fail("work_attempt_binding_invalid");
   if (status !== "unknown") workUuid(result.attemptId);
   if (
-    ["completed", "question", "approval_required", "effect_completed", "not_executed"].includes(
-      status,
-    ) ||
+    [
+      "completed",
+      "question",
+      "approval_required",
+      "effect_completed",
+      "delegated",
+      "specialist_completed",
+      "not_executed",
+    ].includes(status) ||
     result.receipt
   ) {
     const receipt = result.receipt;
@@ -214,6 +225,17 @@ function validateAttempt(result, binding) {
       fail("work_runner_receipt_invalid");
     workUuid(receipt.reservationId);
     const directive = receipt.directive;
+    if (status === "delegated" && directive?.kind !== "specialists")
+      fail("work_runner_directive_invalid");
+    if (status === "delegated" || (status === "cancelled" && directive?.kind === "specialists"))
+      parseWorkSpecialistPlan(directive);
+    if (status === "specialist_completed" && directive?.kind !== "specialist_result")
+      fail("work_runner_directive_invalid");
+    if (
+      status === "specialist_completed" ||
+      (status === "cancelled" && directive?.kind === "specialist_result")
+    )
+      parseWorkSpecialistResult(directive);
     if (
       status === "question" &&
       (directive?.kind !== "question" ||
@@ -235,7 +257,12 @@ function validateAttempt(result, binding) {
         !["completed", "not_executed", "failed"].includes(directive.outcome))
     )
       fail("work_runner_directive_invalid");
-    if (directive && directive.kind !== "failure") workUuid(directive.id);
+    if (directive && !["failure", "specialists"].includes(directive.kind)) workUuid(directive.id);
+    if (
+      ["specialists", "specialist_result"].includes(directive?.kind) &&
+      !["delegated", "specialist_completed", "cancelled"].includes(status)
+    )
+      fail("work_runner_directive_invalid");
     if (status === "completed" && directive) fail("work_runner_directive_invalid");
     // Empty completed receipts remain accounted evidence; the state machine
     // durably fails them instead of dropping the step and replaying the objective.
@@ -296,7 +323,7 @@ export function createWorkRunnerTransport(configuration, fetcher = fetch) {
       operation,
       payload,
     };
-    const body = canonicalWorkInput(envelope);
+    const body = canonicalWorkRunnerRequest(envelope);
     const response = await fetcher(`${config.origin}/v1/work/${operation}`, {
       method: "POST",
       redirect: "error",
@@ -410,8 +437,12 @@ export function createWorkRunnerTransport(configuration, fetcher = fetch) {
               "stepId",
               "model",
               "reasoningEffort",
+              "phase",
+              "coordinatorObjective",
               "objective",
               "sessionContext",
+              "specialist",
+              "specialistResults",
               "directions",
               "answer",
               "maxTokens",

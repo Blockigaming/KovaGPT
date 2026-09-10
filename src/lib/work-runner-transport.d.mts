@@ -33,6 +33,17 @@ export type RunnerReceipt = AttemptBinding & {
         outcome: "completed" | "not_executed" | "failed";
         result?: Record<string, unknown>;
       }
+    | {
+        kind: "specialists";
+        tasks: Array<{
+          id: string;
+          role: string;
+          objective: string;
+          context: string[];
+          tools: [];
+        }>;
+      }
+    | { kind: "specialist_result"; id: string; summary: string; evidence: string[] }
     | { kind: "failure"; reason: string };
 };
 export type RunnerAttempt = AttemptBinding & {
@@ -44,6 +55,8 @@ export type RunnerAttempt = AttemptBinding & {
     | "question"
     | "approval_required"
     | "effect_completed"
+    | "delegated"
+    | "specialist_completed"
     | "cancelled"
     | "failed"
     | "unknown"

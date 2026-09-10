@@ -7,6 +7,21 @@ import type {
 export const WORK_EXECUTION_PROTOCOL: "kova-work-v1";
 export const WORK_RUNNER_CAPABILITIES: readonly string[];
 export const WORK_TERMINAL: readonly string[];
+export const WORK_SPECIALIST_ROLES: readonly string[];
+export const WORK_COORDINATOR_OBJECTIVE: string;
+export const WORK_SYNTHESIS_OBJECTIVE: string;
+export type WorkSpecialist = {
+  id: string;
+  role: string;
+  objective: string;
+  context: string[];
+  tools: [];
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  result: { summary: string; evidence: string[] } | null;
+};
 export type WorkRunner = {
   id: string;
   protocol: string;
@@ -84,18 +99,41 @@ export type WorkRun = {
   stepIds: string[];
   outputRefs: { kind: "library"; id: string }[];
   evidence: string[];
+  specialists: WorkSpecialist[];
   event: { kind: string; at: number; detail: Record<string, unknown> };
 };
 export function workUuid(value: unknown): string;
 export function canonicalWorkInput(value: unknown): string;
+export function canonicalWorkRunnerRequest(input: {
+  runnerId: string;
+  build: string;
+  requestId: string;
+  at: number;
+  operation: string;
+  payload: Record<string, unknown>;
+}): string;
 export function workInputHash(value: unknown): Promise<string>;
 export function workStepInput(
   run: WorkRun,
   stepId: string,
   cost: Record<string, unknown>,
 ): Record<string, unknown>;
+export function estimateWorkStepInputTokens(run: WorkRun, stepId: string): number;
+export function remainingWorkPhaseInputTokens(run: WorkRun, stepId?: string): number[];
 export function runnerReady(runner: WorkRunner | null | undefined, now?: number): boolean;
 export function parseWorkSubmission(input: unknown): WorkSubmission;
+export function parseWorkSpecialistPlan(input: unknown): Array<{
+  id: string;
+  role: string;
+  objective: string;
+  context: string[];
+  tools: [];
+}>;
+export function parseWorkSpecialistResult(input: unknown): {
+  id: string;
+  summary: string;
+  evidence: string[];
+};
 export function admitWorkRun(
   input: unknown,
   policy: {

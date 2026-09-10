@@ -11,8 +11,23 @@ export const WORK_RUNNER_CAPABILITIES = Object.freeze([
   "effect-reconciliation",
   "durable-dispatch",
   "negative-execution-proof",
+  "specialist-subruns",
 ]);
 export const WORK_TERMINAL = Object.freeze(["completed", "failed", "cancelled"]);
+export const WORK_SPECIALIST_ROLES = Object.freeze([
+  "planner",
+  "research",
+  "file",
+  "coding",
+  "writing",
+  "review",
+]);
+const WORK_SPECIALIST_ROLE_SET = new Set(WORK_SPECIALIST_ROLES);
+export const WORK_COORDINATOR_OBJECTIVE = "Complete the coordinator objective.";
+export const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
+const WORK_INPUT_PROJECTION_ID = "00000000-0000-4000-8000-000000000001";
+const WORK_INPUT_HASH_PROJECTION = "f".repeat(64);
+const WORK_RUNNER_DIRECTION_LIMIT = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set([
   "browser_interact",
@@ -49,6 +64,66 @@ function integer(value, min, max) {
   if (!Number.isSafeInteger(value) || value < min || value > max) fail("work_number_invalid");
   return value;
 }
+export function parseWorkSpecialistPlan(value) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    value.kind !== "specialists" ||
+    Object.keys(value).some((key) => !["kind", "tasks"].includes(key)) ||
+    !Array.isArray(value.tasks) ||
+    value.tasks.length < 1 ||
+    value.tasks.length > 4
+  )
+    fail("work_specialist_plan_invalid");
+  const ids = new Set();
+  return value.tasks.map((task) => {
+    if (
+      !task ||
+      typeof task !== "object" ||
+      Array.isArray(task) ||
+      Object.keys(task).some(
+        (key) => !["id", "role", "objective", "context", "tools"].includes(key),
+      )
+    )
+      fail("work_specialist_plan_invalid");
+    const id = workUuid(task.id);
+    if (ids.has(id) || !WORK_SPECIALIST_ROLE_SET.has(task.role))
+      fail("work_specialist_plan_invalid");
+    ids.add(id);
+    if (!Array.isArray(task.context) || task.context.length > 4)
+      fail("work_specialist_plan_invalid");
+    const context = task.context.map((item) => bounded(item, 500, "work_specialist_plan_invalid"));
+    if (
+      !Array.isArray(task.tools) ||
+      task.tools.length ||
+      new TextEncoder().encode(canonicalWorkInput(context)).length > 2400
+    )
+      fail("work_specialist_plan_invalid");
+    return {
+      id,
+      role: task.role,
+      objective: bounded(task.objective, 2000, "work_specialist_plan_invalid"),
+      context,
+      tools: [],
+    };
+  });
+}
+export function parseWorkSpecialistResult(value) {
+  if (
+    !value ||
+    value.kind !== "specialist_result" ||
+    Object.keys(value).some((key) => !["kind", "id", "summary", "evidence"].includes(key)) ||
+    !Array.isArray(value.evidence) ||
+    value.evidence.length > 4
+  )
+    fail("work_specialist_result_invalid");
+  return {
+    id: workUuid(value.id),
+    summary: bounded(value.summary, 3000, "work_specialist_result_invalid"),
+    evidence: value.evidence.map((item) => bounded(item, 500, "work_specialist_result_invalid")),
+  };
+}
 export function canonicalWorkInput(value) {
   let count = 0;
   const encode = (item, depth) => {
@@ -68,12 +143,24 @@ export function canonicalWorkInput(value) {
   if (new TextEncoder().encode(encoded).length > 32768) fail("work_input_too_large");
   return encoded;
 }
+export function canonicalWorkRunnerRequest({ runnerId, build, requestId, at, operation, payload }) {
+  return canonicalWorkInput({
+    protocol: WORK_EXECUTION_PROTOCOL,
+    runnerId,
+    build,
+    requestId,
+    at,
+    operation,
+    payload,
+  });
+}
 export async function workInputHash(value) {
   const bytes = new TextEncoder().encode(canonicalWorkInput(value));
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-export function workStepInput(run, stepId, cost) {
+function buildWorkStepInput(run, stepId, cost, phase, specialist) {
+  const specialists = Array.isArray(run.specialists) ? run.specialists : [];
   return {
     runId: run.id,
     ownerId: run.ownerId,
@@ -82,17 +169,165 @@ export function workStepInput(run, stepId, cost) {
     reservationId: cost.id,
     model: run.model,
     ...(run.modelSelection ? { reasoningEffort: run.modelSelection.reasoningEffort } : {}),
-    objective: run.request.objective,
-    sessionContext: run.sessionContext,
-    directions: structuredClone(run.directions),
-    answer: run.question?.answer ?? null,
+    phase,
+    coordinatorObjective: run.request.objective,
+    objective:
+      phase === "specialist"
+        ? specialist.objective
+        : phase === "synthesis"
+          ? WORK_SYNTHESIS_OBJECTIVE
+          : WORK_COORDINATOR_OBJECTIVE,
+    sessionContext: phase === "coordinator" ? run.sessionContext : null,
+    specialist: specialist
+      ? {
+          id: specialist.id,
+          role: specialist.role,
+          objective: specialist.objective,
+          context: structuredClone(specialist.context),
+          tools: [],
+        }
+      : null,
+    specialistResults:
+      phase === "synthesis"
+        ? specialists.map((item) => ({
+            id: item.id,
+            role: item.role,
+            objective: item.objective,
+            result: structuredClone(item.result),
+          }))
+        : [],
+    directions: phase === "specialist" ? [] : structuredClone(run.directions),
+    answer: phase === "coordinator" ? (run.question?.answer ?? null) : null,
     maxTokens: cost.tokens,
     maxOutputTokens: cost.outputTokens,
-    approval: run.approval?.status === "approved" ? structuredClone(run.approval) : null,
+    approval:
+      phase === "coordinator" && run.approval?.status === "approved"
+        ? structuredClone(run.approval)
+        : null,
     effectResult:
-      run.effect && run.effect.status !== "started" ? structuredClone(run.effect) : null,
+      phase !== "specialist" && run.effect && run.effect.status !== "started"
+        ? structuredClone(run.effect)
+        : null,
     maxCostMicros: cost.costMicros,
   };
+}
+
+export function workStepInput(run, stepId, cost) {
+  const specialists = Array.isArray(run.specialists) ? run.specialists : [];
+  const specialist =
+    specialists.find((item) => item.status === "running") ??
+    specialists.find((item) => item.status === "queued") ??
+    null;
+  const phase = specialist ? "specialist" : specialists.length ? "synthesis" : "coordinator";
+  return buildWorkStepInput(run, stepId, cost, phase, specialist);
+}
+
+export function estimateWorkStepInputTokens(run, stepId) {
+  return estimateWorkInputTokens(workStepInput(run, stepId, projectedWorkCost(run)));
+}
+
+function projectedWorkCost(run, maximumNumbers = false) {
+  return {
+    id: WORK_INPUT_PROJECTION_ID,
+    tokens: maximumNumbers ? Number.MAX_SAFE_INTEGER : run.limits.maxTokens,
+    outputTokens: maximumNumbers
+      ? Number.MAX_SAFE_INTEGER
+      : Math.max(
+          1,
+          Math.min(
+            run.modelSelection?.maxOutputTokens ?? 2048,
+            Math.max(1, run.limits.maxTokens - run.usage.tokens),
+          ),
+        ),
+    costMicros: maximumNumbers ? Number.MAX_SAFE_INTEGER : run.limits.maxCostMicros,
+  };
+}
+
+function estimateWorkInputTokens(input) {
+  const inputBytes = new TextEncoder().encode(canonicalWorkInput(input)).length;
+  return Math.max(1, Math.ceil(inputBytes / 3) + 512);
+}
+
+export function remainingWorkPhaseInputTokens(run, stepId = WORK_INPUT_PROJECTION_ID) {
+  const specialists = Array.isArray(run.specialists) ? run.specialists : [];
+  if (!specialists.length) return [estimateWorkStepInputTokens(run, stepId)];
+  const cost = projectedWorkCost(run);
+  const reservedSpecialistId =
+    run.step?.input?.phase === "specialist" ? run.step.input.specialist?.id : null;
+  const open = specialists.filter(
+    (item) => ["queued", "running"].includes(item.status) && item.id !== reservedSpecialistId,
+  );
+  const estimates = open.map((specialist) =>
+    estimateWorkInputTokens(buildWorkStepInput(run, stepId, cost, "specialist", specialist)),
+  );
+  const synthesisRun = {
+    ...run,
+    specialists: specialists.map((specialist) => ({
+      ...specialist,
+      result: specialist.result ?? { summary: "Pending specialist result.", evidence: [] },
+    })),
+  };
+  estimates.push(
+    estimateWorkInputTokens(buildWorkStepInput(synthesisRun, stepId, cost, "synthesis", null)),
+  );
+  return estimates;
+}
+
+function specialistPhasesExceedTokenBudget(run) {
+  const minimum = remainingWorkPhaseInputTokens(run).reduce(
+    (sum, inputTokens) => sum + inputTokens + 1,
+    0,
+  );
+  return run.usage.tokens + minimum > run.limits.maxTokens;
+}
+
+function workSubmitInputTooLarge(run, input) {
+  try {
+    canonicalWorkRunnerRequest({
+      runnerId: run.runnerId,
+      build: run.runnerBuild,
+      requestId: WORK_INPUT_PROJECTION_ID,
+      at: Number.MAX_SAFE_INTEGER,
+      operation: "submit",
+      payload: { ...input, inputHash: WORK_INPUT_HASH_PROJECTION },
+    });
+    return false;
+  } catch (error) {
+    if (error instanceof Error && error.message === "work_input_too_large") return true;
+    throw error;
+  }
+}
+
+function specialistStepInputTooLarge(run) {
+  const cost = projectedWorkCost(run, true);
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
+  return run.specialists
+    .filter((specialist) => ["queued", "running"].includes(specialist.status))
+    .some((specialist) =>
+      workSubmitInputTooLarge(
+        projectedRun,
+        buildWorkStepInput(projectedRun, WORK_INPUT_PROJECTION_ID, cost, "specialist", specialist),
+      ),
+    );
+}
+
+function specialistSynthesisInputTooLarge(run) {
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
+  const projected = buildWorkStepInput(
+    projectedRun,
+    WORK_INPUT_PROJECTION_ID,
+    projectedWorkCost(run, true),
+    "synthesis",
+    null,
+  );
+  return workSubmitInputTooLarge(projectedRun, projected);
+}
+
+function withoutSentDirections(run) {
+  const sentIds = new Set((run.step?.input?.directions ?? []).map((item) => item.id));
+  return sentIds.size
+    ? { ...run, directions: run.directions.filter((item) => !sentIds.has(item.id)) }
+    : run;
 }
 export function runnerReady(runner, now = Date.now()) {
   return Boolean(
@@ -171,7 +406,7 @@ export async function admitWorkRun(input, policy, runner, now = Date.now()) {
     maxCostMicros: integer(policy.maxCostMicros, 1, 10000000),
     runtimeMs: integer(policy.runtimeMs, 1000, 3600000),
   };
-  return {
+  const run = {
     protocol: WORK_EXECUTION_PROTOCOL,
     id: workUuid(policy.runId),
     ownerId: workUuid(policy.ownerId),
@@ -203,8 +438,24 @@ export async function admitWorkRun(input, policy, runner, now = Date.now()) {
     stepIds: [],
     outputRefs: [],
     evidence: [],
+    specialists: [],
     event: { kind: "admitted", at: now, detail: { source: request.source } },
   };
+  const projectedRun = { ...run, epoch: Number.MAX_SAFE_INTEGER };
+  if (
+    workSubmitInputTooLarge(
+      projectedRun,
+      buildWorkStepInput(
+        projectedRun,
+        WORK_INPUT_PROJECTION_ID,
+        projectedWorkCost(run, true),
+        "coordinator",
+        null,
+      ),
+    )
+  )
+    fail("work_input_too_large");
+  return run;
 }
 function active(run, now) {
   if (WORK_TERMINAL.includes(run.status)) fail("work_run_terminal");
@@ -228,9 +479,27 @@ function update(run, now, kind, detail = {}) {
   run.event = { kind, at: now, detail };
   return run;
 }
+function cancelOpenSpecialists(run, now) {
+  for (const specialist of run.specialists ?? [])
+    if (["queued", "running"].includes(specialist.status)) {
+      specialist.status = "cancelled";
+      specialist.completedAt = now;
+    }
+}
+function failSpecialists(run, now) {
+  const running = (run.specialists ?? []).find((item) => item.status === "running");
+  if (running) {
+    running.status = "failed";
+    running.completedAt = now;
+  }
+  cancelOpenSpecialists(run, now);
+}
 export async function transitionWorkRun(previous, command, context, now = Date.now()) {
   const run = structuredClone(previous);
   if (run.protocol !== WORK_EXECUTION_PROTOCOL) fail("work_protocol_invalid");
+  // Runs admitted before specialist support remain valid and gain the empty
+  // collection on their next transition.
+  if (!Array.isArray(run.specialists)) run.specialists = [];
   if (context.expectedRevision !== run.revision) fail("work_revision_conflict");
   const owner = context.actor === "owner" && context.ownerId === run.ownerId;
   const runner = context.actor === "runner";
@@ -244,6 +513,7 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.lease = null;
       run.question = null;
       if (run.approval) run.approval.status = "denied";
+      cancelOpenSpecialists(run, now);
       // An in-flight external effect remains recorded for reconciliation, never replayed.
       return update(run, now, "cancelled", {
         reconciliationRequired: Boolean(run.effect?.status === "started"),
@@ -251,9 +521,14 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     }
     active(run, now);
     if (command.type === "direction") {
-      if (run.directions.length >= 64) fail("work_direction_limit");
+      if (withoutSentDirections(run).directions.length >= WORK_RUNNER_DIRECTION_LIMIT)
+        fail("work_direction_limit");
       if (run.directions.some((item) => item.id === command.id)) fail("work_direction_duplicate");
       run.directions.push({ id: workUuid(command.id), text: bounded(command.text, 4000), at: now });
+      if (run.specialists.length && specialistSynthesisInputTooLarge(run))
+        fail("work_specialist_synthesis_too_large");
+      if (run.specialists.length && specialistPhasesExceedTokenBudget(run))
+        fail("work_specialist_budget_exceeded");
       return update(run, now, "direction_queued", { id: command.id });
     }
     if (command.type === "edit_direction" || command.type === "remove_direction") {
@@ -262,6 +537,18 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       if (command.type === "edit_direction")
         run.directions[index].text = bounded(command.text, 4000);
       else run.directions.splice(index, 1);
+      if (
+        command.type === "edit_direction" &&
+        run.specialists.length &&
+        specialistSynthesisInputTooLarge(run)
+      )
+        fail("work_specialist_synthesis_too_large");
+      if (
+        command.type === "edit_direction" &&
+        run.specialists.length &&
+        specialistPhasesExceedTokenBudget(run)
+      )
+        fail("work_specialist_budget_exceeded");
       return update(
         run,
         now,
@@ -338,6 +625,7 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.status = "paused";
     else if (now >= run.deadline) run.status = "failed";
     else if (run.status === "running") run.status = "queued";
+    if (run.status === "failed") failSpecialists(run, now);
     return update(run, now, "lease_recovered", {
       reconciliationRequired: Boolean(run.effect?.status === "started" || run.step),
     });
@@ -424,6 +712,13 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     run.usage.costMicros += cost.costMicros;
     run.reservationIds.push(cost.id);
     run.stepIds.push(command.id);
+    const specialist =
+      run.specialists.find((item) => item.status === "running") ??
+      run.specialists.find((item) => item.status === "queued");
+    if (specialist) {
+      specialist.status = "running";
+      specialist.startedAt ??= now;
+    }
     const input = workStepInput(run, command.id, cost);
     if (input.approval) {
       if (input.approval.expiresAt <= now) fail("work_approval_stale");
@@ -453,12 +748,95 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     const receipt = run.step.receipt;
     if (!receipt) fail("work_adapter_receipt_invalid");
     const directive = receipt.directive;
+    const phase = run.step.input.phase ?? "coordinator";
     if (command.budgetViolation === true) {
       run.status = "failed";
       run.lease = null;
+      failSpecialists(run, now);
       run.evidence = [
         "Provider usage exceeded the reserved step budget; actual usage was recorded.",
       ];
+    } else if (
+      (phase === "specialist" && directive?.kind !== "specialist_result") ||
+      (phase === "synthesis" && directive && directive.kind !== "failure")
+    ) {
+      run.status = "failed";
+      run.lease = null;
+      failSpecialists(run, now);
+      run.evidence = ["The runner returned a result that exceeded this step's authority."];
+    } else if (directive?.kind === "specialists") {
+      if (run.specialists.length || run.step.input.phase !== "coordinator")
+        fail("work_specialist_plan_invalid");
+      const plan = parseWorkSpecialistPlan(directive);
+      if (run.usage.actions + plan.length + 1 > run.limits.maxActions) {
+        run.status = "failed";
+        run.lease = null;
+        run.evidence = ["The specialist plan exceeded the parent run's remaining action budget."];
+      } else {
+        run.specialists = plan.map((specialist) => ({
+          ...specialist,
+          status: "queued",
+          createdAt: now,
+          startedAt: null,
+          completedAt: null,
+          result: null,
+        }));
+        const remainingRun = withoutSentDirections(run);
+        if (specialistStepInputTooLarge(remainingRun)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the bounded specialist input."];
+        } else if (specialistSynthesisInputTooLarge(remainingRun)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the bounded synthesis input."];
+        } else if (specialistPhasesExceedTokenBudget(remainingRun)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the parent run's remaining token budget."];
+        } else {
+          run.status = "queued";
+          run.lease = null;
+        }
+      }
+    } else if (directive?.kind === "specialist_result") {
+      const result = parseWorkSpecialistResult(directive);
+      const specialist = run.specialists.find((item) => item.id === result.id);
+      const invalid =
+        run.step.input.phase !== "specialist" ||
+        run.step.input.specialist?.id !== result.id ||
+        !specialist ||
+        specialist.status !== "running" ||
+        specialist.result;
+      if (invalid) {
+        run.status = "failed";
+        run.lease = null;
+        failSpecialists(run, now);
+        run.evidence = ["The specialist result did not match the exact assigned task."];
+      } else {
+        specialist.status = "completed";
+        specialist.completedAt = now;
+        specialist.result = { summary: result.summary, evidence: result.evidence };
+        if (specialistSynthesisInputTooLarge(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist results exceeded the bounded synthesis input."];
+        } else if (specialistPhasesExceedTokenBudget(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = [
+            "The specialist results exceeded the parent run's remaining token budget.",
+          ];
+        } else {
+          run.status = "queued";
+          run.lease = null;
+        }
+      }
     } else if (directive?.kind === "question") {
       if (run.effect?.status === "started") fail("work_effect_unresolved");
       run.question = {
@@ -502,9 +880,11 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.status = directive.outcome === "failed" ? "failed" : "queued";
       run.lease = null;
       run.reconciling = false;
+      if (run.status === "failed") failSpecialists(run, now);
     } else if (directive?.kind === "failure" || !receipt.outputs?.length) {
       run.status = "failed";
       run.lease = null;
+      failSpecialists(run, now);
       run.evidence = [
         "The runner returned no verified deliverable. This attempt will not be repeated.",
       ];
@@ -517,6 +897,8 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
         command.outputRefs.length > 20
       )
         fail("work_outputs_unverified");
+      if (run.specialists.length && run.step.input.phase !== "synthesis")
+        fail("work_specialist_result_invalid");
       run.outputRefs = command.outputRefs.map((output) => ({
         kind: output.kind === "library" ? "library" : fail("work_output_kind_invalid"),
         id: workUuid(output.id),
@@ -527,6 +909,7 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     const sentIds = new Set((run.step.input.directions ?? []).map((item) => item.id));
     run.directions = run.directions.filter((item) => !sentIds.has(item.id));
     run.step = null;
+    run.reconciling = false;
     return update(run, now, "step_completed", { id: command.id, result: run.status });
   }
   if (command.type === "record_step_receipt") {
@@ -621,6 +1004,8 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     if (run.approval?.status === "approved" || run.approval?.status === "pending")
       fail("work_approval_unconsumed");
     if (command.type === "complete") {
+      if (run.specialists.some((item) => item.status !== "completed"))
+        fail("work_specialist_incomplete");
       if (
         !Array.isArray(command.outputRefs) ||
         !command.outputRefs.length ||
@@ -635,6 +1020,11 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.evidence = (command.evidence ?? []).slice(0, 20).map((item) => bounded(item, 2000));
     }
     run.status = command.type === "complete" ? "completed" : "failed";
+    if (command.type === "fail") {
+      failSpecialists(run, now);
+      if (Array.isArray(command.evidence))
+        run.evidence = command.evidence.slice(0, 20).map((item) => bounded(item, 2000));
+    }
     run.lease = null;
     return update(run, now, run.status);
   }
@@ -722,8 +1112,16 @@ export function reconcileUndispatchedWorkRun(
     now,
   );
   // Retain the attempt/action IDs so the old approval can never be executed later.
+  reconciled.usage.actions = Math.max(0, reconciled.usage.actions - 1);
   reconciled.usage.tokens = Math.max(0, reconciled.usage.tokens - step.tokens);
   reconciled.usage.costMicros = Math.max(0, reconciled.usage.costMicros - step.costMicros);
+  const specialistId = step.input?.phase === "specialist" ? step.input.specialist?.id : null;
+  const specialist = reconciled.specialists?.find((item) => item.id === specialistId);
+  if (reconciled.status === "paused" && specialist?.status === "running") {
+    specialist.status = "queued";
+    specialist.startedAt = null;
+    specialist.completedAt = null;
+  }
   reconciled.event = { kind: "undispatched_step_reconciled", at: now, detail: { stepId: step.id } };
   return reconciled;
 }
