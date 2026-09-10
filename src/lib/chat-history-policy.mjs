@@ -81,6 +81,36 @@ function attachment(value) {
   throw new Error("chat_history_invalid");
 }
 
+function responseSource(value, index) {
+  if (!object(value) || !text(value.url, 2048)) throw new Error("chat_history_invalid");
+  let url;
+  try {
+    url = new URL(value.url);
+  } catch {
+    throw new Error("chat_history_invalid");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || !url.hostname)
+    throw new Error("chat_history_invalid");
+  url.username = "";
+  url.password = "";
+  url.hash = "";
+  const clean = (candidate, max) =>
+    text(candidate, max) ? candidate.replace(/\p{Cc}/gu, " ").trim() : "";
+  const title = clean(value.title, 180) || url.hostname;
+  const domain = url.hostname.replace(/^www\./u, "").slice(0, 120);
+  const id = clean(value.id, 80);
+  const snippet = clean(value.snippet, 500);
+  const publishedAt = clean(value.publishedAt, 80);
+  return {
+    id: id || `src-${index + 1}`,
+    title,
+    url: url.toString(),
+    domain,
+    ...(snippet ? { snippet } : {}),
+    ...(publishedAt ? { publishedAt } : {}),
+  };
+}
+
 /** Canonical durable fields only. Temporary chats never enter the cloud outbox. */
 export function normalizeChatHistory(value, ownerId) {
   if (
@@ -119,6 +149,15 @@ export function normalizeChatHistory(value, ownerId) {
       }
       const sources = normalizeMemorySources(message.memorySources, ownerId);
       if (sources && message.role === "assistant") item.memorySources = sources;
+      if (message.sources !== undefined) {
+        if (
+          message.role !== "assistant" ||
+          !Array.isArray(message.sources) ||
+          message.sources.length > 12
+        )
+          throw new Error("chat_history_invalid");
+        item.sources = message.sources.map(responseSource);
+      }
       if (message.generationStatus !== undefined) {
         if (
           message.role !== "assistant" ||

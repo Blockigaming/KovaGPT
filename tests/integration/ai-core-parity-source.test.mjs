@@ -53,6 +53,21 @@ test("deep research exposes the full observable lifecycle and source-state track
   assert.match(research, /Do not invent citations, sources, or URLs/);
 });
 
+test("web and Deep Research responses stream bounded source records to the message UI", () => {
+  const chat = read("src/routes/api/chat.ts");
+  const home = read("src/routes/index.tsx");
+  const message = read("src/components/ChatMessage.tsx");
+  const history = read("src/lib/chat-history-policy.mjs");
+
+  assert.match(chat, /kind: "web_sources"/u);
+  assert.match(chat, /responseSourcesDelta\(result\.sources\)/u);
+  assert.match(chat, /responseSourcesDelta\(webSources\)/u);
+  assert.match(home, /normalizeResponseSources\(delta\.sources\)/u);
+  assert.match(message, /Sources for this response/iu);
+  assert.match(history, /item\.sources = message\.sources\.map\(responseSource\)/u);
+  assert.doesNotMatch(message, /if \(sourceActivity\) toast\.message\(sourceActivity\.label\)/u);
+});
+
 test("tool activity stream is typed, safe, accessible-ready, and excludes secrets", () => {
   const activity = read("src/lib/ai/activity.server.ts");
   for (const token of [

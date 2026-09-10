@@ -8,6 +8,37 @@ test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
 });
 
+test("web answers expose their real sources instead of a placeholder action", async ({ page }) => {
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body:
+        'data: {"choices":[{"delta":{"kind":"web_sources","sources":[{"id":"src-1","title":"Launch report","url":"https://reader:secret@example.com/report#details","domain":"spoofed.invalid","snippet":"Verified launch details."},{"id":"src-2","title":"Pricing page","url":"https://docs.example.org/pricing","domain":"docs.example.org"},{"id":"unsafe","title":"Unsafe result","url":"javascript:alert(1)","domain":"unsafe.invalid"}]}}]}\n\n' +
+        'data: {"choices":[{"delta":{"content":"The launch report confirms the update."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find the launch details");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  const sourcesButton = page.getByRole("button", { name: "2 sources" });
+  await expect(sourcesButton).toBeVisible();
+  await sourcesButton.click();
+  const sources = page.getByRole("region", { name: "Sources for this response (2)" });
+  await expect(sources.getByRole("link", { name: /Launch report/ })).toHaveAttribute(
+    "href",
+    "https://example.com/report",
+  );
+  await expect(sources).toContainText("Verified launch details.");
+  await expect(sources.getByText("example.com", { exact: true })).toBeVisible();
+  await expect(sources).not.toContainText("spoofed.invalid");
+  await expect(sources).not.toContainText("Unsafe result");
+  await expect(sources.getByText("docs.example.org", { exact: true })).toBeVisible();
+});
+
 test("stopping before the first token preserves an honest response with immediate retry", async ({
   page,
 }) => {

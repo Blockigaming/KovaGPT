@@ -45,6 +45,14 @@ export type Activity = {
   label: string;
   status: "done" | "running" | "failed" | "canceled";
 };
+export type ResponseSource = {
+  id: string;
+  title: string;
+  url: string;
+  domain: string;
+  snippet?: string;
+  publishedAt?: string;
+};
 export type ResearchProgress = {
   stage: string;
   label: string;
@@ -70,6 +78,8 @@ export type Message = {
   /** Identifiers of context provided for this response; never memory bodies. */
   memorySources?: MemorySources;
   activities?: Activity[];
+  /** Safe, provider-normalized web sources used to produce this response. */
+  sources?: ResponseSource[];
   researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
   /** A stopped or failed response remains retryable instead of reading as a completed answer. */
@@ -77,6 +87,53 @@ export type Message = {
   /** The explicit composer operation that created this response, retained for faithful retry. */
   requestedTool?: ComposerToolId;
 };
+
+const responseSourceText = (value: unknown, max: number) =>
+  typeof value === "string"
+    ? value
+        .replace(/\p{Cc}/gu, " ")
+        .trim()
+        .slice(0, max)
+    : "";
+
+export function normalizeResponseSources(value: unknown): ResponseSource[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const seen = new Set<string>();
+  const sources: ResponseSource[] = [];
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const item = candidate as Record<string, unknown>;
+    const rawUrl = responseSourceText(item.url, 2_048);
+    let url: URL;
+    try {
+      url = new URL(rawUrl);
+    } catch {
+      continue;
+    }
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname) continue;
+    url.username = "";
+    url.password = "";
+    url.hash = "";
+    const normalizedUrl = url.toString();
+    const key = normalizedUrl.toLowerCase().replace(/\/$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const title = responseSourceText(item.title, 180) || url.hostname.replace(/^www\./, "");
+    const domain = url.hostname.replace(/^www\./, "").slice(0, 120);
+    const snippet = responseSourceText(item.snippet, 500);
+    const publishedAt = responseSourceText(item.publishedAt, 80);
+    sources.push({
+      id: responseSourceText(item.id, 80) || `src-${sources.length + 1}`,
+      title,
+      url: normalizedUrl,
+      domain,
+      ...(snippet ? { snippet } : {}),
+      ...(publishedAt ? { publishedAt } : {}),
+    });
+    if (sources.length >= 12) break;
+  }
+  return sources.length ? sources : undefined;
+}
 
 export function markAssistantStopped(messages: Message[], assistantMessageId: string): Message[] {
   const assistantIndex = messages.findIndex(
@@ -294,14 +351,23 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const { memorySources: rawSources, generationStatus, requestedTool, ...rest } = message;
+    const {
+      memorySources: rawSources,
+      sources: rawResponseSources,
+      generationStatus,
+      requestedTool,
+      ...rest
+    } = message;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
+    const responseSources =
+      message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
     return {
       ...rest,
       ...(memorySources ? { memorySources } : {}),
+      ...(responseSources ? { sources: responseSources } : {}),
       ...(message.role === "assistant" &&
       (generationStatus === "stopped" || generationStatus === "failed")
         ? { generationStatus }
@@ -686,6 +752,7 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       id: newId(),
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
+      sources: message.sources?.map((source) => ({ ...source })),
       researchProgress: message.researchProgress
         ? {
             ...message.researchProgress,
