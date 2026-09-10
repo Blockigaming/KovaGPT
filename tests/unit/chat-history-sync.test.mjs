@@ -203,6 +203,84 @@ test("durable history validates and preserves assistant retry states", () => {
       ),
     /invalid/,
   );
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [
+            {
+              id: "response",
+              role: "assistant",
+              content: "Expanded URL",
+              sources: [
+                {
+                  id: "expanded",
+                  title: "Expanded URL",
+                  url: `https://example.com/${"é".repeat(400)}`,
+                  domain: "example.com",
+                },
+              ],
+            },
+          ],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
+});
+test("durable history preserves bounded safe web sources only on assistant responses", () => {
+  const normalized = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        {
+          id: "response",
+          role: "assistant",
+          content: "A sourced answer.",
+          sources: [
+            {
+              id: "source-one",
+              title: "Example\u0000 report",
+              url: "https://reader:secret@example.com/report#private-section",
+              domain: "spoofed.invalid",
+              snippet: "A short\n supporting summary.",
+              publishedAt: "2026-09-10",
+            },
+          ],
+        },
+      ],
+    },
+    OWNER,
+  );
+  assert.deepEqual(normalized.messages[0].sources, [
+    {
+      id: "source-one",
+      title: "Example  report",
+      url: "https://example.com/report",
+      domain: "example.com",
+      snippet: "A short  supporting summary.",
+      publishedAt: "2026-09-10",
+    },
+  ]);
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        {
+          ...chat(),
+          messages: [
+            {
+              id: "prompt",
+              role: "user",
+              content: "Untrusted",
+              sources: [{ id: "bad", title: "Bad", url: "javascript:alert(1)", domain: "bad" }],
+            },
+          ],
+        },
+        OWNER,
+      ),
+    /invalid/,
+  );
 });
 test("an ambiguous save retries the exact captured payload while a newer local edit survives its receipt", async () => {
   let state = await updateChatHistoryList(await loaded(), [chat()], false);

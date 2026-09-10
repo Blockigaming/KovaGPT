@@ -125,6 +125,7 @@ import {
   loadPendingActive,
   markAssistantStopped,
   newId,
+  normalizeResponseSources,
   saveConversations,
   persistTemporaryConversation,
   saveDraft,
@@ -1296,6 +1297,13 @@ function KovaGPT() {
               }
             ).choices?.[0]?.delta;
             receiveMemorySources(delta);
+            if (delta?.kind === "web_sources") {
+              const sources = normalizeResponseSources(delta.sources);
+              updateAssistantMessage((message) => ({
+                ...message,
+                ...(sources ? { sources } : {}),
+              }));
+            }
             if (delta?.kind === "image_pending") {
               markPendingImage();
             }

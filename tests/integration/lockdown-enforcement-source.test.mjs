@@ -17,7 +17,7 @@ function before(text, guard, operation, label) {
 test("chat blocks explicit and implicit network tools before provider work", async () => {
   const chat = await source("src/routes/api/chat.ts");
   before(chat, "readLockdownMode(", "handleDeepResearchRequest(lastText", "deep research");
-  before(chat, "readLockdownMode(", "runWebSearch(", "web search");
+  before(chat, "readLockdownMode(", "searchWeb(", "web search");
   assert.match(
     chat,
     /!lockdownBlocksNetwork\s*&&\s*\(!customKova \|\| customKova\.allows\("web"\)\)\s*&&\s*lastText/u,

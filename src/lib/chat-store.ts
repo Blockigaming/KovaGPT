@@ -7,6 +7,9 @@ import {
   invalidateChatHistorySnapshot,
   CHAT_HISTORY_CHANGED_EVENT,
 } from "./chat-history-bridge.ts";
+import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
+
+export { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
@@ -70,6 +73,8 @@ export type Message = {
   /** Identifiers of context provided for this response; never memory bodies. */
   memorySources?: MemorySources;
   activities?: Activity[];
+  /** Safe, provider-normalized web sources used to produce this response. */
+  sources?: ResponseSource[];
   researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
   /** A stopped or failed response remains retryable instead of reading as a completed answer. */
@@ -294,14 +299,23 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const { memorySources: rawSources, generationStatus, requestedTool, ...rest } = message;
+    const {
+      memorySources: rawSources,
+      sources: rawResponseSources,
+      generationStatus,
+      requestedTool,
+      ...rest
+    } = message;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
+    const responseSources =
+      message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
     return {
       ...rest,
       ...(memorySources ? { memorySources } : {}),
+      ...(responseSources ? { sources: responseSources } : {}),
       ...(message.role === "assistant" &&
       (generationStatus === "stopped" || generationStatus === "failed")
         ? { generationStatus }
@@ -686,6 +700,7 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       id: newId(),
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
+      sources: message.sources?.map((source) => ({ ...source })),
       researchProgress: message.researchProgress
         ? {
             ...message.researchProgress,

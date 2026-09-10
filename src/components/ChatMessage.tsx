@@ -478,6 +478,7 @@ function ChatMessageInner({
   } | null>(null);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [memoryOpenFor, setMemoryOpenFor] = useState<string | null>(null);
   const memorySources =
     principalResolved && !isUser
@@ -531,6 +532,7 @@ function ChatMessageInner({
       setFeedbackState({ key: feedbackKey, value: null });
       setFeedbackReload((current) => current + 1);
       setEditorOpen(false);
+      setSourcesOpen(false);
       setMemoryOpenFor(null);
       setMobileSheetOpen(false);
       cancelLongPress();
@@ -891,6 +893,49 @@ function ChatMessageInner({
                 )}
               </div>
             )}
+            {!streaming && sourcesOpen && message.sources?.length ? (
+              <section
+                id={`message-sources-${message.id}`}
+                className="mt-3 rounded-xl border border-border/70 bg-muted/25 p-3"
+                aria-label={`Sources for this response (${message.sources.length})`}
+              >
+                <ol className="grid gap-2 sm:grid-cols-2">
+                  {message.sources.map((source, index) => (
+                    <li key={`${source.id}:${source.url}`} className="min-w-0">
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="block rounded-lg p-2 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="flex items-start gap-2">
+                          <span
+                            className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-muted-foreground"
+                            aria-hidden="true"
+                          >
+                            {index + 1}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="line-clamp-2 block text-sm font-medium leading-5 text-foreground">
+                              {source.title}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {source.domain}
+                            </span>
+                          </span>
+                        </span>
+                        {source.snippet ? (
+                          <span className="mt-1.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                            {source.snippet}
+                          </span>
+                        ) : null}
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
           </div>
         </div>
       )}
@@ -911,6 +956,18 @@ function ChatMessageInner({
                   Memory provided ({memorySources.sources.length})
                 </button>
               )}
+              {message.sources?.length ? (
+                <button
+                  type="button"
+                  onClick={() => setSourcesOpen((open) => !open)}
+                  className="kova-message-source-toggle inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-expanded={sourcesOpen}
+                  aria-controls={`message-sources-${message.id}`}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  {message.sources.length} {message.sources.length === 1 ? "source" : "sources"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={copy}
@@ -1063,20 +1120,6 @@ function ChatMessageInner({
                     )}
                     {saving ? "Saving…" : saved ? "Saved to Library" : "Save to Library"}
                   </DropdownMenuItem>
-                  {message.activities?.some((activity) =>
-                    /search|source|web/i.test(activity.tool + activity.label),
-                  ) && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const sourceActivity = message.activities?.find((activity) =>
-                          /search|source|web/i.test(activity.tool + activity.label),
-                        );
-                        if (sourceActivity) toast.message(sourceActivity.label);
-                      }}
-                    >
-                      <Globe className="mr-2 h-4 w-4" /> View sources
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(event) => {
@@ -1174,6 +1217,20 @@ function ChatMessageInner({
                   await share();
                 },
               },
+              ...(message.sources?.length
+                ? [
+                    {
+                      label: sourcesOpen
+                        ? "Hide sources"
+                        : `View ${message.sources.length} sources`,
+                      icon: Globe,
+                      onClick: () => {
+                        setSourcesOpen((open) => !open);
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
               ...(onReplaceContent
                 ? [
                     {

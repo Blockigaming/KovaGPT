@@ -30,7 +30,12 @@ import {
   providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
-import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
+import {
+  NEWS_TRIGGER,
+  formatSearchResultsForPrompt,
+  searchWeb,
+  shouldRunWebSearch,
+} from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
 import {
@@ -40,6 +45,7 @@ import {
   type ResearchAuthorizationClient,
 } from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
+import type { KovaSource } from "@/lib/ai/sources.server";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
@@ -182,6 +188,20 @@ function sseEvent(obj: Record<string, unknown>) {
     choices: [{ index: 0, delta: { role: "assistant", ...obj } }],
   };
   return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
+function responseSourcesDelta(sources: KovaSource[]) {
+  return {
+    kind: "web_sources",
+    sources: sources.slice(0, 12).map(({ id, title, url, domain, snippet, publishedAt }) => ({
+      id,
+      title,
+      url,
+      domain,
+      ...(snippet ? { snippet } : {}),
+      ...(publishedAt ? { publishedAt } : {}),
+    })),
+  };
 }
 
 function sseDone() {
@@ -335,6 +355,7 @@ async function handleDeepResearchRequest(
             ),
           );
         }
+        controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(result.sources))));
         controller.enqueue(enc.encode(sseChunk(result.report)));
       } catch {
         if (options.signal?.aborted) {
@@ -1043,6 +1064,7 @@ export const Route = createFileRoute("/api/chat")({
             // out in settings except for explicit/time-sensitive search asks.
             // Fast mode skips web search entirely to stay instant.
             let webBlock = "";
+            let webSources: KovaSource[] = [];
             if (
               !lockdownBlocksNetwork &&
               (!customKova || customKova.allows("web")) &&
@@ -1055,26 +1077,20 @@ export const Route = createFileRoute("/api/chat")({
                 clientTool === "deep_research" ||
                 shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
-                const activity = createToolActivityEvent(
-                  "search_web",
-                  "Searching the web",
-                  "running",
-                );
                 const result = await preflight.run(
                   "web_search",
                   async (signal) => {
                     await customKova?.assertCurrent(signal);
-                    return runWebSearch(
-                      lastText,
-                      clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                    return searchWeb(lastText, {
+                      wantsNews: clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
                       signal,
-                    );
+                    });
                   },
                   { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
-                  webBlock = result;
-                  void activity;
+                  webBlock = formatSearchResultsForPrompt(result) ?? "";
+                  webSources = result.kovaSources;
                 }
               }
             }
@@ -1520,6 +1536,14 @@ export const Route = createFileRoute("/api/chat")({
               label: string;
               args?: unknown;
             }> = [];
+            if (webSources.length) {
+              const activity = createToolActivityEvent(
+                "search_web",
+                `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
+                "complete",
+              );
+              activityEvents.push({ tool: activity.type, label: activity.label });
+            }
 
             if (enableTools) {
               const MAX_TOOL_HOPS = 3;
@@ -1628,6 +1652,11 @@ export const Route = createFileRoute("/api/chat")({
                             ),
                           ),
                         );
+                        if (webSources.length) {
+                          controller.enqueue(
+                            enc.encode(sseEvent(responseSourcesDelta(webSources))),
+                          );
+                        }
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -2074,6 +2103,9 @@ export const Route = createFileRoute("/api/chat")({
                     ),
                   ),
                 );
+                if (webSources.length) {
+                  controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(webSources))));
+                }
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(

@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import type { Message } from "@/lib/chat-store";
+import { normalizeResponseSources, type ResponseSource } from "@/lib/response-sources";
 import {
   getProjectChat,
   saveProjectChat,
@@ -187,6 +188,12 @@ function ProjectChatPage() {
     setSending(true);
 
     let assistant = "";
+    let assistantSources: ResponseSource[] | undefined;
+    const responseMessage = (): ProjectChatMessage => ({
+      role: "assistant",
+      content: assistant,
+      ...(assistantSources ? { sources: assistantSources } : {}),
+    });
     try {
       const response = await authFetch("/api/chat", {
         method: "POST",
@@ -218,19 +225,19 @@ function ProjectChatPage() {
         onEvent: (parsed) => {
           const delta = (
             parsed as {
-              choices?: Array<{ delta?: { content?: unknown } }>;
+              choices?: Array<{
+                delta?: { content?: unknown; kind?: unknown; sources?: unknown };
+              }>;
             }
-          ).choices?.[0]?.delta?.content;
-          if (typeof delta !== "string" || !delta) return;
-          assistant += delta;
+          ).choices?.[0]?.delta;
+          if (delta?.kind === "web_sources") {
+            assistantSources = normalizeResponseSources(delta.sources);
+          }
+          if (typeof delta?.content === "string" && delta.content) {
+            assistant += delta.content;
+          }
           if (activeChatIdRef.current === requestChatId) {
-            setMessages([
-              ...nextHistory,
-              {
-                role: "assistant",
-                content: assistant,
-              },
-            ]);
+            setMessages([...nextHistory, responseMessage()]);
           }
         },
       });
@@ -240,7 +247,7 @@ function ProjectChatPage() {
       }
     } finally {
       const finalMessages: ProjectChatMessage[] = assistant.trim()
-        ? [...nextHistory, { role: "assistant", content: assistant }]
+        ? [...nextHistory, responseMessage()]
         : nextHistory;
 
       if (activeChatIdRef.current === requestChatId) {
@@ -404,6 +411,7 @@ function ProjectChatPage() {
                   id: messageId,
                   role: message.role,
                   content: message.content,
+                  sources: message.sources,
                 }}
                 streaming={
                   sending && index === visibleMessages.length - 1 && message.role === "assistant"
