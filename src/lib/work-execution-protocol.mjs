@@ -27,6 +27,7 @@ export const WORK_COORDINATOR_OBJECTIVE = "Complete the coordinator objective.";
 export const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
 const WORK_INPUT_PROJECTION_ID = "00000000-0000-4000-8000-000000000001";
 const WORK_INPUT_HASH_PROJECTION = "f".repeat(64);
+const WORK_RUNNER_DIRECTION_LIMIT = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set([
   "browser_interact",
@@ -520,7 +521,8 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     }
     active(run, now);
     if (command.type === "direction") {
-      if (run.directions.length >= 64) fail("work_direction_limit");
+      if (withoutSentDirections(run).directions.length >= WORK_RUNNER_DIRECTION_LIMIT)
+        fail("work_direction_limit");
       if (run.directions.some((item) => item.id === command.id)) fail("work_direction_duplicate");
       run.directions.push({ id: workUuid(command.id), text: bounded(command.text, 4000), at: now });
       if (run.specialists.length && specialistSynthesisInputTooLarge(run))

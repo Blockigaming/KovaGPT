@@ -628,6 +628,55 @@ test("consumed coordinator directions are excluded from specialist phase project
   assert.equal(run.specialists.length, 4);
 });
 
+test("post-delegation directions cannot exceed the synthesis runner limit", async () => {
+  const specialistId = crypto.randomUUID();
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 500000 },
+    heartbeat(),
+    now,
+  );
+  let step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: specialistId,
+        role: "review",
+        objective: "Review the bounded result",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  for (let index = 0; index < 20; index++)
+    run = await transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: `Direction ${index}` },
+      owner(run),
+      now,
+    );
+  await assert.rejects(
+    transitionWorkRun(
+      run,
+      { type: "direction", id: crypto.randomUUID(), text: "Direction 21" },
+      owner(run),
+      now,
+    ),
+    /work_direction_limit/,
+  );
+  step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialist_result",
+    id: specialistId,
+    summary: "Review complete",
+    evidence: [],
+  });
+  step = await beginSpecialistTestStep(run);
+  assert.equal(step.run.step.input.phase, "synthesis");
+  assert.equal(step.run.step.input.directions.length, 20);
+});
+
 test("cancelling a parent run cascades only to open specialists", async () => {
   const completedId = crypto.randomUUID();
   const queuedId = crypto.randomUUID();
