@@ -1,6 +1,6 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { finalizeGeneration } from "@/lib/ai/accounting.server";
-import { OPENAI_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
+import { estimateMaximumCostUsd, OPENAI_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
 import {
   configuredWorkRunnerAdapter,
   reserveWorkStepCost,
@@ -12,6 +12,7 @@ import {
   transitionWorkRun,
   runnerReady,
   estimateWorkStepInputTokens,
+  remainingWorkPhaseInputTokens,
   reconcileWorkRun,
   reconcileUndispatchedWorkRun,
 } from "@/lib/work-execution-protocol.mjs";
@@ -41,40 +42,91 @@ export async function executeConfiguredWorkRun(caller: AuthedCaller, runId: stri
     { actor: "runner", runnerId: runner.id, runner, expectedRevision: run.revision },
   );
   run = await repository.commit(claimed, run.revision, crypto.randomUUID());
-  const result = await executeIsolatedWorkStep(
-    {
-      repository,
-      adapter,
-      costBroker: {
-        async reserve(current, stepId) {
-          const estimatedInputTokens = estimateWorkStepInputTokens(current, stepId);
-          const outputTokens = Math.min(
-            current.modelSelection?.maxOutputTokens ?? 2048,
-            current.limits.maxTokens - current.usage.tokens - estimatedInputTokens,
-          );
-          return reserveWorkStepCost(current, stepId, estimatedInputTokens, outputTokens);
-        },
-        async releaseUnused(reservation) {
-          const model = OPENAI_TEXT_MODELS.find((item) => item.id === reservation.model);
-          if (!model) throw new Error("work_accounting_model_invalid");
-          await finalizeGeneration({
-            eventId: reservation.id,
-            status: "aborted",
-            model,
-            inputTokens: 0,
-            outputTokens: 0,
-            latencyMs: 0,
-            toolCalls: 0,
-          });
-        },
-        async settle(current, receipt) {
-          await settleWorkStepCost(current, { ...receipt, status: "completed" });
+  let result;
+  try {
+    result = await executeIsolatedWorkStep(
+      {
+        repository,
+        adapter,
+        costBroker: {
+          async reserve(current, stepId) {
+            const phaseInputs = remainingWorkPhaseInputTokens(current, stepId);
+            const estimatedInputTokens =
+              phaseInputs[0] ?? estimateWorkStepInputTokens(current, stepId);
+            const futureTokenFloor = phaseInputs
+              .slice(1)
+              .reduce((sum, inputTokens) => sum + inputTokens + 1, 0);
+            const remainingTokens = current.limits.maxTokens - current.usage.tokens;
+            let outputTokens = Math.min(
+              current.modelSelection?.maxOutputTokens ?? 2048,
+              remainingTokens - estimatedInputTokens - futureTokenFloor,
+            );
+            const model = OPENAI_TEXT_MODELS.find((item) => item.id === current.model);
+            if (!model || outputTokens < 1) throw new Error("work_budget_exceeded");
+            const futureCostFloor = phaseInputs
+              .slice(1)
+              .reduce(
+                (sum, inputTokens) =>
+                  sum + Math.max(1, Math.ceil(estimateMaximumCostUsd(model, inputTokens, 1) * 1e6)),
+                0,
+              );
+            const currentCostCap =
+              current.limits.maxCostMicros - current.usage.costMicros - futureCostFloor;
+            let low = 0,
+              high = outputTokens;
+            while (low < high) {
+              const candidate = Math.ceil((low + high) / 2);
+              const candidateCost = Math.max(
+                1,
+                Math.ceil(estimateMaximumCostUsd(model, estimatedInputTokens, candidate) * 1e6),
+              );
+              if (candidateCost <= currentCostCap) low = candidate;
+              else high = candidate - 1;
+            }
+            outputTokens = low;
+            if (outputTokens < 1) throw new Error("work_budget_exceeded");
+            return reserveWorkStepCost(current, stepId, estimatedInputTokens, outputTokens);
+          },
+          async releaseUnused(reservation) {
+            const model = OPENAI_TEXT_MODELS.find((item) => item.id === reservation.model);
+            if (!model) throw new Error("work_accounting_model_invalid");
+            await finalizeGeneration({
+              eventId: reservation.id,
+              status: "aborted",
+              model,
+              inputTokens: 0,
+              outputTokens: 0,
+              latencyMs: 0,
+              toolCalls: 0,
+            });
+          },
+          async settle(current, receipt) {
+            await settleWorkStepCost(current, { ...receipt, status: "completed" });
+          },
         },
       },
-    },
-    run.id,
-    crypto.randomUUID(),
-  );
+      run.id,
+      crypto.randomUUID(),
+    );
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "work_budget_exceeded") throw error;
+    const current = await repository.load(run.id);
+    if (current.status !== "running" || current.step || current.epoch !== run.epoch) throw error;
+    const failed = await transitionWorkRun(
+      current,
+      {
+        type: "fail",
+        evidence: ["The accepted Work phases exceeded the remaining token or cost budget."],
+      },
+      {
+        actor: "runner",
+        runnerId: current.runnerId,
+        epoch: current.epoch,
+        expectedRevision: current.revision,
+      },
+    );
+    return repository.commit(failed, current.revision, crypto.randomUUID());
+  }
   return finishVerifiedReceipt(caller, result.state, result.receipt, result.budgetViolation);
 }
 

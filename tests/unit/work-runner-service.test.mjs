@@ -14,6 +14,8 @@ import {
   transitionWorkRun,
   canonicalWorkInput,
   workInputHash,
+  WORK_COORDINATOR_OBJECTIVE,
+  WORK_SYNTHESIS_OBJECTIVE,
 } from "../../src/lib/work-execution-protocol.mjs";
 import { executeIsolatedWorkStep } from "../../src/lib/work-runner-protocol.mjs";
 import { publishWorkProjectOutput } from "../../src/lib/work-output-publisher.mjs";
@@ -102,7 +104,7 @@ const input = () => ({
   model: "gpt-5.6-luna",
   phase: "coordinator",
   coordinatorObjective: "Prepare output",
-  objective: "Prepare output",
+  objective: WORK_COORDINATOR_OBJECTIVE,
   sessionContext: null,
   specialist: null,
   specialistResults: [],
@@ -202,6 +204,7 @@ test("provider delegates bounded specialists, withholds tools, and accepts synth
     stepId: uuid(),
     reservationId: uuid(),
     phase: "synthesis",
+    objective: WORK_SYNTHESIS_OBJECTIVE,
     sessionContext: null,
     specialistResults: [
       {

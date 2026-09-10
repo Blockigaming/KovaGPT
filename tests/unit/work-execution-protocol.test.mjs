@@ -10,7 +10,9 @@ import {
   runnerReady,
   transitionWorkRun,
   workStepInput,
+  WORK_COORDINATOR_OBJECTIVE,
   WORK_RUNNER_CAPABILITIES,
+  WORK_SYNTHESIS_OBJECTIVE,
 } from "../../src/lib/work-execution-protocol.mjs";
 import { executeIsolatedWorkStep } from "../../src/lib/work-runner-protocol.mjs";
 
@@ -457,6 +459,26 @@ test("specialist cost estimates include the exact long coordinator objective", a
   assert.ok(estimateWorkStepInputTokens(run, stepId) > 4500);
 });
 
+test("multilingual coordinator objectives are carried once in bounded step input", async () => {
+  const coordinatorObjective = "界".repeat(10000);
+  const run = await admitWorkRun(
+    { ...submission(), objective: coordinatorObjective },
+    { ...policy(), maxTokens: 20000 },
+    heartbeat(),
+    now,
+  );
+  const input = workStepInput(run, crypto.randomUUID(), {
+    id: crypto.randomUUID(),
+    tokens: run.limits.maxTokens,
+    outputTokens: 2048,
+    costMicros: run.limits.maxCostMicros,
+  });
+  assert.equal(input.objective, WORK_COORDINATOR_OBJECTIVE);
+  assert.equal(input.coordinatorObjective, coordinatorObjective);
+  assert.doesNotThrow(() => canonicalWorkInput(input));
+  assert.doesNotThrow(() => estimateWorkStepInputTokens(run, crypto.randomUUID()));
+});
+
 test("bounded specialists run sequentially with narrow context and immutable results before synthesis", async () => {
   const firstId = crypto.randomUUID();
   const secondId = crypto.randomUUID();
@@ -465,6 +487,7 @@ test("bounded specialists run sequentially with narrow context and immutable res
     {
       ...policy(),
       maxActions: 5,
+      maxTokens: 10000,
       sessionContext: { privateConversation: "coordinator only" },
     },
     heartbeat(),
@@ -549,6 +572,7 @@ test("bounded specialists run sequentially with narrow context and immutable res
   step = await beginSpecialistTestStep(run);
   run = step.run;
   assert.equal(run.step.input.phase, "synthesis");
+  assert.equal(run.step.input.objective, WORK_SYNTHESIS_OBJECTIVE);
   assert.equal(run.step.input.sessionContext, null);
   assert.equal(run.step.input.specialistResults.length, 2);
   assert.equal(run.step.input.specialistResults[0].result.summary, "Evidence checked");
@@ -566,7 +590,12 @@ test("bounded specialists run sequentially with narrow context and immutable res
 test("cancelling a parent run cascades only to open specialists", async () => {
   const completedId = crypto.randomUUID();
   const queuedId = crypto.randomUUID();
-  let run = await admitWorkRun(submission(), { ...policy(), maxActions: 5 }, heartbeat(), now);
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 5, maxTokens: 10000 },
+    heartbeat(),
+    now,
+  );
   let step = await beginSpecialistTestStep(run);
   run = await finishSpecialistTestStep(step.run, step.id, {
     kind: "specialists",
@@ -629,10 +658,41 @@ test("a specialist plan must leave parent action budget for every task and synth
   assert.match(run.evidence[0], /parent run's remaining action budget/);
 });
 
+test("a specialist plan must leave minimum token budget for every remaining phase", async () => {
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 4, maxTokens: 1200 },
+    heartbeat(),
+    now,
+  );
+  const step = await beginSpecialistTestStep(run);
+  run = await finishSpecialistTestStep(step.run, step.id, {
+    kind: "specialists",
+    tasks: [
+      {
+        id: crypto.randomUUID(),
+        role: "research",
+        objective: "First task",
+        context: [],
+        tools: [],
+      },
+      {
+        id: crypto.randomUUID(),
+        role: "review",
+        objective: "Second task",
+        context: [],
+        tools: [],
+      },
+    ],
+  });
+  assert.equal(run.status, "failed");
+  assert.match(run.evidence[0], /remaining token budget/);
+});
+
 test("aggregate specialist results fail durably before an oversized synthesis step", async () => {
   let run = await admitWorkRun(
     { ...submission(), objective: "p".repeat(12000) },
-    { ...policy(), maxActions: 6, maxTokens: 20000 },
+    { ...policy(), maxActions: 6, maxTokens: 100000 },
     heartbeat(),
     now,
   );
@@ -666,7 +726,12 @@ test("aggregate specialist results fail durably before an oversized synthesis st
 
 test("a recovered specialist receipt exits reconciliation before the next phase", async () => {
   const specialistId = crypto.randomUUID();
-  let run = await admitWorkRun(submission(), { ...policy(), maxActions: 3 }, heartbeat(), now);
+  let run = await admitWorkRun(
+    submission(),
+    { ...policy(), maxActions: 3, maxTokens: 5000 },
+    heartbeat(),
+    now,
+  );
   let step = await beginSpecialistTestStep(run);
   run = await finishSpecialistTestStep(step.run, step.id, {
     kind: "specialists",

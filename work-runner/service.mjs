@@ -7,6 +7,8 @@ import {
   workUuid,
   WORK_RUNNER_CAPABILITIES,
   WORK_EXECUTION_PROTOCOL,
+  WORK_COORDINATOR_OBJECTIVE,
+  WORK_SYNTHESIS_OBJECTIVE,
 } from "../src/lib/work-execution-protocol.mjs";
 import { signRunnerEnvelope } from "../src/lib/work-runner-transport.mjs";
 
@@ -315,7 +317,7 @@ export function createWorkRunnerService({
           } else if (input.specialist !== null) throw new Error("input_invalid");
           if (input.phase === "synthesis") {
             if (
-              input.objective !== input.coordinatorObjective ||
+              input.objective !== WORK_SYNTHESIS_OBJECTIVE ||
               input.sessionContext !== null ||
               input.answer !== null ||
               input.approval !== null ||
@@ -360,7 +362,7 @@ export function createWorkRunnerService({
           } else if (input.specialistResults.length) throw new Error("input_invalid");
           if (
             input.phase === "coordinator" &&
-            (input.objective !== input.coordinatorObjective || input.specialist !== null)
+            (input.objective !== WORK_COORDINATOR_OBJECTIVE || input.specialist !== null)
           )
             throw new Error("input_invalid");
           if (input.approval) {

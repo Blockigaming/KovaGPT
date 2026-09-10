@@ -8,6 +8,8 @@ export const WORK_EXECUTION_PROTOCOL: "kova-work-v1";
 export const WORK_RUNNER_CAPABILITIES: readonly string[];
 export const WORK_TERMINAL: readonly string[];
 export const WORK_SPECIALIST_ROLES: readonly string[];
+export const WORK_COORDINATOR_OBJECTIVE: string;
+export const WORK_SYNTHESIS_OBJECTIVE: string;
 export type WorkSpecialist = {
   id: string;
   role: string;
@@ -109,6 +111,7 @@ export function workStepInput(
   cost: Record<string, unknown>,
 ): Record<string, unknown>;
 export function estimateWorkStepInputTokens(run: WorkRun, stepId: string): number;
+export function remainingWorkPhaseInputTokens(run: WorkRun, stepId?: string): number[];
 export function runnerReady(runner: WorkRunner | null | undefined, now?: number): boolean;
 export function parseWorkSubmission(input: unknown): WorkSubmission;
 export function parseWorkSpecialistPlan(input: unknown): Array<{

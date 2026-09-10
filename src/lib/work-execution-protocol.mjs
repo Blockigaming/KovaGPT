@@ -23,7 +23,8 @@ export const WORK_SPECIALIST_ROLES = Object.freeze([
   "review",
 ]);
 const WORK_SPECIALIST_ROLE_SET = new Set(WORK_SPECIALIST_ROLES);
-const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
+export const WORK_COORDINATOR_OBJECTIVE = "Complete the coordinator objective.";
+export const WORK_SYNTHESIS_OBJECTIVE = "Synthesize the completed specialist results.";
 const WORK_INPUT_PROJECTION_ID = "00000000-0000-4000-8000-000000000001";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS = new Set([
@@ -162,7 +163,7 @@ function buildWorkStepInput(run, stepId, cost, phase, specialist) {
         ? specialist.objective
         : phase === "synthesis"
           ? WORK_SYNTHESIS_OBJECTIVE
-          : run.request.objective,
+          : WORK_COORDINATOR_OBJECTIVE,
     sessionContext: phase === "coordinator" ? run.sessionContext : null,
     specialist: specialist
       ? {
@@ -209,31 +210,65 @@ export function workStepInput(run, stepId, cost) {
 }
 
 export function estimateWorkStepInputTokens(run, stepId) {
-  const remainingTokens = Math.max(1, run.limits.maxTokens - run.usage.tokens);
-  const outputTokens = Math.max(
-    1,
-    Math.min(run.modelSelection?.maxOutputTokens ?? 2048, remainingTokens),
-  );
-  const input = workStepInput(run, stepId, {
+  return estimateWorkInputTokens(workStepInput(run, stepId, projectedWorkCost(run)));
+}
+
+function projectedWorkCost(run, maximumNumbers = false) {
+  return {
     id: WORK_INPUT_PROJECTION_ID,
-    tokens: run.limits.maxTokens,
-    outputTokens,
-    costMicros: run.limits.maxCostMicros,
-  });
+    tokens: maximumNumbers ? Number.MAX_SAFE_INTEGER : run.limits.maxTokens,
+    outputTokens: maximumNumbers
+      ? Number.MAX_SAFE_INTEGER
+      : Math.max(
+          1,
+          Math.min(
+            run.modelSelection?.maxOutputTokens ?? 2048,
+            Math.max(1, run.limits.maxTokens - run.usage.tokens),
+          ),
+        ),
+    costMicros: maximumNumbers ? Number.MAX_SAFE_INTEGER : run.limits.maxCostMicros,
+  };
+}
+
+function estimateWorkInputTokens(input) {
   const inputBytes = new TextEncoder().encode(canonicalWorkInput(input)).length;
   return Math.max(1, Math.ceil(inputBytes / 3) + 512);
+}
+
+export function remainingWorkPhaseInputTokens(run, stepId = WORK_INPUT_PROJECTION_ID) {
+  const specialists = Array.isArray(run.specialists) ? run.specialists : [];
+  if (!specialists.length) return [estimateWorkStepInputTokens(run, stepId)];
+  const cost = projectedWorkCost(run);
+  const open = specialists.filter((item) => ["queued", "running"].includes(item.status));
+  const estimates = open.map((specialist) =>
+    estimateWorkInputTokens(buildWorkStepInput(run, stepId, cost, "specialist", specialist)),
+  );
+  const synthesisRun = {
+    ...run,
+    specialists: specialists.map((specialist) => ({
+      ...specialist,
+      result: specialist.result ?? { summary: "Pending specialist result.", evidence: [] },
+    })),
+  };
+  estimates.push(
+    estimateWorkInputTokens(buildWorkStepInput(synthesisRun, stepId, cost, "synthesis", null)),
+  );
+  return estimates;
+}
+
+function specialistPhasesExceedTokenBudget(run) {
+  const minimum = remainingWorkPhaseInputTokens(run).reduce(
+    (sum, inputTokens) => sum + inputTokens + 1,
+    0,
+  );
+  return run.usage.tokens + minimum > run.limits.maxTokens;
 }
 
 function specialistSynthesisInputTooLarge(run) {
   const projected = buildWorkStepInput(
     { ...run, epoch: Number.MAX_SAFE_INTEGER },
     WORK_INPUT_PROJECTION_ID,
-    {
-      id: WORK_INPUT_PROJECTION_ID,
-      tokens: Number.MAX_SAFE_INTEGER,
-      outputTokens: Number.MAX_SAFE_INTEGER,
-      costMicros: Number.MAX_SAFE_INTEGER,
-    },
+    projectedWorkCost(run, true),
     "synthesis",
     null,
   );
@@ -427,6 +462,8 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.directions.push({ id: workUuid(command.id), text: bounded(command.text, 4000), at: now });
       if (run.specialists.length && specialistSynthesisInputTooLarge(run))
         fail("work_specialist_synthesis_too_large");
+      if (run.specialists.length && specialistPhasesExceedTokenBudget(run))
+        fail("work_specialist_budget_exceeded");
       return update(run, now, "direction_queued", { id: command.id });
     }
     if (command.type === "edit_direction" || command.type === "remove_direction") {
@@ -441,6 +478,12 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
         specialistSynthesisInputTooLarge(run)
       )
         fail("work_specialist_synthesis_too_large");
+      if (
+        command.type === "edit_direction" &&
+        run.specialists.length &&
+        specialistPhasesExceedTokenBudget(run)
+      )
+        fail("work_specialist_budget_exceeded");
       return update(
         run,
         now,
@@ -678,6 +721,11 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           run.lease = null;
           failSpecialists(run, now);
           run.evidence = ["The specialist plan exceeded the bounded synthesis input."];
+        } else if (specialistPhasesExceedTokenBudget(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = ["The specialist plan exceeded the parent run's remaining token budget."];
         } else {
           run.status = "queued";
           run.lease = null;
@@ -706,6 +754,13 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           run.lease = null;
           failSpecialists(run, now);
           run.evidence = ["The specialist results exceeded the bounded synthesis input."];
+        } else if (specialistPhasesExceedTokenBudget(run)) {
+          run.status = "failed";
+          run.lease = null;
+          failSpecialists(run, now);
+          run.evidence = [
+            "The specialist results exceeded the parent run's remaining token budget.",
+          ];
         } else {
           run.status = "queued";
           run.lease = null;
@@ -894,7 +949,11 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.evidence = (command.evidence ?? []).slice(0, 20).map((item) => bounded(item, 2000));
     }
     run.status = command.type === "complete" ? "completed" : "failed";
-    if (command.type === "fail") failSpecialists(run, now);
+    if (command.type === "fail") {
+      failSpecialists(run, now);
+      if (Array.isArray(command.evidence))
+        run.evidence = command.evidence.slice(0, 20).map((item) => bounded(item, 2000));
+    }
     run.lease = null;
     return update(run, now, run.status);
   }
