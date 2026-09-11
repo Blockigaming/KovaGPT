@@ -17,6 +17,7 @@ export class ChatPreflightError extends Error {
     code: string;
     status: number;
     retryable: boolean;
+    publicMessage?: string;
     cause?: unknown;
   });
   toEnvelope(): {

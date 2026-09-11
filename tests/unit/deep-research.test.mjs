@@ -47,6 +47,11 @@ test("chat route has a separate deep research execution path", () => {
   const research = read("src/lib/ai/deep-research.server.ts");
   assert.match(research, /"Research could not complete"/);
   assert.match(research, /"Research canceled"/);
+  assert.match(chat, /await assertSelectedContextsCurrent\(request\.signal\)/u);
+  assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
+  assert.match(research, /makePlan\(safeQuery, opts\.workflowSkillBlock, opts\.signal\)/u);
+  assert.match(research, /opts\.workflowSkillBlock,[\s\S]{0,80}opts\.signal/u);
+  assert.match(research, /evidence and citation rules override any conflicting workflow text/u);
 });
 
 test("chat UI consumes and renders Deep Research lifecycle events", () => {

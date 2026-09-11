@@ -82,6 +82,29 @@ test("required failures preserve explicit status, code, and retryability", async
   }
 });
 
+test("required failures expose only an explicitly marked bounded public message", async () => {
+  const runner = createChatPreflightRunner();
+  const source = Object.assign(new Error("private database detail"), {
+    code: "workflow_skill_unavailable",
+    status: 403,
+    retryable: false,
+    publicMessage: "Choose an installed workflow skill before trying again.",
+  });
+  try {
+    await assert.rejects(
+      runner.run("workflow_skill", () => Promise.reject(source)),
+      (error) => {
+        assert.equal(error.message, source.publicMessage);
+        assert.equal(error.toEnvelope().error, source.publicMessage);
+        assert.equal(error.retryable, false);
+        return true;
+      },
+    );
+  } finally {
+    runner.close();
+  }
+});
+
 test("required failures default retryability from their normalized status", async () => {
   const runner = createChatPreflightRunner();
   try {

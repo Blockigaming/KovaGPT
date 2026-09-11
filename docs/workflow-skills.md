@@ -28,9 +28,9 @@ entitlement, or approval grant.
 
 ## Authority boundary
 
-The resolver adds package content to the server-built system message for text chat and to the
-provider prompt for image generation as user-selected workflow guidance. It does not touch model
-selection, plan checks, tool construction, connector grants,
+The resolver adds package content to the server-built system message for text chat and Deep
+Research, and to the provider prompt for image generation, as user-selected workflow guidance. It
+does not touch model selection, plan checks, tool construction, connector grants,
 provider credentials, approval gates, or accounting. The injected boundary explicitly says that
 package text cannot authorize those capabilities. Resource bodies are labeled as untrusted data so
 instructions embedded inside a reference do not become authority.

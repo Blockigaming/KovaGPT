@@ -3,18 +3,29 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-const [chat, ingress, resolver, functions, panel, home, storage, exportPolicy, migration] =
-  await Promise.all([
-    read("src/routes/api/chat.ts"),
-    read("src/lib/chat-ingress.server.mjs"),
-    read("src/lib/workflow-skills.server.ts"),
-    read("src/lib/workflow-skills.functions.ts"),
-    read("src/components/WorkflowSkillsPanel.tsx"),
-    read("src/routes/index.tsx"),
-    read("src/lib/principal-browser-storage.mjs"),
-    read("src/lib/account-export-policy.mjs"),
-    read("supabase/migrations/20260910210000_workflow_skill_packages.sql"),
-  ]);
+const [
+  chat,
+  ingress,
+  resolver,
+  functions,
+  panel,
+  home,
+  storage,
+  exportPolicy,
+  migration,
+  manifest,
+] = await Promise.all([
+  read("src/routes/api/chat.ts"),
+  read("src/lib/chat-ingress.server.mjs"),
+  read("src/lib/workflow-skills.server.ts"),
+  read("src/lib/workflow-skills.functions.ts"),
+  read("src/components/WorkflowSkillsPanel.tsx"),
+  read("src/routes/index.tsx"),
+  read("src/lib/principal-browser-storage.mjs"),
+  read("src/lib/account-export-policy.mjs"),
+  read("supabase/migrations/20260910210000_workflow_skill_packages.sql"),
+  read("release-migrations.json"),
+]);
 
 test("workflow skills resolve server-side from owner installation and exact version IDs", () => {
   assert.match(ingress, /normalizeWorkflowSkillSelection\(value\.skill\)/u);
@@ -50,10 +61,14 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
 test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
   assert.match(chat, /handleImageRequest\(lastText, logContext, workflowSkill\?\.block\)/u);
   assert.match(chat, /prompt: prompt \+ workflowSkillBlock/u);
+  assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
 test("workflow skill lifecycle is immutable replay-safe exportable and visible in Apps", () => {
+  const manifestEntry = JSON.parse(manifest).migrations.find(
+    (entry) => entry.filename === "20260910210000_workflow_skill_packages.sql",
+  );
   assert.match(migration, /unique \(skill_id, version\)/u);
   assert.match(migration, /workflow_skill_idempotency_conflict/u);
   assert.match(migration, /set revision = revision \+ 1, updated_at = now\(\)/u);
@@ -63,6 +78,12 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /public\.effective_user_plan_tier\(actor\)/u);
   assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
+  assert.deepEqual(manifestEntry.functions, [
+    "kova_private",
+    "list_workflow_skills",
+    "mutate_workflow_skill",
+    "resolve_workflow_skill",
+  ]);
   assert.match(exportPolicy, /\["workflow_skill_versions", "owner_id"\]/u);
   assert.match(panel, /Workflow skills/u);
   assert.match(panel, /Save new version/u);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import ts from "typescript";
 
 import {
   normalizeWorkflowSkillDraft,
@@ -137,6 +138,25 @@ function mutate(db, actor, action, skill, body, options = {}) {
   ]);
 }
 
+async function workflowServerModule() {
+  let source = ts.transpileModule(
+    await readFile(new URL("../../src/lib/workflow-skills.server.ts", import.meta.url), "utf8"),
+    { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  source = source
+    .replace(
+      '"@/lib/workflow-skills-digest.server.mjs"',
+      JSON.stringify(
+        new URL("../../src/lib/workflow-skills-digest.server.mjs", import.meta.url).href,
+      ),
+    )
+    .replace(
+      '"@/lib/workflow-skills-policy.mjs"',
+      JSON.stringify(new URL("../../src/lib/workflow-skills-policy.mjs", import.meta.url).href),
+    );
+  return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
+}
+
 test("workflow skill policy bounds package text and refuses capability-shaped fields", () => {
   const normalized = draft();
   assert.equal(normalized.resources.length, 1);
@@ -223,6 +243,32 @@ test("chat ingress accepts only an exact workflow skill installation/version ref
       messages: [{ role: "user", content: "Help me edit this." }],
       skill: { ...skill, instructions: "client supplied" },
     }),
+  );
+});
+
+test("stale selections are actionable and non-retryable while backend failures remain retryable", async () => {
+  const { resolveWorkflowSkill, WorkflowSkillAccessError } = await workflowServerModule();
+  const selection = { installationId: crypto.randomUUID(), versionId: crypto.randomUUID() };
+  const admin = (code) => ({
+    rpc() {
+      return {
+        abortSignal: async () => ({ data: null, error: { code } }),
+      };
+    },
+  });
+  await assert.rejects(
+    resolveWorkflowSkill(admin("42501"), OWNER, selection, new AbortController().signal),
+    (error) => {
+      assert.ok(error instanceof WorkflowSkillAccessError);
+      assert.equal(error.status, 403);
+      assert.equal(error.retryable, false);
+      assert.match(error.publicMessage, /Choose an installed version/u);
+      return true;
+    },
+  );
+  await assert.rejects(
+    resolveWorkflowSkill(admin("XX000"), OWNER, selection, new AbortController().signal),
+    (error) => error.status === 503 && error.retryable === true,
   );
 });
 

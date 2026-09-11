@@ -2939,14 +2939,19 @@
       "order": 146,
       "filename": "20260910210000_workflow_skill_packages.sql",
       "timestamp": "20260910210000",
-      "sha256": "df7000027ccf29bc611951df2668aa0fc672ce9632008432456f4e8ab0fd91f5",
+      "sha256": "50fb5e9200ffbc098a3cd483aa04d0b4b75bf14d3e220964e4ef9d46d46ed90c",
       "tables": [
         "workflow_skills",
         "workflow_skill_versions",
         "workflow_skill_installations",
         "workflow_skill_mutations"
       ],
-      "functions": [],
+      "functions": [
+        "kova_private",
+        "list_workflow_skills",
+        "mutate_workflow_skill",
+        "resolve_workflow_skill"
+      ],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,

@@ -81,7 +81,7 @@ grant all on public.workflow_skill_versions to service_role;
 grant all on public.workflow_skill_installations to service_role;
 grant all on public.workflow_skill_mutations to service_role;
 
-create function kova_private.workflow_skill_principal_current(p_user_id uuid)
+create or replace function kova_private.workflow_skill_principal_current(p_user_id uuid)
 returns boolean
 language sql
 stable
@@ -109,7 +109,7 @@ revoke all on function kova_private.workflow_skill_principal_current(uuid)
   from public, anon, authenticated;
 grant execute on function kova_private.workflow_skill_principal_current(uuid) to service_role;
 
-create function public.list_workflow_skills()
+create or replace function public.list_workflow_skills()
 returns jsonb
 language plpgsql
 security definer
@@ -157,7 +157,7 @@ begin
 end;
 $$;
 
-create function public.mutate_workflow_skill(
+create or replace function public.mutate_workflow_skill(
   p_action text,
   p_skill_id uuid,
   p_expected_revision bigint,
@@ -372,7 +372,7 @@ begin
 end;
 $$;
 
-create function public.resolve_workflow_skill(
+create or replace function public.resolve_workflow_skill(
   p_actor uuid,
   p_installation_id uuid,
   p_version_id uuid

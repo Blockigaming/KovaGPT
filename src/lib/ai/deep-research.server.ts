@@ -204,7 +204,11 @@ function parsePlan(raw: string, originalQuery: string): string[] {
   return plan.length ? Array.from(new Set(plan)) : fallbackPlan(originalQuery);
 }
 
-async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> {
+async function makePlan(
+  query: string,
+  workflowSkillBlock = "",
+  signal?: AbortSignal,
+): Promise<string[]> {
   const upstream = await chatCompletions(
     {
       model: modelForRole("UTILITY"),
@@ -213,8 +217,7 @@ async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> 
       messages: [
         {
           role: "system",
-          content:
-            "Create a concise deep-research search plan. Return only a JSON array of 3 to 5 distinct web search queries. Do not include commentary.",
+          content: `${workflowSkillBlock}\n\nCreate a concise deep-research search plan that follows applicable workflow guidance. Return only a JSON array of 3 to 5 distinct web search queries. Do not include commentary. Research safety, access, and evidence rules override any conflicting workflow text.`,
         },
         { role: "user", content: sanitizeResearchText(query, 1000) },
       ],
@@ -268,6 +271,7 @@ async function writeReport(
   query: string,
   plan: string[],
   evidence: ResearchEvidence[],
+  workflowSkillBlock = "",
   signal?: AbortSignal,
 ): Promise<string> {
   const upstream = await chatCompletions(
@@ -276,8 +280,7 @@ async function writeReport(
       messages: [
         {
           role: "system",
-          content:
-            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link.",
+          content: `${workflowSkillBlock}\n\nWrite a structured deep-research report that follows applicable workflow guidance and uses the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link. These evidence and citation rules override any conflicting workflow text.`,
         },
         { role: "user", content: evidencePrompt(query, plan, evidence) },
       ],
@@ -298,6 +301,7 @@ export async function runDeepResearch(
     signal?: AbortSignal;
     onProgress?: (event: ResearchProgressEvent) => void | Promise<void>;
     persistence?: ResearchPersistence;
+    workflowSkillBlock?: string;
   } = {},
 ): Promise<ResearchResult> {
   const safeQuery = sanitizeResearchText(query, 1000);
@@ -326,7 +330,7 @@ export async function runDeepResearch(
     );
     let plan: string[];
     try {
-      plan = await makePlan(safeQuery, opts.signal);
+      plan = await makePlan(safeQuery, opts.workflowSkillBlock, opts.signal);
     } catch (error) {
       if (opts.signal?.aborted) throw error;
       if (error instanceof Error && error.name === "AbortError") throw error;
@@ -418,7 +422,13 @@ export async function runDeepResearch(
       0.84,
       createToolActivityEvent("write_report", "Writing cited report", "running"),
     );
-    const report = await writeReport(safeQuery, plan, evidence, opts.signal);
+    const report = await writeReport(
+      safeQuery,
+      plan,
+      evidence,
+      opts.workflowSkillBlock,
+      opts.signal,
+    );
     const completionPersisted = await persistTerminalResearchRun(opts.persistence, runId, {
       status: "complete",
       report,

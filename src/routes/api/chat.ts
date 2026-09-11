@@ -315,6 +315,7 @@ async function handleDeepResearchRequest(
   options: {
     signal?: AbortSignal;
     persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
+    workflowSkillBlock?: string;
     logContext: SafeLogContext;
   },
 ): Promise<Response> {
@@ -342,6 +343,7 @@ async function handleDeepResearchRequest(
         const result = await runDeepResearch(prompt, {
           signal: options.signal,
           persistence: options.persistence,
+          workflowSkillBlock: options.workflowSkillBlock,
           onProgress: emitProgress,
         });
         if (result.partialFailures.length) {
@@ -985,9 +987,11 @@ export const Route = createFileRoute("/api/chat")({
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
             if (clientTool === "deep_research" && lastText) {
+              await assertSelectedContextsCurrent(request.signal);
               return handleDeepResearchRequest(lastText, {
                 signal: request.signal,
                 logContext,
+                workflowSkillBlock: workflowSkill?.block,
                 persistence: auth
                   ? {
                       supabase:
