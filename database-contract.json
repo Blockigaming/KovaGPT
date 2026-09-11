@@ -277,6 +277,7 @@
     "accept_family_invite_atomic",
     "accept_project_invite",
     "accept_project_invite",
+    "account_export_direct_row_bytes",
     "account_library_current_text",
     "acquire_ai_generation",
     "acquire_ai_generation",
@@ -1769,6 +1770,7 @@
     "delete on public.google_oauth_tokens to authenticated",
     "execute on function %s to authenticated,service_role',routine.signature)",
     "execute on function kova_private.accept_project_invite(uuid) to authenticated, service_role",
+    "execute on function kova_private.account_export_direct_row_bytes(uuid, bigint)\n  to service_role",
     "execute on function kova_private.audit_lockdown_mode_change() to service_role",
     "execute on function kova_private.auth_user_exists(uuid),\n  kova_private.verified_auth_user_for_email(text) to service_role",
     "execute on function kova_private.can_edit_project(uuid, uuid) to authenticated, service_role",
@@ -2282,6 +2284,7 @@
     "UPDATE ON public.user_library_items FROM authenticated",
     "all on function %s from public,anon',routine.signature)",
     "all on function kova_private.accept_project_invite(uuid) from public, anon",
+    "all on function kova_private.account_export_direct_row_bytes(uuid, bigint)\n  from public, anon, authenticated",
     "all on function kova_private.audit_lockdown_mode_change() from public, anon, authenticated",
     "all on function kova_private.auth_user_exists(uuid),\n  kova_private.verified_auth_user_for_email(text) from public,anon,authenticated",
     "all on function kova_private.can_edit_project(uuid, uuid) from public, anon",
@@ -2633,5 +2636,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "0f3affcf32cb48857a804048c8b23dc1c737c5e46b19c39c4ba46ab2e1e758e0"
+  "sha256": "23590ab8204eafc254a2feccee561d15c3d27de83c821df05bce4fe92c643e53"
 }

@@ -129,6 +129,182 @@ revoke all on function kova_private.workflow_skill_principal_current(uuid)
   from public, anon, authenticated;
 grant execute on function kova_private.workflow_skill_principal_current(uuid) to service_role;
 
+-- Workflow history shares the account export's single 50 MiB artifact with
+-- every directly collected account table. PostgreSQL's jsonb text includes at
+-- least the bytes reserved by JSON.stringify for these rows, so this is a
+-- conservative admission check that can stop once the shared limit is crossed.
+create or replace function kova_private.account_export_direct_row_bytes(
+  p_owner uuid,
+  p_stop_after bigint
+)
+returns bigint
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  export_source record;
+  source_bytes bigint;
+  total_bytes bigint := 0;
+begin
+  if p_owner is null or p_stop_after is null or p_stop_after not between 1 and 52428800 then
+    raise exception 'account_export_size_invalid' using errcode = '22023';
+  end if;
+
+  for export_source in
+    select source.table_name, source.owner_column
+    from (values
+      ('chat_history_records', 'owner_id'),
+      ('custom_kova_export_rows', 'owner_id'),
+      ('custom_kova_versions', 'owner_id'),
+      ('custom_kova_link_grants', 'user_id'),
+      ('custom_kova_mutations', 'owner_id'),
+      ('custom_kova_reports', 'reporter_id'),
+      ('custom_kova_moderation_events', 'actor_id'),
+      ('google_connection_export_rows', 'user_id'),
+      ('google_connection_preferences', 'user_id'),
+      ('ai_generation_events', 'user_id'),
+      ('ai_usage_events', 'user_id'),
+      ('account_audit_entries', 'user_id'),
+      ('agent_definitions', 'owner_id'),
+      ('agent_definition_versions', 'owner_id'),
+      ('agent_approvals', 'owner_id'),
+      ('agent_deliverables', 'owner_id'),
+      ('agent_jobs', 'owner_id'),
+      ('agent_notifications', 'owner_id'),
+      ('agent_resource_activity', 'owner_id'),
+      ('agent_resource_audit', 'owner_id'),
+      ('agent_resource_promotions', 'owner_id'),
+      ('agent_resource_relationships', 'owner_id'),
+      ('agent_run_events', 'owner_id'),
+      ('agent_run_tasks', 'owner_id'),
+      ('agent_runs', 'owner_id'),
+      ('agent_specialist_tasks', 'owner_id'),
+      ('agent_dependency_edges', 'owner_id'),
+      ('agent_graph_preferences', 'owner_id'),
+      ('app_admin_roles', 'user_id'),
+      ('app_notifications', 'owner_id'),
+      ('banned_users', 'user_id'),
+      ('chat_branches', 'owner_id'),
+      ('chat_custom_rules', 'owner_id'),
+      ('chat_memories', 'user_id'),
+      ('chat_context_summaries', 'user_id'),
+      ('trusted_contact_export_rows', 'user_id'),
+      ('trusted_contact_blocks', 'user_id'),
+      ('chat_message_versions', 'owner_id'),
+      ('chat_pinned_files', 'owner_id'),
+      ('chat_share_links', 'user_id'),
+      ('connected_account_audit_log', 'user_id'),
+      ('connected_accounts', 'user_id'),
+      ('context_packs', 'user_id'),
+      ('daily_usage', 'user_id'),
+      ('deep_research_evidence', 'user_id'),
+      ('deep_research_runs', 'user_id'),
+      ('developer_account_export_records', 'owner_id'),
+      ('developer_funding_export_records', 'owner_id'),
+      ('developer_pricing_draft_export_rows', 'owner_id'),
+      ('developer_pricing_event_export_rows', 'owner_id'),
+      ('developer_file_export_records', 'owner_id'),
+      ('mcp_oauth_grant_export_rows', 'owner_id'),
+      ('mcp_oauth_client_export_rows', 'owner_id'),
+      ('discovery_usage_export_records', 'user_id'),
+      ('feedback_submissions', 'owner_id'),
+      ('financial_accounts', 'user_id'),
+      ('financial_connections', 'owner_id'),
+      ('github_accounts', 'owner_id'),
+      ('github_coding_selections', 'owner_id'),
+      ('github_installations', 'owner_id'),
+      ('github_repositories', 'owner_id'),
+      ('github_repository_branches', 'owner_id'),
+      ('github_sync_records', 'owner_id'),
+      ('github_tool_audit', 'owner_id'),
+      ('github_webhooks', 'owner_id'),
+      ('goal_milestones', 'owner_id'),
+      ('goals', 'owner_id'),
+      ('health_connections', 'owner_id'),
+      ('integration_action_approvals', 'owner_id'),
+      ('integration_audit_events', 'owner_id'),
+      ('integration_consents', 'owner_id'),
+      ('integration_deletion_requests', 'owner_id'),
+      ('integration_linked_accounts', 'owner_id'),
+      ('integration_sync_jobs', 'owner_id'),
+      ('knowledge_relationships', 'owner_id'),
+      ('kova_sites', 'owner_id'),
+      ('kova_site_versions', 'owner_id'),
+      ('kova_site_files', 'owner_id'),
+      ('kova_site_aliases', 'owner_id'),
+      ('kova_site_viewers', 'owner_id'),
+      ('library_folders', 'user_id'),
+      ('library_file_uploads', 'owner_id'),
+      ('library_file_versions', 'owner_id'),
+      ('library_file_replacements', 'owner_id'),
+      ('library_text_versions', 'owner_id'),
+      ('notification_deliveries', 'user_id'),
+      ('notification_preferences', 'user_id'),
+      ('onboarding_progress', 'user_id'),
+      ('operational_events', 'owner_id'),
+      ('organizations', 'created_by'),
+      ('organization_members', 'user_id'),
+      ('organization_scim_user_export_rows', 'user_id'),
+      ('organization_invitations', 'recipient_user_id'),
+      ('organization_audit_events', 'actor_user_id'),
+      ('pending_tool_actions', 'user_id'),
+      ('plaid_items', 'user_id'),
+      ('prompt_evaluations', 'user_id'),
+      ('prompt_templates', 'user_id'),
+      ('prompt_versions', 'user_id'),
+      ('project_template_audit_events', 'owner_id'),
+      ('project_template_grants', 'owner_id'),
+      ('project_template_versions', 'owner_id'),
+      ('project_templates', 'owner_id'),
+      ('research_templates', 'user_id'),
+      ('safety_reports', 'reporter_id'),
+      ('scheduled_task_runs', 'user_id'),
+      ('scheduled_task_account_export', 'user_id'),
+      ('scheduled_task_event_source_export_rows', 'user_id'),
+      ('scheduled_tasks', 'user_id'),
+      ('subscriptions', 'user_id'),
+      ('support_tickets', 'owner_id'),
+      ('user_library_items', 'user_id'),
+      ('user_onboarding', 'user_id'),
+      ('user_preferences', 'user_id'),
+      ('user_storage', 'user_id'),
+      ('work_recent_items', 'owner_id'),
+      ('web_push_preferences', 'user_id'),
+      ('web_push_subscription_export_rows', 'user_id'),
+      ('work_execution_runs', 'owner_id'),
+      ('work_browser_sessions', 'owner_id'),
+      ('study_set_export_rows', 'owner_id'),
+      ('work_execution_events', 'owner_id'),
+      ('work_execution_outputs', 'owner_id'),
+      ('work_saved_records', 'owner_id'),
+      ('workflow_skill_export_rows', 'owner_id'),
+      ('workflow_skill_versions', 'owner_id'),
+      ('workflow_skill_installations', 'owner_id'),
+      ('workflow_skill_mutation_export_rows', 'owner_id'),
+      ('writing_document_versions', 'owner_id'),
+      ('writing_documents', 'owner_id')
+    ) as source(table_name, owner_column)
+  loop
+    execute format(
+      'select coalesce(sum(octet_length(convert_to(to_jsonb(export_row)::text, ''UTF8'')) + 1), 0) from public.%I export_row where %I = $1',
+      export_source.table_name,
+      export_source.owner_column
+    ) into source_bytes using p_owner;
+    total_bytes := total_bytes + source_bytes;
+    if total_bytes > p_stop_after then
+      return total_bytes;
+    end if;
+  end loop;
+  return total_bytes;
+end;
+$$;
+
+revoke all on function kova_private.account_export_direct_row_bytes(uuid, bigint)
+  from public, anon, authenticated;
+grant execute on function kova_private.account_export_direct_row_bytes(uuid, bigint)
+  to service_role;
+
 create or replace function public.list_workflow_skills()
 returns jsonb
 language plpgsql
@@ -468,6 +644,14 @@ begin
   );
   insert into public.workflow_skill_mutations(owner_id, mutation_id, request_hash, result)
     values (actor, p_mutation_id, fingerprint, result);
+  -- Check after every row created by this version mutation exists, including a
+  -- first installation and its replay receipt. Raising still rolls the whole
+  -- transaction back, including the storage charge.
+  if p_action in ('create', 'version')
+    and kova_private.account_export_direct_row_bytes(actor, 52428800) > 52428800
+  then
+    raise exception 'workflow_skill_export_limit' using errcode = '54000';
+  end if;
   return result;
 end;
 $$;

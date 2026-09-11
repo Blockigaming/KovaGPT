@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
+import {
+  ACCOUNT_EXPORT_DIRECT_TABLES,
+  ACCOUNT_EXPORT_MAX_BYTES,
+} from "../../src/lib/account-export-policy.mjs";
+
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const [
   chat,
@@ -145,6 +150,23 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
   assert.match(migration, /to_jsonb\(version_record\)::text/u);
   assert.match(migration, /workflow_skill_bytes > 32000000/u);
+  const exportBudget = migration.slice(
+    migration.indexOf("create or replace function kova_private.account_export_direct_row_bytes"),
+    migration.indexOf("create or replace function public.list_workflow_skills"),
+  );
+  const directSources = [...exportBudget.matchAll(/\('([^']+)', '([^']+)'\)/gu)].map(
+    ([, table, ownerColumn]) => [table, ownerColumn],
+  );
+  assert.deepEqual(directSources, ACCOUNT_EXPORT_DIRECT_TABLES);
+  assert.match(exportBudget, /security invoker/u);
+  assert.doesNotMatch(exportBudget, /to_regclass/u);
+  assert.match(
+    migration,
+    new RegExp(
+      `account_export_direct_row_bytes\\(actor, ${ACCOUNT_EXPORT_MAX_BYTES}\\) > ${ACCOUNT_EXPORT_MAX_BYTES}`,
+      "u",
+    ),
+  );
   assert.match(migration, /workflow_skill_export_limit/u);
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
   assert.match(migration, /workflow_skill_digest_mismatch/u);
@@ -163,6 +185,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.deepEqual(manifestEntry.functions, [
     "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
+    "account_export_direct_row_bytes",
     "list_workflow_skills",
     "mutate_workflow_skill",
     "resolve_workflow_skill",

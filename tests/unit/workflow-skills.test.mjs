@@ -8,6 +8,7 @@ import {
   normalizeWorkflowSkillDraft,
   normalizeWorkflowSkillSelection,
 } from "../../src/lib/workflow-skills-policy.mjs";
+import { ACCOUNT_EXPORT_DIRECT_TABLES } from "../../src/lib/account-export-policy.mjs";
 import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
 import {
   boundedImageProviderPrompt,
@@ -21,6 +22,18 @@ import { normalizeChatPayload } from "../../src/lib/chat-ingress.server.mjs";
 
 const OWNER = "123e4567-e89b-42d3-a456-426614174000";
 const OTHER = "223e4567-e89b-42d3-a456-426614174000";
+const WORKFLOW_EXPORT_RELATIONS = new Set([
+  "workflow_skill_export_rows",
+  "workflow_skill_versions",
+  "workflow_skill_installations",
+  "workflow_skill_mutation_export_rows",
+]);
+const EXISTING_FIXTURE_RELATIONS = new Set([
+  "banned_users",
+  "chat_history_records",
+  "user_storage",
+  ...WORKFLOW_EXPORT_RELATIONS,
+]);
 
 const draft = (instructions = "Review the request, produce a draft, then check it for clarity.") =>
   normalizeWorkflowSkillDraft({
@@ -63,6 +76,10 @@ async function fixture() {
         bytes_used bigint not null default 0,
         updated_at timestamptz not null default now()
       );
+      create table public.chat_history_records(
+        owner_id uuid not null references auth.users(id) on delete cascade,
+        payload jsonb not null
+      );
       create function public.effective_user_plan_tier(uuid) returns text language sql stable as
         $$select 'free'::text$$;
       create function public.try_add_storage_bytes(owner uuid, added bigint, cap bigint)
@@ -85,6 +102,13 @@ async function fixture() {
       grant usage on schema auth, kova_private to authenticated, service_role;
       grant select on auth.users to service_role;
     `);
+    await db.exec(
+      ACCOUNT_EXPORT_DIRECT_TABLES.filter(
+        ([table]) => !EXISTING_FIXTURE_RELATIONS.has(table),
+      )
+        .map(([table, ownerColumn]) => `create table public.${table}(${ownerColumn} uuid);`)
+        .join("\n"),
+    );
     await db.query("insert into auth.users(id) values ($1), ($2)", [OWNER, OTHER]);
     await db.exec(
       await readFile(
@@ -618,6 +642,69 @@ test("workflow skill history stays below the bounded account export artifact", a
       (await db.query("select count(*)::int count from public.workflow_skill_versions")).rows[0]
         .count,
       820,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("workflow history uses only the account export budget left by direct account rows", async () => {
+  const db = await fixture();
+  try {
+    // Eleven MiB of backslashes serialize to about 22 MiB in account JSON,
+    // matching a valid large chat-history account without spending another
+    // 20+ MiB in the test database's unescaped input representation.
+    await db.query(
+      `insert into public.chat_history_records(owner_id,payload)
+       values($1,jsonb_build_object('body',repeat(chr(92),11 * 1024 * 1024)))`,
+      [OWNER],
+    );
+    await db.exec(
+      `create temporary table shared_skill_seed as
+         select row_number() over ()::int n, gen_random_uuid() id from generate_series(1,17)`,
+    );
+    await db.query(
+      "insert into public.workflow_skills(id,owner_id) select id,$1 from shared_skill_seed",
+      [OWNER],
+    );
+    await db.query(
+      `insert into public.workflow_skill_versions(
+         skill_id,owner_id,version,name,description,instructions,resources,content_sha256,size_bytes
+       )
+         select seed.id,$1,version,'Shared','',repeat(chr(92),12000),
+           jsonb_build_array(
+             jsonb_build_object('title','A','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','B','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','C','content',repeat(chr(92),3991))
+           ),repeat('0',64),32000
+         from shared_skill_seed seed cross join generate_series(1,30) version
+         where ((seed.n - 1) * 30) + version <= 490`,
+      [OWNER],
+    );
+
+    const workflowBytes = (
+      await db.query(
+        `select coalesce(sum(
+           octet_length(convert_to(to_jsonb(version_record)::text,'UTF8')) + 1
+         ),0)::bigint bytes
+         from public.workflow_skill_versions version_record where owner_id=$1`,
+        [OWNER],
+      )
+    ).rows[0].bytes;
+    const sharedBytes = (
+      await db.query(
+        "select kova_private.account_export_direct_row_bytes($1,52428800)::bigint bytes",
+        [OWNER],
+      )
+    ).rows[0].bytes;
+    assert.ok(workflowBytes < 32_000_000);
+    assert.ok(sharedBytes > 50 * 1024 * 1024);
+
+    await assert.rejects(mutate(db, OWNER, "create", null, payload(draft())), /export_limit/);
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skill_versions")).rows[0]
+        .count,
+      490,
     );
   } finally {
     await db.close();

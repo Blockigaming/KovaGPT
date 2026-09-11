@@ -24,6 +24,7 @@ test("function inventories preserve plain schema-qualified function names", asyn
   assert.deepEqual(workflowSkills.functions, [
     "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
+    "account_export_direct_row_bytes",
     "list_workflow_skills",
     "mutate_workflow_skill",
     "resolve_workflow_skill",
@@ -35,6 +36,7 @@ test("function inventories preserve plain schema-qualified function names", asyn
     await readFile(new URL("../../database-contract.json", import.meta.url)),
   );
   assert.ok(contract.functions.includes("workflow_skill_principal_current"));
+  assert.ok(contract.functions.includes("account_export_direct_row_bytes"));
   assert.ok(!contract.functions.includes("kova_private"));
 });
 test("security hardening migration protects legacy definers and webhook claims", async () => {
