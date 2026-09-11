@@ -39,7 +39,18 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
   assert.match(home, /consume<ConversationWorkflowSkill>\("kova-workflow-skill-chat"/u);
   assert.match(home, /installationId: selectedWorkflowSkill\.installationId/u);
   assert.match(home, /versionId: selectedWorkflowSkill\.versionId/u);
+  const principalReset = home.slice(
+    home.indexOf("// Load (or reload) settings"),
+    home.indexOf("const loaded = loadSettings"),
+  );
+  assert.match(principalReset, /setPendingWorkflowSkill\(null\)/u);
   assert.doesNotMatch(home, /skill:\s*\{[^}]*instructions/su);
+});
+
+test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
+  assert.match(chat, /handleImageRequest\(lastText, logContext, workflowSkill\?\.block\)/u);
+  assert.match(chat, /prompt: prompt \+ workflowSkillBlock/u);
+  assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
 test("workflow skill lifecycle is immutable replay-safe exportable and visible in Apps", () => {

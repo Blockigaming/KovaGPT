@@ -387,7 +387,11 @@ async function handleDeepResearchRequest(
   });
 }
 
-async function handleImageRequest(prompt: string, logContext: SafeLogContext): Promise<Response> {
+async function handleImageRequest(
+  prompt: string,
+  logContext: SafeLogContext,
+  workflowSkillBlock = "",
+): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -397,7 +401,9 @@ async function handleImageRequest(prompt: string, logContext: SafeLogContext): P
       try {
         const upstream = await imageGenerations({
           model: imageModel(),
-          prompt,
+          // Image generation has no system-message channel, so append the same resolved,
+          // integrity-checked workflow block used by text chat. It remains guidance only.
+          prompt: prompt + workflowSkillBlock,
           size: "1024x1024",
           quality: "low",
           n: 1,
@@ -899,7 +905,7 @@ export const Route = createFileRoute("/api/chat")({
                 if (quota) return quota;
               }
               await assertSelectedContextsCurrent(request.signal);
-              return handleImageRequest(lastText, logContext);
+              return handleImageRequest(lastText, logContext, workflowSkill?.block);
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.

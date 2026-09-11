@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 
 import {
   buildAcceptanceLedger,
@@ -36,4 +37,9 @@ test("merged Work specialist behavior is accepted without claiming deployment pr
 
 test("acceptance ledger serialization is deterministic", async () => {
   assert.equal(await serializeAcceptanceLedger(), await serializeAcceptanceLedger());
+});
+
+test("the normal release gate rejects a stale acceptance ledger", async () => {
+  const pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+  assert.match(pkg.scripts["release:validate"], /npm run release:acceptance-ledger/u);
 });

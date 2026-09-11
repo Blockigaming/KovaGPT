@@ -450,6 +450,7 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
     setSelectedTool(null);
+    setPendingWorkflowSkill(null);
     setCommandOpen(false);
     setCommandQuery("");
     setEditingMessage(null);

@@ -249,7 +249,8 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
                     >
                       {skill.installationId ? "Install update" : "Install"}
                     </Button>
-                  ) : (
+                  ) : null}
+                  {skill.installationId ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -271,7 +272,7 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
                     >
                       Uninstall
                     </Button>
-                  )}
+                  ) : null}
                   <Button
                     size="sm"
                     variant="ghost"

@@ -34,6 +34,22 @@ function boundedText(value, code, maximum, { optional = false } = {}) {
   return normalized;
 }
 
+function normalizedTextBytes(value) {
+  const encoder = new TextEncoder();
+  return (
+    encoder.encode(value.name).byteLength +
+    encoder.encode(value.description).byteLength +
+    encoder.encode(value.instructions).byteLength +
+    value.resources.reduce(
+      (total, resource) =>
+        total +
+        encoder.encode(resource.title).byteLength +
+        encoder.encode(resource.content).byteLength,
+      0,
+    )
+  );
+}
+
 export function normalizeWorkflowSkillDraft(value) {
   if (!isRecord(value)) invalid("workflow_skill_invalid");
   const allowed = new Set(["name", "description", "instructions", "resources"]);
@@ -77,7 +93,9 @@ export function normalizeWorkflowSkillDraft(value) {
       };
     }),
   };
-  const bytes = new TextEncoder().encode(JSON.stringify(result)).byteLength;
+  // This intentionally measures normalized text fields, not a JSON serialization whose
+  // whitespace and key ordering can differ between JavaScript and PostgreSQL.
+  const bytes = normalizedTextBytes(result);
   if (bytes > WORKFLOW_SKILL_LIMITS.totalBytes) invalid("workflow_skill_too_large");
   return { ...result, sizeBytes: bytes };
 }

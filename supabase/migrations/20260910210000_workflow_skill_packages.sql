@@ -258,6 +258,10 @@ begin
     then
       raise exception 'workflow_skill_invalid' using errcode = '22023';
     end if;
+    payload_bytes :=
+      octet_length(convert_to(p_payload->>'name', 'UTF8')) +
+      octet_length(convert_to(p_payload->>'description', 'UTF8')) +
+      octet_length(convert_to(p_payload->>'instructions', 'UTF8'));
     for resource in select value from jsonb_array_elements(p_payload->'resources') loop
       if (select array_agg(key order by key) from jsonb_object_keys(resource) key)
         is distinct from array['content', 'title']::text[]
@@ -266,13 +270,10 @@ begin
       then
         raise exception 'workflow_skill_resource_invalid' using errcode = '22023';
       end if;
+      payload_bytes := payload_bytes +
+        octet_length(convert_to(resource->>'title', 'UTF8')) +
+        octet_length(convert_to(resource->>'content', 'UTF8'));
     end loop;
-    payload_bytes := octet_length(convert_to(jsonb_build_object(
-      'name', p_payload->>'name',
-      'description', p_payload->>'description',
-      'instructions', p_payload->>'instructions',
-      'resources', p_payload->'resources'
-    )::text, 'UTF8'));
     if payload_bytes > 32000 then
       raise exception 'workflow_skill_too_large' using errcode = '54000';
     end if;

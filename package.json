@@ -56,7 +56,7 @@
     "release:smoke": "node scripts/release/smoke.mjs --dry-run",
     "release:local": "node scripts/release/local-non-actions-gate.mjs",
     "test:release": "node --test tests/release/*.test.mjs",
-    "release:validate": "npm run release:migrations && npm run release:migration-preflight && npm run release:schema && npm run release:db:references && npm run release:env && npm run test:release && npm run release:security-source && npm run release:chatgpt-parity-source && npm run release:security && npm run release:ui-truthfulness && npm run release:visible-controls && npm run release:zero-lovable && npm run release:auth-provider && npm run release:stripe:contract && npm run release:ai-provider-contract && npm run release:tanstack && npm run release:edge && npm run release:bundle",
+    "release:validate": "npm run release:migrations && npm run release:migration-preflight && npm run release:schema && npm run release:db:references && npm run release:env && npm run test:release && npm run release:acceptance-ledger && npm run release:security-source && npm run release:chatgpt-parity-source && npm run release:security && npm run release:ui-truthfulness && npm run release:visible-controls && npm run release:zero-lovable && npm run release:auth-provider && npm run release:stripe:contract && npm run release:ai-provider-contract && npm run release:tanstack && npm run release:edge && npm run release:bundle",
     "release:schema": "node scripts/release/schema-contract.mjs",
     "release:db:isolated": "node scripts/release/isolated-database.mjs",
     "release:db:dry": "node scripts/release/isolated-database.mjs --dry-run",

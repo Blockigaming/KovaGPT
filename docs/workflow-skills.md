@@ -21,14 +21,15 @@ entitlement, or approval grant.
 - 100 packages per owner and 30 immutable versions per package;
 - 12,000 instruction characters;
 - up to 10 resources, each with a 120-character title and 8,000-character body;
-- 32,000 UTF-8 bytes for the complete normalized package;
+- 32,000 UTF-8 bytes across the normalized text fields;
 - 100 packages returned by one management read;
 - replay-safe mutations retained for a bounded eight-day window.
 
 ## Authority boundary
 
-The resolver adds package content only to the server-built system message as user-selected workflow
-guidance. It does not touch model selection, plan checks, tool construction, connector grants,
+The resolver adds package content to the server-built system message for text chat and to the
+provider prompt for image generation as user-selected workflow guidance. It does not touch model
+selection, plan checks, tool construction, connector grants,
 provider credentials, approval gates, or accounting. The injected boundary explicitly says that
 package text cannot authorize those capabilities. Resource bodies are labeled as untrusted data so
 instructions embedded inside a reference do not become authority.
