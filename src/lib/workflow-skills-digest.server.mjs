@@ -20,17 +20,21 @@ export function workflowSkillDigest(value) {
     instructions: value.instructions,
     resources: value.resources,
   });
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        name: normalized.name,
-        description: normalized.description,
-        instructions: normalized.instructions,
-        resources: normalized.resources,
-      }),
-      "utf8",
-    )
-    .digest("hex");
+  const hash = createHash("sha256");
+  const update = (text) => {
+    const bytes = Buffer.from(text, "utf8");
+    hash.update(`${bytes.byteLength}:`, "ascii");
+    hash.update(bytes);
+  };
+  update(normalized.name);
+  update(normalized.description);
+  update(normalized.instructions);
+  update(String(normalized.resources.length));
+  for (const resource of normalized.resources) {
+    update(resource.title);
+    update(resource.content);
+  }
+  return hash.digest("hex");
 }
 
 export function buildWorkflowSkillBlock(value) {

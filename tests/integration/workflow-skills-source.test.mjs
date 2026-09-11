@@ -96,11 +96,14 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /on conflict \(owner_id, skill_id\) do update/u);
   assert.match(migration, /public\.effective_user_plan_tier\(actor\)/u);
   assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
-  assert.match(migration, /workflow_skill_bytes \+ payload_bytes > 32000000/u);
+  assert.match(migration, /to_jsonb\(version_record\)::text/u);
+  assert.match(migration, /workflow_skill_bytes > 32000000/u);
   assert.match(migration, /workflow_skill_export_limit/u);
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
+  assert.match(migration, /workflow_skill_digest_mismatch/u);
+  assert.match(migration, /instructions_text, p_payload->'resources', computed_digest/u);
   assert.deepEqual(manifestEntry.functions, [
-    "kova_private",
+    "workflow_skill_principal_current",
     "list_workflow_skills",
     "mutate_workflow_skill",
     "resolve_workflow_skill",

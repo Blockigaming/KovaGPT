@@ -28,7 +28,7 @@ const contract = {
   migrationCount: files.length,
   tables: collect(/create\s+table(?:\s+if\s+not\s+exists)?\s+(?:public\.)?([\w"]+)/gi),
   views: collect(/create\s+(?:or\s+replace\s+)?view\s+public\.([\w"]+)/gi),
-  functions: collect(/create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([\w"]+)/gi),
+  functions: collect(/create\s+(?:or\s+replace\s+)?function\s+(?:[\w"]+\.)?([\w"]+)/gi),
   indexes: indexes.sort(),
   policies: collect(/create\s+policy\s+"?([^"\n]+?)"?\s+on/gi),
   triggers: collect(/create\s+trigger\s+([\w"]+)/gi),

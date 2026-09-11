@@ -184,6 +184,25 @@ declare
   payload_bytes integer;
   workflow_skill_bytes bigint;
   storage_limit bigint;
+  name_text text;
+  description_text text;
+  instructions_text text;
+  resource_title text;
+  resource_content text;
+  resource_count_text text;
+  digest_input text;
+  computed_digest text;
+  trim_characters constant text :=
+    chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) ||
+    chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194) || chr(8195) ||
+    chr(8196) || chr(8197) || chr(8198) || chr(8199) || chr(8200) || chr(8201) ||
+    chr(8202) || chr(8232) || chr(8233) || chr(8239) || chr(8287) || chr(12288) ||
+    chr(65279);
+  prohibited_controls constant text :=
+    chr(1) || chr(2) || chr(3) || chr(4) || chr(5) || chr(6) || chr(7) || chr(8) ||
+    chr(11) || chr(12) || chr(14) || chr(15) || chr(16) || chr(17) || chr(18) ||
+    chr(19) || chr(20) || chr(21) || chr(22) || chr(23) || chr(24) || chr(25) ||
+    chr(26) || chr(27) || chr(28) || chr(29) || chr(30) || chr(31) || chr(127);
 begin
   if p_action is null or p_action not in ('create', 'version', 'install', 'uninstall', 'delete')
     or p_mutation_id is null or p_requested_at is null
@@ -251,46 +270,76 @@ begin
   if p_action in ('create', 'version') then
     if (select array_agg(key order by key) from jsonb_object_keys(p_payload) key)
       is distinct from array['description', 'digest', 'instructions', 'name', 'resources']::text[]
-      or coalesce(length(p_payload->>'name'), 0) not between 1 and 120
-      or coalesce(length(p_payload->>'description'), 0) > 500
-      or coalesce(length(p_payload->>'instructions'), 0) not between 1 and 12000
+      or jsonb_typeof(p_payload->'name') is distinct from 'string'
+      or jsonb_typeof(p_payload->'description') is distinct from 'string'
+      or jsonb_typeof(p_payload->'instructions') is distinct from 'string'
       or jsonb_typeof(p_payload->'resources') is distinct from 'array'
+      or jsonb_typeof(p_payload->'digest') is distinct from 'string'
+    then
+      raise exception 'workflow_skill_invalid' using errcode = '22023';
+    end if;
+    name_text := p_payload->>'name';
+    description_text := p_payload->>'description';
+    instructions_text := p_payload->>'instructions';
+    if length(name_text) not between 1 and 120
+      or length(description_text) > 500
+      or length(instructions_text) not between 1 and 12000
       or jsonb_array_length(p_payload->'resources') > 10
-      or coalesce(p_payload->>'digest', '') !~ '^[a-f0-9]{64}$'
+      or (p_payload->>'digest') !~ '^[a-f0-9]{64}$'
+      or name_text is distinct from btrim(name_text, trim_characters)
+      or description_text is distinct from btrim(description_text, trim_characters)
+      or instructions_text is distinct from btrim(instructions_text, trim_characters)
+      or name_text is distinct from translate(name_text, prohibited_controls, '')
+      or description_text is distinct from translate(description_text, prohibited_controls, '')
+      or instructions_text is distinct from translate(instructions_text, prohibited_controls, '')
     then
       raise exception 'workflow_skill_invalid' using errcode = '22023';
     end if;
     payload_bytes :=
-      octet_length(convert_to(p_payload->>'name', 'UTF8')) +
-      octet_length(convert_to(p_payload->>'description', 'UTF8')) +
-      octet_length(convert_to(p_payload->>'instructions', 'UTF8'));
+      octet_length(convert_to(name_text, 'UTF8')) +
+      octet_length(convert_to(description_text, 'UTF8')) +
+      octet_length(convert_to(instructions_text, 'UTF8'));
+    resource_count_text := jsonb_array_length(p_payload->'resources')::text;
+    digest_input :=
+      octet_length(convert_to(name_text, 'UTF8'))::text || ':' || name_text ||
+      octet_length(convert_to(description_text, 'UTF8'))::text || ':' || description_text ||
+      octet_length(convert_to(instructions_text, 'UTF8'))::text || ':' || instructions_text ||
+      octet_length(convert_to(resource_count_text, 'UTF8'))::text || ':' || resource_count_text;
     for resource in select value from jsonb_array_elements(p_payload->'resources') loop
+      if jsonb_typeof(resource) is distinct from 'object' then
+        raise exception 'workflow_skill_resource_invalid' using errcode = '22023';
+      end if;
       if (select array_agg(key order by key) from jsonb_object_keys(resource) key)
         is distinct from array['content', 'title']::text[]
-        or coalesce(length(resource->>'title'), 0) not between 1 and 120
-        or coalesce(length(resource->>'content'), 0) not between 1 and 8000
+        or jsonb_typeof(resource->'title') is distinct from 'string'
+        or jsonb_typeof(resource->'content') is distinct from 'string'
+      then
+        raise exception 'workflow_skill_resource_invalid' using errcode = '22023';
+      end if;
+      resource_title := resource->>'title';
+      resource_content := resource->>'content';
+      if length(resource_title) not between 1 and 120
+        or length(resource_content) not between 1 and 8000
+        or resource_title is distinct from btrim(resource_title, trim_characters)
+        or resource_content is distinct from btrim(resource_content, trim_characters)
+        or resource_title is distinct from translate(resource_title, prohibited_controls, '')
+        or resource_content is distinct from translate(resource_content, prohibited_controls, '')
       then
         raise exception 'workflow_skill_resource_invalid' using errcode = '22023';
       end if;
       payload_bytes := payload_bytes +
-        octet_length(convert_to(resource->>'title', 'UTF8')) +
-        octet_length(convert_to(resource->>'content', 'UTF8'));
+        octet_length(convert_to(resource_title, 'UTF8')) +
+        octet_length(convert_to(resource_content, 'UTF8'));
+      digest_input := digest_input ||
+        octet_length(convert_to(resource_title, 'UTF8'))::text || ':' || resource_title ||
+        octet_length(convert_to(resource_content, 'UTF8'))::text || ':' || resource_content;
     end loop;
+    computed_digest := encode(sha256(convert_to(digest_input, 'UTF8')), 'hex');
+    if computed_digest <> p_payload->>'digest' then
+      raise exception 'workflow_skill_digest_mismatch' using errcode = '22023';
+    end if;
     if payload_bytes > 32000 then
       raise exception 'workflow_skill_too_large' using errcode = '54000';
-    end if;
-    select coalesce(sum(size_bytes), 0) into workflow_skill_bytes
-      from public.workflow_skill_versions where owner_id = actor;
-    if workflow_skill_bytes + payload_bytes > 32000000 then
-      raise exception 'workflow_skill_export_limit' using errcode = '54000';
-    end if;
-    storage_limit := case public.effective_user_plan_tier(actor)
-      when 'plus' then 26843545600
-      when 'pro' then 26843545600
-      else 524288000
-    end;
-    if not public.try_add_storage_bytes(actor, payload_bytes, storage_limit) then
-      raise exception 'workflow_skill_storage_limit' using errcode = '54000';
     end if;
     select coalesce(max(version), 0) + 1 into next_version
       from public.workflow_skill_versions where skill_id = skill.id;
@@ -301,9 +350,26 @@ begin
       skill_id, owner_id, version, name, description, instructions, resources,
       content_sha256, size_bytes
     ) values (
-      skill.id, actor, next_version, p_payload->>'name', p_payload->>'description',
-      p_payload->>'instructions', p_payload->'resources', p_payload->>'digest', payload_bytes
+      skill.id, actor, next_version, name_text, description_text,
+      instructions_text, p_payload->'resources', computed_digest, payload_bytes
     ) returning id into new_version_id;
+    -- Match the account export's serialized-row accounting, including JSON
+    -- escaping and per-version metadata, instead of trusting raw text bytes.
+    select coalesce(sum(
+      octet_length(convert_to(to_jsonb(version_record)::text, 'UTF8')) + 1
+    ), 0) into workflow_skill_bytes
+      from public.workflow_skill_versions version_record where owner_id = actor;
+    if workflow_skill_bytes > 32000000 then
+      raise exception 'workflow_skill_export_limit' using errcode = '54000';
+    end if;
+    storage_limit := case public.effective_user_plan_tier(actor)
+      when 'plus' then 26843545600
+      when 'pro' then 26843545600
+      else 524288000
+    end;
+    if not public.try_add_storage_bytes(actor, payload_bytes, storage_limit) then
+      raise exception 'workflow_skill_storage_limit' using errcode = '54000';
+    end if;
     update public.workflow_skills
       set head_version_id = new_version_id,
           revision = case when p_action = 'create' then revision else revision + 1 end,

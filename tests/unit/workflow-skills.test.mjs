@@ -191,6 +191,36 @@ test("workflow skill policy bounds package text and refuses capability-shaped fi
   );
 });
 
+test("workflow skill digests use unambiguous UTF-8 byte framing", () => {
+  const first = normalizeWorkflowSkillDraft({
+    name: "ab",
+    description: "c",
+    instructions: "d",
+    resources: [],
+  });
+  const second = normalizeWorkflowSkillDraft({
+    name: "a",
+    description: "bc",
+    instructions: "d",
+    resources: [],
+  });
+  const unicode = normalizeWorkflowSkillDraft({
+    name: "é",
+    description: "",
+    instructions: "✓",
+    resources: [{ title: "A", content: "B" }],
+  });
+  assert.equal(
+    workflowSkillDigest(first),
+    "68a81b08bc52721ce30e8339125cf49a115a13400a1257e2e93e3fc45ce388b0",
+  );
+  assert.notEqual(workflowSkillDigest(first), workflowSkillDigest(second));
+  assert.equal(
+    workflowSkillDigest(unicode),
+    "c4582e5ca375e524b7cd37ecccdade5fba8d034fd8b250a907b1f486728fd6c3",
+  );
+});
+
 test("combined image prompts are bounded after workflow guidance is appended", () => {
   assert.equal(boundedImageProviderPrompt("draw", " with clean lines"), "draw with clean lines");
   assert.equal(boundedImageProviderPrompt("a".repeat(MAX_IMAGE_PROMPT_CHARS), "")?.length, 32000);
@@ -219,8 +249,60 @@ test("the JavaScript and database limits accept the same exact 32,000 text bytes
   const db = await fixture();
   try {
     await mutate(db, OWNER, "create", null, payload(boundary));
-    const stored = await db.query("select size_bytes from public.workflow_skill_versions");
+    const stored = await db.query(
+      "select size_bytes,content_sha256 from public.workflow_skill_versions",
+    );
     assert.equal(stored.rows[0].size_bytes, 32_000);
+    assert.equal(stored.rows[0].content_sha256, workflowSkillDigest(boundary));
+  } finally {
+    await db.close();
+  }
+});
+
+test("the authenticated mutation recomputes digests and requires normalized typed text", async () => {
+  const db = await fixture();
+  try {
+    const normalized = draft();
+    const clean = payload(normalized);
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, { ...clean, digest: "0".repeat(64) }),
+      /workflow_skill_digest_mismatch/,
+    );
+    for (const suffix of [" ", "\t", "\u00a0", "\u3000"]) {
+      await assert.rejects(
+        mutate(db, OWNER, "create", null, { ...clean, name: `${clean.name}${suffix}` }),
+        /workflow_skill_invalid/,
+      );
+    }
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, { ...clean, name: 7 }),
+      /workflow_skill_invalid/,
+    );
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, {
+        ...clean,
+        instructions: "Review\u0007this request.",
+      }),
+      /workflow_skill_invalid/,
+    );
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, { ...clean, resources: ["not an object"] }),
+      /workflow_skill_resource_invalid/,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skill_versions")).rows[0]
+        .count,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select coalesce(bytes_used,0)::int bytes from public.user_storage where user_id=$1",
+          [OWNER],
+        )
+      ).rows[0]?.bytes ?? 0,
+      0,
+    );
   } finally {
     await db.close();
   }
@@ -403,7 +485,7 @@ test("workflow skill history stays below the bounded account export artifact", a
   try {
     await db.exec(
       `create temporary table skill_seed as
-         select row_number() over ()::int n, gen_random_uuid() id from generate_series(1,34)`,
+         select row_number() over ()::int n, gen_random_uuid() id from generate_series(1,28)`,
     );
     await db.query("insert into public.workflow_skills(id,owner_id) select id,$1 from skill_seed", [
       OWNER,
@@ -412,16 +494,34 @@ test("workflow skill history stays below the bounded account export artifact", a
       `insert into public.workflow_skill_versions(
          skill_id,owner_id,version,name,description,instructions,resources,content_sha256,size_bytes
        )
-         select seed.id,$1,version,'Bounded','','x','[]'::jsonb,repeat('0',64),32000
+         select seed.id,$1,version,'Bounded','',repeat(chr(92),12000),
+           jsonb_build_array(
+             jsonb_build_object('title','A','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','B','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','C','content',repeat(chr(92),3990))
+           ),repeat('0',64),32000
          from skill_seed seed cross join generate_series(1,30) version
-         where ((seed.n - 1) * 30) + version <= 1000`,
+         where ((seed.n - 1) * 30) + version <= 820`,
       [OWNER],
     );
+    const versions = (
+      await db.query("select * from public.workflow_skill_versions order by skill_id,version")
+    ).rows;
+    const encoder = new TextEncoder();
+    const actualExportBytes = versions.reduce(
+      (total, row) => total + encoder.encode(JSON.stringify(row)).byteLength + 1,
+      0,
+    );
+    assert.equal(
+      versions.reduce((total, row) => total + row.size_bytes, 0),
+      26_240_000,
+    );
+    assert.ok(actualExportBytes > 50 * 1024 * 1024);
     await assert.rejects(mutate(db, OWNER, "create", null, payload(draft())), /export_limit/);
     assert.equal(
-      (await db.query("select sum(size_bytes)::int bytes from public.workflow_skill_versions"))
-        .rows[0].bytes,
-      32_000_000,
+      (await db.query("select count(*)::int count from public.workflow_skill_versions")).rows[0]
+        .count,
+      820,
     );
   } finally {
     await db.close();
