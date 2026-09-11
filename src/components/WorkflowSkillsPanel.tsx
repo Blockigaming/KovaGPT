@@ -48,22 +48,29 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const retryEnvelopes = useRef(new Map<string, MutationEnvelope>());
+  const loadGenerationRef = useRef(0);
 
   const reload = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
     setLoadError(false);
     try {
       const result = await list();
       // Unserialized server-function failures can resolve as JSON error objects.
       // Keep them out of list state so this panel cannot crash the Apps page.
       if (!Array.isArray(result)) throw new Error("Invalid workflow skill list response.");
+      if (generation !== loadGenerationRef.current) return;
       setSkills(result);
     } catch {
+      if (generation !== loadGenerationRef.current) return;
       setLoadError(true);
     }
   }, [list]);
 
   useEffect(() => {
     void reload();
+    return () => {
+      loadGenerationRef.current += 1;
+    };
   }, [reload]);
 
   const mutate = async (

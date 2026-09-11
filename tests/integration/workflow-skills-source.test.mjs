@@ -59,6 +59,14 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
     home.indexOf("const loaded = loadSettings"),
   );
   assert.match(principalReset, /setPendingWorkflowSkill\(null\)/u);
+  const existingConversationUpdate = home.slice(
+    home.indexOf("const selectedWorkflowSkill = existingConversation"),
+    home.indexOf("setActiveId(nextConvId)"),
+  );
+  assert.match(
+    existingConversationUpdate,
+    /selectedWorkflowSkill \? \{ skill: selectedWorkflowSkill \} : \{\}/u,
+  );
   assert.doesNotMatch(home, /skill:\s*\{[^}]*instructions/su);
 });
 
@@ -113,6 +121,16 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /workflow_skill_idempotency_conflict/u);
   assert.match(migration, /set revision = revision \+ 1, updated_at = now\(\)/u);
   assert.match(panel, /retryEnvelopes\.current\.get\(retryKey\)/u);
+  const reload = panel.slice(
+    panel.indexOf("const reload = useCallback"),
+    panel.indexOf("const mutate"),
+  );
+  const listGuard = reload.indexOf("generation !== loadGenerationRef.current");
+  assert.match(panel, /const loadGenerationRef = useRef\(0\)/u);
+  assert.ok(
+    listGuard > -1 && listGuard < reload.indexOf("setSkills(result)"),
+    "only the latest workflow-skill list response may replace panel state",
+  );
   const responseCheck = panel.indexOf("parseWorkflowSkillMutationResult(result)");
   const envelopeCleanup = panel.indexOf("retryEnvelopes.current.delete(retryKey)");
   assert.ok(
@@ -141,11 +159,17 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     "workflow mutation must hold the shared deletion fence before checking principal state",
   );
   assert.deepEqual(manifestEntry.functions, [
+    "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
     "list_workflow_skills",
     "mutate_workflow_skill",
     "resolve_workflow_skill",
   ]);
+  assert.match(migration, /workflow_skill_utf16_length\(name_text\) not between 1 and 120/u);
+  assert.match(
+    migration,
+    /workflow_skill_utf16_length\(resource_content\) not between 1 and 8000/u,
+  );
   assert.match(exportPolicy, /\["workflow_skill_versions", "owner_id"\]/u);
   assert.match(panel, /Workflow skills/u);
   assert.match(panel, /Save new version/u);

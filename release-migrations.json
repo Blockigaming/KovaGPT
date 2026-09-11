@@ -3164,7 +3164,7 @@
       "order": 146,
       "filename": "20260910210000_workflow_skill_packages.sql",
       "timestamp": "20260910210000",
-      "sha256": "425c58d320b7e3c286578f3a016776fd14106e4fca5a9a328bf8d6ee12cbfb4e",
+      "sha256": "742112d54b06a21b4f53b4905b32075274dbcdb79d253827488c9e9409a1d343",
       "tables": [
         "workflow_skills",
         "workflow_skill_versions",
@@ -3172,6 +3172,7 @@
         "workflow_skill_mutations"
       ],
       "functions": [
+        "workflow_skill_utf16_length",
         "workflow_skill_principal_current",
         "list_workflow_skills",
         "mutate_workflow_skill",

@@ -98,6 +98,67 @@ test("workflow skill mutations retain their replay identity until success is con
   expect(mutationBodies[1]).toBe(mutationBodies[0]);
 });
 
+test("an older workflow skill list response cannot replace mutation-fresh state", async ({
+  page,
+}) => {
+  await installAuthenticatedFixture(page);
+  await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
+  await page.route("**/api/google/status", async (route) => route.fulfill({ json: status() }));
+  let listCalls = 0;
+  let releaseInitial: (() => void) | undefined;
+  const skill = {
+    id: "44444444-4444-4444-8444-444444444444",
+    revision: 1,
+    headVersionId: "55555555-5555-4555-8555-555555555555",
+    version: 1,
+    name: "Editorial review",
+    description: "Review prose",
+    instructions: "Review every claim.",
+    resources: [],
+    digest: "a".repeat(64),
+    installationId: "66666666-6666-4666-8666-666666666666",
+    installedVersionId: "55555555-5555-4555-8555-555555555555",
+    installedVersion: 1,
+    installedName: "Editorial review",
+    created_at: "2026-09-11T00:00:00.000Z",
+    updated_at: "2026-09-11T00:00:00.000Z",
+  };
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({ json: { result: { ok: true }, context: {} } });
+      return;
+    }
+    listCalls += 1;
+    if (listCalls === 1) {
+      await new Promise<void>((resolve) => {
+        releaseInitial = resolve;
+      });
+      await route.fulfill({ json: { result: [], context: {} } });
+      return;
+    }
+    await route.fulfill({ json: { result: [skill], context: {} } });
+  });
+
+  await page.goto("/apps");
+  await expect.poll(() => listCalls).toBe(1);
+  await page.getByRole("button", { name: "New skill" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
+  await page.getByRole("textbox", { name: "Workflow instructions" }).fill("Review every claim.");
+  await page.getByRole("button", { name: "Create and install" }).click();
+  await expect.poll(() => listCalls).toBe(2);
+  await expect(page.getByRole("heading", { name: "Editorial review" })).toBeVisible();
+
+  releaseInitial!();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(page.getByRole("heading", { name: "Editorial review" })).toBeVisible();
+  await expect(page.getByText("No workflow skills yet.", { exact: false })).toHaveCount(0);
+});
+
 test("Google account selection, refresh, disconnect and reauthorization retain the displayed account", async ({
   page,
   context,

@@ -1183,6 +1183,7 @@ function KovaGPT() {
                   typeof c.memoryStartIndex === "number"
                     ? Math.min(Math.max(0, c.memoryStartIndex), priorMessages.length)
                     : undefined,
+                ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
                 updatedAt: Date.now(),
               }
             : c,

@@ -328,7 +328,12 @@ async function handleDeepResearchRequest(
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let terminalProgressEmitted = false;
       const emitProgress = (event: ResearchProgressEvent) => {
+        const terminal =
+          event.stage.id === "complete" ||
+          event.stage.status === "failed" ||
+          event.stage.status === "canceled";
         if (event.activity) {
           controller.enqueue(enc.encode(sseEvent(activityToSseDelta(event.activity))));
         }
@@ -344,6 +349,7 @@ async function handleDeepResearchRequest(
             }),
           ),
         );
+        terminalProgressEmitted ||= terminal;
       };
       try {
         const result = await runDeepResearch(prompt, {
@@ -375,6 +381,22 @@ async function handleDeepResearchRequest(
             category: "server",
             code: error.code,
           });
+          if (!terminalProgressEmitted) {
+            emitProgress({
+              stage: {
+                id: "failed",
+                label: "Research context changed",
+                status: "failed",
+                detail: error.message,
+              },
+              progress: 1,
+              activity: createToolActivityEvent(
+                "write_report",
+                "Research context changed",
+                "failed",
+              ),
+            });
+          }
           controller.enqueue(enc.encode(sseChunk(`_${error.message}_`)));
         } else {
           logSafeFailure("error", "[chat] deep research failed", options.logContext, {

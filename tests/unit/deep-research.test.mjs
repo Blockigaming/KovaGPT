@@ -55,6 +55,23 @@ test("chat route has a separate deep research execution path", () => {
   assert.equal(research.match(/await assertCurrent\(\)/gu)?.length, 3);
   assert.match(chat, /assertCurrent: assertSelectedContextsCurrent/u);
   assert.match(chat, /deep research context changed/u);
+  const contextChanged = chat.slice(
+    chat.indexOf("error instanceof ChatPreflightError", chat.indexOf("handleDeepResearchRequest")),
+    chat.indexOf(
+      "} else {",
+      chat.indexOf(
+        "error instanceof ChatPreflightError",
+        chat.indexOf("handleDeepResearchRequest"),
+      ),
+    ),
+  );
+  assert.match(contextChanged, /if \(!terminalProgressEmitted\)/u);
+  assert.match(contextChanged, /status: "failed"/u);
+  assert.ok(
+    contextChanged.indexOf("emitProgress({") <
+      contextChanged.indexOf("sseChunk(`_${error.message}_`)"),
+    "stale research context must emit terminal progress before explanatory text",
+  );
 });
 
 test("chat UI consumes and renders Deep Research lifecycle events", () => {

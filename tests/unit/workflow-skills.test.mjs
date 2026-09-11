@@ -272,6 +272,44 @@ test("the JavaScript and database limits accept the same exact 32,000 text bytes
   }
 });
 
+test("database character limits match JavaScript UTF-16 code units", async () => {
+  const accepted = normalizeWorkflowSkillDraft({
+    name: "😀".repeat(60),
+    description: "",
+    instructions: "Use the supplied process.",
+    resources: [],
+  });
+  assert.equal(accepted.name.length, 120);
+  assert.throws(
+    () =>
+      normalizeWorkflowSkillDraft({
+        name: "😀".repeat(61),
+        description: accepted.description,
+        instructions: accepted.instructions,
+        resources: accepted.resources,
+      }),
+    /workflow_skill_name_invalid/u,
+  );
+
+  const db = await fixture();
+  try {
+    const units = await db.query("select kova_private.workflow_skill_utf16_length($1)::int units", [
+      accepted.name,
+    ]);
+    assert.equal(units.rows[0].units, 120);
+    await mutate(db, OWNER, "create", null, payload(accepted));
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, {
+        ...payload(accepted),
+        name: "😀".repeat(61),
+      }),
+      /workflow_skill_invalid/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
 test("the authenticated mutation recomputes digests and requires normalized typed text", async () => {
   const db = await fixture();
   try {

@@ -2,6 +2,24 @@
 -- Installations pin one immutable version. Package text never carries a tool,
 -- credential, provider, entitlement, or execution grant.
 
+create or replace function kova_private.workflow_skill_utf16_length(p_value text)
+returns integer
+language sql
+immutable
+strict
+parallel safe
+set search_path = ''
+as $$
+  select (
+    length(p_value) +
+    length(regexp_replace(p_value, E'[\\u0000-\\uFFFF]', '', 'g'))
+  )::integer;
+$$;
+
+revoke all on function kova_private.workflow_skill_utf16_length(text)
+  from public, anon, authenticated;
+grant execute on function kova_private.workflow_skill_utf16_length(text) to service_role;
+
 create table public.workflow_skills (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -17,9 +35,11 @@ create table public.workflow_skill_versions (
   skill_id uuid not null,
   owner_id uuid not null,
   version integer not null check (version between 1 and 30),
-  name text not null check (length(name) between 1 and 120),
-  description text not null default '' check (length(description) <= 500),
-  instructions text not null check (length(instructions) between 1 and 12000),
+  name text not null check (kova_private.workflow_skill_utf16_length(name) between 1 and 120),
+  description text not null default ''
+    check (kova_private.workflow_skill_utf16_length(description) <= 500),
+  instructions text not null
+    check (kova_private.workflow_skill_utf16_length(instructions) between 1 and 12000),
   resources jsonb not null default '[]'::jsonb check (jsonb_typeof(resources) = 'array'),
   content_sha256 text not null check (content_sha256 ~ '^[a-f0-9]{64}$'),
   size_bytes integer not null check (size_bytes between 1 and 32000),
@@ -287,6 +307,9 @@ begin
     if length(name_text) not between 1 and 120
       or length(description_text) > 500
       or length(instructions_text) not between 1 and 12000
+      or kova_private.workflow_skill_utf16_length(name_text) not between 1 and 120
+      or kova_private.workflow_skill_utf16_length(description_text) > 500
+      or kova_private.workflow_skill_utf16_length(instructions_text) not between 1 and 12000
       or jsonb_array_length(p_payload->'resources') > 10
       or (p_payload->>'digest') !~ '^[a-f0-9]{64}$'
       or name_text is distinct from btrim(name_text, trim_characters)
@@ -323,6 +346,8 @@ begin
       resource_content := resource->>'content';
       if length(resource_title) not between 1 and 120
         or length(resource_content) not between 1 and 8000
+        or kova_private.workflow_skill_utf16_length(resource_title) not between 1 and 120
+        or kova_private.workflow_skill_utf16_length(resource_content) not between 1 and 8000
         or resource_title is distinct from btrim(resource_title, trim_characters)
         or resource_content is distinct from btrim(resource_content, trim_characters)
         or resource_title is distinct from translate(resource_title, prohibited_controls, '')

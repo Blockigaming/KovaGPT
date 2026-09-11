@@ -694,7 +694,8 @@
     "web_push_rpc",
     "work_sync_payload_depth_allowed",
     "work_sync_request_fingerprint",
-    "workflow_skill_principal_current"
+    "workflow_skill_principal_current",
+    "workflow_skill_utf16_length"
   ],
   "indexes": [
     "account_export_artifacts_cleanup_idx",
@@ -1798,6 +1799,7 @@
     "execute on function kova_private.track_account_export_artifact_lifetime() to service_role",
     "execute on function kova_private.validate_scheduled_task_context(uuid,jsonb,jsonb) to service_role",
     "execute on function kova_private.workflow_skill_principal_current(uuid) to service_role",
+    "execute on function kova_private.workflow_skill_utf16_length(text) to service_role",
     "execute on function public.%I() to service_role', routine)",
     "execute on function public.accept_project_invite(uuid) to authenticated, service_role",
     "execute on function public.accept_project_invite(uuid) to authenticated, service_role",
@@ -2318,6 +2320,7 @@
     "all on function kova_private.track_account_export_artifact_lifetime()\n  from public, anon, authenticated",
     "all on function kova_private.validate_scheduled_task_context(uuid,jsonb,jsonb) from public,anon,authenticated",
     "all on function kova_private.workflow_skill_principal_current(uuid)\n  from public, anon, authenticated",
+    "all on function kova_private.workflow_skill_utf16_length(text)\n  from public, anon, authenticated",
     "all on function public.%I() from public, anon, authenticated', routine)",
     "all on function public.accept_project_invite(uuid) from public, anon, authenticated",
     "all on function public.accept_project_invite(uuid) from public, anon, authenticated",
@@ -2630,5 +2633,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "d509cac4b3877674e701d2bac690c706b566dbf72f40a0b0cf90ef64b5f405e9"
+  "sha256": "0f3affcf32cb48857a804048c8b23dc1c737c5e46b19c39c4ba46ab2e1e758e0"
 }

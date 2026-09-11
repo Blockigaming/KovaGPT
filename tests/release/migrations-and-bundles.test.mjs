@@ -22,6 +22,7 @@ test("function inventories preserve plain schema-qualified function names", asyn
     (entry) => entry.filename === "20260905005111_scheduled_tasks_activation_foundation.sql",
   );
   assert.deepEqual(workflowSkills.functions, [
+    "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
     "list_workflow_skills",
     "mutate_workflow_skill",
