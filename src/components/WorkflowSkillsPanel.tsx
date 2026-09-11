@@ -51,7 +51,11 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
   const reload = useCallback(async () => {
     setLoadError(false);
     try {
-      setSkills(await list());
+      const result = await list();
+      // Unserialized server-function failures can resolve as JSON error objects.
+      // Keep them out of list state so this panel cannot crash the Apps page.
+      if (!Array.isArray(result)) throw new Error("Invalid workflow skill list response.");
+      setSkills(result);
     } catch {
       setLoadError(true);
     }

@@ -27,6 +27,29 @@ const status = (accounts = [first, second], selected: string | null = accountA, 
   selectionRevision: revision,
 });
 
+test("workflow skill load failures stay contained and can be retried", async ({ page }) => {
+  await installAuthenticatedFixture(page);
+  await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
+  await page.route("**/api/google/status", async (route) => route.fulfill({ json: status() }));
+  await page.route("**/_serverFn/**", async (route) =>
+    route.fulfill({ status: 503, json: { error: "Authentication is temporarily unavailable." } }),
+  );
+  await page.goto("/apps");
+  const error = page.getByRole("alert").filter({ hasText: "Workflow skills could not be loaded." });
+  await expect(error).toBeVisible();
+  await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
+  await expect(page.getByRole("alert", { name: "We couldn't load this workspace" })).toHaveCount(0);
+
+  // Restore a valid empty list through the same transport and exercise the real retry UI.
+  await page.route("**/_serverFn/**", async (route) =>
+    route.fulfill({ json: { result: [], context: {} } }),
+  );
+  await error.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
+  await expect(error).toHaveCount(0);
+  await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
+});
+
 test("Google account selection, refresh, disconnect and reauthorization retain the displayed account", async ({
   page,
   context,
