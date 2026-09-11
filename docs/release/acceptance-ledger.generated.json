@@ -1,0 +1,1720 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": [
+    "docs/release/acceptance-ledger.md",
+    "docs/product-parity/capability-audit.json",
+    "docs/release-reconciliation/test-inventory.json"
+  ],
+  "reconciledAt": "2026-09-10",
+  "auditedMainCommit": "b046727e3336b0f8df48a8097ad131e94cbf4ffe",
+  "provisionalOverallProgress": 76.5,
+  "progressRecalculated": false,
+  "exactHeadEvidence": {
+    "pullRequest": 318,
+    "pullRequestHead": "6869d6c122180a290f39f59d8ae88be39fd9f252",
+    "workflows": [
+      { "id": 34491377736, "name": "KovaGPT CI", "conclusion": "success" },
+      { "id": 34491377765, "name": "Work Sandbox Isolation", "conclusion": "success" },
+      { "id": 34491377790, "name": "Azure Container Readiness", "conclusion": "success" }
+    ]
+  },
+  "verification": {
+    "masterAreas": 27,
+    "stagesPerArea": 5,
+    "acceptanceRows": 135,
+    "uniqueAcceptanceRows": 135,
+    "evidencePaths": 144,
+    "missingEvidencePaths": 0,
+    "retainedLegacyTests": 140,
+    "missingRetainedLegacyTests": 0,
+    "currentTestFiles": 490,
+    "currentTestInventorySha256": "11bf0cf47c32ba91559a9e9daccada41abaefc163625ace1bbbb778e1a4ccaa6",
+    "statusCounts": {
+      "accepted": 22,
+      "verified_for_implemented_scope": 54,
+      "not_verified": 54,
+      "partial": 5
+    }
+  },
+  "rows": [
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Streaming, stop, edit, retry, regenerate, branching, history, and Temporary Chat tests are integrated.",
+      "evidence": [
+        "src/lib/chat-history-controller.mjs",
+        "src/lib/chat-store.ts",
+        "src/routes/api/chat.ts"
+      ],
+      "boundary": "Real provider, authenticated persistence, and production smoke proof."
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/chat-history-database.test.mjs",
+        "tests/unit/chat-history-sync.test.mjs",
+        "tests/unit/temporary-chat-retry-privacy.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real provider, authenticated persistence, and production smoke proof."
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real provider, authenticated persistence, and production smoke proof."
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Draft, keyboard, paste/drop, attachment, file extraction, and mobile composer contracts are integrated.",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/lib/composer-paste.ts",
+        "src/lib/document-extraction/office.mjs",
+        "src/lib/document-extraction/pdf.ts"
+      ],
+      "boundary": "Real upload/storage/provider and physical-device proof."
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/composer-keyboard.test.mjs",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real upload/storage/provider and physical-device proof."
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real upload/storage/provider and physical-device proof."
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Client modes map to server-enforced roles, plans, budgets, and configured model capabilities.",
+      "evidence": [
+        "src/lib/modes.ts",
+        "src/lib/work-model-policy.mjs",
+        "src/lib/work-execution.server.ts"
+      ],
+      "boundary": "Re-audit the deployed model lineup, quota, latency, and Azure availability."
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/work-model-policy.test.mjs",
+        "tests/unit/work-model-server.test.mjs",
+        "tests/e2e/work-model-controls.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Re-audit the deployed model lineup, quota, latency, and Azure availability."
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Re-audit the deployed model lineup, quota, latency, and Azure availability."
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Bounded web/image/shopping/local discovery routes, provider normalization, admission, and UI tests are integrated.",
+      "evidence": ["src/lib/ai/search.server.ts", "src/routes/maps.tsx"],
+      "boundary": "Provider credentials, live quotas, current results, and Maps release decision."
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": ["tests/unit/search-provider.test.mjs"],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Provider credentials, live quotas, current results, and Maps release decision."
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Provider credentials, live quotas, current results, and Maps release decision."
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated.",
+      "evidence": [
+        "src/lib/ai/deep-research.server.ts",
+        "src/lib/research-persistence-authorization.server.mjs",
+        "src/routes/research-planner.tsx"
+      ],
+      "boundary": "Live provider runs, Supabase persistence, export, and production recovery proof."
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/deep-research.test.mjs",
+        "tests/unit/deep-research-persistence.test.mjs",
+        "tests/unit/research-persistence-authorization.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live provider runs, Supabase persistence, export, and production recovery proof."
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live provider runs, Supabase persistence, export, and production recovery proof."
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Isolated Work execution, approvals, browser takeover, tools, outputs, durable events, and bounded specialist runs exist.",
+      "evidence": [
+        "work-runner/provider.mjs",
+        "work-runner/browser-egress.mjs",
+        "src/lib/work-browser.server.ts"
+      ],
+      "boundary": "Hosted runner/container and real provider acceptance are required."
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/work-runner-service.test.mjs",
+        "tests/unit/work-terminal.test.mjs",
+        "tests/e2e/work-browser-takeover.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Hosted runner/container and real provider acceptance are required."
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Hosted runner/container and real provider acceptance are required."
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Durable protocol, revisions, directions, questions, approvals, recovery, accounting, outputs, and specialist runs exist.",
+      "evidence": [
+        "src/lib/work-execution-protocol.mjs",
+        "src/lib/work-execution-driver.server.ts",
+        "work-runner/provider.mjs"
+      ],
+      "boundary": "Live provider, persistence, and production recovery proof remain required."
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/work-execution-migration.test.mjs",
+        "tests/unit/work-admission-recovery.test.mjs",
+        "tests/unit/work-output-publisher.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live provider, persistence, and production recovery proof remain required."
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live provider, persistence, and production recovery proof remain required."
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "CRUD, recurrence, pause/resume, history, conditions, event sources, and execution contracts are integrated.",
+      "evidence": [
+        "src/lib/scheduled-tasks.functions.ts",
+        "src/lib/scheduled-task-events.server.ts",
+        "src/lib/scheduled-execution.server.ts"
+      ],
+      "boundary": "Scheduler heartbeat, live callbacks, OAuth access, budget policy, and notification delivery."
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/scheduled-tasks-foundation.test.mjs",
+        "tests/unit/task-event-ingress.test.mjs",
+        "tests/e2e/scheduled-task-editor.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Scheduler heartbeat, live callbacks, OAuth access, budget policy, and notification delivery."
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Scheduler heartbeat, live callbacks, OAuth access, budget policy, and notification delivery."
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Lifecycle, roles, files, instructions, memory, chats, templates, collaboration, and deletion safety exist.",
+      "evidence": [
+        "src/lib/project-workspace.functions.ts",
+        "src/routes/api/project-files.ts",
+        "src/lib/use-canvas-collaboration.ts"
+      ],
+      "boundary": "Full approved Project retention policy/execution is missing; live two-user and storage cleanup proof remains."
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/project-canvas-collaboration.test.mjs",
+        "tests/unit/collaboration-client.test.mjs",
+        "tests/e2e/projects-library-workspaces.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Full approved Project retention policy/execution is missing; live two-user and storage cleanup proof remains."
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Full approved Project retention policy/execution is missing; live two-user and storage cleanup proof remains."
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Folders, originals, private images, versions, replacement, search, organization, and quota contracts are integrated.",
+      "evidence": [
+        "src/routes/library.tsx",
+        "src/lib/library-original-files.server.mjs",
+        "src/routes/api/library/items.ts"
+      ],
+      "boundary": "Matching production schema/storage, cross-user isolation, and quota canaries."
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/library-versions-migration.test.mjs",
+        "tests/unit/library-original-runtime.test.mjs",
+        "tests/e2e/library-version-history.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Matching production schema/storage, cross-user isolation, and quota canaries."
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Matching production schema/storage, cross-user isolation, and quota canaries."
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Provider boundaries, formats, masks, history, Library flows, safety, and quota handling are integrated.",
+      "evidence": [
+        "src/routes/api/generate-image.ts",
+        "src/lib/multimodal/image-workflows.server.ts",
+        "docs/image-edit-contract.md"
+      ],
+      "boundary": "Live provider capabilities, exact outputs, storage, and quota behavior."
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/image-contract.test.mjs",
+        "tests/unit/image-provider-transport.test.mjs",
+        "tests/unit/image-principal-client.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live provider capabilities, exact outputs, storage, and quota behavior."
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live provider capabilities, exact outputs, storage, and quota behavior."
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Consent, saved memory, source attribution, settings, workspace retrieval, and Temporary Chat isolation exist.",
+      "evidence": [
+        "src/lib/memory-sources.server.mjs",
+        "src/lib/memory-write-coordinator.mjs",
+        "src/lib/workspace-search.server.ts"
+      ],
+      "boundary": "Live persistence, multi-user isolation, deletion, and final UX acceptance."
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/memory-sources.test.mjs",
+        "tests/unit/principal-settings-storage.test.mjs",
+        "tests/unit/workspace-search-migration.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live persistence, multi-user isolation, deletion, and final UX acceptance."
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live persistence, multi-user isolation, deletion, and final UX acceptance."
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Builder, immutable versions, preview, directory/fork, moderation boundaries, and principal tests are integrated.",
+      "evidence": ["src/lib/agent-definitions.functions.ts"],
+      "boundary": "Approved moderation/runtime configuration and production canaries."
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": ["tests/unit/agent-ingress-authorization.test.mjs"],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Approved moderation/runtime configuration and production canaries."
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Approved moderation/runtime configuration and production canaries."
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Connector catalog, account/OAuth boundaries, Google/GitHub tooling, and truthful disabled states exist.",
+      "evidence": [
+        "src/routes/apps.tsx",
+        "src/lib/google-oauth.server.ts",
+        "src/lib/connectors-catalog.ts"
+      ],
+      "boundary": "Reusable installed versioned skill/workflow packages remain missing; each provider needs consent and live credentials."
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/google-multiaccount.test.mjs",
+        "tests/unit/google-oauth-settlement.test.mjs",
+        "tests/unit/connectors-governance.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Reusable installed versioned skill/workflow packages remain missing; each provider needs consent and live credentials."
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Reusable installed versioned skill/workflow packages remain missing; each provider needs consent and live credentials."
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "File analysis, charts, code rendering/copy, sandboxed Work outputs, and office document contracts exist.",
+      "evidence": [
+        "work-runner/sandbox-container.mjs",
+        "work-runner/terminal.mjs",
+        "src/lib/multimodal/files.server.ts"
+      ],
+      "boundary": "Hosted sandbox/provider validation and complex real-file acceptance."
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/work-sandbox-container.test.mjs",
+        "tests/unit/work-terminal.test.mjs",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Hosted sandbox/provider validation and complex real-file acceptance."
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Hosted sandbox/provider validation and complex real-file acceptance."
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Editable writing/code, versions, selection edits, charts, export writers, and visual surfaces exist.",
+      "evidence": [
+        "src/components/ArtifactEditor.tsx",
+        "src/components/ChatChart.tsx",
+        "src/components/CanvasComments.tsx"
+      ],
+      "boundary": "Real export round trips, browser acceptance, and production storage proof."
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/canvas-autosave-policy.test.mjs",
+        "tests/unit/canvas-remote-adoption.test.mjs",
+        "tests/e2e/multimodal-canvas.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real export round trips, browser acceptance, and production storage proof."
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real export round trips, browser acceptance, and production storage proof."
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Static Site lifecycle, versions, access controls, Work output handoff, cleanup, export, and isolated server exist.",
+      "evidence": [
+        "src/lib/sites-hosting.server.ts",
+        "sites-server/index.mjs",
+        "src/lib/account-export-sites.mjs"
+      ],
+      "boundary": "The approved co-editing floor remains narrower/incomplete; hosting activation and publish canaries require approval."
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/sites-lifecycle.test.mjs",
+        "tests/unit/sites-assets.test.mjs",
+        "tests/unit/account-export-sites.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "The approved co-editing floor remains narrower/incomplete; hosting activation and publish canaries require approval."
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "The approved co-editing floor remains narrower/incomplete; hosting activation and publish canaries require approval."
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Chat sharing, Project roles, comments/presence, branch/history continuity, and cross-device source contracts exist.",
+      "evidence": [
+        "src/lib/shared-chats.functions.ts",
+        "src/lib/chat-history-bridge.ts",
+        "src/lib/work-sync-client.ts"
+      ],
+      "boundary": "Live two-account Realtime, revocation, share, and cross-device verification."
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/chat-history-sync.test.mjs",
+        "tests/unit/work-sync-client.test.mjs",
+        "tests/unit/project-canvas-collaboration.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live two-account Realtime, revocation, share, and cross-device verification."
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live two-account Realtime, revocation, share, and cross-device verification."
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "In-app notification center, push lifecycle, scheduled delivery boundaries, and revocation are integrated.",
+      "evidence": [
+        "src/lib/notifications.server.ts",
+        "src/lib/pwa/push.server.ts",
+        "public/kova-sw.js"
+      ],
+      "boundary": "Real delivery provider, browser permission, Safari/device, and production proof."
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/web-push-lifecycle.test.mjs",
+        "tests/unit/web-push-crypto.test.mjs",
+        "tests/e2e/pwa-service-worker.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real delivery provider, browser permission, Safari/device, and production proof."
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real delivery provider, browser permission, Safari/device, and production proof."
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Private progress, practice flow, chat controls, and study workspace tests are integrated.",
+      "evidence": [
+        "src/routes/study.tsx",
+        "src/lib/study.functions.ts",
+        "src/lib/study-policy.mjs"
+      ],
+      "boundary": "Real account persistence and final classroom/user acceptance."
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/study-progress-sql.test.mjs",
+        "tests/unit/study-policy.test.mjs",
+        "tests/e2e/study-practice.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real account persistence and final classroom/user acceptance."
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real account persistence and final classroom/user acceptance."
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Invitation, consent, roles, revocation, erasure protections, and bounded contact delivery exist.",
+      "evidence": [
+        "src/lib/family.functions.ts",
+        "src/routes/trusted-contacts.tsx",
+        "src/lib/trusted-contact-policy.mjs"
+      ],
+      "boundary": "Age, regional/legal policy, actual delivery, and authorized-adult review."
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/family-atomic-membership.test.mjs",
+        "tests/unit/trusted-contact-migration.test.mjs",
+        "tests/unit/trusted-contact-runtime.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Age, regional/legal policy, actual delivery, and authorized-adult review."
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Age, regional/legal policy, actual delivery, and authorized-adult review."
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Sign-in/recovery/MFA, account controls, export, deletion fence, cleanup, and privacy contracts exist.",
+      "evidence": [
+        "src/routes/api/account.ts",
+        "src/lib/account-export.server.ts",
+        "src/lib/account-storage-cleanup.server.ts"
+      ],
+      "boundary": "Live email/OAuth/MFA, migration, multi-account, erasure, and production proof."
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/auth-security.test.mjs",
+        "tests/unit/account-deletion-state.test.mjs",
+        "tests/unit/account-export-generation.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live email/OAuth/MFA, migration, multi-account, erasure, and production proof."
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live email/OAuth/MFA, migration, multi-account, erasure, and production proof."
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Checkout, portal, webhook entitlement, usage, developer billing/funding, and pricing administration exist.",
+      "evidence": [
+        "src/utils/payments.functions.ts",
+        "src/lib/pricing/developer-billing.server.ts",
+        "src/lib/pricing/developer-funding.server.ts"
+      ],
+      "boundary": "Live Pro is still $89 instead of approved $80; tax, refund, proration, retention, payment, and webhook canaries remain."
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/stripe-checkout-authority.test.mjs",
+        "tests/unit/developer-billing-migration.test.mjs",
+        "tests/unit/pricing-administration.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Live Pro is still $89 instead of approved $80; tax, refund, proration, retention, payment, and webhook canaries remain."
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Live Pro is still $89 instead of approved $80; tax, refund, proration, retention, payment, and webhook canaries remain."
+    },
+    {
+      "areaId": "24",
+      "area": "Web and PWA",
+      "id": "24.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Responsive shell, install/offline/share intake, service worker, and push lifecycle are integrated.",
+      "evidence": ["public/kova-sw.js", "src/platform/capabilities.ts"],
+      "boundary": "Physical Safari/mobile/accessibility testing remains. Native applications, voice, microphone, and recording are excluded."
+    },
+    {
+      "areaId": "24",
+      "area": "Web and PWA",
+      "id": "24.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/e2e/pwa-service-worker.spec.ts",
+        "tests/e2e/workspace-visual-coherence.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "24",
+      "area": "Web and PWA",
+      "id": "24.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "24",
+      "area": "Web and PWA",
+      "id": "24.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Physical Safari/mobile/accessibility testing remains. Native applications, voice, microphone, and recording are excluded."
+    },
+    {
+      "areaId": "24",
+      "area": "Web and PWA",
+      "id": "24.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Physical Safari/mobile/accessibility testing remains. Native applications, voice, microphone, and recording are excluded."
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Scoped keys/projects, Responses, models, quotes, files, SDK, MCP tools, OAuth consent, and revocation are integrated.",
+      "evidence": [
+        "src/lib/pricing/developer-platform.server.ts",
+        "src/lib/pricing/developer-mcp.server.ts",
+        "sdk/javascript"
+      ],
+      "boundary": "Real issuer/client registration, secrets, billing, public activation, and production canaries."
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/developer-platform-ingress.test.mjs",
+        "tests/unit/developer-mcp.test.mjs",
+        "tests/unit/developer-files-migration.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real issuer/client registration, secrets, billing, public activation, and production canaries."
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real issuer/client registration, secrets, billing, public activation, and production canaries."
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Roles, invitations, domains, SSO adapter, SCIM Users/Groups, audit, and deletion protections are integrated.",
+      "evidence": [
+        "src/routes/organization.tsx",
+        "src/lib/organization-domain.server.ts",
+        "src/lib/organization-account-deletion.server.ts"
+      ],
+      "boundary": "Approved retention policy/execution is missing; IdP/domain/legal setup and live tenant tests remain."
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/unit/organization-administration.test.mjs",
+        "tests/unit/organization-boundaries.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement."
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Approved retention policy/execution is missing; IdP/domain/legal setup and live tenant tests remain."
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Approved retention policy/execution is missing; IdP/domain/legal setup and live tenant tests remain."
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Workspace Intelligence, Timeline, Knowledge Graph, Prompt Studio, Context Packs, Goals, and Project health exist.",
+      "evidence": [
+        "src/lib/workspace-evolution.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/lib/workspace-search.server.ts"
+      ],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance."
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "evidence": [
+        "tests/integration/workspace-intelligence-source.test.mjs",
+        "tests/integration/future-workspace-source.test.mjs",
+        "tests/unit/workspace-search-policy.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior."
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_implemented_scope",
+      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/318@6869d6c122180a290f39f59d8ae88be39fd9f252",
+        "github:actions/34491377736:KovaGPT CI:success",
+        "github:actions/34491377765:Work Sandbox Isolation:success",
+        "github:actions/34491377790:Azure Container Readiness:success"
+      ],
+      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment."
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance."
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance."
+    }
+  ]
+}

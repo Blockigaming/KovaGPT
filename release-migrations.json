@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 145,
-  "latest": "20260910143000_work_specialist_state_transitions.sql",
+  "count": 146,
+  "latest": "20260910210000_workflow_skill_packages.sql",
   "migrations": [
     {
       "order": 1,
@@ -2934,6 +2934,34 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 146,
+      "filename": "20260910210000_workflow_skill_packages.sql",
+      "timestamp": "20260910210000",
+      "sha256": "9b32cd971d14013ae2e14a87fdeac0cb78f1053424e5e90a13ec8ffb7fca0eed",
+      "tables": [
+        "workflow_skills",
+        "workflow_skill_versions",
+        "workflow_skill_installations",
+        "workflow_skill_mutations"
+      ],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "workflow_skills",
+        "workflow_skill_versions",
+        "workflow_skill_installations",
+        "workflow_skill_mutations"
+      ],
+      "policies": [],
+      "indexes": [
+        "workflow_skills_owner_recent_idx",
+        "workflow_skill_versions_owner_idx",
+        "workflow_skill_installations_owner_idx"
+      ]
     }
   ]
 }

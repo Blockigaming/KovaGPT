@@ -112,6 +112,7 @@ import {
   type Activity,
   type Message,
   type TemporaryChatContext,
+  type ConversationWorkflowSkill,
   deriveTitle,
   branchConversation,
   chatStoragePrincipal,
@@ -126,6 +127,7 @@ import {
   markAssistantStopped,
   newId,
   normalizeResponseSources,
+  isConversationWorkflowSkill,
   saveConversations,
   persistTemporaryConversation,
   saveDraft,
@@ -234,6 +236,8 @@ function KovaGPT() {
     setWorkspaceReloadKey((current) => current + 1);
   }, []);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
+  const [pendingWorkflowSkill, setPendingWorkflowSkill] =
+    useState<ConversationWorkflowSkill | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
   const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
@@ -553,6 +557,7 @@ function KovaGPT() {
       setInput("");
       setAttachments([]);
       setSelectedTool(null);
+      setPendingWorkflowSkill(null);
       setEditingMessage(null);
       setShareChatId(null);
       setCommandOpen(false);
@@ -635,6 +640,15 @@ function KovaGPT() {
     consume<string>("kova-app-chat-context", (appContext) => {
       if (typeof appContext !== "string") throw new Error("invalid_app_handoff");
       return () => setInput(appContext);
+    });
+
+    consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {
+      if (!isConversationWorkflowSkill(skill)) throw new Error("invalid_workflow_skill_handoff");
+      return () => {
+        setActiveId(null);
+        setPendingWorkflowSkill(skill);
+        setInput(`Use the “${skill.name}” workflow skill for this request: `);
+      };
     });
 
     consume<{
@@ -854,6 +868,7 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
     setEditingMessage(null);
+    setPendingWorkflowSkill(null);
   }, [setConversations]);
 
   useEffect(() => {
@@ -1065,6 +1080,7 @@ function KovaGPT() {
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
       const isNewConversation = !retryConversationId && !existingConversation;
+      const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
       const userMsg: Message = {
         id: newId(),
@@ -1133,6 +1149,7 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
+            ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
@@ -1152,6 +1169,7 @@ function KovaGPT() {
         );
       });
       setActiveId(nextConvId);
+      setPendingWorkflowSkill(null);
       setInput("");
       setAttachments([]);
       setEditingMessage(null);
@@ -1246,6 +1264,12 @@ function KovaGPT() {
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
+            skill: selectedWorkflowSkill
+              ? {
+                  installationId: selectedWorkflowSkill.installationId,
+                  versionId: selectedWorkflowSkill.versionId,
+                }
+              : undefined,
             mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
             // Main-chat ids are device-local until a user-owned memory row
@@ -1566,6 +1590,7 @@ function KovaGPT() {
       isLoaded,
       isSignedIn,
       userKey,
+      pendingWorkflowSkill,
     ],
   );
 
@@ -1760,6 +1785,14 @@ function KovaGPT() {
                 placement="topbar"
               />
             )}
+            {(active?.skill ?? pendingWorkflowSkill) ? (
+              <span
+                className="ml-2 max-w-48 truncate rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                title={`Workflow skill: ${(active?.skill ?? pendingWorkflowSkill)!.name}`}
+              >
+                Skill: {(active?.skill ?? pendingWorkflowSkill)!.name}
+              </span>
+            ) : null}
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">

@@ -1,7 +1,7 @@
 # KovaGPT acceptance ledger
 
 Reconciled **2026-09-10** against integrated `main` commit
-`191175105fb9018a683ca3dcb40c56994120689d`.
+`b046727e3336b0f8df48a8097ad131e94cbf4ffe`.
 
 This is the current high-level acceptance ledger. It replaces old percentage claims in historical
 parity and reconciliation documents, but it does not erase those evidence snapshots. Passing source
@@ -9,12 +9,12 @@ checks is not production proof.
 
 ## Evidence baseline
 
-- PR #316's reviewed tree is the tree merged into the exact `main` commit above.
-- Exact-head KovaGPT CI run #2075 passed, including 1,606 unit tests, 9 API tests, integration,
-  browser, visual, accessibility, release-E2E, build, bundle, and release-contract gates.
-- Exact-head Azure Container Readiness run #1152 passed.
-- The isolated-database job intentionally skipped because PR #316 changed no migrations. This does
-  not prove that the complete source migration lineage matches production.
+- PR #318's reviewed tree is the tree merged into the exact `main` commit above.
+- Exact-head KovaGPT CI run #2087 passed, including unit, API, integration, browser, visual,
+  accessibility, release-E2E, build, bundle, and release-contract gates.
+- Exact-head Work Sandbox Isolation run #40 and Azure Container Readiness run #1162 passed.
+- The isolated-database job passed the complete 145-migration source lineage, including the new
+  specialist-state transition migration. This does not prove that source lineage matches production.
 - No current production deployment, database migration, Cloudflare edge/origin configuration,
   Stripe configuration, or production smoke result is certified by this ledger.
 - Overall progress therefore remains the conservative provisional **76.5%**. A green source tree
@@ -38,8 +38,8 @@ checks is not production proof.
 | 03  | Models, modes, and reasoning           | Implemented; external/manual                       | Client modes map to server-enforced roles, plans, budgets, and configured model capabilities.                             | Re-audit the deployed model lineup, quota, latency, and Azure availability.                                               |
 | 04  | Web and product discovery              | Implemented; external/manual                       | Bounded web/image/shopping/local discovery routes, provider normalization, admission, and UI tests are integrated.        | Provider credentials, live quotas, current results, and Maps release decision.                                            |
 | 05  | Deep Research                          | Implemented; external/manual                       | Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated. | Live provider runs, Supabase persistence, export, and production recovery proof.                                          |
-| 06  | Agent tools and actions                | Partial                                            | Isolated Work execution, approvals, browser takeover, tools, outputs, and durable event surfaces exist.                   | Bounded same-owner specialist subruns with aggregate budgets and cascading lifecycle remain missing.                      |
-| 07  | Long-running Work                      | Partial; external/manual                           | Durable run protocol, revisions, directions, questions, approvals, recovery, accounting, and outputs exist.               | Specialist subruns remain missing; hosted runner/container and real provider acceptance are required.                     |
+| 06  | Agent tools and actions                | Implemented; external/manual                       | Isolated Work execution, approvals, browser takeover, tools, outputs, durable events, and bounded specialist runs exist.  | Hosted runner/container and real provider acceptance are required.                                                        |
+| 07  | Long-running Work                      | Implemented; external/manual                       | Durable protocol, revisions, directions, questions, approvals, recovery, accounting, outputs, and specialist runs exist.  | Live provider, persistence, and production recovery proof remain required.                                                |
 | 08  | Scheduled Tasks                        | Implemented; external/manual                       | CRUD, recurrence, pause/resume, history, conditions, event sources, and execution contracts are integrated.               | Scheduler heartbeat, live callbacks, OAuth access, budget policy, and notification delivery.                              |
 | 09  | Projects                               | Partial; external/manual                           | Lifecycle, roles, files, instructions, memory, chats, templates, collaboration, and deletion safety exist.                | Full approved Project retention policy/execution is missing; live two-user and storage cleanup proof remains.             |
 | 10  | Library and files                      | Implemented; external/manual                       | Folders, originals, private images, versions, replacement, search, organization, and quota contracts are integrated.      | Matching production schema/storage, cross-user isolation, and quota canaries.                                             |
@@ -63,23 +63,23 @@ checks is not production proof.
 
 ## Older gap reconciliation
 
-| Older item                                 | Current status on exact `main` | Evidence boundary                                                                                                             |
-| ------------------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Bounded Work specialist/subrun execution   | Missing                        | Legacy specialist records render, but the legacy worker intentionally fails closed and no bounded child-run directive exists. |
-| Reusable installed workflow/skill packages | Missing                        | Apps/connectors and saved prompts are not versioned installed instruction/resource packages.                                  |
-| Custom Kovas                               | Integrated                     | Source, migrations, routes, lifecycle tests, and browser principal tests are present.                                         |
-| Organization SCIM                          | Integrated                     | SCIM migration, server/routes, controls, policy/unit tests, and browser tests are present.                                    |
-| Project retention                          | Missing/partial                | Project deletion and source retirement exist; the broader approved retention lifecycle does not.                              |
-| Developer MCP OAuth                        | Integrated                     | Discovery endpoints, S256 consent, token/refresh lifecycle, revocation, routes, and tests are present.                        |
-| Developer private files                    | Integrated                     | Private text-file schema, driver, APIs, MCP tools, export, and tests are present.                                             |
-| Discovery                                  | Integrated                     | UI/API/provider/admission migration and unit/browser coverage are present.                                                    |
-| Sites co-editing                           | Partial                        | Site lifecycle and access sessions exist, but the separately scoped accepted-editor workflow is not complete.                 |
-| Library image quota                        | Integrated                     | The `20260905033500_library_image_storage_quota.sql` migration and focused tests are present.                                 |
+| Older item                                 | Current status on exact `main` | Evidence boundary                                                                                                                  |
+| ------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Bounded Work specialist/subrun execution   | Integrated                     | PR #318 adds one-to-four same-owner sequential specialist phases with aggregate budgets, bounded context, and cascading lifecycle. |
+| Reusable installed workflow/skill packages | Missing                        | Apps/connectors and saved prompts are not versioned installed instruction/resource packages.                                       |
+| Custom Kovas                               | Integrated                     | Source, migrations, routes, lifecycle tests, and browser principal tests are present.                                              |
+| Organization SCIM                          | Integrated                     | SCIM migration, server/routes, controls, policy/unit tests, and browser tests are present.                                         |
+| Project retention                          | Missing/partial                | Project deletion and source retirement exist; the broader approved retention lifecycle does not.                                   |
+| Developer MCP OAuth                        | Integrated                     | Discovery endpoints, S256 consent, token/refresh lifecycle, revocation, routes, and tests are present.                             |
+| Developer private files                    | Integrated                     | Private text-file schema, driver, APIs, MCP tools, export, and tests are present.                                                  |
+| Discovery                                  | Integrated                     | UI/API/provider/admission migration and unit/browser coverage are present.                                                         |
+| Sites co-editing                           | Partial                        | Site lifecycle and access sessions exist, but the separately scoped accepted-editor workflow is not complete.                      |
+| Library image quota                        | Integrated                     | The `20260905033500_library_image_storage_quota.sql` migration and focused tests are present.                                      |
 
 ## Remaining route to 100%
 
-1. Finish the three clear autonomous gaps: Work subruns, reusable skill/workflow packages, and
-   Project retention; separately decide the exact Sites co-editing floor.
+1. Finish the two clear autonomous gaps: reusable skill/workflow packages and Project retention;
+   separately decide the exact Sites co-editing floor.
 2. Continue the highest-impact chat and mobile usability finishing with focused regression coverage.
 3. Re-run the complete gate set on one exact launch-candidate `main` commit, including isolated
    database verification when migrations are involved.
@@ -89,6 +89,9 @@ checks is not production proof.
 5. Complete legal, commercial, security, age, retention, and account decisions, then record final
    interface acceptance.
 
-This ledger covers all 27 master product areas. Granular requirement-by-requirement acceptance rows
-still need to be migrated from the older matrices and test inventories before the percentage can be
-treated as mathematically authoritative.
+The generated [granular ledger](acceptance-ledger.generated.json) expands all 27 master product areas
+across source, local automation, hosted CI, staging, and production for 135 independently classified
+rows. `npm run release:acceptance-ledger` verifies the row set, source/test evidence paths, retained
+legacy test inventory, exact audited commit, and generated snapshot. The percentage remains
+provisional because the ledger intentionally gives no credit formula to unverified staging,
+production, policy, account, or final-interface evidence.

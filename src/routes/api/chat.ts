@@ -761,6 +761,29 @@ export const Route = createFileRoute("/api/chat")({
               if (!customKova.allows("images")) isImageRequest = false;
             }
 
+            // Workflow skills are exact, owner-scoped instruction/resource
+            // snapshots. Resolving one never changes tools, credentials,
+            // entitlements, model access, or approval policy.
+            let workflowSkill: Awaited<
+              ReturnType<typeof import("@/lib/workflow-skills.server").resolveWorkflowSkill>
+            > | null = null;
+            if (ingress.skill) {
+              if (!auth?.emailVerified)
+                return Response.json(
+                  { error: "Verify your account to use a workflow skill." },
+                  { status: 403 },
+                );
+              workflowSkill = await preflight.run("workflow_skill", async (signal) => {
+                const { resolveWorkflowSkill } = await import("@/lib/workflow-skills.server");
+                return resolveWorkflowSkill(auth.supabaseAdmin, auth.userId, ingress.skill, signal);
+              });
+            }
+
+            const assertSelectedContextsCurrent = async (signal: AbortSignal) => {
+              await customKova?.assertCurrent(signal);
+              await workflowSkill?.assertCurrent(signal);
+            };
+
             // Deep Research is a paid, high-cost operation. Authorize it before
             // checking or invoking any AI/search provider so forged clientTool
             // values cannot become a denial-of-wallet path.
@@ -875,7 +898,7 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (quota) return quota;
               }
-              await customKova?.assertCurrent(request.signal);
+              await assertSelectedContextsCurrent(request.signal);
               return handleImageRequest(lastText, logContext);
             }
 
@@ -1080,7 +1103,7 @@ export const Route = createFileRoute("/api/chat")({
                 const result = await preflight.run(
                   "web_search",
                   async (signal) => {
-                    await customKova?.assertCurrent(signal);
+                    await assertSelectedContextsCurrent(signal);
                     return searchWeb(lastText, {
                       wantsNews: clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
                       signal,
@@ -1388,6 +1411,7 @@ export const Route = createFileRoute("/api/chat")({
                     projectBlock +
                     chatWorkspaceBlock +
                     (customKova?.block ?? "") +
+                    (workflowSkill?.block ?? "") +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
@@ -1580,7 +1604,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
-                  await customKova?.assertCurrent(hopCtl.signal);
+                  await assertSelectedContextsCurrent(hopCtl.signal);
                   providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
@@ -1750,7 +1774,7 @@ export const Route = createFileRoute("/api/chat")({
                         content: JSON.stringify({ error: "tool_not_allowed" }),
                       };
                     try {
-                      await customKova?.assertCurrent(request.signal);
+                      await assertSelectedContextsCurrent(request.signal);
                     } catch {
                       return {
                         role: "tool",
@@ -1866,7 +1890,7 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
-              await customKova?.assertCurrent(request.signal);
+              await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,

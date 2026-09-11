@@ -40,6 +40,7 @@ import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
+import { WorkflowSkillsPanel } from "@/components/WorkflowSkillsPanel";
 import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
@@ -1351,6 +1352,8 @@ function AppsPage() {
             </section>
 
             <GitHubManager key={principal ?? "unresolved"} />
+
+            <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
 
             {filtered.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
