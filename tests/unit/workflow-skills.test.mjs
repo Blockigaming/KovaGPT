@@ -394,18 +394,23 @@ test("stale selections are actionable and non-retryable while backend failures r
   const selection = { installationId: crypto.randomUUID(), versionId: crypto.randomUUID() };
   const callerController = new AbortController();
   let resolutionSignal;
-  const admin = (code) => ({
+  const admin = (code, message) => ({
     rpc() {
       return {
         abortSignal: async (signal) => {
           resolutionSignal = signal;
-          return { data: null, error: { code } };
+          return { data: null, error: { code, message } };
         },
       };
     },
   });
   await assert.rejects(
-    resolveWorkflowSkill(admin("42501"), OWNER, selection, callerController.signal),
+    resolveWorkflowSkill(
+      admin("42501", "workflow_skill_selection_changed"),
+      OWNER,
+      selection,
+      callerController.signal,
+    ),
     (error) => {
       assert.ok(error instanceof WorkflowSkillAccessError);
       assert.equal(error.status, 403);
@@ -419,7 +424,21 @@ test("stale selections are actionable and non-retryable while backend failures r
   callerController.abort();
   assert.equal(resolutionSignal.aborted, true);
   await assert.rejects(
-    resolveWorkflowSkill(admin("XX000"), OWNER, selection, new AbortController().signal),
+    resolveWorkflowSkill(
+      admin("42501", "permission denied for function resolve_workflow_skill"),
+      OWNER,
+      selection,
+      new AbortController().signal,
+    ),
+    (error) => error.status === 503 && error.retryable === true,
+  );
+  await assert.rejects(
+    resolveWorkflowSkill(
+      admin("XX000", "database unavailable"),
+      OWNER,
+      selection,
+      new AbortController().signal,
+    ),
     (error) => error.status === 503 && error.retryable === true,
   );
 });

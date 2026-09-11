@@ -8,6 +8,14 @@ type RpcResult = PromiseLike<{ data: unknown; error: { code?: string; message?: 
 type AbortableRpcResult = RpcResult & { abortSignal: (signal: AbortSignal) => RpcResult };
 type RpcAdmin = { rpc: (name: string, args: Record<string, unknown>) => AbortableRpcResult };
 
+function isSelectionAccessError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42501" &&
+    (error.message === "workflow_skill_denied" ||
+      error.message === "workflow_skill_selection_changed")
+  );
+}
+
 export type ResolvedWorkflowSkill = WorkflowSkillSelection & {
   skillId: string;
   version: number;
@@ -51,7 +59,8 @@ async function resolveRecord(
     ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
     : AbortSignal.timeout(10_000);
   const result = await pending.abortSignal(deadline);
-  if (result.error) throw new WorkflowSkillAccessError(result.error.code === "42501" ? 403 : 503);
+  if (result.error)
+    throw new WorkflowSkillAccessError(isSelectionAccessError(result.error) ? 403 : 503);
   if (!result.data) throw new WorkflowSkillAccessError(503);
   try {
     return buildWorkflowSkillBlock(result.data);
