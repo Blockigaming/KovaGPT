@@ -86,6 +86,13 @@ const TemporaryChatBanner = lazy(() =>
 );
 const COMPLETE = "complete" as const;
 const RESEARCH_CANCELED = "canceled" as const;
+
+function clearRetryTimer(timer: { current: number | null }) {
+  if (timer.current === null) return;
+  window.clearTimeout(timer.current);
+  timer.current = null;
+}
+
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import { consumeOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -437,10 +444,7 @@ function KovaGPT() {
     abortRef.current = null;
     inFlightTargetRef.current = null;
     inFlightRef.current = false;
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    clearRetryTimer(retryTimerRef);
     setIsStreaming(false);
     setTempChat(false);
     setTempChatContext("clean");
@@ -546,10 +550,7 @@ function KovaGPT() {
       abortRef.current = null;
       inFlightTargetRef.current = null;
       inFlightRef.current = false;
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
+      clearRetryTimer(retryTimerRef);
       lastLoadedDraftRef.current = null;
       setConversationState({ principal: null, items: [] });
       setSettings(DEFAULT_SETTINGS);
@@ -703,6 +704,16 @@ function KovaGPT() {
   const selectedWorkflowSkill = active?.skill ?? pendingWorkflowSkill;
 
   const clearWorkflowSkill = useCallback(() => {
+    clearRetryTimer(retryTimerRef);
+    // A queued automatic retry and an already-rendered Retry toast both capture
+    // the old skill selection. Make each closure inert before clearing it.
+    retryGenerationRef.current += 1;
+    if (active?.id) {
+      retryActionEpochRef.current.set(
+        active.id,
+        (retryActionEpochRef.current.get(active.id) ?? 0) + 1,
+      );
+    }
     setPendingWorkflowSkill(null);
     if (!active?.skill) return;
     setConversations((previous) =>
@@ -774,9 +785,7 @@ function KovaGPT() {
 
   useEffect(
     () => () => {
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-      }
+      clearRetryTimer(retryTimerRef);
     },
     [],
   );
@@ -1083,10 +1092,7 @@ function KovaGPT() {
         requestGeneration === storageGenerationRef.current &&
         requestPrincipal === storagePrincipalRef.current;
 
-      if (_retryAttempt === 0 && retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
+      if (_retryAttempt === 0) clearRetryTimer(retryTimerRef);
       if (_retryAttempt === 0 && !isSignedIn) guestPromptTurnsRef.current += 1;
 
       const nextConvId = retryConversationId ?? activeId ?? newId();
@@ -1609,10 +1615,7 @@ function KovaGPT() {
   );
 
   const stop = useCallback(() => {
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    clearRetryTimer(retryTimerRef);
     const target = inFlightTargetRef.current;
     target?.flushPendingContent();
     // Preflight work may not observe AbortSignal immediately. Invalidate the old
@@ -2330,10 +2333,7 @@ function KovaGPT() {
               abortRef.current = null;
               inFlightTargetRef.current = null;
               inFlightRef.current = false;
-              if (retryTimerRef.current !== null) {
-                window.clearTimeout(retryTimerRef.current);
-                retryTimerRef.current = null;
-              }
+              clearRetryTimer(retryTimerRef);
               // A same-principal local reset should remain usable with a clean,
               // empty workspace. The incremented generation rejects every
               // closure created before cleanup.

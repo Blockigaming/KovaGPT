@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { parseWorkflowSkillMutationResult } from "@/lib/workflow-skills-client.mjs";
 import {
   createWorkflowSkill,
   createWorkflowSkillVersion,
@@ -79,7 +80,8 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
       retryEnvelopes.current.set(retryKey, envelope);
     }
     try {
-      await action(envelope);
+      const result = await action(envelope);
+      parseWorkflowSkillMutationResult(result);
       retryEnvelopes.current.delete(retryKey);
       await reload();
       toast.success(success);

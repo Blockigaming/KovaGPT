@@ -74,10 +74,31 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   const imageQuota = imageBranch.indexOf("enforceQuota");
   assert.ok(imageBranch.indexOf("assertSelectedContextsCurrent") < imageQuota);
   assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
+  const chatQuotaBranch = chat.slice(
+    chat.indexOf("// Anonymous chat is allowed"),
+    chat.indexOf("// SECURITY: Server-side tier enforcement"),
+  );
+  const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
+  const chatQuota = chatQuotaBranch.indexOf('enforceQuota(auth, "chats"');
+  assert.ok(
+    contextBeforeChatQuota > -1 && contextBeforeChatQuota < chatQuota,
+    "selected context must be current immediately before generic chat quota",
+  );
+  const researchDispatch = chat.indexOf('if (clientTool === "deep_research" && lastText)');
+  const chatQuotaGlobal = chat.indexOf('enforceQuota(auth, "chats"');
+  assert.ok(chatQuotaGlobal > -1 && chatQuotaGlobal < researchDispatch);
+  assert.ok(chat.indexOf("assertSelectedContextsCurrent", researchDispatch) > researchDispatch);
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
   assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
+  const clearSkill = home.slice(
+    home.indexOf("const clearWorkflowSkill"),
+    home.indexOf("useEffect(() =>", home.indexOf("const clearWorkflowSkill")),
+  );
+  assert.match(clearSkill, /clearRetryTimer\(retryTimerRef\)/u);
+  assert.match(clearSkill, /retryGenerationRef\.current \+= 1/u);
+  assert.match(clearSkill, /retryActionEpochRef\.current\.set/u);
   assert.match(home, /aria-label=\{`Clear workflow skill/u);
   assert.match(home, /skill=\{/u);
   assert.match(mobileTopBar, /aria-label=\{`Clear workflow skill/u);
@@ -92,6 +113,12 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /workflow_skill_idempotency_conflict/u);
   assert.match(migration, /set revision = revision \+ 1, updated_at = now\(\)/u);
   assert.match(panel, /retryEnvelopes\.current\.get\(retryKey\)/u);
+  const responseCheck = panel.indexOf("parseWorkflowSkillMutationResult(result)");
+  const envelopeCleanup = panel.indexOf("retryEnvelopes.current.delete(retryKey)");
+  assert.ok(
+    responseCheck > -1 && responseCheck < envelopeCleanup,
+    "mutation response must be verified before its replay envelope is removed",
+  );
   assert.match(panel, /retryEnvelopes\.current\.delete\(retryKey\)/u);
   assert.match(migration, /on conflict \(owner_id, skill_id\) do update/u);
   assert.match(migration, /public\.effective_user_plan_tier\(actor\)/u);
@@ -102,6 +129,17 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
   assert.match(migration, /workflow_skill_digest_mismatch/u);
   assert.match(migration, /instructions_text, p_payload->'resources', computed_digest/u);
+  const mutation = migration.slice(
+    migration.indexOf("create or replace function public.mutate_workflow_skill"),
+    migration.indexOf("create or replace function public.resolve_workflow_skill"),
+  );
+  const deletionFenceLock = mutation.indexOf("hashtextextended(actor::text, 20260903204500)");
+  const principalCheck = mutation.indexOf("workflow_skill_principal_current(actor)");
+  const workflowLock = mutation.indexOf("hashtextextended(actor::text, 20260910210000)");
+  assert.ok(
+    deletionFenceLock > -1 && deletionFenceLock < principalCheck && principalCheck < workflowLock,
+    "workflow mutation must hold the shared deletion fence before checking principal state",
+  );
   assert.deepEqual(manifestEntry.functions, [
     "workflow_skill_principal_current",
     "list_workflow_skills",

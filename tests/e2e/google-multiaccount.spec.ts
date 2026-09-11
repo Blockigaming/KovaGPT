@@ -50,6 +50,54 @@ test("workflow skill load failures stay contained and can be retried", async ({ 
   await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
 });
 
+test("workflow skill mutations retain their replay identity until success is confirmed", async ({
+  page,
+}) => {
+  await installAuthenticatedFixture(page);
+  await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
+  await page.route("**/api/google/status", async (route) => route.fulfill({ json: status() }));
+  const mutationBodies: string[] = [];
+  let listCalls = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() === "GET") {
+      listCalls++;
+      await route.fulfill({ json: { result: [], context: {} } });
+      return;
+    }
+    mutationBodies.push(route.request().postData() ?? "");
+    await route.fulfill({
+      json: {
+        result:
+          mutationBodies.length === 1
+            ? { error: "Authentication is temporarily unavailable." }
+            : { ok: true },
+        context: {},
+      },
+    });
+  });
+
+  await page.goto("/apps");
+  await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
+  const initialListCalls = listCalls;
+  await page.getByRole("button", { name: "New skill" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
+  await page
+    .getByRole("textbox", { name: "Workflow instructions" })
+    .fill("Review the draft and check every claim.");
+
+  await page.getByRole("button", { name: "Create and install" }).click();
+  await expect(page.getByText("Workflow skill update could not be confirmed.")).toBeVisible();
+  await expect(page.getByText("Workflow skill created and installed")).toHaveCount(0);
+  expect(listCalls).toBe(initialListCalls);
+  expect(mutationBodies).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Create and install" }).click();
+  await expect(page.getByText("Workflow skill created and installed")).toBeVisible();
+  await expect.poll(() => listCalls).toBe(initialListCalls + 1);
+  expect(mutationBodies).toHaveLength(2);
+  expect(mutationBodies[1]).toBe(mutationBodies[0]);
+});
+
 test("Google account selection, refresh, disconnect and reauthorization retain the displayed account", async ({
   page,
   context,

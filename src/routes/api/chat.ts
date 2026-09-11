@@ -945,6 +945,10 @@ export const Route = createFileRoute("/api/chat")({
                 assertFeatureEnabled(auth, "chat"),
               );
               if (maint) return maint;
+              // Research authorization can be slow. Recheck selected context
+              // after it and before quota so a revoked skill cannot consume a
+              // chat request without reaching a provider.
+              await assertSelectedContextsCurrent(request.signal);
               const quota = await preflight.run("chat_quota", (signal) =>
                 enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
               );

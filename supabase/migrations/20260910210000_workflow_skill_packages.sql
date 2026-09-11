@@ -212,6 +212,9 @@ begin
   then
     raise exception 'workflow_skill_invalid' using errcode = '22023';
   end if;
+  -- Serialize every owner-scoped write with account deletion, then recheck the
+  -- principal while holding the shared fence lock.
+  perform pg_advisory_xact_lock(hashtextextended(actor::text, 20260903204500));
   if not kova_private.workflow_skill_principal_current(actor) then
     raise exception 'workflow_skill_denied' using errcode = '42501';
   end if;

@@ -8,6 +8,7 @@ import {
   normalizeWorkflowSkillDraft,
   normalizeWorkflowSkillSelection,
 } from "../../src/lib/workflow-skills-policy.mjs";
+import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
 import {
   boundedImageProviderPrompt,
   MAX_IMAGE_PROMPT_CHARS,
@@ -189,6 +190,18 @@ test("workflow skill policy bounds package text and refuses capability-shaped fi
       credential: "secret",
     }),
   );
+});
+
+test("workflow skill mutation success requires the exact transport result", () => {
+  assert.deepEqual(parseWorkflowSkillMutationResult({ ok: true }), { ok: true });
+  for (const value of [
+    null,
+    { ok: false },
+    { ok: true, error: "late failure" },
+    { error: "503" },
+  ]) {
+    assert.throws(() => parseWorkflowSkillMutationResult(value), /could not be confirmed/u);
+  }
 });
 
 test("workflow skill digests use unambiguous UTF-8 byte framing", () => {
@@ -440,6 +453,32 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
       /permission denied/,
     );
     await db.exec("reset role");
+  } finally {
+    await db.close();
+  }
+});
+
+test("account deletion fences reject workflow mutations without creating storage", async () => {
+  const db = await fixture();
+  try {
+    await db.query("insert into public.account_deletion_fences(user_id) values ($1)", [OWNER]);
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, payload(draft())),
+      /workflow_skill_denied/,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skills")).rows[0].count,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select coalesce(bytes_used,0)::int bytes from public.user_storage where user_id=$1",
+          [OWNER],
+        )
+      ).rows[0]?.bytes ?? 0,
+      0,
+    );
   } finally {
     await db.close();
   }
