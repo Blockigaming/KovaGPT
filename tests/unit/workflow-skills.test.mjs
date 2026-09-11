@@ -52,6 +52,30 @@ async function fixture() {
         $$select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid$$;
       create table public.account_deletion_fences(user_id uuid primary key);
       create table public.banned_users(user_id uuid primary key);
+      create table public.user_storage(
+        user_id uuid primary key references auth.users(id) on delete cascade,
+        bytes_used bigint not null default 0,
+        updated_at timestamptz not null default now()
+      );
+      create function public.effective_user_plan_tier(uuid) returns text language sql stable as
+        $$select 'free'::text$$;
+      create function public.try_add_storage_bytes(owner uuid, added bigint, cap bigint)
+      returns boolean language plpgsql as $$begin
+        insert into public.user_storage(user_id) values(owner) on conflict do nothing;
+        perform 1 from public.user_storage where user_id=owner for update;
+        if (select bytes_used from public.user_storage where user_id=owner)+added>cap then
+          return false;
+        end if;
+        update public.user_storage set bytes_used=bytes_used+added,updated_at=now()
+          where user_id=owner;
+        return true;
+      end$$;
+      create function public.release_project_storage_bytes(owner uuid, released bigint)
+      returns bigint language plpgsql as $$declare remaining bigint; begin
+        update public.user_storage set bytes_used=greatest(0,bytes_used-released),updated_at=now()
+          where user_id=owner returning bytes_used into remaining;
+        return coalesce(remaining,0);
+      end$$;
       grant usage on schema auth, kova_private to authenticated, service_role;
       grant select on auth.users to service_role;
     `);
@@ -247,13 +271,19 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
   try {
     const mutationId = crypto.randomUUID();
     const requestedAt = new Date().toISOString();
-    const content = payload(draft());
+    const normalized = draft();
+    const content = payload(normalized);
     const first = await mutate(db, OWNER, "create", null, content, { mutationId, requestedAt });
     const replay = await mutate(db, OWNER, "create", null, content, { mutationId, requestedAt });
     assert.deepEqual(replay, first);
     assert.equal(
       (await authenticatedRpc(db, OWNER, "list_workflow_skills", [])).rows[0].installationId,
       first.installationId,
+    );
+    assert.equal(
+      (await db.query("select bytes_used from public.user_storage where user_id=$1", [OWNER]))
+        .rows[0].bytes_used,
+      normalized.sizeBytes,
     );
 
     await db.query("select set_config('request.jwt.claim.sub', $1, false)", [OWNER]);
@@ -263,6 +293,41 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
       /permission denied/,
     );
     await db.exec("reset role");
+  } finally {
+    await db.close();
+  }
+});
+
+test("immutable versions charge the authoritative account quota once and deletion releases them", async () => {
+  const db = await fixture();
+  try {
+    const first = draft();
+    await db.query("insert into public.user_storage(user_id,bytes_used) values($1,$2)", [
+      OWNER,
+      524_288_000 - first.sizeBytes + 1,
+    ]);
+    await assert.rejects(mutate(db, OWNER, "create", null, payload(first)), /storage_limit/);
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skills")).rows[0].count,
+      0,
+    );
+
+    await db.query("update public.user_storage set bytes_used=0 where user_id=$1", [OWNER]);
+    const created = await mutate(db, OWNER, "create", null, payload(first));
+    const second = draft("Create the draft and verify every claim.");
+    const updated = await mutate(db, OWNER, "version", created, payload(second));
+    assert.equal(
+      (await db.query("select bytes_used from public.user_storage where user_id=$1", [OWNER]))
+        .rows[0].bytes_used,
+      first.sizeBytes + second.sizeBytes,
+    );
+
+    await mutate(db, OWNER, "delete", updated, {});
+    assert.equal(
+      (await db.query("select bytes_used from public.user_storage where user_id=$1", [OWNER]))
+        .rows[0].bytes_used,
+      0,
+    );
   } finally {
     await db.close();
   }

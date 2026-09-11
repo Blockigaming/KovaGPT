@@ -22,6 +22,7 @@ entitlement, or approval grant.
 - 12,000 instruction characters;
 - up to 10 resources, each with a 120-character title and 8,000-character body;
 - 32,000 UTF-8 bytes across the normalized text fields;
+- every immutable version is charged atomically against the owner's server-resolved storage plan;
 - 100 packages returned by one management read;
 - replay-safe mutations retained for a bounded eight-day window.
 
@@ -36,7 +37,8 @@ instructions embedded inside a reference do not become authority.
 
 Packages, versions, installations, and replay receipts cascade on account deletion and are included
 in the account export. Browser roles cannot select package tables directly; authenticated mutations
-use owner-bound security-definer functions, while runtime resolution is service-role only.
+use owner-bound security-definer functions, while runtime resolution is service-role only. Explicit
+package deletion releases the bytes charged for all of its immutable versions.
 
 ## Release boundary
 

@@ -182,6 +182,7 @@ declare
   new_version_id uuid;
   installation_id uuid;
   payload_bytes integer;
+  storage_limit bigint;
 begin
   if p_action is null or p_action not in ('create', 'version', 'install', 'uninstall', 'delete')
     or p_mutation_id is null or p_requested_at is null
@@ -277,6 +278,14 @@ begin
     if payload_bytes > 32000 then
       raise exception 'workflow_skill_too_large' using errcode = '54000';
     end if;
+    storage_limit := case public.effective_user_plan_tier(actor)
+      when 'plus' then 26843545600
+      when 'pro' then 26843545600
+      else 524288000
+    end;
+    if not public.try_add_storage_bytes(actor, payload_bytes, storage_limit) then
+      raise exception 'workflow_skill_storage_limit' using errcode = '54000';
+    end if;
     select coalesce(max(version), 0) + 1 into next_version
       from public.workflow_skill_versions where skill_id = skill.id;
     if next_version > 30 then
@@ -341,7 +350,12 @@ begin
     if p_payload <> '{}'::jsonb then
       raise exception 'workflow_skill_invalid' using errcode = '22023';
     end if;
+    select coalesce(sum(size_bytes), 0) into payload_bytes
+      from public.workflow_skill_versions where skill_id = skill.id and owner_id = actor;
     delete from public.workflow_skills where id = skill.id and owner_id = actor;
+    if payload_bytes > 0 then
+      perform public.release_project_storage_bytes(actor, payload_bytes);
+    end if;
   end if;
 
   result := jsonb_build_object(

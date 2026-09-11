@@ -60,6 +60,9 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(panel, /retryEnvelopes\.current\.get\(retryKey\)/u);
   assert.match(panel, /retryEnvelopes\.current\.delete\(retryKey\)/u);
   assert.match(migration, /on conflict \(owner_id, skill_id\) do update/u);
+  assert.match(migration, /public\.effective_user_plan_tier\(actor\)/u);
+  assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
+  assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
   assert.match(exportPolicy, /\["workflow_skill_versions", "owner_id"\]/u);
   assert.match(panel, /Workflow skills/u);
   assert.match(panel, /Save new version/u);
