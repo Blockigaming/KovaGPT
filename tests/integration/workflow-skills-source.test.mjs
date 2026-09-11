@@ -31,6 +31,8 @@ test("workflow skills resolve server-side from owner installation and exact vers
   assert.match(ingress, /normalizeWorkflowSkillSelection\(value\.skill\)/u);
   assert.match(resolver, /p_installation_id: selection\.installationId/u);
   assert.match(resolver, /p_version_id: selection\.versionId/u);
+  assert.match(resolver, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(10_000\)\]\)/u);
+  assert.match(resolver, /pending\.abortSignal\(deadline\)/u);
   assert.match(migration, /installation\.owner_id = p_actor/u);
   assert.match(migration, /installation\.version_id = p_version_id/u);
   assert.match(migration, /workflow_skill_selection_changed/u);

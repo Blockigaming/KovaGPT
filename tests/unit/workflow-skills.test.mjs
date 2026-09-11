@@ -259,15 +259,20 @@ test("chat ingress accepts only an exact workflow skill installation/version ref
 test("stale selections are actionable and non-retryable while backend failures remain retryable", async () => {
   const { resolveWorkflowSkill, WorkflowSkillAccessError } = await workflowServerModule();
   const selection = { installationId: crypto.randomUUID(), versionId: crypto.randomUUID() };
+  const callerController = new AbortController();
+  let resolutionSignal;
   const admin = (code) => ({
     rpc() {
       return {
-        abortSignal: async () => ({ data: null, error: { code } }),
+        abortSignal: async (signal) => {
+          resolutionSignal = signal;
+          return { data: null, error: { code } };
+        },
       };
     },
   });
   await assert.rejects(
-    resolveWorkflowSkill(admin("42501"), OWNER, selection, new AbortController().signal),
+    resolveWorkflowSkill(admin("42501"), OWNER, selection, callerController.signal),
     (error) => {
       assert.ok(error instanceof WorkflowSkillAccessError);
       assert.equal(error.status, 403);
@@ -276,6 +281,10 @@ test("stale selections are actionable and non-retryable while backend failures r
       return true;
     },
   );
+  assert.ok(resolutionSignal instanceof AbortSignal);
+  assert.notEqual(resolutionSignal, callerController.signal);
+  callerController.abort();
+  assert.equal(resolutionSignal.aborted, true);
   await assert.rejects(
     resolveWorkflowSkill(admin("XX000"), OWNER, selection, new AbortController().signal),
     (error) => error.status === 503 && error.retryable === true,
