@@ -19,7 +19,7 @@ import {
   type SetStateAction,
 } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, Share2, Download, Sliders, MoreHorizontal } from "lucide-react";
+import { PanelLeft, Search, Share2, Download, Sliders, MoreHorizontal, X } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import {
   DropdownMenu,
@@ -700,6 +700,21 @@ function KovaGPT() {
   );
   const archivedConversations =
     typeof window === "undefined" ? [] : loadArchivedConversations(userKey);
+
+  const clearWorkflowSkill = useCallback(() => {
+    if (active?.skill) {
+      setConversations((previous) =>
+        previous.map((conversation) =>
+          conversation.id === active.id
+            ? { ...conversation, skill: undefined, updatedAt: Date.now() }
+            : conversation,
+        ),
+      );
+    } else {
+      setPendingWorkflowSkill(null);
+    }
+    toast.success("Workflow skill cleared");
+  }, [active?.id, active?.skill, setConversations]);
 
   useEffect(() => {
     if (activeTemporary !== null) setTempChat(activeTemporary);
@@ -1788,10 +1803,24 @@ function KovaGPT() {
             )}
             {(active?.skill ?? pendingWorkflowSkill) ? (
               <span
-                className="ml-2 max-w-48 truncate rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                className="ml-2 inline-flex max-w-56 items-center gap-1 rounded-full border py-1 pl-2.5 pr-1 text-xs text-muted-foreground"
                 title={`Workflow skill: ${(active?.skill ?? pendingWorkflowSkill)!.name}`}
               >
-                Skill: {(active?.skill ?? pendingWorkflowSkill)!.name}
+                <span className="truncate">
+                  Skill: {(active?.skill ?? pendingWorkflowSkill)!.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearWorkflowSkill}
+                  disabled={isStreaming}
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={`Clear workflow skill ${(active?.skill ?? pendingWorkflowSkill)!.name}`}
+                  title={
+                    isStreaming ? "Stop the response before clearing this skill" : "Clear skill"
+                  }
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
               </span>
             ) : null}
           </div>

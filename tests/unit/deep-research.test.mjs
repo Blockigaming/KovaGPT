@@ -52,6 +52,9 @@ test("chat route has a separate deep research execution path", () => {
   assert.match(research, /makePlan\(safeQuery, opts\.workflowSkillBlock, opts\.signal\)/u);
   assert.match(research, /opts\.workflowSkillBlock,[\s\S]{0,80}opts\.signal/u);
   assert.match(research, /evidence and citation rules override any conflicting workflow text/u);
+  assert.equal(research.match(/await assertCurrent\(\)/gu)?.length, 3);
+  assert.match(chat, /assertCurrent: assertSelectedContextsCurrent/u);
+  assert.match(chat, /deep research context changed/u);
 });
 
 test("chat UI consumes and renders Deep Research lifecycle events", () => {

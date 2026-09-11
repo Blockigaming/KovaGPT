@@ -13,8 +13,10 @@ entitlement, or approval grant.
    principal-scoped, one-use browser handoff.
 4. Chat ingress accepts only the two UUIDs. The server resolves them through the current owner and
    requires the requested version to be the version currently pinned by that installation.
-5. Resolution is checked again before provider work. An uninstall, version change, account fence,
-   ban, deletion, or owner change makes the selection fail closed.
+5. Resolution is checked again before provider or search stages, including after long Deep Research
+   searches. An uninstall, version change, account fence, ban, deletion, or owner change makes the
+   selection fail closed. A conversation badge can clear its pinned selection so the chat remains
+   usable after a package changes.
 
 ## Bounds
 
@@ -22,6 +24,7 @@ entitlement, or approval grant.
 - 12,000 instruction characters;
 - up to 10 resources, each with a 120-character title and 8,000-character body;
 - 32,000 UTF-8 bytes across the normalized text fields;
+- 32,000 characters for the complete image-provider prompt after workflow guidance is appended;
 - every immutable version is charged atomically against the owner's server-resolved storage plan;
 - 100 packages returned by one management read;
 - replay-safe mutations retained for a bounded eight-day window.

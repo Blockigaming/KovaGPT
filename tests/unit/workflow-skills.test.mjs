@@ -9,6 +9,10 @@ import {
   normalizeWorkflowSkillSelection,
 } from "../../src/lib/workflow-skills-policy.mjs";
 import {
+  boundedImageProviderPrompt,
+  MAX_IMAGE_PROMPT_CHARS,
+} from "../../src/lib/ai/image-prompt-policy.mjs";
+import {
   buildWorkflowSkillBlock,
   workflowSkillDigest,
 } from "../../src/lib/workflow-skills-digest.server.mjs";
@@ -185,6 +189,12 @@ test("workflow skill policy bounds package text and refuses capability-shaped fi
       credential: "secret",
     }),
   );
+});
+
+test("combined image prompts are bounded after workflow guidance is appended", () => {
+  assert.equal(boundedImageProviderPrompt("draw", " with clean lines"), "draw with clean lines");
+  assert.equal(boundedImageProviderPrompt("a".repeat(MAX_IMAGE_PROMPT_CHARS), "")?.length, 32000);
+  assert.equal(boundedImageProviderPrompt("a".repeat(MAX_IMAGE_PROMPT_CHARS), "b"), null);
 });
 
 test("the JavaScript and database limits accept the same exact 32,000 text bytes", async () => {

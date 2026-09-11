@@ -38,6 +38,7 @@ import {
 } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
+import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
 import {
   authorizeResearchPersistence,
   ResearchPersistenceAuthorizationError,
@@ -320,6 +321,7 @@ async function handleDeepResearchRequest(
     signal?: AbortSignal;
     persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
     workflowSkillBlock?: string;
+    assertCurrent?: NonNullable<Parameters<typeof runDeepResearch>[1]>["assertCurrent"];
     logContext: SafeLogContext;
   },
 ): Promise<Response> {
@@ -348,6 +350,7 @@ async function handleDeepResearchRequest(
           signal: options.signal,
           persistence: options.persistence,
           workflowSkillBlock: options.workflowSkillBlock,
+          assertCurrent: options.assertCurrent,
           onProgress: emitProgress,
         });
         if (result.partialFailures.length) {
@@ -363,9 +366,16 @@ async function handleDeepResearchRequest(
         }
         controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(result.sources))));
         controller.enqueue(enc.encode(sseChunk(result.report)));
-      } catch {
+      } catch (error) {
         if (options.signal?.aborted) {
           controller.enqueue(enc.encode(sseChunk("_Deep Research was cancelled._")));
+        } else if (error instanceof ChatPreflightError) {
+          logSafeFailure("warn", "[chat] deep research context changed", options.logContext, {
+            status: error.status,
+            category: "server",
+            code: error.code,
+          });
+          controller.enqueue(enc.encode(sseChunk(`_${error.message}_`)));
         } else {
           logSafeFailure("error", "[chat] deep research failed", options.logContext, {
             status: 502,
@@ -393,11 +403,7 @@ async function handleDeepResearchRequest(
   });
 }
 
-async function handleImageRequest(
-  prompt: string,
-  logContext: SafeLogContext,
-  workflowSkillBlock = "",
-): Promise<Response> {
+async function handleImageRequest(prompt: string, logContext: SafeLogContext): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -407,9 +413,7 @@ async function handleImageRequest(
       try {
         const upstream = await imageGenerations({
           model: imageModel(),
-          // Image generation has no system-message channel, so append the same resolved,
-          // integrity-checked workflow block used by text chat. It remains guidance only.
-          prompt: prompt + workflowSkillBlock,
+          prompt,
           size: "1024x1024",
           quality: "low",
           n: 1,
@@ -889,6 +893,20 @@ export const Route = createFileRoute("/api/chat")({
             // in text (esp. important when the user *explicitly declined* an
             // image but a keyword still slipped past the negation guard).
             if (isImageRequest && auth) {
+              // Image generation has no system-message channel, so append the same resolved,
+              // integrity-checked workflow block used by text chat. Bound the combined prompt
+              // before feature/quota work so an oversized valid package cannot consume quota.
+              const imagePrompt = boundedImageProviderPrompt(lastText, workflowSkill?.block);
+              if (imagePrompt === null)
+                return Response.json(
+                  {
+                    error:
+                      "The image prompt and workflow skill are too long together. Shorten the prompt or clear the skill before trying again.",
+                    category: "invalid_request",
+                    retryable: false,
+                  },
+                  { status: 400, headers: { "Cache-Control": "no-store" } },
+                );
               const unavailableImageProvider = providerUnavailableResponse("image_generation");
               if (unavailableImageProvider) return unavailableImageProvider;
               if (!isOwner) {
@@ -915,7 +933,7 @@ export const Route = createFileRoute("/api/chat")({
                 if (quota) return quota;
               }
               await assertSelectedContextsCurrent(request.signal);
-              return handleImageRequest(lastText, logContext, workflowSkill?.block);
+              return handleImageRequest(imagePrompt, logContext);
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
@@ -1000,6 +1018,7 @@ export const Route = createFileRoute("/api/chat")({
                 signal: request.signal,
                 logContext,
                 workflowSkillBlock: workflowSkill?.block,
+                assertCurrent: assertSelectedContextsCurrent,
                 persistence: auth
                   ? {
                       supabase:

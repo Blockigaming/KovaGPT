@@ -302,12 +302,15 @@ export async function runDeepResearch(
     onProgress?: (event: ResearchProgressEvent) => void | Promise<void>;
     persistence?: ResearchPersistence;
     workflowSkillBlock?: string;
+    assertCurrent?: (signal: AbortSignal) => Promise<void>;
   } = {},
 ): Promise<ResearchResult> {
   const safeQuery = sanitizeResearchText(query, 1000);
   if (!safeQuery) throw new Error("empty_research_query");
   let currentProgress = 0;
   let workflowComplete = false;
+  const currentnessSignal = opts.signal ?? new AbortController().signal;
+  const assertCurrent = async () => opts.assertCurrent?.(currentnessSignal);
   const emit = async (stage: ResearchStage, progress: number, activity?: ToolActivityEvent) => {
     currentProgress = Math.min(1, Math.max(0, progress));
     await opts.onProgress?.({ stage, progress: currentProgress, activity });
@@ -329,6 +332,7 @@ export async function runDeepResearch(
       createToolActivityEvent("research_plan", "Creating research plan", "running"),
     );
     let plan: string[];
+    await assertCurrent();
     try {
       plan = await makePlan(safeQuery, opts.workflowSkillBlock, opts.signal);
     } catch (error) {
@@ -356,6 +360,7 @@ export async function runDeepResearch(
       createToolActivityEvent("search_web", "Searching web", "running"),
     );
     const partialFailures: string[] = [];
+    await assertCurrent();
     const sourceGroups = await Promise.all(
       plan.map(async (searchQuery) => {
         const response = await searchWeb(searchQuery, {
@@ -422,6 +427,7 @@ export async function runDeepResearch(
       0.84,
       createToolActivityEvent("write_report", "Writing cited report", "running"),
     );
+    await assertCurrent();
     const report = await writeReport(
       safeQuery,
       plan,

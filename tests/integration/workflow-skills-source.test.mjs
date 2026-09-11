@@ -59,11 +59,19 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
 });
 
 test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
-  assert.match(chat, /handleImageRequest\(lastText, logContext, workflowSkill\?\.block\)/u);
-  assert.match(chat, /prompt: prompt \+ workflowSkillBlock/u);
+  const imageBranch = chat.slice(
+    chat.indexOf("if (isImageRequest && auth)"),
+    chat.indexOf("// Anonymous chat is allowed"),
+  );
+  assert.match(chat, /handleImageRequest\(imagePrompt, logContext\)/u);
+  assert.ok(
+    imageBranch.indexOf("boundedImageProviderPrompt") < imageBranch.indexOf("enforceQuota"),
+  );
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
+  assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
+  assert.match(home, /aria-label=\{`Clear workflow skill/u);
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
