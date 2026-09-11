@@ -29,6 +29,8 @@ export class ChatPreflightError extends Error {
   };
 }
 
+export function normalizeChatPreflightFailure(stage: string, error: unknown): ChatPreflightError;
+
 export function createChatPreflightRunner(options?: {
   signal?: AbortSignal;
   requiredTimeoutMs?: number;

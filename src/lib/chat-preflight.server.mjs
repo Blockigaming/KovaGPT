@@ -72,6 +72,21 @@ export class ChatPreflightError extends Error {
   }
 }
 
+export function normalizeChatPreflightFailure(stageValue, error) {
+  const stage = safeStage(stageValue);
+  if (error instanceof ChatPreflightError) return error;
+  const metadata = metadataFromError(error);
+  const status = metadata.status ?? 503;
+  return new ChatPreflightError({
+    stage,
+    code: metadata.code ?? "chat_preflight_failed",
+    status,
+    retryable: metadata.retryable ?? (status === 408 || status === 429 || status >= 500),
+    publicMessage: metadata.publicMessage,
+    cause: error,
+  });
+}
+
 function normalizedFailure(stage, error, { timedOut, parentAborted, totalTimedOut }) {
   if (error instanceof ChatPreflightError) return error;
   if (parentAborted) {
@@ -92,16 +107,7 @@ function normalizedFailure(stage, error, { timedOut, parentAborted, totalTimedOu
       cause: error,
     });
   }
-  const metadata = metadataFromError(error);
-  const status = metadata.status ?? 503;
-  return new ChatPreflightError({
-    stage,
-    code: metadata.code ?? "chat_preflight_failed",
-    status,
-    retryable: metadata.retryable ?? (status === 408 || status === 429 || status >= 500),
-    publicMessage: metadata.publicMessage,
-    cause: error,
-  });
+  return normalizeChatPreflightFailure(stage, error);
 }
 
 export function createChatPreflightRunner({

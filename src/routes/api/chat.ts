@@ -80,7 +80,11 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { ChatPreflightError, createChatPreflightRunner } from "@/lib/chat-preflight.server.mjs";
+import {
+  ChatPreflightError,
+  createChatPreflightRunner,
+  normalizeChatPreflightFailure,
+} from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -788,8 +792,12 @@ export const Route = createFileRoute("/api/chat")({
             }
 
             const assertSelectedContextsCurrent = async (signal: AbortSignal) => {
-              await customKova?.assertCurrent(signal);
-              await workflowSkill?.assertCurrent(signal);
+              try {
+                await customKova?.assertCurrent(signal);
+                await workflowSkill?.assertCurrent(signal);
+              } catch (error) {
+                throw normalizeChatPreflightFailure("selected_context", error);
+              }
             };
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -1906,16 +1914,26 @@ export const Route = createFileRoute("/api/chat")({
                 signal: request.signal,
               });
             } catch (error) {
+              const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({
                 eventId: usageEventId,
-                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                status: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? "aborted"
+                    : "provider_failed",
                 model: catalogModel,
                 inputTokens: inputEstimate.tokens * providerCalls,
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
-                error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
+                error: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? error.code
+                    : "provider_network_error",
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
+              if (contextFailure) throw error;
               const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: providerError.status,

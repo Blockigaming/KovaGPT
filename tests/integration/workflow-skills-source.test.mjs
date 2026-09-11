@@ -62,6 +62,8 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.match(chat, /handleImageRequest\(lastText, logContext, workflowSkill\?\.block\)/u);
   assert.match(chat, /prompt: prompt \+ workflowSkillBlock/u);
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
+  assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
+  assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
