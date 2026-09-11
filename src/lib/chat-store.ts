@@ -19,8 +19,15 @@ export type ConversationWorkflowSkill = {
   name: string;
 };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const CONVERSATION_WORKFLOW_SKILL_KEYS = new Set(["installationId", "versionId", "name"]);
 export function isConversationWorkflowSkill(value: unknown): value is ConversationWorkflowSkill {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  if (
+    keys.length !== CONVERSATION_WORKFLOW_SKILL_KEYS.size ||
+    keys.some((key) => !CONVERSATION_WORKFLOW_SKILL_KEYS.has(key))
+  )
+    return false;
   const candidate = value as Partial<ConversationWorkflowSkill>;
   return (
     typeof candidate.installationId === "string" &&

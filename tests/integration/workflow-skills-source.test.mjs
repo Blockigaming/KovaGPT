@@ -5,30 +5,35 @@ import { readFile } from "node:fs/promises";
 import {
   ACCOUNT_EXPORT_DIRECT_TABLES,
   ACCOUNT_EXPORT_MAX_BYTES,
+  ACCOUNT_EXPORT_PROJECT_TABLES,
 } from "../../src/lib/account-export-policy.mjs";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const [
   chat,
   ingress,
+  chatStore,
   resolver,
   functions,
   panel,
   home,
   mobileTopBar,
   storage,
+  exportServer,
   exportPolicy,
   migration,
   manifest,
 ] = await Promise.all([
   read("src/routes/api/chat.ts"),
   read("src/lib/chat-ingress.server.mjs"),
+  read("src/lib/chat-store.ts"),
   read("src/lib/workflow-skills.server.ts"),
   read("src/lib/workflow-skills.functions.ts"),
   read("src/components/WorkflowSkillsPanel.tsx"),
   read("src/routes/index.tsx"),
   read("src/components/MobileTopBar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
+  read("src/lib/account-export.server.ts"),
   read("src/lib/account-export-policy.mjs"),
   read("supabase/migrations/20260910210000_workflow_skill_packages.sql"),
   read("release-migrations.json"),
@@ -75,6 +80,16 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
     /selectedWorkflowSkill \? \{ skill: selectedWorkflowSkill \} : \{\}/u,
   );
   assert.doesNotMatch(home, /skill:\s*\{[^}]*instructions/su);
+  const storedSelectionGuard = chatStore.slice(
+    chatStore.indexOf("export function isConversationWorkflowSkill"),
+    chatStore.indexOf("export type ComposerToolId"),
+  );
+  assert.match(storedSelectionGuard, /Object\.keys\(value\)/u);
+  assert.match(storedSelectionGuard, /keys\.length !== CONVERSATION_WORKFLOW_SKILL_KEYS\.size/u);
+  assert.match(
+    storedSelectionGuard,
+    /keys\.some\(\(key\) => !CONVERSATION_WORKFLOW_SKILL_KEYS\.has\(key\)\)/u,
+  );
 });
 
 test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
@@ -154,10 +169,29 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     migration.indexOf("create or replace function kova_private.account_export_direct_row_bytes"),
     migration.indexOf("create or replace function public.list_workflow_skills"),
   );
-  const directSources = [...exportBudget.matchAll(/\('([^']+)', '([^']+)'\)/gu)].map(
+  const directBudget = exportBudget.slice(
+    exportBudget.indexOf("for export_source in"),
+    exportBudget.indexOf("-- The exporter reserves"),
+  );
+  const directSources = [...directBudget.matchAll(/\('([^']+)', '([^']+)'\)/gu)].map(
     ([, table, ownerColumn]) => [table, ownerColumn],
   );
   assert.deepEqual(directSources, ACCOUNT_EXPORT_DIRECT_TABLES);
+  const indirectBudget = exportBudget.slice(exportBudget.indexOf("-- The exporter reserves"));
+  const budgetedIndirectTables = new Set(
+    [...indirectBudget.matchAll(/^\s*\('([^']+)',/gmu)].map(([, table]) => table),
+  );
+  const exporterIndirectTables = new Set([
+    ...ACCOUNT_EXPORT_PROJECT_TABLES,
+    ...[...exportServer.matchAll(/readAll(?:Where|In)\(\s*budget,\s*"([^"]+)"/gu)].map(
+      ([, table]) => table,
+    ),
+  ]);
+  assert.deepEqual(
+    [...budgetedIndirectTables].sort(),
+    [...exporterIndirectTables].sort(),
+    "the admission budget must cover every relationship-traversed exporter table",
+  );
   assert.match(exportBudget, /security invoker/u);
   assert.doesNotMatch(exportBudget, /to_regclass/u);
   assert.match(
@@ -166,6 +200,10 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
       `account_export_direct_row_bytes\\(actor, ${ACCOUNT_EXPORT_MAX_BYTES}\\) > ${ACCOUNT_EXPORT_MAX_BYTES}`,
       "u",
     ),
+  );
+  assert.match(
+    migration,
+    /if p_action in \('create', 'version', 'install', 'uninstall'\)[\s\S]{0,180}account_export_direct_row_bytes/u,
   );
   assert.match(migration, /workflow_skill_export_limit/u);
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);

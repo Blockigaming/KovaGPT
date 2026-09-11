@@ -130,9 +130,11 @@ revoke all on function kova_private.workflow_skill_principal_current(uuid)
 grant execute on function kova_private.workflow_skill_principal_current(uuid) to service_role;
 
 -- Workflow history shares the account export's single 50 MiB artifact with
--- every directly collected account table. PostgreSQL's jsonb text includes at
--- least the bytes reserved by JSON.stringify for these rows, so this is a
--- conservative admission check that can stop once the shared limit is crossed.
+-- every direct and relationship-traversed database row. PostgreSQL's jsonb
+-- text includes at least the bytes reserved by JSON.stringify for these rows,
+-- so this conservative admission check can stop once the limit is crossed.
+-- The historical function name is retained because this migration has already
+-- been reviewed as part of the release contract.
 create or replace function kova_private.account_export_direct_row_bytes(
   p_owner uuid,
   p_stop_after bigint
@@ -290,6 +292,122 @@ begin
       'select coalesce(sum(octet_length(convert_to(to_jsonb(export_row)::text, ''UTF8'')) + 1), 0) from public.%I export_row where %I = $1',
       export_source.table_name,
       export_source.owner_column
+    ) into source_bytes using p_owner;
+    total_bytes := total_bytes + source_bytes;
+    if total_bytes > p_stop_after then
+      return total_bytes;
+    end if;
+  end loop;
+
+  -- The exporter reserves these rows after its direct-table pass. Keep each
+  -- read as a separate entry even when its result is later de-duplicated:
+  -- account-export-pagination charges every database response before merging.
+  for export_source in
+    select source.table_name, source.row_filter
+    from (values
+      ('organization_invitations', 'export_row.invited_by = $1'),
+      ('organization_audit_events', 'export_row.subject_user_id = $1'),
+      ('projects', 'export_row.owner_id = $1'),
+      ('project_members', 'export_row.user_id = $1'),
+      ('project_comments', 'export_row.author_id = $1'),
+      ('project_activity',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_chats',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_comments',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_files',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_invites',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_members',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_memory',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_notes',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_tasks',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('project_file_chunks',
+        'export_row.file_id in (
+          select project_file.id
+          from public.project_files project_file
+          where project_file.project_id in (
+            select id from public.projects where owner_id = $1
+          )
+        )'),
+      ('canvas_documents', 'export_row.private_owner_id = $1'),
+      ('canvas_documents',
+        'export_row.project_id in (select id from public.projects where owner_id = $1)'),
+      ('canvas_revisions',
+        'export_row.document_id in (
+          select canvas.id
+          from public.canvas_documents canvas
+          where canvas.private_owner_id = $1
+            or canvas.project_id in (
+              select id from public.projects where owner_id = $1
+            )
+        )'),
+      ('canvas_comments',
+        'export_row.document_id in (
+          select canvas.id
+          from public.canvas_documents canvas
+          where canvas.private_owner_id = $1
+            or canvas.project_id in (
+              select id from public.projects where owner_id = $1
+            )
+        )'),
+      ('canvas_comments', 'export_row.author_id = $1'),
+      ('canvas_documents',
+        'export_row.id in (
+          select authored.document_id
+          from public.canvas_comments authored
+          where authored.author_id = $1
+        )'),
+      ('family_groups', 'export_row.owner_id = $1'),
+      ('family_members', 'export_row.user_id = $1'),
+      ('family_members',
+        'export_row.group_id in (select id from public.family_groups where owner_id = $1)'),
+      ('family_invites',
+        'export_row.group_id in (select id from public.family_groups where owner_id = $1)'),
+      ('shared_chats', 'export_row.owner_user_id = $1'),
+      ('shared_chats', 'export_row.recipient_user_id = $1'),
+      ('project_template_grants', 'export_row.grantee_user_id = $1'),
+      ('agent_job_events',
+        'export_row.job_id in (select id from public.agent_jobs where owner_id = $1)'),
+      ('integration_webhook_subscriptions',
+        'export_row.linked_account_id in (
+          select id from public.integration_linked_accounts where owner_id = $1
+        )'),
+      ('agent_resource_promotions',
+        'export_row.destination_id in (
+          select project_file.id
+          from public.project_files project_file
+          where project_file.project_id in (
+              select id from public.projects where owner_id = $1
+            )
+            and (project_file.status is null or project_file.status = ''ready'')
+        )'),
+      ('agent_deliverables',
+        'export_row.id in (
+          select promotion.deliverable_id
+          from public.agent_resource_promotions promotion
+          where promotion.destination_type = ''project_file''
+            and promotion.destination_id in (
+              select project_file.id
+              from public.project_files project_file
+              where project_file.project_id in (
+                  select id from public.projects where owner_id = $1
+                )
+                and (project_file.status is null or project_file.status = ''ready'')
+            )
+        )')
+    ) as source(table_name, row_filter)
+  loop
+    execute format(
+      'select coalesce(sum(octet_length(convert_to(to_jsonb(export_row)::text, ''UTF8'')) + 1), 0) from public.%I export_row where %s',
+      export_source.table_name,
+      export_source.row_filter
     ) into source_bytes using p_owner;
     total_bytes := total_bytes + source_bytes;
     if total_bytes > p_stop_after then
@@ -644,10 +762,10 @@ begin
   );
   insert into public.workflow_skill_mutations(owner_id, mutation_id, request_hash, result)
     values (actor, p_mutation_id, fingerprint, result);
-  -- Check after every row created by this version mutation exists, including a
-  -- first installation and its replay receipt. Raising still rolls the whole
-  -- transaction back, including the storage charge.
-  if p_action in ('create', 'version')
+  -- Check after every row created by a data-growing mutation exists, including
+  -- its replay receipt. Raising still rolls the whole transaction back,
+  -- including any storage charge.
+  if p_action in ('create', 'version', 'install', 'uninstall')
     and kova_private.account_export_direct_row_bytes(actor, 52428800) > 52428800
   then
     raise exception 'workflow_skill_export_limit' using errcode = '54000';

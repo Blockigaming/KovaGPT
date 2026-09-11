@@ -8,7 +8,10 @@ import {
   normalizeWorkflowSkillDraft,
   normalizeWorkflowSkillSelection,
 } from "../../src/lib/workflow-skills-policy.mjs";
-import { ACCOUNT_EXPORT_DIRECT_TABLES } from "../../src/lib/account-export-policy.mjs";
+import {
+  ACCOUNT_EXPORT_DIRECT_TABLES,
+  ACCOUNT_EXPORT_MAX_BYTES,
+} from "../../src/lib/account-export-policy.mjs";
 import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
 import {
   boundedImageProviderPrompt,
@@ -33,6 +36,15 @@ const EXISTING_FIXTURE_RELATIONS = new Set([
   "chat_history_records",
   "user_storage",
   ...WORKFLOW_EXPORT_RELATIONS,
+]);
+const RELATIONSHIP_FIXTURE_RELATIONS = new Set([
+  "agent_deliverables",
+  "agent_jobs",
+  "agent_resource_promotions",
+  "integration_linked_accounts",
+  "organization_audit_events",
+  "organization_invitations",
+  "project_template_grants",
 ]);
 
 const draft = (instructions = "Review the request, produce a draft, then check it for clarity.") =>
@@ -80,6 +92,127 @@ async function fixture() {
         owner_id uuid not null references auth.users(id) on delete cascade,
         payload jsonb not null
       );
+      create table public.organization_invitations(
+        id uuid primary key default gen_random_uuid(),
+        recipient_user_id uuid,
+        invited_by uuid
+      );
+      create table public.organization_audit_events(
+        id uuid primary key default gen_random_uuid(),
+        actor_user_id uuid,
+        subject_user_id uuid
+      );
+      create table public.projects(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid
+      );
+      create table public.project_activity(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_chats(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_comments(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid,
+        author_id uuid
+      );
+      create table public.project_files(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid,
+        status text
+      );
+      create table public.project_invites(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_members(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid,
+        user_id uuid
+      );
+      create table public.project_memory(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_notes(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_tasks(
+        id uuid primary key default gen_random_uuid(),
+        project_id uuid
+      );
+      create table public.project_file_chunks(
+        id uuid primary key default gen_random_uuid(),
+        file_id uuid,
+        payload jsonb
+      );
+      create table public.canvas_documents(
+        id uuid primary key default gen_random_uuid(),
+        private_owner_id uuid,
+        project_id uuid
+      );
+      create table public.canvas_revisions(
+        document_id uuid,
+        revision integer
+      );
+      create table public.canvas_comments(
+        id uuid primary key default gen_random_uuid(),
+        document_id uuid,
+        author_id uuid
+      );
+      create table public.family_groups(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid
+      );
+      create table public.family_members(
+        id uuid primary key default gen_random_uuid(),
+        group_id uuid,
+        user_id uuid
+      );
+      create table public.family_invites(
+        id uuid primary key default gen_random_uuid(),
+        group_id uuid
+      );
+      create table public.shared_chats(
+        id uuid primary key default gen_random_uuid(),
+        owner_user_id uuid,
+        recipient_user_id uuid
+      );
+      create table public.project_template_grants(
+        owner_id uuid,
+        grantee_user_id uuid
+      );
+      create table public.agent_jobs(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid
+      );
+      create table public.agent_job_events(
+        id uuid primary key default gen_random_uuid(),
+        job_id uuid
+      );
+      create table public.integration_linked_accounts(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid
+      );
+      create table public.integration_webhook_subscriptions(
+        id uuid primary key default gen_random_uuid(),
+        linked_account_id uuid
+      );
+      create table public.agent_resource_promotions(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid,
+        destination_id uuid,
+        destination_type text,
+        deliverable_id uuid
+      );
+      create table public.agent_deliverables(
+        id uuid primary key default gen_random_uuid(),
+        owner_id uuid
+      );
       create function public.effective_user_plan_tier(uuid) returns text language sql stable as
         $$select 'free'::text$$;
       create function public.try_add_storage_bytes(owner uuid, added bigint, cap bigint)
@@ -103,7 +236,10 @@ async function fixture() {
       grant select on auth.users to service_role;
     `);
     await db.exec(
-      ACCOUNT_EXPORT_DIRECT_TABLES.filter(([table]) => !EXISTING_FIXTURE_RELATIONS.has(table))
+      ACCOUNT_EXPORT_DIRECT_TABLES.filter(
+        ([table]) =>
+          !EXISTING_FIXTURE_RELATIONS.has(table) && !RELATIONSHIP_FIXTURE_RELATIONS.has(table),
+      )
         .map(([table, ownerColumn]) => `create table public.${table}(${ownerColumn} uuid);`)
         .join("\n"),
     );
@@ -163,6 +299,39 @@ function mutate(db, actor, action, skill, body, options = {}) {
     options.mutationId ?? crypto.randomUUID(),
     options.requestedAt ?? new Date().toISOString(),
   ]);
+}
+
+async function accountExportDatabaseBytes(db, owner = OWNER) {
+  return Number(
+    (
+      await db.query("select kova_private.account_export_direct_row_bytes($1,$2)::bigint bytes", [
+        owner,
+        ACCOUNT_EXPORT_MAX_BYTES,
+      ])
+    ).rows[0].bytes,
+  );
+}
+
+async function fillAccountExportDatabaseBudget(db, gap = 1) {
+  await db.query(
+    "insert into public.chat_history_records(owner_id,payload) values($1,jsonb_build_object('body',''))",
+    [OWNER],
+  );
+  const base = await accountExportDatabaseBytes(db);
+  const addition = ACCOUNT_EXPORT_MAX_BYTES - gap - base;
+  assert.ok(addition > 0);
+  const escapedCharacters = Math.floor(addition / 2);
+  const plainCharacters = addition - escapedCharacters * 2;
+  await db.query(
+    `update public.chat_history_records
+     set payload=jsonb_build_object(
+       'body',
+       repeat(chr(92),$2::integer) || repeat('x',$3::integer)
+     )
+     where owner_id=$1`,
+    [OWNER, escapedCharacters, plainCharacters],
+  );
+  assert.equal(await accountExportDatabaseBytes(db), ACCOUNT_EXPORT_MAX_BYTES - gap);
 }
 
 async function workflowServerModule() {
@@ -689,12 +858,7 @@ test("workflow history uses only the account export budget left by direct accoun
         [OWNER],
       )
     ).rows[0].bytes;
-    const sharedBytes = (
-      await db.query(
-        "select kova_private.account_export_direct_row_bytes($1,52428800)::bigint bytes",
-        [OWNER],
-      )
-    ).rows[0].bytes;
+    const sharedBytes = await accountExportDatabaseBytes(db);
     assert.ok(workflowBytes < 32_000_000);
     assert.ok(sharedBytes > 50 * 1024 * 1024);
 
@@ -706,5 +870,126 @@ test("workflow history uses only the account export budget left by direct accoun
     );
   } finally {
     await db.close();
+  }
+});
+
+test("workflow history reserves bytes used by relationship-traversed project records", async () => {
+  const db = await fixture();
+  try {
+    const projectId = crypto.randomUUID();
+    const fileId = crypto.randomUUID();
+    await db.query("insert into public.projects(id,owner_id) values($1,$2)", [projectId, OWNER]);
+    await db.query("insert into public.project_files(id,project_id,status) values($1,$2,'ready')", [
+      fileId,
+      projectId,
+    ]);
+    // This row is not owner-keyed. The exporter reaches it through the owned
+    // project file, and JSON escaping makes its 11 MiB body about 22 MiB.
+    await db.query(
+      `insert into public.project_file_chunks(file_id,payload)
+       values($1,jsonb_build_object('body',repeat(chr(92),11 * 1024 * 1024)))`,
+      [fileId],
+    );
+    await db.exec(
+      `create temporary table related_skill_seed as
+         select row_number() over ()::int n, gen_random_uuid() id from generate_series(1,17)`,
+    );
+    await db.query(
+      "insert into public.workflow_skills(id,owner_id) select id,$1 from related_skill_seed",
+      [OWNER],
+    );
+    await db.query(
+      `insert into public.workflow_skill_versions(
+         skill_id,owner_id,version,name,description,instructions,resources,content_sha256,size_bytes
+       )
+         select seed.id,$1,version,'Related','',repeat(chr(92),12000),
+           jsonb_build_array(
+             jsonb_build_object('title','A','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','B','content',repeat(chr(92),8000)),
+             jsonb_build_object('title','C','content',repeat(chr(92),3991))
+           ),repeat('0',64),32000
+         from related_skill_seed seed cross join generate_series(1,30) version
+         where ((seed.n - 1) * 30) + version <= 490`,
+      [OWNER],
+    );
+
+    const workflowBytes = (
+      await db.query(
+        `select coalesce(sum(
+           octet_length(convert_to(to_jsonb(version_record)::text,'UTF8')) + 1
+         ),0)::bigint bytes
+         from public.workflow_skill_versions version_record where owner_id=$1`,
+        [OWNER],
+      )
+    ).rows[0].bytes;
+    assert.ok(workflowBytes < 32_000_000);
+    assert.ok((await accountExportDatabaseBytes(db)) > ACCOUNT_EXPORT_MAX_BYTES);
+
+    await assert.rejects(mutate(db, OWNER, "create", null, payload(draft())), /export_limit/);
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skill_versions")).rows[0]
+        .count,
+      490,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("install and uninstall receipts are admitted against the shared export budget", async (t) => {
+  for (const action of ["install", "uninstall"]) {
+    await t.test(action, async () => {
+      const db = await fixture();
+      try {
+        const created = await mutate(db, OWNER, "create", null, payload(draft()));
+        await fillAccountExportDatabaseBudget(db);
+        const receiptsBefore = (
+          await db.query(
+            "select count(*)::int count from public.workflow_skill_mutations where owner_id=$1",
+            [OWNER],
+          )
+        ).rows[0].count;
+
+        await assert.rejects(
+          mutate(
+            db,
+            OWNER,
+            action,
+            created,
+            action === "install" ? { versionId: created.versionId } : {},
+          ),
+          /workflow_skill_export_limit/u,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select revision::int revision from public.workflow_skills where id=$1",
+              [created.id],
+            )
+          ).rows[0].revision,
+          created.revision,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select count(*)::int count from public.workflow_skill_installations where owner_id=$1",
+              [OWNER],
+            )
+          ).rows[0].count,
+          1,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "select count(*)::int count from public.workflow_skill_mutations where owner_id=$1",
+              [OWNER],
+            )
+          ).rows[0].count,
+          receiptsBefore,
+        );
+      } finally {
+        await db.close();
+      }
+    });
   }
 });

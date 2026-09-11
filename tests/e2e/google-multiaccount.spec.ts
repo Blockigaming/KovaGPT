@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Request } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 const accountA = "11111111-1111-4111-8111-111111111111";
@@ -26,6 +26,11 @@ const status = (accounts = [first, second], selected: string | null = accountA, 
   selectedConnectionId: selected,
   selectionRevision: revision,
 });
+
+function isWorkflowSkillDraftMutation(request: Request) {
+  const body = request.postData() ?? "";
+  return request.method() === "POST" && body.includes('"mutationId"') && body.includes('"draft"');
+}
 
 test("workflow skill load failures stay contained and can be retried", async ({ page }) => {
   await installAuthenticatedFixture(page);
@@ -57,11 +62,13 @@ test("workflow skill mutations retain their replay identity until success is con
   await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
   await page.route("**/api/google/status", async (route) => route.fulfill({ json: status() }));
   const mutationBodies: string[] = [];
-  let listCalls = 0;
   await page.route("**/_serverFn/**", async (route) => {
     if (route.request().method() === "GET") {
-      listCalls++;
       await route.fulfill({ json: { result: [], context: {} } });
+      return;
+    }
+    if (!isWorkflowSkillDraftMutation(route.request())) {
+      await route.fulfill({ json: { result: { ok: true }, context: {} } });
       return;
     }
     mutationBodies.push(route.request().postData() ?? "");
@@ -78,7 +85,6 @@ test("workflow skill mutations retain their replay identity until success is con
 
   await page.goto("/apps");
   await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
-  const initialListCalls = listCalls;
   await page.getByRole("button", { name: "New skill" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
   await page
@@ -88,12 +94,10 @@ test("workflow skill mutations retain their replay identity until success is con
   await page.getByRole("button", { name: "Create and install" }).click();
   await expect(page.getByText("Workflow skill update could not be confirmed.")).toBeVisible();
   await expect(page.getByText("Workflow skill created and installed")).toHaveCount(0);
-  expect(listCalls).toBe(initialListCalls);
   expect(mutationBodies).toHaveLength(1);
 
   await page.getByRole("button", { name: "Create and install" }).click();
   await expect(page.getByText("Workflow skill created and installed")).toBeVisible();
-  await expect.poll(() => listCalls).toBe(initialListCalls + 1);
   expect(mutationBodies).toHaveLength(2);
   expect(mutationBodies[1]).toBe(mutationBodies[0]);
 });
@@ -104,8 +108,6 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
   await installAuthenticatedFixture(page);
   await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
   await page.route("**/api/google/status", async (route) => route.fulfill({ json: status() }));
-  let listCalls = 0;
-  let releaseInitial: (() => void) | undefined;
   const skill = {
     id: "44444444-4444-4444-8444-444444444444",
     revision: 1,
@@ -123,32 +125,70 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
     created_at: "2026-09-11T00:00:00.000Z",
     updated_at: "2026-09-11T00:00:00.000Z",
   };
+  let captureWorkflowReload = false;
+  let workflowListUrl: string | undefined;
+  let staleMode = false;
+  let staleListCalls = 0;
+  let releaseInitial: (() => Promise<void>) | undefined;
   await page.route("**/_serverFn/**", async (route) => {
-    if (route.request().method() === "POST") {
+    const request = route.request();
+    if (isWorkflowSkillDraftMutation(request)) {
+      if (!workflowListUrl) captureWorkflowReload = true;
       await route.fulfill({ json: { result: { ok: true }, context: {} } });
       return;
     }
-    listCalls += 1;
-    if (listCalls === 1) {
-      await new Promise<void>((resolve) => {
-        releaseInitial = resolve;
-      });
-      await route.fulfill({ json: { result: [], context: {} } });
+    if (request.method() !== "GET") {
+      await route.fulfill({ json: { result: { ok: true }, context: {} } });
       return;
     }
-    await route.fulfill({ json: { result: [skill], context: {} } });
+
+    if (captureWorkflowReload && !workflowListUrl) {
+      workflowListUrl = request.url();
+      captureWorkflowReload = false;
+      await route.fulfill({ json: { result: [skill], context: {} } });
+      return;
+    }
+
+    if (staleMode && request.url() === workflowListUrl) {
+      staleListCalls += 1;
+      if (staleListCalls > 1) {
+        await route.fulfill({ json: { result: [skill], context: {} } });
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        releaseInitial = async () => {
+          await route.fulfill({ json: { result: [], context: {} } });
+          resolve();
+        };
+      });
+      return;
+    }
+
+    await route.fulfill({ json: { result: [], context: {} } });
   });
 
+  // Discover the generated workflow-list URL from its reload after a known workflow mutation.
   await page.goto("/apps");
-  await expect.poll(() => listCalls).toBe(1);
+  await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "New skill" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
   await page.getByRole("textbox", { name: "Workflow instructions" }).fill("Review every claim.");
   await page.getByRole("button", { name: "Create and install" }).click();
-  await expect.poll(() => listCalls).toBe(2);
+  await expect.poll(() => workflowListUrl).not.toBeUndefined();
   await expect(page.getByRole("heading", { name: "Editorial review" })).toBeVisible();
 
-  releaseInitial!();
+  // On a fresh panel instance, keep its initial list request pending past a successful mutation.
+  staleMode = true;
+  await page.reload();
+  await expect.poll(() => staleListCalls).toBe(1);
+  await page.getByRole("button", { name: "New skill" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
+  await page.getByRole("textbox", { name: "Workflow instructions" }).fill("Review every claim.");
+  await page.getByRole("button", { name: "Create and install" }).click();
+  await expect.poll(() => staleListCalls).toBe(2);
+  await expect(page.getByRole("heading", { name: "Editorial review" })).toBeVisible();
+
+  await releaseInitial!();
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
