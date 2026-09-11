@@ -10,6 +10,7 @@ const [
   functions,
   panel,
   home,
+  mobileTopBar,
   storage,
   exportPolicy,
   migration,
@@ -21,6 +22,7 @@ const [
   read("src/lib/workflow-skills.functions.ts"),
   read("src/components/WorkflowSkillsPanel.tsx"),
   read("src/routes/index.tsx"),
+  read("src/components/MobileTopBar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
   read("src/lib/account-export-policy.mjs"),
   read("supabase/migrations/20260910210000_workflow_skill_packages.sql"),
@@ -69,11 +71,16 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.ok(
     imageBranch.indexOf("boundedImageProviderPrompt") < imageBranch.indexOf("enforceQuota"),
   );
+  const imageQuota = imageBranch.indexOf("enforceQuota");
+  assert.ok(imageBranch.indexOf("assertSelectedContextsCurrent") < imageQuota);
+  assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
   assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
   assert.match(home, /aria-label=\{`Clear workflow skill/u);
+  assert.match(home, /skill=\{/u);
+  assert.match(mobileTopBar, /aria-label=\{`Clear workflow skill/u);
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
@@ -89,6 +96,8 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /on conflict \(owner_id, skill_id\) do update/u);
   assert.match(migration, /public\.effective_user_plan_tier\(actor\)/u);
   assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
+  assert.match(migration, /workflow_skill_bytes \+ payload_bytes > 32000000/u);
+  assert.match(migration, /workflow_skill_export_limit/u);
   assert.match(migration, /public\.release_project_storage_bytes\(actor, payload_bytes\)/u);
   assert.deepEqual(manifestEntry.functions, [
     "kova_private",

@@ -397,3 +397,33 @@ test("immutable versions charge the authoritative account quota once and deletio
     await db.close();
   }
 });
+
+test("workflow skill history stays below the bounded account export artifact", async () => {
+  const db = await fixture();
+  try {
+    await db.exec(
+      `create temporary table skill_seed as
+         select row_number() over ()::int n, gen_random_uuid() id from generate_series(1,34)`,
+    );
+    await db.query("insert into public.workflow_skills(id,owner_id) select id,$1 from skill_seed", [
+      OWNER,
+    ]);
+    await db.query(
+      `insert into public.workflow_skill_versions(
+         skill_id,owner_id,version,name,description,instructions,resources,content_sha256,size_bytes
+       )
+         select seed.id,$1,version,'Bounded','','x','[]'::jsonb,repeat('0',64),32000
+         from skill_seed seed cross join generate_series(1,30) version
+         where ((seed.n - 1) * 30) + version <= 1000`,
+      [OWNER],
+    );
+    await assert.rejects(mutate(db, OWNER, "create", null, payload(draft())), /export_limit/);
+    assert.equal(
+      (await db.query("select sum(size_bytes)::int bytes from public.workflow_skill_versions"))
+        .rows[0].bytes,
+      32_000_000,
+    );
+  } finally {
+    await db.close();
+  }
+});

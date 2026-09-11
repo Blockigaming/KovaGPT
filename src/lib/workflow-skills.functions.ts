@@ -85,6 +85,8 @@ function safeMutationError(error: { message?: string } | null): Error {
     return new Error("This workflow skill has reached its version limit.");
   if (message.includes("workflow_skill_too_large"))
     return new Error("This workflow skill is too large.");
+  if (message.includes("workflow_skill_export_limit"))
+    return new Error("Your workflow skill history has reached its export-safe limit.");
   if (message.includes("workflow_skill_storage_limit"))
     return new Error("Your account storage limit has been reached.");
   if (message.includes("workflow_skill_version_unavailable"))

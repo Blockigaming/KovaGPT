@@ -24,6 +24,8 @@ entitlement, or approval grant.
 - 12,000 instruction characters;
 - up to 10 resources, each with a 120-character title and 8,000-character body;
 - 32,000 UTF-8 bytes across the normalized text fields;
+- 32,000,000 stored version bytes across an owner's workflow-skill history so every permitted
+  immutable version remains within the bounded account-export artifact;
 - 32,000 characters for the complete image-provider prompt after workflow guidance is appended;
 - every immutable version is charged atomically against the owner's server-resolved storage plan;
 - 100 packages returned by one management read;

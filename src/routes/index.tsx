@@ -700,6 +700,7 @@ function KovaGPT() {
   );
   const archivedConversations =
     typeof window === "undefined" ? [] : loadArchivedConversations(userKey);
+  const selectedWorkflowSkill = active?.skill ?? pendingWorkflowSkill;
 
   const clearWorkflowSkill = useCallback(() => {
     setPendingWorkflowSkill(null);
@@ -1748,6 +1749,15 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
           onOpenChatSettings={active ? () => setWorkspaceOpen(true) : undefined}
           chatRulesActive={chatRulesActive}
+          skill={
+            selectedWorkflowSkill
+              ? {
+                  name: selectedWorkflowSkill.name,
+                  clear: clearWorkflowSkill,
+                  disabled: isStreaming,
+                }
+              : undefined
+          }
         />
         <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
           {isLoaded && isSignedIn ? (
@@ -1798,16 +1808,16 @@ function KovaGPT() {
                 placement="topbar"
               />
             )}
-            {(active?.skill ?? pendingWorkflowSkill) ? (
+            {selectedWorkflowSkill ? (
               <button
                 type="button"
                 onClick={clearWorkflowSkill}
                 disabled={isStreaming}
                 className="ml-2 max-w-56 truncate rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Clear workflow skill ${(active?.skill ?? pendingWorkflowSkill)!.name}`}
-                title={isStreaming ? "Stop the response before clearing this skill" : "Clear skill"}
+                aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
+                title="Clear skill"
               >
-                Skill: {(active?.skill ?? pendingWorkflowSkill)!.name} ×
+                {selectedWorkflowSkill.name} ×
               </button>
             ) : null}
           </div>

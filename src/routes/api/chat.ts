@@ -909,6 +909,7 @@ export const Route = createFileRoute("/api/chat")({
                 );
               const unavailableImageProvider = providerUnavailableResponse("image_generation");
               if (unavailableImageProvider) return unavailableImageProvider;
+              await assertSelectedContextsCurrent(request.signal);
               if (!isOwner) {
                 if (!auth.emailVerified) {
                   return new Response(
@@ -932,6 +933,8 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (quota) return quota;
               }
+              // Recheck after quota authorization too, so a concurrent uninstall or
+              // version change cannot reach the provider after the quota boundary.
               await assertSelectedContextsCurrent(request.signal);
               return handleImageRequest(imagePrompt, logContext);
             }

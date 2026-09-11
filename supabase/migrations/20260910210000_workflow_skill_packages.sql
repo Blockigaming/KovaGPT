@@ -182,6 +182,7 @@ declare
   new_version_id uuid;
   installation_id uuid;
   payload_bytes integer;
+  workflow_skill_bytes bigint;
   storage_limit bigint;
 begin
   if p_action is null or p_action not in ('create', 'version', 'install', 'uninstall', 'delete')
@@ -277,6 +278,11 @@ begin
     end loop;
     if payload_bytes > 32000 then
       raise exception 'workflow_skill_too_large' using errcode = '54000';
+    end if;
+    select coalesce(sum(size_bytes), 0) into workflow_skill_bytes
+      from public.workflow_skill_versions where owner_id = actor;
+    if workflow_skill_bytes + payload_bytes > 32000000 then
+      raise exception 'workflow_skill_export_limit' using errcode = '54000';
     end if;
     storage_limit := case public.effective_user_plan_tier(actor)
       when 'plus' then 26843545600
