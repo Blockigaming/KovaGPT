@@ -103,9 +103,7 @@ async function fixture() {
       grant select on auth.users to service_role;
     `);
     await db.exec(
-      ACCOUNT_EXPORT_DIRECT_TABLES.filter(
-        ([table]) => !EXISTING_FIXTURE_RELATIONS.has(table),
-      )
+      ACCOUNT_EXPORT_DIRECT_TABLES.filter(([table]) => !EXISTING_FIXTURE_RELATIONS.has(table))
         .map(([table, ownerColumn]) => `create table public.${table}(${ownerColumn} uuid);`)
         .join("\n"),
     );
