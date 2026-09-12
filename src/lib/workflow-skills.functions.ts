@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -98,6 +99,9 @@ const VersionHistory = z
       ),
     "Workflow skill versions must be unique and newest first.",
   );
+const AggregateRevision = z
+  .array(z.object({ revision: z.number().int().positive() }).strict())
+  .length(1);
 const Card = z.object({
   id: Id,
   revision: z.number().int().positive(),
@@ -222,6 +226,8 @@ async function draftPayload(draft: WorkflowSkillDraft) {
 export const listWorkflowSkills = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WorkflowSkillCard[]> => {
+    setResponseHeader("Cache-Control", "private, no-store");
+    setResponseHeader("Vary", "Authorization");
     const rows: WorkflowSkillCard[] = [];
     let before: z.infer<typeof Cursor> | null = null;
     for (let pageNumber = 0; pageNumber < 5; pageNumber += 1) {
@@ -244,6 +250,8 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: Id }).strict().parse(input))
   .handler(async ({ data, context }): Promise<WorkflowSkillDetail> => {
+    setResponseHeader("Cache-Control", "private, no-store");
+    setResponseHeader("Vary", "Authorization");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const result = await rpc(supabaseAdmin, "get_workflow_skill", {
       p_actor: context.userId,
@@ -285,6 +293,20 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
           installed.version !== parsed.data.installedVersion ||
           installed.name !== parsed.data.installedName)
     )
+      throw new Error("Workflow skill version history returned an invalid response.");
+    // Bind the separate immutable-history read to the current aggregate. Every
+    // version, install, uninstall, or delete mutation advances this revision,
+    // so a concurrent change between the detail and history reads fails closed.
+    const revisionResult = await (supabaseAdmin as unknown as VersionHistoryClient)
+      .from("workflow_skills")
+      .select("revision")
+      .eq("owner_id", context.userId)
+      .eq("id", data.id)
+      .limit(1);
+    if (revisionResult.error)
+      throw new Error("Workflow skill version history could not be loaded.");
+    const currentRevision = AggregateRevision.safeParse(revisionResult.data);
+    if (!currentRevision.success || currentRevision.data[0].revision !== parsed.data.revision)
       throw new Error("Workflow skill version history returned an invalid response.");
     return { ...parsed.data, versions: history.data };
   });

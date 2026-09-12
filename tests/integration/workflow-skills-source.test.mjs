@@ -370,6 +370,14 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(versionHistoryRead, /limit\(30\)/u);
   assert.match(versionHistoryRead, /const head = history\.data\[0\]/u);
   assert.match(versionHistoryRead, /head\.id !== parsed\.data\.headVersionId/u);
+  assert.match(versionHistoryRead, /from\("workflow_skills"\)/u);
+  assert.match(versionHistoryRead, /select\("revision"\)/u);
+  assert.match(
+    versionHistoryRead,
+    /currentRevision\.data\[0\]\.revision !== parsed\.data\.revision/u,
+  );
+  assert.match(functions, /setResponseHeader\("Cache-Control", "private, no-store"\)/u);
+  assert.match(functions, /setResponseHeader\("Vary", "Authorization"\)/u);
   assert.doesNotMatch(versionHistoryRead, /instructions|resources/u);
   const editorLoad = panel.slice(
     panel.indexOf("const openEditor = async"),
