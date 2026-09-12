@@ -154,11 +154,26 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   );
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /workflowSkill\.toolPlanningBlock/u);
+  const planningContext = chat.slice(
+    chat.indexOf("const toolPlanningMessages"),
+    chat.indexOf("const workingMessages"),
+  );
+  assert.match(planningContext, /\{ role: "user", content: lastText \}/u);
+  assert.doesNotMatch(planningContext, /finalMessages\.map/u);
+  assert.doesNotMatch(
+    planningContext,
+    /conversationSummary|memoryBlock|projectBlock|chatWorkspaceBlock/u,
+  );
+  const noMoreToolCalls = chat.slice(
+    chat.indexOf("if (!msg.tool_calls || msg.tool_calls.length === 0)"),
+    chat.indexOf("// Enforce total tool-call cap"),
+  );
+  assert.match(noMoreToolCalls, /!workflowSkill &&\s*toolsWereUsed/u);
   const finalToolContext = chat.slice(
     chat.indexOf("const finalBody ="),
     chat.indexOf("const activityCount ="),
   );
-  assert.match(finalToolContext, /index === 0 \? finalMessages\[0\] : message/u);
+  assert.match(finalToolContext, /\[\.\.\.finalMessages, \.\.\.finalToolMessages\]/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
   assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);

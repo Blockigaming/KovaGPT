@@ -1620,20 +1620,43 @@ export const Route = createFileRoute("/api/chat")({
             }
 
             const finalMessages = body.messages as unknown as ChatMsg[];
-            const toolPlanningMessages = workflowSkill
-              ? finalMessages.map((message, index) =>
-                  index === 0 && typeof message.content === "string"
-                    ? {
-                        ...message,
-                        content: message.content.replace(
-                          workflowSkill.block,
-                          workflowSkill.toolPlanningBlock,
-                        ),
-                      }
-                    : message,
-                )
+            // A selected workflow resource may have influenced any earlier
+            // assistant response (and therefore a durable conversation summary).
+            // Tool planning gets a fresh, provenance-isolated transcript: only
+            // authoritative runtime instructions, the resource-free skill
+            // instructions, and the user's current text request. The complete
+            // conversation and resource bodies return only for the final call,
+            // where no connector tools are available.
+            const toolPlanningMessages: ChatMsg[] = workflowSkill
+              ? [
+                  {
+                    role: "system",
+                    content:
+                      m.systemPrompt +
+                      TONE_INSTRUCTION +
+                      ADAPTIVE_INSTRUCTION +
+                      UNRESTRICTED_INSTRUCTION +
+                      ACCURACY_INSTRUCTION +
+                      CHART_INSTRUCTION +
+                      CREATOR_INSTRUCTION +
+                      (customKova?.block ?? "") +
+                      workflowSkill.toolPlanningBlock +
+                      toolInstruction +
+                      (callerTier === "plus" || callerTier === "pro"
+                        ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                        : "") +
+                      `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                      buildCurrentDateInstruction(timezone, locale),
+                  },
+                  { role: "user", content: lastText },
+                ]
               : finalMessages;
             const workingMessages: ChatMsg[] = [...toolPlanningMessages];
+            const finalToolMessages: ChatMsg[] = [];
+            const appendToolMessage = (message: ChatMsg) => {
+              workingMessages.push(message);
+              finalToolMessages.push(message);
+            };
             let providerCalls = 0;
             const activityEvents: Array<{
               tool: string;
@@ -1763,7 +1786,12 @@ export const Route = createFileRoute("/api/chat")({
                 const msg = parsedHop.message;
                 const finish = parsedHop.finishReason;
                 if (!msg.tool_calls || msg.tool_calls.length === 0) {
-                  if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
+                  if (
+                    !workflowSkill &&
+                    toolsWereUsed &&
+                    typeof msg.content === "string" &&
+                    msg.content
+                  ) {
                     const enc = new TextEncoder();
                     const stream = new ReadableStream({
                       start(controller) {
@@ -1842,13 +1870,13 @@ export const Route = createFileRoute("/api/chat")({
                     category: "policy",
                     code: "tool_budget_reached",
                   });
-                  workingMessages.push({
+                  appendToolMessage({
                     role: "assistant",
                     content: msg.content ?? null,
                     tool_calls: msg.tool_calls,
                   });
                   for (const tc of msg.tool_calls) {
-                    workingMessages.push({
+                    appendToolMessage({
                       role: "tool",
                       tool_call_id: tc.id,
                       content: JSON.stringify({
@@ -1862,7 +1890,7 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 totalToolCalls += msg.tool_calls.length;
                 toolsWereUsed = true;
-                workingMessages.push({
+                appendToolMessage({
                   role: "assistant",
                   content: msg.content ?? null,
                   tool_calls: msg.tool_calls,
@@ -1963,13 +1991,14 @@ export const Route = createFileRoute("/api/chat")({
                     }
                   }),
                 );
-                for (const r of results) workingMessages.push(r);
+                for (const r of results) appendToolMessage(r);
                 if (finish === "stop") break;
                 if (request.signal?.aborted) return new Response(null, { status: 499 });
               }
               if (hopFailed) {
                 workingMessages.length = 0;
                 workingMessages.push(...(body.messages as unknown as ChatMsg[]));
+                finalToolMessages.length = 0;
               }
               // Stash pending confirms on the outer scope so the final
               // streaming branch can prepend them too.
@@ -1986,9 +2015,7 @@ export const Route = createFileRoute("/api/chat")({
               // Restore the complete selected package only after connected-tool
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
-              messages: workingMessages.map((message, index) =>
-                index === 0 ? finalMessages[0] : message,
-              ),
+              messages: workflowSkill ? [...finalMessages, ...finalToolMessages] : workingMessages,
               stream: true,
             };
             const activityCount = activityEvents.length;
