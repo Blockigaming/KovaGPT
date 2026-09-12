@@ -9,10 +9,7 @@
   ],
   "reconciledAt": "2026-09-12",
   "auditedMainCommit": "b046727e3336b0f8df48a8097ad131e94cbf4ffe",
-  "reviewedCandidate": {
-    "pullRequest": 319,
-    "head": "20940476881dadabfcedbfeadb4aba328dd8cd52"
-  },
+  "reviewedCandidate": { "pullRequest": 319, "head": "20940476881dadabfcedbfeadb4aba328dd8cd52" },
   "ownerDeclaredOverallProgress": 76.5,
   "progressKind": "owner_declared_checkpoint",
   "progressRecalculated": false,
@@ -31,11 +28,7 @@
         "id": "FG-01",
         "owner": "Zachary",
         "title": "Conversation, models, and reasoning",
-        "mappedAreaIds": [
-          "01",
-          "03",
-          "12"
-        ],
+        "mappedAreaIds": ["01", "03", "12"],
         "sourceSection": "Conversation, models, and reasoning",
         "status": "source_partial",
         "dependencies": [
@@ -56,11 +49,7 @@
         "id": "FG-02",
         "owner": "Zachary",
         "title": "Search, browsing, and research",
-        "mappedAreaIds": [
-          "04",
-          "05",
-          "06"
-        ],
+        "mappedAreaIds": ["04", "05", "06"],
         "sourceSection": "Search, browsing, and research",
         "status": "source_partial",
         "dependencies": [
@@ -81,11 +70,7 @@
         "id": "FG-03",
         "owner": "Zachary",
         "title": "Multimodal input and understanding",
-        "mappedAreaIds": [
-          "02",
-          "10",
-          "15"
-        ],
+        "mappedAreaIds": ["02", "10", "15"],
         "sourceSection": "Multimodal input and understanding",
         "status": "source_partial",
         "dependencies": [
@@ -106,9 +91,7 @@
         "id": "FG-04",
         "owner": "Zachary",
         "title": "Image creation and editing",
-        "mappedAreaIds": [
-          "11"
-        ],
+        "mappedAreaIds": ["11"],
         "sourceSection": "Image creation and editing",
         "status": "source_partial",
         "dependencies": [
@@ -129,10 +112,7 @@
         "id": "FG-05",
         "owner": "Zachary",
         "title": "Live voice and audio",
-        "mappedAreaIds": [
-          "02",
-          "24"
-        ],
+        "mappedAreaIds": ["02", "24"],
         "sourceSection": "Live voice and audio",
         "status": "specified_unimplemented",
         "dependencies": [
@@ -150,11 +130,7 @@
         "id": "FG-06",
         "owner": "Zachary",
         "title": "Files, data analysis, and generated artifacts",
-        "mappedAreaIds": [
-          "10",
-          "15",
-          "16"
-        ],
+        "mappedAreaIds": ["10", "15", "16"],
         "sourceSection": "Files, data analysis, and generated artifacts",
         "status": "source_partial",
         "dependencies": [
@@ -175,11 +151,7 @@
         "id": "FG-07",
         "owner": "Zachary",
         "title": "Projects, memory, personalization, and learning",
-        "mappedAreaIds": [
-          "09",
-          "12",
-          "20"
-        ],
+        "mappedAreaIds": ["09", "12", "20"],
         "sourceSection": "Projects, memory, personalization, and learning",
         "status": "source_partial",
         "dependencies": [
@@ -200,9 +172,7 @@
         "id": "FG-08",
         "owner": "Zachary",
         "title": "Library and knowledge organization",
-        "mappedAreaIds": [
-          "10"
-        ],
+        "mappedAreaIds": ["10"],
         "sourceSection": "Library and knowledge organization",
         "status": "source_partial",
         "dependencies": [
@@ -223,9 +193,7 @@
         "id": "FG-09",
         "owner": "Zachary",
         "title": "Tasks and event-driven automation",
-        "mappedAreaIds": [
-          "08"
-        ],
+        "mappedAreaIds": ["08"],
         "sourceSection": "Tasks and event-driven automation",
         "status": "source_partial",
         "dependencies": [
@@ -247,10 +215,7 @@
         "id": "FG-10",
         "owner": "Zachary",
         "title": "Durable agents and non-blocking work",
-        "mappedAreaIds": [
-          "06",
-          "07"
-        ],
+        "mappedAreaIds": ["06", "07"],
         "sourceSection": "Durable agents and non-blocking work",
         "status": "source_partial",
         "dependencies": [
@@ -271,10 +236,7 @@
         "id": "FG-11",
         "owner": "Zachary",
         "title": "Apps, connectors, tools, MCP, and WebMCP",
-        "mappedAreaIds": [
-          "14",
-          "25"
-        ],
+        "mappedAreaIds": ["14", "25"],
         "sourceSection": "Apps, connectors, tools, MCP, and WebMCP",
         "status": "source_partial",
         "dependencies": [
@@ -296,10 +258,7 @@
         "id": "FG-12",
         "owner": "Zachary",
         "title": "Custom Kovas, reusable skills, and discovery",
-        "mappedAreaIds": [
-          "13",
-          "14"
-        ],
+        "mappedAreaIds": ["13", "14"],
         "sourceSection": "Custom Kovas, reusable skills, and discovery",
         "status": "source_partial",
         "dependencies": [
@@ -320,10 +279,7 @@
         "id": "FG-13",
         "owner": "Zachary",
         "title": "Sharing and collaboration",
-        "mappedAreaIds": [
-          "17",
-          "18"
-        ],
+        "mappedAreaIds": ["17", "18"],
         "sourceSection": "Sharing and collaboration",
         "status": "source_partial",
         "dependencies": [
@@ -344,10 +300,7 @@
         "id": "FG-14",
         "owner": "Zachary",
         "title": "Notifications and cross-device experience",
-        "mappedAreaIds": [
-          "19",
-          "24"
-        ],
+        "mappedAreaIds": ["19", "24"],
         "sourceSection": "Notifications and cross-device experience",
         "status": "source_partial",
         "dependencies": [
@@ -368,11 +321,7 @@
         "id": "FG-15",
         "owner": "Zachary",
         "title": "Identity, safety, privacy, and user control",
-        "mappedAreaIds": [
-          "21",
-          "22",
-          "26"
-        ],
+        "mappedAreaIds": ["21", "22", "26"],
         "sourceSection": "Identity, safety, privacy, and user control",
         "status": "source_partial",
         "dependencies": [
@@ -394,9 +343,7 @@
         "id": "FG-16",
         "owner": "Zachary",
         "title": "Plans, entitlements, billing, and premium compute",
-        "mappedAreaIds": [
-          "23"
-        ],
+        "mappedAreaIds": ["23"],
         "sourceSection": "Plans, entitlements, billing, and premium compute",
         "status": "source_partial",
         "dependencies": [
@@ -417,9 +364,7 @@
         "id": "FG-17",
         "owner": "Zachary",
         "title": "Developer platform",
-        "mappedAreaIds": [
-          "25"
-        ],
+        "mappedAreaIds": ["25"],
         "sourceSection": "Developer platform",
         "status": "source_partial",
         "dependencies": [
@@ -440,9 +385,7 @@
         "id": "FG-18",
         "owner": "Zachary",
         "title": "Organization and enterprise operation",
-        "mappedAreaIds": [
-          "26"
-        ],
+        "mappedAreaIds": ["26"],
         "sourceSection": "Organization and enterprise operation",
         "status": "source_partial",
         "dependencies": [
@@ -463,17 +406,7 @@
         "id": "FG-X1",
         "owner": "Zachary",
         "title": "Premium-compute safety contract",
-        "mappedAreaIds": [
-          "03",
-          "06",
-          "07",
-          "08",
-          "11",
-          "14",
-          "15",
-          "23",
-          "25"
-        ],
+        "mappedAreaIds": ["03", "06", "07", "08", "11", "14", "15", "23", "25"],
         "sourceSection": "Premium-compute safety contract",
         "status": "source_partial",
         "dependencies": [
@@ -581,10 +514,7 @@
           "Backups, monitoring, rollback, and exact deployed provenance"
         ],
         "acceptanceTest": "Pass every exact-commit source/review/CI gate, then with separate approval prove migrations, deployed SHA/image, production journeys, provider/billing safety, origin protection, monitoring, backups, recovery, and rollback.",
-        "evidence": [
-          "docs/RELEASE_RUNBOOK.md",
-          "docs/release-provenance.md"
-        ],
+        "evidence": ["docs/RELEASE_RUNBOOK.md", "docs/release-provenance.md"],
         "boundary": "Source and hosted evidence do not establish staging or production; no merge, migration, deployment, purchase, or live configuration change is authorized here.",
         "source": "docs/release/kova-final-goal-2026-09-11.md"
       }
@@ -594,16 +524,8 @@
     "pullRequest": 319,
     "pullRequestHead": "20940476881dadabfcedbfeadb4aba328dd8cd52",
     "workflows": [
-      {
-        "id": 34664358655,
-        "name": "KovaGPT CI",
-        "conclusion": "success"
-      },
-      {
-        "id": 34664358673,
-        "name": "Azure Container Readiness",
-        "conclusion": "success"
-      }
+      { "id": 34664358655, "name": "KovaGPT CI", "conclusion": "success" },
+      { "id": 34664358673, "name": "Azure Container Readiness", "conclusion": "success" }
     ]
   },
   "verification": {
@@ -644,11 +566,7 @@
         "src/routes/api/chat.ts"
       ],
       "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "01",
@@ -663,11 +581,7 @@
         "tests/unit/temporary-chat-retry-privacy.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "01",
@@ -682,11 +596,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "01",
@@ -697,11 +607,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "01",
@@ -712,11 +618,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "02",
@@ -732,12 +634,7 @@
         "src/lib/document-extraction/pdf.ts"
       ],
       "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-05",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "02",
@@ -751,12 +648,7 @@
         "tests/unit/document-export-roundtrip.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-05",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "02",
@@ -771,12 +663,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-05",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "02",
@@ -787,12 +674,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-05",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "02",
@@ -803,12 +685,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-05",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "03",
@@ -823,12 +700,7 @@
         "src/lib/work-execution.server.ts"
       ],
       "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "03",
@@ -843,12 +715,7 @@
         "tests/e2e/work-model-controls.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "03",
@@ -863,12 +730,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "03",
@@ -879,12 +741,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "03",
@@ -895,12 +752,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "04",
@@ -909,16 +761,9 @@
       "stage": "source",
       "status": "accepted",
       "requirement": "Bounded web, image, shopping, and local discovery routes, provider normalization, admission, citations, and UI tests are integrated.",
-      "evidence": [
-        "src/lib/ai/search.server.ts",
-        "src/routes/maps.tsx"
-      ],
+      "evidence": ["src/lib/ai/search.server.ts", "src/routes/maps.tsx"],
       "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "04",
@@ -927,15 +772,9 @@
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
       "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
-      "evidence": [
-        "tests/unit/search-provider.test.mjs"
-      ],
+      "evidence": ["tests/unit/search-provider.test.mjs"],
       "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "04",
@@ -950,11 +789,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "04",
@@ -965,11 +800,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "04",
@@ -980,11 +811,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "05",
@@ -999,11 +826,7 @@
         "src/routes/research-planner.tsx"
       ],
       "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "05",
@@ -1018,11 +841,7 @@
         "tests/unit/research-persistence-authorization.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "05",
@@ -1037,11 +856,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "05",
@@ -1052,11 +867,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "05",
@@ -1067,11 +878,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "06",
@@ -1086,13 +893,7 @@
         "src/lib/work-browser.server.ts"
       ],
       "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "06",
@@ -1107,13 +908,7 @@
         "tests/e2e/work-browser-takeover.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "06",
@@ -1128,13 +923,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "06",
@@ -1145,13 +934,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "06",
@@ -1162,13 +945,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-02",
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "07",
@@ -1183,12 +960,7 @@
         "work-runner/provider.mjs"
       ],
       "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "07",
@@ -1203,12 +975,7 @@
         "tests/unit/work-output-publisher.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "07",
@@ -1223,12 +990,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "07",
@@ -1239,12 +1001,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "07",
@@ -1255,12 +1012,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-10",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "08",
@@ -1275,12 +1027,7 @@
         "src/lib/scheduled-execution.server.ts"
       ],
       "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
-      "finalGoalRequirementIds": [
-        "FG-09",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "08",
@@ -1295,12 +1042,7 @@
         "tests/e2e/scheduled-task-editor.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-09",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "08",
@@ -1315,12 +1057,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-09",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "08",
@@ -1331,12 +1068,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
-      "finalGoalRequirementIds": [
-        "FG-09",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "08",
@@ -1347,12 +1079,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
-      "finalGoalRequirementIds": [
-        "FG-09",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "09",
@@ -1367,11 +1094,7 @@
         "src/lib/use-canvas-collaboration.ts"
       ],
       "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "09",
@@ -1386,11 +1109,7 @@
         "tests/e2e/projects-library-workspaces.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "09",
@@ -1405,11 +1124,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "09",
@@ -1420,11 +1135,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "09",
@@ -1435,11 +1146,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "10",
@@ -1454,13 +1161,7 @@
         "src/routes/api/library/items.ts"
       ],
       "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-08",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "10",
@@ -1475,13 +1176,7 @@
         "tests/e2e/library-version-history.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-08",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "10",
@@ -1496,13 +1191,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-08",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "10",
@@ -1513,13 +1202,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-08",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "10",
@@ -1530,13 +1213,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-08",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "11",
@@ -1551,12 +1228,7 @@
         "docs/image-edit-contract.md"
       ],
       "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
-      "finalGoalRequirementIds": [
-        "FG-04",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "11",
@@ -1571,12 +1243,7 @@
         "tests/unit/image-principal-client.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-04",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "11",
@@ -1591,12 +1258,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-04",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "11",
@@ -1607,12 +1269,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
-      "finalGoalRequirementIds": [
-        "FG-04",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "11",
@@ -1623,12 +1280,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
-      "finalGoalRequirementIds": [
-        "FG-04",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "12",
@@ -1643,12 +1295,7 @@
         "src/lib/workspace-search.server.ts"
       ],
       "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "12",
@@ -1663,12 +1310,7 @@
         "tests/unit/workspace-search-migration.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "12",
@@ -1683,12 +1325,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "12",
@@ -1699,12 +1336,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "12",
@@ -1715,12 +1347,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-01",
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "13",
@@ -1735,11 +1362,7 @@
         "docs/custom-kovas-source-readiness.md"
       ],
       "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-12",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "13",
@@ -1754,11 +1377,7 @@
         "tests/browser-runtime/custom-kovas-principal.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-12",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "13",
@@ -1773,11 +1392,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-12",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "13",
@@ -1788,11 +1403,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-12",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "13",
@@ -1803,11 +1414,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-12",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "14",
@@ -1822,13 +1429,7 @@
         "src/lib/workflow-skills.server.ts"
       ],
       "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-12",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "14",
@@ -1843,13 +1444,7 @@
         "tests/unit/workflow-skills.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-12",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "14",
@@ -1864,13 +1459,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-12",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "14",
@@ -1881,13 +1470,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-12",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "14",
@@ -1898,13 +1481,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-12",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "15",
@@ -1919,13 +1496,7 @@
         "src/lib/multimodal/files.server.ts"
       ],
       "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "15",
@@ -1940,13 +1511,7 @@
         "tests/unit/document-export-roundtrip.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "15",
@@ -1961,13 +1526,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "15",
@@ -1978,13 +1537,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "15",
@@ -1995,13 +1548,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-03",
-        "FG-06",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "16",
@@ -2016,11 +1563,7 @@
         "src/components/CanvasComments.tsx"
       ],
       "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
-      "finalGoalRequirementIds": [
-        "FG-06",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "16",
@@ -2035,11 +1578,7 @@
         "tests/e2e/multimodal-canvas.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-06",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "16",
@@ -2054,11 +1593,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-06",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "16",
@@ -2069,11 +1604,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
-      "finalGoalRequirementIds": [
-        "FG-06",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "16",
@@ -2084,11 +1615,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
-      "finalGoalRequirementIds": [
-        "FG-06",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "17",
@@ -2103,11 +1630,7 @@
         "src/lib/account-export-sites.mjs"
       ],
       "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "17",
@@ -2122,11 +1645,7 @@
         "tests/unit/account-export-sites.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "17",
@@ -2141,11 +1660,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "17",
@@ -2156,11 +1671,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "17",
@@ -2171,11 +1682,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "18",
@@ -2190,11 +1697,7 @@
         "src/lib/work-sync-client.ts"
       ],
       "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "18",
@@ -2209,11 +1712,7 @@
         "tests/unit/project-canvas-collaboration.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "18",
@@ -2228,11 +1727,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "18",
@@ -2243,11 +1738,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "18",
@@ -2258,11 +1749,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-13",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "19",
@@ -2277,11 +1764,7 @@
         "public/kova-sw.js"
       ],
       "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "19",
@@ -2296,11 +1779,7 @@
         "tests/e2e/pwa-service-worker.spec.ts"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "19",
@@ -2315,11 +1794,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "19",
@@ -2330,11 +1805,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "19",
@@ -2345,11 +1816,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "20",
@@ -2364,11 +1831,7 @@
         "src/lib/study-policy.mjs"
       ],
       "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "20",
@@ -2383,11 +1846,7 @@
         "tests/e2e/study-practice.spec.ts"
       ],
       "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "20",
@@ -2402,11 +1861,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "20",
@@ -2417,11 +1872,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "20",
@@ -2432,11 +1883,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-07",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "21",
@@ -2451,11 +1898,7 @@
         "src/lib/trusted-contact-policy.mjs"
       ],
       "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "21",
@@ -2470,11 +1913,7 @@
         "tests/unit/trusted-contact-runtime.test.mjs"
       ],
       "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "21",
@@ -2489,11 +1928,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "21",
@@ -2504,11 +1939,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "21",
@@ -2519,11 +1950,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "22",
@@ -2538,11 +1965,7 @@
         "src/lib/account-storage-cleanup.server.ts"
       ],
       "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "22",
@@ -2557,11 +1980,7 @@
         "tests/unit/account-export-generation.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "22",
@@ -2576,11 +1995,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "22",
@@ -2591,11 +2006,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "22",
@@ -2606,11 +2017,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "23",
@@ -2625,12 +2032,7 @@
         "src/lib/pricing/developer-funding.server.ts"
       ],
       "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-16",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "23",
@@ -2645,12 +2047,7 @@
         "tests/unit/pricing-administration.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-16",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "23",
@@ -2665,12 +2062,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-16",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "23",
@@ -2681,12 +2073,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-16",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "23",
@@ -2697,12 +2084,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-16",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "24",
@@ -2717,12 +2099,7 @@
         "src/lib/capability-registry.ts"
       ],
       "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-05",
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "24",
@@ -2737,12 +2114,7 @@
         "tests/unit/visible-control-contract.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-05",
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "24",
@@ -2757,12 +2129,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-05",
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "24",
@@ -2773,12 +2140,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-05",
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "24",
@@ -2789,12 +2151,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
-      "finalGoalRequirementIds": [
-        "FG-05",
-        "FG-14",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "25",
@@ -2809,13 +2166,7 @@
         "sdk/javascript"
       ],
       "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-17",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "25",
@@ -2830,13 +2181,7 @@
         "tests/unit/developer-files-migration.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-17",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "25",
@@ -2851,13 +2196,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-17",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "25",
@@ -2868,13 +2207,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-17",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "25",
@@ -2885,13 +2218,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
-      "finalGoalRequirementIds": [
-        "FG-11",
-        "FG-17",
-        "FG-X1",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "26",
@@ -2906,12 +2233,7 @@
         "src/lib/organization-account-deletion.server.ts"
       ],
       "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-18",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "26",
@@ -2925,12 +2247,7 @@
         "tests/unit/organization-boundaries.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-18",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "26",
@@ -2945,12 +2262,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-18",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "26",
@@ -2961,12 +2273,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-18",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "26",
@@ -2977,12 +2284,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
-      "finalGoalRequirementIds": [
-        "FG-15",
-        "FG-18",
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
       "areaId": "27",
@@ -2997,10 +2299,7 @@
         "src/lib/workspace-search.server.ts"
       ],
       "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     },
     {
       "areaId": "27",
@@ -3015,10 +2314,7 @@
         "tests/unit/workspace-search-policy.test.mjs"
       ],
       "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
-      "finalGoalRequirementIds": [
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     },
     {
       "areaId": "27",
@@ -3033,10 +2329,7 @@
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
       "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
-      "finalGoalRequirementIds": [
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     },
     {
       "areaId": "27",
@@ -3047,10 +2340,7 @@
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
       "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     },
     {
       "areaId": "27",
@@ -3061,10 +2351,7 @@
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
       "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
-      "finalGoalRequirementIds": [
-        "FG-X2",
-        "FG-X3"
-      ]
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     }
   ]
 }

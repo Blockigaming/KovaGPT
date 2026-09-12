@@ -82,7 +82,11 @@ test("hosted evidence names the reviewed PR 319 implementation head and successf
   );
   assert.deepEqual(ledger.exactHeadEvidence.workflows, [
     { id: 34664358655, name: "KovaGPT CI", conclusion: "success" },
-    { id: 34664358673, name: "Azure Container Readiness", conclusion: "success" },
+    {
+      id: 34664358673,
+      name: "Azure Container Readiness",
+      conclusion: "success",
+    },
   ]);
 });
 

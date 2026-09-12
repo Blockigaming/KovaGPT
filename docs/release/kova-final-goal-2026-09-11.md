@@ -421,4 +421,3 @@ Required evidence includes:
 This final goal authorizes specification, design, implementation, testing, review preparation, and other already approved engineering work. It does **not** by itself authorize production deployment, merge, purchase, paid resource creation, live price change, destructive data action, bypass of access controls, or modification of already verified Azure identity/networking settings. Obtain the required separate authorization for those actions.
 
 When blocked, document the exact dependency and continue independent authorized work. Never fake unsupported behavior, evidence, progress, deployment status, provider availability, pricing, or completion.
-

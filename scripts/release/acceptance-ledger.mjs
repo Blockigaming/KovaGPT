@@ -21,7 +21,11 @@ const EXACT_HEAD_EVIDENCE = {
   pullRequestHead: "20940476881dadabfcedbfeadb4aba328dd8cd52",
   workflows: [
     { id: 34664358655, name: "KovaGPT CI", conclusion: "success" },
-    { id: 34664358673, name: "Azure Container Readiness", conclusion: "success" },
+    {
+      id: 34664358673,
+      name: "Azure Container Readiness",
+      conclusion: "success",
+    },
   ],
 };
 const FINAL_GOAL_REQUIREMENT_IDS = [
@@ -30,11 +34,7 @@ const FINAL_GOAL_REQUIREMENT_IDS = [
   "FG-X2",
   "FG-X3",
 ];
-const FINAL_GOAL_STATUSES = new Set([
-  "source_partial",
-  "specified_unimplemented",
-  "not_verified",
-]);
+const FINAL_GOAL_STATUSES = new Set(["source_partial", "specified_unimplemented", "not_verified"]);
 
 function parseJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -245,9 +245,8 @@ export function buildAcceptanceLedger() {
     throw new Error(`Capability audit is missing areas: ${missingCapabilities.join(", ")}`);
   }
   for (const area of parsed.areas) {
-    const expectedStatus = sourceStatus(area.classification) === "accepted"
-      ? "bounded_source"
-      : "partial_source";
+    const expectedStatus =
+      sourceStatus(area.classification) === "accepted" ? "bounded_source" : "partial_source";
     const capability = capabilities.get(area.id);
     if (
       capability.sourceStatus !== expectedStatus ||
@@ -261,15 +260,13 @@ export function buildAcceptanceLedger() {
   }
 
   const evidencePaths = [
-    ...new Set(
-      [
-        ...capabilityAudit.surfaces.flatMap((surface) => [
-          ...surface.sourceEvidence,
-          ...surface.testEvidence,
-        ]),
-        ...finalGoalRequirements.flatMap((requirement) => requirement.evidence),
-      ],
-    ),
+    ...new Set([
+      ...capabilityAudit.surfaces.flatMap((surface) => [
+        ...surface.sourceEvidence,
+        ...surface.testEvidence,
+      ]),
+      ...finalGoalRequirements.flatMap((requirement) => requirement.evidence),
+    ]),
   ].sort();
   const missingEvidencePaths = evidencePaths.filter((path) => !existsSync(resolve(ROOT, path)));
   if (missingEvidencePaths.length) {
@@ -363,7 +360,10 @@ export function buildAcceptanceLedger() {
 }
 
 export function serializeAcceptanceLedger(ledger = buildAcceptanceLedger()) {
-  return formatWithPrettier(JSON.stringify(ledger), { parser: "json", printWidth: 100 });
+  return formatWithPrettier(JSON.stringify(ledger), {
+    parser: "json",
+    printWidth: 100,
+  });
 }
 
 async function main() {

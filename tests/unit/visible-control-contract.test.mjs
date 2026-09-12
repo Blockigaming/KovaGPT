@@ -10,7 +10,9 @@ test("visible product controls are backed or explicitly absent", () => {
 
 test("visible-control audit tolerates a tracked file deleted before staging", () => {
   assert.deepEqual(
-    inspectVisibleControlContract({ files: ["src/lib/deleted-before-stage.ts"] }),
+    inspectVisibleControlContract({
+      files: ["src/lib/deleted-before-stage.ts"],
+    }),
     [],
   );
 });

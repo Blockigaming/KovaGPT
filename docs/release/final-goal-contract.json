@@ -19,11 +19,7 @@
       "id": "FG-01",
       "owner": "Zachary",
       "title": "Conversation, models, and reasoning",
-      "mappedAreaIds": [
-        "01",
-        "03",
-        "12"
-      ],
+      "mappedAreaIds": ["01", "03", "12"],
       "sourceSection": "Conversation, models, and reasoning",
       "status": "source_partial",
       "dependencies": [
@@ -44,11 +40,7 @@
       "id": "FG-02",
       "owner": "Zachary",
       "title": "Search, browsing, and research",
-      "mappedAreaIds": [
-        "04",
-        "05",
-        "06"
-      ],
+      "mappedAreaIds": ["04", "05", "06"],
       "sourceSection": "Search, browsing, and research",
       "status": "source_partial",
       "dependencies": [
@@ -69,11 +61,7 @@
       "id": "FG-03",
       "owner": "Zachary",
       "title": "Multimodal input and understanding",
-      "mappedAreaIds": [
-        "02",
-        "10",
-        "15"
-      ],
+      "mappedAreaIds": ["02", "10", "15"],
       "sourceSection": "Multimodal input and understanding",
       "status": "source_partial",
       "dependencies": [
@@ -94,9 +82,7 @@
       "id": "FG-04",
       "owner": "Zachary",
       "title": "Image creation and editing",
-      "mappedAreaIds": [
-        "11"
-      ],
+      "mappedAreaIds": ["11"],
       "sourceSection": "Image creation and editing",
       "status": "source_partial",
       "dependencies": [
@@ -117,10 +103,7 @@
       "id": "FG-05",
       "owner": "Zachary",
       "title": "Live voice and audio",
-      "mappedAreaIds": [
-        "02",
-        "24"
-      ],
+      "mappedAreaIds": ["02", "24"],
       "sourceSection": "Live voice and audio",
       "status": "specified_unimplemented",
       "dependencies": [
@@ -138,11 +121,7 @@
       "id": "FG-06",
       "owner": "Zachary",
       "title": "Files, data analysis, and generated artifacts",
-      "mappedAreaIds": [
-        "10",
-        "15",
-        "16"
-      ],
+      "mappedAreaIds": ["10", "15", "16"],
       "sourceSection": "Files, data analysis, and generated artifacts",
       "status": "source_partial",
       "dependencies": [
@@ -163,11 +142,7 @@
       "id": "FG-07",
       "owner": "Zachary",
       "title": "Projects, memory, personalization, and learning",
-      "mappedAreaIds": [
-        "09",
-        "12",
-        "20"
-      ],
+      "mappedAreaIds": ["09", "12", "20"],
       "sourceSection": "Projects, memory, personalization, and learning",
       "status": "source_partial",
       "dependencies": [
@@ -188,9 +163,7 @@
       "id": "FG-08",
       "owner": "Zachary",
       "title": "Library and knowledge organization",
-      "mappedAreaIds": [
-        "10"
-      ],
+      "mappedAreaIds": ["10"],
       "sourceSection": "Library and knowledge organization",
       "status": "source_partial",
       "dependencies": [
@@ -211,9 +184,7 @@
       "id": "FG-09",
       "owner": "Zachary",
       "title": "Tasks and event-driven automation",
-      "mappedAreaIds": [
-        "08"
-      ],
+      "mappedAreaIds": ["08"],
       "sourceSection": "Tasks and event-driven automation",
       "status": "source_partial",
       "dependencies": [
@@ -235,10 +206,7 @@
       "id": "FG-10",
       "owner": "Zachary",
       "title": "Durable agents and non-blocking work",
-      "mappedAreaIds": [
-        "06",
-        "07"
-      ],
+      "mappedAreaIds": ["06", "07"],
       "sourceSection": "Durable agents and non-blocking work",
       "status": "source_partial",
       "dependencies": [
@@ -259,10 +227,7 @@
       "id": "FG-11",
       "owner": "Zachary",
       "title": "Apps, connectors, tools, MCP, and WebMCP",
-      "mappedAreaIds": [
-        "14",
-        "25"
-      ],
+      "mappedAreaIds": ["14", "25"],
       "sourceSection": "Apps, connectors, tools, MCP, and WebMCP",
       "status": "source_partial",
       "dependencies": [
@@ -284,10 +249,7 @@
       "id": "FG-12",
       "owner": "Zachary",
       "title": "Custom Kovas, reusable skills, and discovery",
-      "mappedAreaIds": [
-        "13",
-        "14"
-      ],
+      "mappedAreaIds": ["13", "14"],
       "sourceSection": "Custom Kovas, reusable skills, and discovery",
       "status": "source_partial",
       "dependencies": [
@@ -308,10 +270,7 @@
       "id": "FG-13",
       "owner": "Zachary",
       "title": "Sharing and collaboration",
-      "mappedAreaIds": [
-        "17",
-        "18"
-      ],
+      "mappedAreaIds": ["17", "18"],
       "sourceSection": "Sharing and collaboration",
       "status": "source_partial",
       "dependencies": [
@@ -332,10 +291,7 @@
       "id": "FG-14",
       "owner": "Zachary",
       "title": "Notifications and cross-device experience",
-      "mappedAreaIds": [
-        "19",
-        "24"
-      ],
+      "mappedAreaIds": ["19", "24"],
       "sourceSection": "Notifications and cross-device experience",
       "status": "source_partial",
       "dependencies": [
@@ -356,11 +312,7 @@
       "id": "FG-15",
       "owner": "Zachary",
       "title": "Identity, safety, privacy, and user control",
-      "mappedAreaIds": [
-        "21",
-        "22",
-        "26"
-      ],
+      "mappedAreaIds": ["21", "22", "26"],
       "sourceSection": "Identity, safety, privacy, and user control",
       "status": "source_partial",
       "dependencies": [
@@ -382,9 +334,7 @@
       "id": "FG-16",
       "owner": "Zachary",
       "title": "Plans, entitlements, billing, and premium compute",
-      "mappedAreaIds": [
-        "23"
-      ],
+      "mappedAreaIds": ["23"],
       "sourceSection": "Plans, entitlements, billing, and premium compute",
       "status": "source_partial",
       "dependencies": [
@@ -405,9 +355,7 @@
       "id": "FG-17",
       "owner": "Zachary",
       "title": "Developer platform",
-      "mappedAreaIds": [
-        "25"
-      ],
+      "mappedAreaIds": ["25"],
       "sourceSection": "Developer platform",
       "status": "source_partial",
       "dependencies": [
@@ -428,9 +376,7 @@
       "id": "FG-18",
       "owner": "Zachary",
       "title": "Organization and enterprise operation",
-      "mappedAreaIds": [
-        "26"
-      ],
+      "mappedAreaIds": ["26"],
       "sourceSection": "Organization and enterprise operation",
       "status": "source_partial",
       "dependencies": [
@@ -451,17 +397,7 @@
       "id": "FG-X1",
       "owner": "Zachary",
       "title": "Premium-compute safety contract",
-      "mappedAreaIds": [
-        "03",
-        "06",
-        "07",
-        "08",
-        "11",
-        "14",
-        "15",
-        "23",
-        "25"
-      ],
+      "mappedAreaIds": ["03", "06", "07", "08", "11", "14", "15", "23", "25"],
       "sourceSection": "Premium-compute safety contract",
       "status": "source_partial",
       "dependencies": [
@@ -521,10 +457,7 @@
         "Owner acceptance"
       ],
       "acceptanceTest": "Pass the agreed viewport, theme, touch, keyboard, screen-reader, reduced-motion, long-content, safe-area, no-overflow, lifecycle-state, and performance matrices, then obtain owner acceptance.",
-      "evidence": [
-        "tests/e2e/ui-quality.spec.ts",
-        "tests/e2e/workspace-visual-coherence.spec.ts"
-      ],
+      "evidence": ["tests/e2e/ui-quality.spec.ts", "tests/e2e/workspace-visual-coherence.spec.ts"],
       "boundary": "Hosted browser gates verify bounded current journeys, not the complete interface contract; UI remains the separate owner-declared 1% assessment.",
       "source": "docs/release/kova-final-goal-2026-09-11.md"
     },
@@ -569,10 +502,7 @@
         "Backups, monitoring, rollback, and exact deployed provenance"
       ],
       "acceptanceTest": "Pass every exact-commit source/review/CI gate, then with separate approval prove migrations, deployed SHA/image, production journeys, provider/billing safety, origin protection, monitoring, backups, recovery, and rollback.",
-      "evidence": [
-        "docs/RELEASE_RUNBOOK.md",
-        "docs/release-provenance.md"
-      ],
+      "evidence": ["docs/RELEASE_RUNBOOK.md", "docs/release-provenance.md"],
       "boundary": "Source and hosted evidence do not establish staging or production; no merge, migration, deployment, purchase, or live configuration change is authorized here.",
       "source": "docs/release/kova-final-goal-2026-09-11.md"
     }

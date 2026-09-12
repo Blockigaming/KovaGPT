@@ -11,7 +11,11 @@ import {
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 
 export type CapabilityAvailability =
-  "available" | "limited" | "provider-dependent" | "unavailable" | "excluded";
+  | "available"
+  | "limited"
+  | "provider-dependent"
+  | "unavailable"
+  | "excluded";
 
 export type CapabilityId =
   | "webSearch"

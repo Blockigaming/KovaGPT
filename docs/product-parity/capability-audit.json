@@ -74,13 +74,8 @@
       "area": "Search, images, shopping and local discovery",
       "sourceStatus": "bounded_source",
       "implementedScope": "Existing sourced web search; Discovery package adds bounded Firecrawl web/image metadata, explicit merchant verification/variant comparison and explicit-place handoffs.",
-      "sourceEvidence": [
-        "src/lib/ai/search.server.ts",
-        "src/routes/maps.tsx"
-      ],
-      "testEvidence": [
-        "tests/unit/search-provider.test.mjs"
-      ],
+      "sourceEvidence": ["src/lib/ai/search.server.ts", "src/routes/maps.tsx"],
+      "testEvidence": ["tests/unit/search-provider.test.mjs"],
       "boundary": "Discovery is pending integration in this snapshot. Merchant facts need successful source checks; unknown price/stock stays unknown. No location tracking, native map, live booking or reverse-image claim.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
       "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
