@@ -573,6 +573,23 @@ test("workflow skill detail transport validates the complete response before use
     () =>
       parseWorkflowSkillDetailResult({
         ...detail,
+        versions: [
+          {
+            id: OWNER,
+            version: 2,
+            name: "Concurrent version",
+            digest: "b".repeat(64),
+            created_at: new Date().toISOString(),
+          },
+          ...detail.versions,
+        ],
+      }),
+    /could not be confirmed/u,
+  );
+  assert.throws(
+    () =>
+      parseWorkflowSkillDetailResult({
+        ...detail,
         installedVersionId: OTHER,
         installedVersion: 2,
         installedName: "Editorial review",

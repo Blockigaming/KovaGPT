@@ -83,13 +83,10 @@ export function parseWorkflowSkillDetailResult(value) {
     value.versions.every(
       (version, index) => index === 0 || value.versions[index - 1].version > version.version,
     ) &&
-    value.versions.some(
-      (version) =>
-        version.id === value.headVersionId &&
-        version.version === value.version &&
-        version.name === value.name &&
-        version.digest === value.digest,
-    ) &&
+    value.versions[0].id === value.headVersionId &&
+    value.versions[0].version === value.version &&
+    value.versions[0].name === value.name &&
+    value.versions[0].digest === value.digest &&
     isString(value.digest) &&
     DIGEST_PATTERN.test(value.digest) &&
     nullable(value.installationId, isUuid) &&

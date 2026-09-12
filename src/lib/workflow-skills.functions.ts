@@ -266,7 +266,10 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
     const history = VersionHistory.safeParse(historyResult.data);
     if (!history.success)
       throw new Error("Workflow skill version history returned an invalid response.");
-    const head = history.data.find((version) => version.id === parsed.data.headVersionId);
+    // Require one coherent snapshot. A concurrent version creation between the
+    // authorized detail RPC and this read must fail closed instead of exposing
+    // a newer history row beside stale head metadata.
+    const head = history.data[0];
     const installed = parsed.data.installedVersionId
       ? history.data.find((version) => version.id === parsed.data.installedVersionId)
       : null;
