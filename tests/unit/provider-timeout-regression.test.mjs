@@ -28,7 +28,7 @@ test("stalled managed-identity authentication is bounded and logs no credentials
 
   const fetchToken = createManagedIdentityTokenFetcher({
     env: (name) => secrets[name],
-    resource: "https://cognitiveservices.azure.com",
+    resource: "https://ai.azure.com",
     getTimeoutMs: () => 30,
     fetchImpl: (input, init) => {
       requestedUrl = String(input);
@@ -43,7 +43,7 @@ test("stalled managed-identity authentication is bounded and logs no credentials
   assert.ok(Date.now() - startedAt < 500, "identity timeout must finish promptly");
 
   const url = new URL(requestedUrl);
-  assert.equal(url.searchParams.get("resource"), "https://cognitiveservices.azure.com");
+  assert.equal(url.searchParams.get("resource"), "https://ai.azure.com");
   assert.equal(url.searchParams.get("api-version"), "2019-08-01");
   assert.equal(url.searchParams.get("client_id"), secrets.AZURE_CLIENT_ID);
   assert.equal(observedHeader, secrets.IDENTITY_HEADER);
@@ -226,6 +226,7 @@ test("Azure v1 Responses endpoint and deployment-name routing remain exact", () 
   const catalog = readFileSync("src/lib/ai/model-catalog.server.ts", "utf8");
 
   assert.match(provider, /return `\$\{endpoint\.origin\}\/openai\/v1`/u);
+  assert.match(provider, /const AZURE_OPENAI_RESOURCE = "https:\/\/ai\.azure\.com"/u);
   assert.match(provider, /providerFetch\(\s*"\/responses"/u);
   assert.match(provider, /AZURE_OPENAI_DEPLOYMENT_CHAT/u);
   assert.match(provider, /AZURE_OPENAI_DEPLOYMENT_THINKING/u);

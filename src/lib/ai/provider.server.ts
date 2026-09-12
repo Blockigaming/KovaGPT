@@ -66,7 +66,7 @@ type SafeLogValue = string | number | boolean | undefined;
 type SafeLogDetails = Record<string, SafeLogValue>;
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com";
+const AZURE_OPENAI_RESOURCE = "https://ai.azure.com";
 const DEFAULT_TIMEOUT_MS = 45_000;
 const DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS = 5_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;

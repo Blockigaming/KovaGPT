@@ -11,7 +11,7 @@ export function verifyAiProviderContract({ provider, transport = "", catalog, st
     /\/openai\/v1/u,
     /IDENTITY_ENDPOINT/u,
     /IDENTITY_HEADER/u,
-    /const AZURE_OPENAI_RESOURCE = "https:\/\/cognitiveservices\.azure\.com"/u,
+    /const AZURE_OPENAI_RESOURCE = "https:\/\/ai\.azure\.com"/u,
     /searchParams\.set\("resource", (?:AZURE_OPENAI_RESOURCE|resource)\)/u,
     /searchParams\.set\("api-version", "2019-08-01"\)/u,
     /redirect: "error"/u,
