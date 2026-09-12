@@ -1,7 +1,7 @@
 # KovaGPT acceptance ledger
 
-Reconciled **2026-09-10** against integrated `main` commit
-`b046727e3336b0f8df48a8097ad131e94cbf4ffe`.
+Reconciled **2026-09-12** against reviewed PR #319 implementation head
+`20940476881dadabfcedbfeadb4aba328dd8cd52`, based on `main` commit `b046727e3336b0f8df48a8097ad131e94cbf4ffe`.
 
 This is the current high-level acceptance ledger. It replaces old percentage claims in historical
 parity and reconciliation documents, but it does not erase those evidence snapshots. Passing source
@@ -9,16 +9,38 @@ checks is not production proof.
 
 ## Evidence baseline
 
-- PR #318's reviewed tree is the tree merged into the exact `main` commit above.
-- Exact-head KovaGPT CI run #2087 passed, including unit, API, integration, browser, visual,
-  accessibility, release-E2E, build, bundle, and release-contract gates.
-- Exact-head Work Sandbox Isolation run #40 and Azure Container Readiness run #1162 passed.
-- The isolated-database job passed the complete 145-migration source lineage, including the new
-  specialist-state transition migration. This does not prove that source lineage matches production.
+- PR #318's reviewed tree is the tree merged into the exact `main` base above.
+- PR #319 implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` received an exact-head
+  Codex review with no major issues and no unresolved review threads.
+- Exact-head KovaGPT CI run `34664358655` passed all 12 jobs, including unit, API, integration,
+  isolated database, three release-E2E shards, build, bundle, release contracts, accessibility,
+  visual, deployed-baseline audit, and every browser viewport.
+- Exact-head Azure Container Readiness run `34664358673` passed typecheck, unit, Bicep, production
+  build, Docker/container health, and isolated Sites smoke.
+- The isolated-database job passed the complete 146-migration source lineage. This does not prove
+  that source lineage matches production.
 - No current production deployment, database migration, Cloudflare edge/origin configuration,
   Stripe configuration, or production smoke result is certified by this ledger.
-- Overall progress therefore remains the conservative provisional **76.5%**. A green source tree
-  cannot earn the missing production, policy, account, or final-interface acceptance credit.
+- Overall progress remains the owner-declared **76.5%** checkpoint, and UI completion remains the
+  separate owner-declared **1%** quality assessment. Neither value is recalculated here. A green
+  source tree cannot earn missing production, policy, account, capability, or final-interface credit.
+
+## September 11 final-goal reconciliation
+
+The controlling [September 11 final goal](kova-final-goal-2026-09-11.md) and its
+[machine-readable contract](final-goal-contract.json) map all 18 product areas plus premium-compute,
+interface-quality, and architecture/release obligations into this 27-area evidence ledger.
+
+- All 21 final-goal requirements have a stable ID, source, owner, mapped ledger areas, dependencies,
+  acceptance test, current status, evidence, and an explicit remaining boundary.
+- Nineteen requirements are `source_partial`: useful bounded source exists, but the expanded
+  requirement is not complete.
+- Live voice/audio is `specified_unimplemented`: it is required scope, but it is not currently
+  exposed or falsely advertised as available.
+- Architecture/independence/release completion is `not_verified`: source and hosted CI do not prove
+  staging or production.
+- This reconciliation changes scope truth and evidence metadata only. It does not change the
+  owner-declared overall or UI percentages.
 
 ## Classification key
 
@@ -31,42 +53,42 @@ checks is not production proof.
 
 ## Master product areas
 
-| ID  | Product area                           | Current classification                             | Main and test evidence                                                                                                    | Remaining acceptance boundary                                                                                             |
-| --- | -------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 01  | Core chat                              | Implemented; external/manual                       | Streaming, stop, edit, retry, regenerate, branching, history, and Temporary Chat tests are integrated.                    | Real provider, authenticated persistence, and production smoke proof.                                                     |
-| 02  | Composer and multimodal input          | Implemented; external/manual                       | Draft, keyboard, paste/drop, attachment, file extraction, and mobile composer contracts are integrated.                   | Real upload/storage/provider and physical-device proof.                                                                   |
-| 03  | Models, modes, and reasoning           | Implemented; external/manual                       | Client modes map to server-enforced roles, plans, budgets, and configured model capabilities.                             | Re-audit the deployed model lineup, quota, latency, and Azure availability.                                               |
-| 04  | Web and product discovery              | Implemented; external/manual                       | Bounded web/image/shopping/local discovery routes, provider normalization, admission, and UI tests are integrated.        | Provider credentials, live quotas, current results, and Maps release decision.                                            |
-| 05  | Deep Research                          | Implemented; external/manual                       | Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated. | Live provider runs, Supabase persistence, export, and production recovery proof.                                          |
-| 06  | Agent tools and actions                | Implemented; external/manual                       | Isolated Work execution, approvals, browser takeover, tools, outputs, durable events, and bounded specialist runs exist.  | Hosted runner/container and real provider acceptance are required.                                                        |
-| 07  | Long-running Work                      | Implemented; external/manual                       | Durable protocol, revisions, directions, questions, approvals, recovery, accounting, outputs, and specialist runs exist.  | Live provider, persistence, and production recovery proof remain required.                                                |
-| 08  | Scheduled Tasks                        | Implemented; external/manual                       | CRUD, recurrence, pause/resume, history, conditions, event sources, and execution contracts are integrated.               | Scheduler heartbeat, live callbacks, OAuth access, budget policy, and notification delivery.                              |
-| 09  | Projects                               | Partial; external/manual                           | Lifecycle, roles, files, instructions, memory, chats, templates, collaboration, and deletion safety exist.                | Full approved Project retention policy/execution is missing; live two-user and storage cleanup proof remains.             |
-| 10  | Library and files                      | Implemented; external/manual                       | Folders, originals, private images, versions, replacement, search, organization, and quota contracts are integrated.      | Matching production schema/storage, cross-user isolation, and quota canaries.                                             |
-| 11  | Image generation and editing           | Implemented; external/manual                       | Provider boundaries, formats, masks, history, Library flows, safety, and quota handling are integrated.                   | Live provider capabilities, exact outputs, storage, and quota behavior.                                                   |
-| 12  | Memory and personalization             | Implemented; external/manual                       | Consent, saved memory, source attribution, settings, workspace retrieval, and Temporary Chat isolation exist.             | Live persistence, multi-user isolation, deletion, and final UX acceptance.                                                |
-| 13  | Custom Kovas                           | Implemented; external/manual                       | Builder, immutable versions, preview, directory/fork, moderation boundaries, and principal tests are integrated.          | Approved moderation/runtime configuration and production canaries.                                                        |
-| 14  | Apps, connectors, plugins, and skills  | Partial; external/manual                           | Connector catalog, account/OAuth boundaries, Google/GitHub tooling, and truthful disabled states exist.                   | Reusable installed versioned skill/workflow packages remain missing; each provider needs consent and live credentials.    |
-| 15  | Data analysis and code                 | Implemented; external/manual                       | File analysis, charts, code rendering/copy, sandboxed Work outputs, and office document contracts exist.                  | Hosted sandbox/provider validation and complex real-file acceptance.                                                      |
-| 16  | Artifacts, writing, and visuals        | Implemented; external/manual                       | Editable writing/code, versions, selection edits, charts, export writers, and visual surfaces exist.                      | Real export round trips, browser acceptance, and production storage proof.                                                |
-| 17  | Sites                                  | Partial; external/manual                           | Static Site lifecycle, versions, access controls, Work output handoff, cleanup, export, and isolated server exist.        | The approved co-editing floor remains narrower/incomplete; hosting activation and publish canaries require approval.      |
-| 18  | Sharing, collaboration, and continuity | Implemented; external/manual                       | Chat sharing, Project roles, comments/presence, branch/history continuity, and cross-device source contracts exist.       | Live two-account Realtime, revocation, share, and cross-device verification.                                              |
-| 19  | Notifications                          | Implemented; external/manual                       | In-app notification center, push lifecycle, scheduled delivery boundaries, and revocation are integrated.                 | Real delivery provider, browser permission, Safari/device, and production proof.                                          |
-| 20  | Study                                  | Implemented; external/manual                       | Private progress, practice flow, chat controls, and study workspace tests are integrated.                                 | Real account persistence and final classroom/user acceptance.                                                             |
-| 21  | Family and trusted contacts            | Implemented; external/manual                       | Invitation, consent, roles, revocation, erasure protections, and bounded contact delivery exist.                          | Age, regional/legal policy, actual delivery, and authorized-adult review.                                                 |
-| 22  | Authentication, account, and privacy   | Implemented; external/manual                       | Sign-in/recovery/MFA, account controls, export, deletion fence, cleanup, and privacy contracts exist.                     | Live email/OAuth/MFA, migration, multi-account, erasure, and production proof.                                            |
-| 23  | Billing, usage, and Finances           | Partial; external/manual                           | Checkout, portal, webhook entitlement, usage, developer billing/funding, and pricing administration exist.                | Live Pro is still $89 instead of approved $80; tax, refund, proration, retention, payment, and webhook canaries remain.   |
-| 24  | Web and PWA                            | Implemented within approved scope; external/manual | Responsive shell, install/offline/share intake, service worker, and push lifecycle are integrated.                        | Physical Safari/mobile/accessibility testing remains. Native applications, voice, microphone, and recording are excluded. |
-| 25  | Developer platform and MCP             | Implemented; external/manual                       | Scoped keys/projects, Responses, models, quotes, files, SDK, MCP tools, OAuth consent, and revocation are integrated.     | Real issuer/client registration, secrets, billing, public activation, and production canaries.                            |
-| 26  | Organization administration            | Partial; external/manual                           | Roles, invitations, domains, SSO adapter, SCIM Users/Groups, audit, and deletion protections are integrated.              | Approved retention policy/execution is missing; IdP/domain/legal setup and live tenant tests remain.                      |
-| 27  | KovaGPT differentiators                | Implemented; external/manual                       | Workspace Intelligence, Timeline, Knowledge Graph, Prompt Studio, Context Packs, Goals, and Project health exist.         | Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance.                              |
+| ID  | Product area                           | Current classification       | Current implementation evidence                                                                                                        | Remaining acceptance boundary                                                                                                                    |
+| --- | -------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 01  | Core chat                              | Partial; external/manual     | Streaming, stop, edit, retry, regenerate, branching, history, and private Temporary Chat foundations are integrated.                    | Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.               |
+| 02  | Composer and multimodal input          | Partial; external/manual     | Draft, keyboard, paste/drop, attachment, document extraction, image, and mobile composer contracts are integrated.                      | Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.                           |
+| 03  | Models, modes, and reasoning           | Partial; external/manual     | Current client modes map to server-enforced roles, plans, budgets, deployment aliases, and capability checks.                           | Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.                        |
+| 04  | Web and product discovery              | Implemented; external/manual | Bounded web, image, shopping, and local discovery routes, provider normalization, admission, citations, and UI tests are integrated.    | Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.                                         |
+| 05  | Deep Research                          | Partial; external/manual     | Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated.               | Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.                          |
+| 06  | Agent tools and actions                | Partial; external/manual     | Isolated Work execution, approvals, browser takeover, tools, outputs, durable events, and bounded specialist runs exist.                | Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.             |
+| 07  | Long-running Work                      | Partial; external/manual     | Durable protocol, revisions, directions, questions, approvals, recovery, accounting, outputs, and bounded specialist runs exist.        | Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.                  |
+| 08  | Scheduled Tasks                        | Partial; external/manual     | CRUD, recurrence, pause/resume, history, conditions, verified event sources, and execution contracts are integrated.                    | Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.       |
+| 09  | Projects                               | Partial; external/manual     | Lifecycle, roles, files, instructions, memory, chats, templates, collaboration, and deletion safety exist.                              | Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.      |
+| 10  | Library and files                      | Partial; external/manual     | Folders, originals, private images, versions, replacement, search, organization, and quota contracts are integrated.                    | Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.   |
+| 11  | Image generation and editing           | Partial; external/manual     | Provider boundaries, formats, source edits, masks, history, Library flows, safety, and quota handling are integrated.                   | Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain. |
+| 12  | Memory and personalization             | Partial; external/manual     | Consent, saved memory, source attribution, settings, workspace retrieval, and Temporary Chat isolation exist.                           | Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain. |
+| 13  | Custom Kovas                           | Partial; external/manual     | Builder, immutable versions, preview, directory/fork, moderation boundaries, and principal tests are integrated.                        | Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.           |
+| 14  | Apps, connectors, plugins, and skills  | Partial; external/manual     | Connector/OAuth boundaries, Google/GitHub tooling, multi-account foundations, and owner-scoped immutable workflow skills are integrated. | WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.      |
+| 15  | Data analysis and code                 | Partial; external/manual     | File analysis, charts, code rendering/copy, sandboxed Work outputs, and supported office-document contracts exist.                      | Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.       |
+| 16  | Artifacts, writing, and visuals        | Partial; external/manual     | Editable writing/code, durable versions, selection edits, comments, charts, export writers, and visual surfaces exist.                  | Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.     |
+| 17  | Sites                                  | Partial; external/manual     | Static Site lifecycle, versions, access controls, Work output handoff, cleanup, export, and isolated serving exist.                      | The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.                |
+| 18  | Sharing, collaboration, and continuity | Partial; external/manual     | Chat sharing, Project roles, comments/presence, branch/history continuity, and cross-device source contracts exist.                     | Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.        |
+| 19  | Notifications                          | Partial; external/manual     | In-app notification center, web-push lifecycle, preferences, quiet hours, delivery boundaries, and revocation are integrated.           | Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.   |
+| 20  | Study                                  | Implemented; external/manual | Private progress, practice flow, guided controls, feedback, and study workspace tests are integrated.                                   | Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.                                  |
+| 21  | Family and trusted contacts            | Implemented; external/manual | Invitation, consent, roles, revocation, erasure protections, and bounded contact delivery exist.                                        | Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.                                                     |
+| 22  | Authentication, account, and privacy   | Partial; external/manual     | Sign-in/recovery/MFA, account controls, export, deletion fence, cleanup, and privacy contracts exist.                                   | Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.    |
+| 23  | Billing, usage, and Finances           | Partial; external/manual     | Checkout, portal, webhook entitlement, usage, developer billing/funding, reservations, settlement, and pricing administration exist.   | One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain. |
+| 24  | Web, PWA, voice, and native platforms  | Partial; external/manual     | Responsive web/PWA, install/offline/share intake, service worker, push lifecycle, and truthful capability metadata exist.               | Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.    |
+| 25  | Developer platform and MCP             | Partial; external/manual     | Scoped keys/projects, Responses, models, quotes, files, SDK, MCP tools, OAuth consent, and revocation are integrated.                   | Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain. |
+| 26  | Organization administration            | Partial; external/manual     | Roles, invitations, domains, SSO adapter, SCIM Users/Groups, audit, and deletion protections are integrated.                            | Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain. |
+| 27  | KovaGPT differentiators                | Implemented; external/manual | Workspace Intelligence, Timeline, Knowledge Graph, Prompt Studio, Context Packs, Goals, and Project health exist.                       | Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.                                             |
 
 ## Older gap reconciliation
 
 | Older item                                 | Current status on exact `main` | Evidence boundary                                                                                                                  |
 | ------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Bounded Work specialist/subrun execution   | Integrated                     | PR #318 adds one-to-four same-owner sequential specialist phases with aggregate budgets, bounded context, and cascading lifecycle. |
-| Reusable installed workflow/skill packages | Missing                        | Apps/connectors and saved prompts are not versioned installed instruction/resource packages.                                       |
+| Reusable installed workflow/skill packages | Integrated on reviewed PR #319 | Owner-scoped packages, immutable versions, exact installations, server resolution, export/deletion, quota, and replay safety are present. |
 | Custom Kovas                               | Integrated                     | Source, migrations, routes, lifecycle tests, and browser principal tests are present.                                              |
 | Organization SCIM                          | Integrated                     | SCIM migration, server/routes, controls, policy/unit tests, and browser tests are present.                                         |
 | Project retention                          | Missing/partial                | Project deletion and source retirement exist; the broader approved retention lifecycle does not.                                   |
@@ -78,20 +100,25 @@ checks is not production proof.
 
 ## Remaining route to 100%
 
-1. Finish the two clear autonomous gaps: reusable skill/workflow packages and Project retention;
-   separately decide the exact Sites co-editing floor.
-2. Continue the highest-impact chat and mobile usability finishing with focused regression coverage.
-3. Re-run the complete gate set on one exact launch-candidate `main` commit, including isolated
+1. Finish the remaining autonomous gaps recorded in the final-goal contract, beginning with Project
+   retention, truthful provider-neutral premium capability scaffolding, WebMCP, non-blocking Work
+   expansion, event-task sharing, and the approved Sites co-editing floor.
+2. Build live voice/audio only behind consent, safety, latency, provider, device, and per-minute plus
+   backend-compute gates; keep it truthfully unavailable until those gates exist.
+3. Continue the product-wide interface work with focused desktop/mobile/accessibility regression
+   coverage while preserving the separate owner-declared 1% UI assessment.
+4. Re-run the complete gate set on one exact launch-candidate `main` commit, including isolated
    database verification when migrations are involved.
-4. With explicit approval, reconcile Supabase, deploy the exact reviewed image, prove the Cloudflare
+5. With explicit approval, reconcile Supabase, deploy the exact reviewed image, prove the Cloudflare
    edge and protected Azure origin, validate Stripe and provider configuration, and run production
    smoke/canary tests.
-5. Complete legal, commercial, security, age, retention, and account decisions, then record final
+6. Complete legal, commercial, security, age, retention, and account decisions, then record final
    interface acceptance.
 
 The generated [granular ledger](acceptance-ledger.generated.json) expands all 27 master product areas
 across source, local automation, hosted CI, staging, and production for 135 independently classified
 rows. `npm run release:acceptance-ledger` verifies the row set, source/test evidence paths, retained
-legacy test inventory, exact audited commit, and generated snapshot. The percentage remains
-provisional because the ledger intentionally gives no credit formula to unverified staging,
-production, policy, account, or final-interface evidence.
+legacy test inventory, reviewed implementation evidence, the 21 final-goal requirement records, and
+the generated snapshot. The 76.5% overall checkpoint remains owner-declared because the ledger
+intentionally gives no credit formula to unverified staging, production, policy, account, new
+capability, or final-interface evidence.

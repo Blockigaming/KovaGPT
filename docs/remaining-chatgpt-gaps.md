@@ -1,51 +1,80 @@
-# Remaining ChatGPT gaps
+# Remaining KovaGPT final-goal gaps
 
-Audited **2026-09-05**, repository checkpoint **`1eb7ef53`**. Overall progress remains the authoritative **23.2%** baseline. This ledger supersedes the September 4 list of missing Work, Tasks, organization, Library, search and memory foundations. Their bounded implementations now have source and tests; production evidence remains separate.
+Updated **2026-09-12** against reviewed PR #319 implementation head
+`20940476881dadabfcedbfeadb4aba328dd8cd52`.
 
-The [27-area capability inventory](feature-parity.md) and [official surface audit](product-parity/chatgpt-surface-audit.md) define scope. No item is “manual only” merely because its code is difficult, and no item is complete because its route exists.
+This file keeps its historical path for compatibility. KovaGPT is an independent product, not a
+visual clone. The controlling scope is the
+[September 11 final goal](release/kova-final-goal-2026-09-11.md); the
+[final-goal contract](release/final-goal-contract.json) supplies stable requirement metadata; and the
+[acceptance ledger](release/acceptance-ledger.md) distinguishes source, local, hosted, staging, and
+production evidence.
 
-## A — Autonomous source work still open
+Overall progress remains the owner-declared **76.5%** checkpoint. UI completion remains the separate
+owner-declared **1%** quality assessment. This gap register does not recalculate either number.
 
-| ID  | Concrete gap and source evidence                                                                                                                                                                                                                                  | Required completion / owner                                                                                                                                                                                                                                                                                 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1  | **Completed in the current integration candidate.** Work emits a deterministic, bounded static-Site bundle as a verified owner-bound Library artifact; Sites rechecks the canonical Project file, digest, size and schema before creating an unpublished version. | `src/lib/work-sites-output.mjs`, `work-runner/provider.mjs`, `/api/sites`, and focused unit/integration coverage. Publication remains a separate owner confirmation through the canonical Sites lifecycle; no hosting activation occurred.                                                                  |
-| A2  | **Completed in the current integration candidate.** The unified Work protocol accepts one to four sequential specialist steps inside the parent run; the legacy `agent_runs` team queue remains disabled.                                                         | `work-execution-protocol.mjs`, runner transport/service/provider, `WorkExecutionPanel.tsx`, protocol documentation, and focused protocol/transport/provider/source coverage enforce same-owner aggregate limits, narrower zero-tool context, immutable results, cascading lifecycle, and truthful progress. |
-| A3  | **Completed in the current integration candidate.** Apps now manages owner-scoped workflow skill packages with bounded instructions/resources, immutable versions, and explicit exact-version installation and chat selection.                                    | `workflow-skills-policy.mjs`, authenticated mutation functions, the service-role chat resolver, Apps management UI, principal-scoped handoff, account export, and focused database/source tests ensure package text never grants tools, credentials, models, entitlements, or policy overrides.             |
-| A4  | Current aggregate still needs terminal CI/review on the final integrated tree, including pending packages.                                                                                                                                                        | Resolve actual findings, run relevant source/role/browser gates and exact-head hosted database/container workflows. This is autonomous release work, not a request for Zachary to run tests.                                                                                                                |
+## Just completed on reviewed PR #319
 
-## B — Active packages, not yet in this audited source snapshot
+- Owner-scoped reusable workflow skills now have immutable versions, exact installation/selection,
+  server-side resolution, integrity digests, principal scoping, export/deletion coverage, durable
+  quotas, bounded admission, replay safety, and stale-context revalidation.
+- PR #319 implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` passed exact-head review
+  with no major issues and no unresolved threads.
+- KovaGPT CI run `34664358655` passed all 12 jobs. Azure Container Readiness run
+  `34664358673` passed.
+- These are reviewed source/hosted results. No merge, migration, deployment, or production
+  verification is implied.
 
-These are separate git checkpoints or active implementations. A commit and focused green tests do not prove integration, exact-head CI or deployment. Update this table after the integration owner records the resulting commit.
+## Highest-priority autonomous source work
 
-| Package             | Source checkpoint / evidence                                                                                                                                                                                                | Remaining boundary                                                                                                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Custom Kovas        | `2462f451`; 13 core SQL/policy/HTTP tests, 44 focused tests and two principal/reset browser cases reported green. `docs/custom-kovas-source-readiness.md` and `tests/unit/custom-kovas-lifecycle.test.mjs` in that package. | Integrate, current-head CI/review; moderation operations and publication policies require approved runtime configuration.                                                            |
-| Organization SCIM   | `04664f9d` plus Group DELETE correction `d14540bc`; 24 SQL/API/unit and two browser cases reported green. `docs/release/ORGANIZATION_SCIM.md`.                                                                              | Exact SSO subject/provider mapping, current managed membership and group-directory semantics; groups do not silently grant Project access. Deployment/IdP consent/canary are manual. |
-| Project retention   | Active implementation; no completed checkpoint recorded here.                                                                                                                                                               | Explicit policy consent, current activity/preview revision and storage-first durable execution must be implemented and verified before any deletion activation.                      |
-| Developer MCP OAuth | `39f69da6`; 24 SQL/HTTP/MCP/export, four browser and 11 source cases reported green. `docs/developer-mcp-oauth.md`.                                                                                                         | Integrate browser S256 consent, issuer/resource/client binding, token/refresh revocation and optional registration; real issuer/secret/commercial activation remains manual.         |
-| Developer MCP files | `42f59fe5`; five MCP tests reported green.                                                                                                                                                                                  | Four scoped private developer text-file tools. No consumer Project/Library authority, connector credentials or hosted application widget is implied.                                 |
-| Discovery           | Active `/discovery` package; no completed checkpoint recorded here.                                                                                                                                                         | Bounded Firecrawl search, deliberate image loading, exact merchant variants and explicit-place links. No native maps, geolocation, booking guarantee or reverse-image model.         |
-| Sites co-editing    | Active `20260905040200` package; no completed checkpoint recorded here.                                                                                                                                                     | Separate accepted editor grants, current principal/generation/revision, owner-charged draft versions and owner-only publish/settings. No CRDT/presence/comments claim.               |
-| Library image quota | `28a98df1`, reported integrated after this snapshot; fixture correction `4b406fc3`, 15 focused cases reported green.                                                                                                        | Reconfirm exact integrated source and hosted migration evidence; no live quota backfill was executed here.                                                                           |
+| Priority | Final-goal requirements | Current bounded foundation | Next source acceptance target |
+| --- | --- | --- | --- |
+| 1 | FG-07 Projects and FG-15 privacy | Project lifecycle, roles, files, chats, instructions, memory, collaboration, and deletion safety exist. | Implement the approved retention lifecycle without activating deletion; verify preview, consent, current activity/revision, storage-first execution, idempotency, export, and cancellation. |
+| 2 | FG-X1 premium-compute safety | Model, Work, image, task, and developer ledgers have bounded pieces. | Reconcile one server-owned cross-category reservation/settlement contract covering retries, delegates, tools, disconnects, cancellations, uncertain usage, period rollover, and global kill switches. |
+| 3 | FG-10 durable agents | Durable Work, recovery, directions/questions/approvals, outputs, accounting, and bounded specialist subruns exist. | Add bounded side-chat and cross-task references, complete steering/compaction recovery, and preserve one parent budget and audit trace across all work. |
+| 4 | FG-09 tasks | CRUD, recurrence, conditions, verified event ingress, connected context, and worker contracts exist. | Complete shareable recipient-owned copies, exact free/paid limits, safe signed-in browser tasks, delivery recovery, and source-level scheduler readiness evidence. |
+| 5 | FG-11 apps/MCP/WebMCP | Google/GitHub, multi-account Google foundations, MCP OAuth/files, and workflow skills exist. | Define provider-neutral WebMCP discovery/trust, permission review, isolation, rate, revocation, and audit contracts without granting website text or packages authority. |
+| 6 | FG-01 and FG-04 premium model/image classes | Versioned model aliases, capability checks, image generation/editing, safety, quotas, and provider adapters exist. | Add provider-neutral Astra/Flare/Sunburst capability descriptors, explicit unavailable states, eval and metering gates, and no silent expensive defaults; do not claim or activate an unavailable provider. |
+| 7 | FG-05 voice | The capability registry now treats voice as required but unavailable. | Design the provider-neutral full-duplex protocol, consent/privacy state, captions, interruption, device selection, recovery, agent delegation, and strict minute/backend reservation contract before exposing controls. |
+| 8 | FG-06 and FG-13 artifacts/collaboration | Editors, revisions, comments, charts, document writers, sharing, Projects, and Library foundations exist. | Complete template-driven document/spreadsheet/presentation/PDF workflows, round trips, object-wide sharing roles, conflicts, restore, and durable collaboration evidence. |
+| 9 | FG-17 and FG-18 developer/enterprise | APIs, SDK, MCP, developer billing, organization roles, domains, SSO adapter, SCIM, audit, and deletion protections exist. | Fill audio/realtime/agent/task/webhook API breadth, service accounts, analytics, policy controls, retention execution inputs, support/deprecation, and complete test-mode administration. |
+| 10 | FG-X2 interface quality | Broad source and hosted browser coverage exist. | Continue cohesive product-wide desktop/mobile lifecycle, accessibility, localization, motion, performance, safe-area, no-overflow, and physical-device work; owner acceptance remains mandatory. |
 
-## C — Public-reference differences requiring bounded scope decisions
+## Required but currently unavailable
 
-The current official Sites documentation includes hosted application databases/storage, sign-in and analytics. Kova's current reviewed service is an isolated **static** host with access control; its workspace applications supply their own authorized data. Portable per-visitor application state and traffic analytics are additional differences to evaluate. Arbitrary generated server execution, OpenAI D1/R2 infrastructure and identical hosting internals are not requirements implied by the master static-Sites floor. [Official Sites shapes](https://learn.chatgpt.com/docs/sites)
+- **Live voice/audio:** required, not excluded, and not implemented. Keep unavailable until consent,
+  safety, latency, quality, provider, device, accessibility, privacy, and per-minute plus
+  backend-compute gates pass.
+- **Astra-class premium mode:** required capability class, not proof of a named provider deployment.
+  Keep unavailable until official availability, account entitlement, eval, quota, latency, metering,
+  and cost are verified.
+- **Flare-class and Sunburst-class image paths:** required capability classes, not proof of provider
+  access. Keep unavailable until capability discovery, quality/cost selection, safety, provenance,
+  reservations, and live acceptance pass.
+- **Complete native experiences:** required where necessary for voice, camera, notifications,
+  background work, and sharing. Responsive browser tests do not prove physical-device behavior.
+- **WebMCP:** required provider-neutral website tool discovery. Existing MCP endpoints do not prove
+  browser trust, website tool safety, or production availability.
 
-The public image reference includes multi-image canvas feedback. Kova supports source-image edits and masks, gallery/history and individual views; it does not claim a multi-image comment canvas. Current configured research supports bounded synthesis/cancellation, not provider-native pause/resume/redirection. Keep these narrower behaviors explicit and implement any approved portable expansion; do not represent unavailable provider semantics as a completed workflow.
+## Genuine owner or approved-live dependencies
 
-## D — Work that genuinely needs Zachary or approved live access
-
-| Owner action                                                                                                                                            | Prepared source does not establish                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Review Azure subscription credits and actual deployment quota/access for the owner-selected model lineup.                                               | A diagnosis from one failed chat, working Sol access, or permission to buy credits/change deployments.                    |
-| Approve and perform the reviewed release/migration/infrastructure sequence, including backup, immutable candidate, staging, live canaries and rollback. | Production schema compatibility, active worker services, DNS/TLS, Cloudflare protection or a tested production rollback.  |
-| Supply/approve secrets, OAuth/IdP/provider registrations, native event callback/watch setup, signed runner identity, budgets and deployment policies.   | A feature flag alone, authorized connections, scheduler readiness or provider permission.                                 |
-| Approve commercial rates/funding/processor/tax and retention/privacy/age/organization policies; consent to real external account actions.               | Paid API correctness in live accounts, legal compliance, regional eligibility, BAA or institutional availability.         |
-| Perform required account/device interactions that cannot be exercised with supplied test accounts or available runners.                                 | Actual payment/MFA/recovery emails, real Safari/device push permission or customer account acceptance from browser mocks. |
-
-Do not ask the owner to repeat actions already authorized. Complete source, tests, documentation and reviewable deployment inputs before seeking any genuinely new permission. The attached manual-action boundary still prohibits live Azure, Supabase, Stripe, Cloudflare, DNS, identity, billing, secret, deployment and networking changes in this autonomous source pass.
+| Dependency | Prepared source cannot establish |
+| --- | --- |
+| Approve PR integration, release, migration, staging, or production sequence | Production schema compatibility, deployed SHA/image, live provider/account behavior, canaries, or rollback. |
+| Approve Azure, Cloudflare, Supabase, Microsoft/Entra, or identity/network changes | Credits, quotas, model deployment access, origin enforcement, secrets, callbacks, backups, or actual recovery. |
+| Approve live Stripe prices, commercial policy, purchases, or paid resources | Tax, refund, proration, invoices, funding, customer settlement, or live entitlements. |
+| Supply or approve provider/OAuth/IdP registrations and secrets | Live connected accounts, scheduler watches, signed runner identity, WebMCP trust, notifications, or native permissions. |
+| Approve age, family, retention, privacy, legal, enterprise, and moderation policy | Regional/legal compliance, institutional availability, deletion activation, appeals, or incident operations. |
+| Complete physical-device or real-account interactions unavailable to CI | Safari/device push, microphone/camera permission, native background behavior, MFA/recovery email, or customer acceptance. |
 
 ## Permanent truth boundaries
 
-Voice, audio, microphone dictation and recording are intentionally excluded by product decision. Native desktop/mobile binaries, OS automation and proprietary/regulated services are classified in [intentional exclusions](product-parity/intentionally-excluded.md), not silently counted as web/PWA parity. Private account content remains principal-scoped; Temporary Chat does not automatically enter Library, memory or durable context. Existing functionality and resolved review fixes must be preserved.
+- Do not treat specified, implemented, locally verified, hosted verified, staging verified, and
+  production verified as interchangeable.
+- No hidden mock, dead control, route, provider label, or marketing claim counts as completion.
+- Voice and native experiences are required incomplete scope, not intentional exclusions.
+- Provider-class names describe desired outcomes and portable architecture; they do not establish
+  official availability, entitlement, quality, cost, or activation.
+- Do not interfere with Qustodio.
+- Do not merge PR #319, deploy, apply live migrations, purchase resources, change live pricing,
+  delete data/resources, or modify verified Azure identity/networking without separate approval.

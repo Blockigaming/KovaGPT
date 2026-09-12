@@ -1,0 +1,580 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/release/kova-final-goal-2026-09-11.md",
+  "owner": "Zachary",
+  "scopeUpdated": "2026-09-11",
+  "overallProgress": {
+    "value": 76.5,
+    "kind": "owner_declared_checkpoint",
+    "recalculated": false
+  },
+  "uiCompletion": {
+    "value": 1,
+    "kind": "separate_owner_quality_assessment",
+    "recalculated": false
+  },
+  "voiceRequired": true,
+  "requirements": [
+    {
+      "id": "FG-01",
+      "owner": "Zachary",
+      "title": "Conversation, models, and reasoning",
+      "mappedAreaIds": [
+        "01",
+        "03",
+        "12"
+      ],
+      "sourceSection": "Conversation, models, and reasoning",
+      "status": "source_partial",
+      "dependencies": [
+        "Approved model providers and deployment aliases",
+        "Server-owned plan entitlements and metering",
+        "Durable chat and Temporary Chat privacy boundaries"
+      ],
+      "acceptanceTest": "Exercise streaming, stop, retry, regenerate, edit, branch, persistence, explicit model selection, fallbacks, and private Temporary Chat behavior against the exact deployed candidate.",
+      "evidence": [
+        "src/routes/api/chat.ts",
+        "src/lib/modes.ts",
+        "tests/unit/chat-history-sync.test.mjs"
+      ],
+      "boundary": "The current bounded chat and mode source does not establish Astra-class availability, live provider quality, or production persistence.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-02",
+      "owner": "Zachary",
+      "title": "Search, browsing, and research",
+      "mappedAreaIds": [
+        "04",
+        "05",
+        "06"
+      ],
+      "sourceSection": "Search, browsing, and research",
+      "status": "source_partial",
+      "dependencies": [
+        "Search provider credentials and quotas",
+        "Connected-app authorization",
+        "Bounded browser runtime and confirmation policy"
+      ],
+      "acceptanceTest": "Run current-source web research and an approved signed-in browser task with citations, steering, confirmations, cancellation, durable recovery, and audit evidence.",
+      "evidence": [
+        "src/lib/ai/search.server.ts",
+        "src/lib/ai/deep-research.server.ts",
+        "docs/work-browser-authority.md"
+      ],
+      "boundary": "Search and bounded research exist, but safe signed-in computer use and complete cross-source production acceptance remain unfinished.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-03",
+      "owner": "Zachary",
+      "title": "Multimodal input and understanding",
+      "mappedAreaIds": [
+        "02",
+        "10",
+        "15"
+      ],
+      "sourceSection": "Multimodal input and understanding",
+      "status": "source_partial",
+      "dependencies": [
+        "Secure upload and storage",
+        "Provider support for each media type",
+        "Camera, microphone, and screen permission UX"
+      ],
+      "acceptanceTest": "Verify supported documents, images, audio, video, camera, microphone, and screen inputs across extraction, reasoning, provenance, privacy, and failure states on physical devices.",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/lib/multimodal/files.server.ts",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Text, image, and document foundations exist; audio, video, camera, microphone, and screen-input completion is not established.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-04",
+      "owner": "Zachary",
+      "title": "Image creation and editing",
+      "mappedAreaIds": [
+        "11"
+      ],
+      "sourceSection": "Image creation and editing",
+      "status": "source_partial",
+      "dependencies": [
+        "Approved image providers and capability discovery",
+        "Shared premium-compute reservations",
+        "Safety, provenance, and storage lifecycle"
+      ],
+      "acceptanceTest": "Generate, edit, mask, vary, save, share, and download images through fast and precision routes while proving quality selection, safety, provenance, quotas, retries, and settlement.",
+      "evidence": [
+        "docs/image-edit-contract.md",
+        "src/components/ImageEditControls.tsx",
+        "tests/unit/image-provider-hardening.test.mjs"
+      ],
+      "boundary": "Current image generation/editing source does not prove Flare-class or Sunburst-class routing, live quality tiers, or production settlement.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-05",
+      "owner": "Zachary",
+      "title": "Live voice and audio",
+      "mappedAreaIds": [
+        "02",
+        "24"
+      ],
+      "sourceSection": "Live voice and audio",
+      "status": "specified_unimplemented",
+      "dependencies": [
+        "Approved realtime audio provider",
+        "Explicit microphone and recording consent",
+        "Per-minute and backend-compute metering",
+        "Device and accessibility validation"
+      ],
+      "acceptanceTest": "Complete a full-duplex conversation with barge-in, captions, device selection, privacy controls, agent delegation, reconnect, and bounded cost on supported devices.",
+      "evidence": [],
+      "boundary": "Voice is required by the September 11 goal but remains unavailable; no prior exclusion may be treated as current scope.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-06",
+      "owner": "Zachary",
+      "title": "Files, data analysis, and generated artifacts",
+      "mappedAreaIds": [
+        "10",
+        "15",
+        "16"
+      ],
+      "sourceSection": "Files, data analysis, and generated artifacts",
+      "status": "source_partial",
+      "dependencies": [
+        "Private file storage and extraction",
+        "Isolated analysis runtime",
+        "Durable artifact versioning and export"
+      ],
+      "acceptanceTest": "Round-trip representative documents, spreadsheets, presentations, PDFs, code, notebooks, charts, and templates through upload, analysis, editing, versioning, export, sharing, and deletion.",
+      "evidence": [
+        "src/components/ArtifactEditor.tsx",
+        "src/lib/multimodal/artifacts.server.ts",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Bounded file, sandbox, editor, and export source exists; the complete template-driven artifact and real-file matrix is unfinished.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-07",
+      "owner": "Zachary",
+      "title": "Projects, memory, personalization, and learning",
+      "mappedAreaIds": [
+        "09",
+        "12",
+        "20"
+      ],
+      "sourceSection": "Projects, memory, personalization, and learning",
+      "status": "source_partial",
+      "dependencies": [
+        "Project membership and retention policy",
+        "Scoped memory consent and deletion",
+        "Durable learning progress"
+      ],
+      "acceptanceTest": "Verify project-scoped files, instructions, memory, sharing, retention, export/deletion, user memory controls, personalization, and Study progress across two accounts.",
+      "evidence": [
+        "src/lib/projects.functions.ts",
+        "src/lib/memory-sources.server.mjs",
+        "src/routes/study.tsx"
+      ],
+      "boundary": "Useful foundations exist, but Project retention, live two-account isolation, and final learning/personalization acceptance remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-08",
+      "owner": "Zachary",
+      "title": "Library and knowledge organization",
+      "mappedAreaIds": [
+        "10"
+      ],
+      "sourceSection": "Library and knowledge organization",
+      "status": "source_partial",
+      "dependencies": [
+        "Owner-scoped storage and quotas",
+        "Artifact and Project relationship integrity",
+        "Retention, export, and deletion workers"
+      ],
+      "acceptanceTest": "Exercise search, filters, metadata, folders, preview, rename, move, versions, restore, sharing, quotas, retention, export, and deletion without orphaning or cross-tenant access.",
+      "evidence": [
+        "src/lib/library.functions.ts",
+        "src/lib/library-images.functions.ts",
+        "tests/unit/account-storage-artifacts.test.mjs"
+      ],
+      "boundary": "Library source is substantial; matching production schema/storage, restore/sharing depth, and live isolation remain unverified.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-09",
+      "owner": "Zachary",
+      "title": "Tasks and event-driven automation",
+      "mappedAreaIds": [
+        "08"
+      ],
+      "sourceSection": "Tasks and event-driven automation",
+      "status": "source_partial",
+      "dependencies": [
+        "Durable scheduler heartbeat",
+        "Verified provider events and OAuth",
+        "Notification delivery",
+        "Shared premium-compute accounting"
+      ],
+      "acceptanceTest": "Run one-time, recurring, conditional, event-triggered, copied, and signed-in browser tasks through timezone changes, retries, pause/resume, limits, notifications, and audit history.",
+      "evidence": [
+        "src/lib/scheduled-tasks.functions.ts",
+        "src/lib/scheduled-task-events.server.ts",
+        "tests/unit/task-event-ingress.test.mjs"
+      ],
+      "boundary": "CRUD, recurrence, event-ingress, and worker contracts exist; shareable customization, live callbacks, free/paid limits, and browser-task acceptance remain incomplete.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-10",
+      "owner": "Zachary",
+      "title": "Durable agents and non-blocking work",
+      "mappedAreaIds": [
+        "06",
+        "07"
+      ],
+      "sourceSection": "Durable agents and non-blocking work",
+      "status": "source_partial",
+      "dependencies": [
+        "Durable run storage and worker identity",
+        "Portable sandbox/runtime adapters",
+        "Shared budgets, notifications, and artifacts"
+      ],
+      "acceptanceTest": "Start, steer, side-chat with, disconnect from, resume, cancel, and recover a multi-agent task across devices while enforcing context, authority, loop, concurrency, time, and cost bounds.",
+      "evidence": [
+        "docs/work-execution-protocol.md",
+        "src/lib/work-execution.server.ts",
+        "tests/unit/work-model-server.test.mjs"
+      ],
+      "boundary": "Durable Work and bounded specialist runs exist; side-chat, cross-task references, complete steering, and portable hosted/self-hosted runtime acceptance remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-11",
+      "owner": "Zachary",
+      "title": "Apps, connectors, tools, MCP, and WebMCP",
+      "mappedAreaIds": [
+        "14",
+        "25"
+      ],
+      "sourceSection": "Apps, connectors, tools, MCP, and WebMCP",
+      "status": "source_partial",
+      "dependencies": [
+        "OAuth clients and least-privilege scopes",
+        "Credential custody and revocation",
+        "Tool confirmation and audit policy",
+        "Trusted website tool discovery"
+      ],
+      "acceptanceTest": "Connect multiple accounts, discover approved tools, read and perform a confirmed write, revoke access, and prove provider-neutral MCP/WebMCP isolation, rate limits, and audit behavior.",
+      "evidence": [
+        "src/routes/apps.tsx",
+        "src/lib/mcp/index.ts",
+        "tests/unit/google-multiaccount.test.mjs"
+      ],
+      "boundary": "Google/GitHub and MCP foundations plus versioned workflow skills exist; WebMCP and complete provider/account live acceptance do not.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-12",
+      "owner": "Zachary",
+      "title": "Custom Kovas, reusable skills, and discovery",
+      "mappedAreaIds": [
+        "13",
+        "14"
+      ],
+      "sourceSection": "Custom Kovas, reusable skills, and discovery",
+      "status": "source_partial",
+      "dependencies": [
+        "Moderation and publication policy",
+        "Immutable version and installation storage",
+        "Permission manifests and ranking integrity"
+      ],
+      "acceptanceTest": "Create, test, version, publish, share, install, update, fork, archive, report, and delete a Kova and a reusable skill while proving permissions and tenant isolation.",
+      "evidence": [
+        "src/lib/custom-kovas.server.ts",
+        "src/lib/workflow-skills.server.ts",
+        "tests/unit/workflow-skills.test.mjs"
+      ],
+      "boundary": "Custom Kova and workflow-skill foundations exist; full discovery/store governance, analytics, organization distribution, and production canaries remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-13",
+      "owner": "Zachary",
+      "title": "Sharing and collaboration",
+      "mappedAreaIds": [
+        "17",
+        "18"
+      ],
+      "sourceSection": "Sharing and collaboration",
+      "status": "source_partial",
+      "dependencies": [
+        "Role and invitation policy",
+        "Realtime or conflict-safe asynchronous persistence",
+        "Notifications and revocation"
+      ],
+      "acceptanceTest": "Share and revoke chats, Projects, artifacts, files, agents, and tasks between two accounts; verify role changes, expiration, copy/fork, comments, mentions, conflicts, ownership transfer, and history.",
+      "evidence": [
+        "src/lib/shared-chats.functions.ts",
+        "src/lib/chat-history-bridge.ts",
+        "tests/unit/project-canvas-collaboration.test.mjs"
+      ],
+      "boundary": "Several sharing and collaboration paths exist; complete object coverage and live two-account/realtime behavior remain unfinished.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-14",
+      "owner": "Zachary",
+      "title": "Notifications and cross-device experience",
+      "mappedAreaIds": [
+        "19",
+        "24"
+      ],
+      "sourceSection": "Notifications and cross-device experience",
+      "status": "source_partial",
+      "dependencies": [
+        "Delivery providers and device permission",
+        "Preference, quiet-hour, and localization policy",
+        "Native clients where web/PWA cannot satisfy requirements"
+      ],
+      "acceptanceTest": "Deliver and deep-link in-app, email, push, and supported system notifications across reconnect, offline, device change, safe areas, accessibility, and localization.",
+      "evidence": [
+        "src/lib/notifications.server.ts",
+        "public/kova-sw.js",
+        "tests/unit/web-push-lifecycle.test.mjs"
+      ],
+      "boundary": "In-app and web-push foundations exist; email/system delivery, physical devices, native surfaces, and complete cross-device acceptance remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-15",
+      "owner": "Zachary",
+      "title": "Identity, safety, privacy, and user control",
+      "mappedAreaIds": [
+        "21",
+        "22",
+        "26"
+      ],
+      "sourceSection": "Identity, safety, privacy, and user control",
+      "status": "source_partial",
+      "dependencies": [
+        "Supabase Auth and RLS",
+        "Age/family/legal policy",
+        "Moderation and incident operations",
+        "Cross-system export and deletion"
+      ],
+      "acceptanceTest": "Verify signup, OAuth, MFA, recovery, sessions/devices, linking, abuse controls, tenant isolation, family/admin policy, privacy choices, export, deletion, retention, and incident paths.",
+      "evidence": [
+        "src/routes/api/account.ts",
+        "tests/unit/auth-security.test.mjs",
+        "tests/unit/account-deletion-state.test.mjs"
+      ],
+      "boundary": "Substantial source controls exist; approved policy, live identity/delivery, cross-system erasure, recovery, and production evidence remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-16",
+      "owner": "Zachary",
+      "title": "Plans, entitlements, billing, and premium compute",
+      "mappedAreaIds": [
+        "23"
+      ],
+      "sourceSection": "Plans, entitlements, billing, and premium compute",
+      "status": "source_partial",
+      "dependencies": [
+        "Approved commercial policy and Stripe configuration",
+        "One server-owned entitlement and compute ledger",
+        "Provider usage reconciliation and kill switches"
+      ],
+      "acceptanceTest": "Exercise checkout, portal, upgrade/downgrade, cancellation, payment failure, idempotent webhooks, and bounded reservations/settlement across every billable category and retry edge.",
+      "evidence": [
+        "src/utils/payments.functions.ts",
+        "src/lib/pricing/developer-billing.server.ts",
+        "tests/unit/stripe-checkout-authority.test.mjs"
+      ],
+      "boundary": "Consumer/developer billing foundations exist; unified premium accounting across all categories and live commercial canaries are not established.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-17",
+      "owner": "Zachary",
+      "title": "Developer platform",
+      "mappedAreaIds": [
+        "25"
+      ],
+      "sourceSection": "Developer platform",
+      "status": "source_partial",
+      "dependencies": [
+        "Scoped credentials and OAuth clients",
+        "Versioned provider-neutral APIs and SDKs",
+        "Usage, billing, webhook, and support operations"
+      ],
+      "acceptanceTest": "Use documented APIs/SDKs for responses, streaming, files, images, audio, tools, agents, tasks, and webhooks with rotation, quotas, logs, versioning, revocation, and isolation.",
+      "evidence": [
+        "docs/developer-platform.md",
+        "src/lib/pricing/developer-platform.server.ts",
+        "tests/unit/developer-platform-ingress.test.mjs"
+      ],
+      "boundary": "Responses, files, SDK, MCP, and billing source exists; audio/realtime, agent/task breadth, public activation, support, and production canaries remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-18",
+      "owner": "Zachary",
+      "title": "Organization and enterprise operation",
+      "mappedAreaIds": [
+        "26"
+      ],
+      "sourceSection": "Organization and enterprise operation",
+      "status": "source_partial",
+      "dependencies": [
+        "Approved organization/legal/retention policy",
+        "Verified domains, SSO/SAML, and SCIM identity",
+        "Administrative audit, analytics, and spending controls"
+      ],
+      "acceptanceTest": "Provision and offboard an organization across domain verification, SSO, SCIM, roles, groups, service accounts, retention, connector/model/tool policy, audit, export, deletion, and support.",
+      "evidence": [
+        "docs/organization-administration.md",
+        "src/routes/api/organizations/scim.ts",
+        "tests/unit/organization-scim-runtime.test.mjs"
+      ],
+      "boundary": "Organization, SSO adapter, and SCIM source exists; live IdP/domain/legal, retention execution, analytics, residency, and production tenant evidence remain.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-X1",
+      "owner": "Zachary",
+      "title": "Premium-compute safety contract",
+      "mappedAreaIds": [
+        "03",
+        "06",
+        "07",
+        "08",
+        "11",
+        "14",
+        "15",
+        "23",
+        "25"
+      ],
+      "sourceSection": "Premium-compute safety contract",
+      "status": "source_partial",
+      "dependencies": [
+        "Unified server-owned entitlements",
+        "Atomic reservations and durable settlement",
+        "Provider attempt reconciliation",
+        "Global kill switches and anomaly alerts"
+      ],
+      "acceptanceTest": "Prove per-request, user, period, plan, organization, and global bounds across duplicates, retries, continuations, delegates, tools, disconnects, cancellations, partial failures, unknown usage, and rollover.",
+      "evidence": [
+        "src/lib/pricing/developer-billing.server.ts",
+        "src/lib/work-execution.server.ts",
+        "tests/unit/developer-billing-migration.test.mjs"
+      ],
+      "boundary": "Several bounded ledgers exist; one coherent cross-category premium-compute system is not yet proven.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-X2",
+      "owner": "Zachary",
+      "title": "Interface and product-quality contract",
+      "mappedAreaIds": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27"
+      ],
+      "sourceSection": "Interface and product-quality contract",
+      "status": "source_partial",
+      "dependencies": [
+        "Cohesive design system and truthful capability metadata",
+        "Complete lifecycle-state coverage",
+        "Desktop, mobile, native, accessibility, localization, motion, and performance evidence",
+        "Owner acceptance"
+      ],
+      "acceptanceTest": "Pass the agreed viewport, theme, touch, keyboard, screen-reader, reduced-motion, long-content, safe-area, no-overflow, lifecycle-state, and performance matrices, then obtain owner acceptance.",
+      "evidence": [
+        "tests/e2e/ui-quality.spec.ts",
+        "tests/e2e/workspace-visual-coherence.spec.ts"
+      ],
+      "boundary": "Hosted browser gates verify bounded current journeys, not the complete interface contract; UI remains the separate owner-declared 1% assessment.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    },
+    {
+      "id": "FG-X3",
+      "owner": "Zachary",
+      "title": "Architecture, independence, and release gates",
+      "mappedAreaIds": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27"
+      ],
+      "sourceSection": "Architecture and implementation principles",
+      "status": "not_verified",
+      "dependencies": [
+        "Supabase, Cloudflare, Azure, Microsoft/Entra, Stripe, and GitHub release evidence",
+        "Zero functional Lovable dependency",
+        "Backups, monitoring, rollback, and exact deployed provenance"
+      ],
+      "acceptanceTest": "Pass every exact-commit source/review/CI gate, then with separate approval prove migrations, deployed SHA/image, production journeys, provider/billing safety, origin protection, monitoring, backups, recovery, and rollback.",
+      "evidence": [
+        "docs/RELEASE_RUNBOOK.md",
+        "docs/release-provenance.md"
+      ],
+      "boundary": "Source and hosted evidence do not establish staging or production; no merge, migration, deployment, purchase, or live configuration change is authorized here.",
+      "source": "docs/release/kova-final-goal-2026-09-11.md"
+    }
+  ]
+}
