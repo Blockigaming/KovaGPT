@@ -50,7 +50,7 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
   const remove = useServerFn(deleteWorkflowSkill);
   const [skills, setSkills] = useState<WorkflowSkillCard[] | null>(null);
   const [draft, setDraft] = useState<WorkflowSkillDraft>(emptyDraft);
-  const [editing, setEditing] = useState<WorkflowSkillCard | null>(null);
+  const [editing, setEditing] = useState<WorkflowSkillDetail | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkflowSkillCard | null>(null);
   const [busy, setBusy] = useState(false);

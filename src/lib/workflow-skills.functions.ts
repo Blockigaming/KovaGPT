@@ -60,6 +60,19 @@ type RpcResult = PromiseLike<{ data: unknown; error: { message?: string } | null
 type RpcClient = {
   rpc: (name: string, args: Record<string, unknown>) => RpcResult;
 };
+type VersionHistoryQuery = PromiseLike<{
+  data: unknown;
+  error: { message?: string } | null;
+}> & {
+  eq: (column: string, value: string) => VersionHistoryQuery;
+  order: (column: string, options: { ascending: boolean }) => VersionHistoryQuery;
+  limit: (count: number) => VersionHistoryQuery;
+};
+type VersionHistoryClient = {
+  from: (relation: string) => {
+    select: (columns: string) => VersionHistoryQuery;
+  };
+};
 
 const Resource = z.object({
   title: z.string(),
@@ -242,7 +255,7 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
     // The package body remains a single service-only RPC result. Version
     // history is a second, metadata-only service-role read, owner-scoped and
     // capped at the immutable 30-version package limit.
-    const historyResult = await supabaseAdmin
+    const historyResult = await (supabaseAdmin as unknown as VersionHistoryClient)
       .from("workflow_skill_versions")
       .select("id, version, name, digest:content_sha256, created_at")
       .eq("owner_id", context.userId)
