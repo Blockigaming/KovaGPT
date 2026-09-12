@@ -70,6 +70,13 @@ const Card = z.object({
   created_at: z.string(),
   updated_at: z.string(),
 });
+const MutationAuthorization = z
+  .object({
+    allowed: z.boolean(),
+    replay: z.boolean(),
+    retryAfter: z.number().int().nonnegative(),
+  })
+  .strict();
 
 function rpc(client: unknown, name: string, args: Record<string, unknown>) {
   return (client as RpcClient).rpc(name, args);
@@ -96,12 +103,6 @@ function safeMutationError(error: { message?: string } | null): Error {
   return new Error("The workflow skill could not be saved.");
 }
 
-function assertMutationSucceeded(result: { data: unknown; error: { message?: string } | null }) {
-  if (result.error) throw safeMutationError(result.error);
-  const failure = z.object({ errorCode: z.string() }).safeParse(result.data);
-  if (failure.success) throw safeMutationError({ message: failure.data.errorCode });
-}
-
 function mutationArgs(
   action: string,
   input: { mutationId: string; requestedAt: string },
@@ -119,6 +120,32 @@ function mutationArgs(
     p_mutation_id: input.mutationId,
     p_requested_at: input.requestedAt,
   };
+}
+
+async function runWorkflowSkillMutation(
+  userId: string,
+  action: "create" | "version" | "install" | "uninstall" | "delete",
+  args: ReturnType<typeof mutationArgs>,
+) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // These are deliberately separate PostgREST requests. Authorization commits
+  // its rate token before the mutation can begin, and authenticated callers do
+  // not have EXECUTE on either service-only database function.
+  const authorization = await rpc(supabaseAdmin, "authorize_workflow_skill_mutation", {
+    p_actor: userId,
+    p_action: action,
+    p_mutation_id: args.p_mutation_id,
+  });
+  if (authorization.error) throw safeMutationError(authorization.error);
+  const parsed = MutationAuthorization.safeParse(authorization.data);
+  if (!parsed.success) throw new Error("The workflow skill could not be saved.");
+  if (!parsed.data.allowed) throw safeMutationError({ message: "workflow_skill_rate_limit" });
+
+  const result = await rpc(supabaseAdmin, "mutate_workflow_skill", {
+    p_actor: userId,
+    ...args,
+  });
+  if (result.error) throw safeMutationError(result.error);
 }
 
 async function draftPayload(draft: WorkflowSkillDraft) {
@@ -147,12 +174,11 @@ export const createWorkflowSkill = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => MutationEnvelope.extend({ draft: Draft }).parse(input))
   .handler(async ({ data, context }) => {
-    const result = await rpc(
-      context.supabase,
-      "mutate_workflow_skill",
+    await runWorkflowSkillMutation(
+      context.userId,
+      "create",
       mutationArgs("create", data, { payload: await draftPayload(data.draft) }),
     );
-    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -160,16 +186,15 @@ export const createWorkflowSkillVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SkillMutation.extend({ draft: Draft }).parse(input))
   .handler(async ({ data, context }) => {
-    const result = await rpc(
-      context.supabase,
-      "mutate_workflow_skill",
+    await runWorkflowSkillMutation(
+      context.userId,
+      "version",
       mutationArgs("version", data, {
         id: data.id,
         expectedRevision: data.expectedRevision,
         payload: await draftPayload(data.draft),
       }),
     );
-    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -177,16 +202,15 @@ export const installWorkflowSkillVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SkillMutation.extend({ versionId: Id }).parse(input))
   .handler(async ({ data, context }) => {
-    const result = await rpc(
-      context.supabase,
-      "mutate_workflow_skill",
+    await runWorkflowSkillMutation(
+      context.userId,
+      "install",
       mutationArgs("install", data, {
         id: data.id,
         expectedRevision: data.expectedRevision,
         payload: { versionId: data.versionId },
       }),
     );
-    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -194,12 +218,11 @@ export const uninstallWorkflowSkill = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SkillMutation.parse(input))
   .handler(async ({ data, context }) => {
-    const result = await rpc(
-      context.supabase,
-      "mutate_workflow_skill",
+    await runWorkflowSkillMutation(
+      context.userId,
+      "uninstall",
       mutationArgs("uninstall", data, { id: data.id, expectedRevision: data.expectedRevision }),
     );
-    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -207,11 +230,10 @@ export const deleteWorkflowSkill = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => SkillMutation.parse(input))
   .handler(async ({ data, context }) => {
-    const result = await rpc(
-      context.supabase,
-      "mutate_workflow_skill",
+    await runWorkflowSkillMutation(
+      context.userId,
+      "delete",
       mutationArgs("delete", data, { id: data.id, expectedRevision: data.expectedRevision }),
     );
-    assertMutationSucceeded(result);
     return { ok: true as const };
   });

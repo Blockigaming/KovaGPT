@@ -349,32 +349,41 @@ async function authenticatedRpc(db, actor, name, args) {
   }
 }
 
-async function resolve(db, actor, installationId, versionId) {
+async function serviceRpc(db, name, args) {
   await db.exec("set role service_role");
   try {
     return (
-      await db.query("select public.resolve_workflow_skill($1,$2,$3) result", [
-        actor,
-        installationId,
-        versionId,
-      ])
+      await db.query(
+        `select public.${name}(${args.map((_, index) => `$${index + 1}`).join(",")}) result`,
+        args,
+      )
     ).rows[0].result;
   } finally {
     await db.exec("reset role");
   }
 }
 
+async function resolve(db, actor, installationId, versionId) {
+  return serviceRpc(db, "resolve_workflow_skill", [actor, installationId, versionId]);
+}
+
 async function mutate(db, actor, action, skill, body, options = {}) {
-  const result = await authenticatedRpc(db, actor, "mutate_workflow_skill", [
+  const mutationId = options.mutationId ?? crypto.randomUUID();
+  const authorization = await serviceRpc(db, "authorize_workflow_skill_mutation", [
+    actor,
+    action,
+    mutationId,
+  ]);
+  if (!authorization.allowed) throw new Error("workflow_skill_rate_limit");
+  return serviceRpc(db, "mutate_workflow_skill", [
+    actor,
     action,
     skill?.id ?? null,
     skill?.revision ?? 0,
     body,
-    options.mutationId ?? crypto.randomUUID(),
+    mutationId,
     options.requestedAt ?? new Date().toISOString(),
   ]);
-  if (typeof result?.errorCode === "string") throw new Error(result.errorCode);
-  return result;
 }
 
 async function accountExportDatabaseBytes(db, owner = OWNER) {
@@ -591,7 +600,7 @@ test("database character limits match JavaScript UTF-16 code units", async () =>
   }
 });
 
-test("the authenticated mutation recomputes digests and requires normalized typed text", async () => {
+test("the service mutation recomputes digests and requires normalized typed text", async () => {
   const db = await fixture();
   try {
     const normalized = draft();
@@ -784,6 +793,26 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
         .rows[0].bytes_used,
       normalized.sizeBytes,
     );
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "authorize_workflow_skill_mutation", [
+        OWNER,
+        "create",
+        crypto.randomUUID(),
+      ]),
+      /permission denied/u,
+    );
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "mutate_workflow_skill", [
+        OWNER,
+        "create",
+        null,
+        0,
+        content,
+        crypto.randomUUID(),
+        requestedAt,
+      ]),
+      /permission denied/u,
+    );
 
     await db.query("select set_config('request.jwt.claim.sub', $1, false)", [OWNER]);
     await db.exec("set role authenticated");
@@ -815,7 +844,7 @@ test("new workflow mutations are stopped before export scans at the durable acco
       mutate(db, OWNER, "create", null, payload(draft())),
       /workflow_skill_rate_limit/u,
     );
-    assert.equal(await workflowMutationRateCount(db), 12);
+    assert.equal(await workflowMutationRateCount(db), 13);
     assert.equal(
       (await db.query("select count(*)::int count from public.workflow_skills")).rows[0].count,
       0,

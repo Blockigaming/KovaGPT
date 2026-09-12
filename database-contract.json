@@ -294,6 +294,7 @@
     "audit_lockdown_mode_change",
     "auth_user_exists",
     "authorize_work_browser",
+    "authorize_workflow_skill_mutation",
     "begin_account_export_account_deletion",
     "begin_chat_memory_write",
     "begin_developer_funding",
@@ -1814,6 +1815,7 @@
     "execute on function public.archive_project_template(uuid,uuid,uuid,bigint) to service_role",
     "execute on function public.assert_work_execution_lease(uuid,uuid,bigint,uuid) to service_role",
     "execute on function public.authorize_work_browser(uuid,uuid,uuid,uuid,text,text,text,bigint,bigint,uuid,text,uuid) to service_role",
+    "execute on function public.authorize_workflow_skill_mutation(uuid, text, uuid)\n  to service_role",
     "execute on function public.begin_account_export_account_deletion(uuid) to service_role",
     "execute on function public.begin_chat_memory_write(uuid) to service_role",
     "execute on function public.begin_developer_funding(uuid,uuid,uuid,text,text),public.queue_developer_funding(uuid,text,text,text),public.claim_developer_funding(uuid),public.complete_developer_funding(uuid,uuid,bigint,jsonb,jsonb),public.guard_developer_funding_account_deletion(),public.guard_developer_credit_offer() to service_role",
@@ -1928,7 +1930,7 @@
     "execute on function public.mutate_scheduled_task(uuid,uuid,uuid,bigint,text,jsonb,text) to service_role",
     "execute on function public.mutate_work_recent_item(uuid,uuid,text,uuid,text,bigint)\n  to service_role",
     "execute on function public.mutate_work_recent_item(uuid,uuid,text,uuid,text,bigint) to service_role",
-    "execute on function public.mutate_workflow_skill(text, uuid, bigint, jsonb, uuid, timestamptz)\n  to authenticated",
+    "execute on function public.mutate_workflow_skill(uuid, text, uuid, bigint, jsonb, uuid, timestamptz)\n  to service_role",
     "execute on function public.next_work_execution_dispatch(uuid,text) to service_role",
     "execute on function public.next_work_sync_version(uuid) to service_role",
     "execute on function public.persist_chat_memory(uuid,bigint,text,text,text,integer) to service_role",
@@ -2336,6 +2338,7 @@
     "all on function public.archive_project_template(uuid,uuid,uuid,bigint) from public, anon, authenticated",
     "all on function public.assert_work_execution_lease(uuid,uuid,bigint,uuid) from public,anon,authenticated",
     "all on function public.authorize_work_browser(uuid,uuid,uuid,uuid,text,text,text,bigint,bigint,uuid,text,uuid) from public,anon,authenticated",
+    "all on function public.authorize_workflow_skill_mutation(uuid, text, uuid)\n  from public, anon, authenticated",
     "all on function public.begin_account_export_account_deletion(uuid)\n  from public, anon, authenticated",
     "all on function public.begin_chat_memory_write(uuid) from public,anon,authenticated",
     "all on function public.begin_developer_funding(uuid,uuid,uuid,text,text),public.queue_developer_funding(uuid,text,text,text),public.claim_developer_funding(uuid),public.complete_developer_funding(uuid,uuid,bigint,jsonb,jsonb),public.guard_developer_funding_account_deletion(),public.guard_developer_credit_offer() from public,anon,authenticated",
@@ -2444,7 +2447,7 @@
     "all on function public.mutate_scheduled_task(uuid,uuid,uuid,bigint,text,jsonb,text) from public,anon,authenticated",
     "all on function public.mutate_work_recent_item(uuid,uuid,text,uuid,text,bigint)\n  from public, anon, authenticated",
     "all on function public.mutate_work_recent_item(uuid,uuid,text,uuid,text,bigint) from public, anon, authenticated",
-    "all on function public.mutate_workflow_skill(text, uuid, bigint, jsonb, uuid, timestamptz)\n  from public, anon, authenticated",
+    "all on function public.mutate_workflow_skill(uuid, text, uuid, bigint, jsonb, uuid, timestamptz)\n  from public, anon, authenticated",
     "all on function public.next_work_execution_dispatch(uuid,text) from public,anon,authenticated",
     "all on function public.next_work_sync_version(uuid) from public, anon, authenticated",
     "all on function public.normalize_legacy_live_subscription_price()\n  from public, anon, authenticated, service_role",
@@ -2636,5 +2639,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "23590ab8204eafc254a2feccee561d15c3d27de83c821df05bce4fe92c643e53"
+  "sha256": "07e80acb829647253b9b53ec1d9c73a762eb94ce6d35b4b55d63df7495b6ffad"
 }

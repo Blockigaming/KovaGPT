@@ -635,7 +635,61 @@ begin
 end;
 $$;
 
+-- This service-only preflight is invoked as its own PostgREST request. Its
+-- rate-limit transaction commits before the expensive mutation request can
+-- begin, so a caller canceling or timing out that later request cannot refund
+-- the token. Exact completed replays and deletion remain scan-free.
+create or replace function public.authorize_workflow_skill_mutation(
+  p_actor uuid,
+  p_action text,
+  p_mutation_id uuid
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  rate_allowed boolean;
+  retry_after integer;
+begin
+  if p_actor is null
+    or p_action is null
+    or p_action not in ('create', 'version', 'install', 'uninstall', 'delete')
+    or p_mutation_id is null
+  then
+    raise exception 'workflow_skill_invalid' using errcode = '22023';
+  end if;
+  if not kova_private.workflow_skill_principal_current(p_actor) then
+    raise exception 'workflow_skill_denied' using errcode = '42501';
+  end if;
+  if p_action = 'delete'
+    or exists (
+      select 1 from public.workflow_skill_mutations
+      where owner_id = p_actor and mutation_id = p_mutation_id
+    )
+  then
+    return jsonb_build_object('allowed', true, 'replay', p_action <> 'delete', 'retryAfter', 0);
+  end if;
+
+  select limiter.allowed, limiter.retry_after
+  into rate_allowed, retry_after
+  from public.consume_diagnostic_rate_limit(
+    encode(sha256(convert_to(p_actor::text, 'UTF8')), 'hex'),
+    'workflow_skill_mutation',
+    12,
+    3600
+  ) limiter;
+  return jsonb_build_object(
+    'allowed', coalesce(rate_allowed, false),
+    'replay', false,
+    'retryAfter', coalesce(retry_after, 3600)
+  );
+end;
+$$;
+
 create or replace function public.mutate_workflow_skill(
+  p_actor uuid,
   p_action text,
   p_skill_id uuid,
   p_expected_revision bigint,
@@ -649,7 +703,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := (select auth.uid());
+  actor uuid := p_actor;
   skill public.workflow_skills;
   version_row public.workflow_skill_versions;
   receipt public.workflow_skill_mutations;
@@ -670,8 +724,6 @@ declare
   resource_count_text text;
   digest_input text;
   computed_digest text;
-  rate_allowed boolean;
-  mutation_error text;
   trim_characters constant text :=
     chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) ||
     chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194) || chr(8195) ||
@@ -719,24 +771,6 @@ begin
     return receipt.result;
   end if;
 
-  -- Exact replays are free, while every new data-growing mutation consumes a
-  -- durable distributed token before it can reach the full account-export
-  -- scan. Because this call sits outside the subtransaction below, an export
-  -- rejection still consumes its token and direct authenticated RPC calls
-  -- cannot amplify the scan by rolling the limiter back.
-  if p_action in ('create', 'version', 'install', 'uninstall') then
-    select limiter.allowed into rate_allowed
-    from public.consume_diagnostic_rate_limit(
-      encode(sha256(convert_to(actor::text, 'UTF8')), 'hex'),
-      'workflow_skill_mutation',
-      12,
-      3600
-    ) limiter;
-    if not coalesce(rate_allowed, false) then
-      raise exception 'workflow_skill_rate_limit' using errcode = '54000';
-    end if;
-  end if;
-
   delete from public.workflow_skill_mutations
   where owner_id = actor
     and mutation_id in (
@@ -749,7 +783,6 @@ begin
     raise exception 'workflow_skill_receipt_limit' using errcode = '54000';
   end if;
 
-  begin
   if p_action = 'create' then
     if p_skill_id is not null or p_expected_revision <> 0 then
       raise exception 'workflow_skill_invalid' using errcode = '22023';
@@ -956,14 +989,6 @@ begin
     raise exception 'workflow_skill_export_limit' using errcode = '54000';
   end if;
   return result;
-  exception
-    when others then
-      get stacked diagnostics mutation_error = message_text;
-      if mutation_error = 'workflow_skill_export_limit' then
-        return jsonb_build_object('errorCode', mutation_error);
-      end if;
-      raise;
-  end;
 end;
 $$;
 
@@ -1011,10 +1036,14 @@ $$;
 
 revoke all on function public.list_workflow_skills() from public, anon, authenticated;
 grant execute on function public.list_workflow_skills() to authenticated;
-revoke all on function public.mutate_workflow_skill(text, uuid, bigint, jsonb, uuid, timestamptz)
+revoke all on function public.authorize_workflow_skill_mutation(uuid, text, uuid)
   from public, anon, authenticated;
-grant execute on function public.mutate_workflow_skill(text, uuid, bigint, jsonb, uuid, timestamptz)
-  to authenticated;
+grant execute on function public.authorize_workflow_skill_mutation(uuid, text, uuid)
+  to service_role;
+revoke all on function public.mutate_workflow_skill(uuid, text, uuid, bigint, jsonb, uuid, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.mutate_workflow_skill(uuid, text, uuid, bigint, jsonb, uuid, timestamptz)
+  to service_role;
 revoke all on function public.resolve_workflow_skill(uuid, uuid, uuid)
   from public, anon, authenticated;
 grant execute on function public.resolve_workflow_skill(uuid, uuid, uuid) to service_role;

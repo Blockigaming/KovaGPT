@@ -224,22 +224,48 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     "workflow mutation must hold the shared deletion fence before checking principal state",
   );
   const replayReturn = mutation.indexOf("return receipt.result");
-  const rateLimit = mutation.indexOf("consume_diagnostic_rate_limit");
   const accountScan = mutation.indexOf("account_export_direct_row_bytes");
   assert.ok(
-    replayReturn > -1 && replayReturn < rateLimit && rateLimit < accountScan,
-    "new mutations must consume a durable rate token before the account export scan",
+    replayReturn > -1 && replayReturn < accountScan,
+    "exact mutation replays must return before the account export scan",
   );
-  assert.match(mutation, /'workflow_skill_mutation',\s*12,\s*3600/gu);
-  assert.match(mutation, /return jsonb_build_object\('errorCode', mutation_error\)/u);
-  assert.match(functions, /assertMutationSucceeded\(result\)/u);
-  assert.match(functions, /failure\.data\.errorCode/u);
+  assert.match(mutation, /actor uuid := p_actor/u);
+  const authorization = migration.slice(
+    migration.indexOf("create or replace function public.authorize_workflow_skill_mutation"),
+    migration.indexOf("create or replace function public.mutate_workflow_skill"),
+  );
+  assert.match(authorization, /consume_diagnostic_rate_limit/u);
+  assert.match(authorization, /'workflow_skill_mutation',\s*12,\s*3600/u);
+  assert.match(authorization, /from public\.workflow_skill_mutations/u);
+  assert.doesNotMatch(authorization, /account_export_direct_row_bytes/u);
+  const serverMutation = functions.slice(
+    functions.indexOf("async function runWorkflowSkillMutation"),
+    functions.indexOf("async function draftPayload"),
+  );
+  const authorizationCall = serverMutation.indexOf(
+    'await rpc(supabaseAdmin, "authorize_workflow_skill_mutation"',
+  );
+  const mutationCall = serverMutation.indexOf('await rpc(supabaseAdmin, "mutate_workflow_skill"');
+  assert.ok(
+    authorizationCall > -1 && authorizationCall < mutationCall,
+    "the independently committed service preflight must finish before mutation begins",
+  );
+  assert.match(serverMutation, /client\.server/u);
   assert.match(functions, /workflow_skill_rate_limit/u);
+  assert.match(
+    migration,
+    /grant execute on function public\.mutate_workflow_skill\(uuid, text, uuid, bigint, jsonb, uuid, timestamptz\)\s+to service_role/u,
+  );
+  assert.doesNotMatch(
+    migration,
+    /grant execute on function public\.mutate_workflow_skill[^;]+to authenticated/u,
+  );
   assert.deepEqual(manifestEntry.functions, [
     "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
     "account_export_direct_row_bytes",
     "list_workflow_skills",
+    "authorize_workflow_skill_mutation",
     "mutate_workflow_skill",
     "resolve_workflow_skill",
   ]);
