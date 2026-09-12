@@ -275,6 +275,7 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
       : null;
     if (
       !head ||
+      head.id !== parsed.data.headVersionId ||
       head.version !== parsed.data.version ||
       head.name !== parsed.data.name ||
       head.digest !== parsed.data.digest ||
