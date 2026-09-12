@@ -87,11 +87,19 @@ function safeMutationError(error: { message?: string } | null): Error {
     return new Error("This workflow skill is too large.");
   if (message.includes("workflow_skill_export_limit"))
     return new Error("Your workflow skill history has reached its export-safe limit.");
+  if (message.includes("workflow_skill_rate_limit"))
+    return new Error("Too many workflow skill changes. Try again later.");
   if (message.includes("workflow_skill_storage_limit"))
     return new Error("Your account storage limit has been reached.");
   if (message.includes("workflow_skill_version_unavailable"))
     return new Error("That workflow skill version is no longer available.");
   return new Error("The workflow skill could not be saved.");
+}
+
+function assertMutationSucceeded(result: { data: unknown; error: { message?: string } | null }) {
+  if (result.error) throw safeMutationError(result.error);
+  const failure = z.object({ errorCode: z.string() }).safeParse(result.data);
+  if (failure.success) throw safeMutationError({ message: failure.data.errorCode });
 }
 
 function mutationArgs(
@@ -144,7 +152,7 @@ export const createWorkflowSkill = createServerFn({ method: "POST" })
       "mutate_workflow_skill",
       mutationArgs("create", data, { payload: await draftPayload(data.draft) }),
     );
-    if (result.error) throw safeMutationError(result.error);
+    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -161,7 +169,7 @@ export const createWorkflowSkillVersion = createServerFn({ method: "POST" })
         payload: await draftPayload(data.draft),
       }),
     );
-    if (result.error) throw safeMutationError(result.error);
+    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -178,7 +186,7 @@ export const installWorkflowSkillVersion = createServerFn({ method: "POST" })
         payload: { versionId: data.versionId },
       }),
     );
-    if (result.error) throw safeMutationError(result.error);
+    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -191,7 +199,7 @@ export const uninstallWorkflowSkill = createServerFn({ method: "POST" })
       "mutate_workflow_skill",
       mutationArgs("uninstall", data, { id: data.id, expectedRevision: data.expectedRevision }),
     );
-    if (result.error) throw safeMutationError(result.error);
+    assertMutationSucceeded(result);
     return { ok: true as const };
   });
 
@@ -204,6 +212,6 @@ export const deleteWorkflowSkill = createServerFn({ method: "POST" })
       "mutate_workflow_skill",
       mutationArgs("delete", data, { id: data.id, expectedRevision: data.expectedRevision }),
     );
-    if (result.error) throw safeMutationError(result.error);
+    assertMutationSucceeded(result);
     return { ok: true as const };
   });

@@ -42,9 +42,11 @@ const RELATIONSHIP_FIXTURE_RELATIONS = new Set([
   "agent_jobs",
   "agent_resource_promotions",
   "integration_linked_accounts",
+  "library_file_versions",
   "organization_audit_events",
   "organization_invitations",
   "project_template_grants",
+  "user_library_items",
 ]);
 
 const draft = (instructions = "Review the request, produce a draft, then check it for clarity.") =>
@@ -72,6 +74,7 @@ async function fixture() {
       create role service_role bypassrls;
       create schema auth;
       create schema kova_private;
+      create schema storage;
       create table auth.users(
         id uuid primary key,
         deleted_at timestamptz,
@@ -91,6 +94,51 @@ async function fixture() {
       create table public.chat_history_records(
         owner_id uuid not null references auth.users(id) on delete cascade,
         payload jsonb not null
+      );
+      create table public.diagnostic_rate_limits(
+        identity_hash text not null,
+        action text not null,
+        window_started_at timestamptz not null,
+        request_count integer not null check (request_count between 1 and 1000),
+        expires_at timestamptz not null,
+        primary key(identity_hash,action,window_started_at)
+      );
+      create function public.consume_diagnostic_rate_limit(
+        p_identity_hash text,p_action text,p_limit integer default 12,
+        p_window_seconds integer default 60
+      ) returns table(allowed boolean,retry_after integer)
+      language plpgsql security definer set search_path=pg_catalog,public as $$
+      declare
+        v_now timestamptz:=statement_timestamp();
+        v_window timestamptz:=to_timestamp(
+          floor(extract(epoch from v_now)/p_window_seconds)*p_window_seconds
+        );
+        v_count integer;
+      begin
+        if length(p_identity_hash)<>64 or p_limit not between 1 and 100
+          or p_window_seconds not between 10 and 3600 then
+          raise exception 'invalid_rate_limit_contract';
+        end if;
+        insert into public.diagnostic_rate_limits(
+          identity_hash,action,window_started_at,request_count,expires_at
+        ) values(
+          p_identity_hash,left(p_action,64),v_window,1,
+          v_window+make_interval(secs=>p_window_seconds*2)
+        ) on conflict(identity_hash,action,window_started_at) do update
+          set request_count=public.diagnostic_rate_limits.request_count+1
+        returning request_count into v_count;
+        return query select v_count<=p_limit,greatest(
+          1,
+          ceil(extract(epoch from (
+            v_window+make_interval(secs=>p_window_seconds)-v_now
+          )))::integer
+        );
+      end$$;
+      create table storage.objects(
+        bucket_id text not null,
+        name text not null,
+        metadata jsonb,
+        primary key(bucket_id,name)
       );
       create table public.organization_invitations(
         id uuid primary key default gen_random_uuid(),
@@ -122,7 +170,12 @@ async function fixture() {
       create table public.project_files(
         id uuid primary key default gen_random_uuid(),
         project_id uuid,
-        status text
+        status text,
+        storage_path text,
+        mime_type text,
+        size_bytes bigint default 0,
+        kind text default 'file',
+        uploaded_by uuid
       );
       create table public.project_invites(
         id uuid primary key default gen_random_uuid(),
@@ -205,13 +258,34 @@ async function fixture() {
       create table public.agent_resource_promotions(
         id uuid primary key default gen_random_uuid(),
         owner_id uuid,
+        project_id uuid,
         destination_id uuid,
         destination_type text,
-        deliverable_id uuid
+        deliverable_id uuid,
+        status text
       );
       create table public.agent_deliverables(
         id uuid primary key default gen_random_uuid(),
-        owner_id uuid
+        owner_id uuid,
+        mime_type text,
+        storage_reference text
+      );
+      create table public.user_library_items(
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid,
+        file_url text,
+        file_type text,
+        file_size bigint,
+        metadata jsonb
+      );
+      create table public.library_file_versions(
+        generation uuid primary key default gen_random_uuid(),
+        owner_id uuid,
+        storage_path text,
+        mime_type text,
+        size_bytes bigint,
+        state text,
+        delete_requested boolean default false
       );
       create function public.effective_user_plan_tier(uuid) returns text language sql stable as
         $$select 'free'::text$$;
@@ -290,8 +364,8 @@ async function resolve(db, actor, installationId, versionId) {
   }
 }
 
-function mutate(db, actor, action, skill, body, options = {}) {
-  return authenticatedRpc(db, actor, "mutate_workflow_skill", [
+async function mutate(db, actor, action, skill, body, options = {}) {
+  const result = await authenticatedRpc(db, actor, "mutate_workflow_skill", [
     action,
     skill?.id ?? null,
     skill?.revision ?? 0,
@@ -299,6 +373,8 @@ function mutate(db, actor, action, skill, body, options = {}) {
     options.mutationId ?? crypto.randomUUID(),
     options.requestedAt ?? new Date().toISOString(),
   ]);
+  if (typeof result?.errorCode === "string") throw new Error(result.errorCode);
+  return result;
 }
 
 async function accountExportDatabaseBytes(db, owner = OWNER) {
@@ -309,6 +385,20 @@ async function accountExportDatabaseBytes(db, owner = OWNER) {
         ACCOUNT_EXPORT_MAX_BYTES,
       ])
     ).rows[0].bytes,
+  );
+}
+
+async function workflowMutationRateCount(db, owner = OWNER) {
+  return Number(
+    (
+      await db.query(
+        `select coalesce(sum(request_count),0)::integer count
+         from public.diagnostic_rate_limits
+         where identity_hash=encode(sha256(convert_to($1,'UTF8')),'hex')
+           and action='workflow_skill_mutation'`,
+        [owner],
+      )
+    ).rows[0].count,
   );
 }
 
@@ -684,6 +774,7 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
     const first = await mutate(db, OWNER, "create", null, content, { mutationId, requestedAt });
     const replay = await mutate(db, OWNER, "create", null, content, { mutationId, requestedAt });
     assert.deepEqual(replay, first);
+    assert.equal(await workflowMutationRateCount(db), 1);
     assert.equal(
       (await authenticatedRpc(db, OWNER, "list_workflow_skills", [])).rows[0].installationId,
       first.installationId,
@@ -701,6 +792,34 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
       /permission denied/,
     );
     await db.exec("reset role");
+  } finally {
+    await db.close();
+  }
+});
+
+test("new workflow mutations are stopped before export scans at the durable account rate", async () => {
+  const db = await fixture();
+  try {
+    await db.query(
+      `insert into public.diagnostic_rate_limits(
+         identity_hash,action,window_started_at,request_count,expires_at
+       ) select
+         encode(sha256(convert_to($1,'UTF8')),'hex'),
+         'workflow_skill_mutation',
+         to_timestamp(floor(extract(epoch from statement_timestamp())/3600)*3600),
+         12,
+         to_timestamp(floor(extract(epoch from statement_timestamp())/3600)*3600)+interval '2 hours'`,
+      [OWNER],
+    );
+    await assert.rejects(
+      mutate(db, OWNER, "create", null, payload(draft())),
+      /workflow_skill_rate_limit/u,
+    );
+    assert.equal(await workflowMutationRateCount(db), 12);
+    assert.equal(
+      (await db.query("select count(*)::int count from public.workflow_skills")).rows[0].count,
+      0,
+    );
   } finally {
     await db.close();
   }
@@ -936,6 +1055,97 @@ test("workflow history reserves bytes used by relationship-traversed project rec
   }
 });
 
+test("workflow admission reserves base64-expanded Storage bodies in the shared export", async () => {
+  const db = await fixture();
+  try {
+    const created = await mutate(db, OWNER, "create", null, payload(draft()));
+    const projectId = crypto.randomUUID();
+    const fileId = crypto.randomUUID();
+    const path = `${projectId}/${fileId}/source.bin`;
+    const rawBytes = 24 * 1024 * 1024;
+    const libraryGeneration = crypto.randomUUID();
+    const libraryPath = `${OWNER}/${libraryGeneration}.pdf`;
+    const encodedBodyBytes = 4 * Math.ceil(rawBytes / 3) + 4;
+    await db.query("insert into public.projects(id,owner_id) values($1,$2)", [projectId, OWNER]);
+    await db.query(
+      `insert into public.project_files(
+         id,project_id,status,storage_path,mime_type,size_bytes,kind,uploaded_by
+       ) values($1,$2,'ready',$3,'application/octet-stream',$4,'file',$5)`,
+      [fileId, projectId, path, rawBytes, OWNER],
+    );
+    await db.query(
+      `insert into storage.objects(bucket_id,name,metadata)
+       values('project-files',$1,jsonb_build_object('size',$2::bigint))`,
+      [path, rawBytes],
+    );
+    // The exporter deduplicates one Storage object referenced by a Project,
+    // deliverable, and Library item. The admission query must do the same.
+    await db.query(
+      `insert into public.agent_deliverables(owner_id,mime_type,storage_reference)
+       values($1,'application/octet-stream','project-files:'||$2::text)`,
+      [OWNER, path],
+    );
+    await db.query(
+      `insert into public.user_library_items(user_id,file_url,file_type,file_size)
+       values($1,'project-files:'||$2::text,'application/octet-stream',$3)`,
+      [OWNER, path, rawBytes],
+    );
+    await db.query(
+      `insert into public.library_file_versions(
+         generation,owner_id,storage_path,mime_type,size_bytes,state,delete_requested
+       ) values($1,$2,$3,'application/pdf',1,'ready',false)`,
+      [libraryGeneration, OWNER, libraryPath],
+    );
+    await db.query(
+      `insert into storage.objects(bucket_id,name,metadata)
+       values('library-files',$1,jsonb_build_object('size',1))`,
+      [libraryPath],
+    );
+    assert.ok((await accountExportDatabaseBytes(db)) < ACCOUNT_EXPORT_MAX_BYTES);
+    await db.query(
+      `insert into public.chat_history_records(owner_id,payload)
+       values($1,jsonb_build_object('body',repeat('x',18 * 1024 * 1024)))`,
+      [OWNER],
+    );
+
+    const reservedBytes = await accountExportDatabaseBytes(db);
+    assert.ok(reservedBytes > ACCOUNT_EXPORT_MAX_BYTES);
+    assert.ok(reservedBytes - encodedBodyBytes < ACCOUNT_EXPORT_MAX_BYTES);
+    const rateBefore = await workflowMutationRateCount(db);
+
+    await assert.rejects(
+      mutate(
+        db,
+        OWNER,
+        "version",
+        created,
+        payload(draft("Revise the draft, verify each source, and then check the final answer.")),
+      ),
+      /workflow_skill_export_limit/u,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int count from public.workflow_skill_versions where owner_id=$1",
+          [OWNER],
+        )
+      ).rows[0].count,
+      1,
+    );
+    assert.equal(
+      (
+        await db.query("select revision::int revision from public.workflow_skills where id=$1", [
+          created.id,
+        ])
+      ).rows[0].revision,
+      created.revision,
+    );
+    assert.equal(await workflowMutationRateCount(db), rateBefore + 1);
+  } finally {
+    await db.close();
+  }
+});
+
 test("install and uninstall receipts are admitted against the shared export budget", async (t) => {
   for (const action of ["install", "uninstall"]) {
     await t.test(action, async () => {
@@ -949,6 +1159,7 @@ test("install and uninstall receipts are admitted against the shared export budg
             [OWNER],
           )
         ).rows[0].count;
+        const rateBefore = await workflowMutationRateCount(db);
 
         await assert.rejects(
           mutate(
@@ -987,6 +1198,7 @@ test("install and uninstall receipts are admitted against the shared export budg
           ).rows[0].count,
           receiptsBefore,
         );
+        assert.equal(await workflowMutationRateCount(db), rateBefore + 1);
       } finally {
         await db.close();
       }

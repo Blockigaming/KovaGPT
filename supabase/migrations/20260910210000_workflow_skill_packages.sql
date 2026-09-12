@@ -147,6 +147,9 @@ as $$
 declare
   export_source record;
   source_bytes bigint;
+  file_raw_bytes bigint;
+  file_export_bytes bigint;
+  missing_file_sizes bigint;
   total_bytes bigint := 0;
 begin
   if p_owner is null or p_stop_after is null or p_stop_after not between 1 and 52428800 then
@@ -414,6 +417,167 @@ begin
       return total_bytes;
     end if;
   end loop;
+
+  -- collectFiles embeds these deduplicated Storage objects as base64 in the
+  -- same account-export artifact. Reserve the expanded body and its JSON
+  -- envelope, not only the database rows that reference it. The relational
+  -- size is retained as a conservative fallback and storage.objects metadata
+  -- wins whenever it reports a larger body.
+  with file_candidates(bucket, path, content_type, declared_size) as (
+    select
+      'project-files'::text,
+      project_file.storage_path,
+      project_file.mime_type,
+      project_file.size_bytes
+    from public.project_files project_file
+    join public.projects project on project.id = project_file.project_id
+    where project.owner_id = p_owner
+      and (project_file.status is null or project_file.status = 'ready')
+      and project_file.kind is distinct from 'agent-deliverable'
+
+    union all
+
+    select
+      split_part(deliverable.storage_reference, ':', 1),
+      substring(
+        deliverable.storage_reference
+        from position(':' in deliverable.storage_reference) + 1
+      ),
+      project_file.mime_type,
+      project_file.size_bytes
+    from public.project_files project_file
+    join public.projects project on project.id = project_file.project_id
+    join public.agent_resource_promotions promotion
+      on promotion.destination_id = project_file.id
+      and promotion.destination_type = 'project_file'
+    join public.agent_deliverables deliverable on deliverable.id = promotion.deliverable_id
+    where project.owner_id = p_owner
+      and (project_file.status is null or project_file.status = 'ready')
+      and project_file.kind = 'agent-deliverable'
+      and promotion.status = 'completed'
+      and promotion.project_id = project_file.project_id
+      and promotion.owner_id = project_file.uploaded_by
+      and deliverable.owner_id = promotion.owner_id
+      and deliverable.storage_reference ~ '^(agent-evidence|project-files):'
+
+    union all
+
+    select
+      split_part(deliverable.storage_reference, ':', 1),
+      substring(
+        deliverable.storage_reference
+        from position(':' in deliverable.storage_reference) + 1
+      ),
+      deliverable.mime_type,
+      null::bigint
+    from public.agent_deliverables deliverable
+    where deliverable.owner_id = p_owner
+      and deliverable.storage_reference ~ '^(agent-evidence|project-files):'
+
+    union all
+
+    select
+      case
+        when library_item.metadata->>'file_bucket' = 'library-files' then 'library-files'
+        when library_item.file_url like 'agent-evidence:%' then 'agent-evidence'
+        when library_item.file_url like 'project-files:%' then 'project-files'
+        else 'library-images'
+      end,
+      case
+        when library_item.file_url like 'agent-evidence:%'
+          or library_item.file_url like 'project-files:%'
+        then substring(library_item.file_url from position(':' in library_item.file_url) + 1)
+        else library_item.file_url
+      end,
+      library_item.file_type,
+      library_item.file_size
+    from public.user_library_items library_item
+    where library_item.user_id = p_owner
+      and library_item.file_url is not null
+      and library_item.file_url <> ''
+      and (
+        library_item.metadata->>'file_bucket' = 'library-files'
+        or library_item.file_url like 'agent-evidence:%'
+        or library_item.file_url like 'project-files:%'
+        or library_item.file_url !~* '^[a-z][a-z0-9+.-]*:'
+      )
+
+    union all
+
+    select
+      'library-files'::text,
+      version.storage_path,
+      version.mime_type,
+      version.size_bytes
+    from public.library_file_versions version
+    where version.owner_id = p_owner
+      and version.state = 'ready'
+      and not version.delete_requested
+  ), normalized_candidates as (
+    select
+      bucket,
+      path,
+      max(declared_size) filter (where declared_size >= 0) as declared_size,
+      max(
+        octet_length(convert_to(to_jsonb(content_type)::text, 'UTF8'))
+      ) as content_type_json_bytes
+    from file_candidates
+    where bucket in ('agent-evidence', 'project-files', 'library-files', 'library-images')
+      and path is not null
+      and path <> ''
+    group by bucket, path
+  ), candidate_sizes as (
+    select
+      candidate.bucket,
+      candidate.path,
+      candidate.content_type_json_bytes,
+      greatest(
+        candidate.declared_size,
+        case
+          when object.metadata->>'size' ~ '^[0-9]{1,18}$'
+          then (object.metadata->>'size')::bigint
+        end
+      ) as size_bytes
+    from normalized_candidates candidate
+    left join storage.objects object
+      on object.bucket_id = candidate.bucket and object.name = candidate.path
+  ), bounded_sizes as (
+    select
+      bucket,
+      path,
+      content_type_json_bytes,
+      case
+        when size_bytes > p_stop_after then p_stop_after + 1
+        else size_bytes
+      end as size_bytes
+    from candidate_sizes
+  )
+  select
+    coalesce(sum(size_bytes), 0),
+    coalesce(sum(
+      4 * ((size_bytes + 2) / 3) +
+      octet_length(convert_to(jsonb_build_object(
+        'bucket', bucket,
+        'path', path,
+        'contentType', null,
+        'sizeBytes', size_bytes,
+        'sha256', repeat('0', 64),
+        'base64', ''
+      )::text, 'UTF8')) +
+      greatest(coalesce(content_type_json_bytes, 4) - 4, 0) +
+      1
+    ), 0),
+    count(*) filter (where size_bytes is null)
+  into file_raw_bytes, file_export_bytes, missing_file_sizes
+  from bounded_sizes;
+
+  if missing_file_sizes > 0 or file_raw_bytes > 33554432 then
+    return p_stop_after + 1;
+  end if;
+  total_bytes := total_bytes + file_export_bytes;
+  if total_bytes > p_stop_after then
+    return total_bytes;
+  end if;
   return total_bytes;
 end;
 $$;
@@ -506,6 +670,8 @@ declare
   resource_count_text text;
   digest_input text;
   computed_digest text;
+  rate_allowed boolean;
+  mutation_error text;
   trim_characters constant text :=
     chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) ||
     chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194) || chr(8195) ||
@@ -553,6 +719,24 @@ begin
     return receipt.result;
   end if;
 
+  -- Exact replays are free, while every new data-growing mutation consumes a
+  -- durable distributed token before it can reach the full account-export
+  -- scan. Because this call sits outside the subtransaction below, an export
+  -- rejection still consumes its token and direct authenticated RPC calls
+  -- cannot amplify the scan by rolling the limiter back.
+  if p_action in ('create', 'version', 'install', 'uninstall') then
+    select limiter.allowed into rate_allowed
+    from public.consume_diagnostic_rate_limit(
+      encode(sha256(convert_to(actor::text, 'UTF8')), 'hex'),
+      'workflow_skill_mutation',
+      12,
+      3600
+    ) limiter;
+    if not coalesce(rate_allowed, false) then
+      raise exception 'workflow_skill_rate_limit' using errcode = '54000';
+    end if;
+  end if;
+
   delete from public.workflow_skill_mutations
   where owner_id = actor
     and mutation_id in (
@@ -565,6 +749,7 @@ begin
     raise exception 'workflow_skill_receipt_limit' using errcode = '54000';
   end if;
 
+  begin
   if p_action = 'create' then
     if p_skill_id is not null or p_expected_revision <> 0 then
       raise exception 'workflow_skill_invalid' using errcode = '22023';
@@ -771,6 +956,14 @@ begin
     raise exception 'workflow_skill_export_limit' using errcode = '54000';
   end if;
   return result;
+  exception
+    when others then
+      get stacked diagnostics mutation_error = message_text;
+      if mutation_error = 'workflow_skill_export_limit' then
+        return jsonb_build_object('errorCode', mutation_error);
+      end if;
+      raise;
+  end;
 end;
 $$;
 

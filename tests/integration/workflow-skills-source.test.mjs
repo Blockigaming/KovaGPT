@@ -194,6 +194,9 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   );
   assert.match(exportBudget, /security invoker/u);
   assert.doesNotMatch(exportBudget, /to_regclass/u);
+  assert.match(exportBudget, /left join storage\.objects object/u);
+  assert.match(exportBudget, /4 \* \(\(size_bytes \+ 2\) \/ 3\)/u);
+  assert.match(exportBudget, /file_raw_bytes > 33554432/u);
   assert.match(
     migration,
     new RegExp(
@@ -220,6 +223,18 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     deletionFenceLock > -1 && deletionFenceLock < principalCheck && principalCheck < workflowLock,
     "workflow mutation must hold the shared deletion fence before checking principal state",
   );
+  const replayReturn = mutation.indexOf("return receipt.result");
+  const rateLimit = mutation.indexOf("consume_diagnostic_rate_limit");
+  const accountScan = mutation.indexOf("account_export_direct_row_bytes");
+  assert.ok(
+    replayReturn > -1 && replayReturn < rateLimit && rateLimit < accountScan,
+    "new mutations must consume a durable rate token before the account export scan",
+  );
+  assert.match(mutation, /'workflow_skill_mutation',\s*12,\s*3600/gu);
+  assert.match(mutation, /return jsonb_build_object\('errorCode', mutation_error\)/u);
+  assert.match(functions, /assertMutationSucceeded\(result\)/u);
+  assert.match(functions, /failure\.data\.errorCode/u);
+  assert.match(functions, /workflow_skill_rate_limit/u);
   assert.deepEqual(manifestEntry.functions, [
     "workflow_skill_utf16_length",
     "workflow_skill_principal_current",
