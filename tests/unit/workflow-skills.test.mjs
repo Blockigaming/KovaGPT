@@ -15,7 +15,10 @@ import {
   ACCOUNT_EXPORT_PROJECT_TABLES,
   ACCOUNT_EXPORT_VERSION,
 } from "../../src/lib/account-export-policy.mjs";
-import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
+import {
+  parseWorkflowSkillDetailResult,
+  parseWorkflowSkillMutationResult,
+} from "../../src/lib/workflow-skills-client.mjs";
 import {
   MAX_PENDING_WORKFLOW_SKILL_MUTATIONS,
   reserveWorkflowSkillMutationEnvelope,
@@ -511,6 +514,35 @@ test("workflow skill mutation success requires the exact transport result", () =
   ]) {
     assert.throws(() => parseWorkflowSkillMutationResult(value), /could not be confirmed/u);
   }
+});
+
+test("workflow skill detail transport validates the complete response before use", () => {
+  const detail = {
+    id: OWNER,
+    revision: 1,
+    headVersionId: OTHER,
+    version: 1,
+    name: "Editorial review",
+    description: "A repeatable writing review",
+    instructions: "Review the request.",
+    resources: [{ title: "Checklist", content: "Check clarity." }],
+    digest: "a".repeat(64),
+    installationId: null,
+    installedVersionId: null,
+    installedVersion: null,
+    installedName: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  assert.deepEqual(parseWorkflowSkillDetailResult(detail), detail);
+  assert.throws(
+    () => parseWorkflowSkillDetailResult({ ...detail, resources: undefined }),
+    /could not be confirmed/u,
+  );
+  assert.throws(
+    () => parseWorkflowSkillDetailResult({ ...detail, transportError: true }),
+    /could not be confirmed/u,
+  );
 });
 
 test("unconfirmed workflow mutation envelopes are never evicted by the pending cap", () => {

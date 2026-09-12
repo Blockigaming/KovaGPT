@@ -16,6 +16,7 @@ const [
   resolver,
   functions,
   panel,
+  apps,
   retryPolicy,
   home,
   mobileTopBar,
@@ -31,6 +32,7 @@ const [
   read("src/lib/workflow-skills.server.ts"),
   read("src/lib/workflow-skills.functions.ts"),
   read("src/components/WorkflowSkillsPanel.tsx"),
+  read("src/routes/apps.tsx"),
   read("src/lib/workflow-skills-retry.mjs"),
   read("src/routes/index.tsx"),
   read("src/components/MobileTopBar.tsx"),
@@ -328,9 +330,13 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   );
   assert.ok(
     editorLoad.indexOf("await get({ data: { id: skill.id } })") <
-      editorLoad.indexOf("instructions: current.instructions"),
+      editorLoad.indexOf("parseWorkflowSkillDetailResult(response)") &&
+      editorLoad.indexOf("parseWorkflowSkillDetailResult(response)") <
+        editorLoad.indexOf("setEditing(current)"),
     "the editor must load one authorized package body before populating the draft",
   );
+  assert.match(apps, /primaryEmailAddress\?\.verification\?\.status === "verified"/u);
+  assert.match(apps, /Verify your primary email in account settings/u);
   assert.match(
     migration,
     /grant execute on function public\.mutate_workflow_skill\(uuid, text, uuid, bigint, jsonb, uuid, timestamptz\)\s+to service_role/u,

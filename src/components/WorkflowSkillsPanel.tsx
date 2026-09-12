@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
-import { parseWorkflowSkillMutationResult } from "@/lib/workflow-skills-client.mjs";
+import {
+  parseWorkflowSkillDetailResult,
+  parseWorkflowSkillMutationResult,
+} from "@/lib/workflow-skills-client.mjs";
 import { reserveWorkflowSkillMutationEnvelope } from "@/lib/workflow-skills-retry.mjs";
 import {
   createWorkflowSkill,
@@ -18,6 +21,7 @@ import {
   listWorkflowSkills,
   uninstallWorkflowSkill,
   type WorkflowSkillCard,
+  type WorkflowSkillDetail,
 } from "@/lib/workflow-skills.functions";
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 import type { WorkflowSkillDraft } from "@/lib/workflow-skills-policy.mjs";
@@ -149,7 +153,8 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
     if (busy) return;
     setBusy(true);
     try {
-      const current = await get({ data: { id: skill.id } });
+      const response = await get({ data: { id: skill.id } });
+      const current = parseWorkflowSkillDetailResult(response) as WorkflowSkillDetail;
       setEditing(current);
       setEditorOpen(true);
       setDraft({

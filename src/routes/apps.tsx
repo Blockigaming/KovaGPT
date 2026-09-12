@@ -763,6 +763,7 @@ function GitHubManager() {
 function AppsPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
   const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
   const principalRef = useRef(principal);
@@ -1353,7 +1354,19 @@ function AppsPage() {
 
             <GitHubManager key={principal ?? "unresolved"} />
 
-            <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+            {workflowSkillsAvailable ? (
+              <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+            ) : (
+              <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
+                <h2 id="skills-title" className="text-base font-semibold">
+                  Workflow skills
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Verify your primary email in account settings, then refresh this page to create or
+                  use workflow skills.
+                </p>
+              </section>
+            )}
 
             {filtered.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
