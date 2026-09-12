@@ -26,6 +26,7 @@ test("function inventories preserve plain schema-qualified function names", asyn
     "workflow_skill_principal_current",
     "account_export_direct_row_bytes",
     "list_workflow_skills",
+    "authorize_workflow_skill_mutation",
     "mutate_workflow_skill",
     "resolve_workflow_skill",
   ]);
