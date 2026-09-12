@@ -4,7 +4,7 @@
   "sourceCommit": "20940476881dadabfcedbfeadb4aba328dd8cd52",
   "progressRecalculated": false,
   "voiceAudioDictation": "required_unavailable",
-  "referenceMethod": "Zachary's September 11 final goal reconciled against reviewed PR #319 source and exact-head hosted evidence",
+  "referenceMethod": "Zachary's September 11 final goal reconciled against reviewed PR #319 ancestor source and hosted evidence",
   "surfaces": [
     {
       "id": "01",
@@ -23,7 +23,7 @@
       ],
       "boundary": "Explicit saveable/personalized Temporary Chat behavior, live model/provider use, authenticated persistence and production smoke remain unverified.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -44,7 +44,7 @@
       ],
       "boundary": "Supported parsers and size/type limits apply. No audio/video transcription, recording or arbitrary media ingestion claim.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -65,7 +65,7 @@
       ],
       "boundary": "Astra-class premium capability is required but is not an authorized automatic model migration or a proven deployment. Capability discovery, eval gates, quotas, latency and live Azure availability remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -78,7 +78,7 @@
       "testEvidence": ["tests/unit/search-provider.test.mjs"],
       "boundary": "Discovery is pending integration in this snapshot. Merchant facts need successful source checks; unknown price/stock stays unknown. No location tracking, native map, live booking or reverse-image claim.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -99,7 +99,7 @@
       ],
       "boundary": "Provider-native paused/resumable runs and live redirection are not exposed by the current configured adapter. A provider contract is needed before promising those semantics; existing partial results are not a resumed provider run.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -120,7 +120,7 @@
       ],
       "boundary": "New specialist delegation remains an autonomous source gap. Browser uses ephemeral private sessions and reviewed HTTPS origins, not a desktop profile or arbitrary OS control. Real runsc/container acceptance is a hosted gate.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -141,7 +141,7 @@
       ],
       "boundary": "Work-to-Site output publication and new specialist runs remain source gaps. Current completion accepts Library outputs only; standalone Sites is not evidence of Work publication. Admission stays off without signed runner readiness.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -162,7 +162,7 @@
       ],
       "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, runtime heartbeat, current OAuth access, live callbacks, provider budgets and notification delivery remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -183,7 +183,7 @@
       ],
       "boundary": "Project retention policy/execution is pending source. Live Realtime publication, two-account permissions and storage cleanup require matching deployment evidence. Presence is not CRDT editing.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -204,7 +204,7 @@
       ],
       "boundary": "Temporary Chat never auto-saves. Current text/version/original-byte limits and exact Storage provenance apply. Image-byte quota follow-up is tracked separately until included in the audited tree.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -225,7 +225,7 @@
       ],
       "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choices, advanced edit acceptance, provenance, live provider capabilities and cross-category settlement remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -246,7 +246,7 @@
       ],
       "boundary": "Search considers bounded accessible records/snippets; it is not an unlimited whole-document index. Semantic fallback labels the mode used. Native Computer History and proprietary ranking are outside web scope.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -267,7 +267,7 @@
       ],
       "boundary": "Complete store governance, publish/share/install/update/archive analytics, verified publishers, organization distribution, live moderation operations and production canaries remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -288,7 +288,7 @@
       ],
       "boundary": "WebMCP and complete provider-neutral discovery remain unfinished. Catalog visibility is not operational support; each provider/account still needs consent, revocation, live credentials and acceptance.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -309,7 +309,7 @@
       ],
       "boundary": "No arbitrary host shell, package installation, host filesystem/network access or unlimited notebook environment. Deploy pinned sandbox image/runtime and pass real hosted container acceptance.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -330,7 +330,7 @@
       ],
       "boundary": "Export writers support declared formats; they do not establish lossless arbitrary Office-template editing. Interactive HTML is sandboxed; no untrusted preview gets app credentials or unrestricted network access.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -351,7 +351,7 @@
       ],
       "boundary": "Co-editing package is pending. Portable authenticated state and traffic analytics are recorded as additional public-reference differences for scope review, not requirements to clone OpenAI hosting. Arbitrary server code/OpenAI D1/R2 hosting is not claimed. Work import exists, but verified Work Site completion does not yet.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -372,7 +372,7 @@
       ],
       "boundary": "Shares remain snapshots, not live access to the sender account. Site editor grants are a separate pending package. Real cross-device/browser account verification remains a release gate.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -393,7 +393,7 @@
       ],
       "boundary": "Push defaults off and requires approved VAPID/worker configuration plus device permission. No universal SMS/email delivery or native background guarantee; only configured channels may claim delivery.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -414,7 +414,7 @@
       ],
       "boundary": "Scores report practice, not accredited assessment. Teaching/regulated school products, LMS integrations and institutional contracts are not implied.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -435,7 +435,7 @@
       ],
       "boundary": "No parent chat surveillance or guaranteed emergency intervention. Age, regional/legal policy and actual delivery setup require owner decisions before activation.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -456,7 +456,7 @@
       ],
       "boundary": "The private asynchronous cloud-account export backend exists. Production migration, worker scheduling, and multi-account verification remain required. Passkey availability follows the actual auth adapter; no unsupported passkey enrollment claim.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -477,7 +477,7 @@
       ],
       "boundary": "No source fixture proves live Stripe prices, quota, invoices, legal tax/retention policy or a purchasable enterprise entitlement. Owner-approved rates/funding and actual settlement canaries remain mandatory.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -498,7 +498,7 @@
       ],
       "boundary": "Voice is required but unavailable. Full-duplex audio, interruption, transcripts, device/privacy controls, native applications and real physical-device permission/accessibility behavior remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -519,7 +519,7 @@
       ],
       "boundary": "Audio/realtime, agent/task/webhook breadth, real issuer/client registration, secrets, public billing activation, support/deprecation operations and production canaries remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -539,7 +539,7 @@
       ],
       "boundary": "Service accounts, analytics, complete connector/model/tool/spending policy, approved retention execution, live IdP/domain/legal setup, residency and production tenant tests remain.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -560,7 +560,7 @@
       ],
       "boundary": "Relationships and health use stored authorized evidence. Local-only records are labeled. No invented intelligence, external data acquisition or model-generated relationship is treated as authoritative.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
-      "hostedStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     }

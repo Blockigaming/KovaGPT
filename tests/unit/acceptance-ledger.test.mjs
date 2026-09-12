@@ -12,7 +12,7 @@ test("granular acceptance ledger covers every area and evidence stage", () => {
 
   assert.equal(ledger.schemaVersion, 2);
   assert.equal(ledger.auditedMainCommit, "b046727e3336b0f8df48a8097ad131e94cbf4ffe");
-  assert.deepEqual(ledger.reviewedCandidate, {
+  assert.deepEqual(ledger.reviewedImplementationBaseline, {
     pullRequest: 319,
     head: "20940476881dadabfcedbfeadb4aba328dd8cd52",
   });
@@ -33,7 +33,8 @@ test("granular acceptance ledger covers every area and evidence stage", () => {
   });
   assert.deepEqual(ledger.verification.statusCounts, {
     partial: 23,
-    verified_for_implemented_scope: 54,
+    verified_for_implemented_scope: 27,
+    verified_for_reviewed_ancestor_scope: 27,
     not_verified: 54,
     accepted: 4,
   });
@@ -73,14 +74,14 @@ test("final-goal requirements retain owner scope and honest evidence boundaries"
   }
 });
 
-test("hosted evidence names the reviewed PR 319 implementation head and successful runs", () => {
+test("hosted evidence is explicitly scoped to a reviewed ancestor implementation", () => {
   const ledger = buildAcceptanceLedger();
-  assert.equal(ledger.exactHeadEvidence.pullRequest, 319);
+  assert.equal(ledger.reviewedImplementationEvidence.pullRequest, 319);
   assert.equal(
-    ledger.exactHeadEvidence.pullRequestHead,
+    ledger.reviewedImplementationEvidence.pullRequestHead,
     "20940476881dadabfcedbfeadb4aba328dd8cd52",
   );
-  assert.deepEqual(ledger.exactHeadEvidence.workflows, [
+  assert.deepEqual(ledger.reviewedImplementationEvidence.workflows, [
     { id: 34664358655, name: "KovaGPT CI", conclusion: "success" },
     {
       id: 34664358673,
@@ -88,6 +89,11 @@ test("hosted evidence names the reviewed PR 319 implementation head and successf
       conclusion: "success",
     },
   ]);
+  for (const row of ledger.rows.filter((candidate) => candidate.stage === "hosted_ci")) {
+    assert.equal(row.status, "verified_for_reviewed_ancestor_scope");
+    assert.match(row.boundary, /does not verify this revision|not this revision/u);
+    assert.doesNotMatch(row.requirement, /exact[- ]head/iu);
+  }
 });
 
 test("current scope documents do not retain superseded progress or Voice exclusions", async () => {

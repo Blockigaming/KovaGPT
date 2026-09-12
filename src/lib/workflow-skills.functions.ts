@@ -33,8 +33,6 @@ export type WorkflowSkillCard = {
   version: number;
   name: string;
   description: string;
-  instructions: string;
-  resources: WorkflowSkillResource[];
   digest: string;
   installationId: string | null;
   installedVersionId: string | null;
@@ -42,6 +40,11 @@ export type WorkflowSkillCard = {
   installedName: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type WorkflowSkillDetail = WorkflowSkillCard & {
+  instructions: string;
+  resources: WorkflowSkillResource[];
 };
 
 type RpcResult = PromiseLike<{ data: unknown; error: { message?: string } | null }>;
@@ -60,8 +63,6 @@ const Card = z.object({
   version: z.number().int().positive(),
   name: z.string(),
   description: z.string(),
-  instructions: z.string(),
-  resources: z.array(Resource),
   digest: z.string().regex(/^[a-f0-9]{64}$/u),
   installationId: Id.nullable(),
   installedVersionId: Id.nullable(),
@@ -70,6 +71,22 @@ const Card = z.object({
   created_at: z.string(),
   updated_at: z.string(),
 });
+const Detail = Card.extend({
+  instructions: z.string(),
+  resources: z.array(Resource),
+});
+const Cursor = z
+  .object({
+    updatedAt: z.string().datetime({ offset: true }),
+    id: Id,
+  })
+  .strict();
+const Page = z
+  .object({
+    rows: z.array(Card).max(20),
+    nextCursor: Cursor.nullable(),
+  })
+  .strict();
 const MutationAuthorization = z
   .object({
     allowed: z.boolean(),
@@ -163,11 +180,37 @@ async function draftPayload(draft: WorkflowSkillDraft) {
 export const listWorkflowSkills = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WorkflowSkillCard[]> => {
-    const result = await rpc(context.supabase, "list_workflow_skills", {});
-    if (result.error) throw new Error("Workflow skills could not be loaded.");
-    const parsed = z.object({ rows: z.array(Card).max(100) }).safeParse(result.data);
-    if (!parsed.success) throw new Error("Workflow skills returned an invalid response.");
-    return parsed.data.rows;
+    const rows: WorkflowSkillCard[] = [];
+    let before: z.infer<typeof Cursor> | null = null;
+    for (let pageNumber = 0; pageNumber < 5; pageNumber += 1) {
+      const result = await rpc(context.supabase, "list_workflow_skills", {
+        p_limit: 20,
+        p_before_updated_at: before?.updatedAt ?? null,
+        p_before_id: before?.id ?? null,
+      });
+      if (result.error) throw new Error("Workflow skills could not be loaded.");
+      const parsed = Page.safeParse(result.data);
+      if (!parsed.success) throw new Error("Workflow skills returned an invalid response.");
+      rows.push(...parsed.data.rows);
+      before = parsed.data.nextCursor;
+      if (!before) break;
+    }
+    return rows;
+  });
+
+export const getWorkflowSkill = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: Id }).strict().parse(input))
+  .handler(async ({ data, context }): Promise<WorkflowSkillDetail> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const result = await rpc(supabaseAdmin, "get_workflow_skill", {
+      p_actor: context.userId,
+      p_skill_id: data.id,
+    });
+    if (result.error) throw new Error("Workflow skill details could not be loaded.");
+    const parsed = Detail.safeParse(result.data);
+    if (!parsed.success) throw new Error("Workflow skill details returned an invalid response.");
+    return parsed.data;
   });
 
 export const createWorkflowSkill = createServerFn({ method: "POST" })

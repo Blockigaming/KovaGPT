@@ -9,7 +9,10 @@
   ],
   "reconciledAt": "2026-09-12",
   "auditedMainCommit": "b046727e3336b0f8df48a8097ad131e94cbf4ffe",
-  "reviewedCandidate": { "pullRequest": 319, "head": "20940476881dadabfcedbfeadb4aba328dd8cd52" },
+  "reviewedImplementationBaseline": {
+    "pullRequest": 319,
+    "head": "20940476881dadabfcedbfeadb4aba328dd8cd52"
+  },
   "ownerDeclaredOverallProgress": 76.5,
   "progressKind": "owner_declared_checkpoint",
   "progressRecalculated": false,
@@ -520,7 +523,7 @@
       }
     ]
   },
-  "exactHeadEvidence": {
+  "reviewedImplementationEvidence": {
     "pullRequest": 319,
     "pullRequestHead": "20940476881dadabfcedbfeadb4aba328dd8cd52",
     "workflows": [
@@ -547,7 +550,8 @@
     "currentTestInventorySha256": "11bf0cf47c32ba91559a9e9daccada41abaefc163625ace1bbbb778e1a4ccaa6",
     "statusCounts": {
       "partial": 23,
-      "verified_for_implemented_scope": 54,
+      "verified_for_implemented_scope": 27,
+      "verified_for_reviewed_ancestor_scope": 27,
       "not_verified": 54,
       "accepted": 4
     }
@@ -574,7 +578,7 @@
       "id": "01.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/chat-history-database.test.mjs",
         "tests/unit/chat-history-sync.test.mjs",
@@ -588,14 +592,14 @@
       "area": "Core chat",
       "id": "01.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
     },
     {
@@ -642,7 +646,7 @@
       "id": "02.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/composer-keyboard.test.mjs",
         "tests/unit/document-export-roundtrip.test.mjs"
@@ -655,14 +659,14 @@
       "area": "Composer and multimodal input",
       "id": "02.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
     },
     {
@@ -708,7 +712,7 @@
       "id": "03.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/work-model-policy.test.mjs",
         "tests/unit/work-model-server.test.mjs",
@@ -722,14 +726,14 @@
       "area": "Models, modes, and reasoning",
       "id": "03.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -771,7 +775,7 @@
       "id": "04.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": ["tests/unit/search-provider.test.mjs"],
       "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
@@ -781,14 +785,14 @@
       "area": "Web and product discovery",
       "id": "04.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -834,7 +838,7 @@
       "id": "05.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/deep-research.test.mjs",
         "tests/unit/deep-research-persistence.test.mjs",
@@ -848,14 +852,14 @@
       "area": "Deep Research",
       "id": "05.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -901,7 +905,7 @@
       "id": "06.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/work-runner-service.test.mjs",
         "tests/unit/work-terminal.test.mjs",
@@ -915,14 +919,14 @@
       "area": "Agent tools and actions",
       "id": "06.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -968,7 +972,7 @@
       "id": "07.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/work-execution-migration.test.mjs",
         "tests/unit/work-admission-recovery.test.mjs",
@@ -982,14 +986,14 @@
       "area": "Long-running Work",
       "id": "07.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -1035,7 +1039,7 @@
       "id": "08.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/scheduled-tasks-foundation.test.mjs",
         "tests/unit/task-event-ingress.test.mjs",
@@ -1049,14 +1053,14 @@
       "area": "Scheduled Tasks",
       "id": "08.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -1102,7 +1106,7 @@
       "id": "09.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/project-canvas-collaboration.test.mjs",
         "tests/unit/collaboration-client.test.mjs",
@@ -1116,14 +1120,14 @@
       "area": "Projects",
       "id": "09.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
@@ -1169,7 +1173,7 @@
       "id": "10.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/library-versions-migration.test.mjs",
         "tests/unit/library-original-runtime.test.mjs",
@@ -1183,14 +1187,14 @@
       "area": "Library and files",
       "id": "10.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
     },
     {
@@ -1236,7 +1240,7 @@
       "id": "11.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/image-contract.test.mjs",
         "tests/unit/image-provider-transport.test.mjs",
@@ -1250,14 +1254,14 @@
       "area": "Image generation and editing",
       "id": "11.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -1303,7 +1307,7 @@
       "id": "12.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/memory-sources.test.mjs",
         "tests/unit/principal-settings-storage.test.mjs",
@@ -1317,14 +1321,14 @@
       "area": "Memory and personalization",
       "id": "12.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
     },
     {
@@ -1370,7 +1374,7 @@
       "id": "13.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/custom-kovas-lifecycle.test.mjs",
         "tests/unit/custom-kovas-runtime.test.mjs",
@@ -1384,14 +1388,14 @@
       "area": "Custom Kovas",
       "id": "13.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
     },
     {
@@ -1437,7 +1441,7 @@
       "id": "14.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/google-multiaccount.test.mjs",
         "tests/unit/connectors-governance.test.mjs",
@@ -1451,14 +1455,14 @@
       "area": "Apps, connectors, plugins, and skills",
       "id": "14.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -1504,7 +1508,7 @@
       "id": "15.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/work-sandbox-container.test.mjs",
         "tests/unit/work-terminal.test.mjs",
@@ -1518,14 +1522,14 @@
       "area": "Data analysis and code",
       "id": "15.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -1571,7 +1575,7 @@
       "id": "16.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/canvas-autosave-policy.test.mjs",
         "tests/unit/canvas-remote-adoption.test.mjs",
@@ -1585,14 +1589,14 @@
       "area": "Artifacts, writing, and visuals",
       "id": "16.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
     },
     {
@@ -1638,7 +1642,7 @@
       "id": "17.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/sites-lifecycle.test.mjs",
         "tests/unit/sites-assets.test.mjs",
@@ -1652,14 +1656,14 @@
       "area": "Sites",
       "id": "17.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
@@ -1705,7 +1709,7 @@
       "id": "18.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/chat-history-sync.test.mjs",
         "tests/unit/work-sync-client.test.mjs",
@@ -1719,14 +1723,14 @@
       "area": "Sharing, collaboration, and continuity",
       "id": "18.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
     },
     {
@@ -1772,7 +1776,7 @@
       "id": "19.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/web-push-lifecycle.test.mjs",
         "tests/unit/web-push-crypto.test.mjs",
@@ -1786,14 +1790,14 @@
       "area": "Notifications",
       "id": "19.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
     },
     {
@@ -1839,7 +1843,7 @@
       "id": "20.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/study-progress-sql.test.mjs",
         "tests/unit/study-policy.test.mjs",
@@ -1853,14 +1857,14 @@
       "area": "Study",
       "id": "20.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
       "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
     },
     {
@@ -1906,7 +1910,7 @@
       "id": "21.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/family-atomic-membership.test.mjs",
         "tests/unit/trusted-contact-migration.test.mjs",
@@ -1920,14 +1924,14 @@
       "area": "Family and trusted contacts",
       "id": "21.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
       "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
@@ -1973,7 +1977,7 @@
       "id": "22.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/auth-security.test.mjs",
         "tests/unit/account-deletion-state.test.mjs",
@@ -1987,14 +1991,14 @@
       "area": "Authentication, account, and privacy",
       "id": "22.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
     },
     {
@@ -2040,7 +2044,7 @@
       "id": "23.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/stripe-checkout-authority.test.mjs",
         "tests/unit/developer-billing-migration.test.mjs",
@@ -2054,14 +2058,14 @@
       "area": "Billing, usage, and Finances",
       "id": "23.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -2107,7 +2111,7 @@
       "id": "24.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/e2e/pwa-service-worker.spec.ts",
         "tests/e2e/workspace-visual-coherence.spec.ts",
@@ -2121,14 +2125,14 @@
       "area": "Web, PWA, voice, and native platforms",
       "id": "24.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
     },
     {
@@ -2174,7 +2178,7 @@
       "id": "25.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/developer-platform-ingress.test.mjs",
         "tests/unit/developer-mcp.test.mjs",
@@ -2188,14 +2192,14 @@
       "area": "Developer platform and MCP",
       "id": "25.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
     },
     {
@@ -2241,7 +2245,7 @@
       "id": "26.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/unit/organization-administration.test.mjs",
         "tests/unit/organization-boundaries.test.mjs"
@@ -2254,14 +2258,14 @@
       "area": "Organization administration",
       "id": "26.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted gates verify the implemented slice, not the missing source requirement.",
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
       "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
     },
     {
@@ -2307,7 +2311,7 @@
       "id": "27.local",
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
-      "requirement": "Referenced automated coverage exists and the exact-head gate suite passed.",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
         "tests/integration/workspace-intelligence-source.test.mjs",
         "tests/integration/future-workspace-source.test.mjs",
@@ -2321,14 +2325,14 @@
       "area": "KovaGPT differentiators",
       "id": "27.hosted",
       "stage": "hosted_ci",
-      "status": "verified_for_implemented_scope",
-      "requirement": "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       "evidence": [
         "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Hosted CI is pre-deployment evidence and does not certify a live environment.",
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
       "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
     },
     {

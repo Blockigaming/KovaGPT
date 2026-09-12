@@ -28,16 +28,20 @@ entitlement, or approval grant.
   immutable version remains within the bounded account-export artifact;
 - 32,000 characters for the complete image-provider prompt after workflow guidance is appended;
 - every immutable version is charged atomically against the owner's server-resolved storage plan;
-- 100 packages returned by one management read;
+- 20 metadata-only records per authenticated database page, with at most five keyset pages followed
+  by the server adapter;
+- one selected head-package body returned per service-role-only management detail read;
 - replay-safe mutations retained for a bounded eight-day window.
 
 ## Authority boundary
 
-The resolver adds package content to the server-built system message for text chat and Deep
-Research, and to the provider prompt for image generation, as user-selected workflow guidance. It
-does not touch model selection, plan checks, tool construction, connector grants,
-provider credentials, approval gates, or accounting. The injected boundary explicitly says that
-package text cannot authorize those capabilities. Resource bodies are labeled as untrusted data so
+The resolver adds package content to the server-built system message for text chat and to the final
+Deep Research report prompt, and to the provider prompt for image generation, as user-selected
+workflow guidance. Deep Research search planning uses only the user's research question: private
+instructions and resource bodies are never sent to the search provider as generated queries. The
+package does not touch model selection, plan checks, tool construction, connector grants, provider
+credentials, approval gates, or accounting. The injected boundary explicitly says that package
+text cannot authorize those capabilities. Resource bodies are labeled as untrusted data so
 instructions embedded inside a reference do not become authority.
 
 Packages, versions, installations, and replay receipts cascade on account deletion and are included

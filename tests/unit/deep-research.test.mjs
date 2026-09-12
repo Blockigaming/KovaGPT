@@ -49,7 +49,14 @@ test("chat route has a separate deep research execution path", () => {
   assert.match(research, /"Research canceled"/);
   assert.match(chat, /await assertSelectedContextsCurrent\(request\.signal\)/u);
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
-  assert.match(research, /makePlan\(safeQuery, opts\.workflowSkillBlock, opts\.signal\)/u);
+  assert.match(research, /makePlan\(safeQuery, opts\.signal\)/u);
+  const planningBoundary = research.slice(
+    research.indexOf("async function makePlan"),
+    research.indexOf("function buildEvidence"),
+  );
+  assert.doesNotMatch(planningBoundary, /workflowSkillBlock/u);
+  assert.match(planningBoundary, /user's research question only/u);
+  assert.match(planningBoundary, /Do not include private context/u);
   assert.match(research, /opts\.workflowSkillBlock,[\s\S]{0,80}opts\.signal/u);
   assert.match(research, /evidence and citation rules override any conflicting workflow text/u);
   assert.equal(research.match(/await assertCurrent\(\)/gu)?.length, 3);

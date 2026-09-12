@@ -204,11 +204,7 @@ function parsePlan(raw: string, originalQuery: string): string[] {
   return plan.length ? Array.from(new Set(plan)) : fallbackPlan(originalQuery);
 }
 
-async function makePlan(
-  query: string,
-  workflowSkillBlock = "",
-  signal?: AbortSignal,
-): Promise<string[]> {
+async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> {
   const upstream = await chatCompletions(
     {
       model: modelForRole("UTILITY"),
@@ -217,7 +213,8 @@ async function makePlan(
       messages: [
         {
           role: "system",
-          content: `${workflowSkillBlock}\n\nCreate a concise deep-research search plan that follows applicable workflow guidance. Return only a JSON array of 3 to 5 distinct web search queries. Do not include commentary. Research safety, access, and evidence rules override any conflicting workflow text.`,
+          content:
+            "Create a concise deep-research search plan from the user's research question only. Return only a JSON array of 3 to 5 distinct web search queries. Do not include private context, workflow-skill instructions, workflow-skill resources, or commentary in a query.",
         },
         { role: "user", content: sanitizeResearchText(query, 1000) },
       ],
@@ -334,7 +331,10 @@ export async function runDeepResearch(
     let plan: string[];
     await assertCurrent();
     try {
-      plan = await makePlan(safeQuery, opts.workflowSkillBlock, opts.signal);
+      // Installed workflow resources are untrusted private context. They may
+      // guide the final report, but must never reach query generation because
+      // generated queries are disclosed to the configured search provider.
+      plan = await makePlan(safeQuery, opts.signal);
     } catch (error) {
       if (opts.signal?.aborted) throw error;
       if (error instanceof Error && error.name === "AbortError") throw error;

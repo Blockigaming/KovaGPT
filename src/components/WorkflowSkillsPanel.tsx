@@ -13,6 +13,7 @@ import {
   createWorkflowSkill,
   createWorkflowSkillVersion,
   deleteWorkflowSkill,
+  getWorkflowSkill,
   installWorkflowSkillVersion,
   listWorkflowSkills,
   uninstallWorkflowSkill,
@@ -37,6 +38,7 @@ type MutationEnvelope = ReturnType<typeof mutationEnvelope>;
 export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
   const list = useServerFn(listWorkflowSkills);
   const create = useServerFn(createWorkflowSkill);
+  const get = useServerFn(getWorkflowSkill);
   const version = useServerFn(createWorkflowSkillVersion);
   const install = useServerFn(installWorkflowSkillVersion);
   const uninstall = useServerFn(uninstallWorkflowSkill);
@@ -137,19 +139,32 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
     }
   };
 
-  const openEditor = (skill?: WorkflowSkillCard) => {
-    setEditing(skill ?? null);
-    setEditorOpen(true);
-    setDraft(
-      skill
-        ? {
-            name: skill.name,
-            description: skill.description,
-            instructions: skill.instructions,
-            resources: skill.resources.map((resource) => ({ ...resource })),
-          }
-        : emptyDraft(),
-    );
+  const openEditor = async (skill?: WorkflowSkillCard) => {
+    if (!skill) {
+      setEditing(null);
+      setEditorOpen(true);
+      setDraft(emptyDraft());
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    try {
+      const current = await get({ data: { id: skill.id } });
+      setEditing(current);
+      setEditorOpen(true);
+      setDraft({
+        name: current.name,
+        description: current.description,
+        instructions: current.instructions,
+        resources: current.resources.map((resource) => ({ ...resource })),
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Workflow skill details could not be loaded.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const openChatWithSkill = (skill: WorkflowSkillCard) => {
@@ -184,7 +199,7 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
             access.
           </p>
         </div>
-        <Button variant="outline" onClick={() => openEditor()} disabled={busy}>
+        <Button variant="outline" onClick={() => void openEditor()} disabled={busy}>
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New skill
         </Button>
       </div>
@@ -296,7 +311,7 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
                     size="sm"
                     variant="ghost"
                     disabled={busy}
-                    onClick={() => openEditor(skill)}
+                    onClick={() => void openEditor(skill)}
                   >
                     New version
                   </Button>

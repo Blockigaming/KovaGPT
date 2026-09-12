@@ -294,6 +294,43 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   );
   assert.match(serverMutation, /client\.server/u);
   assert.match(functions, /workflow_skill_rate_limit/u);
+  const listFunction = migration.slice(
+    migration.indexOf("create or replace function public.list_workflow_skills"),
+    migration.indexOf("create or replace function public.get_workflow_skill"),
+  );
+  const detailFunction = migration.slice(
+    migration.indexOf("create or replace function public.get_workflow_skill"),
+    migration.indexOf("create or replace function public.authorize_workflow_skill_mutation"),
+  );
+  assert.match(listFunction, /p_limit integer default 20/u);
+  assert.match(listFunction, /p_limit not between 1 and 20/u);
+  assert.match(listFunction, /limit p_limit/u);
+  assert.match(listFunction, /'nextCursor'/u);
+  assert.doesNotMatch(listFunction, /version\.instructions|version\.resources/u);
+  assert.match(detailFunction, /version\.instructions/u);
+  assert.match(detailFunction, /version\.resources/u);
+  assert.match(detailFunction, /skill\.owner_id = p_actor/u);
+  assert.match(
+    migration,
+    /grant execute on function public\.get_workflow_skill\(uuid, uuid\)\s+to service_role/u,
+  );
+  assert.doesNotMatch(
+    migration,
+    /grant execute on function public\.get_workflow_skill[^;]+to authenticated/u,
+  );
+  assert.match(functions, /rows: z\.array\(Card\)\.max\(20\)/u);
+  assert.match(functions, /pageNumber < 5/u);
+  assert.match(functions, /p_limit: 20/u);
+  assert.match(functions, /await rpc\(supabaseAdmin, "get_workflow_skill"/u);
+  const editorLoad = panel.slice(
+    panel.indexOf("const openEditor = async"),
+    panel.indexOf("const openChatWithSkill"),
+  );
+  assert.ok(
+    editorLoad.indexOf("await get({ data: { id: skill.id } })") <
+      editorLoad.indexOf("instructions: current.instructions"),
+    "the editor must load one authorized package body before populating the draft",
+  );
   assert.match(
     migration,
     /grant execute on function public\.mutate_workflow_skill\(uuid, text, uuid, bigint, jsonb, uuid, timestamptz\)\s+to service_role/u,
@@ -307,6 +344,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     "workflow_skill_principal_current",
     "account_export_direct_row_bytes",
     "list_workflow_skills",
+    "get_workflow_skill",
     "authorize_workflow_skill_mutation",
     "mutate_workflow_skill",
     "resolve_workflow_skill",

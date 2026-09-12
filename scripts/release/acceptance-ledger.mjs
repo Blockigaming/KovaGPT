@@ -16,7 +16,7 @@ const EXPECTED_AREA_IDS = Array.from({ length: 27 }, (_, index) =>
   String(index + 1).padStart(2, "0"),
 );
 const STAGES = ["source", "local_automation", "hosted_ci", "staging", "production"];
-const EXACT_HEAD_EVIDENCE = {
+const REVIEWED_IMPLEMENTATION_BASELINE = {
   pullRequest: 319,
   pullRequestHead: "20940476881dadabfcedbfeadb4aba328dd8cd52",
   workflows: [
@@ -52,7 +52,7 @@ function listFiles(path) {
 
 function parseLedger(markdown) {
   const identity = markdown.match(
-    /Reconciled \*\*(\d{4}-\d{2}-\d{2})\*\* against reviewed PR #(\d+) implementation head\s+`([0-9a-f]{40})`, based on `main` commit `([0-9a-f]{40})`\./s,
+    /Reconciled \*\*(\d{4}-\d{2}-\d{2})\*\* against reviewed PR #(\d+) ancestor implementation head\s+`([0-9a-f]{40})`, based on `main` commit `([0-9a-f]{40})`\./s,
   );
   if (!identity) {
     throw new Error("Acceptance ledger is missing its reviewed candidate and main identities.");
@@ -164,7 +164,7 @@ function areaStages(area, capability) {
       id: `${area.id}.local`,
       stage: "local_automation",
       status: "verified_for_implemented_scope",
-      requirement: "Referenced automated coverage exists and the exact-head gate suite passed.",
+      requirement: "Referenced automated coverage exists and is exercised by the release gate.",
       evidence: capability.testEvidence,
       boundary:
         currentSourceStatus === "partial"
@@ -174,19 +174,19 @@ function areaStages(area, capability) {
     {
       id: `${area.id}.hosted`,
       stage: "hosted_ci",
-      status: "verified_for_implemented_scope",
+      status: "verified_for_reviewed_ancestor_scope",
       requirement:
-        "The reviewed exact PR head passed the hosted source, browser, and container gates.",
+        "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
       evidence: [
-        `github:pull/${EXACT_HEAD_EVIDENCE.pullRequest}@${EXACT_HEAD_EVIDENCE.pullRequestHead}`,
-        ...EXACT_HEAD_EVIDENCE.workflows.map(
+        `github:pull/${REVIEWED_IMPLEMENTATION_BASELINE.pullRequest}@${REVIEWED_IMPLEMENTATION_BASELINE.pullRequestHead}`,
+        ...REVIEWED_IMPLEMENTATION_BASELINE.workflows.map(
           (workflow) => `github:actions/${workflow.id}:${workflow.name}:${workflow.conclusion}`,
         ),
       ],
       boundary:
         currentSourceStatus === "partial"
-          ? "Hosted gates verify the implemented slice, not the missing source requirement."
-          : "Hosted CI is pre-deployment evidence and does not certify a live environment.",
+          ? "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement."
+          : "Ancestor hosted CI does not verify this revision or certify a live environment.",
     },
     {
       id: `${area.id}.staging`,
@@ -217,10 +217,12 @@ export function buildAcceptanceLedger() {
   const legacyTestInventory = parseJson(LEGACY_TEST_INVENTORY_PATH);
 
   if (
-    parsed.reviewedPullRequest !== EXACT_HEAD_EVIDENCE.pullRequest ||
-    parsed.reviewedCandidateHead !== EXACT_HEAD_EVIDENCE.pullRequestHead
+    parsed.reviewedPullRequest !== REVIEWED_IMPLEMENTATION_BASELINE.pullRequest ||
+    parsed.reviewedCandidateHead !== REVIEWED_IMPLEMENTATION_BASELINE.pullRequestHead
   ) {
-    throw new Error("Acceptance ledger identity does not match its reviewed hosted evidence.");
+    throw new Error(
+      "Acceptance ledger identity does not match its reviewed implementation baseline.",
+    );
   }
   if (
     capabilityAudit.sourceCommit !== parsed.reviewedCandidateHead ||
@@ -251,7 +253,7 @@ export function buildAcceptanceLedger() {
     if (
       capability.sourceStatus !== expectedStatus ||
       capability.localStatus !== "verified_for_implemented_scope_at_reviewed_candidate" ||
-      capability.hostedStatus !== "verified_for_implemented_scope_at_reviewed_candidate" ||
+      capability.hostedStatus !== "verified_for_reviewed_ancestor_scope" ||
       capability.stagingStatus !== "not_exercised" ||
       capability.productionStatus !== "not_verified"
     ) {
@@ -324,7 +326,7 @@ export function buildAcceptanceLedger() {
     ],
     reconciledAt: parsed.reconciledAt,
     auditedMainCommit: parsed.auditedMainCommit,
-    reviewedCandidate: {
+    reviewedImplementationBaseline: {
       pullRequest: parsed.reviewedPullRequest,
       head: parsed.reviewedCandidateHead,
     },
@@ -339,7 +341,7 @@ export function buildAcceptanceLedger() {
       voiceRequired: finalGoalContract.voiceRequired,
       requirements: finalGoalRequirements,
     },
-    exactHeadEvidence: EXACT_HEAD_EVIDENCE,
+    reviewedImplementationEvidence: REVIEWED_IMPLEMENTATION_BASELINE,
     verification: {
       masterAreas: parsed.areas.length,
       stagesPerArea: STAGES.length,

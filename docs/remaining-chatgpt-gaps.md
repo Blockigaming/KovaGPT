@@ -1,6 +1,6 @@
 # Remaining KovaGPT final-goal gaps
 
-Updated **2026-09-12** against reviewed PR #319 implementation head
+Updated **2026-09-12** against reviewed PR #319 ancestor implementation head
 `20940476881dadabfcedbfeadb4aba328dd8cd52`.
 
 This file keeps its historical path for compatibility. KovaGPT is an independent product, not a
@@ -18,12 +18,12 @@ owner-declared **1%** quality assessment. This gap register does not recalculate
 - Owner-scoped reusable workflow skills now have immutable versions, exact installation/selection,
   server-side resolution, integrity digests, principal scoping, export/deletion coverage, durable
   quotas, bounded admission, replay safety, and stale-context revalidation.
-- PR #319 implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` passed exact-head review
-  with no major issues and no unresolved threads.
+- PR #319 ancestor implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` passed
+  commit-scoped review with no major issues and no unresolved threads at that time.
 - KovaGPT CI run `34664358655` passed all 12 jobs. Azure Container Readiness run
   `34664358673` passed.
-- These are reviewed source/hosted results. No merge, migration, deployment, or production
-  verification is implied.
+- These are historical source/hosted results for the named ancestor only. They do not verify this
+  revision, and no merge, migration, deployment, or production verification is implied.
 
 ## Highest-priority autonomous source work
 

@@ -615,7 +615,11 @@ revoke all on function kova_private.account_export_direct_row_bytes(uuid, bigint
 grant execute on function kova_private.account_export_direct_row_bytes(uuid, bigint)
   to service_role;
 
-create or replace function public.list_workflow_skills()
+create or replace function public.list_workflow_skills(
+  p_limit integer default 20,
+  p_before_updated_at timestamptz default null,
+  p_before_id uuid default null
+)
 returns jsonb
 language plpgsql
 security definer
@@ -624,12 +628,18 @@ as $$
 declare
   actor uuid := (select auth.uid());
   rows jsonb;
+  next_cursor jsonb;
 begin
   if not kova_private.workflow_skill_principal_current(actor) then
     raise exception 'workflow_skill_denied' using errcode = '42501';
   end if;
+  if p_limit not between 1 and 20
+    or ((p_before_updated_at is null) <> (p_before_id is null))
+  then
+    raise exception 'workflow_skill_list_invalid' using errcode = '22023';
+  end if;
 
-  select coalesce(jsonb_agg(to_jsonb(item) order by item.updated_at desc, item.id), '[]'::jsonb)
+  select coalesce(jsonb_agg(to_jsonb(item) order by item.updated_at desc, item.id desc), '[]'::jsonb)
   into rows
   from (
     select
@@ -641,8 +651,6 @@ begin
       version.version,
       version.name,
       version.description,
-      version.instructions,
-      version.resources,
       version.content_sha256 as digest,
       installation.id as "installationId",
       installation.version_id as "installedVersionId",
@@ -656,10 +664,67 @@ begin
       on installed_version.id = installation.version_id
       and installed_version.skill_id = installation.skill_id
     where skill.owner_id = actor
-    order by skill.updated_at desc, skill.id
-    limit 100
+      and (
+        p_before_updated_at is null
+        or (skill.updated_at, skill.id) < (p_before_updated_at, p_before_id)
+      )
+    order by skill.updated_at desc, skill.id desc
+    limit p_limit
   ) item;
-  return jsonb_build_object('rows', rows);
+  if jsonb_array_length(rows) = p_limit then
+    next_cursor := jsonb_build_object(
+      'updatedAt', rows->(jsonb_array_length(rows) - 1)->>'updated_at',
+      'id', rows->(jsonb_array_length(rows) - 1)->>'id'
+    );
+  end if;
+  return jsonb_build_object('rows', rows, 'nextCursor', next_cursor);
+end;
+$$;
+
+create or replace function public.get_workflow_skill(p_actor uuid, p_skill_id uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  item jsonb;
+begin
+  if p_actor is null
+    or p_skill_id is null
+    or not kova_private.workflow_skill_principal_current(p_actor)
+  then
+    raise exception 'workflow_skill_denied' using errcode = '42501';
+  end if;
+  select jsonb_build_object(
+    'id', skill.id,
+    'revision', skill.revision,
+    'headVersionId', skill.head_version_id,
+    'created_at', skill.created_at,
+    'updated_at', skill.updated_at,
+    'version', version.version,
+    'name', version.name,
+    'description', version.description,
+    'instructions', version.instructions,
+    'resources', version.resources,
+    'digest', version.content_sha256,
+    'installationId', installation.id,
+    'installedVersionId', installation.version_id,
+    'installedVersion', installed_version.version,
+    'installedName', installed_version.name
+  ) into item
+  from public.workflow_skills skill
+  join public.workflow_skill_versions version on version.id = skill.head_version_id
+  left join public.workflow_skill_installations installation
+    on installation.skill_id = skill.id and installation.owner_id = p_actor
+  left join public.workflow_skill_versions installed_version
+    on installed_version.id = installation.version_id
+    and installed_version.skill_id = installation.skill_id
+  where skill.id = p_skill_id and skill.owner_id = p_actor;
+  if item is null then
+    raise exception 'workflow_skill_unavailable' using errcode = '42501';
+  end if;
+  return item;
 end;
 $$;
 
@@ -1062,8 +1127,14 @@ begin
 end;
 $$;
 
-revoke all on function public.list_workflow_skills() from public, anon, authenticated;
-grant execute on function public.list_workflow_skills() to authenticated;
+revoke all on function public.list_workflow_skills(integer, timestamptz, uuid)
+  from public, anon, authenticated;
+grant execute on function public.list_workflow_skills(integer, timestamptz, uuid)
+  to authenticated;
+revoke all on function public.get_workflow_skill(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.get_workflow_skill(uuid, uuid)
+  to service_role;
 revoke all on function public.authorize_workflow_skill_mutation(uuid, text, uuid)
   from public, anon, authenticated;
 grant execute on function public.authorize_workflow_skill_mutation(uuid, text, uuid)

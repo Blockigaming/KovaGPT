@@ -1,6 +1,6 @@
 # KovaGPT acceptance ledger
 
-Reconciled **2026-09-12** against reviewed PR #319 implementation head
+Reconciled **2026-09-12** against reviewed PR #319 ancestor implementation head
 `20940476881dadabfcedbfeadb4aba328dd8cd52`, based on `main` commit `b046727e3336b0f8df48a8097ad131e94cbf4ffe`.
 
 This is the current high-level acceptance ledger. It replaces old percentage claims in historical
@@ -10,15 +10,17 @@ checks is not production proof.
 ## Evidence baseline
 
 - PR #318's reviewed tree is the tree merged into the exact `main` base above.
-- PR #319 implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` received an exact-head
-  Codex review with no major issues and no unresolved review threads.
-- Exact-head KovaGPT CI run `34664358655` passed all 12 jobs, including unit, API, integration,
+- PR #319 ancestor implementation head `20940476881dadabfcedbfeadb4aba328dd8cd52` received a
+  commit-scoped Codex review with no major issues and no unresolved review threads at that time.
+- Ancestor KovaGPT CI run `34664358655` passed all 12 jobs, including unit, API, integration,
   isolated database, three release-E2E shards, build, bundle, release contracts, accessibility,
   visual, deployed-baseline audit, and every browser viewport.
-- Exact-head Azure Container Readiness run `34664358673` passed typecheck, unit, Bicep, production
+- Ancestor Azure Container Readiness run `34664358673` passed typecheck, unit, Bicep, production
   build, Docker/container health, and isolated Sites smoke.
 - The isolated-database job passed the complete 146-migration source lineage. This does not prove
   that source lineage matches production.
+- This historical evidence verifies only the named ancestor. It does not verify the revision that
+  contains this ledger or any later PR head.
 - No current production deployment, database migration, Cloudflare edge/origin configuration,
   Stripe configuration, or production smoke result is certified by this ledger.
 - Overall progress remains the owner-declared **76.5%** checkpoint, and UI completion remains the

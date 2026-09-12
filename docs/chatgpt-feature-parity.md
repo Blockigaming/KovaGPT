@@ -1,6 +1,6 @@
 # KovaGPT capability comparison
 
-Updated **2026-09-12** against reviewed PR #319 implementation head
+Updated **2026-09-12** against reviewed PR #319 ancestor implementation head
 `20940476881dadabfcedbfeadb4aba328dd8cd52`.
 
 KovaGPT is an independent product, not a visual clone. This document is a compatibility index for an
@@ -26,6 +26,7 @@ owner-declared **1%** quality assessment. Neither value is recalculated by this 
 | Identity, family, privacy, billing, developer, and organization | Auth/MFA/recovery, family contacts, exports/deletion, Stripe/developer billing foundations, APIs/SDK/MCP, SSO adapter, and SCIM source exist. | Approved policy, unified premium accounting, live identity/payments/IdP, service accounts, analytics, retention, residency, erasure, support, and production proof remain. |
 | Voice and native experiences                                    | Voice is correctly recorded as required but unavailable; responsive web/PWA source exists.                                                    | Full-duplex voice, interruption, captions, device/privacy controls, strict minute/backend budgets, native apps, and physical-device acceptance are unfinished.             |
 
-The reviewed implementation head passed exact-head source, database, release-E2E, browser, build,
-container, and Azure-readiness gates for its implemented scope. Staging and production remain
-unverified; no source or CI result establishes deployment.
+The reviewed ancestor implementation head passed commit-scoped source, database, release-E2E,
+browser, build, container, and Azure-readiness gates for its implemented scope. Those historical
+results do not verify this revision. Staging and production remain unverified; no source or CI
+result establishes deployment.

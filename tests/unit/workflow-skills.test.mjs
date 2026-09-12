@@ -829,10 +829,22 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
     const replay = await mutate(db, OWNER, "create", null, content, { mutationId, requestedAt });
     assert.deepEqual(replay, first);
     assert.equal(await workflowMutationRateCount(db), 1);
-    assert.equal(
-      (await authenticatedRpc(db, OWNER, "list_workflow_skills", [])).rows[0].installationId,
-      first.installationId,
+    const listed = await authenticatedRpc(db, OWNER, "list_workflow_skills", [20, null, null]);
+    assert.equal(listed.rows[0].installationId, first.installationId);
+    assert.equal(listed.nextCursor, null);
+    assert.equal(Object.hasOwn(listed.rows[0], "instructions"), false);
+    assert.equal(Object.hasOwn(listed.rows[0], "resources"), false);
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "list_workflow_skills", [21, null, null]),
+      /workflow_skill_list_invalid/u,
     );
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "list_workflow_skills", [20, new Date().toISOString(), null]),
+      /workflow_skill_list_invalid/u,
+    );
+    const detail = await serviceRpc(db, "get_workflow_skill", [OWNER, first.id]);
+    assert.equal(detail.instructions, normalized.instructions);
+    assert.deepEqual(detail.resources, normalized.resources);
     assert.equal(
       (await db.query("select bytes_used from public.user_storage where user_id=$1", [OWNER]))
         .rows[0].bytes_used,
@@ -856,6 +868,10 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
         crypto.randomUUID(),
         requestedAt,
       ]),
+      /permission denied/u,
+    );
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "get_workflow_skill", [OWNER, first.id]),
       /permission denied/u,
     );
 
