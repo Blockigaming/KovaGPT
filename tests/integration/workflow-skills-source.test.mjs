@@ -11,6 +11,7 @@ import {
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const [
   chat,
+  auth,
   ingress,
   chatStore,
   resolver,
@@ -27,6 +28,7 @@ const [
   manifest,
 ] = await Promise.all([
   read("src/routes/api/chat.ts"),
+  read("src/components/auth/ClerkSafe.tsx"),
   read("src/lib/chat-ingress.server.mjs"),
   read("src/lib/chat-store.ts"),
   read("src/lib/workflow-skills.server.ts"),
@@ -337,6 +339,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   );
   assert.match(apps, /primaryEmailAddress\?\.verification\?\.status === "verified"/u);
   assert.match(apps, /Verify your primary email in account settings/u);
+  assert.match(auth, /u\.email_confirmed_at \? "verified" : "unverified"/u);
   assert.match(
     migration,
     /grant execute on function public\.mutate_workflow_skill\(uuid, text, uuid, bigint, jsonb, uuid, timestamptz\)\s+to service_role/u,
