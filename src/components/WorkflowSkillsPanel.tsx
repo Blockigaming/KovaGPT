@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { parseWorkflowSkillMutationResult } from "@/lib/workflow-skills-client.mjs";
+import { reserveWorkflowSkillMutationEnvelope } from "@/lib/workflow-skills-retry.mjs";
 import {
   createWorkflowSkill,
   createWorkflowSkillVersion,
@@ -79,13 +80,18 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
     success: string,
   ) => {
     if (busy) return false;
-    setBusy(true);
-    let envelope = retryEnvelopes.current.get(retryKey);
+    const envelope = reserveWorkflowSkillMutationEnvelope(
+      retryEnvelopes.current,
+      retryKey,
+      mutationEnvelope,
+    );
     if (!envelope) {
-      if (retryEnvelopes.current.size >= 32) retryEnvelopes.current.clear();
-      envelope = mutationEnvelope();
-      retryEnvelopes.current.set(retryKey, envelope);
+      toast.error(
+        "Too many workflow skill changes are awaiting confirmation. Retry an earlier change before starting another.",
+      );
+      return false;
     }
+    setBusy(true);
     try {
       const result = await action(envelope);
       parseWorkflowSkillMutationResult(result);

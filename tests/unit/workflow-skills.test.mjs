@@ -17,6 +17,10 @@ import {
 } from "../../src/lib/account-export-policy.mjs";
 import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
 import {
+  MAX_PENDING_WORKFLOW_SKILL_MUTATIONS,
+  reserveWorkflowSkillMutationEnvelope,
+} from "../../src/lib/workflow-skills-retry.mjs";
+import {
   boundedImageProviderPrompt,
   MAX_IMAGE_PROMPT_CHARS,
 } from "../../src/lib/ai/image-prompt-policy.mjs";
@@ -507,6 +511,32 @@ test("workflow skill mutation success requires the exact transport result", () =
   ]) {
     assert.throws(() => parseWorkflowSkillMutationResult(value), /could not be confirmed/u);
   }
+});
+
+test("unconfirmed workflow mutation envelopes are never evicted by the pending cap", () => {
+  const envelopes = new Map();
+  for (let index = 0; index < MAX_PENDING_WORKFLOW_SKILL_MUTATIONS; index += 1) {
+    const envelope = { mutationId: crypto.randomUUID(), requestedAt: new Date().toISOString() };
+    assert.equal(
+      reserveWorkflowSkillMutationEnvelope(envelopes, `mutation-${index}`, () => envelope),
+      envelope,
+    );
+  }
+  const first = envelopes.get("mutation-0");
+  let created = false;
+  assert.equal(
+    reserveWorkflowSkillMutationEnvelope(envelopes, "mutation-over-cap", () => {
+      created = true;
+      return { mutationId: crypto.randomUUID(), requestedAt: new Date().toISOString() };
+    }),
+    null,
+  );
+  assert.equal(created, false);
+  assert.equal(envelopes.size, MAX_PENDING_WORKFLOW_SKILL_MUTATIONS);
+  assert.equal(
+    reserveWorkflowSkillMutationEnvelope(envelopes, "mutation-0", () => null),
+    first,
+  );
 });
 
 test("workflow skill digests use unambiguous UTF-8 byte framing", () => {

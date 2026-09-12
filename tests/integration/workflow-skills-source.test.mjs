@@ -16,6 +16,7 @@ const [
   resolver,
   functions,
   panel,
+  retryPolicy,
   home,
   mobileTopBar,
   storage,
@@ -30,6 +31,7 @@ const [
   read("src/lib/workflow-skills.server.ts"),
   read("src/lib/workflow-skills.functions.ts"),
   read("src/components/WorkflowSkillsPanel.tsx"),
+  read("src/lib/workflow-skills-retry.mjs"),
   read("src/routes/index.tsx"),
   read("src/components/MobileTopBar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
@@ -167,7 +169,18 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /unique \(skill_id, version\)/u);
   assert.match(migration, /workflow_skill_idempotency_conflict/u);
   assert.match(migration, /set revision = revision \+ 1, updated_at = now\(\)/u);
-  assert.match(panel, /retryEnvelopes\.current\.get\(retryKey\)/u);
+  assert.match(panel, /reserveWorkflowSkillMutationEnvelope\(/u);
+  assert.match(retryPolicy, /const existing = envelopes\.get\(retryKey\)/u);
+  const pendingMutationCap = retryPolicy.indexOf(
+    "envelopes.size >= MAX_PENDING_WORKFLOW_SKILL_MUTATIONS",
+  );
+  const newMutationEnvelope = retryPolicy.indexOf("const envelope = createEnvelope()");
+  assert.ok(
+    pendingMutationCap > -1 && pendingMutationCap < newMutationEnvelope,
+    "new workflow mutations must fail closed at the pending cap before allocating an envelope",
+  );
+  assert.doesNotMatch(panel, /retryEnvelopes\.current\.clear\(\)/u);
+  assert.doesNotMatch(retryPolicy, /\.clear\(/u);
   const reload = panel.slice(
     panel.indexOf("const reload = useCallback"),
     panel.indexOf("const mutate"),
