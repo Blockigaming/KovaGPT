@@ -1724,6 +1724,28 @@ export const Route = createFileRoute("/api/chat")({
                   });
                   break;
                 }
+                // The selected package may be revoked while the non-streaming
+                // provider hop is in flight. Revalidate its exact installation
+                // and version before even inspecting returned tool calls; the
+                // per-call check below closes the remaining processing window.
+                try {
+                  await assertSelectedContextsCurrent(request.signal);
+                } catch (error) {
+                  await finalizeGeneration({
+                    eventId: usageEventId,
+                    status: request.signal.aborted ? "client_disconnected" : "aborted",
+                    model: catalogModel,
+                    inputTokens: inputEstimate.tokens * providerCalls,
+                    latencyMs: Date.now() - startedAt,
+                    toolCalls: activityEvents.length,
+                    error: request.signal.aborted
+                      ? "client_disconnected"
+                      : error instanceof ChatPreflightError
+                        ? error.code
+                        : "selected_context_unavailable",
+                  }).catch(() => undefined);
+                  throw error;
+                }
                 const msg = parsedHop.message;
                 const finish = parsedHop.finishReason;
                 if (!msg.tool_calls || msg.tool_calls.length === 0) {

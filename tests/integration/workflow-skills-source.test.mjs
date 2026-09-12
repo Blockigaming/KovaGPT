@@ -118,6 +118,31 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   const chatQuotaGlobal = chat.indexOf('enforceQuota(auth, "chats"');
   assert.ok(chatQuotaGlobal > -1 && chatQuotaGlobal < researchDispatch);
   assert.ok(chat.indexOf("assertSelectedContextsCurrent", researchDispatch) > researchDispatch);
+  const toolHopLoop = chat.slice(
+    chat.indexOf("for (let hop = 0; hop < MAX_TOOL_HOPS; hop++)"),
+    chat.indexOf("if (hopFailed)"),
+  );
+  const hopResponseParsed = toolHopLoop.indexOf("if (!parsedHop)");
+  const postHopCurrentness = toolHopLoop.indexOf(
+    "await assertSelectedContextsCurrent(request.signal)",
+    hopResponseParsed,
+  );
+  const toolCallsInspected = toolHopLoop.indexOf("const msg = parsedHop.message");
+  assert.ok(
+    hopResponseParsed > -1 &&
+      hopResponseParsed < postHopCurrentness &&
+      postHopCurrentness < toolCallsInspected,
+    "selected workflow context must be revalidated after the model hop and before tool calls",
+  );
+  const perCallCurrentness = toolHopLoop.indexOf(
+    "await assertSelectedContextsCurrent(request.signal)",
+    toolCallsInspected,
+  );
+  assert.ok(
+    perCallCurrentness > toolCallsInspected &&
+      perCallCurrentness < toolHopLoop.indexOf("stagePendingAction"),
+    "each returned tool call must be revalidated again immediately before processing",
+  );
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
@@ -197,6 +222,10 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(exportBudget, /left join storage\.objects object/u);
   assert.match(exportBudget, /4 \* \(\(size_bytes \+ 2\) \/ 3\)/u);
   assert.match(exportBudget, /file_raw_bytes > 33554432/u);
+  assert.match(exportBudget, /fixed_envelope_bytes constant bigint := 65536/u);
+  assert.match(exportBudget, /from auth\.users auth_user/u);
+  assert.match(exportBudget, /from auth\.identities identity_row/u);
+  assert.match(exportBudget, /from auth\.mfa_factors factor_row/u);
   assert.match(
     migration,
     new RegExp(

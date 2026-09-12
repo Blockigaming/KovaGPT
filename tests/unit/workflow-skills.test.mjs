@@ -10,7 +10,10 @@ import {
 } from "../../src/lib/workflow-skills-policy.mjs";
 import {
   ACCOUNT_EXPORT_DIRECT_TABLES,
+  ACCOUNT_EXPORT_FORMAT,
   ACCOUNT_EXPORT_MAX_BYTES,
+  ACCOUNT_EXPORT_PROJECT_TABLES,
+  ACCOUNT_EXPORT_VERSION,
 } from "../../src/lib/account-export-policy.mjs";
 import { parseWorkflowSkillMutationResult } from "../../src/lib/workflow-skills-client.mjs";
 import {
@@ -80,7 +83,19 @@ async function fixture() {
         deleted_at timestamptz,
         email_confirmed_at timestamptz default now(),
         is_anonymous boolean default false,
-        banned_until timestamptz
+        banned_until timestamptz,
+        raw_app_meta_data jsonb default '{}'::jsonb,
+        raw_user_meta_data jsonb default '{}'::jsonb
+      );
+      create table auth.identities(
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null,
+        identity_data jsonb not null default '{}'::jsonb
+      );
+      create table auth.mfa_factors(
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null,
+        friendly_name text
       );
       create function auth.uid() returns uuid language sql stable as
         $$select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid$$;
@@ -307,7 +322,7 @@ async function fixture() {
         return coalesce(remaining,0);
       end$$;
       grant usage on schema auth, kova_private to authenticated, service_role;
-      grant select on auth.users to service_role;
+      grant select on auth.users,auth.identities,auth.mfa_factors to service_role;
     `);
     await db.exec(
       ACCOUNT_EXPORT_DIRECT_TABLES.filter(
@@ -849,6 +864,67 @@ test("new workflow mutations are stopped before export scans at the durable acco
       (await db.query("select count(*)::int count from public.workflow_skills")).rows[0].count,
       0,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("workflow admission reserves the fixed and account-specific export envelope", async () => {
+  const db = await fixture();
+  try {
+    const recordKeys = new Set([
+      ...ACCOUNT_EXPORT_DIRECT_TABLES.map(([table]) => table),
+      ...ACCOUNT_EXPORT_PROJECT_TABLES,
+      "projects",
+      "project_memberships",
+      "project_comments_authored",
+      "project_file_chunks",
+      "canvas_documents",
+      "canvas_revisions",
+      "canvas_comments",
+      "canvas_comments_authored",
+      "family_groups",
+      "family_memberships",
+      "family_members",
+      "family_invites",
+      "shared_chats",
+      "project_template_grants",
+      "agent_job_events",
+      "integration_webhook_subscriptions",
+      "kova_site_files",
+    ]);
+    const fixedShape = {
+      format: ACCOUNT_EXPORT_FORMAT,
+      version: ACCOUNT_EXPORT_VERSION,
+      exportId: crypto.randomUUID(),
+      generatedAt: new Date().toISOString(),
+      account: {},
+      records: Object.fromEntries([...recordKeys].map((key) => [key, []])),
+      files: [],
+      notes: [
+        "OAuth credentials, access tokens, refresh tokens, secrets, and private moderation notes are intentionally excluded.",
+        "The export reflects records available while the job ran; changes made during processing can appear in a later export.",
+      ],
+    };
+    assert.ok(new TextEncoder().encode(JSON.stringify(fixedShape)).byteLength < 65_536);
+    const baseline = await accountExportDatabaseBytes(db);
+    assert.ok(baseline >= 65_536);
+    await db.query(
+      `update auth.users
+       set raw_user_meta_data=jsonb_build_object('profile',repeat('x',80000))
+       where id=$1`,
+      [OWNER],
+    );
+    await db.query(
+      `insert into auth.identities(user_id,identity_data)
+       values($1,jsonb_build_object('claims',repeat('y',50000)))`,
+      [OWNER],
+    );
+    await db.query(
+      "insert into auth.mfa_factors(user_id,friendly_name) values($1,repeat('z',5000))",
+      [OWNER],
+    );
+    assert.ok((await accountExportDatabaseBytes(db)) - baseline > 130_000);
   } finally {
     await db.close();
   }

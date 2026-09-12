@@ -150,10 +150,38 @@ declare
   file_raw_bytes bigint;
   file_export_bytes bigint;
   missing_file_sizes bigint;
+  account_envelope_bytes bigint;
+  fixed_envelope_bytes constant bigint := 65536;
   total_bytes bigint := 0;
 begin
   if p_owner is null or p_stop_after is null or p_stop_after not between 1 and 52428800 then
     raise exception 'account_export_size_invalid' using errcode = '22023';
+  end if;
+
+  -- Reserve the complete non-row envelope before any workflow data is
+  -- admitted. 64 KiB conservatively covers the statically bounded outer
+  -- object, format/version/export identifiers, timestamp, fixed notes, every
+  -- record key and empty-array delimiter, and the transformed account-object
+  -- field names. Account-specific Auth values are charged separately using
+  -- their full database JSON, which is larger than the sanitized API shape.
+  select
+    fixed_envelope_bytes +
+    coalesce((
+      select sum(octet_length(convert_to(to_jsonb(auth_user)::text, 'UTF8')) + 1)
+      from auth.users auth_user where auth_user.id = p_owner
+    ), 0) +
+    coalesce((
+      select sum(octet_length(convert_to(to_jsonb(identity_row)::text, 'UTF8')) + 1)
+      from auth.identities identity_row where identity_row.user_id = p_owner
+    ), 0) +
+    coalesce((
+      select sum(octet_length(convert_to(to_jsonb(factor_row)::text, 'UTF8')) + 1)
+      from auth.mfa_factors factor_row where factor_row.user_id = p_owner
+    ), 0)
+  into account_envelope_bytes;
+  total_bytes := account_envelope_bytes;
+  if total_bytes > p_stop_after then
+    return total_bytes;
   end if;
 
   for export_source in

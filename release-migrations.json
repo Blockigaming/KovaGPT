@@ -3164,7 +3164,7 @@
       "order": 146,
       "filename": "20260910210000_workflow_skill_packages.sql",
       "timestamp": "20260910210000",
-      "sha256": "a8e251612402eceb67940ee47821d406e581a3fc7331c9a15494bfc1037f98e5",
+      "sha256": "7d832bdab789f2a24647e89a80ef5132797f0b2e17a0ed8eea8d47368164f544",
       "tables": [
         "workflow_skills",
         "workflow_skill_versions",
