@@ -1515,7 +1515,7 @@ export const Route = createFileRoute("/api/chat")({
               auth &&
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
-              !hasImages &&
+              !hasAttachments &&
               m.id !== "instant" &&
               lastText.length > 0
                 ? ((await preflight.run(

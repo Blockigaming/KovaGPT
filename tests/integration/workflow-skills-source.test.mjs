@@ -154,6 +154,12 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   );
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /workflowSkill\.toolPlanningBlock/u);
+  const connectorGate = chat.slice(
+    chat.indexOf("const googleContext ="),
+    chat.indexOf("const availableTools ="),
+  );
+  assert.match(connectorGate, /!hasAttachments/u);
+  assert.doesNotMatch(connectorGate, /!hasImages/u);
   const planningContext = chat.slice(
     chat.indexOf("const toolPlanningMessages"),
     chat.indexOf("const workingMessages"),
