@@ -22,6 +22,7 @@ export type ResolvedWorkflowSkill = WorkflowSkillSelection & {
   name: string;
   digest: string;
   block: string;
+  toolPlanningBlock: string;
   assertCurrent: (signal?: AbortSignal) => Promise<void>;
 };
 

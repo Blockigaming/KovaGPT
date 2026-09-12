@@ -40,9 +40,11 @@ Deep Research report prompt, and to the provider prompt for image generation, as
 workflow guidance. Deep Research search planning uses only the user's research question: private
 instructions and resource bodies are never sent to the search provider as generated queries. The
 package does not touch model selection, plan checks, tool construction, connector grants, provider
-credentials, approval gates, or accounting. The injected boundary explicitly says that package
-text cannot authorize those capabilities. Resource bodies are labeled as untrusted data so
-instructions embedded inside a reference do not become authority.
+credentials, approval gates, or accounting. Workflow instructions may guide an explicitly selected
+skill, but untrusted resource bodies are withheld from connected-tool planning and restored only
+for the final answer. The injected boundary explicitly says that package text cannot authorize
+those capabilities. Resource bodies are labeled as untrusted data so instructions embedded inside
+a reference do not become authority.
 
 Packages, versions, installations, and replay receipts cascade on account deletion and are included
 in the account export. Browser roles cannot select package tables directly; authenticated mutations

@@ -27,6 +27,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -776,6 +777,7 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [verificationBusy, setVerificationBusy] = useState(false);
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
@@ -788,6 +790,24 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+
+  const resendWorkflowVerification = async () => {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email || verificationBusy) return;
+    const generation = generationRef.current;
+    setVerificationBusy(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (generation !== generationRef.current) return;
+      if (error) throw error;
+      toast.success("Verification email sent. Follow its link, then refresh this page.");
+    } catch {
+      if (generation !== generationRef.current) return;
+      toast.error("Verification email could not be sent. Try again shortly.");
+    } finally {
+      if (generation === generationRef.current) setVerificationBusy(false);
+    }
+  };
 
   useEffect(() => {
     generationRef.current += 1;
@@ -1362,9 +1382,17 @@ function AppsPage() {
                   Workflow skills
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Verify your primary email in account settings, then refresh this page to create or
-                  use workflow skills.
+                  Verify your primary email, then refresh this page to create or use workflow
+                  skills.
                 </p>
+                <Button
+                  variant="outline"
+                  className="mt-4 min-h-11"
+                  disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
+                  onClick={() => void resendWorkflowVerification()}
+                >
+                  {verificationBusy ? "Sending…" : "Resend verification email"}
+                </Button>
               </section>
             )}
 

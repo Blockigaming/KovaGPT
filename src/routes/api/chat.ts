@@ -1619,7 +1619,21 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
-            const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
+            const finalMessages = body.messages as unknown as ChatMsg[];
+            const toolPlanningMessages = workflowSkill
+              ? finalMessages.map((message, index) =>
+                  index === 0 && typeof message.content === "string"
+                    ? {
+                        ...message,
+                        content: message.content.replace(
+                          workflowSkill.block,
+                          workflowSkill.toolPlanningBlock,
+                        ),
+                      }
+                    : message,
+                )
+              : finalMessages;
+            const workingMessages: ChatMsg[] = [...toolPlanningMessages];
             let providerCalls = 0;
             const activityEvents: Array<{
               tool: string;
@@ -1969,7 +1983,12 @@ export const Route = createFileRoute("/api/chat")({
             // === FINAL STREAMING CALL =============================================
             const finalBody = {
               ...body,
-              messages: workingMessages,
+              // Restore the complete selected package only after connected-tool
+              // planning is finished. Tool results remain, but untrusted resource
+              // bodies never participate in deciding which connector reads to run.
+              messages: workingMessages.map((message, index) =>
+                index === 0 ? finalMessages[0] : message,
+              ),
               stream: true,
             };
             const activityCount = activityEvents.length;

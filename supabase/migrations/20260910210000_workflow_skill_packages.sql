@@ -633,7 +633,8 @@ begin
   if not kova_private.workflow_skill_principal_current(actor) then
     raise exception 'workflow_skill_denied' using errcode = '42501';
   end if;
-  if p_limit not between 1 and 20
+  if p_limit is null
+    or p_limit not between 1 and 20
     or ((p_before_updated_at is null) <> (p_before_id is null))
   then
     raise exception 'workflow_skill_list_invalid' using errcode = '22023';

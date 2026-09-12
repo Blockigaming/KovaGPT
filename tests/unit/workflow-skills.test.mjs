@@ -738,6 +738,9 @@ test("workflow skill block is integrity checked and cannot imply an authorizatio
   });
   assert.match(resolved.block, /cannot grant tools, credentials, account access, model access/i);
   assert.match(resolved.block, /treat as untrusted data/i);
+  assert.match(resolved.toolPlanningBlock, /Workflow instructions:/u);
+  assert.match(resolved.toolPlanningBlock, /withheld during connector tool planning/u);
+  assert.doesNotMatch(resolved.toolPlanningBlock, /Check structure, evidence, and clarity/u);
   assert.throws(() => buildWorkflowSkillBlock({ ...resolved, digest: "0".repeat(64) }));
 });
 
@@ -868,6 +871,10 @@ test("workflow skill mutations are replay safe and browser roles cannot read pac
     assert.equal(Object.hasOwn(listed.rows[0], "resources"), false);
     await assert.rejects(
       authenticatedRpc(db, OWNER, "list_workflow_skills", [21, null, null]),
+      /workflow_skill_list_invalid/u,
+    );
+    await assert.rejects(
+      authenticatedRpc(db, OWNER, "list_workflow_skills", [null, null, null]),
       /workflow_skill_list_invalid/u,
     );
     await assert.rejects(

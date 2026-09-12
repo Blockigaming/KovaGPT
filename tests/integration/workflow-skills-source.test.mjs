@@ -150,6 +150,12 @@ test("workflow skills remain usable across durable chat, image requests, and ava
     "each returned tool call must be revalidated again immediately before processing",
   );
   assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
+  assert.match(chat, /workflowSkill\.toolPlanningBlock/u);
+  const finalToolContext = chat.slice(
+    chat.indexOf("const finalBody ="),
+    chat.indexOf("const activityCount ="),
+  );
+  assert.match(finalToolContext, /index === 0 \? finalMessages\[0\] : message/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
   assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
   assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
@@ -307,7 +313,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     migration.indexOf("create or replace function public.authorize_workflow_skill_mutation"),
   );
   assert.match(listFunction, /p_limit integer default 20/u);
-  assert.match(listFunction, /p_limit not between 1 and 20/u);
+  assert.match(listFunction, /p_limit is null[\s\S]{0,80}p_limit not between 1 and 20/u);
   assert.match(listFunction, /limit p_limit/u);
   assert.match(listFunction, /'nextCursor'/u);
   assert.doesNotMatch(listFunction, /version\.instructions|version\.resources/u);
@@ -338,7 +344,8 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
     "the editor must load one authorized package body before populating the draft",
   );
   assert.match(apps, /primaryEmailAddress\?\.verification\?\.status === "verified"/u);
-  assert.match(apps, /Verify your primary email in account settings/u);
+  assert.match(apps, /supabase\.auth\.resend\(\{ type: "signup", email \}\)/u);
+  assert.match(apps, /Resend verification email/u);
   assert.match(auth, /u\.email_confirmed_at \? "verified" : "unverified"/u);
   assert.match(
     migration,
