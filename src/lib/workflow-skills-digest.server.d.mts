@@ -7,4 +7,5 @@ export function buildWorkflowSkillBlock(value: unknown): WorkflowSkillSelection 
   name: string;
   digest: string;
   block: string;
+  toolPlanningBlock: string;
 };

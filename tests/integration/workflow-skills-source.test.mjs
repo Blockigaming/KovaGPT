@@ -15,6 +15,7 @@ const [
   ingress,
   chatStore,
   resolver,
+  digestTypes,
   functions,
   panel,
   apps,
@@ -32,6 +33,7 @@ const [
   read("src/lib/chat-ingress.server.mjs"),
   read("src/lib/chat-store.ts"),
   read("src/lib/workflow-skills.server.ts"),
+  read("src/lib/workflow-skills-digest.server.d.mts"),
   read("src/lib/workflow-skills.functions.ts"),
   read("src/components/WorkflowSkillsPanel.tsx"),
   read("src/routes/apps.tsx"),
@@ -49,6 +51,7 @@ test("workflow skills resolve server-side from owner installation and exact vers
   assert.match(ingress, /normalizeWorkflowSkillSelection\(value\.skill\)/u);
   assert.match(resolver, /p_installation_id: selection\.installationId/u);
   assert.match(resolver, /p_version_id: selection\.versionId/u);
+  assert.match(digestTypes, /toolPlanningBlock: string/u);
   assert.match(resolver, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(10_000\)\]\)/u);
   assert.match(resolver, /pending\.abortSignal\(deadline\)/u);
   assert.match(resolver, /error\.message === "workflow_skill_denied"/u);
