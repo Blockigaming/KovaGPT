@@ -17,6 +17,9 @@ entitlement, or approval grant.
    searches. An uninstall, version change, account fence, ban, deletion, or owner change makes the
    selection fail closed. A conversation badge can clear its pinned selection so the chat remains
    usable after a package changes.
+6. Management detail returns a service-role-only, metadata-only history capped at the existing
+   30-version package limit. Installing an earlier immutable version moves only the installation
+   pointer, providing rollback without deleting or rewriting newer versions.
 
 ## Bounds
 

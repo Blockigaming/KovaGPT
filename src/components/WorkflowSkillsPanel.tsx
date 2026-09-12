@@ -22,6 +22,7 @@ import {
   uninstallWorkflowSkill,
   type WorkflowSkillCard,
   type WorkflowSkillDetail,
+  type WorkflowSkillVersionSummary,
 } from "@/lib/workflow-skills.functions";
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 import type { WorkflowSkillDraft } from "@/lib/workflow-skills-policy.mjs";
@@ -137,6 +138,31 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
       current ? "New workflow skill version saved" : "Workflow skill created and installed",
     );
     if (saved) {
+      setEditing(null);
+      setEditorOpen(false);
+      setDraft(emptyDraft());
+    }
+  };
+
+  const installHistoricalVersion = async (target: WorkflowSkillVersionSummary) => {
+    const current = editing;
+    if (!current || target.id === current.installedVersionId) return;
+    const installed = await mutate(
+      JSON.stringify(["install", current.id, current.revision, target.id]),
+      (envelope) =>
+        install({
+          data: {
+            ...envelope,
+            id: current.id,
+            expectedRevision: current.revision,
+            versionId: target.id,
+          },
+        }),
+      target.id === current.headVersionId
+        ? `Installed latest version ${target.version}`
+        : `Rolled back to version ${target.version}`,
+    );
+    if (installed) {
       setEditing(null);
       setEditorOpen(false);
       setDraft(emptyDraft());
@@ -449,6 +475,53 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
               </fieldset>
             ))}
           </div>
+          {editing ? (
+            <div className="space-y-2 rounded-lg border p-3">
+              <div>
+                <h4 className="text-sm font-medium">Version history</h4>
+                <p className="text-xs text-muted-foreground">
+                  Versions are immutable. Installing an earlier version rolls back the active
+                  workflow without deleting newer versions.
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {editing.versions.map((version) => {
+                  const installed = version.id === editing.installedVersionId;
+                  return (
+                    <li
+                      key={version.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background p-2"
+                    >
+                      <span className="min-w-0 text-sm">
+                        <span className="font-medium">Version {version.version}</span>
+                        <span className="ml-2 text-muted-foreground">{version.name}</span>
+                      </span>
+                      {installed ? (
+                        <span
+                          className="text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                          aria-label={`Version ${version.version} installed`}
+                        >
+                          Installed
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => void installHistoricalVersion(version)}
+                        >
+                          {version.id === editing.headVersionId
+                            ? `Install latest v${version.version}`
+                            : `Roll back to v${version.version}`}
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"

@@ -526,6 +526,15 @@ test("workflow skill detail transport validates the complete response before use
     description: "A repeatable writing review",
     instructions: "Review the request.",
     resources: [{ title: "Checklist", content: "Check clarity." }],
+    versions: [
+      {
+        id: OTHER,
+        version: 1,
+        name: "Editorial review",
+        digest: "a".repeat(64),
+        created_at: new Date().toISOString(),
+      },
+    ],
     digest: "a".repeat(64),
     installationId: null,
     installedVersionId: null,
@@ -537,6 +546,37 @@ test("workflow skill detail transport validates the complete response before use
   assert.deepEqual(parseWorkflowSkillDetailResult(detail), detail);
   assert.throws(
     () => parseWorkflowSkillDetailResult({ ...detail, resources: undefined }),
+    /could not be confirmed/u,
+  );
+  assert.throws(
+    () => parseWorkflowSkillDetailResult({ ...detail, versions: [] }),
+    /could not be confirmed/u,
+  );
+  assert.throws(
+    () =>
+      parseWorkflowSkillDetailResult({
+        ...detail,
+        versions: [
+          ...detail.versions,
+          {
+            id: OWNER,
+            version: 2,
+            name: "Editorial review",
+            digest: "b".repeat(64),
+            created_at: new Date().toISOString(),
+          },
+        ],
+      }),
+    /could not be confirmed/u,
+  );
+  assert.throws(
+    () =>
+      parseWorkflowSkillDetailResult({
+        ...detail,
+        installedVersionId: OTHER,
+        installedVersion: 2,
+        installedName: "Editorial review",
+      }),
     /could not be confirmed/u,
   );
   assert.throws(

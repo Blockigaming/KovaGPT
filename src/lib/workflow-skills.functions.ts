@@ -42,9 +42,18 @@ export type WorkflowSkillCard = {
   updated_at: string;
 };
 
+export type WorkflowSkillVersionSummary = {
+  id: string;
+  version: number;
+  name: string;
+  digest: string;
+  created_at: string;
+};
+
 export type WorkflowSkillDetail = WorkflowSkillCard & {
   instructions: string;
   resources: WorkflowSkillResource[];
+  versions: WorkflowSkillVersionSummary[];
 };
 
 type RpcResult = PromiseLike<{ data: unknown; error: { message?: string } | null }>;
@@ -56,6 +65,26 @@ const Resource = z.object({
   title: z.string(),
   content: z.string(),
 });
+const VersionSummary = z
+  .object({
+    id: Id,
+    version: z.number().int().positive(),
+    name: z.string(),
+    digest: z.string().regex(/^[a-f0-9]{64}$/u),
+    created_at: z.string(),
+  })
+  .strict();
+const VersionHistory = z
+  .array(VersionSummary)
+  .min(1)
+  .max(30)
+  .refine(
+    (versions) =>
+      versions.every(
+        (version, index) => index === 0 || versions[index - 1].version > version.version,
+      ),
+    "Workflow skill versions must be unique and newest first.",
+  );
 const Card = z.object({
   id: Id,
   revision: z.number().int().positive(),
@@ -210,7 +239,37 @@ export const getWorkflowSkill = createServerFn({ method: "GET" })
     if (result.error) throw new Error("Workflow skill details could not be loaded.");
     const parsed = Detail.safeParse(result.data);
     if (!parsed.success) throw new Error("Workflow skill details returned an invalid response.");
-    return parsed.data;
+    // The package body remains a single service-only RPC result. Version
+    // history is a second, metadata-only service-role read, owner-scoped and
+    // capped at the immutable 30-version package limit.
+    const historyResult = await supabaseAdmin
+      .from("workflow_skill_versions")
+      .select("id, version, name, digest:content_sha256, created_at")
+      .eq("owner_id", context.userId)
+      .eq("skill_id", data.id)
+      .order("version", { ascending: false })
+      .limit(30);
+    if (historyResult.error) throw new Error("Workflow skill version history could not be loaded.");
+    const history = VersionHistory.safeParse(historyResult.data);
+    if (!history.success)
+      throw new Error("Workflow skill version history returned an invalid response.");
+    const head = history.data.find((version) => version.id === parsed.data.headVersionId);
+    const installed = parsed.data.installedVersionId
+      ? history.data.find((version) => version.id === parsed.data.installedVersionId)
+      : null;
+    if (
+      !head ||
+      head.version !== parsed.data.version ||
+      head.name !== parsed.data.name ||
+      head.digest !== parsed.data.digest ||
+      (parsed.data.installedVersionId === null
+        ? parsed.data.installedVersion !== null || parsed.data.installedName !== null
+        : !installed ||
+          installed.version !== parsed.data.installedVersion ||
+          installed.name !== parsed.data.installedName)
+    )
+      throw new Error("Workflow skill version history returned an invalid response.");
+    return { ...parsed.data, versions: history.data };
   });
 
 export const createWorkflowSkill = createServerFn({ method: "POST" })

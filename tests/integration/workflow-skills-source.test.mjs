@@ -356,6 +356,19 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(functions, /pageNumber < 5/u);
   assert.match(functions, /p_limit: 20/u);
   assert.match(functions, /await rpc\(supabaseAdmin, "get_workflow_skill"/u);
+  const versionHistoryRead = functions.slice(
+    functions.indexOf('from("workflow_skill_versions")'),
+    functions.indexOf("return { ...parsed.data, versions: history.data }"),
+  );
+  assert.match(
+    versionHistoryRead,
+    /select\("id, version, name, digest:content_sha256, created_at"\)/u,
+  );
+  assert.match(versionHistoryRead, /eq\("owner_id", context\.userId\)/u);
+  assert.match(versionHistoryRead, /eq\("skill_id", data\.id\)/u);
+  assert.match(versionHistoryRead, /order\("version", \{ ascending: false \}\)/u);
+  assert.match(versionHistoryRead, /limit\(30\)/u);
+  assert.doesNotMatch(versionHistoryRead, /instructions|resources/u);
   const editorLoad = panel.slice(
     panel.indexOf("const openEditor = async"),
     panel.indexOf("const openChatWithSkill"),
@@ -399,4 +412,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(panel, /Save new version/u);
   assert.match(panel, /Install update/u);
   assert.match(panel, /Use installed v/u);
+  assert.match(panel, /Version history/u);
+  assert.match(panel, /Roll back to v/u);
+  assert.match(panel, /versionId: target\.id/u);
 });

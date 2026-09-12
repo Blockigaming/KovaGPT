@@ -24,6 +24,7 @@ const DETAIL_KEYS = new Set([
   "description",
   "instructions",
   "resources",
+  "versions",
   "digest",
   "installationId",
   "installedVersionId",
@@ -49,6 +50,17 @@ export function parseWorkflowSkillDetailResult(value) {
     Object.keys(resource).length === 2 &&
     typeof resource.title === "string" &&
     typeof resource.content === "string";
+  const validVersion = (version) =>
+    version !== null &&
+    typeof version === "object" &&
+    !Array.isArray(version) &&
+    Object.keys(version).length === 5 &&
+    isUuid(version.id) &&
+    isPositiveInteger(version.version) &&
+    isString(version.name) &&
+    isString(version.digest) &&
+    DIGEST_PATTERN.test(version.digest) &&
+    isString(version.created_at);
   const valid =
     value !== null &&
     typeof value === "object" &&
@@ -64,12 +76,34 @@ export function parseWorkflowSkillDetailResult(value) {
     isString(value.instructions) &&
     Array.isArray(value.resources) &&
     value.resources.every(validResource) &&
+    Array.isArray(value.versions) &&
+    value.versions.length >= 1 &&
+    value.versions.length <= 30 &&
+    value.versions.every(validVersion) &&
+    value.versions.every(
+      (version, index) => index === 0 || value.versions[index - 1].version > version.version,
+    ) &&
+    value.versions.some(
+      (version) =>
+        version.id === value.headVersionId &&
+        version.version === value.version &&
+        version.name === value.name &&
+        version.digest === value.digest,
+    ) &&
     isString(value.digest) &&
     DIGEST_PATTERN.test(value.digest) &&
     nullable(value.installationId, isUuid) &&
     nullable(value.installedVersionId, isUuid) &&
     nullable(value.installedVersion, isPositiveInteger) &&
     nullable(value.installedName, isString) &&
+    (value.installedVersionId === null
+      ? value.installedVersion === null && value.installedName === null
+      : value.versions.some(
+          (version) =>
+            version.id === value.installedVersionId &&
+            version.version === value.installedVersion &&
+            version.name === value.installedName,
+        )) &&
     isString(value.created_at) &&
     isString(value.updated_at);
   if (!valid) {
