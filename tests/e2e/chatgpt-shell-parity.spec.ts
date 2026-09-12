@@ -128,8 +128,16 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
         body: JSON.stringify({ title: "Header hierarchy" }),
       });
     });
+    // The account menu can render before the lazy history runtime opens its
+    // writable device view. Its first sync request starts after initialization;
+    // wait for that boundary before this header test sends a mocked response.
+    const historyInitialized = page.waitForRequest(
+      (request) =>
+        request.method() === "GET" && new URL(request.url()).pathname === "/api/chat/history",
+    );
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
+    await historyInitialized;
     const input = page.getByRole("textbox", { name: "Message KovaGPT" });
     await input.fill("Check the header");
     await page.getByRole("button", { name: "Send message" }).click();
