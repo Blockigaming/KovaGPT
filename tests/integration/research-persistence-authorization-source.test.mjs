@@ -28,6 +28,13 @@ test("research authorization precedes every provider and quota decision", () => 
   assert.ok(authorizeAt < executionAt, "authorization must precede provider execution");
 });
 
+test("clean temporary research strips both persisted chat relationships", () => {
+  const authorizeAt = chatSource.indexOf('preflight.run("research_authorization"');
+  const authorizationBlock = chatSource.slice(authorizeAt, chatSource.indexOf("}),", authorizeAt));
+  assert.match(authorizationBlock, /chatId: usesExistingContext \? chatId : undefined/);
+  assert.match(authorizationBlock, /projectId: usesExistingContext \? projectId : undefined/);
+});
+
 test("service-role persistence receives only authorization output", () => {
   const persistenceStart = chatSource.indexOf("persistence: auth");
   const persistenceEnd = chatSource.indexOf("temporary: Boolean(temporary)", persistenceStart);
