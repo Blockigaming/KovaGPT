@@ -86,6 +86,13 @@ const TemporaryChatBanner = lazy(() =>
 );
 const COMPLETE = "complete" as const;
 const RESEARCH_CANCELED = "canceled" as const;
+
+function clearRetryTimer(timer: { current: number | null }) {
+  if (timer.current === null) return;
+  window.clearTimeout(timer.current);
+  timer.current = null;
+}
+
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import { consumeOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -112,6 +119,7 @@ import {
   type Activity,
   type Message,
   type TemporaryChatContext,
+  type ConversationWorkflowSkill,
   deriveTitle,
   branchConversation,
   chatStoragePrincipal,
@@ -126,6 +134,7 @@ import {
   markAssistantStopped,
   newId,
   normalizeResponseSources,
+  isConversationWorkflowSkill,
   saveConversations,
   persistTemporaryConversation,
   saveDraft,
@@ -234,6 +243,8 @@ function KovaGPT() {
     setWorkspaceReloadKey((current) => current + 1);
   }, []);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
+  const [pendingWorkflowSkill, setPendingWorkflowSkill] =
+    useState<ConversationWorkflowSkill | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
   const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
@@ -433,10 +444,7 @@ function KovaGPT() {
     abortRef.current = null;
     inFlightTargetRef.current = null;
     inFlightRef.current = false;
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    clearRetryTimer(retryTimerRef);
     setIsStreaming(false);
     setTempChat(false);
     setTempChatContext("clean");
@@ -446,6 +454,7 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
     setSelectedTool(null);
+    setPendingWorkflowSkill(null);
     setCommandOpen(false);
     setCommandQuery("");
     setEditingMessage(null);
@@ -541,10 +550,7 @@ function KovaGPT() {
       abortRef.current = null;
       inFlightTargetRef.current = null;
       inFlightRef.current = false;
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
+      clearRetryTimer(retryTimerRef);
       lastLoadedDraftRef.current = null;
       setConversationState({ principal: null, items: [] });
       setSettings(DEFAULT_SETTINGS);
@@ -553,6 +559,7 @@ function KovaGPT() {
       setInput("");
       setAttachments([]);
       setSelectedTool(null);
+      setPendingWorkflowSkill(null);
       setEditingMessage(null);
       setShareChatId(null);
       setCommandOpen(false);
@@ -637,6 +644,15 @@ function KovaGPT() {
       return () => setInput(appContext);
     });
 
+    consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {
+      if (!isConversationWorkflowSkill(skill)) throw new Error("invalid_workflow_skill_handoff");
+      return () => {
+        setActiveId(null);
+        setPendingWorkflowSkill(skill);
+        setInput(`Use the “${skill.name}” workflow skill for this request: `);
+      };
+    });
+
     consume<{
       prompt: string;
       pack?: { name: string; items: { title: string; content: string }[] } | null;
@@ -685,6 +701,29 @@ function KovaGPT() {
   );
   const archivedConversations =
     typeof window === "undefined" ? [] : loadArchivedConversations(userKey);
+  const selectedWorkflowSkill = active?.skill ?? pendingWorkflowSkill;
+
+  const clearWorkflowSkill = useCallback(() => {
+    clearRetryTimer(retryTimerRef);
+    // A queued automatic retry and an already-rendered Retry toast both capture
+    // the old skill selection. Make each closure inert before clearing it.
+    retryGenerationRef.current += 1;
+    if (active?.id) {
+      retryActionEpochRef.current.set(
+        active.id,
+        (retryActionEpochRef.current.get(active.id) ?? 0) + 1,
+      );
+    }
+    setPendingWorkflowSkill(null);
+    if (!active?.skill) return;
+    setConversations((previous) =>
+      previous.map((conversation) =>
+        conversation.id === active.id
+          ? { ...conversation, skill: undefined, updatedAt: Date.now() }
+          : conversation,
+      ),
+    );
+  }, [active?.id, active?.skill, setConversations]);
 
   useEffect(() => {
     if (activeTemporary !== null) setTempChat(activeTemporary);
@@ -746,9 +785,7 @@ function KovaGPT() {
 
   useEffect(
     () => () => {
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-      }
+      clearRetryTimer(retryTimerRef);
     },
     [],
   );
@@ -854,6 +891,7 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
     setEditingMessage(null);
+    setPendingWorkflowSkill(null);
   }, [setConversations]);
 
   useEffect(() => {
@@ -1054,10 +1092,7 @@ function KovaGPT() {
         requestGeneration === storageGenerationRef.current &&
         requestPrincipal === storagePrincipalRef.current;
 
-      if (_retryAttempt === 0 && retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
+      if (_retryAttempt === 0) clearRetryTimer(retryTimerRef);
       if (_retryAttempt === 0 && !isSignedIn) guestPromptTurnsRef.current += 1;
 
       const nextConvId = retryConversationId ?? activeId ?? newId();
@@ -1065,6 +1100,7 @@ function KovaGPT() {
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
       const isNewConversation = !retryConversationId && !existingConversation;
+      const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
       const userMsg: Message = {
         id: newId(),
@@ -1133,6 +1169,7 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
+            ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
@@ -1146,12 +1183,14 @@ function KovaGPT() {
                   typeof c.memoryStartIndex === "number"
                     ? Math.min(Math.max(0, c.memoryStartIndex), priorMessages.length)
                     : undefined,
+                ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
                 updatedAt: Date.now(),
               }
             : c,
         );
       });
       setActiveId(nextConvId);
+      setPendingWorkflowSkill(null);
       setInput("");
       setAttachments([]);
       setEditingMessage(null);
@@ -1246,6 +1285,12 @@ function KovaGPT() {
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
+            skill: selectedWorkflowSkill
+              ? {
+                  installationId: selectedWorkflowSkill.installationId,
+                  versionId: selectedWorkflowSkill.versionId,
+                }
+              : undefined,
             mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
             // Main-chat ids are device-local until a user-owned memory row
@@ -1566,14 +1611,12 @@ function KovaGPT() {
       isLoaded,
       isSignedIn,
       userKey,
+      pendingWorkflowSkill,
     ],
   );
 
   const stop = useCallback(() => {
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    clearRetryTimer(retryTimerRef);
     const target = inFlightTargetRef.current;
     target?.flushPendingContent();
     // Preflight work may not observe AbortSignal immediately. Invalidate the old
@@ -1710,6 +1753,15 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
           onOpenChatSettings={active ? () => setWorkspaceOpen(true) : undefined}
           chatRulesActive={chatRulesActive}
+          skill={
+            selectedWorkflowSkill
+              ? {
+                  name: selectedWorkflowSkill.name,
+                  clear: clearWorkflowSkill,
+                  disabled: isStreaming,
+                }
+              : undefined
+          }
         />
         <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
           {isLoaded && isSignedIn ? (
@@ -1760,6 +1812,18 @@ function KovaGPT() {
                 placement="topbar"
               />
             )}
+            {selectedWorkflowSkill ? (
+              <button
+                type="button"
+                onClick={clearWorkflowSkill}
+                disabled={isStreaming}
+                className="ml-2 max-w-56 truncate rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
+                title="Clear skill"
+              >
+                {selectedWorkflowSkill.name} ×
+              </button>
+            ) : null}
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
@@ -2270,10 +2334,7 @@ function KovaGPT() {
               abortRef.current = null;
               inFlightTargetRef.current = null;
               inFlightRef.current = false;
-              if (retryTimerRef.current !== null) {
-                window.clearTimeout(retryTimerRef.current);
-                retryTimerRef.current = null;
-              }
+              clearRetryTimer(retryTimerRef);
               // A same-principal local reset should remain usable with a clean,
               // empty workspace. The incremented generation rejects every
               // closure created before cleanup.

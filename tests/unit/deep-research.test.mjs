@@ -47,6 +47,38 @@ test("chat route has a separate deep research execution path", () => {
   const research = read("src/lib/ai/deep-research.server.ts");
   assert.match(research, /"Research could not complete"/);
   assert.match(research, /"Research canceled"/);
+  assert.match(chat, /await assertSelectedContextsCurrent\(request\.signal\)/u);
+  assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
+  assert.match(research, /makePlan\(safeQuery, opts\.signal\)/u);
+  const planningBoundary = research.slice(
+    research.indexOf("async function makePlan"),
+    research.indexOf("function buildEvidence"),
+  );
+  assert.doesNotMatch(planningBoundary, /workflowSkillBlock/u);
+  assert.match(planningBoundary, /user's research question only/u);
+  assert.match(planningBoundary, /Do not include private context/u);
+  assert.match(research, /opts\.workflowSkillBlock,[\s\S]{0,80}opts\.signal/u);
+  assert.match(research, /evidence and citation rules override any conflicting workflow text/u);
+  assert.equal(research.match(/await assertCurrent\(\)/gu)?.length, 3);
+  assert.match(chat, /assertCurrent: assertSelectedContextsCurrent/u);
+  assert.match(chat, /deep research context changed/u);
+  const contextChanged = chat.slice(
+    chat.indexOf("error instanceof ChatPreflightError", chat.indexOf("handleDeepResearchRequest")),
+    chat.indexOf(
+      "} else {",
+      chat.indexOf(
+        "error instanceof ChatPreflightError",
+        chat.indexOf("handleDeepResearchRequest"),
+      ),
+    ),
+  );
+  assert.match(contextChanged, /if \(!terminalProgressEmitted\)/u);
+  assert.match(contextChanged, /status: "failed"/u);
+  assert.ok(
+    contextChanged.indexOf("emitProgress({") <
+      contextChanged.indexOf("sseChunk(`_${error.message}_`)"),
+    "stale research context must emit terminal progress before explanatory text",
+  );
 });
 
 test("chat UI consumes and renders Deep Research lifecycle events", () => {

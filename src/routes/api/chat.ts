@@ -38,6 +38,7 @@ import {
 } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
+import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
 import {
   authorizeResearchPersistence,
   ResearchPersistenceAuthorizationError,
@@ -80,7 +81,11 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { ChatPreflightError, createChatPreflightRunner } from "@/lib/chat-preflight.server.mjs";
+import {
+  ChatPreflightError,
+  createChatPreflightRunner,
+  normalizeChatPreflightFailure,
+} from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -315,13 +320,20 @@ async function handleDeepResearchRequest(
   options: {
     signal?: AbortSignal;
     persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
+    workflowSkillBlock?: string;
+    assertCurrent?: NonNullable<Parameters<typeof runDeepResearch>[1]>["assertCurrent"];
     logContext: SafeLogContext;
   },
 ): Promise<Response> {
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let terminalProgressEmitted = false;
       const emitProgress = (event: ResearchProgressEvent) => {
+        const terminal =
+          event.stage.id === "complete" ||
+          event.stage.status === "failed" ||
+          event.stage.status === "canceled";
         if (event.activity) {
           controller.enqueue(enc.encode(sseEvent(activityToSseDelta(event.activity))));
         }
@@ -337,11 +349,14 @@ async function handleDeepResearchRequest(
             }),
           ),
         );
+        terminalProgressEmitted ||= terminal;
       };
       try {
         const result = await runDeepResearch(prompt, {
           signal: options.signal,
           persistence: options.persistence,
+          workflowSkillBlock: options.workflowSkillBlock,
+          assertCurrent: options.assertCurrent,
           onProgress: emitProgress,
         });
         if (result.partialFailures.length) {
@@ -357,9 +372,32 @@ async function handleDeepResearchRequest(
         }
         controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(result.sources))));
         controller.enqueue(enc.encode(sseChunk(result.report)));
-      } catch {
+      } catch (error) {
         if (options.signal?.aborted) {
           controller.enqueue(enc.encode(sseChunk("_Deep Research was cancelled._")));
+        } else if (error instanceof ChatPreflightError) {
+          logSafeFailure("warn", "[chat] deep research context changed", options.logContext, {
+            status: error.status,
+            category: "server",
+            code: error.code,
+          });
+          if (!terminalProgressEmitted) {
+            emitProgress({
+              stage: {
+                id: "failed",
+                label: "Research context changed",
+                status: "failed",
+                detail: error.message,
+              },
+              progress: 1,
+              activity: createToolActivityEvent(
+                "write_report",
+                "Research context changed",
+                "failed",
+              ),
+            });
+          }
+          controller.enqueue(enc.encode(sseChunk(`_${error.message}_`)));
         } else {
           logSafeFailure("error", "[chat] deep research failed", options.logContext, {
             status: 502,
@@ -761,6 +799,33 @@ export const Route = createFileRoute("/api/chat")({
               if (!customKova.allows("images")) isImageRequest = false;
             }
 
+            // Workflow skills are exact, owner-scoped instruction/resource
+            // snapshots. Resolving one never changes tools, credentials,
+            // entitlements, model access, or approval policy.
+            let workflowSkill: Awaited<
+              ReturnType<typeof import("@/lib/workflow-skills.server").resolveWorkflowSkill>
+            > | null = null;
+            if (ingress.skill) {
+              if (!auth?.emailVerified)
+                return Response.json(
+                  { error: "Verify your account to use a workflow skill." },
+                  { status: 403 },
+                );
+              workflowSkill = await preflight.run("workflow_skill", async (signal) => {
+                const { resolveWorkflowSkill } = await import("@/lib/workflow-skills.server");
+                return resolveWorkflowSkill(auth.supabaseAdmin, auth.userId, ingress.skill, signal);
+              });
+            }
+
+            const assertSelectedContextsCurrent = async (signal: AbortSignal) => {
+              try {
+                await customKova?.assertCurrent(signal);
+                await workflowSkill?.assertCurrent(signal);
+              } catch (error) {
+                throw normalizeChatPreflightFailure("selected_context", error);
+              }
+            };
+
             // Deep Research is a paid, high-cost operation. Authorize it before
             // checking or invoking any AI/search provider so forged clientTool
             // values cannot become a denial-of-wallet path.
@@ -850,8 +915,23 @@ export const Route = createFileRoute("/api/chat")({
             // in text (esp. important when the user *explicitly declined* an
             // image but a keyword still slipped past the negation guard).
             if (isImageRequest && auth) {
+              // Image generation has no system-message channel, so append the same resolved,
+              // integrity-checked workflow block used by text chat. Bound the combined prompt
+              // before feature/quota work so an oversized valid package cannot consume quota.
+              const imagePrompt = boundedImageProviderPrompt(lastText, workflowSkill?.block);
+              if (imagePrompt === null)
+                return Response.json(
+                  {
+                    error:
+                      "The image prompt and workflow skill are too long together. Shorten the prompt or clear the skill before trying again.",
+                    category: "invalid_request",
+                    retryable: false,
+                  },
+                  { status: 400, headers: { "Cache-Control": "no-store" } },
+                );
               const unavailableImageProvider = providerUnavailableResponse("image_generation");
               if (unavailableImageProvider) return unavailableImageProvider;
+              await assertSelectedContextsCurrent(request.signal);
               if (!isOwner) {
                 if (!auth.emailVerified) {
                   return new Response(
@@ -875,8 +955,10 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 if (quota) return quota;
               }
-              await customKova?.assertCurrent(request.signal);
-              return handleImageRequest(lastText, logContext);
+              // Recheck after quota authorization too, so a concurrent uninstall or
+              // version change cannot reach the provider after the quota boundary.
+              await assertSelectedContextsCurrent(request.signal);
+              return handleImageRequest(imagePrompt, logContext);
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
@@ -885,6 +967,10 @@ export const Route = createFileRoute("/api/chat")({
                 assertFeatureEnabled(auth, "chat"),
               );
               if (maint) return maint;
+              // Research authorization can be slow. Recheck selected context
+              // after it and before quota so a revoked skill cannot consume a
+              // chat request without reaching a provider.
+              await assertSelectedContextsCurrent(request.signal);
               const quota = await preflight.run("chat_quota", (signal) =>
                 enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
               );
@@ -956,9 +1042,12 @@ export const Route = createFileRoute("/api/chat")({
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
             if (clientTool === "deep_research" && lastText) {
+              await assertSelectedContextsCurrent(request.signal);
               return handleDeepResearchRequest(lastText, {
                 signal: request.signal,
                 logContext,
+                workflowSkillBlock: workflowSkill?.block,
+                assertCurrent: assertSelectedContextsCurrent,
                 persistence: auth
                   ? {
                       supabase:
@@ -1080,7 +1169,7 @@ export const Route = createFileRoute("/api/chat")({
                 const result = await preflight.run(
                   "web_search",
                   async (signal) => {
-                    await customKova?.assertCurrent(signal);
+                    await assertSelectedContextsCurrent(signal);
                     return searchWeb(lastText, {
                       wantsNews: clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
                       signal,
@@ -1388,6 +1477,7 @@ export const Route = createFileRoute("/api/chat")({
                     projectBlock +
                     chatWorkspaceBlock +
                     (customKova?.block ?? "") +
+                    (workflowSkill?.block ?? "") +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
@@ -1425,7 +1515,7 @@ export const Route = createFileRoute("/api/chat")({
               auth &&
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
-              !hasImages &&
+              !hasAttachments &&
               m.id !== "instant" &&
               lastText.length > 0
                 ? ((await preflight.run(
@@ -1529,7 +1619,44 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
-            const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
+            const finalMessages = body.messages as unknown as ChatMsg[];
+            // A selected workflow resource may have influenced any earlier
+            // assistant response (and therefore a durable conversation summary).
+            // Tool planning gets a fresh, provenance-isolated transcript: only
+            // authoritative runtime instructions, the resource-free skill
+            // instructions, and the user's current text request. The complete
+            // conversation and resource bodies return only for the final call,
+            // where no connector tools are available.
+            const toolPlanningMessages: ChatMsg[] = workflowSkill
+              ? [
+                  {
+                    role: "system",
+                    content:
+                      m.systemPrompt +
+                      TONE_INSTRUCTION +
+                      ADAPTIVE_INSTRUCTION +
+                      UNRESTRICTED_INSTRUCTION +
+                      ACCURACY_INSTRUCTION +
+                      CHART_INSTRUCTION +
+                      CREATOR_INSTRUCTION +
+                      (customKova?.block ?? "") +
+                      workflowSkill.toolPlanningBlock +
+                      toolInstruction +
+                      (callerTier === "plus" || callerTier === "pro"
+                        ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                        : "") +
+                      `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                      buildCurrentDateInstruction(timezone, locale),
+                  },
+                  { role: "user", content: lastText },
+                ]
+              : finalMessages;
+            const workingMessages: ChatMsg[] = [...toolPlanningMessages];
+            const finalToolMessages: ChatMsg[] = [];
+            const appendToolMessage = (message: ChatMsg) => {
+              workingMessages.push(message);
+              finalToolMessages.push(message);
+            };
             let providerCalls = 0;
             const activityEvents: Array<{
               tool: string;
@@ -1580,7 +1707,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
-                  await customKova?.assertCurrent(hopCtl.signal);
+                  await assertSelectedContextsCurrent(hopCtl.signal);
                   providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
@@ -1634,10 +1761,37 @@ export const Route = createFileRoute("/api/chat")({
                   });
                   break;
                 }
+                // The selected package may be revoked while the non-streaming
+                // provider hop is in flight. Revalidate its exact installation
+                // and version before even inspecting returned tool calls; the
+                // per-call check below closes the remaining processing window.
+                try {
+                  await assertSelectedContextsCurrent(request.signal);
+                } catch (error) {
+                  await finalizeGeneration({
+                    eventId: usageEventId,
+                    status: request.signal.aborted ? "client_disconnected" : "aborted",
+                    model: catalogModel,
+                    inputTokens: inputEstimate.tokens * providerCalls,
+                    latencyMs: Date.now() - startedAt,
+                    toolCalls: activityEvents.length,
+                    error: request.signal.aborted
+                      ? "client_disconnected"
+                      : error instanceof ChatPreflightError
+                        ? error.code
+                        : "selected_context_unavailable",
+                  }).catch(() => undefined);
+                  throw error;
+                }
                 const msg = parsedHop.message;
                 const finish = parsedHop.finishReason;
                 if (!msg.tool_calls || msg.tool_calls.length === 0) {
-                  if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
+                  if (
+                    !workflowSkill &&
+                    toolsWereUsed &&
+                    typeof msg.content === "string" &&
+                    msg.content
+                  ) {
                     const enc = new TextEncoder();
                     const stream = new ReadableStream({
                       start(controller) {
@@ -1716,13 +1870,13 @@ export const Route = createFileRoute("/api/chat")({
                     category: "policy",
                     code: "tool_budget_reached",
                   });
-                  workingMessages.push({
+                  appendToolMessage({
                     role: "assistant",
                     content: msg.content ?? null,
                     tool_calls: msg.tool_calls,
                   });
                   for (const tc of msg.tool_calls) {
-                    workingMessages.push({
+                    appendToolMessage({
                       role: "tool",
                       tool_call_id: tc.id,
                       content: JSON.stringify({
@@ -1736,7 +1890,7 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 totalToolCalls += msg.tool_calls.length;
                 toolsWereUsed = true;
-                workingMessages.push({
+                appendToolMessage({
                   role: "assistant",
                   content: msg.content ?? null,
                   tool_calls: msg.tool_calls,
@@ -1750,7 +1904,7 @@ export const Route = createFileRoute("/api/chat")({
                         content: JSON.stringify({ error: "tool_not_allowed" }),
                       };
                     try {
-                      await customKova?.assertCurrent(request.signal);
+                      await assertSelectedContextsCurrent(request.signal);
                     } catch {
                       return {
                         role: "tool",
@@ -1837,13 +1991,14 @@ export const Route = createFileRoute("/api/chat")({
                     }
                   }),
                 );
-                for (const r of results) workingMessages.push(r);
+                for (const r of results) appendToolMessage(r);
                 if (finish === "stop") break;
                 if (request.signal?.aborted) return new Response(null, { status: 499 });
               }
               if (hopFailed) {
                 workingMessages.length = 0;
                 workingMessages.push(...(body.messages as unknown as ChatMsg[]));
+                finalToolMessages.length = 0;
               }
               // Stash pending confirms on the outer scope so the final
               // streaming branch can prepend them too.
@@ -1857,7 +2012,10 @@ export const Route = createFileRoute("/api/chat")({
             // === FINAL STREAMING CALL =============================================
             const finalBody = {
               ...body,
-              messages: workingMessages,
+              // Restore the complete selected package only after connected-tool
+              // planning is finished. Tool results remain, but untrusted resource
+              // bodies never participate in deciding which connector reads to run.
+              messages: workflowSkill ? [...finalMessages, ...finalToolMessages] : workingMessages,
               stream: true,
             };
             const activityCount = activityEvents.length;
@@ -1866,22 +2024,32 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
-              await customKova?.assertCurrent(request.signal);
+              await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
             } catch (error) {
+              const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({
                 eventId: usageEventId,
-                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                status: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? "aborted"
+                    : "provider_failed",
                 model: catalogModel,
                 inputTokens: inputEstimate.tokens * providerCalls,
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
-                error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
+                error: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? error.code
+                    : "provider_network_error",
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
+              if (contextFailure) throw error;
               const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: providerError.status,

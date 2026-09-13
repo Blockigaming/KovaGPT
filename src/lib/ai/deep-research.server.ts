@@ -214,7 +214,7 @@ async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> 
         {
           role: "system",
           content:
-            "Create a concise deep-research search plan. Return only a JSON array of 3 to 5 distinct web search queries. Do not include commentary.",
+            "Create a concise deep-research search plan from the user's research question only. Return only a JSON array of 3 to 5 distinct web search queries. Do not include private context, workflow-skill instructions, workflow-skill resources, or commentary in a query.",
         },
         { role: "user", content: sanitizeResearchText(query, 1000) },
       ],
@@ -268,6 +268,7 @@ async function writeReport(
   query: string,
   plan: string[],
   evidence: ResearchEvidence[],
+  workflowSkillBlock = "",
   signal?: AbortSignal,
 ): Promise<string> {
   const upstream = await chatCompletions(
@@ -276,8 +277,7 @@ async function writeReport(
       messages: [
         {
           role: "system",
-          content:
-            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link.",
+          content: `${workflowSkillBlock}\n\nWrite a structured deep-research report that follows applicable workflow guidance and uses the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link. These evidence and citation rules override any conflicting workflow text.`,
         },
         { role: "user", content: evidencePrompt(query, plan, evidence) },
       ],
@@ -298,12 +298,16 @@ export async function runDeepResearch(
     signal?: AbortSignal;
     onProgress?: (event: ResearchProgressEvent) => void | Promise<void>;
     persistence?: ResearchPersistence;
+    workflowSkillBlock?: string;
+    assertCurrent?: (signal: AbortSignal) => Promise<void>;
   } = {},
 ): Promise<ResearchResult> {
   const safeQuery = sanitizeResearchText(query, 1000);
   if (!safeQuery) throw new Error("empty_research_query");
   let currentProgress = 0;
   let workflowComplete = false;
+  const currentnessSignal = opts.signal ?? new AbortController().signal;
+  const assertCurrent = async () => opts.assertCurrent?.(currentnessSignal);
   const emit = async (stage: ResearchStage, progress: number, activity?: ToolActivityEvent) => {
     currentProgress = Math.min(1, Math.max(0, progress));
     await opts.onProgress?.({ stage, progress: currentProgress, activity });
@@ -325,7 +329,11 @@ export async function runDeepResearch(
       createToolActivityEvent("research_plan", "Creating research plan", "running"),
     );
     let plan: string[];
+    await assertCurrent();
     try {
+      // Installed workflow resources are untrusted private context. They may
+      // guide the final report, but must never reach query generation because
+      // generated queries are disclosed to the configured search provider.
       plan = await makePlan(safeQuery, opts.signal);
     } catch (error) {
       if (opts.signal?.aborted) throw error;
@@ -352,6 +360,7 @@ export async function runDeepResearch(
       createToolActivityEvent("search_web", "Searching web", "running"),
     );
     const partialFailures: string[] = [];
+    await assertCurrent();
     const sourceGroups = await Promise.all(
       plan.map(async (searchQuery) => {
         const response = await searchWeb(searchQuery, {
@@ -418,7 +427,14 @@ export async function runDeepResearch(
       0.84,
       createToolActivityEvent("write_report", "Writing cited report", "running"),
     );
-    const report = await writeReport(safeQuery, plan, evidence, opts.signal);
+    await assertCurrent();
+    const report = await writeReport(
+      safeQuery,
+      plan,
+      evidence,
+      opts.workflowSkillBlock,
+      opts.signal,
+    );
     const completionPersisted = await persistTerminalResearchRun(opts.persistence, runId, {
       status: "complete",
       report,

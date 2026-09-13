@@ -31,7 +31,7 @@ for (const [order, filename] of files.entries()) {
     ...sql.matchAll(/create\s+table(?:\s+if\s+not\s+exists)?\s+(?:public\.)?([\w"]+)/gi),
   ].map((m) => m[1].replaceAll('"', ""));
   const functions = [
-    ...sql.matchAll(/create\s+or\s+replace\s+function\s+(?:public\.)?([\w"]+)/gi),
+    ...sql.matchAll(/create\s+(?:or\s+replace\s+)?function\s+(?:[\w"]+\.)?([\w"]+)/gi),
   ].map((m) => m[1].replaceAll('"', ""));
   inventory.push({
     order: order + 1,

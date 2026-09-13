@@ -12,10 +12,10 @@ A simultaneous anonymous Chromium capture was attempted against both production 
 - **Apps and connectors:** the existing operational Google and GitHub directory is exposed in primary navigation. Unsupported connectors remain hidden rather than represented as working.
 - **Deep research:** the existing server-gated research planner is exposed; no capability is fabricated.
 - **Maps:** added a privacy education and product-decision surface. No map canvas, markers, directions, location request, or provider claim ships without a licensed provider and server privacy contract.
-- **Voice:** remains intentionally excluded pending explicit approval. The current owner scope excludes dictation and audio as well; any older distinction is superseded.
+- **Voice (historical state):** was unavailable at this checkpoint. The September 11 final goal supersedes the former exclusion; Voice is now required but remains unimplemented pending explicit safety, privacy, device, provider, latency, and cost gates.
 - **Images and existing Kova features:** preserved without destructive visual matching.
 - **Azure, Supabase, Stripe, authorization and provider runtime:** untouched.
 
 ## Remaining risks and blockers
 
-The mandatory live matrix cannot truthfully be marked complete in this environment. Paid/free account states need supplied storage-state files; Safari needs a macOS runner (WebKit emulation is available in the harness); Maps needs provider/legal approval; Voice needs product/privacy approval. Visual observations should be re-baselined before release because the production reference can change.
+The mandatory live matrix cannot truthfully be marked complete in this environment. Paid/free account states need supplied storage-state files; Safari needs a macOS runner (WebKit emulation is available in the harness); Maps needs provider/legal approval; Voice needs product/privacy approval plus the September final-goal implementation gates. Visual observations should be re-baselined before release because the production reference can change.

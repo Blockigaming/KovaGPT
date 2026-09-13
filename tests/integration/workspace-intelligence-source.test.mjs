@@ -76,22 +76,25 @@ test("chat history is searchable from both the sidebar and command palette", asy
   assert.match(home, /onSelectArchived/);
 });
 
-test("gap ledger separates open source work, pending packages and owner activation", async () => {
+test("gap ledger separates autonomous work, unavailable scope, and owner activation", async () => {
   const ledger = await read("docs/remaining-chatgpt-gaps.md");
   for (const category of [
-    "A — Autonomous source work still open",
-    "B — Active packages, not yet in this audited source snapshot",
-    "C — Public-reference differences requiring bounded scope decisions",
-    "D — Work that genuinely needs Zachary or approved live access",
+    "Highest-priority autonomous source work",
+    "Required but currently unavailable",
+    "Genuine owner or approved-live dependencies",
+    "Permanent truth boundaries",
   ]) {
     assert.ok(ledger.includes(category), `missing gap category: ${category}`);
   }
-  for (const id of ["A1", "A2", "A3", "A4"]) {
-    assert.match(ledger, new RegExp(`\\| ${id}\\s+\\|`));
+  for (const priority of [1, 2, 3, 4]) {
+    assert.match(ledger, new RegExp(`\\| ${priority}\\s+\\|`));
   }
-  assert.match(ledger, /no item is complete because its route exists/i);
-  assert.match(ledger, /focused green tests do not prove integration, exact-head CI or deployment/);
-  assert.match(ledger, /not a request for Zachary to run tests/);
+  for (const requirement of ["FG-07", "FG-X1", "FG-10", "FG-09"]) {
+    assert.match(ledger, new RegExp(requirement));
+  }
+  assert.match(ledger, /owner-declared \*\*76\.5%\*\*/i);
+  assert.match(ledger, /specified, implemented, locally verified, hosted verified/i);
+  assert.match(ledger, /Do not merge PR #319, deploy, apply live migrations/i);
 });
 
 test("Workspace Timeline and batch context workflows use existing authorized records", async () => {

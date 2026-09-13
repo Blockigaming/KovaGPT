@@ -13,6 +13,32 @@ export { normalizeResponseSources, type ResponseSource } from "./response-source
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
+export type ConversationWorkflowSkill = {
+  installationId: string;
+  versionId: string;
+  name: string;
+};
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const CONVERSATION_WORKFLOW_SKILL_KEYS = new Set(["installationId", "versionId", "name"]);
+export function isConversationWorkflowSkill(value: unknown): value is ConversationWorkflowSkill {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  if (
+    keys.length !== CONVERSATION_WORKFLOW_SKILL_KEYS.size ||
+    keys.some((key) => !CONVERSATION_WORKFLOW_SKILL_KEYS.has(key))
+  )
+    return false;
+  const candidate = value as Partial<ConversationWorkflowSkill>;
+  return (
+    typeof candidate.installationId === "string" &&
+    UUID_PATTERN.test(candidate.installationId) &&
+    typeof candidate.versionId === "string" &&
+    UUID_PATTERN.test(candidate.versionId) &&
+    typeof candidate.name === "string" &&
+    candidate.name.trim().length > 0 &&
+    candidate.name.length <= 120
+  );
+}
 export type ComposerToolId =
   "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 const COMPOSER_TOOL_IDS = new Set<ComposerToolId>([
@@ -124,6 +150,8 @@ export function chatRequestMessages(previous: Message[], latest: Message) {
 export type Conversation = {
   /** A selected Kova never carries link capabilities or another user's credentials. */
   kova?: { id: string; versionId?: string };
+  /** An owner installation and immutable version reference; package text stays server-side. */
+  skill?: ConversationWorkflowSkill;
   id: string;
   title: string;
   messages: Message[];
@@ -173,6 +201,7 @@ function isConversation(value: unknown): value is Conversation {
     typeof candidate.createdAt === "number" &&
     typeof candidate.updatedAt === "number" &&
     typeof candidate.mode === "string" &&
+    (candidate.skill === undefined || isConversationWorkflowSkill(candidate.skill)) &&
     (candidate.memoryStartIndex === undefined ||
       (Number.isInteger(candidate.memoryStartIndex) && candidate.memoryStartIndex >= 0)) &&
     Array.isArray(candidate.messages) &&

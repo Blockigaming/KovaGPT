@@ -22,6 +22,7 @@ export function MobileTopBar({
   onTemporaryChatChange,
   onOpenChatSettings,
   chatRulesActive = false,
+  skill,
 }: {
   onOpenSidebar: () => void;
   onNewChat: () => void;
@@ -34,6 +35,7 @@ export function MobileTopBar({
   /** Opens per-chat rules and pinned files; omitted when there is no chat yet. */
   onOpenChatSettings?: () => void;
   chatRulesActive?: boolean;
+  skill?: { name: string; clear: () => void; disabled: boolean };
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
@@ -48,7 +50,7 @@ export function MobileTopBar({
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex min-w-0 items-center justify-start pl-1">
+        <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
           {mode && onModeChange ? (
             <ResponsiveModelSelector
               mode={mode}
@@ -64,6 +66,18 @@ export function MobileTopBar({
               </span>
             </div>
           )}
+          {skill ? (
+            <button
+              type="button"
+              onClick={skill.clear}
+              disabled={skill.disabled}
+              className="max-w-20 shrink truncate rounded-full border px-2 py-1 text-xs text-muted-foreground disabled:opacity-50"
+              aria-label={`Clear workflow skill ${skill.name}`}
+              title="Clear skill"
+            >
+              {skill.name} ×
+            </button>
+          ) : null}
         </div>
         {showAuth ? (
           <SignInButton mode="modal">
