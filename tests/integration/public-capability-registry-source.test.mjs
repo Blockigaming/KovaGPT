@@ -83,9 +83,9 @@ test("retired modes and unsupported product promises stay off public routes", ()
   }
 });
 
-test("known limitations and voice exclusion remain explicit", () => {
-  assert.match(registry, /voiceScope: "excluded"/);
-  assert.match(registry, /availability: "excluded"/);
+test("known limitations and required unavailable Voice remain explicit", () => {
+  assert.match(registry, /voiceScope: "required_unavailable"/);
+  assert.match(registry, /voice:[\s\S]*availability: "unavailable"/);
   assert.match(registry, /PDF, Word, PowerPoint, and Excel extraction is not currently supported/);
   assert.match(registry, /Editing an uploaded or generated image is not currently available/);
   assert.match(
@@ -97,7 +97,11 @@ test("known limitations and voice exclusion remain explicit", () => {
     /Offline edits stay on this device until acknowledged; Temporary Chat stays out of history/,
   );
   assert.match(registry, /Background scheduled execution is unavailable in this deployment/);
-  assert.match(registry, /Voice is intentionally outside KovaGPT's current product scope/);
+  assert.match(
+    registry,
+    /Live voice and audio are required KovaGPT scope but are not currently available/u,
+  );
+  assert.match(registry, /consent, safety, latency, provider, device/u);
   assert.doesNotMatch(aiWriter, /voice notes|audio notes|microphone input|audio upload/i);
   for (const unsupportedAudioClaim of [
     /turn .{0,40}\bvoice notes\b into/i,

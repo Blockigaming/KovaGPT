@@ -35,18 +35,25 @@ function metadataFromError(error) {
     code: typeof source.code === "string" && source.code ? source.code : undefined,
     status,
     retryable: typeof source.retryable === "boolean" ? source.retryable : undefined,
+    publicMessage:
+      typeof source.publicMessage === "string" &&
+      source.publicMessage.length <= 300 &&
+      !/[\u0000-\u001f\u007f]/u.test(source.publicMessage)
+        ? source.publicMessage
+        : undefined,
   };
 }
 
 export class ChatPreflightError extends Error {
-  constructor({ stage, code, status, retryable, cause }) {
-    const publicMessage =
-      status === 499
+  constructor({ stage, code, status, retryable, publicMessage, cause }) {
+    const message =
+      publicMessage ??
+      (status === 499
         ? "The request was cancelled."
         : status === 504
           ? "KovaGPT took too long to prepare this request. Please try again."
-          : "KovaGPT could not prepare this request. Please try again.";
-    super(publicMessage, cause === undefined ? undefined : { cause });
+          : "KovaGPT could not prepare this request. Please try again.");
+    super(message, cause === undefined ? undefined : { cause });
     this.name = "ChatPreflightError";
     this.stage = stage;
     this.code = code;
@@ -63,6 +70,21 @@ export class ChatPreflightError extends Error {
       stage: this.stage,
     };
   }
+}
+
+export function normalizeChatPreflightFailure(stageValue, error) {
+  const stage = safeStage(stageValue);
+  if (error instanceof ChatPreflightError) return error;
+  const metadata = metadataFromError(error);
+  const status = metadata.status ?? 503;
+  return new ChatPreflightError({
+    stage,
+    code: metadata.code ?? "chat_preflight_failed",
+    status,
+    retryable: metadata.retryable ?? (status === 408 || status === 429 || status >= 500),
+    publicMessage: metadata.publicMessage,
+    cause: error,
+  });
 }
 
 function normalizedFailure(stage, error, { timedOut, parentAborted, totalTimedOut }) {
@@ -85,15 +107,7 @@ function normalizedFailure(stage, error, { timedOut, parentAborted, totalTimedOu
       cause: error,
     });
   }
-  const metadata = metadataFromError(error);
-  const status = metadata.status ?? 503;
-  return new ChatPreflightError({
-    stage,
-    code: metadata.code ?? "chat_preflight_failed",
-    status,
-    retryable: metadata.retryable ?? (status === 408 || status === 429 || status >= 500),
-    cause: error,
-  });
+  return normalizeChatPreflightFailure(stage, error);
 }
 
 export function createChatPreflightRunner({

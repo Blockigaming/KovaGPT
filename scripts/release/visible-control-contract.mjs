@@ -72,8 +72,11 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
   if (!/scheduledTasks:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
     errors.push("capability-registry:scheduled execution limitation missing");
   }
-  if (!/voiceScope: "excluded"/u.test(capabilities)) {
-    errors.push("capability-registry:Voice exclusion missing");
+  if (!/voiceScope: "required_unavailable"/u.test(capabilities)) {
+    errors.push("capability-registry:required unavailable Voice scope missing");
+  }
+  if (!/voice:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
+    errors.push("capability-registry:Voice availability limitation missing");
   }
 
   return [...new Set(errors)].sort();
@@ -85,5 +88,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`Visible-control contract failed:\n${errors.join("\n")}`);
     process.exit(1);
   }
-  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=false");
+  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=required_unavailable");
 }

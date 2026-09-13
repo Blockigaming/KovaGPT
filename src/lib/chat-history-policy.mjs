@@ -49,6 +49,21 @@ export function canonicalChatHistory(value) {
     object(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v,
   );
 }
+
+function workflowSkill(value) {
+  if (
+    !object(value) ||
+    Object.keys(value).some((key) => !["installationId", "versionId", "name"].includes(key)) ||
+    !text(value.name, 120) ||
+    !value.name.trim()
+  )
+    throw new Error("chat_history_invalid");
+  return {
+    installationId: chatHistoryUuid(value.installationId),
+    versionId: chatHistoryUuid(value.versionId),
+    name: value.name.trim(),
+  };
+}
 function attachment(value) {
   if (!object(value)) throw new Error("chat_history_invalid");
   if (
@@ -243,6 +258,7 @@ export function normalizeChatHistory(value, ownerId) {
         : {}),
     };
   }
+  if (value.skill !== undefined) result.skill = workflowSkill(value.skill);
   if (value.pinned === true) result.pinned = true;
   if (time(value.pinnedAt)) result.pinnedAt = value.pinnedAt;
   if (value.memoryStartIndex !== undefined) {

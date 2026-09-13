@@ -134,6 +134,10 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["work_execution_events", "owner_id"],
   ["work_execution_outputs", "owner_id"],
   ["work_saved_records", "owner_id"],
+  ["workflow_skill_export_rows", "owner_id"],
+  ["workflow_skill_versions", "owner_id"],
+  ["workflow_skill_installations", "owner_id"],
+  ["workflow_skill_mutation_export_rows", "owner_id"],
   ["writing_document_versions", "owner_id"],
   ["writing_documents", "owner_id"],
 ]);

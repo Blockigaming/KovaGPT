@@ -127,7 +127,7 @@ test("later-page failures and null data cannot produce a successful partial expo
   }
 });
 
-test("Google preferences, Site children and Work events export through their complete actual primary keys", async () => {
+test("Google preferences, Site children, Work events and skill receipts use complete ordering keys", async () => {
   const keys = {
     google_connection_preferences: ["user_id"],
     work_execution_events: ["run_id", "revision"],
@@ -135,6 +135,7 @@ test("Google preferences, Site children and Work events export through their com
     kova_site_files: ["version_id", "path"],
     kova_site_aliases: ["site_id", "slug"],
     kova_site_viewers: ["site_id", "viewer_id"],
+    workflow_skill_mutation_export_rows: ["owner_id", "mutation_id"],
   };
   const client = createClient("https://export.example", "fixture", {
     auth: { persistSession: false, autoRefreshToken: false },

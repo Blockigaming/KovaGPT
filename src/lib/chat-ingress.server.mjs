@@ -1,4 +1,5 @@
 import { BoundedJsonError, readBoundedJsonObject } from "./bounded-json.server.mjs";
+import { normalizeWorkflowSkillSelection } from "./workflow-skills-policy.mjs";
 
 export const CHAT_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
 export const CHAT_MAX_MESSAGES = 100;
@@ -337,6 +338,13 @@ export function normalizeChatPayload(value) {
       const versionId = optionalUuid(value.kova.versionId, "custom_kova_version");
       if (!versionId) invalid("invalid_custom_kova");
       payload.kova.versionId = versionId;
+    }
+  }
+  if (value.skill !== undefined) {
+    try {
+      payload.skill = normalizeWorkflowSkillSelection(value.skill);
+    } catch {
+      invalid("invalid_workflow_skill", "Invalid workflow skill selection.");
     }
   }
   const mode = normalizeMode(value.mode);

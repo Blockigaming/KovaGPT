@@ -16,7 +16,7 @@ async function collectSourceFiles(directory) {
   return files;
 }
 
-test("user-facing source exposes no browser voice or dictation implementation", async () => {
+test("required Voice remains unavailable until its safety and cost gates are implemented", async () => {
   const files = await collectSourceFiles("src");
   const source = (
     await Promise.all(files.map(async (file) => `${file}\n${await readFile(file, "utf8")}`))
@@ -33,6 +33,11 @@ test("user-facing source exposes no browser voice or dictation implementation", 
   ]) {
     assert.doesNotMatch(source, forbidden);
   }
+
+  const registry = await readFile("src/lib/capability-registry.ts", "utf8");
+  assert.match(registry, /voiceScope:\s*"required_unavailable"/u);
+  assert.match(registry, /availability:\s*"unavailable"/u);
+  assert.doesNotMatch(registry, /voiceScope:\s*"excluded"/u);
 
   const composer = await readFile("src/components/ChatInput.tsx", "utf8");
   assert.doesNotMatch(composer, /\btoggleDictation\b|\bdictating\b|\brecognitionRef\b/u);

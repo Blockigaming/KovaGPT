@@ -4,18 +4,27 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("feature parity ledger covers required product areas", () => {
+test("final-goal contract covers required product areas", () => {
   const ledger = read("docs/chatgpt-feature-parity.md");
+  const contract = JSON.parse(read("docs/release/final-goal-contract.json"));
+  const requirementTitles = contract.requirements
+    .map((requirement) => requirement.title)
+    .join("\n");
+
+  assert.equal(contract.requirements.length, 21);
+  assert.equal(contract.voiceRequired, true);
   for (const area of [
-    "Conversation branching",
-    "Interactive charts",
-    "Lockdown Mode",
-    "Voice",
-    "Collaboration",
-    "Finances",
+    "Conversation, models, and reasoning",
+    "Files, data analysis, and generated artifacts",
+    "Identity, safety, privacy, and user control",
+    "Live voice and audio",
+    "Sharing and collaboration",
+    "Plans, entitlements, billing, and premium compute",
   ]) {
-    assert.match(ledger, new RegExp(area));
+    assert.match(requirementTitles, new RegExp(area));
   }
+  assert.match(ledger, /independent product, not a visual clone/);
+  assert.match(ledger, /owner-declared \*\*76\.5%\*\*/);
 });
 
 test("conversation branching records origin and truncates at a selected message", () => {

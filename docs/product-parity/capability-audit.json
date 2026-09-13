@@ -1,16 +1,15 @@
 {
-  "schemaVersion": 1,
-  "auditDate": "2026-09-05",
-  "sourceCommit": "1eb7ef53",
-  "overallProgressBaseline": 23.2,
+  "schemaVersion": 2,
+  "auditDate": "2026-09-12",
+  "sourceCommit": "20940476881dadabfcedbfeadb4aba328dd8cd52",
   "progressRecalculated": false,
-  "voiceAudioDictation": "intentionally_excluded",
-  "referenceMethod": "Public official documentation read; authenticated variants not exercised",
+  "voiceAudioDictation": "required_unavailable",
+  "referenceMethod": "Zachary's September 11 final goal reconciled against reviewed PR #319 ancestor source and hosted evidence",
   "surfaces": [
     {
       "id": "01",
       "area": "Core chat",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Persistent/Temporary chats, streaming/stop, edit/retry/regenerate/branch, rich rendering, search/pins/archive/restore and explicit cloud-history migration.",
       "sourceEvidence": [
         "src/lib/chat-history-controller.mjs",
@@ -22,16 +21,16 @@
         "tests/unit/chat-history-sync.test.mjs",
         "tests/unit/temporary-chat-retry-privacy.test.mjs"
       ],
-      "boundary": "Account history is bounded (1,000 messages/4 MiB per chat; account limits apply); offline edits require acknowledgment. Real model/quota and deployed migration remain unverified.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Explicit saveable/personalized Temporary Chat behavior, live model/provider use, authenticated persistence and production smoke remain unverified.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "02",
       "area": "Composer and multimodal input",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Drafts, keyboard/paste/drop, formatted paste and large-paste attachments; PDF/Office extraction, images and explicit Library reuse.",
       "sourceEvidence": [
         "src/components/ChatInput.tsx",
@@ -44,15 +43,15 @@
         "tests/unit/document-export-roundtrip.test.mjs"
       ],
       "boundary": "Supported parsers and size/type limits apply. No audio/video transcription, recording or arbitrary media ingestion claim.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "03",
       "area": "Models, modes and reasoning",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Current Kova mode catalog, exact server plan/model access and Work reasoning choices from signed provider capabilities.",
       "sourceEvidence": [
         "src/lib/modes.ts",
@@ -64,29 +63,29 @@
         "tests/unit/work-model-server.test.mjs",
         "tests/e2e/work-model-controls.spec.ts"
       ],
-      "boundary": "Luna/Terra/Sol are the owner-selected lineup. GPT-6 Astra is an audited reference update, not an authorized automatic model migration. Unsupported effort rejects; speed is not a latency guarantee.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Astra-class premium capability is required but is not an authorized automatic model migration or a proven deployment. Capability discovery, eval gates, quotas, latency and live Azure availability remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "04",
       "area": "Search, images, shopping and local discovery",
-      "sourceStatus": "pending_package",
+      "sourceStatus": "bounded_source",
       "implementedScope": "Existing sourced web search; Discovery package adds bounded Firecrawl web/image metadata, explicit merchant verification/variant comparison and explicit-place handoffs.",
       "sourceEvidence": ["src/lib/ai/search.server.ts", "src/routes/maps.tsx"],
       "testEvidence": ["tests/unit/search-provider.test.mjs"],
       "boundary": "Discovery is pending integration in this snapshot. Merchant facts need successful source checks; unknown price/stock stays unknown. No location tracking, native map, live booking or reverse-image claim.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "05",
       "area": "Deep Research",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Source preferences, research plan, bounded live search/synthesis, progress/cancel, persisted evidence/report and exports with current authorization.",
       "sourceEvidence": [
         "src/lib/ai/deep-research.server.ts",
@@ -99,8 +98,8 @@
         "tests/unit/research-persistence-authorization.test.mjs"
       ],
       "boundary": "Provider-native paused/resumable runs and live redirection are not exposed by the current configured adapter. A provider contract is needed before promising those semantics; existing partial results are not a resumed provider run.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -120,8 +119,8 @@
         "tests/e2e/work-browser-takeover.spec.ts"
       ],
       "boundary": "New specialist delegation remains an autonomous source gap. Browser uses ephemeral private sessions and reviewed HTTPS origins, not a desktop profile or arbitrary OS control. Real runsc/container acceptance is a hosted gate.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -141,15 +140,15 @@
         "tests/unit/work-output-publisher.test.mjs"
       ],
       "boundary": "Work-to-Site output publication and new specialist runs remain source gaps. Current completion accepts Library outputs only; standalone Sites is not evidence of Work publication. Admission stays off without signed runner readiness.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "08",
       "area": "Scheduled Tasks",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "CRUD, pause/resume/history, anchored timezone/DST recurrence, conditions, verified native Gmail/Slack/GitHub event ingress, saved/connected context and recipient-authorized copies.",
       "sourceEvidence": [
         "src/lib/scheduled-tasks.functions.ts",
@@ -161,16 +160,16 @@
         "tests/unit/task-event-ingress.test.mjs",
         "tests/e2e/scheduled-task-editor.spec.ts"
       ],
-      "boundary": "Runtime heartbeat/policy, current OAuth grant/resource access, provider budget and native callback/watch readiness gate execution. Saved chat context is an explicit bounded snapshot, not continuously synchronized history; no credentials are copied.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, runtime heartbeat, current OAuth access, live callbacks, provider budgets and notification delivery remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "09",
       "area": "Projects",
-      "sourceStatus": "pending_package",
+      "sourceStatus": "partial_source",
       "implementedScope": "Project lifecycle, files/instructions/memory/chats, current member roles, revision-aware comments/presence, templates and explicit sharing.",
       "sourceEvidence": [
         "src/lib/project-workspace.functions.ts",
@@ -183,15 +182,15 @@
         "tests/e2e/projects-library-workspaces.spec.ts"
       ],
       "boundary": "Project retention policy/execution is pending source. Live Realtime publication, two-account permissions and storage cleanup require matching deployment evidence. Presence is not CRDT editing.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "10",
       "area": "Library and files",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Original files, nested folders, bulk organization, lazy private images, keyset search, on-demand bodies, immutable versions, replacement/revert and storage accounting.",
       "sourceEvidence": [
         "src/routes/library.tsx",
@@ -204,15 +203,15 @@
         "tests/e2e/library-version-history.spec.ts"
       ],
       "boundary": "Temporary Chat never auto-saves. Current text/version/original-byte limits and exact Storage provenance apply. Image-byte quota follow-up is tracked separately until included in the audited tree.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "11",
       "area": "Image generation and editing",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Generate/view/download and principal-scoped IndexedDB history; private Library source edits with optional dimension-matched alpha PNG masks and source-digest metadata.",
       "sourceEvidence": [
         "src/routes/api/generate-image.ts",
@@ -224,16 +223,16 @@
         "tests/unit/image-provider-transport.test.mjs",
         "tests/unit/image-principal-client.test.mjs"
       ],
-      "boundary": "Configured provider must support the requested operation/format. Exact preservation, arbitrary aspect ratios, batch canvas comments, sticker marketplace and reverse-image search are not claimed.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choices, advanced edit acceptance, provenance, live provider capabilities and cross-category settlement remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "12",
       "area": "Memory and personalization",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Saved memory controls, prompt-source inspection, scoped preferences, current-source authorization, themes/language and bounded semantic workspace retrieval.",
       "sourceEvidence": [
         "src/lib/memory-sources.server.mjs",
@@ -246,21 +245,29 @@
         "tests/unit/workspace-search-migration.test.mjs"
       ],
       "boundary": "Search considers bounded accessible records/snippets; it is not an unlimited whole-document index. Semantic fallback labels the mode used. Native Computer History and proprietary ranking are outside web scope.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "13",
       "area": "Custom conversational Kovas",
-      "sourceStatus": "pending_package",
-      "implementedScope": "Active package implements immutable instruction/knowledge versions, builder/preview, private/link/public directory, fork and bounded moderation with current caller tool/model access.",
-      "sourceEvidence": ["src/lib/agent-definitions.functions.ts"],
-      "testEvidence": ["tests/unit/agent-ingress-authorization.test.mjs"],
-      "boundary": "Full Custom Kovas source is pending this snapshot; historical agent definitions do not establish it. Publication copies only explicitly consented knowledge, never creator Library/OAuth authority. See pending-package ledger for current tests.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "sourceStatus": "partial_source",
+      "implementedScope": "Immutable Custom Kova instructions/knowledge versions, builder/preview, private/link/public directory, fork, bounded moderation and current caller tool/model access.",
+      "sourceEvidence": [
+        "src/lib/custom-kovas.server.ts",
+        "src/lib/agent-definitions.functions.ts",
+        "docs/custom-kovas-source-readiness.md"
+      ],
+      "testEvidence": [
+        "tests/unit/custom-kovas-lifecycle.test.mjs",
+        "tests/unit/custom-kovas-runtime.test.mjs",
+        "tests/browser-runtime/custom-kovas-principal.spec.ts"
+      ],
+      "boundary": "Complete store governance, publish/share/install/update/archive analytics, verified publishers, organization distribution, live moderation operations and production canaries remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -268,27 +275,27 @@
       "id": "14",
       "area": "Apps, connectors, plugins and skills",
       "sourceStatus": "partial_source",
-      "implementedScope": "Connector directory, explicit OAuth scopes, encrypted custody, multi-account Google generation binding, current-access checks, confirmed writes and sync/index adapters.",
+      "implementedScope": "Connector directory, OAuth custody/scopes, multi-account Google generation binding, current-access checks, confirmed writes, sync/index adapters, and owner-scoped immutable workflow skill installation/resolution.",
       "sourceEvidence": [
         "src/routes/apps.tsx",
         "src/lib/google-oauth.server.ts",
-        "src/lib/connectors-catalog.ts"
+        "src/lib/workflow-skills.server.ts"
       ],
       "testEvidence": [
         "tests/unit/google-multiaccount.test.mjs",
-        "tests/unit/google-oauth-settlement.test.mjs",
-        "tests/unit/connectors-governance.test.mjs"
+        "tests/unit/connectors-governance.test.mjs",
+        "tests/unit/workflow-skills.test.mjs"
       ],
-      "boundary": "Reusable skill installation/resolution remains autonomous source work. Catalog visibility is not operational support. MCP OAuth/file tools are separate pending packages; no exact universal-plugin inventory or arbitrary widget/runtime claim.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "WebMCP and complete provider-neutral discovery remain unfinished. Catalog visibility is not operational support; each provider/account still needs consent, revocation, live credentials and acceptance.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "15",
       "area": "Data analysis and code",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Bounded document extraction, CSV analysis/charts and actual Python/file execution in networkless runsc containers; fixed terminal operations and verified output bytes.",
       "sourceEvidence": [
         "work-runner/sandbox-container.mjs",
@@ -301,15 +308,15 @@
         "tests/unit/document-export-roundtrip.test.mjs"
       ],
       "boundary": "No arbitrary host shell, package installation, host filesystem/network access or unlimited notebook environment. Deploy pinned sandbox image/runtime and pass real hosted container acceptance.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "16",
       "area": "Artifacts, writing and interactive visuals",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Writing/code full-screen editor, selection edits, durable revisions/compare/comments, isolated HTML preview, chart rendering and document exports.",
       "sourceEvidence": [
         "src/components/ArtifactEditor.tsx",
@@ -322,8 +329,8 @@
         "tests/e2e/multimodal-canvas.spec.ts"
       ],
       "boundary": "Export writers support declared formats; they do not establish lossless arbitrary Office-template editing. Interactive HTML is sandboxed; no untrusted preview gets app credentials or unrestricted network access.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -343,15 +350,15 @@
         "tests/unit/account-export-sites.test.mjs"
       ],
       "boundary": "Co-editing package is pending. Portable authenticated state and traffic analytics are recorded as additional public-reference differences for scope review, not requirements to clone OpenAI hosting. Arbitrary server code/OpenAI D1/R2 hosting is not claimed. Work import exists, but verified Work Site completion does not yet.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "18",
       "area": "Sharing, collaboration and continuity",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Revocable chat snapshots, Project membership/templates, Canvas collaboration and owner-scoped chat/Work sync with outboxes, revisions, conflicts and reset fences.",
       "sourceEvidence": [
         "src/lib/shared-chats.functions.ts",
@@ -364,15 +371,15 @@
         "tests/unit/project-canvas-collaboration.test.mjs"
       ],
       "boundary": "Shares remain snapshots, not live access to the sender account. Site editor grants are a separate pending package. Real cross-device/browser account verification remains a release gate.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "19",
       "area": "Notifications",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "In-app unread/read/deep links plus preference-aware Work/Task notices; metadata-only Web Push with consent, quiet hours, timezone and current-principal delivery.",
       "sourceEvidence": [
         "src/lib/notifications.server.ts",
@@ -385,8 +392,8 @@
         "tests/e2e/pwa-service-worker.spec.ts"
       ],
       "boundary": "Push defaults off and requires approved VAPID/worker configuration plus device permission. No universal SMS/email delivery or native background guarantee; only configured channels may claim delivery.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -406,8 +413,8 @@
         "tests/e2e/study-practice.spec.ts"
       ],
       "boundary": "Scores report practice, not accredited assessment. Teaching/regulated school products, LMS integrations and institutional contracts are not implied.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -427,15 +434,15 @@
         "tests/unit/trusted-contact-runtime.test.mjs"
       ],
       "boundary": "No parent chat surveillance or guaranteed emergency intervention. Age, regional/legal policy and actual delivery setup require owner decisions before activation.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "22",
       "area": "Authentication, account and privacy",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Auth/recovery/MFA/security controls, privacy settings, bounded asynchronous account export, durable deletion fence, storage-first retry and connector/runner cleanup.",
       "sourceEvidence": [
         "src/routes/api/account.ts",
@@ -448,15 +455,15 @@
         "tests/unit/account-export-generation.test.mjs"
       ],
       "boundary": "The private asynchronous cloud-account export backend exists. Production migration, worker scheduling, and multi-account verification remain required. Passkey availability follows the actual auth adapter; no unsupported passkey enrollment claim.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "23",
       "area": "Billing, usage and Finances",
-      "sourceStatus": "bounded_source",
+      "sourceStatus": "partial_source",
       "implementedScope": "Consumer checkout/portal/webhook entitlement and usage; developer exact quotes, reservations, settlement, prepaid funding and price administration with bounded financial retention.",
       "sourceEvidence": [
         "src/utils/payments.functions.ts",
@@ -469,32 +476,37 @@
         "tests/unit/pricing-administration.test.mjs"
       ],
       "boundary": "No source fixture proves live Stripe prices, quota, invoices, legal tax/retention policy or a purchasable enterprise entitlement. Owner-approved rates/funding and actual settlement canaries remain mandatory.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "24",
-      "area": "Web, PWA and native platforms",
-      "sourceStatus": "bounded_source",
-      "implementedScope": "Responsive web/PWA, install/share intake, offline public shell and supported push with owner-bound private-state clearing.",
-      "sourceEvidence": ["public/kova-sw.js", "src/platform/capabilities.ts"],
+      "area": "Web, PWA, voice and native platforms",
+      "sourceStatus": "partial_source",
+      "implementedScope": "Responsive web/PWA, install/share intake, offline public shell, supported push, owner-bound private-state clearing, and truthful required-but-unavailable voice metadata.",
+      "sourceEvidence": [
+        "public/kova-sw.js",
+        "src/platform/capabilities.ts",
+        "src/lib/capability-registry.ts"
+      ],
       "testEvidence": [
         "tests/e2e/pwa-service-worker.spec.ts",
-        "tests/e2e/workspace-visual-coherence.spec.ts"
+        "tests/e2e/workspace-visual-coherence.spec.ts",
+        "tests/unit/visible-control-contract.test.mjs"
       ],
-      "boundary": "No native macOS/Windows/Linux/iOS/Android client, browser extension, OS computer control, local-folder sync or desktop pet claim. Real Safari/device hardware/permission behavior is distinct from Chromium/WebKit simulation.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Voice is required but unavailable. Full-duplex audio, interruption, transcripts, device/privacy controls, native applications and real physical-device permission/accessibility behavior remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "25",
       "area": "Developer platform and MCP",
-      "sourceStatus": "pending_package",
-      "implementedScope": "Scoped keys/projects, models/quotes/Responses/streaming/tools/structured outputs/images/embeddings/private text files, SDK and cost-bound MCP; browser OAuth package is ready for integration.",
+      "sourceStatus": "partial_source",
+      "implementedScope": "Scoped keys/projects, models/quotes, Responses/streaming/tools/structured outputs/images/embeddings/private text files, SDK, cost-bound MCP, browser S256 OAuth consent and revocation.",
       "sourceEvidence": [
         "src/lib/pricing/developer-platform.server.ts",
         "src/lib/pricing/developer-mcp.server.ts",
@@ -505,17 +517,17 @@
         "tests/unit/developer-mcp.test.mjs",
         "tests/unit/developer-files-migration.test.mjs"
       ],
-      "boundary": "MCP OAuth and four text-file tools are pending this snapshot. Consumer Projects/Library, arbitrary hosted tool execution and an installable ChatGPT UI widget are not granted. Public paid activation requires approved operational evidence.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Audio/realtime, agent/task/webhook breadth, real issuer/client registration, secrets, public billing activation, support/deprecation operations and production canaries remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
     {
       "id": "26",
-      "area": "Organization and specialized verticals",
-      "sourceStatus": "pending_package",
-      "implementedScope": "Organization owners/admins/members, verified targeted invitations, DNS/SSO adapter, current-member RLS, last-owner preflight and bounded safe audit export; SCIM source ready for integration.",
+      "area": "Organization administration",
+      "sourceStatus": "partial_source",
+      "implementedScope": "Organization owners/admins/members, targeted invitations, domains, SSO adapter, SCIM Users/Groups, current-member RLS, last-owner preflight, audit and deletion protections.",
       "sourceEvidence": [
         "src/routes/organization.tsx",
         "src/lib/organization-domain.server.ts",
@@ -525,9 +537,9 @@
         "tests/unit/organization-administration.test.mjs",
         "tests/unit/organization-boundaries.test.mjs"
       ],
-      "boundary": "Retention remains a proposal until an approved policy and execution package. No BAA/HIPAA/FedRAMP/residency/medical, trusted-access cyber, GPT-Rosalind or institutional Edu equivalence. Generic analysis/Study/Work are bounded alternatives, not those products.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "boundary": "Service accounts, analytics, complete connector/model/tool/spending policy, approved retention execution, live IdP/domain/legal setup, residency and production tenant tests remain.",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     },
@@ -547,10 +559,13 @@
         "tests/unit/workspace-search-policy.test.mjs"
       ],
       "boundary": "Relationships and health use stored authorized evidence. Local-only records are labeled. No invented intelligence, external data acquisition or model-generated relationship is treated as authoritative.",
-      "localStatus": "test_sources_present_not_rerun_by_documentation_audit",
-      "hostedStatus": "not_verified_for_audited_tree",
+      "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
+      "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",
       "productionStatus": "not_verified"
     }
-  ]
+  ],
+  "ownerDeclaredOverallProgress": 76.5,
+  "uiCompletion": 1,
+  "scopeContract": "docs/release/final-goal-contract.json"
 }
