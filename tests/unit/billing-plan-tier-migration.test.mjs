@@ -6,11 +6,13 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath =
   "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql";
+const proPriceRotationMigrationPath = "supabase/migrations/20260913012000_pro_80_live_price.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
 const plusPriceId = "price_1UAzhHAEZlsb6DBYWw2oUCeO";
 const proPriceId = "price_1UAzhRAEZlsb6DBYlafU4mhc";
+const currentProPriceId = "price_1UEw6FAEZlsb6DBYuksCKOBR";
 const rotatedPlusPriceId = "price_RotatedPlus123";
 
 async function createDatabase({ beforeMigration } = {}) {
@@ -90,6 +92,7 @@ async function createDatabase({ beforeMigration } = {}) {
   `);
   if (beforeMigration) await beforeMigration(database);
   await database.exec(await readFile(migrationPath, "utf8"));
+  await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
   return database;
 }
 
@@ -194,6 +197,37 @@ test("two exact historical Prices may share one lookup key without ambiguity", a
       subscriptionId: "sub_rotated",
     });
     assert.equal(await tier(database), "plus");
+  } finally {
+    await database.close();
+  }
+});
+
+test("current and historical Pro Prices resolve under the same lookup key", async () => {
+  const database = await createDatabase();
+  try {
+    const mappings = await database.query(
+      `SELECT stripe_price_id
+       FROM public.billing_plan_tiers
+       WHERE environment = 'live' AND lookup_key = 'pro_monthly'
+       ORDER BY stripe_price_id`,
+    );
+    assert.deepEqual(mappings.rows, [
+      { stripe_price_id: proPriceId },
+      { stripe_price_id: currentProPriceId },
+    ]);
+
+    await addSubscription(database, {
+      priceId: proPriceId,
+      subscriptionId: "sub_historical_pro",
+    });
+    assert.equal(await tier(database), "pro");
+
+    await database.query("DELETE FROM public.subscriptions");
+    await addSubscription(database, {
+      priceId: currentProPriceId,
+      subscriptionId: "sub_current_pro",
+    });
+    assert.equal(await tier(database), "pro");
   } finally {
     await database.close();
   }

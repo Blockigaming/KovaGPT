@@ -11,7 +11,7 @@ export const BILLING_PLANS = Object.freeze({
   },
   pro_monthly: {
     lookupKey: "pro_monthly",
-    livePriceId: "price_1UAzhRAEZlsb6DBYlafU4mhc",
+    livePriceId: "price_1UEw6FAEZlsb6DBYuksCKOBR",
     tier: "pro",
     trialPeriodDays: 0,
   },
