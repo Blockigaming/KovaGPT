@@ -10,10 +10,16 @@ const owner = "11111111-1111-4111-8111-111111111111",
   runner = "55555555-5555-4555-8555-555555555555",
   step = "66666666-6666-4666-8666-666666666666",
   approval = "77777777-7777-4777-8777-777777777777";
-const migration = await readFile(
-  new URL("../../supabase/migrations/20260905034000_work_browser_takeover.sql", import.meta.url),
-  "utf8",
-);
+const migration = (
+  await Promise.all(
+    [
+      "20260905034000_work_browser_takeover.sql",
+      "20260913022249_stabilize_work_browser_session_timestamps.sql",
+    ].map((name) =>
+      readFile(new URL(`../../supabase/migrations/${name}`, import.meta.url), "utf8"),
+    ),
+  )
+).join("\n");
 async function fixture() {
   const db = new PGlite();
   try {
@@ -96,6 +102,29 @@ async function fixture() {
     throw error;
   }
 }
+test("session creation and expiry use one stable statement timestamp", async () => {
+  const f = await fixture();
+  try {
+    const defaults = Object.fromEntries(
+      (
+        await f.db.query(
+          "select column_name,column_default from information_schema.columns where table_name='work_browser_sessions' and column_name in ('created_at','expires_at')",
+        )
+      ).rows.map((row) => [row.column_name, row.column_default]),
+    );
+    assert.match(defaults.created_at, /statement_timestamp\(\)/u);
+    assert.match(defaults.expires_at, /statement_timestamp\(\).*00:05:00/u);
+
+    await f.admit();
+    const result = await f.db.query(
+      "select extract(epoch from (expires_at-created_at)) seconds from work_browser_sessions where id=$1",
+      [session],
+    );
+    assert.equal(Number(result.rows[0].seconds), 300);
+  } finally {
+    await f.db.close();
+  }
+});
 test("only the current paused owner admits takeover; database blocks cross-tab resume until confirmed release", async () => {
   const f = await fixture();
   try {
