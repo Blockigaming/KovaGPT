@@ -155,7 +155,11 @@ Application rollback is not interchangeable with merely disabling one endpoint.
    window has either expired or seeded its subscription row with Stripe's exact Price ID. A novel
    legacy `pro_monthly` write remains visibly quarantined under that unmapped value, grants no paid
    entitlement, and is recoverable by exact-ID reconciliation even if the legacy handler already
-   completed its event ledger entry. Do not infer the exact Price from a user-level Checkout attempt.
+   completed its event ledger entry. The forward migration also quarantines exact-looking Pro rows
+   that match the prior unsafe trigger's signature: they were created after the same user's matching
+   Checkout attempt but have no authoritative Stripe event or observation provenance. This closes the
+   gap for writes that landed before the trigger replacement. Do not infer the exact Price from a
+   user-level Checkout attempt.
 4. Only after the new application revision is fully drained and the exact-ID reconciliation gate in
    step 3 is closed, and this query returns zero rows, may an old application revision receive webhook
    deliveries: `select stripe_subscription_id from public.subscriptions where environment = 'live'

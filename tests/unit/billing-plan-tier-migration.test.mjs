@@ -20,7 +20,7 @@ const proPriceId = "price_1UAzhRAEZlsb6DBYlafU4mhc";
 const currentProPriceId = "price_1UEw6FAEZlsb6DBYuksCKOBR";
 const rotatedPlusPriceId = "price_RotatedPlus123";
 
-async function createDatabase({ beforeMigration } = {}) {
+async function createDatabase({ beforeMigration, beforeQuarantineMigration } = {}) {
   const database = new PGlite();
   await database.exec(`
     CREATE ROLE anon;
@@ -102,6 +102,7 @@ async function createDatabase({ beforeMigration } = {}) {
   await database.exec(await readFile(migrationPath, "utf8"));
   await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
   await database.exec(await readFile(proRollbackCompatibilityMigrationPath, "utf8"));
+  if (beforeQuarantineMigration) await beforeQuarantineMigration(database);
   await database.exec(await readFile(proRollbackQuarantineMigrationPath, "utf8"));
   return database;
 }
@@ -366,6 +367,58 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
     );
     assert.deepEqual(unrelatedAttempt.rows, [{ price_id: "pro_monthly" }]);
     assert.equal(await tier(database, ownerId), "free");
+  } finally {
+    await database.close();
+  }
+});
+
+test("the forward migration quarantines Pro rows inferred by the unsafe trigger", async () => {
+  const database = await createDatabase({
+    beforeQuarantineMigration: async (db) => {
+      await db.query(
+        `INSERT INTO public.stripe_checkout_attempts (
+           environment, user_id, stripe_price_id, outcome, stripe_session_id,
+           idempotency_key, session_expires_at, idempotency_expires_at,
+           created_at, updated_at
+         ) VALUES (
+           'live', $1::uuid, $2, 'ready', 'cs_unsafe_inference', gen_random_uuid(),
+           now() + interval '1 hour', now() + interval '2 hours',
+           now() - interval '1 minute', now() - interval '1 minute'
+         )`,
+        [userId, currentProPriceId],
+      );
+      await addSubscription(db, {
+        priceId: "pro_monthly",
+        subscriptionId: "sub_unsafe_inference",
+      });
+      const inferred = await db.query(
+        `SELECT price_id
+         FROM public.subscriptions
+         WHERE stripe_subscription_id = 'sub_unsafe_inference'`,
+      );
+      assert.deepEqual(inferred.rows, [{ price_id: currentProPriceId }]);
+      assert.equal(await tier(db), "pro");
+    },
+  });
+  try {
+    const quarantined = await database.query(
+      `SELECT price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id = 'sub_unsafe_inference'`,
+    );
+    assert.deepEqual(quarantined.rows, [{ price_id: "pro_monthly" }]);
+    assert.equal(await tier(database), "free");
+
+    await database.query(
+      `UPDATE public.subscriptions
+       SET price_id = $1,
+           last_stripe_event_created_at = now(),
+           last_stripe_event_id = 'evt_exact_reconciliation',
+           last_stripe_observation_sequence = 1
+       WHERE stripe_subscription_id = 'sub_unsafe_inference'`,
+      [currentProPriceId],
+    );
+    assert.equal(await tier(database), "pro");
   } finally {
     await database.close();
   }

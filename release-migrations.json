@@ -3243,7 +3243,7 @@
       "order": 150,
       "filename": "20260913153000_quarantine_ambiguous_legacy_pro_price.sql",
       "timestamp": "20260913153000",
-      "sha256": "e024255566c919c7ee413012d6a1a3cfe553b982c10e679a793a82c00904e10a",
+      "sha256": "ecc84a2cc1cc6990b390e6ea89387c20afb34f8c0cabfe7821d1527c2f51b437",
       "tables": [],
       "functions": ["normalize_legacy_live_subscription_price"],
       "destructive": false,

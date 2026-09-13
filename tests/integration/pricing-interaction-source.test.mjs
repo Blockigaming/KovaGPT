@@ -56,6 +56,10 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   assert.match(rollout, /grants no paid\s+entitlement/u);
   assert.match(
     rollout,
+    /quarantines exact-looking Pro rows[\s\S]*?no authoritative Stripe event or observation provenance/u,
+  );
+  assert.match(
+    rollout,
     /If a row appears later, disable legacy intake and run exact-ID\s+reconciliation/u,
   );
   assert.match(

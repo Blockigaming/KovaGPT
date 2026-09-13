@@ -51,4 +51,35 @@ $$;
 revoke all on function public.normalize_legacy_live_subscription_price()
   from public, anon, authenticated, service_role;
 
+-- The previous revision could already have converted a novel legacy Pro write
+-- to the Price from the user's current Checkout attempt. Those rows look exact
+-- but have no authoritative Stripe event/observation provenance. Quarantine
+-- only the rows that could have been created by that path: the subscription was
+-- created after the matching attempt and no exact-ID handler ever stamped it.
+-- Disabling the compatibility trigger is safe under ALTER TABLE's transaction
+-- lock and prevents it from preserving the suspect exact Price during repair.
+alter table public.subscriptions
+  disable trigger normalize_legacy_live_subscription_price;
+
+update public.subscriptions as subscription
+set price_id = 'pro_monthly',
+    updated_at = now()
+from public.stripe_checkout_attempts as attempt
+join public.billing_plan_tiers as mapping
+  on mapping.environment = attempt.environment
+ and mapping.stripe_price_id = attempt.stripe_price_id
+where subscription.environment = 'live'
+  and attempt.environment = subscription.environment
+  and attempt.user_id = subscription.user_id
+  and attempt.stripe_price_id = subscription.price_id
+  and attempt.outcome in ('pending', 'ready', 'complete')
+  and mapping.lookup_key = 'pro_monthly'
+  and subscription.created_at >= attempt.created_at
+  and subscription.last_stripe_event_created_at is null
+  and subscription.last_stripe_event_id is null
+  and subscription.last_stripe_observation_sequence is null;
+
+alter table public.subscriptions
+  enable trigger normalize_legacy_live_subscription_price;
+
 commit;
