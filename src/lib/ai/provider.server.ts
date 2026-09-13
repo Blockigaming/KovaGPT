@@ -6,11 +6,14 @@ import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mj
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 import {
+  AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE,
+  AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE,
   createManagedIdentityTokenFetcher,
   createRequestDeadline,
   fetchWithDeadline,
   isAbortError,
   isProviderTimeoutError,
+  managedIdentityResourceForAzureBaseUrl,
   type DeadlineOutcome,
 } from "@/lib/ai/provider-transport.server.mjs";
 
@@ -66,7 +69,6 @@ type SafeLogValue = string | number | boolean | undefined;
 type SafeLogDetails = Record<string, SafeLogValue>;
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com";
 const DEFAULT_TIMEOUT_MS = 45_000;
 const DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS = 5_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
@@ -248,12 +250,26 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
-const fetchManagedIdentityToken = createManagedIdentityTokenFetcher({
+const fetchFoundryManagedIdentityToken = createManagedIdentityTokenFetcher({
   env,
-  resource: AZURE_OPENAI_RESOURCE,
+  resource: AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE,
   getTimeoutMs: () => DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS,
   log: logProviderEvent,
 });
+
+const fetchCognitiveServicesManagedIdentityToken = createManagedIdentityTokenFetcher({
+  env,
+  resource: AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE,
+  getTimeoutMs: () => DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS,
+  log: logProviderEvent,
+});
+
+function fetchManagedIdentityTokenForTarget(target: ProviderTarget, signal?: AbortSignal) {
+  const resource = managedIdentityResourceForAzureBaseUrl(target.baseUrl);
+  return resource === AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE
+    ? fetchFoundryManagedIdentityToken(signal)
+    : fetchCognitiveServicesManagedIdentityToken(signal);
+}
 
 export function getAiProviderConfig(): ProviderConfig {
   const target = providerTarget();
@@ -390,7 +406,7 @@ async function providerHeaders(
   }
   if (target.auth === "azure_managed_identity") {
     return {
-      Authorization: `Bearer ${await fetchManagedIdentityToken(signal)}`,
+      Authorization: `Bearer ${await fetchManagedIdentityTokenForTarget(target, signal)}`,
       "Content-Type": "application/json",
     };
   }

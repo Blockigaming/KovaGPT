@@ -407,7 +407,7 @@ test("zero-Lovable dependency and lock checks are deterministic", () => {
 
 test("Azure provider contract requires GPT-5.6 Sol and managed identity", () => {
   const provider =
-    'type ProviderKind = "azure_openai" | "openai"; https://api.openai.com/v1 .openai.azure.com .services.ai.azure.com /openai/v1 IDENTITY_ENDPOINT IDENTITY_HEADER const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com" searchParams.set("resource", AZURE_OPENAI_RESOURCE) searchParams.set("api-version", "2019-08-01") redirect: "error" "/responses" responsesStreamToChatStream AZURE_OPENAI_DEPLOYMENT_DEEP';
+    'type ProviderKind = "azure_openai" | "openai"; https://api.openai.com/v1 .openai.azure.com .services.ai.azure.com /openai/v1 IDENTITY_ENDPOINT IDENTITY_HEADER AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE = "https://ai.azure.com" AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE = "https://cognitiveservices.azure.com" managedIdentityResourceForAzureBaseUrl(target.baseUrl) searchParams.set("resource", resource) searchParams.set("api-version", "2019-08-01") redirect: "error" "/responses" responsesStreamToChatStream AZURE_OPENAI_DEPLOYMENT_DEEP';
   const catalog =
     'id: "gpt-5.6-sol", reasoning: true, vision: true, tools: true fallback: "gpt-5.6-sol"';
   const staging =

@@ -50,7 +50,7 @@ test("Azure OpenAI supports API-key and bounded Container Apps managed identity 
   assert.match(runtime, /IDENTITY_ENDPOINT/u);
   assert.match(runtime, /IDENTITY_HEADER/u);
   assert.match(runtime, /X-IDENTITY-HEADER/u);
-  assert.match(runtime, /https:\/\/cognitiveservices\.azure\.com/u);
+  assert.match(runtime, /https:\/\/ai\.azure\.com/u);
   assert.match(transport, /createRequestDeadline/u);
   assert.match(transport, /wrapResponseBodyWithDeadline/u);
   assert.match(azure, /AZURE_OPENAI_API_KEY/u);
