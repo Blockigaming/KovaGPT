@@ -143,3 +143,23 @@ test("representative detail families remain responsive in light and dark modes",
     }
   }
 });
+
+test("Academy and research landings expose populated destinations", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1440x900");
+
+  await page.goto("/academy", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await expect(page.locator('[data-public-primary="true"]')).toHaveAttribute(
+    "href",
+    "/academy/ai-fundamentals",
+  );
+  await expect(page.locator('main a[href^="/academy/"]')).toHaveCount(39);
+
+  await page.goto("/economic-research-exchange", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const researchAction = page.locator('[data-public-primary="true"]');
+  await expect(researchAction).toHaveAttribute("href", "/research-assistant");
+  await researchAction.click();
+  await expect(page).toHaveURL(/\/research-assistant$/u);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});

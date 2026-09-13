@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AcademyRouteImport } from './routes/academy'
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
@@ -190,6 +191,11 @@ const IndexRoute = IndexRouteImport.update({
 const SlugRoute = SlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcademyRoute = AcademyRouteImport.update({
+  id: '/academy',
+  path: '/academy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiHumanizerRoute = AiHumanizerRouteImport.update({
@@ -1073,6 +1079,7 @@ const ApiScimV2OrganizationIdSplatRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1247,6 +1254,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1422,6 +1430,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1598,6 +1607,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -1772,6 +1782,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -1946,6 +1957,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -2121,6 +2133,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
+  AcademyRoute: typeof AcademyRoute
   AiHumanizerRoute: typeof AiHumanizerRoute
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
@@ -2298,6 +2311,13 @@ declare module '@tanstack/react-router' {
       path: '/$slug'
       fullPath: '/$slug'
       preLoaderRoute: typeof SlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/academy': {
+      id: '/academy'
+      path: '/academy'
+      fullPath: '/academy'
+      preLoaderRoute: typeof AcademyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-humanizer': {
@@ -3590,6 +3610,7 @@ const ApiPushRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
+  AcademyRoute: AcademyRoute,
   AiHumanizerRoute: AiHumanizerRoute,
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,

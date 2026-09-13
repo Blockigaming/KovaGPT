@@ -205,11 +205,11 @@ test("all 340 reconciled public routes are reviewed and the sitemap retains 167 
 
 test("release route manifest is generated from all route files and one sitemap source", async () => {
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
-  assert.equal(manifest.routeFileCount, 173);
-  assert.equal(manifest.records.length, 173);
+  assert.equal(manifest.routeFileCount, 174);
+  assert.equal(manifest.records.length, 174);
   assert.equal(manifest.sitemapCount, 167);
   assert.equal(manifest.reviewedPublicRouteCount, 340);
-  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 173);
+  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 174);
   const { PUBLIC_SITEMAP_ENTRIES } = await import("../../src/lib/seo-policy.mjs");
   const associatedSitemapPaths = new Set(
     manifest.records.flatMap((record) => [

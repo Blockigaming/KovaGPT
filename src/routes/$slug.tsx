@@ -20,14 +20,13 @@ const PAGE_ACTIONS = new Map([
   ["health", { primaryAction: { label: "Open KovaGPT", to: "/" } }],
   ["contact-sales", { primaryAction: { label: "Contact support", to: "/contact-support" } }],
   ["shopping", { primaryAction: { label: "Start shopping research", to: "/" } }],
-  ["academy", { primaryAction: { label: "Open learning guides", to: "/learn" } }],
   ["business-data", { primaryAction: { label: "Review data controls", to: "/data-controls" } }],
   ["careers", { primaryAction: { label: "Contact KovaGPT", to: "/contact-support" } }],
   ["charter", { primaryAction: { label: "About KovaGPT", to: "/about" } }],
   ["consumer-privacy", { primaryAction: { label: "Review data controls", to: "/data-controls" } }],
   [
     "economic-research-exchange",
-    { primaryAction: { label: "Explore KovaGPT research", to: "/research" } },
+    { primaryAction: { label: "Explore KovaGPT research", to: "/research-assistant" } },
   ],
   [
     "enterprise-privacy",
@@ -267,7 +266,7 @@ export const Route = createFileRoute("/$slug")({
       item = EXPANDED_PUBLIC_PAGE_BY_SLUG.get(params.slug);
     }
     if (item?.review) throw notFound();
-    if (item) return { kind: "page" as const, item };
+    if (item) return { kind: "page" as const, item, related: RELATED_PAGES.get(item.slug) ?? [] };
     if ((PUBLICATION_SECTIONS as readonly string[]).includes(params.slug))
       return {
         kind: "index" as const,
@@ -364,7 +363,7 @@ function Page() {
     );
   const item = data.item;
   const actions = PAGE_ACTIONS.get(item.slug);
-  const related = RELATED_PAGES.get(item.slug) ?? [];
+  const related = data.related;
   return (
     <PublicPageView
       eyebrow={item.eyebrow}

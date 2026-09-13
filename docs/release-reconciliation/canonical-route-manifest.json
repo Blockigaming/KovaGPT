@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedAt": "2026-09-13",
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
-  "routeFileCount": 173,
+  "routeFileCount": 174,
   "sitemapCount": 167,
   "reviewedPublicRouteCount": 340,
   "classificationCounts": {
@@ -10,8 +10,8 @@
     "dynamic_public": 3,
     "reserved_service": 96,
     "root_shell": 1,
+    "public": 28,
     "application_or_authenticated": 33,
-    "public": 27,
     "reserved_auth_or_callback": 7
   },
   "records": [
@@ -200,7 +200,6 @@
       "canonicalPath": "/$slug",
       "resolvedCanonicalPaths": [
         "/about",
-        "/academy",
         "/accessibility",
         "/business",
         "/business-data",
@@ -361,6 +360,26 @@
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
       "evidence": ["src/routes/__root.tsx", "npm run build"]
+    },
+    {
+      "canonicalPath": "/academy",
+      "resolvedCanonicalPaths": [],
+      "routeFile": "src/routes/academy.tsx",
+      "template": false,
+      "classification": "public",
+      "indexingDecision": "index",
+      "sitemapIncluded": true,
+      "canonicalUrl": "https://kovagpt.com/academy",
+      "contentOwner": "KovaGPT public content registry or explicit route",
+      "contentSource": "repository-owned source",
+      "contentCompleteness": "keep_indexable",
+      "legalReviewRequired": false,
+      "administratorContentRequired": false,
+      "runtimeResult": "http_200",
+      "metadataResult": "reviewed",
+      "authorizationBoundary": "signed-out public response",
+      "finalDecision": "retain_in_sitemap",
+      "evidence": ["src/routes/academy.tsx", "docs/page-parity/indexable-content-review.json"]
     },
     {
       "canonicalPath": "/admin/kovas",

@@ -39,8 +39,8 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.uiRouteTemplateCount + kovagpt.serviceRouteTemplateCount,
     kovagpt.routeTemplateCount,
   );
-  assert.equal(kovagpt.routeTemplateCount, 173);
-  assert.equal(kovagpt.uiRouteTemplateCount, 74);
+  assert.equal(kovagpt.routeTemplateCount, 174);
+  assert.equal(kovagpt.uiRouteTemplateCount, 75);
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);

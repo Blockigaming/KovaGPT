@@ -17,7 +17,7 @@ KovaGPT will create original, Kova-branded equivalents for product and informati
 | ChatGPT sitemap               |                     98 URLs | 63 localized homes, 19 public GPT details, 10 translation tools, and 6 other canonical pages        |
 | ChatGPT marketing navigation  |  51 canonical English paths | Product, feature, plan, use-case, app, business, education, download, and sales families            |
 | ChatGPT authenticated UI      | 12 static templates/dialogs | Not verified by the public audit run; requires a separately dated authenticated observation         |
-| KovaGPT source routes         |               173 templates | 74 UI templates, including the root shell, and 99 API/service templates                             |
+| KovaGPT source routes         |               174 templates | 75 UI templates, including the root shell, and 99 API/service templates                             |
 | KovaGPT public registry       |                   276 pages | 66 index/content pages plus 210 feature, plan, academy, policy, solution, business, and app details |
 | KovaGPT reviewed public paths |                   340 paths | Includes explicit, detail, dynamic, publishing, developer, academy, policy, and localized templates |
 | KovaGPT sitemap               |         167 canonical paths | Approved substantive product, academy, plan, feature, solution, trust, and utility pages            |
@@ -94,8 +94,7 @@ An exact path is counted only when it is present in KovaGPT's reviewed public ro
 - Strict source-page status: 264/1,850 discovered source pages have an exact-path Kova counterpart. The earlier family-based five-workstream implementation is not equivalent to page-by-page completion.
 - Public runtime crawl: 340/340 reviewed routes return HTTP 200 with a heading, unique metadata, canonical URL, and skip link.
 - Link and metadata audit: zero broken internal links, duplicate titles, duplicate descriptions, duplicate canonicals, missing titles, missing descriptions, or missing canonical links.
-- Exhaustive public browser matrix: 36/36 groups pass across phone, tablet, and desktop, covering all 180 reviewed routes in light and dark modes (1,080 route/viewport/theme states).
-- Post-split expanded-page matrix: all 12 bounded groups pass for the 180-route Academy, policy, solution, business, and expanded-hub inventory across phone, tablet, and desktop in light and dark modes (1,080 route/viewport/theme states).
+- Expanded public browser matrix: all 12 bounded groups pass for the 180-route Academy, policy, solution, business, and expanded-hub subset across phone, tablet, and desktop in light and dark modes (1,080 route/viewport/theme states). The separate 340-route runtime crawl verifies every reviewed path but is not represented as responsive browser coverage.
 - Public detail suite: all five bounded desktop groups pass for all 199 detail pages, and the representative detail-family check passes at phone, tablet, and desktop widths in both light and dark modes. The phone representative case was rerun alone after the combined run encountered CPU contention and passed in 40.3 seconds.
 - Earlier combined product browser matrix: 38 applicable tests pass and 13 project-scoped cases are intentionally skipped; functional, responsive, keyboard, focus, hydration, visual-baseline, public-page, and secondary-screen assertions are clean.
 - Full unit suite: 1,775/1,775 tests pass locally; the previous hosted exact-head verification run also passed.

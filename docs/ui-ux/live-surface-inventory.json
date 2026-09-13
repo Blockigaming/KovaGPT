@@ -2191,8 +2191,8 @@
     }
   },
   "kovagpt": {
-    "routeTemplateCount": 173,
-    "uiRouteTemplateCount": 74,
+    "routeTemplateCount": 174,
+    "uiRouteTemplateCount": 75,
     "serviceRouteTemplateCount": 99,
     "routeTemplates": [
       {
@@ -2238,6 +2238,10 @@
       {
         "route": "/$slug",
         "file": "src/routes/$slug.tsx"
+      },
+      {
+        "route": "/academy",
+        "file": "src/routes/academy.tsx"
       },
       {
         "route": "/admin/kovas",
