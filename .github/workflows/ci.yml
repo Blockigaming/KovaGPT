@@ -164,6 +164,25 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Read-only deployed baseline audit
+        id: deployed_baseline
+        if: steps.scope.outputs.run_ci == 'true'
+        continue-on-error: true
+        run: npm run test:deployed-baseline:audit
+
+      - name: Report deployed baseline audit blocker
+        if: steps.scope.outputs.run_ci == 'true' && steps.deployed_baseline.outcome == 'failure'
+        run: echo "::warning::The observational deployed-baseline audit could not produce accepted evidence; strict candidate gates will continue."
+
+      - name: Upload deployed baseline evidence
+        if: always() && steps.deployed_baseline.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: deployed-baseline-${{ github.sha }}
+          path: artifacts/ui-audit/deployed-baseline
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'
         env:
