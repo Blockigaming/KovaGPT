@@ -26,6 +26,7 @@ import { Route as CodeHelperRouteImport } from './routes/code-helper'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
+import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
@@ -33,6 +34,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
+import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -40,6 +42,7 @@ import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as ModesRouteImport } from './routes/modes'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OmegaRouteImport } from './routes/omega'
+import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProjectsRouteImport } from './routes/projects'
@@ -49,28 +52,41 @@ import { Route as ResearchAssistantRouteImport } from './routes/research-assista
 import { Route as ResearchPlannerRouteImport } from './routes/research-planner'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
+import { Route as ShareInboxRouteImport } from './routes/share-inbox'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SitesRouteImport } from './routes/sites'
 import { Route as StatusRouteImport } from './routes/status'
+import { Route as StudyRouteImport } from './routes/study'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TrustedContactsRouteImport } from './routes/trusted-contacts'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as WriteRouteImport } from './routes/write'
 import { Route as LocaleHomeRouteImport } from './routes/$locale.home'
 import { Route as SectionArticleSlugRouteImport } from './routes/$section.$articleSlug'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminKovasRouteImport } from './routes/admin/kovas'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiDiscoveryRouteImport } from './routes/api/discovery'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiKovasRouteImport } from './routes/api/kovas'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
+import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
+import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
+import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
+import { Route as ApiSitesRouteImport } from './routes/api/sites'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
+import { Route as ApiTrustedContactsRouteImport } from './routes/api/trusted-contacts'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
@@ -81,6 +97,10 @@ import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as DevelopersIndexRouteImport } from './routes/developers.index'
 import { Route as DevelopersDocSlugRouteImport } from './routes/developers.$docSlug'
+import { Route as DevelopersAuthorizeRouteImport } from './routes/developers.authorize'
+import { Route as DevelopersConnectionsRouteImport } from './routes/developers.connections'
+import { Route as DevelopersConsoleRouteImport } from './routes/developers.console'
+import { Route as DevelopersPricingRouteImport } from './routes/developers.pricing'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
@@ -88,10 +108,18 @@ import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callba
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
+import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
+import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
+import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
+import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
+import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/console'
+import { Route as ApiDeveloperFilesRouteImport } from './routes/api/developer/files'
+import { Route as ApiDeveloperFundingRouteImport } from './routes/api/developer/funding'
+import { Route as ApiDeveloperMcpRouteImport } from './routes/api/developer/mcp'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesWebhookRouteImport } from './routes/api/finances/webhook'
@@ -105,20 +133,52 @@ import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callb
 import { Route as ApiGoogleDisconnectRouteImport } from './routes/api/google/disconnect'
 import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
+import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
+import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
+import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
+import { Route as ApiInternalDeveloperFundingRouteImport } from './routes/api/internal/developer-funding'
+import { Route as ApiInternalGoogleOauthCleanupRouteImport } from './routes/api/internal/google-oauth-cleanup'
+import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
+import { Route as ApiInternalSiteMaintenanceRouteImport } from './routes/api/internal/site-maintenance'
+import { Route as ApiInternalStorageArtifactCleanupRouteImport } from './routes/api/internal/storage-artifact-cleanup'
+import { Route as ApiInternalWebPushRouteImport } from './routes/api/internal/web-push'
+import { Route as ApiInternalWorkBrowserRouteImport } from './routes/api/internal/work-browser'
+import { Route as ApiInternalWorkExecutionRouteImport } from './routes/api/internal/work-execution'
+import { Route as ApiInternalWorkspaceSearchRouteImport } from './routes/api/internal/workspace-search'
+import { Route as ApiKovasDirectoryRouteImport } from './routes/api/kovas/directory'
 import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bulk-move'
+import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
+import { Route as ApiLibraryItemsRouteImport } from './routes/api/library/items'
+import { Route as ApiOrganizationsScimRouteImport } from './routes/api/organizations/scim'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
+import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
+import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
+import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
+import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
+import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
+import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
+import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
+import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
+import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
+import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
+import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
+import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
+import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
+import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
+import { Route as ApiScimV2OrganizationIdSplatRouteImport } from './routes/api/scim/v2/$organizationId/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -205,6 +265,11 @@ const ContextPacksRoute = ContextPacksRouteImport.update({
   path: '/context-packs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscoveryRoute = DiscoveryRouteImport.update({
+  id: '/discovery',
+  path: '/discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -240,6 +305,11 @@ const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
   path: '/knowledge-graph',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KovasRoute = KovasRouteImport.update({
+  id: '/kovas',
+  path: '/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
   path: '/library',
@@ -273,6 +343,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const OmegaRoute = OmegaRouteImport.update({
   id: '/omega',
   path: '/omega',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizationRoute = OrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -320,14 +395,29 @@ const ScheduledTasksRoute = ScheduledTasksRouteImport.update({
   path: '/scheduled-tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareInboxRoute = ShareInboxRouteImport.update({
+  id: '/share-inbox',
+  path: '/share-inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitesRoute = SitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatusRoute = StatusRouteImport.update({
   id: '/status',
   path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudyRoute = StudyRouteImport.update({
+  id: '/study',
+  path: '/study',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudyAssistantRoute = StudyAssistantRouteImport.update({
@@ -343,6 +433,11 @@ const SummaryRoute = SummaryRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustedContactsRoute = TrustedContactsRouteImport.update({
+  id: '/trusted-contacts',
+  path: '/trusted-contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -376,12 +471,23 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const Char91DotwellKnownChar93OauthAuthorizationServerRoute =
+  Char91DotwellKnownChar93OauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminKovasRoute = AdminKovasRouteImport.update({
+  id: '/admin/kovas',
+  path: '/admin/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAccountRoute = ApiAccountRouteImport.update({
   id: '/api/account',
   path: '/api/account',
@@ -390,6 +496,11 @@ const ApiAccountRoute = ApiAccountRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDiscoveryRoute = ApiDiscoveryRouteImport.update({
+  id: '/api/discovery',
+  path: '/api/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
@@ -402,6 +513,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKovasRoute = ApiKovasRouteImport.update({
+  id: '/api/kovas',
+  path: '/api/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLivezRoute = ApiLivezRouteImport.update({
   id: '/api/livez',
   path: '/api/livez',
@@ -410,6 +526,16 @@ const ApiLivezRoute = ApiLivezRouteImport.update({
 const ApiMemoryRoute = ApiMemoryRouteImport.update({
   id: '/api/memory',
   path: '/api/memory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrganizationsRoute = ApiOrganizationsRouteImport.update({
+  id: '/api/organizations',
+  path: '/api/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
+  id: '/api/project-files',
+  path: '/api/project-files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
@@ -422,14 +548,29 @@ const ApiProjectTemplatesRoute = ApiProjectTemplatesRouteImport.update({
   path: '/api/project-templates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushRoute = ApiPushRouteImport.update({
+  id: '/api/push',
+  path: '/api/push',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiReadyzRoute = ApiReadyzRouteImport.update({
   id: '/api/readyz',
   path: '/api/readyz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSitesRoute = ApiSitesRouteImport.update({
+  id: '/api/sites',
+  path: '/api/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTrustedContactsRoute = ApiTrustedContactsRouteImport.update({
+  id: '/api/trusted-contacts',
+  path: '/api/trusted-contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVersionRoute = ApiVersionRouteImport.update({
@@ -484,6 +625,26 @@ const DevelopersDocSlugRoute = DevelopersDocSlugRouteImport.update({
   path: '/developers/$docSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevelopersAuthorizeRoute = DevelopersAuthorizeRouteImport.update({
+  id: '/developers/authorize',
+  path: '/developers/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersConnectionsRoute = DevelopersConnectionsRouteImport.update({
+  id: '/developers/connections',
+  path: '/developers/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersConsoleRoute = DevelopersConsoleRouteImport.update({
+  id: '/developers/console',
+  path: '/developers/console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersPricingRoute = DevelopersPricingRouteImport.update({
+  id: '/developers/pricing',
+  path: '/developers/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -520,9 +681,25 @@ const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
   path: '/api/admin/ai-usage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeveloperBillingRoute =
+  ApiAdminDeveloperBillingRouteImport.update({
+    id: '/api/admin/developer-billing',
+    path: '/api/admin/developer-billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   id: '/api/admin/diagnostics',
   path: '/api/admin/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminKovasRoute = ApiAdminKovasRouteImport.update({
+  id: '/api/admin/kovas',
+  path: '/api/admin/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminPricingRoute = ApiAdminPricingRouteImport.update({
+  id: '/api/admin/pricing',
+  path: '/api/admin/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
@@ -539,6 +716,31 @@ const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
   getParentRoute: () => ApiChatRoute,
+} as any)
+const ApiChatHistoryRoute = ApiChatHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => ApiChatRoute,
+} as any)
+const ApiDeveloperConsoleRoute = ApiDeveloperConsoleRouteImport.update({
+  id: '/api/developer/console',
+  path: '/api/developer/console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeveloperFilesRoute = ApiDeveloperFilesRouteImport.update({
+  id: '/api/developer/files',
+  path: '/api/developer/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeveloperFundingRoute = ApiDeveloperFundingRouteImport.update({
+  id: '/api/developer/funding',
+  path: '/api/developer/funding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeveloperMcpRoute = ApiDeveloperMcpRouteImport.update({
+  id: '/api/developer/mcp',
+  path: '/api/developer/mcp',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFinancesExchangeRoute = ApiFinancesExchangeRouteImport.update({
   id: '/api/finances/exchange',
@@ -605,6 +807,11 @@ const ApiGoogleGmailRoute = ApiGoogleGmailRouteImport.update({
   path: '/api/google/gmail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleSelectRoute = ApiGoogleSelectRouteImport.update({
+  id: '/api/google/select',
+  path: '/api/google/select',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGoogleStatusRoute = ApiGoogleStatusRouteImport.update({
   id: '/api/google/status',
   path: '/api/google/status',
@@ -621,15 +828,89 @@ const ApiInternalAccountExportsRoute =
     path: '/api/internal/account-exports',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalChatSummariesRoute =
+  ApiInternalChatSummariesRouteImport.update({
+    id: '/api/internal/chat-summaries',
+    path: '/api/internal/chat-summaries',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalDeveloperBillingRoute =
+  ApiInternalDeveloperBillingRouteImport.update({
+    id: '/api/internal/developer-billing',
+    path: '/api/internal/developer-billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalDeveloperFundingRoute =
+  ApiInternalDeveloperFundingRouteImport.update({
+    id: '/api/internal/developer-funding',
+    path: '/api/internal/developer-funding',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalGoogleOauthCleanupRoute =
+  ApiInternalGoogleOauthCleanupRouteImport.update({
+    id: '/api/internal/google-oauth-cleanup',
+    path: '/api/internal/google-oauth-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalReceiptMaintenanceRoute =
+  ApiInternalReceiptMaintenanceRouteImport.update({
+    id: '/api/internal/receipt-maintenance',
+    path: '/api/internal/receipt-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
     path: '/api/internal/scheduled-execution',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalSiteMaintenanceRoute =
+  ApiInternalSiteMaintenanceRouteImport.update({
+    id: '/api/internal/site-maintenance',
+    path: '/api/internal/site-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalStorageArtifactCleanupRoute =
+  ApiInternalStorageArtifactCleanupRouteImport.update({
+    id: '/api/internal/storage-artifact-cleanup',
+    path: '/api/internal/storage-artifact-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalWebPushRoute = ApiInternalWebPushRouteImport.update({
+  id: '/api/internal/web-push',
+  path: '/api/internal/web-push',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalWorkBrowserRoute = ApiInternalWorkBrowserRouteImport.update({
+  id: '/api/internal/work-browser',
+  path: '/api/internal/work-browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalWorkExecutionRoute =
+  ApiInternalWorkExecutionRouteImport.update({
+    id: '/api/internal/work-execution',
+    path: '/api/internal/work-execution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalWorkspaceSearchRoute =
+  ApiInternalWorkspaceSearchRouteImport.update({
+    id: '/api/internal/workspace-search',
+    path: '/api/internal/workspace-search',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiKovasDirectoryRoute = ApiKovasDirectoryRouteImport.update({
+  id: '/directory',
+  path: '/directory',
+  getParentRoute: () => ApiKovasRoute,
+} as any)
 const ApiLibraryBulkMoveRoute = ApiLibraryBulkMoveRouteImport.update({
   id: '/api/library/bulk-move',
   path: '/api/library/bulk-move',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLibraryFilesRoute = ApiLibraryFilesRouteImport.update({
+  id: '/api/library/files',
+  path: '/api/library/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
@@ -637,14 +918,79 @@ const ApiLibraryFoldersRoute = ApiLibraryFoldersRouteImport.update({
   path: '/api/library/folders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLibraryItemsRoute = ApiLibraryItemsRouteImport.update({
+  id: '/api/library/items',
+  path: '/api/library/items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrganizationsScimRoute = ApiOrganizationsScimRouteImport.update({
+  id: '/scim',
+  path: '/scim',
+  getParentRoute: () => ApiOrganizationsRoute,
+} as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushRevokeDeviceRoute = ApiPushRevokeDeviceRouteImport.update({
+  id: '/revoke-device',
+  path: '/revoke-device',
+  getParentRoute: () => ApiPushRoute,
+} as any)
 const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
   id: '/api/security/lockdown',
   path: '/api/security/lockdown',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTasksEventSourcesRoute = ApiTasksEventSourcesRouteImport.update({
+  id: '/api/tasks/event-sources',
+  path: '/api/tasks/event-sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1EmbeddingsRoute = ApiV1EmbeddingsRouteImport.update({
+  id: '/api/v1/embeddings',
+  path: '/api/v1/embeddings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1FilesRoute = ApiV1FilesRouteImport.update({
+  id: '/api/v1/files',
+  path: '/api/v1/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ImagesRoute = ApiV1ImagesRouteImport.update({
+  id: '/api/v1/images',
+  path: '/api/v1/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ModelsRoute = ApiV1ModelsRouteImport.update({
+  id: '/api/v1/models',
+  path: '/api/v1/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1QuotesRoute = ApiV1QuotesRouteImport.update({
+  id: '/api/v1/quotes',
+  path: '/api/v1/quotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ResponsesRoute = ApiV1ResponsesRouteImport.update({
+  id: '/api/v1/responses',
+  path: '/api/v1/responses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkBrowserRoute = ApiWorkBrowserRouteImport.update({
+  id: '/api/work/browser',
+  path: '/api/work/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkExecutionRoute = ApiWorkExecutionRouteImport.update({
+  id: '/api/work/execution',
+  path: '/api/work/execution',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkOutputRoute = ApiWorkOutputRouteImport.update({
+  id: '/api/work/output',
+  path: '/api/work/output',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWorkSyncRoute = ApiWorkSyncRouteImport.update({
@@ -652,6 +998,22 @@ const ApiWorkSyncRoute = ApiWorkSyncRouteImport.update({
   path: '/api/work/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkspaceSearchRoute = ApiWorkspaceSearchRouteImport.update({
+  id: '/api/workspace/search',
+  path: '/api/workspace/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthMcpActionRoute = OauthMcpActionRouteImport.update({
+  id: '/oauth/mcp/$action',
+  path: '/oauth/mcp/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeveloperPaymentsWebhookRoute =
+  ApiDeveloperPaymentsWebhookRouteImport.update({
+    id: '/api/developer/payments/webhook',
+    path: '/api/developer/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiIntegrationsOauthDisconnectRoute =
   ApiIntegrationsOauthDisconnectRouteImport.update({
     id: '/api/integrations/oauth/disconnect',
@@ -670,6 +1032,11 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiTasksEventsProviderRoute = ApiTasksEventsProviderRouteImport.update({
+  id: '/api/tasks/events/$provider',
+  path: '/api/tasks/events/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdChatChatIdRoute =
   ProjectsProjectIdChatChatIdRouteImport.update({
     id: '/chat/$chatId',
@@ -680,6 +1047,12 @@ const ApiIntegrationsOauthCallbackProviderRoute =
   ApiIntegrationsOauthCallbackProviderRouteImport.update({
     id: '/api/integrations/oauth/callback/$provider',
     path: '/api/integrations/oauth/callback/$provider',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiScimV2OrganizationIdSplatRoute =
+  ApiScimV2OrganizationIdSplatRouteImport.update({
+    id: '/api/scim/v2/$organizationId/$',
+    path: '/api/scim/v2/$organizationId/$',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -701,6 +1074,7 @@ export interface FileRoutesByFullPath {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -708,6 +1082,7 @@ export interface FileRoutesByFullPath {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -715,6 +1090,7 @@ export interface FileRoutesByFullPath {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -724,28 +1100,41 @@ export interface FileRoutesByFullPath {
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/share-inbox': typeof ShareInboxRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
+  '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/$locale/home': typeof LocaleHomeRoute
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -755,6 +1144,10 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
+  '/developers/authorize': typeof DevelopersAuthorizeRoute
+  '/developers/connections': typeof DevelopersConnectionsRoute
+  '/developers/console': typeof DevelopersConsoleRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
@@ -763,10 +1156,18 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/developer/console': typeof ApiDeveloperConsoleRoute
+  '/api/developer/files': typeof ApiDeveloperFilesRoute
+  '/api/developer/funding': typeof ApiDeveloperFundingRoute
+  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
@@ -780,20 +1181,52 @@ export interface FileRoutesByFullPath {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
+  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/web-push': typeof ApiInternalWebPushRoute
+  '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
+  '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/files': typeof ApiV1FilesRoute
+  '/api/v1/images': typeof ApiV1ImagesRoute
+  '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/quotes': typeof ApiV1QuotesRoute
+  '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/work/browser': typeof ApiWorkBrowserRoute
+  '/api/work/execution': typeof ApiWorkExecutionRoute
+  '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
+  '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
+  '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -813,6 +1246,7 @@ export interface FileRoutesByTo {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -820,6 +1254,7 @@ export interface FileRoutesByTo {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -827,6 +1262,7 @@ export interface FileRoutesByTo {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -836,28 +1272,41 @@ export interface FileRoutesByTo {
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/share-inbox': typeof ShareInboxRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
+  '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/$locale/home': typeof LocaleHomeRoute
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -867,6 +1316,10 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
+  '/developers/authorize': typeof DevelopersAuthorizeRoute
+  '/developers/connections': typeof DevelopersConnectionsRoute
+  '/developers/console': typeof DevelopersConsoleRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
@@ -875,10 +1328,18 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/developer/console': typeof ApiDeveloperConsoleRoute
+  '/api/developer/files': typeof ApiDeveloperFilesRoute
+  '/api/developer/funding': typeof ApiDeveloperFundingRoute
+  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
@@ -892,20 +1353,52 @@ export interface FileRoutesByTo {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
+  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/web-push': typeof ApiInternalWebPushRoute
+  '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
+  '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/files': typeof ApiV1FilesRoute
+  '/api/v1/images': typeof ApiV1ImagesRoute
+  '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/quotes': typeof ApiV1QuotesRoute
+  '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/work/browser': typeof ApiWorkBrowserRoute
+  '/api/work/execution': typeof ApiWorkExecutionRoute
+  '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
+  '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
+  '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -926,6 +1419,7 @@ export interface FileRoutesById {
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
+  '/discovery': typeof DiscoveryRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -933,6 +1427,7 @@ export interface FileRoutesById {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
@@ -940,6 +1435,7 @@ export interface FileRoutesById {
   '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -949,28 +1445,41 @@ export interface FileRoutesById {
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/share-inbox': typeof ShareInboxRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
+  '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
+  '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/$locale/home': typeof LocaleHomeRoute
   '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/discovery': typeof ApiDiscoveryRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/kovas': typeof ApiKovasRouteWithChildren
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
+  '/api/sites': typeof ApiSitesRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
@@ -980,6 +1489,10 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
+  '/developers/authorize': typeof DevelopersAuthorizeRoute
+  '/developers/connections': typeof DevelopersConnectionsRoute
+  '/developers/console': typeof DevelopersConsoleRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
@@ -988,10 +1501,18 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/kovas': typeof ApiAdminKovasRoute
+  '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/developer/console': typeof ApiDeveloperConsoleRoute
+  '/api/developer/files': typeof ApiDeveloperFilesRoute
+  '/api/developer/funding': typeof ApiDeveloperFundingRoute
+  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
@@ -1005,20 +1526,52 @@ export interface FileRoutesById {
   '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
   '/api/google/drive': typeof ApiGoogleDriveRoute
   '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
+  '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
+  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
+  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
+  '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
+  '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
+  '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
+  '/api/internal/web-push': typeof ApiInternalWebPushRoute
+  '/api/internal/work-browser': typeof ApiInternalWorkBrowserRoute
+  '/api/internal/work-execution': typeof ApiInternalWorkExecutionRoute
+  '/api/internal/workspace-search': typeof ApiInternalWorkspaceSearchRoute
+  '/api/kovas/directory': typeof ApiKovasDirectoryRoute
   '/api/library/bulk-move': typeof ApiLibraryBulkMoveRoute
+  '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
+  '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
+  '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
+  '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
+  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
+  '/api/v1/files': typeof ApiV1FilesRoute
+  '/api/v1/images': typeof ApiV1ImagesRoute
+  '/api/v1/models': typeof ApiV1ModelsRoute
+  '/api/v1/quotes': typeof ApiV1QuotesRoute
+  '/api/v1/responses': typeof ApiV1ResponsesRoute
+  '/api/work/browser': typeof ApiWorkBrowserRoute
+  '/api/work/execution': typeof ApiWorkExecutionRoute
+  '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
+  '/api/workspace/search': typeof ApiWorkspaceSearchRoute
+  '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
+  '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1040,6 +1593,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1047,6 +1601,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1054,6 +1609,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1063,28 +1619,41 @@ export interface FileRouteTypes {
     | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
+    | '/share-inbox'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
+    | '/study'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
     | '/$locale/home'
     | '/$section/$articleSlug'
     | '/.mcp/list-tools'
+    | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
+    | '/api/push'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1094,6 +1663,10 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/developers/$docSlug'
+    | '/developers/authorize'
+    | '/developers/connections'
+    | '/developers/console'
+    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
@@ -1102,10 +1675,18 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
+    | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
+    | '/api/chat/history'
+    | '/api/developer/console'
+    | '/api/developer/files'
+    | '/api/developer/funding'
+    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
@@ -1119,20 +1700,52 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
+    | '/api/internal/developer-funding'
+    | '/api/internal/google-oauth-cleanup'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/web-push'
+    | '/api/internal/work-browser'
+    | '/api/internal/work-execution'
+    | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
+    | '/api/library/files'
     | '/api/library/folders'
+    | '/api/library/items'
+    | '/api/organizations/scim'
     | '/api/public/help-submit'
+    | '/api/push/revoke-device'
     | '/api/security/lockdown'
+    | '/api/tasks/event-sources'
+    | '/api/v1/embeddings'
+    | '/api/v1/files'
+    | '/api/v1/images'
+    | '/api/v1/models'
+    | '/api/v1/quotes'
+    | '/api/v1/responses'
+    | '/api/work/browser'
+    | '/api/work/execution'
+    | '/api/work/output'
     | '/api/work/sync'
+    | '/api/workspace/search'
+    | '/oauth/mcp/$action'
+    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
+    | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
+    | '/api/scim/v2/$organizationId/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1152,6 +1765,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1159,6 +1773,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1166,6 +1781,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1175,28 +1791,41 @@ export interface FileRouteTypes {
     | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
+    | '/share-inbox'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
+    | '/study'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
     | '/$locale/home'
     | '/$section/$articleSlug'
     | '/.mcp/list-tools'
+    | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
+    | '/api/push'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1206,6 +1835,10 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/developers/$docSlug'
+    | '/developers/authorize'
+    | '/developers/connections'
+    | '/developers/console'
+    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
@@ -1214,10 +1847,18 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
+    | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
+    | '/api/chat/history'
+    | '/api/developer/console'
+    | '/api/developer/files'
+    | '/api/developer/funding'
+    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
@@ -1231,20 +1872,52 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
+    | '/api/internal/developer-funding'
+    | '/api/internal/google-oauth-cleanup'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/web-push'
+    | '/api/internal/work-browser'
+    | '/api/internal/work-execution'
+    | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
+    | '/api/library/files'
     | '/api/library/folders'
+    | '/api/library/items'
+    | '/api/organizations/scim'
     | '/api/public/help-submit'
+    | '/api/push/revoke-device'
     | '/api/security/lockdown'
+    | '/api/tasks/event-sources'
+    | '/api/v1/embeddings'
+    | '/api/v1/files'
+    | '/api/v1/images'
+    | '/api/v1/models'
+    | '/api/v1/quotes'
+    | '/api/v1/responses'
+    | '/api/work/browser'
+    | '/api/work/execution'
+    | '/api/work/output'
     | '/api/work/sync'
+    | '/api/workspace/search'
+    | '/oauth/mcp/$action'
+    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
+    | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
+    | '/api/scim/v2/$organizationId/$'
   id:
     | '__root__'
     | '/'
@@ -1264,6 +1937,7 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contact-support'
     | '/context-packs'
+    | '/discovery'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -1271,6 +1945,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovas'
     | '/library'
     | '/maps'
     | '/mcp'
@@ -1278,6 +1953,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/notifications'
     | '/omega'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -1287,28 +1963,41 @@ export interface FileRouteTypes {
     | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
+    | '/share-inbox'
     | '/sitemap.xml'
+    | '/sites'
     | '/status'
+    | '/study'
     | '/study-assistant'
     | '/summary'
     | '/terms'
+    | '/trusted-contacts'
     | '/unsubscribe'
     | '/work'
     | '/write'
     | '/$locale/home'
     | '/$section/$articleSlug'
     | '/.mcp/list-tools'
+    | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/discovery'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/kovas'
     | '/api/livez'
     | '/api/memory'
+    | '/api/organizations'
+    | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
+    | '/api/push'
     | '/api/readyz'
+    | '/api/sites'
     | '/api/title'
+    | '/api/trusted-contacts'
     | '/api/version'
     | '/api/weather'
     | '/api/write'
@@ -1318,6 +2007,10 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/developers/$docSlug'
+    | '/developers/authorize'
+    | '/developers/connections'
+    | '/developers/console'
+    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
@@ -1326,10 +2019,18 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
+    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
+    | '/api/admin/kovas'
+    | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
+    | '/api/chat/history'
+    | '/api/developer/console'
+    | '/api/developer/files'
+    | '/api/developer/funding'
+    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
@@ -1343,20 +2044,52 @@ export interface FileRouteTypes {
     | '/api/google/disconnect'
     | '/api/google/drive'
     | '/api/google/gmail'
+    | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
     | '/api/internal/account-exports'
+    | '/api/internal/chat-summaries'
+    | '/api/internal/developer-billing'
+    | '/api/internal/developer-funding'
+    | '/api/internal/google-oauth-cleanup'
+    | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
+    | '/api/internal/site-maintenance'
+    | '/api/internal/storage-artifact-cleanup'
+    | '/api/internal/web-push'
+    | '/api/internal/work-browser'
+    | '/api/internal/work-execution'
+    | '/api/internal/workspace-search'
+    | '/api/kovas/directory'
     | '/api/library/bulk-move'
+    | '/api/library/files'
     | '/api/library/folders'
+    | '/api/library/items'
+    | '/api/organizations/scim'
     | '/api/public/help-submit'
+    | '/api/push/revoke-device'
     | '/api/security/lockdown'
+    | '/api/tasks/event-sources'
+    | '/api/v1/embeddings'
+    | '/api/v1/files'
+    | '/api/v1/images'
+    | '/api/v1/models'
+    | '/api/v1/quotes'
+    | '/api/v1/responses'
+    | '/api/work/browser'
+    | '/api/work/execution'
+    | '/api/work/output'
     | '/api/work/sync'
+    | '/api/workspace/search'
+    | '/oauth/mcp/$action'
+    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
+    | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
+    | '/api/scim/v2/$organizationId/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1377,6 +2110,7 @@ export interface RootRouteChildren {
   ConnectRoute: typeof ConnectRoute
   ContactSupportRoute: typeof ContactSupportRoute
   ContextPacksRoute: typeof ContextPacksRoute
+  DiscoveryRoute: typeof DiscoveryRoute
   FilesRoute: typeof FilesRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
@@ -1384,6 +2118,7 @@ export interface RootRouteChildren {
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
+  KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
   MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
@@ -1391,6 +2126,7 @@ export interface RootRouteChildren {
   ModesRoute: typeof ModesRoute
   NotificationsRoute: typeof NotificationsRoute
   OmegaRoute: typeof OmegaRoute
+  OrganizationRoute: typeof OrganizationRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
@@ -1400,28 +2136,41 @@ export interface RootRouteChildren {
   ResearchPlannerRoute: typeof ResearchPlannerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
+  ShareInboxRoute: typeof ShareInboxRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SitesRoute: typeof SitesRoute
   StatusRoute: typeof StatusRoute
+  StudyRoute: typeof StudyRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
   SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
+  TrustedContactsRoute: typeof TrustedContactsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
   LocaleHomeRoute: typeof LocaleHomeRoute
   SectionArticleSlugRoute: typeof SectionArticleSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminKovasRoute: typeof AdminKovasRoute
   ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
+  ApiDiscoveryRoute: typeof ApiDiscoveryRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiKovasRoute: typeof ApiKovasRouteWithChildren
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiOrganizationsRoute: typeof ApiOrganizationsRouteWithChildren
+  ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
+  ApiPushRoute: typeof ApiPushRouteWithChildren
   ApiReadyzRoute: typeof ApiReadyzRoute
+  ApiSitesRoute: typeof ApiSitesRoute
   ApiTitleRoute: typeof ApiTitleRoute
+  ApiTrustedContactsRoute: typeof ApiTrustedContactsRoute
   ApiVersionRoute: typeof ApiVersionRoute
   ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
@@ -1430,15 +2179,26 @@ export interface RootRouteChildren {
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DevelopersDocSlugRoute: typeof DevelopersDocSlugRoute
+  DevelopersAuthorizeRoute: typeof DevelopersAuthorizeRoute
+  DevelopersConnectionsRoute: typeof DevelopersConnectionsRoute
+  DevelopersConsoleRoute: typeof DevelopersConsoleRoute
+  DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
+  ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
+  ApiAdminKovasRoute: typeof ApiAdminKovasRoute
+  ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
+  ApiDeveloperConsoleRoute: typeof ApiDeveloperConsoleRoute
+  ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
+  ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
+  ApiDeveloperMcpRoute: typeof ApiDeveloperMcpRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesWebhookRoute: typeof ApiFinancesWebhookRoute
@@ -1452,19 +2212,48 @@ export interface RootRouteChildren {
   ApiGoogleDisconnectRoute: typeof ApiGoogleDisconnectRoute
   ApiGoogleDriveRoute: typeof ApiGoogleDriveRoute
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
+  ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
+  ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
+  ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
+  ApiInternalDeveloperFundingRoute: typeof ApiInternalDeveloperFundingRoute
+  ApiInternalGoogleOauthCleanupRoute: typeof ApiInternalGoogleOauthCleanupRoute
+  ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
+  ApiInternalSiteMaintenanceRoute: typeof ApiInternalSiteMaintenanceRoute
+  ApiInternalStorageArtifactCleanupRoute: typeof ApiInternalStorageArtifactCleanupRoute
+  ApiInternalWebPushRoute: typeof ApiInternalWebPushRoute
+  ApiInternalWorkBrowserRoute: typeof ApiInternalWorkBrowserRoute
+  ApiInternalWorkExecutionRoute: typeof ApiInternalWorkExecutionRoute
+  ApiInternalWorkspaceSearchRoute: typeof ApiInternalWorkspaceSearchRoute
   ApiLibraryBulkMoveRoute: typeof ApiLibraryBulkMoveRoute
+  ApiLibraryFilesRoute: typeof ApiLibraryFilesRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
+  ApiLibraryItemsRoute: typeof ApiLibraryItemsRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
+  ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
+  ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
+  ApiV1FilesRoute: typeof ApiV1FilesRoute
+  ApiV1ImagesRoute: typeof ApiV1ImagesRoute
+  ApiV1ModelsRoute: typeof ApiV1ModelsRoute
+  ApiV1QuotesRoute: typeof ApiV1QuotesRoute
+  ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
+  ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
+  ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
+  ApiWorkOutputRoute: typeof ApiWorkOutputRoute
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
+  ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
+  OauthMcpActionRoute: typeof OauthMcpActionRoute
+  ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
+  ApiScimV2OrganizationIdSplatRoute: typeof ApiScimV2OrganizationIdSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1588,6 +2377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContextPacksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discovery': {
+      id: '/discovery'
+      path: '/discovery'
+      fullPath: '/discovery'
+      preLoaderRoute: typeof DiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files': {
       id: '/files'
       path: '/files'
@@ -1637,6 +2433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KnowledgeGraphRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kovas': {
+      id: '/kovas'
+      path: '/kovas'
+      fullPath: '/kovas'
+      preLoaderRoute: typeof KovasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/library': {
       id: '/library'
       path: '/library'
@@ -1684,6 +2487,13 @@ declare module '@tanstack/react-router' {
       path: '/omega'
       fullPath: '/omega'
       preLoaderRoute: typeof OmegaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organization': {
+      id: '/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof OrganizationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -1749,6 +2559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScheduledTasksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share-inbox': {
+      id: '/share-inbox'
+      path: '/share-inbox'
+      fullPath: '/share-inbox'
+      preLoaderRoute: typeof ShareInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -1756,11 +2573,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sites': {
+      id: '/sites'
+      path: '/sites'
+      fullPath: '/sites'
+      preLoaderRoute: typeof SitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/status': {
       id: '/status'
       path: '/status'
       fullPath: '/status'
       preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/study': {
+      id: '/study'
+      path: '/study'
+      fullPath: '/study'
+      preLoaderRoute: typeof StudyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/study-assistant': {
@@ -1782,6 +2613,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trusted-contacts': {
+      id: '/trusted-contacts'
+      path: '/trusted-contacts'
+      fullPath: '/trusted-contacts'
+      preLoaderRoute: typeof TrustedContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unsubscribe': {
@@ -1826,11 +2664,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/kovas': {
+      id: '/admin/kovas'
+      path: '/admin/kovas'
+      fullPath: '/admin/kovas'
+      preLoaderRoute: typeof AdminKovasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/account': {
@@ -1847,6 +2699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/discovery': {
+      id: '/api/discovery'
+      path: '/api/discovery'
+      fullPath: '/api/discovery'
+      preLoaderRoute: typeof ApiDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-image': {
       id: '/api/generate-image'
       path: '/api/generate-image'
@@ -1859,6 +2718,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/kovas': {
+      id: '/api/kovas'
+      path: '/api/kovas'
+      fullPath: '/api/kovas'
+      preLoaderRoute: typeof ApiKovasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/livez': {
@@ -1875,6 +2741,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organizations': {
+      id: '/api/organizations'
+      path: '/api/organizations'
+      fullPath: '/api/organizations'
+      preLoaderRoute: typeof ApiOrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/project-files': {
+      id: '/api/project-files'
+      path: '/api/project-files'
+      fullPath: '/api/project-files'
+      preLoaderRoute: typeof ApiProjectFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/project-suggest': {
       id: '/api/project-suggest'
       path: '/api/project-suggest'
@@ -1889,6 +2769,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProjectTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push': {
+      id: '/api/push'
+      path: '/api/push'
+      fullPath: '/api/push'
+      preLoaderRoute: typeof ApiPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/readyz': {
       id: '/api/readyz'
       path: '/api/readyz'
@@ -1896,11 +2783,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiReadyzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sites': {
+      id: '/api/sites'
+      path: '/api/sites'
+      fullPath: '/api/sites'
+      preLoaderRoute: typeof ApiSitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
       fullPath: '/api/title'
       preLoaderRoute: typeof ApiTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trusted-contacts': {
+      id: '/api/trusted-contacts'
+      path: '/api/trusted-contacts'
+      fullPath: '/api/trusted-contacts'
+      preLoaderRoute: typeof ApiTrustedContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/version': {
@@ -1973,6 +2874,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevelopersDocSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/developers/authorize': {
+      id: '/developers/authorize'
+      path: '/developers/authorize'
+      fullPath: '/developers/authorize'
+      preLoaderRoute: typeof DevelopersAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers/connections': {
+      id: '/developers/connections'
+      path: '/developers/connections'
+      fullPath: '/developers/connections'
+      preLoaderRoute: typeof DevelopersConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers/console': {
+      id: '/developers/console'
+      path: '/developers/console'
+      fullPath: '/developers/console'
+      preLoaderRoute: typeof DevelopersConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers/pricing': {
+      id: '/developers/pricing'
+      path: '/developers/pricing'
+      fullPath: '/developers/pricing'
+      preLoaderRoute: typeof DevelopersPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -2022,11 +2951,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminAiUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/developer-billing': {
+      id: '/api/admin/developer-billing'
+      path: '/api/admin/developer-billing'
+      fullPath: '/api/admin/developer-billing'
+      preLoaderRoute: typeof ApiAdminDeveloperBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/diagnostics': {
       id: '/api/admin/diagnostics'
       path: '/api/admin/diagnostics'
       fullPath: '/api/admin/diagnostics'
       preLoaderRoute: typeof ApiAdminDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/kovas': {
+      id: '/api/admin/kovas'
+      path: '/api/admin/kovas'
+      fullPath: '/api/admin/kovas'
+      preLoaderRoute: typeof ApiAdminKovasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/pricing': {
+      id: '/api/admin/pricing'
+      path: '/api/admin/pricing'
+      fullPath: '/api/admin/pricing'
+      preLoaderRoute: typeof ApiAdminPricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agents/runs': {
@@ -2049,6 +2999,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat/confirm'
       preLoaderRoute: typeof ApiChatConfirmRouteImport
       parentRoute: typeof ApiChatRoute
+    }
+    '/api/chat/history': {
+      id: '/api/chat/history'
+      path: '/history'
+      fullPath: '/api/chat/history'
+      preLoaderRoute: typeof ApiChatHistoryRouteImport
+      parentRoute: typeof ApiChatRoute
+    }
+    '/api/developer/console': {
+      id: '/api/developer/console'
+      path: '/api/developer/console'
+      fullPath: '/api/developer/console'
+      preLoaderRoute: typeof ApiDeveloperConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/developer/files': {
+      id: '/api/developer/files'
+      path: '/api/developer/files'
+      fullPath: '/api/developer/files'
+      preLoaderRoute: typeof ApiDeveloperFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/developer/funding': {
+      id: '/api/developer/funding'
+      path: '/api/developer/funding'
+      fullPath: '/api/developer/funding'
+      preLoaderRoute: typeof ApiDeveloperFundingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/developer/mcp': {
+      id: '/api/developer/mcp'
+      path: '/api/developer/mcp'
+      fullPath: '/api/developer/mcp'
+      preLoaderRoute: typeof ApiDeveloperMcpRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/finances/exchange': {
       id: '/api/finances/exchange'
@@ -2141,6 +3126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleGmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google/select': {
+      id: '/api/google/select'
+      path: '/api/google/select'
+      fullPath: '/api/google/select'
+      preLoaderRoute: typeof ApiGoogleSelectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/google/status': {
       id: '/api/google/status'
       path: '/api/google/status'
@@ -2162,6 +3154,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalAccountExportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/chat-summaries': {
+      id: '/api/internal/chat-summaries'
+      path: '/api/internal/chat-summaries'
+      fullPath: '/api/internal/chat-summaries'
+      preLoaderRoute: typeof ApiInternalChatSummariesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/developer-billing': {
+      id: '/api/internal/developer-billing'
+      path: '/api/internal/developer-billing'
+      fullPath: '/api/internal/developer-billing'
+      preLoaderRoute: typeof ApiInternalDeveloperBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/developer-funding': {
+      id: '/api/internal/developer-funding'
+      path: '/api/internal/developer-funding'
+      fullPath: '/api/internal/developer-funding'
+      preLoaderRoute: typeof ApiInternalDeveloperFundingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/google-oauth-cleanup': {
+      id: '/api/internal/google-oauth-cleanup'
+      path: '/api/internal/google-oauth-cleanup'
+      fullPath: '/api/internal/google-oauth-cleanup'
+      preLoaderRoute: typeof ApiInternalGoogleOauthCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/receipt-maintenance': {
+      id: '/api/internal/receipt-maintenance'
+      path: '/api/internal/receipt-maintenance'
+      fullPath: '/api/internal/receipt-maintenance'
+      preLoaderRoute: typeof ApiInternalReceiptMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/scheduled-execution': {
       id: '/api/internal/scheduled-execution'
       path: '/api/internal/scheduled-execution'
@@ -2169,11 +3196,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/site-maintenance': {
+      id: '/api/internal/site-maintenance'
+      path: '/api/internal/site-maintenance'
+      fullPath: '/api/internal/site-maintenance'
+      preLoaderRoute: typeof ApiInternalSiteMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/storage-artifact-cleanup': {
+      id: '/api/internal/storage-artifact-cleanup'
+      path: '/api/internal/storage-artifact-cleanup'
+      fullPath: '/api/internal/storage-artifact-cleanup'
+      preLoaderRoute: typeof ApiInternalStorageArtifactCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/web-push': {
+      id: '/api/internal/web-push'
+      path: '/api/internal/web-push'
+      fullPath: '/api/internal/web-push'
+      preLoaderRoute: typeof ApiInternalWebPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/work-browser': {
+      id: '/api/internal/work-browser'
+      path: '/api/internal/work-browser'
+      fullPath: '/api/internal/work-browser'
+      preLoaderRoute: typeof ApiInternalWorkBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/work-execution': {
+      id: '/api/internal/work-execution'
+      path: '/api/internal/work-execution'
+      fullPath: '/api/internal/work-execution'
+      preLoaderRoute: typeof ApiInternalWorkExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/workspace-search': {
+      id: '/api/internal/workspace-search'
+      path: '/api/internal/workspace-search'
+      fullPath: '/api/internal/workspace-search'
+      preLoaderRoute: typeof ApiInternalWorkspaceSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/kovas/directory': {
+      id: '/api/kovas/directory'
+      path: '/directory'
+      fullPath: '/api/kovas/directory'
+      preLoaderRoute: typeof ApiKovasDirectoryRouteImport
+      parentRoute: typeof ApiKovasRoute
+    }
     '/api/library/bulk-move': {
       id: '/api/library/bulk-move'
       path: '/api/library/bulk-move'
       fullPath: '/api/library/bulk-move'
       preLoaderRoute: typeof ApiLibraryBulkMoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/library/files': {
+      id: '/api/library/files'
+      path: '/api/library/files'
+      fullPath: '/api/library/files'
+      preLoaderRoute: typeof ApiLibraryFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/library/folders': {
@@ -2183,12 +3266,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLibraryFoldersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/library/items': {
+      id: '/api/library/items'
+      path: '/api/library/items'
+      fullPath: '/api/library/items'
+      preLoaderRoute: typeof ApiLibraryItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/organizations/scim': {
+      id: '/api/organizations/scim'
+      path: '/scim'
+      fullPath: '/api/organizations/scim'
+      preLoaderRoute: typeof ApiOrganizationsScimRouteImport
+      parentRoute: typeof ApiOrganizationsRoute
+    }
     '/api/public/help-submit': {
       id: '/api/public/help-submit'
       path: '/api/public/help-submit'
       fullPath: '/api/public/help-submit'
       preLoaderRoute: typeof ApiPublicHelpSubmitRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/push/revoke-device': {
+      id: '/api/push/revoke-device'
+      path: '/revoke-device'
+      fullPath: '/api/push/revoke-device'
+      preLoaderRoute: typeof ApiPushRevokeDeviceRouteImport
+      parentRoute: typeof ApiPushRoute
     }
     '/api/security/lockdown': {
       id: '/api/security/lockdown'
@@ -2197,11 +3301,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSecurityLockdownRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tasks/event-sources': {
+      id: '/api/tasks/event-sources'
+      path: '/api/tasks/event-sources'
+      fullPath: '/api/tasks/event-sources'
+      preLoaderRoute: typeof ApiTasksEventSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/embeddings': {
+      id: '/api/v1/embeddings'
+      path: '/api/v1/embeddings'
+      fullPath: '/api/v1/embeddings'
+      preLoaderRoute: typeof ApiV1EmbeddingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/files': {
+      id: '/api/v1/files'
+      path: '/api/v1/files'
+      fullPath: '/api/v1/files'
+      preLoaderRoute: typeof ApiV1FilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/images': {
+      id: '/api/v1/images'
+      path: '/api/v1/images'
+      fullPath: '/api/v1/images'
+      preLoaderRoute: typeof ApiV1ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/models': {
+      id: '/api/v1/models'
+      path: '/api/v1/models'
+      fullPath: '/api/v1/models'
+      preLoaderRoute: typeof ApiV1ModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/quotes': {
+      id: '/api/v1/quotes'
+      path: '/api/v1/quotes'
+      fullPath: '/api/v1/quotes'
+      preLoaderRoute: typeof ApiV1QuotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/responses': {
+      id: '/api/v1/responses'
+      path: '/api/v1/responses'
+      fullPath: '/api/v1/responses'
+      preLoaderRoute: typeof ApiV1ResponsesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/work/browser': {
+      id: '/api/work/browser'
+      path: '/api/work/browser'
+      fullPath: '/api/work/browser'
+      preLoaderRoute: typeof ApiWorkBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/work/execution': {
+      id: '/api/work/execution'
+      path: '/api/work/execution'
+      fullPath: '/api/work/execution'
+      preLoaderRoute: typeof ApiWorkExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/work/output': {
+      id: '/api/work/output'
+      path: '/api/work/output'
+      fullPath: '/api/work/output'
+      preLoaderRoute: typeof ApiWorkOutputRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/work/sync': {
       id: '/api/work/sync'
       path: '/api/work/sync'
       fullPath: '/api/work/sync'
       preLoaderRoute: typeof ApiWorkSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workspace/search': {
+      id: '/api/workspace/search'
+      path: '/api/workspace/search'
+      fullPath: '/api/workspace/search'
+      preLoaderRoute: typeof ApiWorkspaceSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/mcp/$action': {
+      id: '/oauth/mcp/$action'
+      path: '/oauth/mcp/$action'
+      fullPath: '/oauth/mcp/$action'
+      preLoaderRoute: typeof OauthMcpActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/developer/payments/webhook': {
+      id: '/api/developer/payments/webhook'
+      path: '/api/developer/payments/webhook'
+      fullPath: '/api/developer/payments/webhook'
+      preLoaderRoute: typeof ApiDeveloperPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/disconnect': {
@@ -2225,6 +3420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tasks/events/$provider': {
+      id: '/api/tasks/events/$provider'
+      path: '/api/tasks/events/$provider'
+      fullPath: '/api/tasks/events/$provider'
+      preLoaderRoute: typeof ApiTasksEventsProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId/chat/$chatId': {
       id: '/projects/$projectId/chat/$chatId'
       path: '/chat/$chatId'
@@ -2237,6 +3439,13 @@ declare module '@tanstack/react-router' {
       path: '/api/integrations/oauth/callback/$provider'
       fullPath: '/api/integrations/oauth/callback/$provider'
       preLoaderRoute: typeof ApiIntegrationsOauthCallbackProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/scim/v2/$organizationId/$': {
+      id: '/api/scim/v2/$organizationId/$'
+      path: '/api/scim/v2/$organizationId/$'
+      fullPath: '/api/scim/v2/$organizationId/$'
+      preLoaderRoute: typeof ApiScimV2OrganizationIdSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -2291,14 +3500,50 @@ const ApiAccountRouteWithChildren = ApiAccountRoute._addFileChildren(
 
 interface ApiChatRouteChildren {
   ApiChatConfirmRoute: typeof ApiChatConfirmRoute
+  ApiChatHistoryRoute: typeof ApiChatHistoryRoute
 }
 
 const ApiChatRouteChildren: ApiChatRouteChildren = {
   ApiChatConfirmRoute: ApiChatConfirmRoute,
+  ApiChatHistoryRoute: ApiChatHistoryRoute,
 }
 
 const ApiChatRouteWithChildren =
   ApiChatRoute._addFileChildren(ApiChatRouteChildren)
+
+interface ApiKovasRouteChildren {
+  ApiKovasDirectoryRoute: typeof ApiKovasDirectoryRoute
+}
+
+const ApiKovasRouteChildren: ApiKovasRouteChildren = {
+  ApiKovasDirectoryRoute: ApiKovasDirectoryRoute,
+}
+
+const ApiKovasRouteWithChildren = ApiKovasRoute._addFileChildren(
+  ApiKovasRouteChildren,
+)
+
+interface ApiOrganizationsRouteChildren {
+  ApiOrganizationsScimRoute: typeof ApiOrganizationsScimRoute
+}
+
+const ApiOrganizationsRouteChildren: ApiOrganizationsRouteChildren = {
+  ApiOrganizationsScimRoute: ApiOrganizationsScimRoute,
+}
+
+const ApiOrganizationsRouteWithChildren =
+  ApiOrganizationsRoute._addFileChildren(ApiOrganizationsRouteChildren)
+
+interface ApiPushRouteChildren {
+  ApiPushRevokeDeviceRoute: typeof ApiPushRevokeDeviceRoute
+}
+
+const ApiPushRouteChildren: ApiPushRouteChildren = {
+  ApiPushRevokeDeviceRoute: ApiPushRevokeDeviceRoute,
+}
+
+const ApiPushRouteWithChildren =
+  ApiPushRoute._addFileChildren(ApiPushRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -2318,6 +3563,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectRoute: ConnectRoute,
   ContactSupportRoute: ContactSupportRoute,
   ContextPacksRoute: ContextPacksRoute,
+  DiscoveryRoute: DiscoveryRoute,
   FilesRoute: FilesRoute,
   GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
@@ -2325,6 +3571,7 @@ const rootRouteChildren: RootRouteChildren = {
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
+  KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,
   MapsRoute: MapsRoute,
   McpRoute: McpRoute,
@@ -2332,6 +3579,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModesRoute: ModesRoute,
   NotificationsRoute: NotificationsRoute,
   OmegaRoute: OmegaRoute,
+  OrganizationRoute: OrganizationRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
@@ -2341,29 +3589,43 @@ const rootRouteChildren: RootRouteChildren = {
   ResearchPlannerRoute: ResearchPlannerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
+  ShareInboxRoute: ShareInboxRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SitesRoute: SitesRoute,
   StatusRoute: StatusRoute,
+  StudyRoute: StudyRoute,
   StudyAssistantRoute: StudyAssistantRoute,
   SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
+  TrustedContactsRoute: TrustedContactsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
   LocaleHomeRoute: LocaleHomeRoute,
   SectionArticleSlugRoute: SectionArticleSlugRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthAuthorizationServerRoute:
+    Char91DotwellKnownChar93OauthAuthorizationServerRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminKovasRoute: AdminKovasRoute,
   ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
+  ApiDiscoveryRoute: ApiDiscoveryRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiKovasRoute: ApiKovasRouteWithChildren,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
+  ApiOrganizationsRoute: ApiOrganizationsRouteWithChildren,
+  ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
+  ApiPushRoute: ApiPushRouteWithChildren,
   ApiReadyzRoute: ApiReadyzRoute,
+  ApiSitesRoute: ApiSitesRoute,
   ApiTitleRoute: ApiTitleRoute,
+  ApiTrustedContactsRoute: ApiTrustedContactsRoute,
   ApiVersionRoute: ApiVersionRoute,
   ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
@@ -2372,15 +3634,26 @@ const rootRouteChildren: RootRouteChildren = {
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   DevelopersDocSlugRoute: DevelopersDocSlugRoute,
+  DevelopersAuthorizeRoute: DevelopersAuthorizeRoute,
+  DevelopersConnectionsRoute: DevelopersConnectionsRoute,
+  DevelopersConsoleRoute: DevelopersConsoleRoute,
+  DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
+  ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
+  ApiAdminKovasRoute: ApiAdminKovasRoute,
+  ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
+  ApiDeveloperConsoleRoute: ApiDeveloperConsoleRoute,
+  ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
+  ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
+  ApiDeveloperMcpRoute: ApiDeveloperMcpRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesWebhookRoute: ApiFinancesWebhookRoute,
@@ -2394,20 +3667,50 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleDisconnectRoute: ApiGoogleDisconnectRoute,
   ApiGoogleDriveRoute: ApiGoogleDriveRoute,
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
+  ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
+  ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
+  ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,
+  ApiInternalDeveloperFundingRoute: ApiInternalDeveloperFundingRoute,
+  ApiInternalGoogleOauthCleanupRoute: ApiInternalGoogleOauthCleanupRoute,
+  ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
+  ApiInternalSiteMaintenanceRoute: ApiInternalSiteMaintenanceRoute,
+  ApiInternalStorageArtifactCleanupRoute:
+    ApiInternalStorageArtifactCleanupRoute,
+  ApiInternalWebPushRoute: ApiInternalWebPushRoute,
+  ApiInternalWorkBrowserRoute: ApiInternalWorkBrowserRoute,
+  ApiInternalWorkExecutionRoute: ApiInternalWorkExecutionRoute,
+  ApiInternalWorkspaceSearchRoute: ApiInternalWorkspaceSearchRoute,
   ApiLibraryBulkMoveRoute: ApiLibraryBulkMoveRoute,
+  ApiLibraryFilesRoute: ApiLibraryFilesRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
+  ApiLibraryItemsRoute: ApiLibraryItemsRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
+  ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
+  ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,
+  ApiV1FilesRoute: ApiV1FilesRoute,
+  ApiV1ImagesRoute: ApiV1ImagesRoute,
+  ApiV1ModelsRoute: ApiV1ModelsRoute,
+  ApiV1QuotesRoute: ApiV1QuotesRoute,
+  ApiV1ResponsesRoute: ApiV1ResponsesRoute,
+  ApiWorkBrowserRoute: ApiWorkBrowserRoute,
+  ApiWorkExecutionRoute: ApiWorkExecutionRoute,
+  ApiWorkOutputRoute: ApiWorkOutputRoute,
   ApiWorkSyncRoute: ApiWorkSyncRoute,
+  ApiWorkspaceSearchRoute: ApiWorkspaceSearchRoute,
+  OauthMcpActionRoute: OauthMcpActionRoute,
+  ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
+  ApiScimV2OrganizationIdSplatRoute: ApiScimV2OrganizationIdSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

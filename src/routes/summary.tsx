@@ -1,3 +1,4 @@
+import { hasGoogleCapability } from "@/lib/google-account-policy.mjs";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -318,25 +319,31 @@ function SummaryPage() {
   });
   const qGoogle = useQuery({
     queryKey: ["summary", "google", userKey],
-    queryFn: () => getGoogleStatus(),
+    queryFn: () => getGoogleStatus({ data: { expectedUserId: userKey! } }),
     enabled,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const hasGmail =
-    !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("gmail"));
+    !qGoogle.isFetching &&
+    !!qGoogle.data?.connected &&
+    !!qGoogle.data.connectionId &&
+    hasGoogleCapability(qGoogle.data.scopes, "gmail.read");
   const hasCal =
-    !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("calendar"));
+    !qGoogle.isFetching &&
+    !!qGoogle.data?.connected &&
+    !!qGoogle.data.connectionId &&
+    hasGoogleCapability(qGoogle.data.scopes, "calendar.read");
 
   const qGmail = useQuery({
-    queryKey: ["summary", "gmail", userKey],
-    queryFn: () => getGmailSummary(),
+    queryKey: ["summary", "gmail", userKey, qGoogle.data?.connectionId],
+    queryFn: () => getGmailSummary({ data: { connectionId: qGoogle.data!.connectionId! } }),
     enabled: enabled && hasGmail,
     staleTime: 60_000,
   });
   const qCal = useQuery({
-    queryKey: ["summary", "cal", userKey],
-    queryFn: () => getCalendarSummary(),
+    queryKey: ["summary", "cal", userKey, qGoogle.data?.connectionId],
+    queryFn: () => getCalendarSummary({ data: { connectionId: qGoogle.data!.connectionId! } }),
     enabled: enabled && hasCal,
     staleTime: 60_000,
   });
@@ -700,14 +707,17 @@ function SummaryPage() {
 
           {!isHidden("calendar") && (
             <Section id="calendar" title="Calendar" icon={Calendar} onDismiss={hide}>
-              {!qGoogle.isLoading && !hasCal ? (
+              {hasCal && (
+                <p className="mb-2 text-xs text-muted-foreground">{qGoogle.data?.email}</p>
+              )}
+              {!qGoogle.isFetching && !hasCal ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Google Calendar to see upcoming events.</p>
                   <Link to="/apps" className="text-xs underline">
                     Connect →
                   </Link>
                 </div>
-              ) : qCal.isLoading || qGoogle.isLoading ? (
+              ) : qCal.isLoading || qGoogle.isFetching ? (
                 <div className="space-y-2">
                   <Skeleton className="h-8" />
                   <Skeleton className="h-8" />
@@ -751,14 +761,17 @@ function SummaryPage() {
 
           {!isHidden("gmail") && (
             <Section id="gmail" title="Gmail - unread" icon={Mail} onDismiss={hide}>
-              {!qGoogle.isLoading && !hasGmail ? (
+              {hasGmail && (
+                <p className="mb-2 text-xs text-muted-foreground">{qGoogle.data?.email}</p>
+              )}
+              {!qGoogle.isFetching && !hasGmail ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Gmail to see unread messages.</p>
                   <Link to="/apps" className="text-xs underline">
                     Connect →
                   </Link>
                 </div>
-              ) : qGmail.isLoading || qGoogle.isLoading ? (
+              ) : qGmail.isLoading || qGoogle.isFetching ? (
                 <div className="space-y-2">
                   <Skeleton className="h-10" />
                   <Skeleton className="h-10" />

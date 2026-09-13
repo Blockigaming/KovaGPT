@@ -39,7 +39,7 @@ jobs:
 
           files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
           printf '%s\n' "$files"
-          if printf '%s\n' "$files" | grep -Eq '^(\.github/workflows/(azure-container-ci|ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290|validate-azure-production)\.yml$|\.dockerignore$|Dockerfile$|\.env\.example$|package(-lock)?\.json$|infra/azure/|scripts/azure/|src/lib/azure-runtime-env\.server\.ts$|src/lib/readiness\.server\.ts$|src/routes/api/health\.ts$|src/server\.ts$|src/start\.ts$|vite\.config\.ts$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(\.github/workflows/(azure-container-ci|ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290|validate-azure-production)\.yml$|\.dockerignore$|Dockerfile$|\.env\.example$|package(-lock)?\.json$|sites-server/|src/lib/sites-[^/]+$|infra/azure/|scripts/azure/|src/lib/azure-runtime-env\.server\.ts$|src/lib/readiness\.server\.ts$|src/routes/api/health\.ts$|src/server\.ts$|src/start\.ts$|vite\.config\.ts$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -82,13 +82,25 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm run azure:validate
 
+      - name: Compile production Bicep without Azure sign-in
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          az bicep build \
+            --file infra/azure/production/main.bicep \
+            --outfile "$RUNNER_TEMP/kova-production-template.json"
+
       - name: Production build
         if: steps.scope.outputs.run == 'true'
         run: KOVA_BROWSER_PREVIEW=node npm run build
 
       - name: Docker image build
         if: steps.scope.outputs.run == 'true'
-        run: npm run container:build
+        run: |
+          KOVA_CI_SOURCE_SHA="$(git rev-parse HEAD)"
+          KOVA_CI_SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+          docker build -t kovagpt-web:azure-dev \
+            --build-arg KOVA_SOURCE_SHA="$KOVA_CI_SOURCE_SHA" \
+            --build-arg KOVA_SOURCE_TREE="$KOVA_CI_SOURCE_TREE" .
 
       - name: Container startup
         if: steps.scope.outputs.run == 'true'
@@ -111,6 +123,33 @@ jobs:
       - name: Health smoke test
         if: steps.scope.outputs.run == 'true'
         run: npm run container:smoke
+
+      - name: Build isolated Sites image
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          docker build -f sites-server/Dockerfile -t kovagpt-sites:ci \
+            --build-arg KOVA_SOURCE_SHA="$(git rev-parse HEAD)" \
+            --build-arg KOVA_SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')" .
+
+      - name: Isolated Sites container smoke
+        if: steps.scope.outputs.run == 'true'
+        run: node sites-server/ci-smoke.mjs
+
+      - name: Record verified CI image and source evidence
+        if: steps.scope.outputs.run == 'true'
+        run: node scripts/azure/ci-container-evidence.mjs
+
+      - name: Retain review candidate image
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-container-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            artifacts/ci-container/kovagpt-ci-image.tar.gz
+            artifacts/ci-container/evidence.json
+            artifacts/ci-container/sites-evidence.json
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Container shutdown
         if: always() && steps.scope.outputs.run == 'true'

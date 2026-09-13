@@ -20,11 +20,17 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { listMessageVersions, saveMessageVersion } from "@/lib/chat-workspace.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
-import { RealtimeReadiness } from "@/components/RealtimeReadiness";
+import { CollaborationStatus } from "@/components/CollaborationStatus";
+import { CanvasComments } from "@/components/CanvasComments";
+import { useCanvasCollaboration } from "@/lib/use-canvas-collaboration";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
+import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
+import {
+  canApplyLoadedArtifactHistory,
+  recoverFailedArtifactSnapshot,
+} from "@/lib/canvas-autosave-policy.mjs";
 
 type SessionVersion = {
   id: number;
@@ -33,6 +39,7 @@ type SessionVersion = {
   label: string;
   /** True when this entry is stored server-side and survives closing Canvas. */
   durable?: boolean;
+  remoteRevision?: number;
 };
 
 function documentOutline(value: string, isCode: boolean) {
@@ -51,16 +58,7 @@ function documentOutline(value: string, isCode: boolean) {
     .slice(0, 80);
 }
 
-export function ArtifactEditor({
-  open,
-  onClose,
-  initialContent,
-  kind,
-  onImprove,
-  initialMode = "edit",
-  chatId,
-  messageId,
-}: {
+type ArtifactEditorProps = {
   open: boolean;
   onClose: () => void;
   initialContent: string;
@@ -73,11 +71,30 @@ export function ArtifactEditor({
    */
   chatId?: string | null;
   messageId?: string | null;
-}) {
-  const LONG_THRESHOLD = 50_000;
-  const canTruncate = kind === "writing" && initialContent.length > LONG_THRESHOLD;
+  projectId?: string | null;
+};
+export function ArtifactEditor(props: ArtifactEditorProps) {
+  const { user } = useUser();
+  if (!props.open) return null;
+  return (
+    <ArtifactEditorSession
+      key={JSON.stringify([user?.id, props.chatId, props.messageId, props.projectId])}
+      {...props}
+    />
+  );
+}
+function ArtifactEditorSession({
+  open,
+  onClose,
+  initialContent,
+  kind,
+  onImprove,
+  initialMode = "edit",
+  chatId,
+  messageId,
+  projectId,
+}: ArtifactEditorProps) {
   const [value, setValue] = useState(initialContent);
-  const [truncated, setTruncated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -90,16 +107,33 @@ export function ArtifactEditor({
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comments, setComments] = useState<{ id: number; body: string; selection: string }[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved" | "session_only">(
+    "saved",
+  );
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastRecordedValueRef = useRef(initialContent);
+  const lastScheduledValueRef = useRef(initialContent);
+  const autosaveGenerationRef = useRef(0);
+  const localEditRevisionRef = useRef(0);
+  const [acknowledgedEditRevision, setAcknowledgedEditRevision] = useState(0);
+  const pendingAutosavesRef = useRef(0);
+  const autosaveQueueRef = useRef(createSerializedWriteQueue());
+  const [autosaveRetryNonce, setAutosaveRetryNonce] = useState(0);
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
-  const listVersionsFn = useServerFn(listMessageVersions);
-  const saveVersionFn = useServerFn(saveMessageVersion);
   const canPersistVersions = Boolean(isSignedIn && chatId && messageId);
+  const collaboration = useCanvasCollaboration({
+    open,
+    actorId: canPersistVersions ? userKey : null,
+    chatId,
+    messageId,
+    projectId,
+    initialContent,
+  });
+  const saveVersionFn = collaboration.save;
   const [historyError, setHistoryError] = useState<string | null>(null);
   const artifactTitle =
     kind === "code"
@@ -114,14 +148,15 @@ export function ArtifactEditor({
   );
 
   useEffect(() => {
+    // Opening, closing, or replacing an artifact invalidates all asynchronous
+    // work captured by the previous Canvas session.
+    autosaveGenerationRef.current += 1;
     if (open) {
-      if (canTruncate) {
-        setValue(initialContent.slice(0, LONG_THRESHOLD));
-        setTruncated(true);
-      } else {
-        setValue(initialContent);
-        setTruncated(false);
-      }
+      localEditRevisionRef.current = 0;
+      setAcknowledgedEditRevision(0);
+      lastRecordedValueRef.current = initialContent;
+      lastScheduledValueRef.current = initialContent;
+      setValue(initialContent);
       setCopied(false);
       setSaved(false);
       let preferred: string | undefined;
@@ -141,41 +176,56 @@ export function ArtifactEditor({
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
       setHistoryError(null);
+      setComments([]);
+      setCommentDraft("");
+      setCommentsOpen(false);
     }
-  }, [open, initialContent, initialMode, canTruncate, kind]);
-
-  // Load durable versions for this message so history survives closing Canvas.
-  useEffect(() => {
-    if (!open || !canPersistVersions || !chatId || !messageId) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const rows = await listVersionsFn({ data: { chatId, messageId } });
-        if (cancelled) return;
-        const durable = rows
-          .slice()
-          .reverse()
-          .map((row) => ({
-            id: new Date(row.createdAt).getTime() + row.version,
-            content: row.content,
-            savedAt: new Date(row.createdAt).getTime(),
-            label: `Saved v${row.version}${row.accepted ? " (current)" : ""}`,
-            durable: true,
-          }));
-        if (durable.length > 0) {
-          setVersions((current) => [...durable, ...current].slice(0, 30));
-        }
-      } catch (error) {
-        if (cancelled) return;
-        setHistoryError(
-          error instanceof Error ? error.message : "Saved versions could not be loaded.",
-        );
-      }
-    })();
     return () => {
-      cancelled = true;
+      autosaveGenerationRef.current += 1;
     };
-  }, [open, canPersistVersions, chatId, messageId, listVersionsFn]);
+  }, [open, initialContent, initialMode, kind, userKey, chatId, messageId, projectId]);
+
+  // Canonical snapshots never replace a dirty local edit. Version content is
+  // fetched only on restore/compare, keeping realtime refreshes bounded.
+  const remoteSnapshot = collaboration.snapshot;
+  const adoptRemote = collaboration.adopt;
+  useEffect(() => {
+    if (!open || !remoteSnapshot) return;
+    const durable = remoteSnapshot.versions.map((row) => ({
+      id: row.revision,
+      content:
+        row.revision === remoteSnapshot.document.revision ? remoteSnapshot.document.content : "",
+      savedAt: new Date(row.created_at).getTime(),
+      label: `Saved v${row.revision}${row.revision === remoteSnapshot.document.revision ? " (current)" : ""}`,
+      durable: true,
+      remoteRevision: row.revision,
+    }));
+    setVersions((current) =>
+      [
+        ...durable.map((row) => ({
+          ...row,
+          content:
+            row.remoteRevision === remoteSnapshot.document.revision
+              ? row.content
+              : (current.find((existing) => existing.remoteRevision === row.remoteRevision)
+                  ?.content ?? ""),
+        })),
+        ...current.filter((row) => !row.durable),
+      ].slice(0, 50),
+    );
+    if (
+      canApplyLoadedArtifactHistory(acknowledgedEditRevision, localEditRevisionRef.current) &&
+      pendingAutosavesRef.current === 0
+    ) {
+      const content = adoptRemote();
+      if (content !== null) {
+        lastRecordedValueRef.current = content;
+        lastScheduledValueRef.current = content;
+        setValue(content);
+        setSaveState("saved");
+      }
+    }
+  }, [open, remoteSnapshot, adoptRemote, value, acknowledgedEditRevision]);
 
   useEffect(() => {
     if (!open) return;
@@ -203,9 +253,44 @@ export function ArtifactEditor({
   }, [value]);
 
   const updateValue = (next: string) => {
+    if (canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit) return;
+    localEditRevisionRef.current += 1;
     setValue(next);
     setSaveState("unsaved");
   };
+
+  const exportActorRef = useRef(userKey);
+  exportActorRef.current = userKey;
+  useEffect(
+    () => () => {
+      autosaveGenerationRef.current += 1;
+    },
+    [],
+  );
+  const [exportFormat, setExportFormat] = useState<"source" | "pdf" | "docx" | "xlsx" | "pptx">(
+    "source",
+  );
+  const [exporting, setExporting] = useState(false);
+  const exportOffice = async () => {
+    if (!open || exporting || exportFormat === "source") return;
+    const generation = autosaveGenerationRef.current;
+    const actor = userKey;
+    const current = () =>
+      generation === autosaveGenerationRef.current && actor === exportActorRef.current;
+    setExporting(true);
+    try {
+      const { downloadDocument } = await import("@/lib/writing-export/export");
+      if (current() && (await downloadDocument(exportFormat, artifactTitle, value, current)))
+        toast.success("Document exported");
+    } catch (error) {
+      if (current()) toast.error(error instanceof Error ? error.message : "Document export failed");
+    } finally {
+      if (current()) setExporting(false);
+    }
+  };
+  useEffect(() => {
+    setExporting(false);
+  }, [open, userKey, initialContent]);
 
   const exportDocument = () => {
     const extension = kind === "writing" ? "md" : kind === "website" ? "html" : "txt";
@@ -219,44 +304,88 @@ export function ArtifactEditor({
   };
 
   useEffect(() => {
-    if (!open || saveState !== "unsaved") return;
-    setSaveState("saving");
+    // Compare with the latest scheduled snapshot, not only the last completed
+    // write. If edit A is in flight and the user reverts to the prior value,
+    // that revert still needs to queue behind A.
+    if (!open || value === lastScheduledValueRef.current) return;
+    if (
+      canPersistVersions &&
+      (!collaboration.ready ||
+        collaboration.conflict ||
+        collaboration.error ||
+        !remoteSnapshot?.canEdit)
+    )
+      return;
     let cancelled = false;
+    const snapshot = value;
+    const editRevision = localEditRevisionRef.current;
+    const generation = autosaveGenerationRef.current;
     const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      lastScheduledValueRef.current = snapshot;
+      setSaveState("saving");
       void (async () => {
         // Persist first, then label the entry honestly: only a resolved server
         // write may be shown as saved beyond this session.
         let durable = false;
-        if (canPersistVersions && chatId && messageId && value.trim()) {
+        if (canPersistVersions && chatId && messageId) {
           try {
-            await saveVersionFn({
-              data: {
-                chatId,
-                messageId,
-                source: "inline_edit",
-                content: value,
-                originalContent: initialContent,
-                accepted: true,
-              },
-            });
+            // The queue orders this device's writes; the database CAS also
+            // rejects an older snapshot from another editor or device.
+            pendingAutosavesRef.current += 1;
+            await autosaveQueueRef.current
+              .enqueue(() => {
+                if (autosaveGenerationRef.current !== generation)
+                  throw new Error("This editing session changed.");
+                return saveVersionFn(snapshot);
+              })
+              .finally(() => {
+                pendingAutosavesRef.current -= 1;
+              });
+            // A later edit cancels this effect's UI work, but it does not
+            // cancel an already-started server write. Preserve that successful
+            // durable value for failure recovery within the same artifact.
+            if (autosaveGenerationRef.current === generation) {
+              lastRecordedValueRef.current = snapshot;
+              setAcknowledgedEditRevision(editRevision);
+            }
             durable = true;
             if (!cancelled) setHistoryError(null);
           } catch (error) {
-            if (!cancelled) {
+            const recovery = recoverFailedArtifactSnapshot({
+              failedSnapshot: snapshot,
+              scheduledSnapshot: lastScheduledValueRef.current,
+              durableSnapshot: lastRecordedValueRef.current,
+              generation,
+              currentGeneration: autosaveGenerationRef.current,
+              effectCancelled: cancelled,
+            });
+            if (recovery.scheduledSnapshot !== lastScheduledValueRef.current) {
+              // Invalidate only this failed latest snapshot. A genuinely newer
+              // scheduled edit must retain its comparison point.
+              lastScheduledValueRef.current = recovery.scheduledSnapshot;
               setHistoryError(
                 error instanceof Error
                   ? error.message
                   : "This edit is only kept for the current session.",
               );
+              if (recovery.retryCurrentValue) {
+                // The effect that owned the failed write was cancelled, so its
+                // visible value otherwise has no effect left to retry it.
+                setAutosaveRetryNonce((nonce) => nonce + 1);
+              }
             }
           }
         }
         if (cancelled) return;
+        if (!canPersistVersions && autosaveGenerationRef.current === generation) {
+          lastRecordedValueRef.current = snapshot;
+        }
         setVersions((current) =>
           [
             {
               id: Date.now(),
-              content: value,
+              content: snapshot,
               savedAt: Date.now(),
               label: durable ? "Saved to this chat" : "Session only",
               durable,
@@ -264,7 +393,7 @@ export function ArtifactEditor({
             ...current,
           ].slice(0, 30),
         );
-        setSaveState("saved");
+        setSaveState(durable ? "saved" : "session_only");
       })();
     }, 900);
     return () => {
@@ -273,13 +402,17 @@ export function ArtifactEditor({
     };
   }, [
     open,
-    saveState,
     value,
     canPersistVersions,
     chatId,
     messageId,
     initialContent,
     saveVersionFn,
+    autosaveRetryNonce,
+    collaboration.ready,
+    collaboration.conflict,
+    collaboration.error,
+    remoteSnapshot?.canEdit,
   ]);
 
   if (!open) return null;
@@ -294,6 +427,12 @@ export function ArtifactEditor({
   const save = async () => {
     if (!isSignedIn) {
       clerk?.openSignIn();
+      return;
+    }
+    if (value.length > 200_000) {
+      toast.error(
+        "This draft is too large for Library. Export it to download the complete file instead.",
+      );
       return;
     }
     setSaving(true);
@@ -311,7 +450,7 @@ export function ArtifactEditor({
           title,
           item_type,
           source: "chat",
-          content_text: value.slice(0, 100_000),
+          content_text: value,
         },
       });
       setSaved(true);
@@ -325,8 +464,19 @@ export function ArtifactEditor({
   };
 
   const improve = () => {
-    if (!onImprove) return;
-    const trimmed = value.trim().slice(0, 8000);
+    if (!onImprove || (canPersistVersions && !remoteSnapshot?.canEdit)) return;
+    const start = textareaRef.current?.selectionStart ?? 0;
+    const end = textareaRef.current?.selectionEnd ?? 0;
+    const selected = end > start ? value.slice(start, end) : value;
+    const trimmed = selected.trim();
+    if (!trimmed) {
+      toast.error("Add some content to improve first.");
+      return;
+    }
+    if (trimmed.length > 8000) {
+      toast.error("Improve supports up to 8,000 characters at once. Select a shorter section.");
+      return;
+    }
     const prompt =
       kind === "writing"
         ? `Improve the following text. Keep meaning intact, tighten prose, fix grammar, and return only the improved version.\n\n${trimmed}`
@@ -352,7 +502,14 @@ export function ArtifactEditor({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-            <RealtimeReadiness resource="Artifact" />
+            <CollaborationStatus {...collaboration.presence} />
+            <span className="text-[11px] text-muted-foreground">
+              {projectId
+                ? "Shared with Project members"
+                : canPersistVersions
+                  ? "Only you"
+                  : "This session only"}
+            </span>
             {kind === "website" && !splitView && (
               <div className="ml-2 inline-flex rounded border border-border overflow-hidden">
                 <button
@@ -376,7 +533,13 @@ export function ArtifactEditor({
               aria-live="polite"
               role="status"
             >
-              {saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved" : "Saved"}
+              {saveState === "saving"
+                ? "Saving…"
+                : saveState === "unsaved"
+                  ? "Unsaved"
+                  : saveState === "session_only"
+                    ? "Session only"
+                    : "Saved"}
             </span>
             <span className="hidden text-xs text-muted-foreground lg:inline">
               {statistics.words.toLocaleString()} words · {statistics.readingMinutes} min read ·{" "}
@@ -493,25 +656,11 @@ export function ArtifactEditor({
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0">
-                {truncated && (
-                  <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-yellow-50 text-yellow-900 border-b border-yellow-200">
-                    <span>
-                      Showing the first {LONG_THRESHOLD.toLocaleString()} characters for
-                      performance. Full content is preserved.
-                    </span>
-                    <button
-                      onClick={() => {
-                        setValue(initialContent);
-                        setTruncated(false);
-                      }}
-                      className="px-2 py-1 rounded border border-yellow-300 hover:bg-yellow-100 whitespace-nowrap"
-                    >
-                      Load full content
-                    </button>
-                  </div>
-                )}
                 <textarea
                   ref={textareaRef}
+                  readOnly={Boolean(
+                    canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit,
+                  )}
                   value={value}
                   onChange={(e) => updateValue(e.target.value)}
                   spellCheck={!isCode}
@@ -568,17 +717,49 @@ export function ArtifactEditor({
                       {new Date(version.savedAt).toLocaleTimeString()}
                     </div>
                     <button
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium"
-                      onClick={() => {
-                        updateValue(version.content);
-                        toast.success("Version restored");
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium disabled:opacity-50"
+                      disabled={canPersistVersions && !remoteSnapshot?.canEdit}
+                      onClick={async () => {
+                        const generation = autosaveGenerationRef.current;
+                        try {
+                          const content = version.remoteRevision
+                            ? await collaboration.versionContent(version.remoteRevision)
+                            : version.content;
+                          if (autosaveGenerationRef.current !== generation) return;
+                          updateValue(content);
+                          toast.success("Version restored");
+                        } catch (error) {
+                          if (autosaveGenerationRef.current !== generation) return;
+                          toast.error(
+                            error instanceof Error ? error.message : "Version could not be loaded.",
+                          );
+                        }
                       }}
                     >
                       <RotateCcw className="h-3 w-3" /> Restore
                     </button>
                     <button
                       className="ml-3 mt-2 inline-flex items-center gap-1 text-xs font-medium"
-                      onClick={() => setCompareVersion(version.id)}
+                      onClick={async () => {
+                        const generation = autosaveGenerationRef.current;
+                        try {
+                          const content = version.remoteRevision
+                            ? await collaboration.versionContent(version.remoteRevision)
+                            : version.content;
+                          if (autosaveGenerationRef.current !== generation) return;
+                          setVersions((current) =>
+                            current.map((row) =>
+                              row.id === version.id ? { ...row, content } : row,
+                            ),
+                          );
+                          setCompareVersion(version.id);
+                        } catch (error) {
+                          if (autosaveGenerationRef.current !== generation) return;
+                          toast.error(
+                            error instanceof Error ? error.message : "Version could not be loaded.",
+                          );
+                        }
+                      }}
                     >
                       <GitCompare className="h-3 w-3" /> Compare
                     </button>
@@ -592,65 +773,149 @@ export function ArtifactEditor({
               className="fixed inset-x-0 bottom-0 z-20 max-h-[70dvh] w-full shrink-0 overflow-y-auto rounded-t-2xl border bg-[var(--surface-secondary)] p-3 shadow-xl md:static md:max-h-none md:w-72 md:rounded-none md:border-y-0 md:border-r-0 md:shadow-none"
               aria-label="Artifact comments"
             >
-              <h2 className="text-sm font-semibold">Comments</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Comments stay with this open editing session.
-              </p>
-              <textarea
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
-                placeholder="Comment on the document or current selection"
-                aria-label="Artifact comment"
-              />
-              <button
-                disabled={!commentDraft.trim()}
-                onClick={() => {
-                  const area = textareaRef.current;
-                  const selection = area ? value.slice(area.selectionStart, area.selectionEnd) : "";
-                  setComments((current) => [
-                    {
-                      id: Date.now(),
-                      body: commentDraft.trim(),
-                      selection: selection.slice(0, 160),
-                    },
-                    ...current,
-                  ]);
-                  setCommentDraft("");
-                }}
-                className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
-              >
-                Add comment
-              </button>
-              {comments.length === 0 ? (
-                <p className="mt-4 text-xs text-muted-foreground">No comments yet.</p>
+              {canPersistVersions ? (
+                remoteSnapshot ? (
+                  <CanvasComments
+                    key={remoteSnapshot.document.id}
+                    snapshot={remoteSnapshot}
+                    value={value}
+                    actorId={userKey}
+                    dirty={value !== lastRecordedValueRef.current || collaboration.conflict}
+                    onComment={(data) => collaboration.commentMutation("comment", data)}
+                    onDelete={(commentId) =>
+                      collaboration.commentMutation("delete_comment", { commentId })
+                    }
+                    onOlder={collaboration.olderComments}
+                    selection={() => {
+                      const area = textareaRef.current;
+                      if (!area || area.selectionStart === area.selectionEnd) return null;
+                      const start = Array.from(value.slice(0, area.selectionStart)).length;
+                      const end = Math.min(
+                        start + 500,
+                        Array.from(value.slice(0, area.selectionEnd)).length,
+                      );
+                      return { start, end };
+                    }}
+                    onSelect={(start, end) => {
+                      setMode("edit");
+                      requestAnimationFrame(() => {
+                        textareaRef.current?.focus();
+                        textareaRef.current?.setSelectionRange(start, end);
+                      });
+                    }}
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Comments are unavailable until this Canvas reconnects.
+                  </p>
+                )
               ) : (
-                <ul className="mt-4 space-y-2">
-                  {comments.map((comment) => (
-                    <li key={comment.id} className="rounded-lg border bg-background p-2 text-xs">
-                      {comment.selection && (
-                        <blockquote className="mb-2 border-l-2 pl-2 text-muted-foreground">
-                          {comment.selection}
-                        </blockquote>
-                      )}
-                      <p>{comment.body}</p>
-                      <button
-                        onClick={() =>
-                          setComments((current) =>
-                            current.filter((value) => value.id !== comment.id),
-                          )
-                        }
-                        className="mt-2 text-destructive"
-                      >
-                        Delete
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <h2 className="text-sm font-semibold">Comments</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Comments stay with this open editing session.
+                  </p>
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
+                    placeholder="Comment on the document or current selection"
+                    aria-label="Artifact comment"
+                  />
+                  <button
+                    disabled={!commentDraft.trim()}
+                    onClick={() => {
+                      const area = textareaRef.current;
+                      const selection = area
+                        ? value.slice(area.selectionStart, area.selectionEnd)
+                        : "";
+                      setComments((current) => [
+                        {
+                          id: Date.now(),
+                          body: commentDraft.trim(),
+                          selection: selection.slice(0, 160),
+                        },
+                        ...current,
+                      ]);
+                      setCommentDraft("");
+                    }}
+                    className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+                  >
+                    Add comment
+                  </button>
+                  {comments.length === 0 ? (
+                    <p className="mt-4 text-xs text-muted-foreground">No comments yet.</p>
+                  ) : (
+                    <ul className="mt-4 space-y-2">
+                      {comments.map((comment) => (
+                        <li
+                          key={comment.id}
+                          className="rounded-lg border bg-background p-2 text-xs"
+                        >
+                          {comment.selection && (
+                            <blockquote className="mb-2 border-l-2 pl-2 text-muted-foreground">
+                              {comment.selection}
+                            </blockquote>
+                          )}
+                          <p>{comment.body}</p>
+                          <button
+                            onClick={() =>
+                              setComments((current) =>
+                                current.filter((value) => value.id !== comment.id),
+                              )
+                            }
+                            className="mt-2 text-destructive"
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </aside>
           ) : null}
         </div>
+
+        {canPersistVersions && (collaboration.conflict || collaboration.error) && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 border-t border-amber-400/40 bg-amber-400/10 p-3 text-sm"
+          >
+            <span>
+              {collaboration.conflict
+                ? "Another editor saved changes. Your draft is preserved; copy it before loading the current version."
+                : collaboration.error}
+            </span>
+            <button className="min-h-9 rounded-lg border px-3" onClick={() => void copy(value)}>
+              Copy my draft
+            </button>
+            {collaboration.conflict ? (
+              <button
+                className="min-h-9 rounded-lg border px-3"
+                onClick={() => {
+                  const content = collaboration.adopt();
+                  if (content !== null) {
+                    autosaveGenerationRef.current += 1;
+                    localEditRevisionRef.current = 0;
+                    setAcknowledgedEditRevision(0);
+                    lastRecordedValueRef.current = content;
+                    lastScheduledValueRef.current = content;
+                    setValue(content);
+                    setSaveState("saved");
+                  }
+                }}
+              >
+                Load current version
+              </button>
+            ) : (
+              <button className="min-h-9 rounded-lg border px-3" onClick={collaboration.retry}>
+                Reconnect
+              </button>
+            )}
+          </div>
+        )}
 
         {compareVersion && versions.find((version) => version.id === compareVersion) ? (
           <div
@@ -705,9 +970,28 @@ export function ArtifactEditor({
             )}
             {copied ? "Copied" : "Copy edited"}
           </button>
+          {kind === "writing" && (
+            <select
+              aria-label="Export document format"
+              value={exportFormat}
+              onChange={(event) => setExportFormat(event.target.value as typeof exportFormat)}
+              className="text-xs px-2 py-1.5 rounded border border-border bg-background"
+            >
+              <option value="source">Markdown</option>
+              <option value="pdf">PDF</option>
+              <option value="docx">Word DOCX</option>
+              <option value="xlsx">Excel XLSX</option>
+              <option value="pptx">PowerPoint PPTX</option>
+            </select>
+          )}
           <button
-            onClick={exportDocument}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
+            onClick={() =>
+              kind === "writing" && exportFormat !== "source"
+                ? void exportOffice()
+                : exportDocument()
+            }
+            disabled={exporting}
+            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50"
           >
             <Download className="mr-1 inline h-3.5 w-3.5" /> Export
           </button>
@@ -760,6 +1044,7 @@ export function ArtifactEditor({
           {onImprove && (
             <button
               onClick={improve}
+              disabled={canPersistVersions && !remoteSnapshot?.canEdit}
               className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
             >
               <Wand2 className="w-3.5 h-3.5 inline mr-1" />

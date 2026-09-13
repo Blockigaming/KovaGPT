@@ -1,5 +1,5 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
-import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { createClient } from "@supabase/supabase-js";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -18,22 +18,8 @@ export const AGENT_LIMITS: Record<
 };
 
 export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEntitlement | null> {
-  const { data, error } = await caller.supabaseAdmin
-    .from("subscriptions")
-    .select("price_id, status, current_period_end, environment")
-    .eq("user_id", caller.userId)
-    .eq("environment", BILLING_ENV)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(10);
-  if (error) {
-    console.error("[getAgentEntitlement] subscription lookup failed", error);
-    return null;
-  }
-  return resolveAgentEntitlement(data, {
-    billingEnvironment: BILLING_ENV,
-    tierForLookupKey,
-  });
+  const tier = await resolveEffectiveBillingTier(caller.supabaseAdmin, caller.userId);
+  return resolveAgentEntitlement(tier);
 }
 
 /** Browser automation remains intentionally unavailable until the isolated worker is deployed. */
@@ -125,7 +111,6 @@ export async function controlAgentRun(
   if (!run) throw new Error("agent_run_not_found");
   const safeRun = run as unknown as { status: string };
   if (command === "resume") throw new Error("browser_agent_unavailable");
-  if (command === "cancel" && safeRun.status === "cancelled") return { status: "cancelled" };
   if (command === "delete") {
     if (!["completed", "failed", "cancelled"].includes(safeRun.status))
       throw new Error("active_run_cannot_be_deleted");
@@ -137,53 +122,26 @@ export async function controlAgentRun(
     if (error) throw new Error("agent_run_delete_failed");
     return { deleted: true };
   }
-  const allowedStatuses =
-    command === "pause"
-      ? ["queued", "leased", "planning", "running", "retry_wait"]
-      : command === "deny"
-        ? ["approval_needed"]
-        : ["queued", "leased", "planning", "running", "approval_needed", "paused", "retry_wait"];
-  if (!allowedStatuses.includes(safeRun.status)) throw new Error("agent_run_not_cancellable");
-  if (command === "deny") {
-    if (!approvalId) throw new Error("approval_id_required");
-    const { data: approval, error } = await db
-      .from("integration_action_approvals")
-      .update({
-        status: "denied",
-        decided_at: new Date().toISOString(),
-      } as never)
-      .eq("id", approvalId)
-      .eq("owner_id", caller.userId)
-      .eq("status", "pending")
-      .select("id")
-      .maybeSingle();
-    if (error || !approval) throw new Error("approval_not_pending");
+  // The caller-scoped RPC locks the run and commits approval decisions,
+  // terminal child cleanup, and evidence atomically. Unbound legacy approvals
+  // cannot be associated using caller-supplied metadata.
+  const { data, error } = await caller.supabaseUser.rpc("control_disabled_browser_run", {
+    p_run_id: runId,
+    p_command: command,
+    p_approval_id: approvalId ?? null,
+  });
+  if (error) {
+    const safeErrors = new Set([
+      "agent_run_not_found",
+      "agent_run_not_cancellable",
+      "approval_id_required",
+      "approval_not_pending",
+      "browser_agent_unavailable",
+    ]);
+    throw new Error(safeErrors.has(error.message) ? error.message : "agent_control_unavailable");
   }
-  const status = command === "pause" ? "paused" : "cancelled";
-  const { data: transitioned, error: transitionError } = await db
-    .from("agent_runs")
-    .update({
-      status,
-      available_at: new Date().toISOString(),
-      lease_owner: null,
-      lease_expires_at: null,
-      cancelled_at: command === "cancel" || command === "deny" ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", runId)
-    .eq("owner_id", caller.userId)
-    .eq("status", safeRun.status)
-    .select("id")
-    .maybeSingle();
-  if (transitionError || !transitioned) throw new Error("agent_run_state_changed");
-  const { error: eventError } = await db.from("agent_run_events").insert({
-    run_id: runId,
-    owner_id: caller.userId,
-    kind: command === "deny" ? "approval" : "log",
-    safe_payload: { command, result: "accepted" },
-  } as never);
-  if (eventError) throw new Error("agent_event_write_failed");
-  return { status, auditRecorded: true };
+  if (!data) throw new Error("agent_control_unavailable");
+  return data;
 }
 
 export async function retryAgentRun(

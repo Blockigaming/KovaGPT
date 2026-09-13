@@ -5,9 +5,6 @@ import test from "node:test";
 import { resolveAgentEntitlement } from "../../src/agents/entitlement-policy.mjs";
 import { getDeepResearchAccess } from "../../src/lib/ai/deep-research-access.mjs";
 
-const exactTier = (priceId) =>
-  priceId === "plus_monthly" ? "plus" : priceId === "pro_monthly" ? "pro" : "free";
-
 test("Deep Research rejects anonymous and free callers before a provider can run", async () => {
   let providerCalls = 0;
   const provider = async () => {
@@ -36,66 +33,12 @@ test("Deep Research rejects anonymous and free callers before a provider can run
   );
 });
 
-test("agent entitlement accepts only live, exact, active, unexpired paid plans", () => {
-  const now = Date.parse("2026-08-01T00:00:00.000Z");
-  const resolve = (rows) =>
-    resolveAgentEntitlement(rows, {
-      billingEnvironment: "live",
-      tierForLookupKey: exactTier,
-      now,
-    });
-
-  assert.equal(
-    resolve([
-      {
-        environment: "live",
-        price_id: "plus_monthly",
-        status: "active",
-        current_period_end: "2026-09-01T00:00:00.000Z",
-      },
-    ]),
-    "plus",
-  );
-  assert.equal(
-    resolve([
-      {
-        environment: "live",
-        price_id: "pro_monthly",
-        status: "trialing",
-        current_period_end: "2026-09-01T00:00:00.000Z",
-      },
-    ]),
-    "pro",
-  );
-
-  for (const row of [
-    {
-      environment: "sandbox",
-      price_id: "pro_monthly",
-      status: "active",
-      current_period_end: "2026-09-01T00:00:00.000Z",
-    },
-    {
-      environment: "live",
-      price_id: "plus_monthly_lookalike",
-      status: "active",
-      current_period_end: "2026-09-01T00:00:00.000Z",
-    },
-    {
-      environment: "live",
-      price_id: "pro_monthly",
-      status: "canceled",
-      current_period_end: "2026-09-01T00:00:00.000Z",
-    },
-    {
-      environment: "live",
-      price_id: "plus_monthly",
-      status: "active",
-      current_period_end: "2026-07-31T23:59:59.000Z",
-    },
-  ]) {
-    assert.equal(resolve([row]), null);
-  }
+test("agent policy accepts only a paid tier already resolved by the database", () => {
+  assert.equal(resolveAgentEntitlement("plus"), "plus");
+  assert.equal(resolveAgentEntitlement("pro"), "pro");
+  assert.equal(resolveAgentEntitlement("free"), null);
+  assert.equal(resolveAgentEntitlement(null), null);
+  assert.equal(resolveAgentEntitlement("plus_monthly"), null);
 });
 
 test("server routes wire entitlement checks ahead of costly research/provider calls", async () => {
@@ -110,11 +53,7 @@ test("server routes wire entitlement checks ahead of costly research/provider ca
   assert.ok(accessGate < chat.indexOf("missingAiProviderResponse()"));
   assert.ok(accessGate < chat.indexOf("return handleDeepResearchRequest("));
 
-  assert.match(execution, /\.eq\("environment", BILLING_ENV\)/);
-  const lookupErrorGate = execution.indexOf("if (error) {");
-  const entitlementResolver = execution.indexOf("return resolveAgentEntitlement(data");
-  assert.notEqual(lookupErrorGate, -1);
-  assert.ok(lookupErrorGate < entitlementResolver);
-  assert.match(execution, /resolveAgentEntitlement\(data/);
-  assert.doesNotMatch(execution, /price\.includes\(/);
+  assert.match(execution, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, caller\.userId\)/);
+  assert.match(execution, /return resolveAgentEntitlement\(tier\)/);
+  assert.doesNotMatch(execution, /tierForLookupKey|\.from\("subscriptions"\)|price\.includes\(/);
 });

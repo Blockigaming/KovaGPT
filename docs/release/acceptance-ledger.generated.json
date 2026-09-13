@@ -1,0 +1,2361 @@
+{
+  "schemaVersion": 2,
+  "generatedFrom": [
+    "docs/release/acceptance-ledger.md",
+    "docs/release/kova-final-goal-2026-09-11.md",
+    "docs/release/final-goal-contract.json",
+    "docs/product-parity/capability-audit.json",
+    "docs/release-reconciliation/test-inventory.json"
+  ],
+  "reconciledAt": "2026-09-12",
+  "auditedMainCommit": "b046727e3336b0f8df48a8097ad131e94cbf4ffe",
+  "reviewedImplementationBaseline": {
+    "pullRequest": 319,
+    "head": "20940476881dadabfcedbfeadb4aba328dd8cd52"
+  },
+  "ownerDeclaredOverallProgress": 76.5,
+  "progressKind": "owner_declared_checkpoint",
+  "progressRecalculated": false,
+  "uiCompletion": {
+    "value": 1,
+    "kind": "separate_owner_quality_assessment",
+    "recalculated": false
+  },
+  "finalGoal": {
+    "source": "docs/release/kova-final-goal-2026-09-11.md",
+    "owner": "Zachary",
+    "scopeUpdated": "2026-09-11",
+    "voiceRequired": true,
+    "requirements": [
+      {
+        "id": "FG-01",
+        "owner": "Zachary",
+        "title": "Conversation, models, and reasoning",
+        "mappedAreaIds": ["01", "03", "12"],
+        "sourceSection": "Conversation, models, and reasoning",
+        "status": "source_partial",
+        "dependencies": [
+          "Approved model providers and deployment aliases",
+          "Server-owned plan entitlements and metering",
+          "Durable chat and Temporary Chat privacy boundaries"
+        ],
+        "acceptanceTest": "Exercise streaming, stop, retry, regenerate, edit, branch, persistence, explicit model selection, fallbacks, and private Temporary Chat behavior against the exact deployed candidate.",
+        "evidence": [
+          "src/routes/api/chat.ts",
+          "src/lib/modes.ts",
+          "tests/unit/chat-history-sync.test.mjs"
+        ],
+        "boundary": "The current bounded chat and mode source does not establish Astra-class availability, live provider quality, or production persistence.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-02",
+        "owner": "Zachary",
+        "title": "Search, browsing, and research",
+        "mappedAreaIds": ["04", "05", "06"],
+        "sourceSection": "Search, browsing, and research",
+        "status": "source_partial",
+        "dependencies": [
+          "Search provider credentials and quotas",
+          "Connected-app authorization",
+          "Bounded browser runtime and confirmation policy"
+        ],
+        "acceptanceTest": "Run current-source web research and an approved signed-in browser task with citations, steering, confirmations, cancellation, durable recovery, and audit evidence.",
+        "evidence": [
+          "src/lib/ai/search.server.ts",
+          "src/lib/ai/deep-research.server.ts",
+          "docs/work-browser-authority.md"
+        ],
+        "boundary": "Search and bounded research exist, but safe signed-in computer use and complete cross-source production acceptance remain unfinished.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-03",
+        "owner": "Zachary",
+        "title": "Multimodal input and understanding",
+        "mappedAreaIds": ["02", "10", "15"],
+        "sourceSection": "Multimodal input and understanding",
+        "status": "source_partial",
+        "dependencies": [
+          "Secure upload and storage",
+          "Provider support for each media type",
+          "Camera, microphone, and screen permission UX"
+        ],
+        "acceptanceTest": "Verify supported documents, images, audio, video, camera, microphone, and screen inputs across extraction, reasoning, provenance, privacy, and failure states on physical devices.",
+        "evidence": [
+          "src/components/ChatInput.tsx",
+          "src/lib/multimodal/files.server.ts",
+          "tests/unit/document-export-roundtrip.test.mjs"
+        ],
+        "boundary": "Text, image, and document foundations exist; audio, video, camera, microphone, and screen-input completion is not established.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-04",
+        "owner": "Zachary",
+        "title": "Image creation and editing",
+        "mappedAreaIds": ["11"],
+        "sourceSection": "Image creation and editing",
+        "status": "source_partial",
+        "dependencies": [
+          "Approved image providers and capability discovery",
+          "Shared premium-compute reservations",
+          "Safety, provenance, and storage lifecycle"
+        ],
+        "acceptanceTest": "Generate, edit, mask, vary, save, share, and download images through fast and precision routes while proving quality selection, safety, provenance, quotas, retries, and settlement.",
+        "evidence": [
+          "docs/image-edit-contract.md",
+          "src/components/ImageEditControls.tsx",
+          "tests/unit/image-provider-hardening.test.mjs"
+        ],
+        "boundary": "Current image generation/editing source does not prove Flare-class or Sunburst-class routing, live quality tiers, or production settlement.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-05",
+        "owner": "Zachary",
+        "title": "Live voice and audio",
+        "mappedAreaIds": ["02", "24"],
+        "sourceSection": "Live voice and audio",
+        "status": "specified_unimplemented",
+        "dependencies": [
+          "Approved realtime audio provider",
+          "Explicit microphone and recording consent",
+          "Per-minute and backend-compute metering",
+          "Device and accessibility validation"
+        ],
+        "acceptanceTest": "Complete a full-duplex conversation with barge-in, captions, device selection, privacy controls, agent delegation, reconnect, and bounded cost on supported devices.",
+        "evidence": [],
+        "boundary": "Voice is required by the September 11 goal but remains unavailable; no prior exclusion may be treated as current scope.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-06",
+        "owner": "Zachary",
+        "title": "Files, data analysis, and generated artifacts",
+        "mappedAreaIds": ["10", "15", "16"],
+        "sourceSection": "Files, data analysis, and generated artifacts",
+        "status": "source_partial",
+        "dependencies": [
+          "Private file storage and extraction",
+          "Isolated analysis runtime",
+          "Durable artifact versioning and export"
+        ],
+        "acceptanceTest": "Round-trip representative documents, spreadsheets, presentations, PDFs, code, notebooks, charts, and templates through upload, analysis, editing, versioning, export, sharing, and deletion.",
+        "evidence": [
+          "src/components/ArtifactEditor.tsx",
+          "src/lib/multimodal/artifacts.server.ts",
+          "tests/unit/document-export-roundtrip.test.mjs"
+        ],
+        "boundary": "Bounded file, sandbox, editor, and export source exists; the complete template-driven artifact and real-file matrix is unfinished.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-07",
+        "owner": "Zachary",
+        "title": "Projects, memory, personalization, and learning",
+        "mappedAreaIds": ["09", "12", "20"],
+        "sourceSection": "Projects, memory, personalization, and learning",
+        "status": "source_partial",
+        "dependencies": [
+          "Project membership and retention policy",
+          "Scoped memory consent and deletion",
+          "Durable learning progress"
+        ],
+        "acceptanceTest": "Verify project-scoped files, instructions, memory, sharing, retention, export/deletion, user memory controls, personalization, and Study progress across two accounts.",
+        "evidence": [
+          "src/lib/projects.functions.ts",
+          "src/lib/memory-sources.server.mjs",
+          "src/routes/study.tsx"
+        ],
+        "boundary": "Useful foundations exist, but Project retention, live two-account isolation, and final learning/personalization acceptance remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-08",
+        "owner": "Zachary",
+        "title": "Library and knowledge organization",
+        "mappedAreaIds": ["10"],
+        "sourceSection": "Library and knowledge organization",
+        "status": "source_partial",
+        "dependencies": [
+          "Owner-scoped storage and quotas",
+          "Artifact and Project relationship integrity",
+          "Retention, export, and deletion workers"
+        ],
+        "acceptanceTest": "Exercise search, filters, metadata, folders, preview, rename, move, versions, restore, sharing, quotas, retention, export, and deletion without orphaning or cross-tenant access.",
+        "evidence": [
+          "src/lib/library.functions.ts",
+          "src/lib/library-images.functions.ts",
+          "tests/unit/account-storage-artifacts.test.mjs"
+        ],
+        "boundary": "Library source is substantial; matching production schema/storage, restore/sharing depth, and live isolation remain unverified.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-09",
+        "owner": "Zachary",
+        "title": "Tasks and event-driven automation",
+        "mappedAreaIds": ["08"],
+        "sourceSection": "Tasks and event-driven automation",
+        "status": "source_partial",
+        "dependencies": [
+          "Durable scheduler heartbeat",
+          "Verified provider events and OAuth",
+          "Notification delivery",
+          "Shared premium-compute accounting"
+        ],
+        "acceptanceTest": "Run one-time, recurring, conditional, event-triggered, copied, and signed-in browser tasks through timezone changes, retries, pause/resume, limits, notifications, and audit history.",
+        "evidence": [
+          "src/lib/scheduled-tasks.functions.ts",
+          "src/lib/scheduled-task-events.server.ts",
+          "tests/unit/task-event-ingress.test.mjs"
+        ],
+        "boundary": "CRUD, recurrence, event-ingress, and worker contracts exist; shareable customization, live callbacks, free/paid limits, and browser-task acceptance remain incomplete.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-10",
+        "owner": "Zachary",
+        "title": "Durable agents and non-blocking work",
+        "mappedAreaIds": ["06", "07"],
+        "sourceSection": "Durable agents and non-blocking work",
+        "status": "source_partial",
+        "dependencies": [
+          "Durable run storage and worker identity",
+          "Portable sandbox/runtime adapters",
+          "Shared budgets, notifications, and artifacts"
+        ],
+        "acceptanceTest": "Start, steer, side-chat with, disconnect from, resume, cancel, and recover a multi-agent task across devices while enforcing context, authority, loop, concurrency, time, and cost bounds.",
+        "evidence": [
+          "docs/work-execution-protocol.md",
+          "src/lib/work-execution.server.ts",
+          "tests/unit/work-model-server.test.mjs"
+        ],
+        "boundary": "Durable Work and bounded specialist runs exist; side-chat, cross-task references, complete steering, and portable hosted/self-hosted runtime acceptance remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-11",
+        "owner": "Zachary",
+        "title": "Apps, connectors, tools, MCP, and WebMCP",
+        "mappedAreaIds": ["14", "25"],
+        "sourceSection": "Apps, connectors, tools, MCP, and WebMCP",
+        "status": "source_partial",
+        "dependencies": [
+          "OAuth clients and least-privilege scopes",
+          "Credential custody and revocation",
+          "Tool confirmation and audit policy",
+          "Trusted website tool discovery"
+        ],
+        "acceptanceTest": "Connect multiple accounts, discover approved tools, read and perform a confirmed write, revoke access, and prove provider-neutral MCP/WebMCP isolation, rate limits, and audit behavior.",
+        "evidence": [
+          "src/routes/apps.tsx",
+          "src/lib/mcp/index.ts",
+          "tests/unit/google-multiaccount.test.mjs"
+        ],
+        "boundary": "Google/GitHub and MCP foundations plus versioned workflow skills exist; WebMCP and complete provider/account live acceptance do not.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-12",
+        "owner": "Zachary",
+        "title": "Custom Kovas, reusable skills, and discovery",
+        "mappedAreaIds": ["13", "14"],
+        "sourceSection": "Custom Kovas, reusable skills, and discovery",
+        "status": "source_partial",
+        "dependencies": [
+          "Moderation and publication policy",
+          "Immutable version and installation storage",
+          "Permission manifests and ranking integrity"
+        ],
+        "acceptanceTest": "Create, test, version, publish, share, install, update, fork, archive, report, and delete a Kova and a reusable skill while proving permissions and tenant isolation.",
+        "evidence": [
+          "src/lib/custom-kovas.server.ts",
+          "src/lib/workflow-skills.server.ts",
+          "tests/unit/workflow-skills.test.mjs"
+        ],
+        "boundary": "Custom Kova and workflow-skill foundations exist; full discovery/store governance, analytics, organization distribution, and production canaries remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-13",
+        "owner": "Zachary",
+        "title": "Sharing and collaboration",
+        "mappedAreaIds": ["17", "18"],
+        "sourceSection": "Sharing and collaboration",
+        "status": "source_partial",
+        "dependencies": [
+          "Role and invitation policy",
+          "Realtime or conflict-safe asynchronous persistence",
+          "Notifications and revocation"
+        ],
+        "acceptanceTest": "Share and revoke chats, Projects, artifacts, files, agents, and tasks between two accounts; verify role changes, expiration, copy/fork, comments, mentions, conflicts, ownership transfer, and history.",
+        "evidence": [
+          "src/lib/shared-chats.functions.ts",
+          "src/lib/chat-history-bridge.ts",
+          "tests/unit/project-canvas-collaboration.test.mjs"
+        ],
+        "boundary": "Several sharing and collaboration paths exist; complete object coverage and live two-account/realtime behavior remain unfinished.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-14",
+        "owner": "Zachary",
+        "title": "Notifications and cross-device experience",
+        "mappedAreaIds": ["19", "24"],
+        "sourceSection": "Notifications and cross-device experience",
+        "status": "source_partial",
+        "dependencies": [
+          "Delivery providers and device permission",
+          "Preference, quiet-hour, and localization policy",
+          "Native clients where web/PWA cannot satisfy requirements"
+        ],
+        "acceptanceTest": "Deliver and deep-link in-app, email, push, and supported system notifications across reconnect, offline, device change, safe areas, accessibility, and localization.",
+        "evidence": [
+          "src/lib/notifications.server.ts",
+          "public/kova-sw.js",
+          "tests/unit/web-push-lifecycle.test.mjs"
+        ],
+        "boundary": "In-app and web-push foundations exist; email/system delivery, physical devices, native surfaces, and complete cross-device acceptance remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-15",
+        "owner": "Zachary",
+        "title": "Identity, safety, privacy, and user control",
+        "mappedAreaIds": ["21", "22", "26"],
+        "sourceSection": "Identity, safety, privacy, and user control",
+        "status": "source_partial",
+        "dependencies": [
+          "Supabase Auth and RLS",
+          "Age/family/legal policy",
+          "Moderation and incident operations",
+          "Cross-system export and deletion"
+        ],
+        "acceptanceTest": "Verify signup, OAuth, MFA, recovery, sessions/devices, linking, abuse controls, tenant isolation, family/admin policy, privacy choices, export, deletion, retention, and incident paths.",
+        "evidence": [
+          "src/routes/api/account.ts",
+          "tests/unit/auth-security.test.mjs",
+          "tests/unit/account-deletion-state.test.mjs"
+        ],
+        "boundary": "Substantial source controls exist; approved policy, live identity/delivery, cross-system erasure, recovery, and production evidence remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-16",
+        "owner": "Zachary",
+        "title": "Plans, entitlements, billing, and premium compute",
+        "mappedAreaIds": ["23"],
+        "sourceSection": "Plans, entitlements, billing, and premium compute",
+        "status": "source_partial",
+        "dependencies": [
+          "Approved commercial policy and Stripe configuration",
+          "One server-owned entitlement and compute ledger",
+          "Provider usage reconciliation and kill switches"
+        ],
+        "acceptanceTest": "Exercise checkout, portal, upgrade/downgrade, cancellation, payment failure, idempotent webhooks, and bounded reservations/settlement across every billable category and retry edge.",
+        "evidence": [
+          "src/utils/payments.functions.ts",
+          "src/lib/pricing/developer-billing.server.ts",
+          "tests/unit/stripe-checkout-authority.test.mjs"
+        ],
+        "boundary": "Consumer/developer billing foundations exist; unified premium accounting across all categories and live commercial canaries are not established.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-17",
+        "owner": "Zachary",
+        "title": "Developer platform",
+        "mappedAreaIds": ["25"],
+        "sourceSection": "Developer platform",
+        "status": "source_partial",
+        "dependencies": [
+          "Scoped credentials and OAuth clients",
+          "Versioned provider-neutral APIs and SDKs",
+          "Usage, billing, webhook, and support operations"
+        ],
+        "acceptanceTest": "Use documented APIs/SDKs for responses, streaming, files, images, audio, tools, agents, tasks, and webhooks with rotation, quotas, logs, versioning, revocation, and isolation.",
+        "evidence": [
+          "docs/developer-platform.md",
+          "src/lib/pricing/developer-platform.server.ts",
+          "tests/unit/developer-platform-ingress.test.mjs"
+        ],
+        "boundary": "Responses, files, SDK, MCP, and billing source exists; audio/realtime, agent/task breadth, public activation, support, and production canaries remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-18",
+        "owner": "Zachary",
+        "title": "Organization and enterprise operation",
+        "mappedAreaIds": ["26"],
+        "sourceSection": "Organization and enterprise operation",
+        "status": "source_partial",
+        "dependencies": [
+          "Approved organization/legal/retention policy",
+          "Verified domains, SSO/SAML, and SCIM identity",
+          "Administrative audit, analytics, and spending controls"
+        ],
+        "acceptanceTest": "Provision and offboard an organization across domain verification, SSO, SCIM, roles, groups, service accounts, retention, connector/model/tool policy, audit, export, deletion, and support.",
+        "evidence": [
+          "docs/organization-administration.md",
+          "src/routes/api/organizations/scim.ts",
+          "tests/unit/organization-scim-runtime.test.mjs"
+        ],
+        "boundary": "Organization, SSO adapter, and SCIM source exists; live IdP/domain/legal, retention execution, analytics, residency, and production tenant evidence remain.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-X1",
+        "owner": "Zachary",
+        "title": "Premium-compute safety contract",
+        "mappedAreaIds": ["03", "06", "07", "08", "11", "14", "15", "23", "25"],
+        "sourceSection": "Premium-compute safety contract",
+        "status": "source_partial",
+        "dependencies": [
+          "Unified server-owned entitlements",
+          "Atomic reservations and durable settlement",
+          "Provider attempt reconciliation",
+          "Global kill switches and anomaly alerts"
+        ],
+        "acceptanceTest": "Prove per-request, user, period, plan, organization, and global bounds across duplicates, retries, continuations, delegates, tools, disconnects, cancellations, partial failures, unknown usage, and rollover.",
+        "evidence": [
+          "src/lib/pricing/developer-billing.server.ts",
+          "src/lib/work-execution.server.ts",
+          "tests/unit/developer-billing-migration.test.mjs"
+        ],
+        "boundary": "Several bounded ledgers exist; one coherent cross-category premium-compute system is not yet proven.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-X2",
+        "owner": "Zachary",
+        "title": "Interface and product-quality contract",
+        "mappedAreaIds": [
+          "01",
+          "02",
+          "03",
+          "04",
+          "05",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27"
+        ],
+        "sourceSection": "Interface and product-quality contract",
+        "status": "source_partial",
+        "dependencies": [
+          "Cohesive design system and truthful capability metadata",
+          "Complete lifecycle-state coverage",
+          "Desktop, mobile, native, accessibility, localization, motion, and performance evidence",
+          "Owner acceptance"
+        ],
+        "acceptanceTest": "Pass the agreed viewport, theme, touch, keyboard, screen-reader, reduced-motion, long-content, safe-area, no-overflow, lifecycle-state, and performance matrices, then obtain owner acceptance.",
+        "evidence": [
+          "tests/e2e/ui-quality.spec.ts",
+          "tests/e2e/workspace-visual-coherence.spec.ts"
+        ],
+        "boundary": "Hosted browser gates verify bounded current journeys, not the complete interface contract; UI remains the separate owner-declared 1% assessment.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      },
+      {
+        "id": "FG-X3",
+        "owner": "Zachary",
+        "title": "Architecture, independence, and release gates",
+        "mappedAreaIds": [
+          "01",
+          "02",
+          "03",
+          "04",
+          "05",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27"
+        ],
+        "sourceSection": "Architecture and implementation principles",
+        "status": "not_verified",
+        "dependencies": [
+          "Supabase, Cloudflare, Azure, Microsoft/Entra, Stripe, and GitHub release evidence",
+          "Zero functional Lovable dependency",
+          "Backups, monitoring, rollback, and exact deployed provenance"
+        ],
+        "acceptanceTest": "Pass every exact-commit source/review/CI gate, then with separate approval prove migrations, deployed SHA/image, production journeys, provider/billing safety, origin protection, monitoring, backups, recovery, and rollback.",
+        "evidence": ["docs/RELEASE_RUNBOOK.md", "docs/release-provenance.md"],
+        "boundary": "Source and hosted evidence do not establish staging or production; no merge, migration, deployment, purchase, or live configuration change is authorized here.",
+        "source": "docs/release/kova-final-goal-2026-09-11.md"
+      }
+    ]
+  },
+  "reviewedImplementationEvidence": {
+    "pullRequest": 319,
+    "pullRequestHead": "20940476881dadabfcedbfeadb4aba328dd8cd52",
+    "workflows": [
+      { "id": 34664358655, "name": "KovaGPT CI", "conclusion": "success" },
+      { "id": 34664358673, "name": "Azure Container Readiness", "conclusion": "success" }
+    ]
+  },
+  "verification": {
+    "masterAreas": 27,
+    "stagesPerArea": 5,
+    "acceptanceRows": 135,
+    "uniqueAcceptanceRows": 135,
+    "finalGoalRequirements": 21,
+    "finalGoalStatusCounts": {
+      "source_partial": 19,
+      "specified_unimplemented": 1,
+      "not_verified": 1
+    },
+    "evidencePaths": 167,
+    "missingEvidencePaths": 0,
+    "retainedLegacyTests": 140,
+    "missingRetainedLegacyTests": 0,
+    "currentTestFiles": 490,
+    "currentTestInventorySha256": "11bf0cf47c32ba91559a9e9daccada41abaefc163625ace1bbbb778e1a4ccaa6",
+    "statusCounts": {
+      "partial": 23,
+      "verified_for_implemented_scope": 27,
+      "verified_for_reviewed_ancestor_scope": 27,
+      "not_verified": 54,
+      "accepted": 4
+    }
+  },
+  "rows": [
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Streaming, stop, edit, retry, regenerate, branching, history, and private Temporary Chat foundations are integrated.",
+      "evidence": [
+        "src/lib/chat-history-controller.mjs",
+        "src/lib/chat-store.ts",
+        "src/routes/api/chat.ts"
+      ],
+      "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/chat-history-database.test.mjs",
+        "tests/unit/chat-history-sync.test.mjs",
+        "tests/unit/temporary-chat-retry-privacy.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "01",
+      "area": "Core chat",
+      "id": "01.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Explicit saveable/personalized Temporary Chat behavior, real provider use, authenticated persistence, and production smoke remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Draft, keyboard, paste/drop, attachment, document extraction, image, and mobile composer contracts are integrated.",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/lib/composer-paste.ts",
+        "src/lib/document-extraction/office.mjs",
+        "src/lib/document-extraction/pdf.ts"
+      ],
+      "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/composer-keyboard.test.mjs",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "02",
+      "area": "Composer and multimodal input",
+      "id": "02.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Audio, supported video, camera, microphone, screen input, physical-device permissions, and live provider proof remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-05", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Current client modes map to server-enforced roles, plans, budgets, deployment aliases, and capability checks.",
+      "evidence": [
+        "src/lib/modes.ts",
+        "src/lib/work-model-policy.mjs",
+        "src/lib/work-execution.server.ts"
+      ],
+      "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/work-model-policy.test.mjs",
+        "tests/unit/work-model-server.test.mjs",
+        "tests/e2e/work-model-controls.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "03",
+      "area": "Models, modes, and reasoning",
+      "id": "03.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Astra-class premium capability, truthful availability discovery, eval gates, latency, quota, and live Azure proof remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Bounded web, image, shopping, and local discovery routes, provider normalization, admission, citations, and UI tests are integrated.",
+      "evidence": ["src/lib/ai/search.server.ts", "src/routes/maps.tsx"],
+      "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": ["tests/unit/search-provider.test.mjs"],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "04",
+      "area": "Web and product discovery",
+      "id": "04.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Provider credentials, live quotas, current-result quality, and approved location/Maps decisions remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated.",
+      "evidence": [
+        "src/lib/ai/deep-research.server.ts",
+        "src/lib/research-persistence-authorization.server.mjs",
+        "src/routes/research-planner.tsx"
+      ],
+      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/deep-research.test.mjs",
+        "tests/unit/deep-research-persistence.test.mjs",
+        "tests/unit/research-persistence-authorization.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "05",
+      "area": "Deep Research",
+      "id": "05.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Isolated Work execution, approvals, browser takeover, tools, outputs, durable events, and bounded specialist runs exist.",
+      "evidence": [
+        "work-runner/provider.mjs",
+        "work-runner/browser-egress.mjs",
+        "src/lib/work-browser.server.ts"
+      ],
+      "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/work-runner-service.test.mjs",
+        "tests/unit/work-terminal.test.mjs",
+        "tests/e2e/work-browser-takeover.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "06",
+      "area": "Agent tools and actions",
+      "id": "06.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete signed-in browser safety, provider-neutral tool breadth, hosted runner acceptance, and real connected-service proof remain.",
+      "finalGoalRequirementIds": ["FG-02", "FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Durable protocol, revisions, directions, questions, approvals, recovery, accounting, outputs, and bounded specialist runs exist.",
+      "evidence": [
+        "src/lib/work-execution-protocol.mjs",
+        "src/lib/work-execution-driver.server.ts",
+        "work-runner/provider.mjs"
+      ],
+      "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/work-execution-migration.test.mjs",
+        "tests/unit/work-admission-recovery.test.mjs",
+        "tests/unit/work-output-publisher.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "07",
+      "area": "Long-running Work",
+      "id": "07.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Side-chat, cross-task references, complete steering, portable hosted/self-hosted runtime, and production recovery proof remain.",
+      "finalGoalRequirementIds": ["FG-10", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "CRUD, recurrence, pause/resume, history, conditions, verified event sources, and execution contracts are integrated.",
+      "evidence": [
+        "src/lib/scheduled-tasks.functions.ts",
+        "src/lib/scheduled-task-events.server.ts",
+        "src/lib/scheduled-execution.server.ts"
+      ],
+      "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/scheduled-tasks-foundation.test.mjs",
+        "tests/unit/task-event-ingress.test.mjs",
+        "tests/e2e/scheduled-task-editor.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "08",
+      "area": "Scheduled Tasks",
+      "id": "08.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Shareable/customizable copies, exact free/paid limits, safe browser tasks, live callbacks, OAuth, scheduler heartbeat, and delivery remain.",
+      "finalGoalRequirementIds": ["FG-09", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Lifecycle, roles, files, instructions, memory, chats, templates, collaboration, and deletion safety exist.",
+      "evidence": [
+        "src/lib/project-workspace.functions.ts",
+        "src/routes/api/project-files.ts",
+        "src/lib/use-canvas-collaboration.ts"
+      ],
+      "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/project-canvas-collaboration.test.mjs",
+        "tests/unit/collaboration-client.test.mjs",
+        "tests/e2e/projects-library-workspaces.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "09",
+      "area": "Projects",
+      "id": "09.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Full approved retention policy/execution, complete sharing/tool/member behavior, live two-user isolation, and storage cleanup proof remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Folders, originals, private images, versions, replacement, search, organization, and quota contracts are integrated.",
+      "evidence": [
+        "src/routes/library.tsx",
+        "src/lib/library-original-files.server.mjs",
+        "src/routes/api/library/items.ts"
+      ],
+      "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/library-versions-migration.test.mjs",
+        "tests/unit/library-original-runtime.test.mjs",
+        "tests/e2e/library-version-history.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "10",
+      "area": "Library and files",
+      "id": "10.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete artifact coverage, move/restore/share depth, matching production storage, cross-user isolation, retention, and quota canaries remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-08", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Provider boundaries, formats, source edits, masks, history, Library flows, safety, and quota handling are integrated.",
+      "evidence": [
+        "src/routes/api/generate-image.ts",
+        "src/lib/multimodal/image-workflows.server.ts",
+        "docs/image-edit-contract.md"
+      ],
+      "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/image-contract.test.mjs",
+        "tests/unit/image-provider-transport.test.mjs",
+        "tests/unit/image-principal-client.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "11",
+      "area": "Image generation and editing",
+      "id": "11.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Flare-class and Sunburst-class routing, visible quality/cost choice, advanced edit acceptance, provenance, live provider, and settlement remain.",
+      "finalGoalRequirementIds": ["FG-04", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Consent, saved memory, source attribution, settings, workspace retrieval, and Temporary Chat isolation exist.",
+      "evidence": [
+        "src/lib/memory-sources.server.mjs",
+        "src/lib/memory-write-coordinator.mjs",
+        "src/lib/workspace-search.server.ts"
+      ],
+      "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/memory-sources.test.mjs",
+        "tests/unit/principal-settings-storage.test.mjs",
+        "tests/unit/workspace-search-migration.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "12",
+      "area": "Memory and personalization",
+      "id": "12.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete inspect/edit/forget/pause/export controls, personalized Temporary Chat choices, live isolation/deletion, and final UX acceptance remain.",
+      "finalGoalRequirementIds": ["FG-01", "FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Builder, immutable versions, preview, directory/fork, moderation boundaries, and principal tests are integrated.",
+      "evidence": [
+        "src/lib/custom-kovas.server.ts",
+        "src/lib/agent-definitions.functions.ts",
+        "docs/custom-kovas-source-readiness.md"
+      ],
+      "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/custom-kovas-lifecycle.test.mjs",
+        "tests/unit/custom-kovas-runtime.test.mjs",
+        "tests/browser-runtime/custom-kovas-principal.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "13",
+      "area": "Custom Kovas",
+      "id": "13.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete publish/share/install/update/archive analytics, store governance, organization distribution, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-12", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Connector/OAuth boundaries, Google/GitHub tooling, multi-account foundations, and owner-scoped immutable workflow skills are integrated.",
+      "evidence": [
+        "src/routes/apps.tsx",
+        "src/lib/google-oauth.server.ts",
+        "src/lib/workflow-skills.server.ts"
+      ],
+      "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/google-multiaccount.test.mjs",
+        "tests/unit/connectors-governance.test.mjs",
+        "tests/unit/workflow-skills.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "14",
+      "area": "Apps, connectors, plugins, and skills",
+      "id": "14.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "WebMCP, complete provider-neutral discovery, broader live providers/accounts, consent, revocation, permission review, and operations remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-12", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "File analysis, charts, code rendering/copy, sandboxed Work outputs, and supported office-document contracts exist.",
+      "evidence": [
+        "work-runner/sandbox-container.mjs",
+        "work-runner/terminal.mjs",
+        "src/lib/multimodal/files.server.ts"
+      ],
+      "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/work-sandbox-container.test.mjs",
+        "tests/unit/work-terminal.test.mjs",
+        "tests/unit/document-export-roundtrip.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "15",
+      "area": "Data analysis and code",
+      "id": "15.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Reproducible notebook depth, complete structured extraction, hosted sandbox/provider validation, and complex real-file acceptance remain.",
+      "finalGoalRequirementIds": ["FG-03", "FG-06", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Editable writing/code, durable versions, selection edits, comments, charts, export writers, and visual surfaces exist.",
+      "evidence": [
+        "src/components/ArtifactEditor.tsx",
+        "src/components/ChatChart.tsx",
+        "src/components/CanvasComments.tsx"
+      ],
+      "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/canvas-autosave-policy.test.mjs",
+        "tests/unit/canvas-remote-adoption.test.mjs",
+        "tests/e2e/multimodal-canvas.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "16",
+      "area": "Artifacts, writing, and visuals",
+      "id": "16.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete template-driven document/spreadsheet/presentation/PDF workflows, collaboration, export round trips, and production storage remain.",
+      "finalGoalRequirementIds": ["FG-06", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Static Site lifecycle, versions, access controls, Work output handoff, cleanup, export, and isolated serving exist.",
+      "evidence": [
+        "src/lib/sites-hosting.server.ts",
+        "sites-server/index.mjs",
+        "src/lib/account-export-sites.mjs"
+      ],
+      "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/sites-lifecycle.test.mjs",
+        "tests/unit/sites-assets.test.mjs",
+        "tests/unit/account-export-sites.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "17",
+      "area": "Sites",
+      "id": "17.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "The approved co-editing floor, portable authenticated state/analytics decisions, hosting activation, and publish canaries remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Chat sharing, Project roles, comments/presence, branch/history continuity, and cross-device source contracts exist.",
+      "evidence": [
+        "src/lib/shared-chats.functions.ts",
+        "src/lib/chat-history-bridge.ts",
+        "src/lib/work-sync-client.ts"
+      ],
+      "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/chat-history-sync.test.mjs",
+        "tests/unit/work-sync-client.test.mjs",
+        "tests/unit/project-canvas-collaboration.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "18",
+      "area": "Sharing, collaboration, and continuity",
+      "id": "18.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete object coverage, roles/expiration/transfer/fork semantics, live two-account realtime, revocation, and cross-device proof remain.",
+      "finalGoalRequirementIds": ["FG-13", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "In-app notification center, web-push lifecycle, preferences, quiet hours, delivery boundaries, and revocation are integrated.",
+      "evidence": [
+        "src/lib/notifications.server.ts",
+        "src/lib/pwa/push.server.ts",
+        "public/kova-sw.js"
+      ],
+      "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/web-push-lifecycle.test.mjs",
+        "tests/unit/web-push-crypto.test.mjs",
+        "tests/e2e/pwa-service-worker.spec.ts"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "19",
+      "area": "Notifications",
+      "id": "19.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Email and supported system channels, physical browser/device permission, localization, native behavior, and production delivery proof remain.",
+      "finalGoalRequirementIds": ["FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Private progress, practice flow, guided controls, feedback, and study workspace tests are integrated.",
+      "evidence": [
+        "src/routes/study.tsx",
+        "src/lib/study.functions.ts",
+        "src/lib/study-policy.mjs"
+      ],
+      "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/study-progress-sql.test.mjs",
+        "tests/unit/study-policy.test.mjs",
+        "tests/e2e/study-practice.spec.ts"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "20",
+      "area": "Study",
+      "id": "20.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real account persistence, age/classroom policy, source grounding quality, and final learner acceptance remain.",
+      "finalGoalRequirementIds": ["FG-07", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Invitation, consent, roles, revocation, erasure protections, and bounded contact delivery exist.",
+      "evidence": [
+        "src/lib/family.functions.ts",
+        "src/routes/trusted-contacts.tsx",
+        "src/lib/trusted-contact-policy.mjs"
+      ],
+      "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/family-atomic-membership.test.mjs",
+        "tests/unit/trusted-contact-migration.test.mjs",
+        "tests/unit/trusted-contact-runtime.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "21",
+      "area": "Family and trusted contacts",
+      "id": "21.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Age, regional/legal policy, actual delivery, administrator policy, and parent review remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Sign-in/recovery/MFA, account controls, export, deletion fence, cleanup, and privacy contracts exist.",
+      "evidence": [
+        "src/routes/api/account.ts",
+        "src/lib/account-export.server.ts",
+        "src/lib/account-storage-cleanup.server.ts"
+      ],
+      "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/auth-security.test.mjs",
+        "tests/unit/account-deletion-state.test.mjs",
+        "tests/unit/account-export-generation.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "22",
+      "area": "Authentication, account, and privacy",
+      "id": "22.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Complete session/device/linking behavior, live email/OAuth/MFA, migration, abuse controls, cross-system erasure, and production proof remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Checkout, portal, webhook entitlement, usage, developer billing/funding, reservations, settlement, and pricing administration exist.",
+      "evidence": [
+        "src/utils/payments.functions.ts",
+        "src/lib/pricing/developer-billing.server.ts",
+        "src/lib/pricing/developer-funding.server.ts"
+      ],
+      "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/stripe-checkout-authority.test.mjs",
+        "tests/unit/developer-billing-migration.test.mjs",
+        "tests/unit/pricing-administration.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "23",
+      "area": "Billing, usage, and Finances",
+      "id": "23.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "One cross-category premium-compute ledger, approved live pricing/policy, tax/refund/proration, reconciliation, anomaly, and payment canaries remain.",
+      "finalGoalRequirementIds": ["FG-16", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "24",
+      "area": "Web, PWA, voice, and native platforms",
+      "id": "24.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Responsive web/PWA, install/offline/share intake, service worker, push lifecycle, and truthful capability metadata exist.",
+      "evidence": [
+        "public/kova-sw.js",
+        "src/platform/capabilities.ts",
+        "src/lib/capability-registry.ts"
+      ],
+      "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "24",
+      "area": "Web, PWA, voice, and native platforms",
+      "id": "24.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/e2e/pwa-service-worker.spec.ts",
+        "tests/e2e/workspace-visual-coherence.spec.ts",
+        "tests/unit/visible-control-contract.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "24",
+      "area": "Web, PWA, voice, and native platforms",
+      "id": "24.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "24",
+      "area": "Web, PWA, voice, and native platforms",
+      "id": "24.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "24",
+      "area": "Web, PWA, voice, and native platforms",
+      "id": "24.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Voice is required but unavailable; full-duplex audio, device controls, native apps, physical-device behavior, and accessibility proof remain.",
+      "finalGoalRequirementIds": ["FG-05", "FG-14", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Scoped keys/projects, Responses, models, quotes, files, SDK, MCP tools, OAuth consent, and revocation are integrated.",
+      "evidence": [
+        "src/lib/pricing/developer-platform.server.ts",
+        "src/lib/pricing/developer-mcp.server.ts",
+        "sdk/javascript"
+      ],
+      "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/developer-platform-ingress.test.mjs",
+        "tests/unit/developer-mcp.test.mjs",
+        "tests/unit/developer-files-migration.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "25",
+      "area": "Developer platform and MCP",
+      "id": "25.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Audio/realtime, agents/tasks/webhooks breadth, real issuer/client registration, secrets, billing, public activation, and production canaries remain.",
+      "finalGoalRequirementIds": ["FG-11", "FG-17", "FG-X1", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.source",
+      "stage": "source",
+      "status": "partial",
+      "requirement": "Roles, invitations, domains, SSO adapter, SCIM Users/Groups, audit, and deletion protections are integrated.",
+      "evidence": [
+        "src/routes/organization.tsx",
+        "src/lib/organization-domain.server.ts",
+        "src/lib/organization-account-deletion.server.ts"
+      ],
+      "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/unit/organization-administration.test.mjs",
+        "tests/unit/organization-boundaries.test.mjs"
+      ],
+      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "26",
+      "area": "Organization administration",
+      "id": "26.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Service accounts, analytics, complete policy controls, approved retention execution, IdP/domain/legal setup, residency, and live tenant tests remain.",
+      "finalGoalRequirementIds": ["FG-15", "FG-18", "FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.source",
+      "stage": "source",
+      "status": "accepted",
+      "requirement": "Workspace Intelligence, Timeline, Knowledge Graph, Prompt Studio, Context Packs, Goals, and Project health exist.",
+      "evidence": [
+        "src/lib/workspace-evolution.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/lib/workspace-search.server.ts"
+      ],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.local",
+      "stage": "local_automation",
+      "status": "verified_for_implemented_scope",
+      "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
+      "evidence": [
+        "tests/integration/workspace-intelligence-source.test.mjs",
+        "tests/integration/future-workspace-source.test.mjs",
+        "tests/unit/workspace-search-policy.test.mjs"
+      ],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.hosted",
+      "stage": "hosted_ci",
+      "status": "verified_for_reviewed_ancestor_scope",
+      "requirement": "A reviewed ancestor implementation head passed the hosted source, browser, and container gates.",
+      "evidence": [
+        "github:pull/319@20940476881dadabfcedbfeadb4aba328dd8cd52",
+        "github:actions/34664358655:KovaGPT CI:success",
+        "github:actions/34664358673:Azure Container Readiness:success"
+      ],
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.staging",
+      "stage": "staging",
+      "status": "not_verified",
+      "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
+      "evidence": [],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
+    },
+    {
+      "areaId": "27",
+      "area": "KovaGPT differentiators",
+      "id": "27.production",
+      "stage": "production",
+      "status": "not_verified",
+      "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
+      "evidence": [],
+      "boundary": "Real-data quality, cross-device behavior, browser finishing, and Zachary's final acceptance remain.",
+      "finalGoalRequirementIds": ["FG-X2", "FG-X3"]
+    }
+  ]
+}

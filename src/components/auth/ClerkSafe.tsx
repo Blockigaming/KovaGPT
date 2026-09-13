@@ -93,7 +93,10 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   // `undefined` is unresolved, `null` is a confirmed guest, and a string is a
   // validated account.
   const browserStorageUserIdRef = useRef<string | null | undefined>(undefined);
-  const pendingValidationUserIdRef = useRef<string | null>(null);
+  // `undefined` means there is no account awaiting validation. Keep this
+  // distinct from `null`, which is the real guest principal understood by the
+  // storage cleanup helpers.
+  const pendingValidationUserIdRef = useRef<string | undefined>(undefined);
   const validatedSessionRef = useRef<Session | null>(null);
 
   const clearBrowserStateFor = useCallback((...userIds: (string | null | undefined)[]) => {
@@ -178,7 +181,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         // ownerless transitional data, never separately scoped guest data.
         if (previousUserId !== null || pendingUserId) purgeOwnerlessStateFor(null);
         browserStorageUserIdRef.current = null;
-        pendingValidationUserIdRef.current = null;
+        pendingValidationUserIdRef.current = undefined;
         validatedSessionRef.current = null;
         setSession(null);
         setPendingMfaSession(null);
@@ -237,7 +240,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
           clearBrowserStateFor(...cleanupIds);
           purgeOwnerlessStateFor(null);
           browserStorageUserIdRef.current = null;
-          pendingValidationUserIdRef.current = null;
+          pendingValidationUserIdRef.current = undefined;
           validatedSessionRef.current = null;
           setSession(null);
           setPendingMfaSession(null);
@@ -258,7 +261,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
             purgeOwnerlessStateFor(validatedUser.id);
           }
           browserStorageUserIdRef.current = validatedUser.id;
-          pendingValidationUserIdRef.current = null;
+          pendingValidationUserIdRef.current = undefined;
           validatedSessionRef.current = null;
           setSession(null);
           setPendingMfaSession(candidate);
@@ -281,7 +284,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         }
         const validatedSession = { ...candidate, user: validatedUser };
         browserStorageUserIdRef.current = validatedUser.id;
-        pendingValidationUserIdRef.current = null;
+        pendingValidationUserIdRef.current = undefined;
         validatedSessionRef.current = validatedSession;
         setPendingMfaSession(null);
         setSession(validatedSession);
@@ -382,7 +385,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
               clearBrowserStateFor(...cleanupIds);
               purgeOwnerlessStateFor(null);
               browserStorageUserIdRef.current = null;
-              pendingValidationUserIdRef.current = null;
+              pendingValidationUserIdRef.current = undefined;
               validatedSessionRef.current = null;
               setAuthIssue(null);
               setIsLoaded(true);
@@ -449,7 +452,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     clearBrowserStateFor(browserStorageUserId, pendingValidationUserId);
     purgeOwnerlessStateFor(null);
     browserStorageUserIdRef.current = null;
-    pendingValidationUserIdRef.current = null;
+    pendingValidationUserIdRef.current = undefined;
     validatedSessionRef.current = null;
     setSession(null);
     setPendingMfaSession(null);
@@ -531,7 +534,10 @@ type UserShape = {
   fullName?: string | null;
   imageUrl?: string | null;
   username?: string | null;
-  primaryEmailAddress?: { emailAddress?: string };
+  primaryEmailAddress?: {
+    emailAddress?: string;
+    verification?: { status: "verified" | "unverified" };
+  };
   emailAddresses?: Array<{ emailAddress?: string }>;
 } | null;
 
@@ -554,7 +560,12 @@ function adaptUser(u: SupabaseUser | null): UserShape {
       (meta.preferred_username as string | undefined) ??
       null,
     imageUrl,
-    primaryEmailAddress: email ? { emailAddress: email } : undefined,
+    primaryEmailAddress: email
+      ? {
+          emailAddress: email,
+          verification: { status: u.email_confirmed_at ? "verified" : "unverified" },
+        }
+      : undefined,
     emailAddresses: email ? [{ emailAddress: email }] : [],
   };
 }

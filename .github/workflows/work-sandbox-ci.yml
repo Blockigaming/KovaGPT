@@ -1,0 +1,92 @@
+name: Work Sandbox Isolation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - "work-runner/**"
+      - "tests/unit/work-sandbox-container.test.mjs"
+      - "tests/unit/work-browser*.test.mjs"
+      - "tests/browser-runtime/**"
+      - "src/lib/work-browser-transport.*"
+      - ".github/workflows/work-sandbox-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: work-sandbox-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Install locked test dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate the executor protocol
+        run: node --test tests/unit/work-sandbox-container.test.mjs tests/unit/work-browser*.test.mjs
+
+      - name: Install the verified gVisor release on this ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Official release-20260831.0; full bundle includes required sidecars.
+          # https://github.com/google/gvisor/releases/tag/release-20260831.0
+          # https://gvisor.dev/docs/user_guide/install/
+          sandbox_archive="$RUNNER_TEMP/gvisor.tar.bz2"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --max-time 120 --output "$sandbox_archive" \
+            https://storage.googleapis.com/gvisor/releases/release/20260831.0/x86_64/gvisor.tar.bz2
+          printf '%s  %s\n' \
+            c7b4f22c60be3ea5a0ace478ed390403255d818729aaccff82d5b60026f3060d2ea31ab6670249a34a98eef59726217018c91ec631f7d753459127d930658392 \
+            "$sandbox_archive" | sha512sum --check --strict -
+          sudo tar -xjf "$sandbox_archive" -C /usr/local/bin
+          sudo /usr/local/bin/runsc install
+          sudo systemctl reload docker
+          /usr/local/bin/runsc --version
+
+      - name: Build the exact sandbox source into a local immutable image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --iidfile "$RUNNER_TEMP/kova-sandbox-image-id" work-runner/sandbox-image
+          sandbox_image="$(cat "$RUNNER_TEMP/kova-sandbox-image-id")"
+          [[ "$sandbox_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf 'KOVA_WORK_SANDBOX_IMAGE=%s\n' "$sandbox_image" >> "$GITHUB_ENV"
+
+      - name: Run actual isolated Python and CSV acceptance
+        run: node work-runner/sandbox-image/acceptance.mjs --execute
+
+      - name: Build immutable isolated Chromium image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --iidfile "$RUNNER_TEMP/kova-browser-image-id" work-runner/browser-image
+          browser_image="$(cat "$RUNNER_TEMP/kova-browser-image-id")"
+          [[ "$browser_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf 'KOVA_WORK_BROWSER_IMAGE=%s\n' "$browser_image" >> "$GITHUB_ENV"
+
+      - name: Run real networkless Chromium and takeover acceptance
+        run: node work-runner/browser-image/acceptance.mjs --execute
+
+      - name: Remove only this runner's Kova sandbox containers
+        if: always()
+        shell: bash
+        run: |
+          docker ps --all --quiet --filter label=com.kova.sandbox=python-v1 | xargs --no-run-if-empty docker rm --force --volumes
+          docker ps --all --quiet --filter label=com.kova.browser=interactive-v1 | xargs --no-run-if-empty docker rm --force --volumes

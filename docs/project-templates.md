@@ -1,9 +1,32 @@
 # Versioned Project templates
 
-KovaGPT's Project-template backend stores a small, explicit Project configuration snapshot. It
+KovaGPT's Project-template feature stores a small, explicit Project configuration snapshot. It
 does not copy chats, files, memories, members, invitations, credentials, or connected-account
 data. Each published version is immutable, so a copy of version 1 cannot silently change after
 version 2 is published.
+
+## Client workflow
+
+Open **Projects → Templates** to create a saved template, inspect a specific immutable
+version, or create a Project from that version. Owners can publish a new version, grant
+view-only or copy access using a recipient's account ID, revoke access, and archive.
+The dialog also shows the current user's account ID for receiving templates. Existing
+built-in Project suggestions remain in **New project** and do not create shared or
+versioned templates.
+
+The dialog uses the authenticated `/api/project-templates` route. It displays the backend's
+50 most recently updated templates and discloses that limit when reached. Template content
+and pending mutations are scoped to the signed-in user and are not put into browser storage.
+Closing and reopening the dialog on the same page keeps an unresolved mutation available
+for retry; reloading the page discards that in-memory retry state.
+
+Every write prepares one immutable request and UUID. A network error, timeout, malformed
+successful response, or server failure retains those exact bytes for **Retry same request**;
+other writes remain disabled until that request is resolved. A revision conflict preserves
+the draft and requires a successful refresh before a new attempt. A selected historical
+version is always passed explicitly when copying, so publishing a newer version cannot
+change what the user copies. The transport binds the access token to the rendered account
+and bounds session lookup, request, and response-body waits.
 
 ## Authorization model
 
@@ -46,5 +69,5 @@ for at least seven days and require a production scheduler to call the bounded p
 7. Request both users' account exports and verify owner/recipient grant coverage without foreign
    template snapshots or mutation receipts.
 
-Until that migration and two-user flow are verified in production, this capability is
-source-complete only.
+Until that migration and two-user flow are verified in production, this capability remains
+source-complete only; the client reports unavailable access instead of claiming a template was saved.

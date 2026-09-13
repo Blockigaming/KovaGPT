@@ -45,7 +45,7 @@ test.describe("core shell and chat experience", () => {
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Hello from the retry test");
     if (testInfo.project.use.hasTouch) {
-      await page.getByRole("button", { name: /^send$/i }).click();
+      await page.getByTestId("send-button").click();
     } else {
       // Desktop plain Enter remains covered while touch layouts use the visible send control.
       await textbox.press("Enter");

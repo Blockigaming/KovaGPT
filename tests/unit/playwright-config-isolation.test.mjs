@@ -36,7 +36,11 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
   assert.doesNotMatch(workflow, /candidate-visual-baselines/u);
   assert.match(
     workflow,
-    /path: artifacts\/ui-audit\/deployed-baseline[\s\S]{0,120}if-no-files-found: error/u,
+    /path: artifacts\/ui-audit\/deployed-baseline[\s\S]{0,120}if-no-files-found: warn/u,
+  );
+  assert.match(
+    workflow,
+    /name: Upload deployed baseline evidence[\s\S]*?continue-on-error: true[\s\S]*?uses: actions\/upload-artifact/u,
   );
   assert.match(workflow, /if: always\(\) && steps\.deployed_baseline\.outcome != 'skipped'/u);
   assert.match(helper, /await page\.screenshot\(/u);

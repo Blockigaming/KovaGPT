@@ -408,7 +408,11 @@ test("production planning documentation records the apply blockers without claim
   assert.match(documentation, /complete Container App environment list/u);
   assert.match(documentation, /Staging images contain staging browser configuration/u);
   assert.match(documentation, /embedded provenance file alone do not authenticate/u);
-  assert.match(documentation, /role identifiers are declared but no production role assignments/u);
+  assert.match(
+    documentation,
+    /role identifiers are declared but no production assignments or fail-closed assignment preflight/u,
+  );
+  assert.match(documentation, /dedicated image account has one conditional resource-scoped/u);
   assert.match(documentation, /declared but unused/u);
   assert.match(documentation, /Single-revision mode sends 100% of traffic/u);
   assert.match(documentation, /denial of unauthorized raw-origin requests/u);

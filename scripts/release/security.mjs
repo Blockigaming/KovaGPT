@@ -161,6 +161,7 @@ function inspectText(path, source, violations, { built = false } = {}) {
   for (const name of [
     "OPENAI_API_KEY",
     "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_IMAGE_API_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "STRIPE_SECRET_KEY",
     "PAYMENTS_LIVE_API_KEY",
@@ -189,7 +190,10 @@ export function runReleaseSecurityAudit({ files = trackedFiles() } = {}) {
     ) {
       continue;
     }
-    inspectText(path, readFileSync(join(root, path), "utf8"), violations);
+    const sourcePath = join(root, path);
+    // git ls-files can retain a pending deletion until it is staged.
+    if (!existsSync(sourcePath)) continue;
+    inspectText(path, readFileSync(sourcePath, "utf8"), violations);
   }
 
   for (const directory of ["dist/client", "dist/server"]) {

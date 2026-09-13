@@ -19,7 +19,26 @@ const e2eUser = {
   is_anonymous: false,
 };
 
-export async function installAuthenticatedFixture(page: Page) {
+export async function installAuthenticatedFixture(
+  page: Page,
+  options: { authUserDelayMs?: number } = {},
+) {
+  // This fixture exercises the returning-user shell. Server-function onboarding
+  // can arrive after hydration; dismiss that separate flow through its real UI
+  // without issuing a save/skip request or hiding background accessibility bugs.
+  const welcomeDialog = page
+    .locator('[role="dialog"][data-state="open"]')
+    .filter({ hasText: "Welcome to KovaGPT" });
+  await page.addLocatorHandler(
+    welcomeDialog,
+    async () => {
+      await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
+      // The handler targets only an open overlay. Radix keeps the closed node
+      // mounted during its exit animation, so waiting for removal here can
+      // turn a successful dismissal into a false test failure.
+    },
+    { noWaitAfter: true },
+  );
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
       localStorage.clear();
@@ -65,6 +84,9 @@ export async function installAuthenticatedFixture(page: Page) {
     const url = new URL(route.request().url());
     mockedBackendOrigins.add(url.origin);
     if (url.pathname === "/auth/v1/user") {
+      if (options.authUserDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, options.authUserDelayMs));
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",

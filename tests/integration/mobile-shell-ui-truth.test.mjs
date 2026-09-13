@@ -5,9 +5,10 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("Temporary Chat is reachable and truthfully selected from the mobile top bar", async () => {
-  const [topBar, route] = await Promise.all([
+  const [topBar, route, temporaryControls] = await Promise.all([
     read("src/components/MobileTopBar.tsx"),
     read("src/routes/index.tsx"),
+    read("src/components/TemporaryChatStartDialog.tsx"),
   ]);
 
   assert.match(topBar, /MessageSquareDashed/);
@@ -17,9 +18,16 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
   assert.match(topBar, /h-11 w-11/);
   assert.match(route, /temporaryChat=\{tempChat\}/);
   assert.match(route, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
-  assert.match(route, /onClick=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
-  assert.match(route, /onClick=\{\(\) => setTemporaryChatEnabled\(false\)\}/);
-  assert.match(route, /This chat won't appear in history or be used for cross-chat memory/);
+  assert.match(route, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
+  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
+  assert.match(route, /onTurnOff=\{\(\) => setTemporaryChatEnabled\(false\)\}/);
+  assert.match(temporaryControls, /onClick=\{onTurnOff\}/);
+  assert.match(
+    temporaryControls,
+    /does not use or update saved memory, profile details, custom instructions, personality settings, or connected apps/,
+  );
+  assert.match(temporaryControls, /will not create new saved memories/);
   assert.doesNotMatch(route, /It's private/);
 });
 

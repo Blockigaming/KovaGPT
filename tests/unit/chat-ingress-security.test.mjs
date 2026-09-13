@@ -35,6 +35,32 @@ async function expectIngressError(request, code, status, maxBytes) {
   );
 }
 
+test("chat ingress cancels a stalled request body when its stage is aborted", async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    pull() {
+      return new Promise(() => {});
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const request = new Request("https://kovagpt.com/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+    duplex: "half",
+  });
+  const controller = new AbortController();
+  const pending = readChatRequest(request, 64, controller.signal);
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.abort(new DOMException("Request body timed out", "AbortError"));
+
+  await assert.rejects(pending, (error) => error?.name === "AbortError");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(cancelled, true);
+});
+
 test("chat ingress enforces streamed byte limits without trusting content-length", async () => {
   const encoder = new TextEncoder();
   const oversized = streamedRequest([
@@ -167,6 +193,37 @@ test("chat payload normalization preserves valid clients and strips unexpected f
     temporary: false,
     clientTool: "file_analysis",
   });
+});
+
+test("temporary context accepts only an explicit immutable creation policy", () => {
+  const base = { messages: [{ role: "user", content: "hello" }], temporary: true };
+  assert.deepEqual(normalizeChatPayload({ ...base, temporaryContext: "clean" }), {
+    ...base,
+    temporaryContext: "clean",
+  });
+  assert.deepEqual(normalizeChatPayload({ ...base, temporaryContext: "personalized" }), {
+    ...base,
+    temporaryContext: "personalized",
+  });
+  assert.throws(
+    () => normalizeChatPayload({ ...base, temporaryContext: "sometimes" }),
+    (error) =>
+      error instanceof ChatIngressError &&
+      error.code === "invalid_temporary_context" &&
+      error.status === 400,
+  );
+  assert.throws(
+    () =>
+      normalizeChatPayload({
+        messages: base.messages,
+        temporary: false,
+        temporaryContext: "personalized",
+      }),
+    (error) =>
+      error instanceof ChatIngressError &&
+      error.code === "temporary_context_requires_temporary_chat" &&
+      error.status === 400,
+  );
 });
 
 test("chat payload accepts attachments only on the latest authenticated turn boundary", () => {
@@ -370,4 +427,14 @@ test("chat ingress error envelopes include deterministic request identifiers", (
     retryable: false,
     timestamp: "2026-08-02T00:00:00.000Z",
   });
+});
+
+test("chat ingress validates the converted Temporary memory boundary", () => {
+  const base = { messages: [{ role: "user", content: "Continue" }] };
+  assert.equal(normalizeChatPayload({ ...base, memoryStartIndex: 0 }).memoryStartIndex, 0);
+  for (const value of [-1, 2, 0.5, "0", null])
+    assert.throws(
+      () => normalizeChatPayload({ ...base, memoryStartIndex: value }),
+      /Invalid conversation memory boundary/,
+    );
 });

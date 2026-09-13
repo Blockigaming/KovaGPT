@@ -1,6 +1,18 @@
 # Work cross-device synchronization
 
-KovaGPT's Work sync contract persists account-owned Work tasks, reusable templates, agent drafts, and Recent-item state. The database and `/api/work/sync` route provide the durable server boundary; clients must not claim cross-device continuity until they use this contract and the exact production migration is verified.
+KovaGPT's Work sync contract persists account-owned Work tasks, reusable templates, agent drafts, and Recent-item state. The database and `/api/work/sync` route provide the durable server boundary. The browser client now adopts that contract, while exact production migrations and cross-device verification remain release gates.
+
+## Browser behavior
+
+- A signed-in account first checks the authenticated sync endpoint. An unavailable backend leaves existing local storage in use.
+- Once the endpoint responds, saved tasks, templates and agent drafts from that same account move into an atomic local sync envelope. Existing local arrays remain untouched until every body is durably preserved there, including pending/conflicting copies; duplicate arrays are then retired so later deletions cannot resurrect an old cache. Guest records are never imported into a signed-in account.
+- Records, pending edits, immutable retry requests, remote revisions, tombstones, and the last fully applied cursor are persisted together. Storage failure prevents sending a new mutation.
+- One browser tab holds the account's Web Lock and may edit/sync saved work. Other tabs can read it and acquire the lock when the active tab closes; browsers without Web Locks remain local or read-only.
+- Requests use a bearer token checked against the expected signed-in account and abort on logout/account switch. Server-side authentication remains authoritative.
+- A lost response retries the same mutation UUID and exact body. New local edits made during that request remain queued behind its receipt. Ordinary writes are spaced at least six seconds apart; rate-limit responses respect `Retry-After`.
+- Conflicts preserve both the account snapshot and the pending local change until the user explicitly chooses a version. New server changes can produce another conflict; there is no automatic last-writer overwrite.
+- Work exposes saved task/template/draft previews, Recent pin/unpin/forget controls, pending counts, errors and conflict choices. Library and Context Packs refresh when synced Work changes. This does not enable background agent execution.
+- Clearing the account's browser data stops the current sync session and removes its envelope along with existing account-scoped Work keys. A later sign-in can retrieve account data again; clearing browser data does not promise cloud deletion.
 
 ## Data and authorization boundary
 
@@ -25,7 +37,7 @@ Responses are `no-store`. Cross-site writes, non-JSON writes, oversized bodies a
 
 ## Deletion, bounds, and retry behavior
 
-- Deleting saved Work creates a tombstone and preserves its payload for synchronization and account portability.
+- Deleting saved Work creates a tombstone and scrubs its payload through the hardening migration. Clients propagate the deletion without retaining the removed body in the remote snapshot.
 - Forgetting a Recent item creates a Recent tombstone even when the referenced saved record has already been deleted.
 - A mutation receipt makes a retry return the original result without applying the operation twice.
 - Each account is limited to 500 active and 2,000 total saved records, and the same bounds apply independently to Recent items.
@@ -43,4 +55,4 @@ Source completion is not production completion. Before any UI labels Work or Rec
 - confirm account exports include saved Work and Recent state without counters or mutation receipts;
 - keep local-only UI records labeled local until their migration succeeds, and never discard a local record automatically after a conflict or failed upload.
 
-Until the exact deployed revision and migration pass these checks, this remains a source-ready backend capability rather than verified production cross-device synchronization.
+Until the exact deployed revision and migration pass these checks, this remains source-ready client/server functionality rather than verified production cross-device synchronization.

@@ -10,6 +10,7 @@ A verified build must establish all of the following:
 
 - the expected Supabase project URL and browser-safe publishable key are present in deployable browser assets;
 - no second Supabase project URL, project-ref literal, modern publishable key, or legacy Supabase JWT is present in those assets;
+- when a Stripe publishable key is supplied, that exact key appears in executable browser assets; stale or second Stripe keys fail verification;
 - server-only output cannot satisfy the browser check;
 - every served text asset under `dist/client`, including `.txt`, web-manifest, and XML files, is scanned;
 - no OpenAI secret, Supabase secret key, legacy Supabase service-role JWT, legacy anon JWT, user-session JWT, PostgreSQL credential URL, or private-key PEM appears in browser assets;
@@ -34,9 +35,12 @@ SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
 TARGET_PROJECT_REF="<exact-20-character-project-ref>"
 TARGET_SUPABASE_URL="https://${TARGET_PROJECT_REF}.supabase.co"
 TARGET_PUBLISHABLE_KEY="<sb_publishable_browser_safe_key>"
+TARGET_STRIPE_PUBLISHABLE_KEY="${KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY:-}"
 FORBIDDEN_PROJECT_REFS="<comma-separated refs that must not appear>"
 IMAGE_TAG="kovagpt-candidate:${SOURCE_SHA}"
 ```
+
+`TARGET_STRIPE_PUBLISHABLE_KEY` is empty for a build without payments. For a production billing candidate, use the owner-verified live publishable key from the protected production environment; never a secret or restricted API key. It is compiled into the image and cannot be supplied later as a runtime variable.
 
 `SOURCE_SHA` and `SOURCE_TREE` must identify the reviewed release commit and tree. Keep the publishable key out of shared logs even though it is intentionally browser-visible.
 
@@ -51,6 +55,7 @@ docker build \
   --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$FORBIDDEN_PROJECT_REFS" \
   --build-arg VITE_SUPABASE_URL="$TARGET_SUPABASE_URL" \
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$TARGET_PUBLISHABLE_KEY" \
+  --build-arg VITE_PAYMENTS_CLIENT_TOKEN="$TARGET_STRIPE_PUBLISHABLE_KEY" \
   --tag "$IMAGE_TAG" \
   "$BUILD_CONTEXT"
 ```
@@ -90,7 +95,8 @@ Extract `/app/dist/browser-config-provenance.json` from the image. It contains o
 
 - source SHA, source tree, and Git-archive context;
 - project ref and URL;
-- SHA-256 fingerprint of the publishable key, never the full key;
+- SHA-256 fingerprint of the Supabase publishable key, never the full key;
+- `stripePublishableKeySha256`, the compiled Stripe publishable-key fingerprint or explicit null for an unconfigured build;
 - deterministic browser-bundle SHA-256;
 - scanned file and byte counts;
 - discovered and forbidden project-ref evidence.

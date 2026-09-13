@@ -10,14 +10,19 @@ const authSource = readFileSync(
 const clientSource = readFileSync(new URL("../../src/routes/index.tsx", import.meta.url), "utf8");
 
 test("research authorization precedes every provider and quota decision", () => {
-  const authorizeAt = chatSource.indexOf("await authorizeResearchPersistence({");
+  const authorizeAt = chatSource.indexOf('preflight.run("research_authorization"');
+  const authorizationCallAt = chatSource.indexOf("authorizeResearchPersistence({", authorizeAt);
   const providerConfigAt = chatSource.indexOf(
     "const missingProvider = missingAiProviderResponse();",
   );
-  const quotaAt = chatSource.indexOf('enforceQuota(auth, "chats"');
+  const quotaAt = chatSource.indexOf('preflight.run("chat_quota"');
   const executionAt = chatSource.indexOf("return handleDeepResearchRequest(lastText");
 
   assert.ok(authorizeAt > 0, "authorization gate must exist");
+  assert.ok(
+    authorizationCallAt > authorizeAt,
+    "bounded authorization stage must call the ownership verifier",
+  );
   assert.ok(authorizeAt < providerConfigAt, "authorization must precede provider configuration");
   assert.ok(authorizeAt < quotaAt, "authorization must precede quota charging");
   assert.ok(authorizeAt < executionAt, "authorization must precede provider execution");
@@ -42,5 +47,5 @@ test("authorization uses a verified JWT-scoped user client while writes retain s
 });
 
 test("the first-party main-chat client does not submit an unowned research chat id", () => {
-  assert.match(clientSource, /chatId:\s*activeTool === "deep_research" \? undefined : nextConvId/);
+  assert.match(clientSource, /chatId:\s*retryTool === "deep_research" \? undefined : nextConvId/);
 });

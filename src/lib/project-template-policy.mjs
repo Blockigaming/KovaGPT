@@ -199,17 +199,22 @@ export function parseProjectTemplateMutation(value) {
 export function parseProjectTemplateQuery(urlValue) {
   const url = urlValue instanceof URL ? urlValue : new URL(urlValue);
   if (
-    [...url.searchParams.keys()].some((key) => !["templateId", "version", "limit"].includes(key))
+    [...url.searchParams.keys()].some(
+      (key) => !["templateId", "version", "limit", "after"].includes(key),
+    )
   ) {
     throw new ProjectTemplateInputError("project_template_query_invalid");
   }
-  for (const key of ["templateId", "version", "limit"]) {
+  for (const key of ["templateId", "version", "limit", "after"]) {
     if (url.searchParams.getAll(key).length > 1) {
       throw new ProjectTemplateInputError("project_template_query_invalid");
     }
   }
   const templateIdRaw = url.searchParams.get("templateId");
   const versionRaw = url.searchParams.get("version");
+  const afterRaw = url.searchParams.get("after");
+  if (afterRaw !== null && templateIdRaw !== null)
+    throw new ProjectTemplateInputError("project_template_query_invalid");
   if (versionRaw !== null && templateIdRaw === null) {
     throw new ProjectTemplateInputError("project_template_query_invalid");
   }
@@ -218,6 +223,7 @@ export function parseProjectTemplateQuery(urlValue) {
     throw new ProjectTemplateInputError("project_template_query_invalid");
   }
   return {
+    after: afterRaw === null ? null : uuid(afterRaw, "project_template_cursor_invalid"),
     templateId: templateIdRaw === null ? null : uuid(templateIdRaw, "project_template_id_invalid"),
     version:
       versionRaw === null

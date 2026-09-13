@@ -80,27 +80,36 @@ test("first resolution and guest-to-user transitions purge only ownerless privat
     clerkSource,
     /browserStorageUserIdRef = useRef<string \| null \| undefined>\(undefined\)/,
   );
+  assert.match(
+    clerkSource,
+    /pendingValidationUserIdRef = useRef<string \| undefined>\(undefined\)/,
+  );
   assert.match(clerkSource, /const result = purgeUnscopedPrivateBrowserStorage\(userId\)/);
   assert.match(
     clerkSource,
     /if \(browserStorageUserIdRef\.current !== validatedUser\.id\) \{\s*purgeOwnerlessStateFor\(validatedUser\.id\)/,
   );
   assert.match(clerkSource, /typeof previousUserId === "string" \? previousUserId : undefined/);
+  assert.match(
+    clerkSource,
+    /clearBrowserStateFor\(\s*typeof previousUserId === "string" \? previousUserId : undefined,\s*pendingUserId,\s*\)/,
+  );
+  assert.doesNotMatch(clerkSource, /pendingValidationUserIdRef\.current = null/);
   assert.doesNotMatch(clerkSource, /clearBrowserStateFor\(previousUserId\)/);
 });
 
 test("Settings uses the same current-principal registry and truthful copy", () => {
-  assert.match(settingsSource, /clearPrincipalBrowserStorage\(targetUserKey\)/);
+  assert.match(settingsSource, /await resetPrincipalDeviceData\(targetUserKey\)/);
   assert.match(
     settingsSource,
-    /const cleanupResult = clearLocalBrowserData\(deletionUserKey\);[\s\S]*?currentAuthUserKeyRef\.current === deletionUserKey[\s\S]*?onClearAll\(\)/,
+    /const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]*?currentAuthUserKeyRef\.current === deletionUserKey[\s\S]*?onClearAll\(\)/,
   );
   assert.match(
     settingsSource,
-    /Ownerless private data,[\s\S]*?transitional values from older versions,[\s\S]*?Other profiles' scoped data,[\s\S]*?cloud data are preserved/,
+    /Ownerless\s+private\s+data,[\s\S]*?transitional values from older versions,[\s\S]*?Other profiles' scoped data,[\s\S]*?cloud data are preserved/,
   );
   assert.match(settingsSource, /Reset this profile's local data/);
-  assert.match(settingsSource, /dispatchPrincipalBrowserStorageCleared\(userKey\)/);
+  assert.match(settingsSource, /currentAuthUserKeyRef\.current === resetUserKey/);
   assert.match(settingsSource, /cleanupFailureCount > 0/);
   assert.doesNotMatch(
     settingsSource,

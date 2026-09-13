@@ -12,8 +12,12 @@
           "name": "RLS project $MARKER",
           "description": "Two-user rehearsal fixture"
         },
-        "updatePatch": { "description": "Cross-user mutation $MARKER" },
-        "bindings": { "PROJECT_A": "id" }
+        "updatePatch": {
+          "description": "Cross-user mutation $MARKER"
+        },
+        "bindings": {
+          "PROJECT_A": "id"
+        }
       }
     },
     {
@@ -25,10 +29,14 @@
         "row": {
           "project_id": "$PROJECT_A",
           "title": "RLS project chat $MARKER",
-          "snapshot": { "messages": [] },
+          "snapshot": {
+            "messages": []
+          },
           "created_by": "$USER_A"
         },
-        "updatePatch": { "title": "Cross-user chat mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user chat mutation $MARKER"
+        }
       }
     },
     {
@@ -38,15 +46,20 @@
       "fixture": {
         "idColumn": "id",
         "row": {
+          "id": "$MARKER",
           "project_id": "$PROJECT_A",
           "name": "rls-$MARKER.txt",
-          "storage_path": "$PROJECT_A/rls-$MARKER.txt",
+          "storage_path": "$PROJECT_A/$MARKER.txt",
           "mime_type": "text/plain",
           "size_bytes": 1,
           "kind": "file",
-          "uploaded_by": "$USER_A"
+          "uploaded_by": "$USER_A",
+          "storage_owner_id": "$USER_A",
+          "status": "ready"
         },
-        "updatePatch": { "name": "cross-user-$MARKER.txt" }
+        "updatePatch": {
+          "name": "cross-user-$MARKER.txt"
+        }
       }
     },
     {
@@ -60,7 +73,9 @@
           "content": "RLS memory $MARKER",
           "created_by": "$USER_A"
         },
-        "updatePatch": { "content": "Cross-user memory mutation $MARKER" }
+        "updatePatch": {
+          "content": "Cross-user memory mutation $MARKER"
+        }
       }
     },
     {
@@ -76,7 +91,9 @@
           "source": "manual",
           "content_text": "RLS fixture"
         },
-        "updatePatch": { "title": "Cross-user library mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user library mutation $MARKER"
+        }
       }
     },
     {
@@ -85,8 +102,17 @@
       "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "user_id",
-        "row": { "user_id": "$USER_A", "settings": { "rlsMarker": "$MARKER" } },
-        "updatePatch": { "settings": { "rlsMarker": "cross-user-$MARKER" } }
+        "row": {
+          "user_id": "$USER_A",
+          "settings": {
+            "rlsMarker": "$MARKER"
+          }
+        },
+        "updatePatch": {
+          "settings": {
+            "rlsMarker": "cross-user-$MARKER"
+          }
+        }
       }
     },
     {
@@ -102,7 +128,9 @@
           "summary": "RLS memory summary",
           "message_count": 1
         },
-        "updatePatch": { "title": "Cross-user memory mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user memory mutation $MARKER"
+        }
       }
     },
     {
@@ -116,11 +144,15 @@
           "recipient_email": "$EMAIL_A",
           "local_chat_reference": "rls-$MARKER",
           "title": "RLS shared chat $MARKER",
-          "snapshot": { "messages": [] },
+          "snapshot": {
+            "messages": []
+          },
           "permission": "view",
           "status": "pending"
         },
-        "updatePatch": { "title": "Cross-user share mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user share mutation $MARKER"
+        }
       }
     },
     {
@@ -137,7 +169,9 @@
           "safe_identity": "rls-$MARKER",
           "granted_scopes": []
         },
-        "updatePatch": { "status": "error" }
+        "updatePatch": {
+          "status": "error"
+        }
       }
     },
     {
@@ -154,7 +188,9 @@
           "current_balance": 10,
           "currency": "USD"
         },
-        "updatePatch": { "account_name": "Cross-user account mutation $MARKER" }
+        "updatePatch": {
+          "account_name": "Cross-user account mutation $MARKER"
+        }
       }
     },
     {
@@ -173,7 +209,9 @@
           "environment": "sandbox",
           "current_period_end": "2099-01-01T00:00:00Z"
         },
-        "updatePatch": { "status": "past_due" }
+        "updatePatch": {
+          "status": "past_due"
+        }
       }
     },
     {
@@ -190,7 +228,9 @@
           "repeat": "none",
           "status": "scheduled"
         },
-        "updatePatch": { "title": "Cross-user task mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user task mutation $MARKER"
+        }
       }
     },
     {
@@ -199,8 +239,13 @@
       "operations": ["select", "update", "delete"],
       "fixture": {
         "idColumn": "user_id",
-        "row": { "user_id": "$USER_A", "bytes_used": 1 },
-        "updatePatch": { "bytes_used": 999 }
+        "row": {
+          "user_id": "$USER_A",
+          "bytes_used": 1
+        },
+        "updatePatch": {
+          "bytes_used": 999
+        }
       }
     },
     {
@@ -214,9 +259,13 @@
           "title": "RLS document $MARKER",
           "content": "RLS fixture",
           "content_format": "markdown",
-          "metadata": { "rlsMarker": "$MARKER" }
+          "metadata": {
+            "rlsMarker": "$MARKER"
+          }
         },
-        "updatePatch": { "title": "Cross-user document mutation $MARKER" }
+        "updatePatch": {
+          "title": "Cross-user document mutation $MARKER"
+        }
       }
     }
   ]

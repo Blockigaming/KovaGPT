@@ -1,29 +1,13 @@
 # Product gap report
 
-## P0 — financial and security controls
+Updated **2026-09-05**, source `1eb7ef53`. This index supersedes the earlier generic implementation backlog. The [remaining-work ledger](../remaining-chatgpt-gaps.md) owns the exact open items and package checkpoints; the [capability audit](capability-audit.json) records every master surface and evidence stage.
 
-- Wire the versioned quote, prepaid reservation, authoritative settlement, and emergency controls into **every** paid API ingress before enabling paid traffic.
-- Add atomic settle/release and uncertain-outcome reconciliation jobs, budget/concurrency enforcement at key/project/organization/day/month scopes, and administrator alert delivery.
-- Prove server-side tenant isolation and roles for every existing multi-user route.
+| Priority        | Current work                                                                                                                                                       | Completion evidence                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| P0              | Integrate pending source safely, preserve account/privacy/billing fences, resolve concrete review findings and finish exact-head CI.                               | Matching tree/commit, terminal review, real database/container tests and audited export/deletion behavior.                    |
+| P1              | Complete Work specialist delegation, verified Work Site outputs and reusable skills.                                                                               | Actual authorization/runtime/lease/budget/approval tests and truthful UI; no legacy viewer counted as execution.              |
+| P1              | Finish active Custom Kovas, SCIM, Project retention, MCP OAuth/files, Discovery and Sites co-editing packages.                                                     | Each package's source/test checkpoint, integration and final-head gates.                                                      |
+| P2              | Evaluate explicitly recorded public-reference differences, including portable Site state/analytics and multi-image canvas feedback, within approved web/PWA scope. | A concrete source requirement and tests, or a justified scope disposition; no blanket “provider setup” label for absent code. |
+| Release / owner | Approved provider quota/budgets, live identities/policies/secrets, migration/deployment, actual payment/account/device flows and rollback.                         | Exact staged and production candidate evidence, not source or local mocks.                                                    |
 
-## P1 — essential journeys
-
-- Build the administrator-only upstream-price review, evidence, expiry, emergency-control, and profitability workflows.
-- Publish Kova-owned developer models/prices/docs only after accepted-price capture and settlement pass end-to-end tests.
-- Complete authenticated chat/project/library accessibility, mobile, loading, empty, error, offline, and recovery coverage.
-
-## P2 — major completeness
-
-- Consolidate settings/account/help/sharing/task journeys without adding aliases that are empty shells.
-- Split public, developer-doc, help, resource/blog, and company sitemap indexes with canonical tests.
-- Complete artifact creation/edit/render/export only for supported file types.
-
-## P3 — advanced workspace/enterprise
-
-- Implement role-managed workspaces, groups, verified domains, SSO/SCIM, audit exports, retention, company knowledge, and analytics after infrastructure and legal review.
-
-## P4 — optional public content
-
-- Add only purchasable/requestable plan pages and substantiated business, education, company, resource, download, event, partner, and customer journeys.
-
-No route count is treated as product completeness. The official surface audit remains externally blocked, and exact remaining work must be re-baselined after a successful lawful audit across permitted account/workspace/device variants.
+Developer quote/reservation/settlement, price administration, prepaid funding, organization roles, Library versions, chat/Work sync, Tasks and browser takeover already have bounded source. Do not reopen them as entirely missing or mark them live. Official public documentation is now reachable; authenticated and hardware-specific reference variants remain unverified.

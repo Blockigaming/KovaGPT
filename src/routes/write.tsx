@@ -290,15 +290,16 @@ function WritePage() {
     }
   };
 
-  const exportDocument = async (format: "docx" | "pdf" | "html") => {
+  const exportDocument = async (format: "docx" | "pdf" | "xlsx" | "pptx" | "html") => {
     if (!documentReady) return;
+    const generation = storageGenerationRef.current;
+    const actor = principal;
+    const current = () =>
+      generation === storageGenerationRef.current && actor === principalRef.current;
     try {
-      if (format === "docx") {
-        const { exportDocumentDocx } = await import("@/lib/writing-export/docx");
-        await exportDocumentDocx(title, text);
-      } else if (format === "pdf") {
-        const { exportDocumentPdf } = await import("@/lib/writing-export/pdf");
-        await exportDocumentPdf(title, text);
+      if (format !== "html") {
+        const { downloadDocument } = await import("@/lib/writing-export/export");
+        if (!current() || !(await downloadDocument(format, title, text, current))) return;
       } else {
         const escapeHtml = (value: string) =>
           value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -312,9 +313,9 @@ function WritePage() {
           "html",
         );
       }
-      toast.success("Document exported");
-    } catch {
-      toast.error("Document export failed");
+      if (current()) toast.success("Document exported");
+    } catch (error) {
+      if (current()) toast.error(error instanceof Error ? error.message : "Document export failed");
     }
   };
 
@@ -632,6 +633,17 @@ function WritePage() {
           >
             Download PDF
           </button>
+          {(["xlsx", "pptx"] as const).map((format) => (
+            <button
+              key={format}
+              type="button"
+              onClick={() => void exportDocument(format)}
+              disabled={!documentReady}
+              className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            >
+              Download {format.toUpperCase()}
+            </button>
+          ))}
           <button
             type="button"
             onClick={() => void exportDocument("html")}

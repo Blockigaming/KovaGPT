@@ -11,6 +11,7 @@ const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 const packageJson = await readFile("package.json", "utf8");
 const changedFormat = await readFile("scripts/check-format-changed.mjs", "utf8");
+const prettierIgnore = await readFile(".prettierignore", "utf8");
 
 test("Supabase browser config is feature-scoped and cannot crash public boot", () => {
   assert.match(supabaseClient, /getSupabaseClientConfigStatus/);
@@ -59,4 +60,5 @@ test("CI blocks changed-file and repository-wide formatting", () => {
     /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/,
   );
   assert.match(workflow, /Production build/);
+  assert.match(prettierIgnore, /^src\/integrations\/supabase\/types\.ts$/m);
 });

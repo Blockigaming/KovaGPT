@@ -5,7 +5,7 @@ import { seoLandingHead } from "@/components/seo-landing-head";
 const faq = [
   {
     q: "Will it sound like me or like AI?",
-    a: "KovaGPT learns your voice from the writing you share and the tone you request. Give it one or two examples of past writing and it will match your rhythm, vocabulary, and pacing instead of producing generic AI prose.",
+    a: "Writing samples and tone instructions can guide a draft in the current conversation, but an exact voice match is not guaranteed. Review and revise important writing before you use it.",
   },
   {
     q: "Can it write long-form pieces?",
@@ -17,16 +17,16 @@ const faq = [
   },
   {
     q: "Does it handle non-English writing?",
-    a: "Yes. KovaGPT writes and edits in dozens of languages, and can translate between them while preserving tone and meaning.",
+    a: "KovaGPT can help draft, edit, and translate many languages. Quality varies by language and context, so review translations where precise meaning matters.",
   },
 ];
 
 export const Route = createFileRoute("/ai-writer")({
   head: () =>
     seoLandingHead({
-      title: "AI Writer for Emails, Essays, Posts & Scripts | KovaGPT",
+      title: "AI Writing and Editing Assistant | KovaGPT",
       description:
-        "Draft, rewrite, and polish anything with KovaGPT's AI writer. Keeps your voice, cuts filler, and works across emails, essays, blog posts, scripts, and captions.",
+        "Draft, rewrite, and review emails, essays, posts, scripts, and other writing with KovaGPT.",
       path: "/ai-writer",
       ogImage: "/og/writer.jpg",
       faq,
@@ -37,19 +37,19 @@ export const Route = createFileRoute("/ai-writer")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Writer That Sounds Like You, Not Like a Bot"
-      intro="KovaGPT helps you draft, rewrite, and polish writing across every format that matters - emails, essays, blog posts, scripts, LinkedIn posts, captions, product copy - while keeping your voice, not replacing it. Give it a topic or a rough draft and it delivers clear, publishable prose in seconds."
+      h1="Draft and revise writing with KovaGPT"
+      intro="Use KovaGPT to create a first draft, reshape existing text, or review writing for clarity. Give it context, constraints, and examples, then check the result before sending or publishing it."
       benefits={[
         "Turn bullet points or pasted notes into a finished draft",
         "Rewrite emails to sound more professional, warmer, or more direct",
-        "Match your existing tone from writing samples",
+        "Use writing samples as guidance for tone and structure",
         "Generate outlines, hooks, titles, and social captions",
         "Edit for grammar, clarity, and length without losing meaning",
-        "Translate while preserving voice",
+        "Draft or translate across supported languages",
       ]}
       details={[
-        "Writing is rarely the bottleneck - it's the blank page, the tenth revision, or the email you've been putting off for three days. KovaGPT compresses that friction. Describe what you need and it produces a real draft you can send, publish, or hand to an editor.",
-        "It's especially good at the boring high-volume writing: routine emails, meeting recaps, product descriptions, weekly updates, LinkedIn posts. Set the tone once and KovaGPT keeps delivering in that voice.",
+        "Start from a blank page, bullet points, or a rough draft. KovaGPT can suggest structure and wording, while you remain responsible for facts, tone, and the final version.",
+        "For repeated work such as emails, meeting recaps, product descriptions, and weekly updates, include the audience and a fresh example in your prompt when consistency matters.",
       ]}
       prompts={[
         "Turn these bullet points into a professional email",

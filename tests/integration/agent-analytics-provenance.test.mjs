@@ -20,11 +20,11 @@ test("agent runs reject stale versions and omit objectives from operational even
   assert.doesNotMatch(server, /safe_payload: \{\s*objective:/s);
   assert.match(api, /expectedDefinitionVersion/);
   assert.match(server, /agent_run_not_cancellable/);
-  assert.match(server, /command === "cancel" && safeRun.status === "cancelled"/);
+  assert.match(server, /supabaseUser\.rpc\("control_disabled_browser_run"/);
+  assert.doesNotMatch(server, /command === "cancel" && safeRun.status === "cancelled"/);
   assert.match(server, /idempotencyKey: `retry:\$\{runId\}:\$\{retryKey\}`/);
   assert.match(server, /priorRunId: runId/);
-  assert.match(server, /\.eq\("status", safeRun\.status\)/);
-  assert.match(server, /agent_run_state_changed/);
+  assert.match(server, /if \(!data\) throw new Error\("agent_control_unavailable"\)/);
 });
 test("knowledge provenance is owner scoped, confidence bounded, and suggestions require approval", async () => {
   const sql = await read("supabase/migrations/20260803100000_knowledge_provenance.sql");

@@ -32,6 +32,9 @@ test("AI requests are locked to approved OpenAI and Azure endpoints", () => {
   assert.match(source, /\.openai\.azure\.com/u);
   assert.match(source, /\.services\.ai\.azure\.com/u);
   assert.match(source, /redirect: "error"/u);
+  assert.match(source, /AZURE_OPENAI_IMAGE_ENDPOINT/u);
+  assert.match(source, /providerTarget\(capability\)/u);
+  assert.match(source, /`\$\{target\.baseUrl\}\$\{path\}`/u);
   assert.doesNotMatch(source, /LOVABLE|OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/u);
   assert.doesNotMatch(source, /VITE_.*API_KEY/u);
 });
@@ -61,6 +64,8 @@ test("AI provider environment knobs are documented without sample secrets", () =
   assert.match(env, /^KOVA_AI_TIMEOUT_MS=45000$/m);
   assert.match(env, /^KOVA_AI_CAPABILITIES=$/m);
   assert.match(env, /^AZURE_OPENAI_API_KEY=$/m);
+  assert.match(env, /^AZURE_OPENAI_IMAGE_ENDPOINT=$/m);
+  assert.match(env, /^AZURE_OPENAI_IMAGE_API_KEY=$/m);
   assert.doesNotMatch(env, /(?:OPENAI|AZURE_OPENAI)_API_KEY=(?:sk-|[A-Za-z0-9]{16})/u);
   assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
 });

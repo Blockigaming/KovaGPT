@@ -10,7 +10,8 @@ export class PricingUnavailableError extends Error {
   }
 }
 
-const roundUp = (value, increment) => Math.ceil((value - Number.EPSILON) / increment) * increment;
+const roundUp = (value, increment) =>
+  Number((Math.ceil((value - Number.EPSILON) / increment) * increment).toFixed(8));
 
 export function selectActivePrices(records, { provider, model, at = new Date(), currency }) {
   const instant = new Date(at).getTime();
@@ -57,6 +58,9 @@ export function quoteRequest({
   if (!pricingVersion?.id || pricingVersion.status !== "approved") {
     throw new PricingUnavailableError("pricing_version_unapproved");
   }
+  const marginFloor = pricingVersion.marginFloor ?? MARGIN_FLOOR;
+  if (!Number.isFinite(marginFloor) || marginFloor < MARGIN_FLOOR || marginFloor >= 1)
+    throw new PricingUnavailableError("margin_floor_invalid");
   if (riskBufferPercentage < 0 || riskBufferPercentage > 1)
     throw new RangeError("risk_buffer_invalid");
   const blocked = emergencyControls.find(
@@ -89,8 +93,8 @@ export function quoteRequest({
   const collectionRate = allowances.collectionPercentage ?? 0;
   const collectionFixed = allowances.collectionFixed ?? 0;
   const preCollectionCost = upstreamCost + fixedCosts + percentageCosts;
-  // Solve charge >= (non-collection cost + fixed fee + charge*collection rate) / .5.
-  const denominator = MARGIN_FLOOR - collectionRate;
+  // Solve the approved margin floor including collection costs on the charge.
+  const denominator = 1 - marginFloor - collectionRate;
   if (denominator <= 0) throw new PricingUnavailableError("collection_cost_exceeds_margin_budget");
   const baseMinimumPrice = (preCollectionCost + collectionFixed) / denominator;
   const riskBufferAmount = baseMinimumPrice * riskBufferPercentage;
@@ -102,7 +106,7 @@ export function quoteRequest({
   let customerCharge = roundUp(Math.max(0, normalCharge - requestedDiscount), roundingIncrement);
   const projectedCollectionCost = collectionFixed + customerCharge * collectionRate;
   const totalVariableCost = preCollectionCost + projectedCollectionCost;
-  const marginMinimum = totalVariableCost / MARGIN_FLOOR;
+  const marginMinimum = totalVariableCost / (1 - marginFloor);
   let promotionalSubsidy = 0;
   if (customerCharge + Number.EPSILON < marginMinimum) {
     if (
@@ -116,11 +120,12 @@ export function quoteRequest({
   }
   const effectiveRevenue = customerCharge + promotionalSubsidy;
   const grossMarginPercentage = (effectiveRevenue - totalVariableCost) / effectiveRevenue;
-  if (grossMarginPercentage + Number.EPSILON < MARGIN_FLOOR) {
+  if (grossMarginPercentage + Number.EPSILON < marginFloor) {
     throw new PricingUnavailableError("margin_floor_not_met");
   }
   return Object.freeze({
     pricingVersionId: pricingVersion.id,
+    marginFloor,
     publicPrice,
     currency,
     upstreamBreakdown,
@@ -149,7 +154,7 @@ export function reconcileCharge({
   const revenue = quote.customerCharge + quote.promotionalSubsidy;
   const grossProfit = revenue - actualTotalVariableCost;
   const grossMarginPercentage = revenue > 0 ? grossProfit / revenue : Number.NEGATIVE_INFINITY;
-  const belowFloor = grossMarginPercentage < MARGIN_FLOOR;
+  const belowFloor = grossMarginPercentage < (quote.marginFloor ?? MARGIN_FLOOR);
   return {
     finalCustomerCharge: quote.customerCharge,
     finalUpstreamCost: actualUpstreamCost,

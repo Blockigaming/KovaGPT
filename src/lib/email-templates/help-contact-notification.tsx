@@ -84,7 +84,7 @@ export const template = {
   subject: (data: Record<string, unknown>) =>
     `${data.variant === "bug" ? "[Kova bug]" : "[Kova help]"} ${data.topic || "New request"}`,
   displayName: "Help / bug - internal notification",
-  to: "help@kovagpt.com",
+  to: "support@kovagpt.com",
   previewData: {
     name: "Jane Doe",
     email: "jane@example.com",

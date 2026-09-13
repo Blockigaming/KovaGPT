@@ -5,11 +5,13 @@ export const BILLING_ENV = "live" as const;
 export const BILLING_PLANS = Object.freeze({
   plus_monthly: {
     lookupKey: "plus_monthly",
+    livePriceId: "price_1UAzhHAEZlsb6DBYWw2oUCeO",
     tier: "plus",
     trialPeriodDays: 30,
   },
   pro_monthly: {
     lookupKey: "pro_monthly",
+    livePriceId: "price_1UAzhRAEZlsb6DBYlafU4mhc",
     tier: "pro",
     trialPeriodDays: 0,
   },
@@ -18,8 +20,11 @@ export const BILLING_PLANS = Object.freeze({
 export type BillingLookupKey = keyof typeof BILLING_PLANS;
 
 export function resolveBillingPlan(value: string | null | undefined) {
-  if (!value || !Object.prototype.hasOwnProperty.call(BILLING_PLANS, value)) return null;
-  return BILLING_PLANS[value as BillingLookupKey];
+  if (!value) return null;
+  if (Object.prototype.hasOwnProperty.call(BILLING_PLANS, value)) {
+    return BILLING_PLANS[value as BillingLookupKey];
+  }
+  return Object.values(BILLING_PLANS).find((plan) => plan.livePriceId === value) ?? null;
 }
 
 export function tierForLookupKey(value: string | null | undefined): BillingTier {

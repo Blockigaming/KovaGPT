@@ -1,10 +1,42 @@
 # KovaGPT parity reconciliation release report
 
-**Authority date:** 2026-08-12  
-**Starting HEAD:** `0df0f5dd188fa9cb6657570cc78ecc21677e5b95`  
-**Status:** release candidate reconciliation complete; production promotion blocked by the integration gate described below.
+**Authority date:** 2026-09-07
+
+**Historical starting HEAD:** `0df0f5dd188fa9cb6657570cc78ecc21677e5b95`
+
+**Status:** historical reconciliation retained below; the 2026-09-07 integrated candidate update is authoritative. Production promotion has not been approved.
 
 This report supersedes the current-state totals in `docs/page-parity/page-parity-report.md`, `docs/page-parity/final-verification.md`, and the earlier product-parity evidence. The August 11 inventory is user-provided snapshot evidence, not a live crawl.
+
+## Integrated candidate update — 2026-09-07
+
+This section supersedes every earlier current-status and integration-total statement in this report. Historical sections remain below so the progression and original evidence are not rewritten.
+
+The validated source head is `6c0562bad99a97bb8f33a783ed18e30bee4e727d` on local branch `codex/consolidate-release-foundation-20260907-v4`. It consolidates the PR #299/#301 release work, reconciles the PR #300/#303 Supabase migration lineage, reconstructs the conflicted integration work, restores the chat/hydration/provider fixes, and establishes the redesigned core workspace. The branch is local only: it has not been pushed, deployed, or applied to a live database.
+
+| Current gate                                     | Exact result                                                                            |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Production build                                 | pass                                                                                    |
+| Typecheck                                        | pass                                                                                    |
+| ESLint                                           | pass                                                                                    |
+| Repository formatting                            | pass                                                                                    |
+| Unit                                             | 1590/1590 pass                                                                          |
+| Release                                          | 23/23 at validated source head; 24/24 after adding this evidence contract               |
+| Integration                                      | 483/484 pass; zero source-contract failures                                             |
+| Sole integration failure                         | Wrangler/workerd sandbox boot: `uv_interface_addresses returned Unknown system error 1` |
+| Supabase source-only migration preflight         | pass across 144 migration files                                                         |
+| Disposable isolated migration apply              | not run; Docker is unavailable in this environment                                      |
+| Live deployment/database/network/Stripe mutation | not performed                                                                           |
+
+A read-only audit of `https://kovagpt.com/` reproduced the deployed React hydration error `#418`. The deployed document does not expose the candidate's `kova-build` metadata, corroborating that production predates this integrated branch. The local candidate contains the pre-hydration root, locale, theme and principal-storage fixes and has green source/browser contracts for those boundaries. Exact-head hosted CI and staged deployment evidence are still required before claiming the production failure is eliminated.
+
+**Current decision:** the source candidate is ready for hosted CI and staged validation. It is not approved for production. Publication, any live migration, networking change, real Stripe test, or deployment remains a separate explicitly authorized action.
+
+### Post-validation autonomous source closure
+
+Commit `80fa6d5a` closes the Work-to-Sites source gap. Work can now emit one deterministic, bounded multi-file static-Site bundle as an immutable owner-bound output. The Sites import path independently verifies current ownership, the canonical ready Project file, MIME, byte count, SHA-256 digest, bundle schema, safe paths, unique paths, supported text assets and required `index.html` before creating a normal Sites version. Import never publishes: the existing Sites publication action and receipt verification remain a separate owner confirmation.
+
+The production build, typecheck and lint pass. Focused Work/Sites security and lifecycle coverage passes 25/25; the wider protocol, migration, service and transport selection passes 51/51. The environment denied the network-capable aggregate integration command before it started, so the earlier exact 483/484 aggregate result remains the latest complete aggregate evidence. No Site was registered, hosted, imported, or published, and no live data changed.
 
 ## Git reconciliation
 

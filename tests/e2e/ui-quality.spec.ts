@@ -15,7 +15,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(composer).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send" }).first()).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Send message" }).first()).toBeDisabled();
 
   const unfocused = await composer.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -30,7 +30,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
 
   await input.focus();
   await input.fill("A focused prompt");
-  await expect(page.getByRole("button", { name: "Send" }).first()).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Send message" }).first()).toBeEnabled();
 
   const focused = await composer.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -287,7 +287,7 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   for (const action of [
     page.getByRole("button", { name: "Open menu" }),
     page.getByRole("button", { name: "Add files, tools, or prompts" }),
-    page.getByRole("button", { name: "Send" }),
+    page.getByRole("button", { name: "Send message" }),
   ]) {
     const actionBox = await action.first().boundingBox();
     expect(actionBox).not.toBeNull();
@@ -346,7 +346,7 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Explain the result clearly.");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-user-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toContainText("Stability");

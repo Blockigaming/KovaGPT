@@ -4,6 +4,7 @@ import test from "node:test";
 
 const projectChat = await readFile("src/routes/projects.$projectId.chat.$chatId.tsx", "utf8");
 const chatInput = await readFile("src/components/ChatInput.tsx", "utf8");
+const projectFunctions = await readFile("src/lib/projects.functions.ts", "utf8");
 
 test("project chat uses the shared chat surface without unsupported controls", () => {
   assert.match(projectChat, /import \{ ChatInput,/);
@@ -21,6 +22,19 @@ test("project chat uses the shared chat surface without unsupported controls", (
   assert.doesNotMatch(projectChat, /h-\[100dvh\]/);
   assert.doesNotMatch(projectChat, /bg-primary\s+text-primary-foreground/);
   assert.doesNotMatch(projectChat, /\b(?:voice|microphone)\b/i);
+});
+
+test("project chat preserves the same bounded response sources live and after save", () => {
+  assert.match(projectChat, /delta\?\.kind === "web_sources"/u);
+  assert.match(projectChat, /normalizeResponseSources\(delta\.sources\)/u);
+  assert.match(projectChat, /assistantSources \? \{ sources: assistantSources \} : \{\}/u);
+  assert.match(projectChat, /sources: message\.sources/u);
+  assert.match(
+    projectFunctions,
+    /sources: z\.array\(ResponseSourceSchema\)\.max\(12\)\.optional\(\)/u,
+  );
+  assert.match(projectFunctions, /message\.role !== "assistant"/u);
+  assert.match(projectFunctions, /snapshot: projectChatSnapshot\(row\.snapshot\)/u);
 });
 
 test("project chat can stop generation and saves only non-empty assistant output", () => {
