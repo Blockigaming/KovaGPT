@@ -50,8 +50,9 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     rollout,
-    /novel ambiguous `pro_monthly` write is rejected for retry instead of\s+relabeling/u,
+    /recovers the exact Price ID from the durable nonterminal Checkout attempt/u,
   );
+  assert.match(rollout, /requires exact-ID reconciliation before webhook retry/u);
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

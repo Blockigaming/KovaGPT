@@ -148,8 +148,10 @@ Application rollback is not interchangeable with merely disabling one endpoint.
    compatibility wrapper for the rollback window. Legacy Plus lookup-key writes normalize to its
    exact live Price ID. Because Pro's lookup key now represents both the historical USD 89 Price and
    the current USD 80 Price, legacy Pro updates and upserts preserve the exact Price ID already stored
-   for that subscription; a novel ambiguous `pro_monthly` write is rejected for retry instead of
-   relabeling the subscription.
+   for that subscription. If the first subscription webhook arrives after rollback, the database
+   recovers the exact Price ID from the durable nonterminal Checkout attempt created before the Stripe
+   Session request. A novel `pro_monthly` write with neither source is rejected instead of relabeling
+   the subscription and requires exact-ID reconciliation before webhook retry.
 4. Only after the new revision is fully drained may an old revision receive webhook deliveries.
    Re-enable intake only through an explicit operator decision; the old handler has weaker
    email-identity and timestamp-ordering behavior.

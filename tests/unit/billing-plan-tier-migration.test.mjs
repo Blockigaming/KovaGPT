@@ -289,6 +289,37 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
       { stripe_subscription_id: "sub_historical_pro", price_id: proPriceId },
     ]);
 
+    await database.query(
+      `INSERT INTO public.stripe_checkout_attempts (
+         environment, user_id, stripe_price_id, outcome, stripe_session_id,
+         idempotency_key, session_expires_at, idempotency_expires_at
+       ) VALUES (
+         'live', $1::uuid, $2, 'ready', 'cs_current_pro', gen_random_uuid(),
+         now() + interval '1 hour', now() + interval '2 hours'
+       )`,
+      [userId, currentProPriceId],
+    );
+    await addSubscription(database, {
+      priceId: "pro_monthly",
+      subscriptionId: "sub_first_current_pro_webhook",
+    });
+    const recovered = await database.query(
+      `SELECT price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id = 'sub_first_current_pro_webhook'`,
+    );
+    assert.deepEqual(recovered.rows, [{ price_id: currentProPriceId }]);
+
+    await database.query(
+      `INSERT INTO public.stripe_checkout_attempts (
+         environment, user_id, stripe_price_id, outcome, idempotency_key,
+         session_expires_at, idempotency_expires_at
+       ) VALUES (
+         'live', $1::uuid, $2, 'new', gen_random_uuid(),
+         now() + interval '1 hour', now() + interval '2 hours'
+       )`,
+      [ownerId, currentProPriceId],
+    );
     await assert.rejects(
       database.query(
         `INSERT INTO public.subscriptions (
@@ -298,7 +329,7 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
            $1::uuid, 'sub_ambiguous_pro', 'cus_ambiguous_pro', 'prod_fixture',
            'pro_monthly', 'active', now() + interval '30 days', 'live'
          )`,
-        [userId],
+        [ownerId],
       ),
       /ambiguous_legacy_live_pro_price/u,
     );

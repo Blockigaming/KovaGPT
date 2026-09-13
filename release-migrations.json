@@ -3215,7 +3215,7 @@
       "order": 148,
       "filename": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
       "timestamp": "20260913023331",
-      "sha256": "8c2f2b7ecf7615557bcd04d3371efc37eea7d01b58ccbb507d99d709ab4a1578",
+      "sha256": "d0d981d5693fdd9e6ca996a9208adba3c6b23c7b1fceb7383427e2d070b41862",
       "tables": [],
       "functions": ["normalize_legacy_live_subscription_price"],
       "destructive": false,
