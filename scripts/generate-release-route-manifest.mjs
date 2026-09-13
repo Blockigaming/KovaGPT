@@ -91,7 +91,7 @@ await writeFile(
   `${JSON.stringify(
     {
       schemaVersion: 1,
-      generatedAt: "2026-08-12",
+      generatedAt: "2026-09-13",
       sourceOfTruth: "src/routes plus src/lib/seo-policy.mjs",
       routeFileCount: records.length,
       sitemapCount: PUBLIC_SITEMAP_ENTRIES.length,

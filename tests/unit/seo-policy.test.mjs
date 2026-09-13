@@ -55,13 +55,18 @@ test("the public sitemap is unique and contains no private or service endpoints"
   const privatePrefixes = [
     "/api",
     "/account",
-    "/apps",
     "/chat",
     "/checkout",
     "/projects",
     "/settings",
     "/work",
   ];
+  const publicAppDetails = new Set([
+    "/apps/google-drive",
+    "/apps/gmail",
+    "/apps/google-calendar",
+    "/apps/github",
+  ]);
 
   for (const path of paths) {
     assert.match(path, /^\/(?:[^?#]*)$/u);
@@ -70,5 +75,8 @@ test("the public sitemap is unique and contains no private or service endpoints"
       false,
       path,
     );
+    if (path === "/apps" || path.startsWith("/apps/")) {
+      assert.equal(publicAppDetails.has(path), true, path);
+    }
   }
 });

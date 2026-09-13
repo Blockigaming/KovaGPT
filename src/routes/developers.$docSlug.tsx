@@ -8,7 +8,22 @@ export const Route = createFileRoute("/developers/$docSlug")({
     return doc;
   },
   component: UnavailableDeveloperDoc,
-  head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" }] }),
+  head: ({ loaderData: doc }) =>
+    doc
+      ? {
+          meta: [
+            { title: `${doc.title} | KovaGPT Developers` },
+            { name: "description", content: doc.description },
+            { name: "robots", content: "noindex, nofollow" },
+          ],
+          links: [
+            {
+              rel: "canonical",
+              href: `https://kovagpt.com/developers/${doc.slug}`,
+            },
+          ],
+        }
+      : {},
 });
 
 function UnavailableDeveloperDoc() {

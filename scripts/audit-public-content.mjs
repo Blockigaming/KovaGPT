@@ -84,8 +84,8 @@ const records = raw.map((item) => {
     structuredDataType: item.structuredDataType,
     legalReview: legal ? "required" : "not_required",
     administratorContent: admin ? "required" : "not_required",
-    mobileResult: "baseline_pass_2026-08-11",
-    darkModeResult: "baseline_pass_2026-08-11",
+    mobileResult: "baseline_pass_2026-09-13",
+    darkModeResult: "baseline_pass_2026-09-13",
     keyboardResult: item.skipLinkPresent ? "skip_link_present" : "fail",
     runtimeStatus: item.status,
     decision,
@@ -104,7 +104,13 @@ await writeFile(
   `${JSON.stringify({ generatedAt: new Date().toISOString(), baseUrl, reviewedRouteCount: records.length, records }, null, 2)}\n`,
 );
 const failures = records.filter(
-  (record) => record.runtimeStatus !== 200 || record.keyboardResult === "fail",
+  (record) =>
+    record.runtimeStatus !== 200 ||
+    record.keyboardResult === "fail" ||
+    !record.h1 ||
+    !record.uniqueTitle ||
+    !record.uniqueDescription ||
+    !record.canonical,
 );
 const brokenInternalLinks = [];
 for (const path of new Set(raw.flatMap(({ internalLinks }) => internalLinks))) {

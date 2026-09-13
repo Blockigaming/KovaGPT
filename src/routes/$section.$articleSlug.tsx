@@ -1,35 +1,48 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
-import { PublicPageView } from "@/components/public/PublicSite";
+import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
+import { PUBLIC_DETAIL_PAGE_BY_KEY } from "@/lib/public-detail-content";
 export const Route = createFileRoute("/$section/$articleSlug")({
   loader: ({ params }) => {
-    const item = PUBLICATION_BY_KEY.get(publicationKey(params.section, params.articleSlug));
-    if (!item) throw notFound();
-    return item;
+    const key = publicationKey(params.section, params.articleSlug);
+    const detail = PUBLIC_DETAIL_PAGE_BY_KEY.get(key);
+    if (detail) return { kind: "detail" as const, item: detail };
+    const publication = PUBLICATION_BY_KEY.get(key);
+    if (publication) return { kind: "publication" as const, item: publication };
+    throw notFound();
   },
-  head: ({ loaderData: item }) =>
-    item
+  head: ({ loaderData: data }) =>
+    data
       ? {
           meta: [
-            { title: `${item.title} | KovaGPT` },
-            { name: "description", content: item.description },
+            { title: `${data.item.title} | KovaGPT` },
+            { name: "description", content: data.item.description },
             {
               name: "robots",
-              content: isPublicIndexableRoute(`/${item.section}/${item.slug}`)
+              content: isPublicIndexableRoute(`/${data.item.section}/${data.item.slug}`)
                 ? "index, follow"
                 : "noindex, follow",
             },
-            { property: "og:title", content: item.title },
-            { property: "og:description", content: item.description },
+            { property: "og:title", content: data.item.title },
+            { property: "og:description", content: data.item.description },
+            { property: "og:type", content: data.kind === "publication" ? "article" : "website" },
+            { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
           ],
-          links: [{ rel: "canonical", href: `https://kovagpt.com/${item.section}/${item.slug}` }],
+          links: [
+            {
+              rel: "canonical",
+              href: `https://kovagpt.com/${data.item.section}/${data.item.slug}`,
+            },
+          ],
         }
       : {},
   component: Article,
 });
 function Article() {
-  const item = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  if (data.kind === "detail") return <PublicDetailPageView item={data.item} />;
+  const item = data.item;
   return (
     <PublicPageView
       eyebrow={`${item.section.replaceAll("-", " ")} · ${item.publishedAt}`}

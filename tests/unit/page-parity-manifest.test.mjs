@@ -84,7 +84,7 @@ test("route manifest includes reusable public, publishing, developer, assistant 
       routes.records.some(({ canonicalPath }) => canonicalPath === pattern),
       pattern,
     );
-  assert.equal(routes.reviewedPublicRouteCount, 87);
+  assert.equal(routes.reviewedPublicRouteCount, 122);
 });
 
 test("Local discovery is noindex, requests no device location, and preserves an accessible main", () => {
@@ -140,16 +140,16 @@ test("public catch-all rejects every reserved application and security namespace
   assert.match(catchAll, /isReservedPublicPath\(`\/\$\{params\.slug\}`\)/);
 });
 
-test("all 87 reconciled public routes are reviewed and the sitemap retains only 23 substantive routes", async () => {
+test("all 122 reconciled public routes are reviewed and the sitemap retains 75 substantive routes", async () => {
   const review = JSON.parse(read("docs/page-parity/indexable-content-review.json"));
   const developer = JSON.parse(read("docs/release-reconciliation/developer-contract-report.json"));
-  assert.equal(review.reviewedRouteCount, 87);
-  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 87);
+  assert.equal(review.reviewedRouteCount, 122);
+  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 122);
   for (const entry of review.records) {
     assert.ok(entry.h1, entry.route);
     assert.equal(entry.runtimeStatus, 200, entry.route);
-    assert.equal(entry.mobileResult, "baseline_pass_2026-08-11", entry.route);
-    assert.equal(entry.darkModeResult, "baseline_pass_2026-08-11", entry.route);
+    assert.equal(entry.mobileResult, "baseline_pass_2026-09-13", entry.route);
+    assert.equal(entry.darkModeResult, "baseline_pass_2026-09-13", entry.route);
     assert.equal(entry.keyboardResult, "skip_link_present", entry.route);
     assert.ok(entry.uniqueTitle, entry.route);
     assert.ok(entry.uniqueDescription, entry.route);
@@ -163,19 +163,19 @@ test("all 87 reconciled public routes are reviewed and the sitemap retains only 
   );
   const { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } =
     await import("../../src/lib/seo-policy.mjs");
-  assert.equal(PUBLIC_REVIEW_PATHS.length, 87);
-  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 23);
+  assert.equal(PUBLIC_REVIEW_PATHS.length, 122);
+  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 75);
   const indexed = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const { route } of developer.records) assert.equal(indexed.has(route), false, route);
 });
 
 test("release route manifest is generated from all route files and one sitemap source", () => {
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
-  assert.equal(manifest.routeFileCount, 103);
-  assert.equal(manifest.records.length, 103);
-  assert.equal(manifest.sitemapCount, 23);
-  assert.equal(manifest.reviewedPublicRouteCount, 87);
-  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 103);
+  assert.equal(manifest.routeFileCount, 171);
+  assert.equal(manifest.records.length, 171);
+  assert.equal(manifest.sitemapCount, 75);
+  assert.equal(manifest.reviewedPublicRouteCount, 122);
+  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 171);
   assert.ok(
     manifest.records
       .filter(({ classification }) => classification.startsWith("reserved_"))

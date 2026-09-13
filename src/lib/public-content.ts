@@ -529,6 +529,108 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     ],
   ),
   page(
+    "overview",
+    "Meet KovaGPT",
+    "Product overview",
+    "Explore KovaGPT chat, research, images, files, projects, apps, and workspaces.",
+    "KovaGPT brings focused AI workflows into one workspace with explicit limits, account controls, and provider-aware availability.",
+    [
+      {
+        title: "Start with conversation",
+        body: "Draft, explain, compare, and plan in chat, then move longer work into Projects, Library, Study, Research, Images, or Work.",
+      },
+      {
+        title: "Know what is real",
+        body: "Plan eligibility, server authorization, provider readiness, and privacy mode determine what can run. Unavailable tools stay visibly unavailable.",
+      },
+    ],
+  ),
+  page(
+    "college-students",
+    "KovaGPT for college students",
+    "Education",
+    "Use KovaGPT for explanation, practice, research planning, and organization while following course rules.",
+    "Build understanding with guided questions and reviewable drafts—not unchecked answers submitted as your own work.",
+    [
+      {
+        title: "Learn actively",
+        body: "Set a learning objective, attempt the problem first, ask for targeted hints, and explain the final reasoning in your own words.",
+      },
+      {
+        title: "Protect your work",
+        body: "Do not upload unnecessary personal, institutional, research, or participant data. Cite sources and disclose AI assistance when required.",
+      },
+    ],
+  ),
+  page(
+    "parent-resources",
+    "Resources for parents and caregivers",
+    "Families",
+    "Practical guidance for discussing AI limits, privacy, safety, and verification with young people.",
+    "Set clear expectations about what information to share, what claims to verify, and when a trusted adult or qualified professional needs to step in.",
+    [
+      {
+        title: "Use AI together",
+        body: "Review generated answers, ask where facts came from, and compare important claims with trusted age-appropriate sources.",
+      },
+      {
+        title: "Set boundaries",
+        body: "Avoid sharing sensitive identifiers, private school records, health details, or information about other people that is not needed.",
+      },
+    ],
+  ),
+  page(
+    "health",
+    "Health information with clear boundaries",
+    "Safety",
+    "Use KovaGPT to organize general health questions without treating it as diagnosis, treatment, or emergency care.",
+    "Generated health information can be incomplete, outdated, or wrong. A qualified clinician and authoritative guidance remain the source for medical decisions.",
+    [
+      {
+        title: "Prepare better questions",
+        body: "Organize symptoms, timing, medication questions, or appointment notes, then review them with a qualified professional.",
+      },
+      {
+        title: "Know when not to wait",
+        body: "For urgent symptoms, danger, or crisis, contact local emergency or crisis services rather than relying on an AI response.",
+      },
+    ],
+  ),
+  page(
+    "contact-sales",
+    "Talk with KovaGPT about your organization",
+    "Contact",
+    "Discuss organizational requirements without assuming features, certifications, pricing, or deployment terms.",
+    "Share the workflow, users, data boundaries, identity needs, review requirements, and deployment constraints you need evaluated.",
+    [
+      {
+        title: "Bring requirements",
+        body: "Describe the use case, expected scale, sensitive data classes, access model, retention needs, and required integrations.",
+      },
+      {
+        title: "Confirm before relying",
+        body: "Availability, support, security commitments, commercial terms, and implementation timing are confirmed in writing before purchase.",
+      },
+    ],
+  ),
+  page(
+    "shopping",
+    "Shopping research with KovaGPT",
+    "Use case",
+    "Compare products and tradeoffs without implying live inventory, fulfillment, endorsement, or guaranteed prices.",
+    "Turn needs into criteria, compare supported evidence, and verify the final price, seller, warranty, availability, and return terms directly.",
+    [
+      {
+        title: "Compare what matters",
+        body: "Separate must-haves from preferences, set a budget, and ask for explicit tradeoffs instead of a single unexplained recommendation.",
+      },
+      {
+        title: "Check before buying",
+        body: "Listings and prices change. Confirm product identity, merchant reputation, shipping, warranty, compatibility, and return policy at the seller.",
+      },
+    ],
+  ),
+  page(
     "copyright",
     "Copyright requests",
     "Legal",
