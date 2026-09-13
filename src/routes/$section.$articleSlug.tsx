@@ -2,10 +2,10 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
-import { PUBLIC_DETAIL_PAGE_BY_KEY } from "@/lib/public-detail-content";
 export const Route = createFileRoute("/$section/$articleSlug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const key = publicationKey(params.section, params.articleSlug);
+    const { PUBLIC_DETAIL_PAGE_BY_KEY } = await import("@/lib/public-detail-content");
     const detail = PUBLIC_DETAIL_PAGE_BY_KEY.get(key);
     if (detail) return { kind: "detail" as const, item: detail };
     const publication = PUBLICATION_BY_KEY.get(key);

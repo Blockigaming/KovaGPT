@@ -45,6 +45,7 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   const route = read("src/routes/$section.$articleSlug.tsx");
   const view = read("src/components/public/PublicSite.tsx");
   assert.match(route, /PUBLIC_DETAIL_PAGE_BY_KEY/u);
+  assert.match(route, /await import\("@\/lib\/public-detail-content"\)/u);
   assert.match(route, /isPublicIndexableRoute/u);
   assert.match(route, /og:type/u);
   assert.match(view, /aria-label="Breadcrumb"/u);
