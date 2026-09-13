@@ -10,17 +10,17 @@ KovaGPT will create original, Kova-branded equivalents for relevant product and 
 
 ## Live inventory
 
-| Surface                       |                   Live result | Meaning for KovaGPT                                                                                             |
-| ----------------------------- | ----------------------------: | --------------------------------------------------------------------------------------------------------------- |
-| OpenAI sitemap index          |             38 child sitemaps | Complete discoverable sitemap-family inventory                                                                  |
-| OpenAI canonical URLs         |             1,704 unique URLs | Mostly reusable editorial, plugin, partner, policy, and publication families                                    |
-| ChatGPT sitemap               |                       98 URLs | 63 localized homes, 19 public GPT details, 10 translation tools, and 6 other canonical pages                    |
-| ChatGPT marketing navigation  |    51 canonical English paths | Product, feature, plan, use-case, app, business, education, download, and sales families                        |
-| ChatGPT authenticated UI      | 12 observed templates/dialogs | Chat, conversation, images, library, projects, schedules, plugins, profile, personalization, settings, and help |
-| KovaGPT source routes         |                 170 templates | 72 UI templates and 98 API/service templates                                                                    |
-| KovaGPT public registry       |                      40 pages | Original company, product, use-case, safety, trust, policy, education, and developer pages                      |
-| KovaGPT reviewed public paths |                     122 paths | Includes explicit, detail, dynamic, publishing, developer, and localized templates                              |
-| KovaGPT sitemap               |            75 canonical paths | Approved substantive product, plan, feature, use-case, business, app, trust, and utility pages                  |
+| Surface                       |                 Live result | Meaning for KovaGPT                                                                            |
+| ----------------------------- | --------------------------: | ---------------------------------------------------------------------------------------------- |
+| OpenAI sitemap index          |           38 child sitemaps | Complete discoverable sitemap-family inventory                                                 |
+| OpenAI canonical URLs         |           1,704 unique URLs | Mostly reusable editorial, plugin, partner, policy, and publication families                   |
+| ChatGPT sitemap               |                     98 URLs | 63 localized homes, 19 public GPT details, 10 translation tools, and 6 other canonical pages   |
+| ChatGPT marketing navigation  |  51 canonical English paths | Product, feature, plan, use-case, app, business, education, download, and sales families       |
+| ChatGPT authenticated UI      | 12 static templates/dialogs | Not verified by the public audit run; requires a separately dated authenticated observation    |
+| KovaGPT source routes         |               171 templates | 72 UI templates, including the root shell, and 99 API/service templates                        |
+| KovaGPT public registry       |                    69 pages | 40 index/content pages plus 29 feature, plan, use-case, business, and app detail pages         |
+| KovaGPT reviewed public paths |                   122 paths | Includes explicit, detail, dynamic, publishing, developer, and localized templates             |
+| KovaGPT sitemap               |          75 canonical paths | Approved substantive product, plan, feature, use-case, business, app, trust, and utility pages |
 
 Counts can change as source sites publish or retire pages. Re-run `npm run audit:ui-surfaces` to refresh the complete inventory.
 
@@ -71,12 +71,12 @@ Counts can change as source sites publish or retire pages. Re-run `npm run audit
 
 ## Verification record
 
-- Completion status: all five UI/UX gates pass locally on the finished source.
+- Source implementation status: all five planned public UI/UX workstreams are implemented; full verification remains open for authenticated states, every-route responsive/dark rendering, and the deployed production surface.
 - Public runtime crawl: 122/122 routes return HTTP 200; 75 are intentionally indexable and 47 are intentionally `noindex`.
 - Link and metadata audit: zero broken internal links, duplicate titles, duplicate canonicals, missing titles, missing descriptions, or missing canonical links.
 - Dedicated public browser matrix: all applicable assertions pass across phone, tablet, and desktop; representative detail families pass in light and dark modes.
 - Combined browser matrix: 38 applicable tests pass and 13 project-scoped cases are intentionally skipped; functional, responsive, keyboard, focus, hydration, visual-baseline, public-page, and secondary-screen assertions are clean.
-- Full unit suite: 1,759/1,759 tests pass.
+- Full unit suite: passes on the hosted exact-head verification run; targeted final-review regressions also pass locally.
 - Static and build gates: formatting, ESLint, TypeScript, the production Cloudflare build, the local Node preview build, and strict built-artifact provenance checks pass.
 - Visual baselines: two stale phone snapshots were manually reviewed and refreshed to the current touch-safe login action; representative feature, plan, and business pages were also inspected in desktop light, mobile light, and desktop dark presentations.
 - Accessibility: source contract and signed-out phone/desktop light/dark browser checks pass.

@@ -66,3 +66,8 @@ test("business and app guidance actions lead to their intended public flows", ()
   assert.doesNotMatch(source, /label: "Discuss requirements", to: "\/contact-support"/u);
   assert.doesNotMatch(source, /label: "App connection guidance", to: "\/connect"/u);
 });
+
+test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
+  const source = read("src/lib/public-detail-content.ts");
+  assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);
+});

@@ -6,6 +6,10 @@ Disallow: /account
 Disallow: /admin
 Disallow: /api/
 Disallow: /apps
+Allow: /apps/github
+Allow: /apps/gmail
+Allow: /apps/google-calendar
+Allow: /apps/google-drive
 Disallow: /audit-log
 Disallow: /billing
 Disallow: /chat

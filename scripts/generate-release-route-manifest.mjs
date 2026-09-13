@@ -3,6 +3,12 @@ import { join, relative } from "node:path";
 import { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } from "../src/lib/seo-policy.mjs";
 
 const root = "src/routes";
+const generatedAt =
+  process.env.KOVA_ROUTE_MANIFEST_DATE?.trim() || new Date().toISOString().slice(0, 10);
+
+if (!/^\d{4}-\d{2}-\d{2}$/u.test(generatedAt)) {
+  throw new Error("KOVA_ROUTE_MANIFEST_DATE must use YYYY-MM-DD");
+}
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   return (
@@ -19,14 +25,38 @@ const reviewByPath = new Map(review.records.map((entry) => [entry.route, entry])
 const indexable = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
 const reviewed = new Set(PUBLIC_REVIEW_PATHS);
 const files = (await walk(root)).filter((file) => /\.(?:ts|tsx)$/u.test(file)).sort();
+const routeSources = await Promise.all(
+  files.map(async (file) => {
+    const source = await readFile(file, "utf8");
+    const relativeFile = relative(root, file);
+    const declared = source.match(/create(?:Root)?FileRoute\(["']([^"']+)["']\)/u)?.[1];
+    const route =
+      relativeFile === "__root.tsx" ? "<root-shell>" : declared || `<generated:${relativeFile}>`;
+    return { file, relativeFile, route };
+  }),
+);
+const declaredRoutes = new Set(routeSources.map(({ route }) => route));
+
+function matchesTemplate(template, path) {
+  const templateSegments = template.split("/").filter(Boolean);
+  const pathSegments = path.split("/").filter(Boolean);
+  return (
+    templateSegments.length === pathSegments.length &&
+    templateSegments.every(
+      (segment, index) => segment.startsWith("$") || segment === pathSegments[index],
+    )
+  );
+}
+
 const records = [];
-for (const file of files) {
-  const source = await readFile(file, "utf8");
-  const relativeFile = relative(root, file);
-  const declared = source.match(/create(?:Root)?FileRoute\(["']([^"']+)["']\)/u)?.[1];
-  const route =
-    relativeFile === "__root.tsx" ? "<root-shell>" : declared || `<generated:${relativeFile}>`;
+for (const { file, relativeFile, route } of routeSources) {
   const isDynamic = route.includes("$") || relativeFile.includes("$");
+  const resolvedCanonicalPaths = isDynamic
+    ? [...indexable]
+        .filter((path) => !declaredRoutes.has(path) && matchesTemplate(route, path))
+        .sort()
+    : [];
+  const indexesResolvedPaths = resolvedCanonicalPaths.length > 0;
   const isService = /^\/(?:api|\.mcp|\.well-known|mcp)(?:\/|$)/u.test(route);
   const isReserved =
     /^\/(?:auth|login|signup|reset-password|oauth|checkout|email|unsubscribe)(?:\/|$)/u.test(route);
@@ -36,7 +66,9 @@ for (const file of files) {
     : isReserved
       ? "reserved_auth_or_callback"
       : isDynamic
-        ? "dynamic"
+        ? indexesResolvedPaths
+          ? "dynamic_public"
+          : "dynamic"
         : isReviewed
           ? "public"
           : route === "<root-shell>"
@@ -45,15 +77,21 @@ for (const file of files) {
   const contentReview = reviewByPath.get(route);
   records.push({
     canonicalPath: route,
+    resolvedCanonicalPaths,
     routeFile: file,
     template: isDynamic,
     classification,
-    indexingDecision: indexable.has(route) ? "index" : "noindex_or_not_public",
-    sitemapIncluded: indexable.has(route),
+    indexingDecision: indexable.has(route)
+      ? "index"
+      : indexesResolvedPaths
+        ? "index_resolved_paths"
+        : "noindex_or_not_public",
+    sitemapIncluded: indexable.has(route) || indexesResolvedPaths,
     canonicalUrl: isReviewed ? `https://kovagpt.com${route === "/" ? "/" : route}` : null,
-    contentOwner: isReviewed
-      ? "KovaGPT public content registry or explicit route"
-      : "route subsystem owner",
+    contentOwner:
+      isReviewed || indexesResolvedPaths
+        ? "KovaGPT public content registry or explicit route"
+        : "route subsystem owner",
     contentSource: isReviewed ? "repository-owned source" : relativeFile,
     contentCompleteness: contentReview?.decision || "fixture_or_contract_dependent",
     legalReviewRequired: contentReview?.legalReview === "required",
@@ -66,14 +104,15 @@ for (const file of files) {
       ? "server handler authorization; public catch-all prohibited"
       : isReserved
         ? "dedicated authentication/callback route; public catch-all prohibited"
-        : isReviewed
+        : isReviewed || indexesResolvedPaths
           ? "signed-out public response"
           : "application route; authentication and ownership remain route-specific",
-    finalDecision: indexable.has(route)
-      ? "retain_in_sitemap"
-      : isReviewed
-        ? "retain_noindex"
-        : "retain_route_outside_public_sitemap",
+    finalDecision:
+      indexable.has(route) || indexesResolvedPaths
+        ? "retain_in_sitemap"
+        : isReviewed
+          ? "retain_noindex"
+          : "retain_route_outside_public_sitemap",
     evidence: [
       file,
       contentReview ? "docs/page-parity/indexable-content-review.json" : "npm run build",
@@ -91,7 +130,7 @@ await writeFile(
   `${JSON.stringify(
     {
       schemaVersion: 1,
-      generatedAt: "2026-09-13",
+      generatedAt,
       sourceOfTruth: "src/routes plus src/lib/seo-policy.mjs",
       routeFileCount: records.length,
       sitemapCount: PUBLIC_SITEMAP_ENTRIES.length,

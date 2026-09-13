@@ -201,8 +201,9 @@ async function collectKova() {
   for (const file of routeFiles) {
     const source = await readFile(file, "utf8");
     const match = source.match(/createFileRoute\("([^"]+)"\)/u);
-    if (!match) continue;
-    routeRows.push({ route: match[1], file: relative(ROOT, file) });
+    const rootShell = source.includes("createRootRouteWithContext");
+    if (!match && !rootShell) continue;
+    routeRows.push({ route: rootShell ? "<root-shell>" : match[1], file: relative(ROOT, file) });
   }
   routeRows.sort((left, right) => left.route.localeCompare(right.route));
   const publicContent = await readFile(resolve(ROOT, "src/lib/public-content.ts"), "utf8");

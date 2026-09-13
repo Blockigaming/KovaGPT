@@ -6,7 +6,8 @@
   "sitemapCount": 75,
   "reviewedPublicRouteCount": 122,
   "classificationCounts": {
-    "dynamic": 7,
+    "dynamic": 5,
+    "dynamic_public": 2,
     "reserved_service": 96,
     "root_shell": 1,
     "application_or_authenticated": 33,
@@ -16,6 +17,7 @@
   "records": [
     {
       "canonicalPath": "/$locale/home",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/$locale.home.tsx",
       "template": true,
       "classification": "dynamic",
@@ -35,44 +37,101 @@
     },
     {
       "canonicalPath": "/$section/$articleSlug",
+      "resolvedCanonicalPaths": [
+        "/apps/github",
+        "/apps/gmail",
+        "/apps/google-calendar",
+        "/apps/google-drive",
+        "/business/ai-for-data-science-analytics",
+        "/business/ai-for-engineering",
+        "/business/ai-for-finance",
+        "/business/ai-for-product-management",
+        "/business/ai-for-sales-marketing",
+        "/business/education",
+        "/business/enterprise",
+        "/features/chat-with-pdfs",
+        "/features/deep-research",
+        "/features/plugins",
+        "/features/study-mode",
+        "/plans/free",
+        "/plans/plus",
+        "/plans/pro",
+        "/use-cases/chat-with-presentations",
+        "/use-cases/chat-with-spreadsheets",
+        "/use-cases/fitness-wellness-and-health",
+        "/use-cases/money-and-finances",
+        "/use-cases/recipes-cooking",
+        "/use-cases/science-medicine",
+        "/use-cases/students",
+        "/use-cases/teachers",
+        "/use-cases/travel-and-exploration",
+        "/use-cases/university-educators",
+        "/use-cases/veterans"
+      ],
       "routeFile": "src/routes/$section.$articleSlug.tsx",
       "template": true,
-      "classification": "dynamic",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
+      "classification": "dynamic_public",
+      "indexingDecision": "index_resolved_paths",
+      "sitemapIncluded": true,
       "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
+      "contentOwner": "KovaGPT public content registry or explicit route",
       "contentSource": "$section.$articleSlug.tsx",
       "contentCompleteness": "fixture_or_contract_dependent",
       "legalReviewRequired": false,
       "administratorContentRequired": false,
       "runtimeResult": "not_crawled_requires_fixture",
       "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "application route; authentication and ownership remain route-specific",
-      "finalDecision": "retain_route_outside_public_sitemap",
+      "authorizationBoundary": "signed-out public response",
+      "finalDecision": "retain_in_sitemap",
       "evidence": ["src/routes/$section.$articleSlug.tsx", "npm run build"]
     },
     {
       "canonicalPath": "/$slug",
+      "resolvedCanonicalPaths": [
+        "/about",
+        "/accessibility",
+        "/business",
+        "/college-students",
+        "/contact-sales",
+        "/data-controls",
+        "/document-analysis",
+        "/education",
+        "/families",
+        "/features",
+        "/health",
+        "/mission",
+        "/model-behavior",
+        "/moderation",
+        "/overview",
+        "/parent-resources",
+        "/plans",
+        "/shopping",
+        "/shopping-assistant",
+        "/translation",
+        "/transparency",
+        "/trust",
+        "/use-cases"
+      ],
       "routeFile": "src/routes/$slug.tsx",
       "template": true,
-      "classification": "dynamic",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
+      "classification": "dynamic_public",
+      "indexingDecision": "index_resolved_paths",
+      "sitemapIncluded": true,
       "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
+      "contentOwner": "KovaGPT public content registry or explicit route",
       "contentSource": "$slug.tsx",
       "contentCompleteness": "fixture_or_contract_dependent",
       "legalReviewRequired": false,
       "administratorContentRequired": false,
       "runtimeResult": "not_crawled_requires_fixture",
       "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "application route; authentication and ownership remain route-specific",
-      "finalDecision": "retain_route_outside_public_sitemap",
+      "authorizationBoundary": "signed-out public response",
+      "finalDecision": "retain_in_sitemap",
       "evidence": ["src/routes/$slug.tsx", "npm run build"]
     },
     {
       "canonicalPath": "/.mcp/invoke-tool/$tool",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/[.mcp]/invoke-tool/$tool.ts",
       "template": true,
       "classification": "reserved_service",
@@ -92,6 +151,7 @@
     },
     {
       "canonicalPath": "/.mcp/list-tools",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/[.mcp]/list-tools.ts",
       "template": false,
       "classification": "reserved_service",
@@ -111,6 +171,7 @@
     },
     {
       "canonicalPath": "/.well-known/oauth-authorization-server",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/[.well-known]/oauth-authorization-server.ts",
       "template": false,
       "classification": "reserved_service",
@@ -130,6 +191,7 @@
     },
     {
       "canonicalPath": "/.well-known/oauth-protected-resource",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/[.well-known]/oauth-protected-resource.ts",
       "template": false,
       "classification": "reserved_service",
@@ -149,6 +211,7 @@
     },
     {
       "canonicalPath": "<root-shell>",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/__root.tsx",
       "template": false,
       "classification": "root_shell",
@@ -168,6 +231,7 @@
     },
     {
       "canonicalPath": "/admin/kovas",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/admin/kovas.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -187,6 +251,7 @@
     },
     {
       "canonicalPath": "/ai-humanizer",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/ai-humanizer.tsx",
       "template": false,
       "classification": "public",
@@ -206,6 +271,7 @@
     },
     {
       "canonicalPath": "/ai-image-generator",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/ai-image-generator.tsx",
       "template": false,
       "classification": "public",
@@ -228,6 +294,7 @@
     },
     {
       "canonicalPath": "/ai-safety",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/ai-safety.tsx",
       "template": false,
       "classification": "public",
@@ -247,6 +314,7 @@
     },
     {
       "canonicalPath": "/ai-writer",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/ai-writer.tsx",
       "template": false,
       "classification": "public",
@@ -266,6 +334,7 @@
     },
     {
       "canonicalPath": "/api/account",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/account.ts",
       "template": false,
       "classification": "reserved_service",
@@ -285,6 +354,7 @@
     },
     {
       "canonicalPath": "/api/account/export",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/account/export.ts",
       "template": false,
       "classification": "reserved_service",
@@ -304,6 +374,7 @@
     },
     {
       "canonicalPath": "/api/admin/ai-usage",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/admin/ai-usage.ts",
       "template": false,
       "classification": "reserved_service",
@@ -323,6 +394,7 @@
     },
     {
       "canonicalPath": "/api/admin/developer-billing",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/admin/developer-billing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -342,6 +414,7 @@
     },
     {
       "canonicalPath": "/api/admin/diagnostics",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/admin/diagnostics.ts",
       "template": false,
       "classification": "reserved_service",
@@ -361,6 +434,7 @@
     },
     {
       "canonicalPath": "/api/admin/kovas",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/admin/kovas.ts",
       "template": false,
       "classification": "reserved_service",
@@ -380,6 +454,7 @@
     },
     {
       "canonicalPath": "/api/admin/pricing",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/admin/pricing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -399,6 +474,7 @@
     },
     {
       "canonicalPath": "/api/agents/runs",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/agents/runs.ts",
       "template": false,
       "classification": "reserved_service",
@@ -418,6 +494,7 @@
     },
     {
       "canonicalPath": "/api/agents/teams",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/agents/teams.ts",
       "template": false,
       "classification": "reserved_service",
@@ -437,6 +514,7 @@
     },
     {
       "canonicalPath": "/api/chat",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/chat.ts",
       "template": false,
       "classification": "reserved_service",
@@ -456,6 +534,7 @@
     },
     {
       "canonicalPath": "/api/chat/confirm",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/chat/confirm.ts",
       "template": false,
       "classification": "reserved_service",
@@ -475,6 +554,7 @@
     },
     {
       "canonicalPath": "/api/chat/history",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/chat/history.ts",
       "template": false,
       "classification": "reserved_service",
@@ -494,6 +574,7 @@
     },
     {
       "canonicalPath": "/api/developer/console",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/developer/console.ts",
       "template": false,
       "classification": "reserved_service",
@@ -513,6 +594,7 @@
     },
     {
       "canonicalPath": "/api/developer/files",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/developer/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -532,6 +614,7 @@
     },
     {
       "canonicalPath": "/api/developer/funding",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/developer/funding.ts",
       "template": false,
       "classification": "reserved_service",
@@ -551,6 +634,7 @@
     },
     {
       "canonicalPath": "/api/developer/mcp",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/developer/mcp.ts",
       "template": false,
       "classification": "reserved_service",
@@ -570,6 +654,7 @@
     },
     {
       "canonicalPath": "/api/developer/payments/webhook",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/developer/payments/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -589,6 +674,7 @@
     },
     {
       "canonicalPath": "/api/discovery",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/discovery.ts",
       "template": false,
       "classification": "reserved_service",
@@ -608,6 +694,7 @@
     },
     {
       "canonicalPath": "/api/finances/exchange",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/finances/exchange.ts",
       "template": false,
       "classification": "reserved_service",
@@ -627,6 +714,7 @@
     },
     {
       "canonicalPath": "/api/finances/link-token",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/finances/link-token.ts",
       "template": false,
       "classification": "reserved_service",
@@ -646,6 +734,7 @@
     },
     {
       "canonicalPath": "/api/finances/webhook",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/finances/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -665,6 +754,7 @@
     },
     {
       "canonicalPath": "/api/generate-image",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/generate-image.ts",
       "template": false,
       "classification": "reserved_service",
@@ -684,6 +774,7 @@
     },
     {
       "canonicalPath": "/api/github/auth",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/github/auth.ts",
       "template": false,
       "classification": "reserved_service",
@@ -703,6 +794,7 @@
     },
     {
       "canonicalPath": "/api/github/callback",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/github/callback.ts",
       "template": false,
       "classification": "reserved_service",
@@ -722,6 +814,7 @@
     },
     {
       "canonicalPath": "/api/github/tool",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/github/tool.ts",
       "template": false,
       "classification": "reserved_service",
@@ -741,6 +834,7 @@
     },
     {
       "canonicalPath": "/api/github/webhook",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/github/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -760,6 +854,7 @@
     },
     {
       "canonicalPath": "/api/google/auth",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/auth.ts",
       "template": false,
       "classification": "reserved_service",
@@ -779,6 +874,7 @@
     },
     {
       "canonicalPath": "/api/google/calendar",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/calendar.ts",
       "template": false,
       "classification": "reserved_service",
@@ -798,6 +894,7 @@
     },
     {
       "canonicalPath": "/api/google/callback",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/callback.ts",
       "template": false,
       "classification": "reserved_service",
@@ -817,6 +914,7 @@
     },
     {
       "canonicalPath": "/api/google/disconnect",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/disconnect.ts",
       "template": false,
       "classification": "reserved_service",
@@ -836,6 +934,7 @@
     },
     {
       "canonicalPath": "/api/google/drive",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/drive.ts",
       "template": false,
       "classification": "reserved_service",
@@ -855,6 +954,7 @@
     },
     {
       "canonicalPath": "/api/google/gmail",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/gmail.ts",
       "template": false,
       "classification": "reserved_service",
@@ -874,6 +974,7 @@
     },
     {
       "canonicalPath": "/api/google/select",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/select.ts",
       "template": false,
       "classification": "reserved_service",
@@ -893,6 +994,7 @@
     },
     {
       "canonicalPath": "/api/google/status",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/google/status.ts",
       "template": false,
       "classification": "reserved_service",
@@ -912,6 +1014,7 @@
     },
     {
       "canonicalPath": "/api/health",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/health.ts",
       "template": false,
       "classification": "reserved_service",
@@ -931,6 +1034,7 @@
     },
     {
       "canonicalPath": "/api/integrations/accounts",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/integrations/accounts.ts",
       "template": false,
       "classification": "reserved_service",
@@ -950,6 +1054,7 @@
     },
     {
       "canonicalPath": "/api/integrations/oauth/callback/$provider",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/integrations/oauth/callback/$provider.ts",
       "template": true,
       "classification": "reserved_service",
@@ -969,6 +1074,7 @@
     },
     {
       "canonicalPath": "/api/integrations/oauth/disconnect",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/integrations/oauth/disconnect.ts",
       "template": false,
       "classification": "reserved_service",
@@ -988,6 +1094,7 @@
     },
     {
       "canonicalPath": "/api/integrations/oauth/start",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/integrations/oauth/start.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1007,6 +1114,7 @@
     },
     {
       "canonicalPath": "/api/internal/account-exports",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/account-exports.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1026,6 +1134,7 @@
     },
     {
       "canonicalPath": "/api/internal/chat-summaries",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/chat-summaries.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1045,6 +1154,7 @@
     },
     {
       "canonicalPath": "/api/internal/developer-billing",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/developer-billing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1064,6 +1174,7 @@
     },
     {
       "canonicalPath": "/api/internal/developer-funding",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/developer-funding.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1083,6 +1194,7 @@
     },
     {
       "canonicalPath": "/api/internal/google-oauth-cleanup",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/google-oauth-cleanup.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1102,6 +1214,7 @@
     },
     {
       "canonicalPath": "/api/internal/receipt-maintenance",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/receipt-maintenance.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1121,6 +1234,7 @@
     },
     {
       "canonicalPath": "/api/internal/scheduled-execution",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/scheduled-execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1140,6 +1254,7 @@
     },
     {
       "canonicalPath": "/api/internal/site-maintenance",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/site-maintenance.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1159,6 +1274,7 @@
     },
     {
       "canonicalPath": "/api/internal/storage-artifact-cleanup",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/storage-artifact-cleanup.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1178,6 +1294,7 @@
     },
     {
       "canonicalPath": "/api/internal/web-push",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/web-push.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1197,6 +1314,7 @@
     },
     {
       "canonicalPath": "/api/internal/work-browser",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/work-browser.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1216,6 +1334,7 @@
     },
     {
       "canonicalPath": "/api/internal/work-execution",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/work-execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1235,6 +1354,7 @@
     },
     {
       "canonicalPath": "/api/internal/workspace-search",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/internal/workspace-search.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1254,6 +1374,7 @@
     },
     {
       "canonicalPath": "/api/kovas",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/kovas.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1273,6 +1394,7 @@
     },
     {
       "canonicalPath": "/api/kovas/directory",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/kovas/directory.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1292,6 +1414,7 @@
     },
     {
       "canonicalPath": "/api/library/bulk-move",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/library/bulk-move.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1311,6 +1434,7 @@
     },
     {
       "canonicalPath": "/api/library/files",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/library/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1330,6 +1454,7 @@
     },
     {
       "canonicalPath": "/api/library/folders",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/library/folders.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1349,6 +1474,7 @@
     },
     {
       "canonicalPath": "/api/library/items",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/library/items.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1368,6 +1494,7 @@
     },
     {
       "canonicalPath": "/api/livez",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/livez.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1387,6 +1514,7 @@
     },
     {
       "canonicalPath": "/api/memory",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/memory.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1406,6 +1534,7 @@
     },
     {
       "canonicalPath": "/api/organizations",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/organizations.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1425,6 +1554,7 @@
     },
     {
       "canonicalPath": "/api/organizations/scim",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/organizations/scim.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1444,6 +1574,7 @@
     },
     {
       "canonicalPath": "/api/project-files",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/project-files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1463,6 +1594,7 @@
     },
     {
       "canonicalPath": "/api/project-suggest",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/project-suggest.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1482,6 +1614,7 @@
     },
     {
       "canonicalPath": "/api/project-templates",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/project-templates.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1501,6 +1634,7 @@
     },
     {
       "canonicalPath": "/api/public/help-submit",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/public/help-submit.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1520,6 +1654,7 @@
     },
     {
       "canonicalPath": "/api/public/payments/webhook",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/public/payments/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1539,6 +1674,7 @@
     },
     {
       "canonicalPath": "/api/push",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/push.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1558,6 +1694,7 @@
     },
     {
       "canonicalPath": "/api/push/revoke-device",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/push/revoke-device.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1577,6 +1714,7 @@
     },
     {
       "canonicalPath": "/api/readyz",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/readyz.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1596,6 +1734,7 @@
     },
     {
       "canonicalPath": "/api/scim/v2/$organizationId/$",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/scim/v2/$organizationId/$.ts",
       "template": true,
       "classification": "reserved_service",
@@ -1615,6 +1754,7 @@
     },
     {
       "canonicalPath": "/api/security/lockdown",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/security/lockdown.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1634,6 +1774,7 @@
     },
     {
       "canonicalPath": "/api/sites",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/sites.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1653,6 +1794,7 @@
     },
     {
       "canonicalPath": "/api/tasks/event-sources",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/tasks/event-sources.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1672,6 +1814,7 @@
     },
     {
       "canonicalPath": "/api/tasks/events/$provider",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/tasks/events/$provider.ts",
       "template": true,
       "classification": "reserved_service",
@@ -1691,6 +1834,7 @@
     },
     {
       "canonicalPath": "/api/title",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/title.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1710,6 +1854,7 @@
     },
     {
       "canonicalPath": "/api/trusted-contacts",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/trusted-contacts.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1729,6 +1874,7 @@
     },
     {
       "canonicalPath": "/api/v1/embeddings",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/embeddings.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1748,6 +1894,7 @@
     },
     {
       "canonicalPath": "/api/v1/files",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1767,6 +1914,7 @@
     },
     {
       "canonicalPath": "/api/v1/images",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/images.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1786,6 +1934,7 @@
     },
     {
       "canonicalPath": "/api/v1/models",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/models.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1805,6 +1954,7 @@
     },
     {
       "canonicalPath": "/api/v1/quotes",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/quotes.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1824,6 +1974,7 @@
     },
     {
       "canonicalPath": "/api/v1/responses",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/v1/responses.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1843,6 +1994,7 @@
     },
     {
       "canonicalPath": "/api/version",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/version.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1862,6 +2014,7 @@
     },
     {
       "canonicalPath": "/api/weather",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/weather.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1881,6 +2034,7 @@
     },
     {
       "canonicalPath": "/api/work/browser",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/work/browser.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1900,6 +2054,7 @@
     },
     {
       "canonicalPath": "/api/work/execution",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/work/execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1919,6 +2074,7 @@
     },
     {
       "canonicalPath": "/api/work/output",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/work/output.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1938,6 +2094,7 @@
     },
     {
       "canonicalPath": "/api/work/sync",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/work/sync.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1957,6 +2114,7 @@
     },
     {
       "canonicalPath": "/api/workspace/search",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/workspace/search.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1976,6 +2134,7 @@
     },
     {
       "canonicalPath": "/api/write",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/api/write.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1995,6 +2154,7 @@
     },
     {
       "canonicalPath": "/apps",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/apps.tsx",
       "template": false,
       "classification": "public",
@@ -2014,6 +2174,7 @@
     },
     {
       "canonicalPath": "/assistants/$assistantSlug",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/assistants.$assistantSlug.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2033,6 +2194,7 @@
     },
     {
       "canonicalPath": "/assistants",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/assistants.tsx",
       "template": false,
       "classification": "public",
@@ -2052,6 +2214,7 @@
     },
     {
       "canonicalPath": "/audit-log",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/audit-log.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2071,6 +2234,7 @@
     },
     {
       "canonicalPath": "/auth",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/auth.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2090,6 +2254,7 @@
     },
     {
       "canonicalPath": "/blog/ai-market-research-guide",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/blog.ai-market-research-guide.tsx",
       "template": false,
       "classification": "public",
@@ -2112,6 +2277,7 @@
     },
     {
       "canonicalPath": "/blog/best-ai-assistants",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/blog.best-ai-assistants.tsx",
       "template": false,
       "classification": "public",
@@ -2134,6 +2300,7 @@
     },
     {
       "canonicalPath": "/blog/best-ai-market-research-tools",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/blog.best-ai-market-research-tools.tsx",
       "template": false,
       "classification": "public",
@@ -2156,6 +2323,7 @@
     },
     {
       "canonicalPath": "/brain",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/brain.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2175,6 +2343,7 @@
     },
     {
       "canonicalPath": "/changelog",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/changelog.tsx",
       "template": false,
       "classification": "public",
@@ -2194,6 +2363,7 @@
     },
     {
       "canonicalPath": "/chatgpt-alternative",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/chatgpt-alternative.tsx",
       "template": false,
       "classification": "public",
@@ -2216,6 +2386,7 @@
     },
     {
       "canonicalPath": "/checkout/return",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/checkout.return.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2235,6 +2406,7 @@
     },
     {
       "canonicalPath": "/code-helper",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/code-helper.tsx",
       "template": false,
       "classification": "public",
@@ -2254,6 +2426,7 @@
     },
     {
       "canonicalPath": "/connect",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/connect.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2273,6 +2446,7 @@
     },
     {
       "canonicalPath": "/contact-support",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/contact-support.tsx",
       "template": false,
       "classification": "public",
@@ -2295,6 +2469,7 @@
     },
     {
       "canonicalPath": "/context-packs",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/context-packs.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2314,6 +2489,7 @@
     },
     {
       "canonicalPath": "/developers/$docSlug",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.$docSlug.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2333,6 +2509,7 @@
     },
     {
       "canonicalPath": "/developers/authorize",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.authorize.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2352,6 +2529,7 @@
     },
     {
       "canonicalPath": "/developers/connections",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.connections.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2371,6 +2549,7 @@
     },
     {
       "canonicalPath": "/developers/console",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.console.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2390,6 +2569,7 @@
     },
     {
       "canonicalPath": "/developers/",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.index.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2409,6 +2589,7 @@
     },
     {
       "canonicalPath": "/developers/pricing",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/developers.pricing.tsx",
       "template": false,
       "classification": "public",
@@ -2431,6 +2612,7 @@
     },
     {
       "canonicalPath": "/discovery",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/discovery.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2450,6 +2632,7 @@
     },
     {
       "canonicalPath": "/email/unsubscribe",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/email/unsubscribe.ts",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2469,6 +2652,7 @@
     },
     {
       "canonicalPath": "/files",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/files.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2488,6 +2672,7 @@
     },
     {
       "canonicalPath": "/getting-started",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/getting-started.tsx",
       "template": false,
       "classification": "public",
@@ -2510,6 +2695,7 @@
     },
     {
       "canonicalPath": "/goals",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/goals.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2529,6 +2715,7 @@
     },
     {
       "canonicalPath": "/help",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/help.tsx",
       "template": false,
       "classification": "public",
@@ -2548,6 +2735,7 @@
     },
     {
       "canonicalPath": "/humanize-ai-text",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/humanize-ai-text.tsx",
       "template": false,
       "classification": "public",
@@ -2570,6 +2758,7 @@
     },
     {
       "canonicalPath": "/images",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/images.tsx",
       "template": false,
       "classification": "public",
@@ -2589,6 +2778,7 @@
     },
     {
       "canonicalPath": "/",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/index.tsx",
       "template": false,
       "classification": "public",
@@ -2608,6 +2798,7 @@
     },
     {
       "canonicalPath": "/knowledge-graph",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/knowledge-graph.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2627,6 +2818,7 @@
     },
     {
       "canonicalPath": "/kovas",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/kovas.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2646,6 +2838,7 @@
     },
     {
       "canonicalPath": "/library",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/library.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2665,6 +2858,7 @@
     },
     {
       "canonicalPath": "/maps",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/maps.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2684,6 +2878,7 @@
     },
     {
       "canonicalPath": "/mcp",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/mcp.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2703,6 +2898,7 @@
     },
     {
       "canonicalPath": "/memory",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/memory.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2722,6 +2918,7 @@
     },
     {
       "canonicalPath": "/modes",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/modes.tsx",
       "template": false,
       "classification": "public",
@@ -2741,6 +2938,7 @@
     },
     {
       "canonicalPath": "/notifications",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/notifications.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2760,6 +2958,7 @@
     },
     {
       "canonicalPath": "/oauth/consent",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/oauth.consent.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2779,6 +2978,7 @@
     },
     {
       "canonicalPath": "/oauth/mcp/$action",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/oauth/mcp/$action.ts",
       "template": true,
       "classification": "reserved_auth_or_callback",
@@ -2798,6 +2998,7 @@
     },
     {
       "canonicalPath": "/omega",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/omega.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2817,6 +3018,7 @@
     },
     {
       "canonicalPath": "/organization",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/organization.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2836,6 +3038,7 @@
     },
     {
       "canonicalPath": "/pricing",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/pricing.tsx",
       "template": false,
       "classification": "public",
@@ -2855,6 +3058,7 @@
     },
     {
       "canonicalPath": "/privacy",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/privacy.tsx",
       "template": false,
       "classification": "public",
@@ -2874,6 +3078,7 @@
     },
     {
       "canonicalPath": "/projects/$projectId/chat/$chatId",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/projects.$projectId.chat.$chatId.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2893,6 +3098,7 @@
     },
     {
       "canonicalPath": "/projects/$projectId",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/projects.$projectId.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2912,6 +3118,7 @@
     },
     {
       "canonicalPath": "/projects",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/projects.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2931,6 +3138,7 @@
     },
     {
       "canonicalPath": "/prompt-studio",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/prompt-studio.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2950,6 +3158,7 @@
     },
     {
       "canonicalPath": "/refund",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/refund.tsx",
       "template": false,
       "classification": "public",
@@ -2969,6 +3178,7 @@
     },
     {
       "canonicalPath": "/research-assistant",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/research-assistant.tsx",
       "template": false,
       "classification": "public",
@@ -2991,6 +3201,7 @@
     },
     {
       "canonicalPath": "/research-planner",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/research-planner.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3010,6 +3221,7 @@
     },
     {
       "canonicalPath": "/reset-password",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/reset-password.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -3029,6 +3241,7 @@
     },
     {
       "canonicalPath": "/scheduled-tasks",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/scheduled-tasks.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3048,6 +3261,7 @@
     },
     {
       "canonicalPath": "/share-inbox",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/share-inbox.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3067,6 +3281,7 @@
     },
     {
       "canonicalPath": "/sitemap.xml",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/sitemap[.]xml.ts",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3086,6 +3301,7 @@
     },
     {
       "canonicalPath": "/sites",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/sites.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3105,6 +3321,7 @@
     },
     {
       "canonicalPath": "/status",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/status.tsx",
       "template": false,
       "classification": "public",
@@ -3124,6 +3341,7 @@
     },
     {
       "canonicalPath": "/study-assistant",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/study-assistant.tsx",
       "template": false,
       "classification": "public",
@@ -3146,6 +3364,7 @@
     },
     {
       "canonicalPath": "/study",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/study.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3165,6 +3384,7 @@
     },
     {
       "canonicalPath": "/summary",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/summary.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3184,6 +3404,7 @@
     },
     {
       "canonicalPath": "/terms",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/terms.tsx",
       "template": false,
       "classification": "public",
@@ -3203,6 +3424,7 @@
     },
     {
       "canonicalPath": "/trusted-contacts",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/trusted-contacts.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3222,6 +3444,7 @@
     },
     {
       "canonicalPath": "/unsubscribe",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/unsubscribe.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -3241,6 +3464,7 @@
     },
     {
       "canonicalPath": "/work",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/work.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3260,6 +3484,7 @@
     },
     {
       "canonicalPath": "/write",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/write.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3279,6 +3504,7 @@
     },
     {
       "canonicalPath": "/~oauth/callback",
+      "resolvedCanonicalPaths": [],
       "routeFile": "src/routes/~oauth.callback.tsx",
       "template": false,
       "classification": "application_or_authenticated",

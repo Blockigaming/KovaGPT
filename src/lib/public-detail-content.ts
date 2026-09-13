@@ -155,7 +155,10 @@ const planPages = (["free", "plus", "pro"] as const).map((tier) => {
     `KovaGPT ${plan.name}`,
     `${plan.name} plan details, published capabilities, and current product boundaries.`,
     plan.description,
-    { label: tier === "free" ? "Open KovaGPT" : `Choose ${plan.name}`, to: "/pricing" },
+    {
+      label: tier === "free" ? "Open KovaGPT" : `Choose ${plan.name}`,
+      to: tier === "free" ? "/" : "/pricing",
+    },
     [price, `${plan.features.length} published benefits`, "Checkout confirms paid terms"],
     [
       {

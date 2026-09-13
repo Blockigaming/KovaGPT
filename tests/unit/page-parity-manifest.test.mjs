@@ -169,13 +169,21 @@ test("all 122 reconciled public routes are reviewed and the sitemap retains 75 s
   for (const { route } of developer.records) assert.equal(indexed.has(route), false, route);
 });
 
-test("release route manifest is generated from all route files and one sitemap source", () => {
+test("release route manifest is generated from all route files and one sitemap source", async () => {
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
   assert.equal(manifest.routeFileCount, 171);
   assert.equal(manifest.records.length, 171);
   assert.equal(manifest.sitemapCount, 75);
   assert.equal(manifest.reviewedPublicRouteCount, 122);
   assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 171);
+  const { PUBLIC_SITEMAP_ENTRIES } = await import("../../src/lib/seo-policy.mjs");
+  const associatedSitemapPaths = new Set(
+    manifest.records.flatMap((record) => [
+      ...(record.sitemapIncluded && !record.template ? [record.canonicalPath] : []),
+      ...(record.resolvedCanonicalPaths ?? []),
+    ]),
+  );
+  assert.deepEqual(associatedSitemapPaths, new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path)));
   assert.ok(
     manifest.records
       .filter(({ classification }) => classification.startsWith("reserved_"))
@@ -183,4 +191,8 @@ test("release route manifest is generated from all route files and one sitemap s
   );
   assert.match(read("src/routes/$slug.tsx"), /name: "robots", content: "noindex, follow"/u);
   assert.match(read("src/routes/developers.$docSlug.tsx"), /throw notFound\(\)/u);
+  const robots = read("public/robots.txt");
+  for (const path of ["github", "gmail", "google-calendar", "google-drive"]) {
+    assert.match(robots, new RegExp(`^Allow: \/apps\/${path}$`, "mu"));
+  }
 });

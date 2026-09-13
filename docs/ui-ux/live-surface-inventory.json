@@ -2191,8 +2191,8 @@
     }
   },
   "kovagpt": {
-    "routeTemplateCount": 170,
-    "uiRouteTemplateCount": 71,
+    "routeTemplateCount": 171,
+    "uiRouteTemplateCount": 72,
     "serviceRouteTemplateCount": 99,
     "routeTemplates": [
       {
@@ -2874,6 +2874,10 @@
       {
         "route": "/write",
         "file": "src/routes/write.tsx"
+      },
+      {
+        "route": "<root-shell>",
+        "file": "src/routes/__root.tsx"
       }
     ],
     "publicIndexContentSlugCount": 40,

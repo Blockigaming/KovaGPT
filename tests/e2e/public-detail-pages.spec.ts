@@ -56,6 +56,12 @@ test("every public detail page has complete content and metadata", async ({ page
     await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
     await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
     await expect(page.locator("main article"), route).toHaveCount(2);
+    const primaryAction = page.locator("[data-public-primary]");
+    await expect(primaryAction, route).toHaveCount(1);
+    if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");
+    if (route === "/plans/plus" || route === "/plans/pro") {
+      await expect(primaryAction).toHaveAttribute("href", "/pricing");
+    }
     const description = await page.locator('meta[name="description"]').getAttribute("content");
     expect(description?.trim().length, `${route} description length`).toBeGreaterThanOrEqual(30);
     await expect(page.locator('link[rel="canonical"]'), route).toHaveAttribute(
