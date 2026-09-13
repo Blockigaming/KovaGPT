@@ -144,5 +144,7 @@ test("readiness and product ledgers classify cloud export truthfully", async () 
     capability,
     /Production migration, worker scheduling, and multi-account verification remain required/u,
   );
-  assert.match(parity, /production migration, worker scheduling, authenticated UI wiring/u);
+  assert.match(parity, /Identity, family, privacy, billing, developer, and organization/u);
+  assert.match(parity, /exports\/deletion/u);
+  assert.match(parity, /live identity\/payments\/IdP/u);
 });

@@ -17,6 +17,7 @@ export class ChatPreflightError extends Error {
     code: string;
     status: number;
     retryable: boolean;
+    publicMessage?: string;
     cause?: unknown;
   });
   toEnvelope(): {
@@ -27,6 +28,8 @@ export class ChatPreflightError extends Error {
     stage: string;
   };
 }
+
+export function normalizeChatPreflightFailure(stage: string, error: unknown): ChatPreflightError;
 
 export function createChatPreflightRunner(options?: {
   signal?: AbortSignal;
