@@ -5,11 +5,12 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("pricing keeps the published prices and production checkout lookup keys", async () => {
-  const [pricing, registry, billingPlans, manualHandoff] = await Promise.all([
+  const [pricing, registry, billingPlans, manualHandoff, rollout] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/lib/capability-registry.ts"),
     read("src/lib/billing-plans.ts"),
     read("docs/release/KOVAGPT_MANUAL_HANDOFF.md"),
+    read("docs/release/STRIPE_BILLING_ROLLOUT.md"),
   ]);
 
   assert.match(
@@ -43,6 +44,14 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   assert.match(manualHandoff, /do not offer it for\s+new USD 80 checkouts/u);
   assert.match(manualHandoff, /do not create\s+another Price for this rollout/u);
   assert.doesNotMatch(manualHandoff, /must\s+create a new immutable recurring Pro Price/u);
+  assert.match(
+    rollout,
+    /legacy Pro updates and upserts preserve the exact Price ID already stored/u,
+  );
+  assert.match(
+    rollout,
+    /novel ambiguous `pro_monthly` write is rejected for retry instead of\s+relabeling/u,
+  );
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

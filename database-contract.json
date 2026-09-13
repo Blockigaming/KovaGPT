@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 147,
+  "migrationCount": 148,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -514,6 +514,7 @@
     "next_task_occurrence",
     "next_work_execution_dispatch",
     "next_work_sync_version",
+    "normalize_legacy_live_subscription_price",
     "normalize_legacy_live_subscription_price",
     "organization_scim_actor_current",
     "organization_scim_admin_rpc",
@@ -2454,6 +2455,7 @@
     "all on function public.next_work_execution_dispatch(uuid,text) from public,anon,authenticated",
     "all on function public.next_work_sync_version(uuid) from public, anon, authenticated",
     "all on function public.normalize_legacy_live_subscription_price()\n  from public, anon, authenticated, service_role",
+    "all on function public.normalize_legacy_live_subscription_price()\n  from public, anon, authenticated, service_role",
     "all on function public.persist_chat_memory(uuid,bigint,text,text,text,integer) from public,anon,authenticated",
     "all on function public.prepare_org_account_deletion(uuid) from public,anon,authenticated",
     "all on function public.prepare_stripe_account_deletion(uuid) from public, anon, authenticated",
@@ -2642,5 +2644,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "f959f0389c1615418fa6b520f59669f18501673494a4a5e8126b43bdc5c23b51"
+  "sha256": "67e3cd70907fa4c1b8767a7c9791c3b0f31548bf1023b97d0fbe799db9eb29ca"
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 147,
-  "latest": "20260913013131_register_pro_80_live_price.sql",
+  "count": 148,
+  "latest": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
   "migrations": [
     {
       "order": 1,
@@ -3206,6 +3206,20 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 148,
+      "filename": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
+      "timestamp": "20260913023331",
+      "sha256": "8c2f2b7ecf7615557bcd04d3371efc37eea7d01b58ccbb507d99d709ab4a1578",
+      "tables": [],
+      "functions": ["normalize_legacy_live_subscription_price"],
+      "destructive": false,
+      "dataBackfill": false,
       "reversible": false,
       "rls": [],
       "policies": [],
