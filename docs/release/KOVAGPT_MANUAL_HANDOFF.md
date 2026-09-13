@@ -529,9 +529,14 @@ and Terms URL. Confirm that Plus and Pro are separate products and that the chos
 transition behavior actually supports the intended path. Configure sandbox first, then live mode
 with **View test data** off. Do not assume sandbox settings carry into live mode.
 
-**Exact values to inspect:** live price IDs `price_1UAzhHAEZlsb6DBYWw2oUCeO` and
-`price_1UAzhRAEZlsb6DBYlafU4mhc`; canonical return origin `https://kovagpt.com`; Stripe Dashboard
-**Settings > Billing > Customer portal**; the deployed server's allowed return-URL contract.
+**Exact values to inspect:** current live Plus price
+`price_1UAzhHAEZlsb6DBYWw2oUCeO` (USD 16/month), current live Pro price
+`price_1UEw6FAEZlsb6DBYuksCKOBR` (USD 80/month), and historical Pro price
+`price_1UAzhRAEZlsb6DBYlafU4mhc` (USD 89/month). Configure the current Plus and USD 80 Pro prices
+as eligible for intended new-customer transitions. Retain the historical Pro price only where
+existing subscriptions or an explicitly reviewed migration path require it; do not offer it for
+new USD 80 checkouts. Also inspect canonical return origin `https://kovagpt.com`, Stripe Dashboard
+**Settings > Billing > Customer portal**, and the deployed server's allowed return-URL contract.
 
 **Risk:** a guessed configuration can misstate cancellation rights, create unexpected prorations,
 or expose one customer's portal to another. **Consequence of not performing:** the Portal and live

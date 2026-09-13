@@ -5,10 +5,11 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("pricing keeps the published prices and production checkout lookup keys", async () => {
-  const [pricing, registry, billingPlans] = await Promise.all([
+  const [pricing, registry, billingPlans, manualHandoff] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/lib/capability-registry.ts"),
     read("src/lib/billing-plans.ts"),
+    read("docs/release/KOVAGPT_MANUAL_HANDOFF.md"),
   ]);
 
   assert.match(
@@ -31,6 +32,15 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.plus\.lookupKey!/);
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.pro\.lookupKey!/);
+  assert.match(
+    manualHandoff,
+    /current live Pro price\s+`price_1UEw6FAEZlsb6DBYuksCKOBR` \(USD 80\/month\)/u,
+  );
+  assert.match(
+    manualHandoff,
+    /historical Pro price\s+`price_1UAzhRAEZlsb6DBYlafU4mhc` \(USD 89\/month\)/u,
+  );
+  assert.match(manualHandoff, /do not offer it for\s+new USD 80 checkouts/u);
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {
