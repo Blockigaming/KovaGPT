@@ -90,6 +90,9 @@ export function PublicPageView({
 }
 
 export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
+  const slugSegments = item.slug.split("/");
+  const currentPageSlug = slugSegments.at(-1) ?? item.slug;
+  const categorySlugs = slugSegments.slice(0, -1);
   return (
     <PublicShell>
       <main id="main-content" tabIndex={-1}>
@@ -109,9 +112,15 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               >
                 {item.section.replaceAll("-", " ")}
               </Link>
+              {categorySlugs.map((category) => (
+                <span key={category} className="contents">
+                  <span aria-hidden="true">/</span>
+                  <span>{category.replaceAll("-", " ")}</span>
+                </span>
+              ))}
               <span aria-hidden="true">/</span>
               <span aria-current="page" className="truncate text-foreground">
-                {item.slug.replaceAll("-", " ")}
+                {currentPageSlug.replaceAll("-", " ")}
               </span>
             </nav>
 

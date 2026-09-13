@@ -105,6 +105,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
+import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
@@ -665,6 +666,12 @@ const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SectionCategoryArticleSlugRoute =
+  SectionCategoryArticleSlugRouteImport.update({
+    id: '/$section/$category/$articleSlug',
+    path: '/$section/$category/$articleSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -1153,6 +1160,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1325,6 +1333,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1498,6 +1507,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1672,6 +1682,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -1844,6 +1855,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -2016,6 +2028,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -2187,6 +2200,7 @@ export interface RootRouteChildren {
   OauthConsentRoute: typeof OauthConsentRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
+  SectionCategoryArticleSlugRoute: typeof SectionCategoryArticleSlugRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
@@ -2930,6 +2944,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$section/$category/$articleSlug': {
+      id: '/$section/$category/$articleSlug'
+      path: '/$section/$category/$articleSlug'
+      fullPath: '/$section/$category/$articleSlug'
+      preLoaderRoute: typeof SectionCategoryArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -3642,6 +3663,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthConsentRoute: OauthConsentRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
+  SectionCategoryArticleSlugRoute: SectionCategoryArticleSlugRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,

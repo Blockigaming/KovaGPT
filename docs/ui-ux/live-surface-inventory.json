@@ -2191,8 +2191,8 @@
     }
   },
   "kovagpt": {
-    "routeTemplateCount": 171,
-    "uiRouteTemplateCount": 72,
+    "routeTemplateCount": 172,
+    "uiRouteTemplateCount": 73,
     "serviceRouteTemplateCount": 99,
     "routeTemplates": [
       {
@@ -2226,6 +2226,10 @@
       {
         "route": "/$section/$articleSlug",
         "file": "src/routes/$section.$articleSlug.tsx"
+      },
+      {
+        "route": "/$section/$category/$articleSlug",
+        "file": "src/routes/$section.$category.$articleSlug.tsx"
       },
       {
         "route": "/$slug",
@@ -2949,7 +2953,7 @@
       "use-cases",
       "voice"
     ],
-    "publicDetailPathCount": 50,
+    "publicDetailPathCount": 61,
     "publicDetailPaths": [
       "apps/canva",
       "apps/github",
@@ -2978,6 +2982,17 @@
       "plans/k12-teachers",
       "plans/plus",
       "plans/pro",
+      "solutions/blueprints/knowledge-retrieval",
+      "solutions/blueprints/mcpkit",
+      "solutions/industries/financial-services",
+      "solutions/industries/government",
+      "solutions/industries/healthcare",
+      "solutions/industries/retail",
+      "solutions/use-case/agents",
+      "solutions/use-case/coding",
+      "solutions/use-case/content-creation",
+      "solutions/use-case/data-analysis",
+      "solutions/use-case/research",
       "students/2026",
       "translate/english-to-french",
       "translate/english-to-hindi",
@@ -3002,8 +3017,8 @@
       "use-cases/veterans",
       "writing/paraphrase"
     ],
-    "publicRegistryPageCount": 116,
-    "reviewedPublicPathCount": 180,
+    "publicRegistryPageCount": 127,
+    "reviewedPublicPathCount": 191,
     "reviewedPublicPaths": [
       "/",
       "/images",
@@ -3123,6 +3138,17 @@
       "/solutions",
       "/transparency-and-content-moderation",
       "/trust-and-transparency",
+      "/solutions/blueprints/knowledge-retrieval",
+      "/solutions/blueprints/mcpkit",
+      "/solutions/industries/financial-services",
+      "/solutions/industries/government",
+      "/solutions/industries/healthcare",
+      "/solutions/industries/retail",
+      "/solutions/use-case/agents",
+      "/solutions/use-case/coding",
+      "/solutions/use-case/content-creation",
+      "/solutions/use-case/data-analysis",
+      "/solutions/use-case/research",
       "/enterprise",
       "/developers",
       "/learn",
@@ -3186,7 +3212,7 @@
       "/pt-BR",
       "/pt-PT"
     ],
-    "sitemapPathCount": 118,
+    "sitemapPathCount": 129,
     "sitemapPaths": [
       "/",
       "/images",
@@ -3305,7 +3331,18 @@
       "/security-and-privacy",
       "/solutions",
       "/transparency-and-content-moderation",
-      "/trust-and-transparency"
+      "/trust-and-transparency",
+      "/solutions/blueprints/knowledge-retrieval",
+      "/solutions/blueprints/mcpkit",
+      "/solutions/industries/financial-services",
+      "/solutions/industries/government",
+      "/solutions/industries/healthcare",
+      "/solutions/industries/retail",
+      "/solutions/use-case/agents",
+      "/solutions/use-case/coding",
+      "/solutions/use-case/content-creation",
+      "/solutions/use-case/data-analysis",
+      "/solutions/use-case/research"
     ]
   }
 }

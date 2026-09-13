@@ -39,21 +39,24 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.uiRouteTemplateCount + kovagpt.serviceRouteTemplateCount,
     kovagpt.routeTemplateCount,
   );
-  assert.equal(kovagpt.routeTemplateCount, 171);
-  assert.equal(kovagpt.uiRouteTemplateCount, 72);
+  assert.equal(kovagpt.routeTemplateCount, 172);
+  assert.equal(kovagpt.uiRouteTemplateCount, 73);
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 50);
-  assert.equal(kovagpt.publicRegistryPageCount, 116);
-  assert.equal(kovagpt.reviewedPublicPathCount, 180);
-  assert.equal(kovagpt.sitemapPathCount, 118);
+  assert.equal(kovagpt.publicDetailPathCount, 61);
+  assert.equal(kovagpt.publicRegistryPageCount, 127);
+  assert.equal(kovagpt.reviewedPublicPathCount, 191);
+  assert.equal(kovagpt.sitemapPathCount, 129);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
   assert.ok(kovagpt.publicDetailPaths.includes("features/voice"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/canva"));
   assert.ok(kovagpt.publicDetailPaths.includes("codex/pricing"));
+  assert.ok(kovagpt.publicDetailPaths.includes("solutions/blueprints/knowledge-retrieval"));
+  assert.ok(kovagpt.publicDetailPaths.includes("solutions/industries/healthcare"));
+  assert.ok(kovagpt.publicDetailPaths.includes("solutions/use-case/research"));
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
@@ -77,7 +80,7 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 104);
+  assert.equal(measurement.completedPageCount, 115);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,
@@ -116,6 +119,17 @@ test("strict UI progress gives every discovered page equal weight", () => {
     "/student-collective",
     "/transparency-and-content-moderation",
     "/trust-and-transparency",
+    "/solutions/blueprints/knowledge-retrieval",
+    "/solutions/blueprints/mcpkit",
+    "/solutions/industries/financial-services",
+    "/solutions/industries/government",
+    "/solutions/industries/healthcare",
+    "/solutions/industries/retail",
+    "/solutions/use-case/agents",
+    "/solutions/use-case/coding",
+    "/solutions/use-case/content-creation",
+    "/solutions/use-case/data-analysis",
+    "/solutions/use-case/research",
   ]) {
     const record = records.find(
       (entry) => entry.source === "openai.com" && entry.sourcePath === sourcePath,

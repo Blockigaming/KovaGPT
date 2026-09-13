@@ -4,9 +4,9 @@
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
     "sourcePageCount": 1850,
-    "completedPageCount": 104,
-    "remainingPageCount": 1746,
-    "completionPercent": 5.62,
+    "completedPageCount": 115,
+    "remainingPageCount": 1735,
+    "completionPercent": 6.22,
     "percentPerPage": 0.054054,
     "sourceCounts": {
       "openai.com": 1704,
@@ -21694,9 +21694,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/blueprints/knowledge-retrieval",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21707,9 +21707,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/blueprints/mcpkit",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21720,9 +21720,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/industries/financial-services",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21733,9 +21733,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/industries/government",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21746,9 +21746,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/industries/healthcare",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21759,9 +21759,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/industries/retail",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21772,9 +21772,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/use-case/agents",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21785,9 +21785,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/use-case/coding",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21798,9 +21798,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/use-case/content-creation",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21811,9 +21811,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/use-case/data-analysis",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21824,9 +21824,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/solutions/use-case/research",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",

@@ -241,7 +241,18 @@ async function collectKova() {
     resolve(ROOT, "src/lib/public-detail-content.ts"),
     "utf8",
   );
-  const publicDetailPaths = extractPublicDetailPaths(publicDetailContent);
+  const publicSolutionContent = await readFile(
+    resolve(ROOT, "src/lib/public-solution-content.ts"),
+    "utf8",
+  );
+  const publicDetailPaths = [
+    ...new Set([
+      ...extractPublicDetailPaths(publicDetailContent),
+      ...[...publicSolutionContent.matchAll(/\bsolution\(\s*"([^"]+)"\s*,\s*"([^"]+)"/gu)].map(
+        (match) => `solutions/${match[1]}/${match[2]}`,
+      ),
+    ]),
+  ].sort();
   return {
     routeTemplateCount: routeRows.length,
     uiRouteTemplateCount: routeRows.filter(({ route, file }) => isKovaUiRoute(route, file)).length,

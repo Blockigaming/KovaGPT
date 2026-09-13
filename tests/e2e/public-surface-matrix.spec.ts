@@ -25,6 +25,17 @@ const expandedPublicRoutes = new Set([
   "/student-collective",
   "/transparency-and-content-moderation",
   "/trust-and-transparency",
+  "/solutions/blueprints/knowledge-retrieval",
+  "/solutions/blueprints/mcpkit",
+  "/solutions/industries/financial-services",
+  "/solutions/industries/government",
+  "/solutions/industries/healthcare",
+  "/solutions/industries/retail",
+  "/solutions/use-case/agents",
+  "/solutions/use-case/coding",
+  "/solutions/use-case/content-creation",
+  "/solutions/use-case/data-analysis",
+  "/solutions/use-case/research",
 ]);
 
 function watchForRuntimeErrors(page: Page) {
