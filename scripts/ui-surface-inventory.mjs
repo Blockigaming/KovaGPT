@@ -6,7 +6,8 @@ import { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } from "../src/lib/seo-poli
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT = resolve(ROOT, "docs/ui-ux/live-surface-inventory.json");
-const SNAPSHOT_DATE = "2026-09-13";
+const SNAPSHOT_DATE =
+  process.env.KOVA_UI_SNAPSHOT_DATE?.trim() || new Date().toISOString().slice(0, 10);
 
 const CHATGPT_AUTHENTICATED_TEMPLATES = Object.freeze([
   "/",
@@ -128,7 +129,7 @@ async function collectChatGpt() {
       paths: marketingPaths,
     },
     authenticatedTemplates: {
-      evidence: "Live authenticated navigation inspected read-only on 2026-09-13.",
+      evidence: `Live authenticated navigation inspected read-only on ${SNAPSHOT_DATE}.`,
       templates: CHATGPT_AUTHENTICATED_TEMPLATES,
     },
   };

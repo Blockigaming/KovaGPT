@@ -48,7 +48,16 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(route, /isPublicIndexableRoute/u);
   assert.match(route, /og:type/u);
   assert.match(view, /aria-label="Breadcrumb"/u);
+  assert.match(view, /data-public-primary/u);
   assert.match(view, /item\.primaryAction\.to/u);
   assert.match(view, /item\.sections\.map/u);
   assert.match(view, /Page highlights/u);
+});
+
+test("business and app guidance actions lead to their intended public flows", () => {
+  const source = read("src/lib/public-detail-content.ts");
+  assert.match(source, /label: "Discuss requirements", to: "\/contact-sales"/u);
+  assert.match(source, /label: "App connection guidance", to: "\/features\/plugins"/u);
+  assert.doesNotMatch(source, /label: "Discuss requirements", to: "\/contact-support"/u);
+  assert.doesNotMatch(source, /label: "App connection guidance", to: "\/connect"/u);
 });

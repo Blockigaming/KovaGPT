@@ -5,7 +5,11 @@ import test from "node:test";
 const inventory = JSON.parse(readFileSync("docs/ui-ux/live-surface-inventory.json", "utf8"));
 
 test("live UI inventory records the complete discoverable source snapshot", () => {
-  assert.equal(inventory.snapshotDate, "2026-09-13");
+  assert.match(inventory.snapshotDate, /^\d{4}-\d{2}-\d{2}$/u);
+  assert.doesNotMatch(
+    readFileSync("scripts/ui-surface-inventory.mjs", "utf8"),
+    /const SNAPSHOT_DATE = ["']\d{4}-\d{2}-\d{2}["']/u,
+  );
   assert.equal(inventory.openai.sitemapCount, 38);
   assert.equal(inventory.openai.uniqueUrlCount, 1704);
   assert.equal(inventory.chatgpt.sitemapEntryCount, 98);

@@ -90,7 +90,7 @@ const business = (
     title,
     `${title}: evaluate KovaGPT with explicit workflow, data, and review boundaries.`,
     summary,
-    { label: "Discuss requirements", to: "/contact-support" },
+    { label: "Discuss requirements", to: "/contact-sales" },
     ["Scoped evaluation", "Human review", "No invented assurances"],
     [
       {
@@ -142,7 +142,7 @@ const app = (
         ],
       },
     ],
-    { label: "App connection guidance", to: "/connect" },
+    { label: "App connection guidance", to: "/features/plugins" },
   );
 
 const planPages = (["free", "plus", "pro"] as const).map((tier) => {

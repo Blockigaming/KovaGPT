@@ -22,7 +22,9 @@ for (const path of auditPaths) {
   const descriptionTag = html.match(/<meta\b[^>]*name=["']description["'][^>]*>/iu)?.[0];
   const robotsTag = html.match(/<meta\b[^>]*name=["']robots["'][^>]*>/iu)?.[0];
   const canonicalTag = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*>/iu)?.[0];
-  const ctaTag = main.match(/<a\b[^>]*href=["'][^"']+["'][^>]*>[\s\S]*?<\/a>/iu)?.[0];
+  const ctaTag = [...main.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)]
+    .map((match) => match[0])
+    .find((tag) => /\bdata-public-primary(?:\s|=|>)/iu.test(tag));
   const internalLinks = [...html.matchAll(/<a\b[^>]*href=["'](\/[^"]*?)["']/giu)]
     .map((match) => match[1].split(/[?#]/u, 1)[0])
     .filter((href) => href && !href.startsWith("//"));
@@ -84,14 +86,14 @@ const records = raw.map((item) => {
     structuredDataType: item.structuredDataType,
     legalReview: legal ? "required" : "not_required",
     administratorContent: admin ? "required" : "not_required",
-    mobileResult: "baseline_pass_2026-09-13",
-    darkModeResult: "baseline_pass_2026-09-13",
+    mobileResult: "not_verified",
+    darkModeResult: "not_verified",
     keyboardResult: item.skipLinkPresent ? "skip_link_present" : "fail",
     runtimeStatus: item.status,
     decision,
     reason:
       decision === "keep_indexable"
-        ? "Runtime, metadata, responsive, and minimum-content checks passed."
+        ? "Runtime, metadata, and minimum-content checks passed. Responsive behavior requires separate browser evidence."
         : decision === "improve_then_index"
           ? "The page renders but needs more substantive content before final index review."
           : legal || admin

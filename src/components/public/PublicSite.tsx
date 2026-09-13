@@ -50,6 +50,7 @@ export function PublicPageView({
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 to={primaryAction.to as never}
+                data-public-primary
                 className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {primaryAction.label} <ArrowRight className="h-4 w-4" aria-hidden="true" />

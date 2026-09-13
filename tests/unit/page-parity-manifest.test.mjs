@@ -148,8 +148,8 @@ test("all 122 reconciled public routes are reviewed and the sitemap retains 75 s
   for (const entry of review.records) {
     assert.ok(entry.h1, entry.route);
     assert.equal(entry.runtimeStatus, 200, entry.route);
-    assert.equal(entry.mobileResult, "baseline_pass_2026-09-13", entry.route);
-    assert.equal(entry.darkModeResult, "baseline_pass_2026-09-13", entry.route);
+    assert.equal(entry.mobileResult, "not_verified", entry.route);
+    assert.equal(entry.darkModeResult, "not_verified", entry.route);
     assert.equal(entry.keyboardResult, "skip_link_present", entry.route);
     assert.ok(entry.uniqueTitle, entry.route);
     assert.ok(entry.uniqueDescription, entry.route);
