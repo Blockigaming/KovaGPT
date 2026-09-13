@@ -99,3 +99,29 @@ test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
   const source = read("src/lib/public-detail-content.ts");
   assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);
 });
+
+test("Kova Academy provides all 38 exact-path, original learning guides", () => {
+  const source = read("src/lib/public-academy-content.ts");
+  const progress = JSON.parse(read("docs/ui-ux/page-by-page-progress.json"));
+  const expected = progress.records
+    .filter(
+      ({ source, sourcePath }) => source === "openai.com" && sourcePath.startsWith("/academy/"),
+    )
+    .map(({ sourcePath }) => sourcePath.slice(1));
+  const actual = [...source.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(
+    (match) => `academy/${match[1]}`,
+  );
+  assert.equal(expected.length, 38);
+  assert.deepEqual(new Set(actual), new Set(expected));
+  assert.equal(new Set(actual).size, 38);
+  assert.match(source, /PUBLIC_ACADEMY_PAGE_BY_KEY/u);
+  assert.match(source, /Treat every generated answer as a draft/u);
+  assert.doesNotMatch(source, /OpenAI Academy|ChatGPT Academy/u);
+
+  const twoSegmentRoute = read("src/routes/$section.$articleSlug.tsx");
+  const threeSegmentRoute = read("src/routes/$section.$category.$articleSlug.tsx");
+  for (const route of [twoSegmentRoute, threeSegmentRoute]) {
+    assert.match(route, /PUBLIC_ACADEMY_PAGE_BY_KEY/u);
+    assert.match(route, /params\.section === "academy"/u);
+  }
+});

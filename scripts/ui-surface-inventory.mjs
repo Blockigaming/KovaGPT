@@ -245,11 +245,18 @@ async function collectKova() {
     resolve(ROOT, "src/lib/public-solution-content.ts"),
     "utf8",
   );
+  const publicAcademyContent = await readFile(
+    resolve(ROOT, "src/lib/public-academy-content.ts"),
+    "utf8",
+  );
   const publicDetailPaths = [
     ...new Set([
       ...extractPublicDetailPaths(publicDetailContent),
       ...[...publicSolutionContent.matchAll(/\bsolution\(\s*"([^"]+)"\s*,\s*"([^"]+)"/gu)].map(
         (match) => `solutions/${match[1]}/${match[2]}`,
+      ),
+      ...[...publicAcademyContent.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(
+        (match) => `academy/${match[1]}`,
       ),
     ]),
   ].sort();

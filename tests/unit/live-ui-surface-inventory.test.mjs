@@ -44,10 +44,10 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 61);
-  assert.equal(kovagpt.publicRegistryPageCount, 127);
-  assert.equal(kovagpt.reviewedPublicPathCount, 191);
-  assert.equal(kovagpt.sitemapPathCount, 129);
+  assert.equal(kovagpt.publicDetailPathCount, 99);
+  assert.equal(kovagpt.publicRegistryPageCount, 165);
+  assert.equal(kovagpt.reviewedPublicPathCount, 229);
+  assert.equal(kovagpt.sitemapPathCount, 167);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
@@ -57,6 +57,12 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.ok(kovagpt.publicDetailPaths.includes("solutions/blueprints/knowledge-retrieval"));
   assert.ok(kovagpt.publicDetailPaths.includes("solutions/industries/healthcare"));
   assert.ok(kovagpt.publicDetailPaths.includes("solutions/use-case/research"));
+  assert.ok(kovagpt.publicDetailPaths.includes("academy/ai-fundamentals"));
+  assert.ok(
+    kovagpt.publicDetailPaths.includes(
+      "academy/chatgpt-work/how-business-operations-teams-use-codex",
+    ),
+  );
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
@@ -80,7 +86,7 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 115);
+  assert.equal(measurement.completedPageCount, 153);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { PUBLIC_SITEMAP_ENTRIES } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
 const allDetailRoutes = [
@@ -53,7 +54,8 @@ const allDetailRoutes = [
   "/translate/spanish-to-english",
   "/translate/tagalog-to-english",
   "/writing/paraphrase",
-] as const;
+  ...PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path).filter((path) => path.startsWith("/academy/")),
+];
 
 const responsiveRoutes = [
   "/features/deep-research",
@@ -61,6 +63,8 @@ const responsiveRoutes = [
   "/use-cases/chat-with-spreadsheets",
   "/business/ai-for-engineering",
   "/apps/google-drive",
+  "/academy/ai-fundamentals",
+  "/academy/chatgpt-work/how-data-science-teams-use-codex",
 ] as const;
 
 const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>
@@ -73,7 +77,7 @@ test.describe.parallel("complete public detail content", () => {
       page,
     }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop-1440x900");
-      test.setTimeout(90_000);
+      test.setTimeout(180_000);
 
       for (const route of routes) {
         const response = await page.goto(route, { waitUntil: "domcontentloaded" });
