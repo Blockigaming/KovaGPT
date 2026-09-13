@@ -6,11 +6,16 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath =
   "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql";
+const proPriceRotationMigrationPath =
+  "supabase/migrations/20260913013131_register_pro_80_live_price.sql";
+const proRollbackCompatibilityMigrationPath =
+  "supabase/migrations/20260913023331_preserve_rotated_pro_price_on_rollback.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
 const plusPriceId = "price_1UAzhHAEZlsb6DBYWw2oUCeO";
 const proPriceId = "price_1UAzhRAEZlsb6DBYlafU4mhc";
+const currentProPriceId = "price_1UEw6FAEZlsb6DBYuksCKOBR";
 const rotatedPlusPriceId = "price_RotatedPlus123";
 
 async function createDatabase({ beforeMigration } = {}) {
@@ -31,6 +36,9 @@ async function createDatabase({ beforeMigration } = {}) {
     CREATE TABLE public.family_links (
       member_id uuid PRIMARY KEY,
       owner_id uuid NOT NULL
+    );
+    CREATE TABLE public.account_deletion_fences (
+      user_id uuid PRIMARY KEY
     );
     CREATE FUNCTION public.family_owner_of(_user_id uuid)
     RETURNS uuid
@@ -90,6 +98,8 @@ async function createDatabase({ beforeMigration } = {}) {
   `);
   if (beforeMigration) await beforeMigration(database);
   await database.exec(await readFile(migrationPath, "utf8"));
+  await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
+  await database.exec(await readFile(proRollbackCompatibilityMigrationPath, "utf8"));
   return database;
 }
 
@@ -194,6 +204,135 @@ test("two exact historical Prices may share one lookup key without ambiguity", a
       subscriptionId: "sub_rotated",
     });
     assert.equal(await tier(database), "plus");
+  } finally {
+    await database.close();
+  }
+});
+
+test("the current Pro Price is checkout-eligible while the historical mapping remains", async () => {
+  const database = await createDatabase();
+  try {
+    await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
+    const mappings = await database.query(
+      `SELECT stripe_price_id, lookup_key, tier
+       FROM public.billing_plan_tiers
+       WHERE environment = 'live'
+         AND stripe_price_id IN ($1, $2)
+       ORDER BY stripe_price_id`,
+      [proPriceId, currentProPriceId],
+    );
+    assert.deepEqual(mappings.rows, [
+      { stripe_price_id: proPriceId, lookup_key: "pro_monthly", tier: "pro" },
+      { stripe_price_id: currentProPriceId, lookup_key: "pro_monthly", tier: "pro" },
+    ]);
+
+    await database.query(
+      `INSERT INTO public.stripe_customer_mappings
+         (environment, stripe_customer_id, user_id)
+       VALUES ('live', 'cus_current_pro', $1::uuid)`,
+      [userId],
+    );
+    const claim = await database.query(
+      `SELECT public.claim_stripe_checkout_attempt(
+         $1::uuid,
+         'live',
+         $2,
+         false
+       ) AS claim`,
+      [userId, currentProPriceId],
+    );
+    assert.equal(claim.rows[0]?.claim?.stripeCustomerId, "cus_current_pro");
+    assert.equal(claim.rows[0]?.claim?.trialEligible, false);
+  } finally {
+    await database.close();
+  }
+});
+
+test("rollback lookup-key writes preserve each subscription's exact Pro Price", async () => {
+  const database = await createDatabase();
+  try {
+    await addSubscription(database, {
+      priceId: proPriceId,
+      subscriptionId: "sub_historical_pro",
+    });
+    await addSubscription(database, {
+      priceId: currentProPriceId,
+      subscriptionId: "sub_current_pro",
+    });
+
+    await database.query(
+      `UPDATE public.subscriptions
+       SET price_id = 'pro_monthly'
+       WHERE stripe_subscription_id = 'sub_historical_pro'`,
+    );
+    await database.query(
+      `INSERT INTO public.subscriptions (
+         user_id, stripe_subscription_id, stripe_customer_id, product_id,
+         price_id, status, current_period_end, environment
+       ) VALUES (
+         $1::uuid, 'sub_current_pro', 'cus_rollback_upsert', 'prod_fixture',
+         'pro_monthly', 'active', now() + interval '30 days', 'live'
+       )
+       ON CONFLICT (stripe_subscription_id, environment) DO UPDATE
+       SET price_id = excluded.price_id`,
+      [userId],
+    );
+
+    const preserved = await database.query(
+      `SELECT stripe_subscription_id, price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id IN ('sub_historical_pro', 'sub_current_pro')
+       ORDER BY stripe_subscription_id`,
+    );
+    assert.deepEqual(preserved.rows, [
+      { stripe_subscription_id: "sub_current_pro", price_id: currentProPriceId },
+      { stripe_subscription_id: "sub_historical_pro", price_id: proPriceId },
+    ]);
+
+    await database.query(
+      `INSERT INTO public.stripe_checkout_attempts (
+         environment, user_id, stripe_price_id, outcome, stripe_session_id,
+         idempotency_key, session_expires_at, idempotency_expires_at
+       ) VALUES (
+         'live', $1::uuid, $2, 'ready', 'cs_current_pro', gen_random_uuid(),
+         now() + interval '1 hour', now() + interval '2 hours'
+       )`,
+      [userId, currentProPriceId],
+    );
+    await addSubscription(database, {
+      priceId: "pro_monthly",
+      subscriptionId: "sub_first_current_pro_webhook",
+    });
+    const recovered = await database.query(
+      `SELECT price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id = 'sub_first_current_pro_webhook'`,
+    );
+    assert.deepEqual(recovered.rows, [{ price_id: currentProPriceId }]);
+
+    await database.query(
+      `INSERT INTO public.stripe_checkout_attempts (
+         environment, user_id, stripe_price_id, outcome, idempotency_key,
+         session_expires_at, idempotency_expires_at
+       ) VALUES (
+         'live', $1::uuid, $2, 'new', gen_random_uuid(),
+         now() + interval '1 hour', now() + interval '2 hours'
+       )`,
+      [ownerId, currentProPriceId],
+    );
+    await assert.rejects(
+      database.query(
+        `INSERT INTO public.subscriptions (
+           user_id, stripe_subscription_id, stripe_customer_id, product_id,
+           price_id, status, current_period_end, environment
+         ) VALUES (
+           $1::uuid, 'sub_ambiguous_pro', 'cus_ambiguous_pro', 'prod_fixture',
+           'pro_monthly', 'active', now() + interval '30 days', 'live'
+         )`,
+        [ownerId],
+      ),
+      /ambiguous_legacy_live_pro_price/u,
+    );
   } finally {
     await database.close();
   }

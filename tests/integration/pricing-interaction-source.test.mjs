@@ -5,9 +5,12 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("pricing keeps the published prices and production checkout lookup keys", async () => {
-  const [pricing, registry] = await Promise.all([
+  const [pricing, registry, billingPlans, manualHandoff, rollout] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/lib/capability-registry.ts"),
+    read("src/lib/billing-plans.ts"),
+    read("docs/release/KOVAGPT_MANUAL_HANDOFF.md"),
+    read("docs/release/STRIPE_BILLING_ROLLOUT.md"),
   ]);
 
   assert.match(
@@ -18,6 +21,11 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     registry,
     /pro:\s*\{[\s\S]*?monthlyPriceUsd:\s*80,[\s\S]*?lookupKey:\s*BILLING_PLANS\.pro_monthly\.lookupKey/,
   );
+  assert.match(
+    billingPlans,
+    /pro_monthly:\s*\{[\s\S]*?lookupKey:\s*"pro_monthly",[\s\S]*?livePriceId:\s*"price_1UEw6FAEZlsb6DBYuksCKOBR"/,
+  );
+  assert.doesNotMatch(billingPlans, /price_1UAzhRAEZlsb6DBYlafU4mhc/);
   assert.match(pricing, /useStripeCheckout\(\)/);
   assert.match(
     pricing,
@@ -25,6 +33,26 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.plus\.lookupKey!/);
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.pro\.lookupKey!/);
+  assert.match(
+    manualHandoff,
+    /current live Pro price\s+`price_1UEw6FAEZlsb6DBYuksCKOBR` \(USD 80\/month\)/u,
+  );
+  assert.match(
+    manualHandoff,
+    /historical Pro price\s+`price_1UAzhRAEZlsb6DBYlafU4mhc` \(USD 89\/month\)/u,
+  );
+  assert.match(manualHandoff, /do not offer it for\s+new USD 80 checkouts/u);
+  assert.match(manualHandoff, /do not create\s+another Price for this rollout/u);
+  assert.doesNotMatch(manualHandoff, /must\s+create a new immutable recurring Pro Price/u);
+  assert.match(
+    rollout,
+    /legacy Pro updates and upserts preserve the exact Price ID already stored/u,
+  );
+  assert.match(
+    rollout,
+    /recovers the exact Price ID from the durable nonterminal Checkout attempt/u,
+  );
+  assert.match(rollout, /requires exact-ID reconciliation before webhook retry/u);
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

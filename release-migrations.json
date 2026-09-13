@@ -1,8 +1,13 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
+
+  "count": 148,
+  "latest": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
+
   "count": 147,
   "latest": "20260913022249_stabilize_work_browser_session_timestamps.sql",
+
   "migrations": [
     {
       "order": 1,
@@ -3199,12 +3204,35 @@
     },
     {
       "order": 147,
+
+      "filename": "20260913013131_register_pro_80_live_price.sql",
+      "timestamp": "20260913013131",
+      "sha256": "7597e654ce239bbffb9838e57bcf67b13547b4eeeebeda6abe19f58907952d3f",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 148,
+      "filename": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
+      "timestamp": "20260913023331",
+      "sha256": "d0d981d5693fdd9e6ca996a9208adba3c6b23c7b1fceb7383427e2d070b41862",
+      "tables": [],
+      "functions": ["normalize_legacy_live_subscription_price"],
+      "destructive": false,
+
       "filename": "20260913022249_stabilize_work_browser_session_timestamps.sql",
       "timestamp": "20260913022249",
       "sha256": "01a3f198633dd26ca38ee17ad70aa7c1a661059e1478686bfb18be06d278fb0f",
       "tables": [],
       "functions": [],
       "destructive": false,
+
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
