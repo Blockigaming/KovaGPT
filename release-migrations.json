@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 146,
-  "latest": "20260910210000_workflow_skill_packages.sql",
+  "count": 148,
+  "latest": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
   "migrations": [
     {
       "order": 1,
@@ -3196,6 +3196,34 @@
         "workflow_skill_versions_owner_idx",
         "workflow_skill_installations_owner_idx"
       ]
+    },
+    {
+      "order": 147,
+      "filename": "20260913013131_register_pro_80_live_price.sql",
+      "timestamp": "20260913013131",
+      "sha256": "7597e654ce239bbffb9838e57bcf67b13547b4eeeebeda6abe19f58907952d3f",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 148,
+      "filename": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
+      "timestamp": "20260913023331",
+      "sha256": "d0d981d5693fdd9e6ca996a9208adba3c6b23c7b1fceb7383427e2d070b41862",
+      "tables": [],
+      "functions": ["normalize_legacy_live_subscription_price"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

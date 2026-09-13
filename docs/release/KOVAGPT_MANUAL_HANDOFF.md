@@ -42,12 +42,13 @@ before a write.
 | Supabase/Auth     | 2026-09-01: production project `mfbycmbjygcfkrsuepxf` reported Google enabled, but no successful production OAuth round trip was captured.                                                                                                                                                                                                     | Provider configuration is not end-to-end proof.                                              |
 
 **Pricing decision recorded 2026-09-07:** publish Plus at USD 16/month and Pro at USD 80/month.
-The dated live evidence above remains intentionally unchanged: Stripe still has the existing USD
-89/month Pro price. Before any release can advertise or charge USD 80, an authorized operator must
-create a new immutable recurring Pro Price at USD 80, move the `pro_monthly` lookup key under a
-reviewed migration, preserve recognition of existing subscription price IDs, and complete the
-approved sandbox/reconciliation evidence. This record is preparation only; no live Stripe write or
-real checkout was authorized or performed.
+The dated 2026-09-01 evidence above remains intentionally unchanged. A later 2026-09-13 handoff
+records the current immutable USD 80 Pro Price as `price_1UEw6FAEZlsb6DBYuksCKOBR`; do not create
+another Price for this rollout. The application and forward migration select that current Price
+while preserving recognition of the historical USD 89 Price
+`price_1UAzhRAEZlsb6DBYlafU4mhc` for existing subscriptions and webhook history. Before release,
+complete merge, database-lineage, Portal, sandbox, and reconciliation evidence. No real checkout
+was authorized or performed by this repository change.
 
 ## Non-negotiable entry gate
 
@@ -529,9 +530,14 @@ and Terms URL. Confirm that Plus and Pro are separate products and that the chos
 transition behavior actually supports the intended path. Configure sandbox first, then live mode
 with **View test data** off. Do not assume sandbox settings carry into live mode.
 
-**Exact values to inspect:** live price IDs `price_1UAzhHAEZlsb6DBYWw2oUCeO` and
-`price_1UAzhRAEZlsb6DBYlafU4mhc`; canonical return origin `https://kovagpt.com`; Stripe Dashboard
-**Settings > Billing > Customer portal**; the deployed server's allowed return-URL contract.
+**Exact values to inspect:** current live Plus price
+`price_1UAzhHAEZlsb6DBYWw2oUCeO` (USD 16/month), current live Pro price
+`price_1UEw6FAEZlsb6DBYuksCKOBR` (USD 80/month), and historical Pro price
+`price_1UAzhRAEZlsb6DBYlafU4mhc` (USD 89/month). Configure the current Plus and USD 80 Pro prices
+as eligible for intended new-customer transitions. Retain the historical Pro price only where
+existing subscriptions or an explicitly reviewed migration path require it; do not offer it for
+new USD 80 checkouts. Also inspect canonical return origin `https://kovagpt.com`, Stripe Dashboard
+**Settings > Billing > Customer portal**, and the deployed server's allowed return-URL contract.
 
 **Risk:** a guessed configuration can misstate cancellation rights, create unexpected prorations,
 or expose one customer's portal to another. **Consequence of not performing:** the Portal and live
