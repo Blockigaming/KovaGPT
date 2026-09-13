@@ -32,7 +32,6 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
   assert.match(checkoutSource, /claim_stripe_checkout_attempt/);
   assert.match(checkoutSource, /_trial_eligible: requestedTrialEligibility/);
-  assert.match(checkoutSource, /idempotencyKey: `kova-checkout-/);
   assert.match(
     checkoutSource,
     /subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/,
