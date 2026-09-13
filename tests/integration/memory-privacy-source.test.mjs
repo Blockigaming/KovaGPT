@@ -158,7 +158,7 @@ test("saved-memory deletion is authenticated, serialized after writes, and truth
   );
 });
 
-test("family-plan entitlement is resolved by the server and picks the highest active tier", () => {
+test("family-plan entitlement uses the centralized effective database resolver", () => {
   const auth = read("src/lib/api-auth.server.ts");
   const chatApi = read("src/routes/api/chat.ts");
 

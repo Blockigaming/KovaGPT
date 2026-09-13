@@ -16,18 +16,30 @@ export type Database = {
     Tables: {
       billing_plan_tiers: {
         Row: {
+          checkout_session_id: string | null;
+          completed_at: string | null;
+          correlation_id: string | null;
+          customer_id: string | null;
           environment: string;
           lookup_key: string;
           stripe_price_id: string;
           tier: string;
         };
         Insert: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment: string;
           lookup_key: string;
           stripe_price_id: string;
           tier: string;
         };
         Update: {
+          checkout_session_id?: string | null;
+          completed_at?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment?: string;
           lookup_key?: string;
           stripe_price_id?: string;

@@ -30,6 +30,16 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
   assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
   assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
+  assert.match(checkoutSource, /claim_stripe_checkout_attempt/);
+  assert.match(checkoutSource, /_trial_eligible: requestedTrialEligibility/);
+  assert.match(
+    checkoutSource,
+    /subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/,
+  );
+  assert.match(checkoutSource, /stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/);
+  assert.match(checkoutSource, /\.select\("status, current_period_end"\)/);
+  assert.match(checkoutSource, /if \(!session\.client_secret\)/);
+  assert.doesNotMatch(checkoutSource, /client_secret \?\? ""/);
   assert.match(
     checkoutSource,
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,

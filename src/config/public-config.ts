@@ -1,10 +1,10 @@
 // Publishable, non-secret deployment configuration.
 //
 // These values are safe to ship in the browser bundle (they are the same
-// publishable identifiers the client already sends with every request). They
-// are committed here so a production build never loses them when local-only
-// environment files are absent, which previously made sign-in fail with
-// "authentication is not configured".
+// publishable identifiers the client already sends with every request).
+// Supabase defaults remain committed for authentication continuity. Billing is
+// intentionally different: an absent deployment value must fail closed instead
+// of silently selecting a publishable key from another Stripe account.
 
 export const PUBLIC_BACKEND_URL = "https://mfbycmbjygcfkrsuepxf.supabase.co";
 export const PUBLIC_BACKEND_KEY = "sb_publishable_3_JjqZc2hdxn2Q0xAWwMOw_EaZsryWw";
