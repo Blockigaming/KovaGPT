@@ -40,6 +40,15 @@ test("route failures and not-found responses are never indexable", () => {
   }
 });
 
+test("successful locale entry pages remain followable without becoming indexable", () => {
+  for (const pathname of ["/ar", "/fr-FR", "/pt-BR", "/en/home", "/ar/home"]) {
+    assert.equal(isPublicIndexableRoute(pathname), false, pathname);
+    assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
+  }
+
+  assert.equal(robotsDirectiveForRoute("/ar", ["notFound"]), "noindex, nofollow");
+});
+
 test("path normalization is conservative and deterministic", () => {
   assert.equal(normalizePathname("/pricing/"), "/pricing");
   assert.equal(normalizePathname("/pricing?from=test"), "/pricing");

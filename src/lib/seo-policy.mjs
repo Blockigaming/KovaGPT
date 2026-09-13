@@ -265,6 +265,12 @@ const PUBLIC_REVIEW_PATHS = Object.freeze([
 ]);
 
 const PUBLIC_INDEXABLE_PATHS = new Set(PUBLIC_SITEMAP_ENTRIES.map((entry) => entry.path));
+const PUBLIC_FOLLOWABLE_NOINDEX_PATHS = new Set([
+  ...["en", "es", "fr", "de", "pt-BR", "ja", "ko", "ar"].map((locale) => `/${locale}/home`),
+  ...["ar", "de-DE", "es-419", "es-ES", "fr-CA", "fr-FR", "ja-JP", "ko-KR", "pt-BR", "pt-PT"].map(
+    (locale) => `/${locale}`,
+  ),
+]);
 const NON_INDEXABLE_STATUSES = new Set(["error", "notFound", "redirected"]);
 
 function normalizePathname(pathname) {
@@ -283,7 +289,11 @@ function isPublicIndexableRoute(pathname, statuses = []) {
 }
 
 function robotsDirectiveForRoute(pathname, statuses = []) {
-  return isPublicIndexableRoute(pathname, statuses) ? "index, follow" : "noindex, nofollow";
+  if (statuses.some((status) => NON_INDEXABLE_STATUSES.has(status))) return "noindex, nofollow";
+  const normalized = normalizePathname(pathname);
+  if (PUBLIC_INDEXABLE_PATHS.has(normalized)) return "index, follow";
+  if (PUBLIC_FOLLOWABLE_NOINDEX_PATHS.has(normalized)) return "noindex, follow";
+  return "noindex, nofollow";
 }
 
 export {

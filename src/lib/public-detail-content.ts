@@ -613,7 +613,7 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
     "Reference permitted Drive files in supported KovaGPT workflows after connecting the intended Google account.",
     [
       "Choose the correct Google account",
-      "Grant only requested Drive scopes",
+      "Review the unified Google grant for Drive, Gmail, and Calendar access",
       "Recheck access before each protected read",
     ],
   ),

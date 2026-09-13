@@ -95,6 +95,12 @@ test("business and app guidance actions lead to their intended public flows", ()
   assert.doesNotMatch(source, /label: "App connection guidance", to: "\/connect"/u);
 });
 
+test("Google Drive guidance describes the unified Google authorization grant", () => {
+  const source = read("src/lib/public-detail-content.ts");
+  assert.match(source, /Review the unified Google grant for Drive, Gmail, and Calendar access/u);
+  assert.doesNotMatch(source, /only requested Drive scopes/iu);
+});
+
 test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
   const source = read("src/lib/public-detail-content.ts");
   assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);

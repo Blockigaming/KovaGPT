@@ -83,10 +83,9 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(confirmation, /readBoundedJsonObject\(request, 8 \* 1024\)/);
 
   assert.match(seoPolicy, /return PUBLIC_INDEXABLE_PATHS\.has/);
-  assert.match(
-    seoPolicy,
-    /isPublicIndexableRoute\(pathname, statuses\) \? "index, follow" : "noindex, nofollow"/,
-  );
+  assert.match(seoPolicy, /PUBLIC_FOLLOWABLE_NOINDEX_PATHS\.has\(normalized\)/);
+  assert.match(seoPolicy, /return "noindex, follow"/);
+  assert.match(seoPolicy, /return "noindex, nofollow"/);
   assert.match(root, /KovaGPT couldn't load this page/);
   assert.doesNotMatch(root, /correlationId|randomUUID|console\.error/);
 
