@@ -5,11 +5,23 @@ import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 export const Route = createFileRoute("/$section/$category/$articleSlug")({
   loader: async ({ params }) => {
     const key = `${params.section}/${params.category}/${params.articleSlug}`;
+    if (params.section === "policies") {
+      const { PUBLIC_POLICY_PAGE_BY_KEY } = await import("@/lib/public-policy-content");
+      const policy = PUBLIC_POLICY_PAGE_BY_KEY.get(key);
+      if (!policy) throw notFound();
+      return policy;
+    }
     if (params.section === "academy") {
       const { PUBLIC_ACADEMY_PAGE_BY_KEY } = await import("@/lib/public-academy-content");
       const academy = PUBLIC_ACADEMY_PAGE_BY_KEY.get(key);
       if (!academy) throw notFound();
       return academy;
+    }
+    if (params.section === "business") {
+      const { PUBLIC_BUSINESS_PAGE_BY_KEY } = await import("@/lib/public-business-content");
+      const business = PUBLIC_BUSINESS_PAGE_BY_KEY.get(key);
+      if (!business) throw notFound();
+      return business;
     }
     const { PUBLIC_SOLUTION_PAGE_BY_KEY } = await import("@/lib/public-solution-content");
     const item = PUBLIC_SOLUTION_PAGE_BY_KEY.get(key);

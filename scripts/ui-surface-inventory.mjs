@@ -2,7 +2,12 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } from "../src/lib/seo-policy.mjs";
+import {
+  PUBLIC_BUSINESS_PATHS,
+  PUBLIC_POLICY_PATHS,
+  PUBLIC_REVIEW_PATHS,
+  PUBLIC_SITEMAP_ENTRIES,
+} from "../src/lib/seo-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT = resolve(ROOT, "docs/ui-ux/live-surface-inventory.json");
@@ -258,6 +263,8 @@ async function collectKova() {
       ...[...publicAcademyContent.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(
         (match) => `academy/${match[1]}`,
       ),
+      ...PUBLIC_POLICY_PATHS.map((path) => path.slice(1)),
+      ...PUBLIC_BUSINESS_PATHS.map((path) => path.slice(1)),
     ]),
   ].sort();
   return {

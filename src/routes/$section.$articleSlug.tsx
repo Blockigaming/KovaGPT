@@ -13,9 +13,20 @@ export const Route = createFileRoute("/$section/$articleSlug")({
       if (academy) return { kind: "detail" as const, item: academy };
       throw notFound();
     }
+    if (params.section === "policies") {
+      const { PUBLIC_POLICY_PAGE_BY_KEY } = await import("@/lib/public-policy-content");
+      const policy = PUBLIC_POLICY_PAGE_BY_KEY.get(key);
+      if (policy) return { kind: "detail" as const, item: policy };
+      throw notFound();
+    }
     const { PUBLIC_DETAIL_PAGE_BY_KEY } = await import("@/lib/public-detail-content");
     const detail = PUBLIC_DETAIL_PAGE_BY_KEY.get(key);
     if (detail) return { kind: "detail" as const, item: detail };
+    if (params.section === "business") {
+      const { PUBLIC_BUSINESS_PAGE_BY_KEY } = await import("@/lib/public-business-content");
+      const business = PUBLIC_BUSINESS_PAGE_BY_KEY.get(key);
+      if (business) return { kind: "detail" as const, item: business };
+    }
     throw notFound();
   },
   head: ({ loaderData: data }) =>

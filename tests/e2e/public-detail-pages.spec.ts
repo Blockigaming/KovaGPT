@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { PUBLIC_SITEMAP_ENTRIES } from "../../src/lib/seo-policy.mjs";
+import {
+  PUBLIC_BUSINESS_PATHS,
+  PUBLIC_POLICY_PATHS,
+  PUBLIC_SITEMAP_ENTRIES,
+} from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
 const allDetailRoutes = [
@@ -55,6 +59,8 @@ const allDetailRoutes = [
   "/translate/tagalog-to-english",
   "/writing/paraphrase",
   ...PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path).filter((path) => path.startsWith("/academy/")),
+  ...PUBLIC_POLICY_PATHS,
+  ...PUBLIC_BUSINESS_PATHS,
 ];
 
 const responsiveRoutes = [
@@ -65,6 +71,8 @@ const responsiveRoutes = [
   "/apps/google-drive",
   "/academy/ai-fundamentals",
   "/academy/chatgpt-work/how-data-science-teams-use-codex",
+  "/policies/privacy-policy/california-privacy-rights-reporting",
+  "/business/solutions/finance/workflows",
 ] as const;
 
 const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>
@@ -77,7 +85,7 @@ test.describe.parallel("complete public detail content", () => {
       page,
     }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop-1440x900");
-      test.setTimeout(180_000);
+      test.setTimeout(420_000);
 
       for (const route of routes) {
         const response = await page.goto(route, { waitUntil: "domcontentloaded" });
@@ -114,7 +122,7 @@ test("representative detail families remain responsive in light and dark modes",
 }, testInfo) => {
   const projects = new Set(["phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
   test.skip(!projects.has(testInfo.project.name));
-  test.setTimeout(90_000);
+  test.setTimeout(300_000);
 
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });

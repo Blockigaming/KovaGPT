@@ -4,9 +4,9 @@
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
     "sourcePageCount": 1850,
-    "completedPageCount": 153,
-    "remainingPageCount": 1697,
-    "completionPercent": 8.27,
+    "completedPageCount": 264,
+    "remainingPageCount": 1586,
+    "completionPercent": 14.27,
     "percentPerPage": 0.054054,
     "sourceCounts": {
       "openai.com": 1704,
@@ -738,9 +738,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/amex-chatgpt-business-credit",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -751,9 +751,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/contact-sales-financial-services",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -764,9 +764,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/customer-stories",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -777,9 +777,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/enabling-a-data-driven-workforce-webinar",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -790,9 +790,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/fine-tuning-gpt-4o-webinar",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -803,9 +803,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/frontier",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -816,9 +816,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guaranteed-capacity",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -829,9 +829,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/a-practical-guide-to-building-ai-agents",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -842,9 +842,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/a-practical-guide-to-building-with-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -855,9 +855,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/chatgpt-business-smb-guide",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -868,9 +868,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/chatgpt-usage-and-adoption-patterns-at-work",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -881,9 +881,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/how-enterprises-are-scaling-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -894,9 +894,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/how-openai-uses-codex",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -907,9 +907,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/identifying-and-scaling-ai-use-cases",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -920,9 +920,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/inside-gpt5-our-best-model-for-work",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -933,9 +933,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/staying-ahead-in-the-age-of-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -946,9 +946,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/guides-and-resources/the-state-of-enterprise-ai-2025-report",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -959,9 +959,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/intelligence-at-work",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -972,9 +972,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -985,9 +985,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/agent-security-enterprise",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -998,9 +998,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/download-the-chatgpt-work-guide-for-sales-teams",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1011,9 +1011,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/gartner-2026-agentic-coding-leader",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1024,9 +1024,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/how-our-sales-team-uses-chatgpt-work",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1037,9 +1037,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/intelligence-at-work-cyber",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1050,9 +1050,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/learn/intelligence-at-work-financial-services",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1063,9 +1063,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/model",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1076,9 +1076,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/new-in-chatgpt-for-business-april-updates-2025",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1089,9 +1089,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/new-in-chatgpt-for-work-march-updates-2025",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1102,9 +1102,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/openai-presence",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3416,9 +3416,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/pricing",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3429,9 +3429,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/put-ai-to-work-automate-and-scale-financial-operations",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3442,9 +3442,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/put-ai-to-work-for-marketing-teams",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3455,9 +3455,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/put-ai-to-work-lessons-from-hundreds-of-successful-deployments",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3468,9 +3468,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/cybersecurity",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3481,9 +3481,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/data",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3494,9 +3494,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/design",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3507,9 +3507,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/education",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3520,9 +3520,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/engineering",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3533,9 +3533,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/finance",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3546,9 +3546,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/finance/workflows",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3559,9 +3559,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/marketing",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3572,9 +3572,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/operations",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3585,9 +3585,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solutions/sales",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3598,9 +3598,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/solving-complex-problems-with-openai-o1-models",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3611,9 +3611,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/updates-to-chatgpt-business-plans-livestream-june-2025",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3624,9 +3624,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/why-openai/enterprises",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3637,9 +3637,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/why-openai/small-business",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3650,9 +3650,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/why-openai/startups",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3663,9 +3663,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/workspace-agents",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20563,9 +20563,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/ad-credit-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20576,9 +20576,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/ad-policies",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20589,9 +20589,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/ad-tools-dpa",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20602,9 +20602,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/ad-tools-subprocessors",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20615,9 +20615,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/ad-tools-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20628,9 +20628,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/advertising-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20641,9 +20641,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/au-online-safety-act",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20654,9 +20654,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/aug-2023-business-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20667,9 +20667,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/br-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20680,9 +20680,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/brazil-eca-digital",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20693,9 +20693,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/chatgpt-sites-data-processing-addendum",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20706,9 +20706,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/chatgpt-sites-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20719,9 +20719,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/civil-user-data-requests",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20732,9 +20732,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/commerce-policies",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20745,9 +20745,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/communications-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20758,9 +20758,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/conversion-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20771,9 +20771,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/cookie-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20784,9 +20784,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/coordinated-vulnerability-disclosure-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20797,9 +20797,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/cybersecurity-grant-program-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20810,9 +20810,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/data-processing-addendum",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20823,9 +20823,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/dec-2024-eu-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20836,9 +20836,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/developer-apps-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20849,9 +20849,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/early-access-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20862,9 +20862,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/education-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20875,9 +20875,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/eu-services-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20888,9 +20888,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/events-code-of-conduct",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20901,9 +20901,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/feb-2024-data-processing-addendum",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20914,9 +20914,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/financial-services-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20927,9 +20927,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/hackathon-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20940,9 +20940,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/health-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20953,9 +20953,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/how-chatgpt-and-our-foundation-models-are-developed",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20966,9 +20966,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/how-your-data-is-used-to-improve-model-performance",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20979,9 +20979,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/jun-2023-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -20992,9 +20992,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/kr-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21005,9 +21005,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/may-2025-business-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21018,9 +21018,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/merchant-feed-terms-of-service",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21031,9 +21031,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/nov-2023-business-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21044,9 +21044,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/oct-2024-eu-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21057,9 +21057,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/oct-2024-row-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21070,9 +21070,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/openai-cve-assignment-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21083,9 +21083,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/outbound-coordinated-disclosure-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21096,9 +21096,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21109,9 +21109,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/privacy-policy/california-privacy-rights-reporting",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21122,9 +21122,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/professional-services-security-measures",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21135,9 +21135,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/row-terms-of-use",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21148,9 +21148,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/service-credit-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21161,9 +21161,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/service-terms",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21174,9 +21174,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/services-agreement",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21187,9 +21187,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/services-communications-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21200,9 +21200,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/sharing-publication-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21213,9 +21213,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/sub-processor-list-april-2025-update",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21226,9 +21226,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/sub-processor-list",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21239,9 +21239,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/supplier-code",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21252,9 +21252,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/supplier-dpa",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21265,9 +21265,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/supplier-security-measures",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21278,9 +21278,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/terms-of-use",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21291,9 +21291,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/uk-online-safety-act",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21304,9 +21304,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/uk-tax-strategy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21317,9 +21317,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/unauthorized-openai-equity-transactions",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21330,9 +21330,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/us-privacy-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21343,9 +21343,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/usage-policies",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -21356,9 +21356,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/policies/using-chatgpt-agent-in-line-with-our-policies",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",

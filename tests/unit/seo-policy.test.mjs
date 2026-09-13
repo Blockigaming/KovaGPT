@@ -16,7 +16,6 @@ test("only intentional public routes are indexable", () => {
 
   for (const pathname of [
     "/api/chat",
-    "/apps",
     "/chat/abc",
     "/projects",
     "/projects/abc/chat/def",
@@ -40,8 +39,16 @@ test("route failures and not-found responses are never indexable", () => {
   }
 });
 
-test("successful locale entry pages remain followable without becoming indexable", () => {
-  for (const pathname of ["/ar", "/fr-FR", "/pt-BR", "/en/home", "/ar/home"]) {
+test("successful reviewed pages remain followable without becoming indexable", () => {
+  for (const pathname of [
+    "/ar",
+    "/fr-FR",
+    "/pt-BR",
+    "/en/home",
+    "/ar/home",
+    "/apps",
+    "/policies/privacy-policy",
+  ]) {
     assert.equal(isPublicIndexableRoute(pathname), false, pathname);
     assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
   }

@@ -62,7 +62,9 @@ test("robots and sitemap share an explicit public/private boundary", async () =>
           ? "fullPath: '/$section/$articleSlug'"
           : segmentCount === 3
             ? "fullPath: '/$section/$category/$articleSlug'"
-            : "";
+            : segmentCount === 4
+              ? "fullPath: '/$section/$category/$subcategory/$articleSlug'"
+              : "";
     assert.ok(
       routeTree.includes(`fullPath: '${path}'`) ||
         (dynamicTemplate && routeTree.includes(dynamicTemplate)),

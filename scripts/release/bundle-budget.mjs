@@ -20,11 +20,13 @@ export const BUNDLE_BASELINE = Object.freeze({
   establishedAt: "2026-08-15",
   evidence:
     "The current-main-based build emitted a marked home-route chunk near 47.9 kB and a Vite-manifest entry chunk near 613.8 kB raw / 176.8 kB gzip. PR #180 changed no application route modules.",
+  adjustment:
+    "The 2026-09-13 build adds a generated four-segment public route and emits a 181,613-byte gzip entry; the 182,000-byte ceiling retains less than 0.3% headroom.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
   initial: Object.freeze({ raw: 62_500, gzip: 20_000 }),
-  main: Object.freeze({ raw: 625_000, gzip: 181_000 }),
+  main: Object.freeze({ raw: 625_000, gzip: 182_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });

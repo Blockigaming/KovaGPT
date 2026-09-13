@@ -25,6 +25,7 @@ const expandedPublicRoutes = new Set([
   "/student-collective",
   "/transparency-and-content-moderation",
   "/trust-and-transparency",
+  ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/policies/")),
   "/solutions/blueprints/knowledge-retrieval",
   "/solutions/blueprints/mcpkit",
   "/solutions/industries/financial-services",
@@ -37,6 +38,7 @@ const expandedPublicRoutes = new Set([
   "/solutions/use-case/data-analysis",
   "/solutions/use-case/research",
   ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/academy/")),
+  ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/business/")),
 ]);
 
 function watchForRuntimeErrors(page: Page) {

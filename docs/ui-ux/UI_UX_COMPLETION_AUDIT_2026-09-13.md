@@ -10,17 +10,17 @@ KovaGPT will create original, Kova-branded equivalents for product and informati
 
 ## Live inventory
 
-| Surface                       |                 Live result | Meaning for KovaGPT                                                                          |
-| ----------------------------- | --------------------------: | -------------------------------------------------------------------------------------------- |
-| OpenAI sitemap index          |           38 child sitemaps | Complete discoverable sitemap-family inventory                                               |
-| OpenAI canonical URLs         |           1,704 unique URLs | Mostly reusable editorial, plugin, partner, policy, and publication families                 |
-| ChatGPT sitemap               |                     98 URLs | 63 localized homes, 19 public GPT details, 10 translation tools, and 6 other canonical pages |
-| ChatGPT marketing navigation  |  51 canonical English paths | Product, feature, plan, use-case, app, business, education, download, and sales families     |
-| ChatGPT authenticated UI      | 12 static templates/dialogs | Not verified by the public audit run; requires a separately dated authenticated observation  |
-| KovaGPT source routes         |               172 templates | 73 UI templates, including the root shell, and 99 API/service templates                      |
-| KovaGPT public registry       |                   165 pages | 66 index/content pages plus 99 feature, plan, academy, solution, business, and app details   |
-| KovaGPT reviewed public paths |                   229 paths | Includes explicit, detail, dynamic, publishing, developer, academy, and localized templates  |
-| KovaGPT sitemap               |         167 canonical paths | Approved substantive product, academy, plan, feature, solution, trust, and utility pages     |
+| Surface                       |                 Live result | Meaning for KovaGPT                                                                                 |
+| ----------------------------- | --------------------------: | --------------------------------------------------------------------------------------------------- |
+| OpenAI sitemap index          |           38 child sitemaps | Complete discoverable sitemap-family inventory                                                      |
+| OpenAI canonical URLs         |           1,704 unique URLs | Mostly reusable editorial, plugin, partner, policy, and publication families                        |
+| ChatGPT sitemap               |                     98 URLs | 63 localized homes, 19 public GPT details, 10 translation tools, and 6 other canonical pages        |
+| ChatGPT marketing navigation  |  51 canonical English paths | Product, feature, plan, use-case, app, business, education, download, and sales families            |
+| ChatGPT authenticated UI      | 12 static templates/dialogs | Not verified by the public audit run; requires a separately dated authenticated observation         |
+| KovaGPT source routes         |               173 templates | 74 UI templates, including the root shell, and 99 API/service templates                             |
+| KovaGPT public registry       |                   276 pages | 66 index/content pages plus 210 feature, plan, academy, policy, solution, business, and app details |
+| KovaGPT reviewed public paths |                   340 paths | Includes explicit, detail, dynamic, publishing, developer, academy, policy, and localized templates |
+| KovaGPT sitemap               |         167 canonical paths | Approved substantive product, academy, plan, feature, solution, trust, and utility pages            |
 
 Counts can change as source sites publish or retire pages. Re-run `npm run audit:ui-surfaces` to refresh the complete inventory.
 
@@ -31,10 +31,10 @@ Counts can change as source sites publish or retire pages. Re-run `npm run audit
 | OpenAI source pages            |                      1,704 |
 | Unique ChatGPT source paths    |                        146 |
 | Total equally weighted pages   |                      1,850 |
-| Exact-path Kova counterparts   |                        153 |
-| Remaining source pages         |                      1,697 |
+| Exact-path Kova counterparts   |                        264 |
+| Remaining source pages         |                      1,586 |
 | Progress per completed page    | 0.054054 percentage points |
-| Current strict page completion |                      8.27% |
+| Current strict page completion |                     14.27% |
 
 An exact path is counted only when it is present in KovaGPT's reviewed public routes or concrete UI route templates. Shared templates, proposed routes, exclusions, and family-level coverage do not increase this percentage by themselves.
 
@@ -55,6 +55,8 @@ An exact path is counted only when it is present in KovaGPT's reviewed public ro
 | Use-case details                                                           | Complete                           | Eleven original supported-workflow pages use one reusable content contract                                                           |
 | Solution blueprints, industries, and use cases                             | Expanded                           | Eleven exact-path solution pages cover bounded Kova retrieval, MCP, industry, agent, coding, content, data, and research workflows   |
 | Academy learning guides                                                    | Complete for current inventory     | Thirty-eight exact-path Kova Academy pages provide original foundations, role workflows, coding, research, file, and safety guidance |
+| Policy detail references                                                   | Complete for current inventory     | Sixty-two exact paths route to original Kova status guidance and current controlling documents without importing third-party terms   |
+| Business guides, updates, and solution references                          | Complete for current inventory     | Forty-nine exact paths provide original Kova workflows or explicit availability boundaries without inventing offers or endorsements  |
 | Individual plan details                                                    | Complete                           | Free, Plus, and Pro details derive their prices and limits from the authoritative capability registry                                |
 | Business role/solution details                                             | Complete                           | Seven role/solution pages avoid invented enterprise claims and lead into real Kova tools                                             |
 | Education and parent resources                                             | Complete                           | Student, teacher, university, college, and parent guidance is represented with safety boundaries                                     |
@@ -80,24 +82,24 @@ An exact path is counted only when it is present in KovaGPT's reviewed public ro
 
 ## Implemented family-level set
 
-- Added 99 original detail pages spanning features, plans, Academy, use cases, solution blueprints and industries, business, apps, coding, translation, writing, and student guidance.
+- Added 210 original detail pages spanning features, plans, Academy, policy references, business guides and status references, use cases, solution blueprints and industries, apps, coding, translation, writing, and student guidance.
 - Added 33 original top-level pages spanning product, education, access, coding, assistants, merchant status, remote work, voice, learning, company structure, privacy, safety, science, and program availability.
 - Upgraded the shared public hero, calls to action, responsive navigation, page hierarchy, related-page discovery, and four-column footer.
-- Expanded the approved sitemap from 23 to 167 canonical public paths and the reviewed public-route set from 87 to 229 paths.
+- Expanded the approved sitemap from 23 to 167 canonical public paths and the reviewed public-route set from 87 to 340 paths.
 - Added 10 exact source-locale entry paths backed by Kova's owned Arabic, Portuguese, German, Spanish, French, Japanese, and Korean translations.
 - Added a live-source inventory generator and machine-readable record covering all discovered source URLs and every Kova route template.
 
 ## Verification record
 
-- Strict source-page status: 153/1,850 discovered source pages have an exact-path Kova counterpart. The earlier family-based five-workstream implementation is not equivalent to page-by-page completion.
-- Public runtime crawl: 229/229 reviewed routes return HTTP 200; 167 are intentionally indexable and 62 are intentionally `noindex`.
+- Strict source-page status: 264/1,850 discovered source pages have an exact-path Kova counterpart. The earlier family-based five-workstream implementation is not equivalent to page-by-page completion.
+- Public runtime crawl: 340/340 reviewed routes return HTTP 200 with a heading, unique metadata, canonical URL, and skip link.
 - Link and metadata audit: zero broken internal links, duplicate titles, duplicate descriptions, duplicate canonicals, missing titles, missing descriptions, or missing canonical links.
 - Exhaustive public browser matrix: 36/36 groups pass across phone, tablet, and desktop, covering all 180 reviewed routes in light and dark modes (1,080 route/viewport/theme states).
-- Post-split expanded-page matrix: 12/12 groups pass across phone, tablet, and desktop in light and dark modes, covering 69 expanded routes including all 38 Academy and 11 solution details (414 route/viewport/theme states).
-- Public detail suite: five bounded desktop groups verify all 88 two- and three-segment detail pages, and the representative responsive detail-family check passes in both themes.
+- Post-split expanded-page matrix: all 12 bounded groups pass for the 180-route Academy, policy, solution, business, and expanded-hub inventory across phone, tablet, and desktop in light and dark modes (1,080 route/viewport/theme states).
+- Public detail suite: all five bounded desktop groups pass for all 199 detail pages, and the representative detail-family check passes at phone, tablet, and desktop widths in both light and dark modes. The phone representative case was rerun alone after the combined run encountered CPU contention and passed in 40.3 seconds.
 - Earlier combined product browser matrix: 38 applicable tests pass and 13 project-scoped cases are intentionally skipped; functional, responsive, keyboard, focus, hydration, visual-baseline, public-page, and secondary-screen assertions are clean.
-- Full unit suite: 1,771/1,771 tests pass locally; the previous hosted exact-head verification run also passed.
-- Static and build gates: formatting, ESLint, TypeScript, the production Cloudflare build, the local Node preview build, and strict built-artifact provenance checks pass.
+- Full unit suite: 1,775/1,775 tests pass locally; the previous hosted exact-head verification run also passed.
+- Static and build gates: formatting, ESLint, TypeScript, the production Cloudflare build, the local Node preview build, strict built-artifact provenance, and the recalibrated main-bundle budget pass.
 - Visual baselines: two stale phone snapshots were manually reviewed and refreshed to the current touch-safe login action; representative feature, plan, and business pages were also inspected in desktop light, mobile light, and desktop dark presentations.
 - Accessibility: source contract and signed-out phone/desktop light/dark browser checks pass.
 - Truthfulness: visible-control audit passes with zero fake controls; unavailable voice UI remains absent.

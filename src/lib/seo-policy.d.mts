@@ -5,6 +5,8 @@ export type PublicSitemapEntry = Readonly<{
 }>;
 
 export declare const PUBLIC_SITEMAP_ENTRIES: readonly PublicSitemapEntry[];
+export declare const PUBLIC_POLICY_PATHS: readonly string[];
+export declare const PUBLIC_BUSINESS_PATHS: readonly string[];
 
 export declare function normalizePathname(pathname: string): string;
 

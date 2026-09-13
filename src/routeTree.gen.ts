@@ -172,6 +172,7 @@ import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
+import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './routes/$section.$category.$subcategory.$articleSlug'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
@@ -1015,6 +1016,12 @@ const OauthMcpActionRoute = OauthMcpActionRouteImport.update({
   path: '/oauth/mcp/$action',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SectionCategorySubcategoryArticleSlugRoute =
+  SectionCategorySubcategoryArticleSlugRouteImport.update({
+    id: '/$section/$category/$subcategory/$articleSlug',
+    path: '/$section/$category/$subcategory/$articleSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1227,6 +1234,7 @@ export interface FileRoutesByFullPath {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1400,6 +1408,7 @@ export interface FileRoutesByTo {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1574,6 +1583,7 @@ export interface FileRoutesById {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1749,6 +1759,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -1922,6 +1933,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2095,6 +2107,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2261,6 +2274,7 @@ export interface RootRouteChildren {
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   OauthMcpActionRoute: typeof OauthMcpActionRoute
+  SectionCategorySubcategoryArticleSlugRoute: typeof SectionCategorySubcategoryArticleSlugRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
@@ -3413,6 +3427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthMcpActionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$section/$category/$subcategory/$articleSlug': {
+      id: '/$section/$category/$subcategory/$articleSlug'
+      path: '/$section/$category/$subcategory/$articleSlug'
+      fullPath: '/$section/$category/$subcategory/$articleSlug'
+      preLoaderRoute: typeof SectionCategorySubcategoryArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -3725,6 +3746,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiWorkspaceSearchRoute: ApiWorkspaceSearchRoute,
   OauthMcpActionRoute: OauthMcpActionRoute,
+  SectionCategorySubcategoryArticleSlugRoute:
+    SectionCategorySubcategoryArticleSlugRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,

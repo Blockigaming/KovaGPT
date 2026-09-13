@@ -39,14 +39,14 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.uiRouteTemplateCount + kovagpt.serviceRouteTemplateCount,
     kovagpt.routeTemplateCount,
   );
-  assert.equal(kovagpt.routeTemplateCount, 172);
-  assert.equal(kovagpt.uiRouteTemplateCount, 73);
+  assert.equal(kovagpt.routeTemplateCount, 173);
+  assert.equal(kovagpt.uiRouteTemplateCount, 74);
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 99);
-  assert.equal(kovagpt.publicRegistryPageCount, 165);
-  assert.equal(kovagpt.reviewedPublicPathCount, 229);
+  assert.equal(kovagpt.publicDetailPathCount, 210);
+  assert.equal(kovagpt.publicRegistryPageCount, 276);
+  assert.equal(kovagpt.reviewedPublicPathCount, 340);
   assert.equal(kovagpt.sitemapPathCount, 167);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
@@ -63,6 +63,18 @@ test("Kova inventory separates interface templates from service handlers", () =>
       "academy/chatgpt-work/how-business-operations-teams-use-codex",
     ),
   );
+  assert.ok(kovagpt.publicDetailPaths.includes("policies/privacy-policy"));
+  assert.ok(
+    kovagpt.publicDetailPaths.includes(
+      "policies/privacy-policy/california-privacy-rights-reporting",
+    ),
+  );
+  assert.ok(
+    kovagpt.publicDetailPaths.includes(
+      "business/guides-and-resources/a-practical-guide-to-building-ai-agents",
+    ),
+  );
+  assert.ok(kovagpt.publicDetailPaths.includes("business/solutions/finance/workflows"));
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
@@ -86,7 +98,7 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 153);
+  assert.equal(measurement.completedPageCount, 264);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,
@@ -142,5 +154,16 @@ test("strict UI progress gives every discovered page equal weight", () => {
     );
     assert.equal(record?.completed, true, sourcePath);
     assert.equal(record?.kovaPath, sourcePath, sourcePath);
+  }
+
+  for (const record of records.filter(({ sourceFamily }) => sourceFamily === "policy_detail")) {
+    assert.equal(record.completed, true, record.sourcePath);
+    assert.equal(record.kovaPath, record.sourcePath, record.sourcePath);
+  }
+
+  for (const record of records.filter(({ sourceFamily }) => sourceFamily === "business_detail")) {
+    if (!record.sourcePath.startsWith("/business/")) continue;
+    assert.equal(record.completed, true, record.sourcePath);
+    assert.equal(record.kovaPath, record.sourcePath, record.sourcePath);
   }
 });

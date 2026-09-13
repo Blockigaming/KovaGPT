@@ -131,3 +131,39 @@ test("Kova Academy provides all 38 exact-path, original learning guides", () => 
     assert.match(route, /params\.section === "academy"/u);
   }
 });
+
+test("Kova policy references cover every exact source path without importing external terms", async () => {
+  const source = read("src/lib/public-policy-content.ts");
+  const twoSegmentRoute = read("src/routes/$section.$articleSlug.tsx");
+  const threeSegmentRoute = read("src/routes/$section.$category.$articleSlug.tsx");
+  const { PUBLIC_POLICY_PATHS } = await import("../../src/lib/seo-policy.mjs");
+
+  assert.equal(PUBLIC_POLICY_PATHS.length, 62);
+  assert.equal(new Set(PUBLIC_POLICY_PATHS).size, 62);
+  assert.ok(PUBLIC_POLICY_PATHS.every((path) => path.startsWith("/policies/")));
+  assert.match(source, /PUBLIC_POLICY_PATHS\.map\(policyPage\)/u);
+  assert.match(source, /does not reproduce, adopt, replace, or summarize/u);
+  assert.match(source, /not a standalone contract or policy edition/u);
+  assert.match(twoSegmentRoute, /PUBLIC_POLICY_PAGE_BY_KEY/u);
+  assert.match(threeSegmentRoute, /PUBLIC_POLICY_PAGE_BY_KEY/u);
+});
+
+test("Kova business resources cover every exact source path without unsupported claims", async () => {
+  const source = read("src/lib/public-business-content.ts");
+  const twoSegmentRoute = read("src/routes/$section.$articleSlug.tsx");
+  const threeSegmentRoute = read("src/routes/$section.$category.$articleSlug.tsx");
+  const fourSegmentRoute = read("src/routes/$section.$category.$subcategory.$articleSlug.tsx");
+  const { PUBLIC_BUSINESS_PATHS } = await import("../../src/lib/seo-policy.mjs");
+
+  assert.equal(PUBLIC_BUSINESS_PATHS.length, 49);
+  assert.equal(new Set(PUBLIC_BUSINESS_PATHS).size, 49);
+  assert.ok(PUBLIC_BUSINESS_PATHS.every((path) => path.startsWith("/business/")));
+  assert.match(source, /PUBLIC_BUSINESS_PATHS\.map\(businessPage\)/u);
+  assert.match(source, /No unsupported claim/u);
+  assert.match(source, /No third-party relationship or endorsement is implied/u);
+  assert.doesNotMatch(source, /guarantees? that capacity is available/iu);
+  for (const route of [twoSegmentRoute, threeSegmentRoute, fourSegmentRoute]) {
+    assert.match(route, /PUBLIC_BUSINESS_PAGE_BY_KEY/u);
+    assert.match(route, /params\.section (?:===|!==) "business"/u);
+  }
+});
