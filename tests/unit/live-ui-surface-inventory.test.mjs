@@ -14,6 +14,13 @@ test("live UI inventory records the complete discoverable source snapshot", () =
   assert.equal(inventory.openai.uniqueUrlCount, 1704);
   assert.equal(inventory.chatgpt.sitemapEntryCount, 98);
   assert.ok(inventory.chatgpt.marketingNavigation.pathCount >= 49);
+  assert.equal(inventory.chatgpt.authenticatedTemplates.observationDate, null);
+  assert.equal(inventory.chatgpt.authenticatedTemplates.verification, "not_verified");
+  assert.match(inventory.chatgpt.authenticatedTemplates.evidence, /not verified/u);
+  assert.doesNotMatch(
+    readFileSync("scripts/ui-surface-inventory.mjs", "utf8"),
+    /authenticated navigation inspected read-only on \$\{SNAPSHOT_DATE\}/u,
+  );
 
   assert.equal(new Set(inventory.openai.urls).size, inventory.openai.uniqueUrlCount);
   assert.equal(new Set(inventory.chatgpt.urls).size, inventory.chatgpt.sitemapEntryCount);
@@ -32,8 +39,14 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.routeTemplateCount,
   );
   assert.equal(kovagpt.routeTemplateCount, 170);
-  assert.equal(kovagpt.uiRouteTemplateCount, 72);
-  assert.equal(kovagpt.publicContentSlugCount, 40);
+  assert.equal(kovagpt.uiRouteTemplateCount, 71);
+  assert.equal(kovagpt.serviceRouteTemplateCount, 99);
+  assert.equal(kovagpt.publicIndexContentSlugCount, 40);
+  assert.equal(kovagpt.publicDetailPathCount, 29);
+  assert.equal(kovagpt.publicRegistryPageCount, 69);
+  assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
+  assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
+  assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,

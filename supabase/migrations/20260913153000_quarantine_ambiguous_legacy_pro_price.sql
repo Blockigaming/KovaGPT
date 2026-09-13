@@ -55,7 +55,9 @@ revoke all on function public.normalize_legacy_live_subscription_price()
 -- to the Price from the user's current Checkout attempt. Those rows look exact
 -- but have no authoritative Stripe event/observation provenance. Quarantine
 -- only the rows that could have been created by that path: the subscription was
--- created after the matching attempt and no exact-ID handler ever stamped it.
+-- created after the matching attempt and no observation-sequence handler ever
+-- stamped it. The rollback webhook did stamp event time and ID before the
+-- observation-sequence protocol existed, so those fields cannot prove safety.
 -- Disabling the compatibility trigger is safe under ALTER TABLE's transaction
 -- lock and prevents it from preserving the suspect exact Price during repair.
 alter table public.subscriptions
@@ -75,8 +77,6 @@ where subscription.environment = 'live'
   and attempt.outcome in ('pending', 'ready', 'complete')
   and mapping.lookup_key = 'pro_monthly'
   and subscription.created_at >= attempt.created_at
-  and subscription.last_stripe_event_created_at is null
-  and subscription.last_stripe_event_id is null
   and subscription.last_stripe_observation_sequence is null;
 
 alter table public.subscriptions

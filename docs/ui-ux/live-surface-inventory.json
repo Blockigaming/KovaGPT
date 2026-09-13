@@ -2171,7 +2171,9 @@
       ]
     },
     "authenticatedTemplates": {
-      "evidence": "Live authenticated navigation inspected read-only on 2026-09-13.",
+      "evidence": "Static authenticated template inventory; not verified by this public audit run.",
+      "observationDate": null,
+      "verification": "not_verified",
       "templates": [
         "/",
         "/c/$conversationId",
@@ -2190,8 +2192,8 @@
   },
   "kovagpt": {
     "routeTemplateCount": 170,
-    "uiRouteTemplateCount": 72,
-    "serviceRouteTemplateCount": 98,
+    "uiRouteTemplateCount": 71,
+    "serviceRouteTemplateCount": 99,
     "routeTemplates": [
       {
         "route": "/",
@@ -2874,8 +2876,8 @@
         "file": "src/routes/write.tsx"
       }
     ],
-    "publicContentSlugCount": 40,
-    "publicContentSlugs": [
+    "publicIndexContentSlugCount": 40,
+    "publicIndexContentSlugs": [
       "about",
       "acceptable-use",
       "accessibility",
@@ -2917,6 +2919,39 @@
       "trust",
       "use-cases"
     ],
+    "publicDetailPathCount": 29,
+    "publicDetailPaths": [
+      "apps/github",
+      "apps/gmail",
+      "apps/google-calendar",
+      "apps/google-drive",
+      "business/ai-for-data-science-analytics",
+      "business/ai-for-engineering",
+      "business/ai-for-finance",
+      "business/ai-for-product-management",
+      "business/ai-for-sales-marketing",
+      "business/education",
+      "business/enterprise",
+      "features/chat-with-pdfs",
+      "features/deep-research",
+      "features/plugins",
+      "features/study-mode",
+      "plans/free",
+      "plans/plus",
+      "plans/pro",
+      "use-cases/chat-with-presentations",
+      "use-cases/chat-with-spreadsheets",
+      "use-cases/fitness-wellness-and-health",
+      "use-cases/money-and-finances",
+      "use-cases/recipes-cooking",
+      "use-cases/science-medicine",
+      "use-cases/students",
+      "use-cases/teachers",
+      "use-cases/travel-and-exploration",
+      "use-cases/university-educators",
+      "use-cases/veterans"
+    ],
+    "publicRegistryPageCount": 69,
     "reviewedPublicPathCount": 122,
     "reviewedPublicPaths": [
       "/",

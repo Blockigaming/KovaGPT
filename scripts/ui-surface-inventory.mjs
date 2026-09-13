@@ -8,6 +8,15 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT = resolve(ROOT, "docs/ui-ux/live-surface-inventory.json");
 const SNAPSHOT_DATE =
   process.env.KOVA_UI_SNAPSHOT_DATE?.trim() || new Date().toISOString().slice(0, 10);
+const AUTHENTICATED_OBSERVATION_DATE =
+  process.env.KOVA_CHATGPT_AUTHENTICATED_OBSERVATION_DATE?.trim() || null;
+
+if (
+  AUTHENTICATED_OBSERVATION_DATE &&
+  !/^\d{4}-\d{2}-\d{2}$/u.test(AUTHENTICATED_OBSERVATION_DATE)
+) {
+  throw new Error("KOVA_CHATGPT_AUTHENTICATED_OBSERVATION_DATE must use YYYY-MM-DD");
+}
 
 const CHATGPT_AUTHENTICATED_TEMPLATES = Object.freeze([
   "/",
@@ -129,7 +138,11 @@ async function collectChatGpt() {
       paths: marketingPaths,
     },
     authenticatedTemplates: {
-      evidence: `Live authenticated navigation inspected read-only on ${SNAPSHOT_DATE}.`,
+      evidence: AUTHENTICATED_OBSERVATION_DATE
+        ? `Manual authenticated navigation observation supplied for ${AUTHENTICATED_OBSERVATION_DATE}.`
+        : "Static authenticated template inventory; not verified by this public audit run.",
+      observationDate: AUTHENTICATED_OBSERVATION_DATE,
+      verification: AUTHENTICATED_OBSERVATION_DATE ? "manually_supplied" : "not_verified",
       templates: CHATGPT_AUTHENTICATED_TEMPLATES,
     },
   };
@@ -155,8 +168,29 @@ function isKovaUiRoute(route, file) {
     file.includes("/routes/api/") ||
     file.includes("/routes/oauth/mcp/") ||
     file.endsWith("/routes/mcp.ts") ||
+    route === "/email/unsubscribe" ||
     route === "/sitemap.xml"
   );
+}
+
+function extractPublicDetailPaths(source) {
+  const registry = source.slice(source.indexOf("export const PUBLIC_DETAIL_PAGES"));
+  const paths = [
+    ...[...registry.matchAll(/\bdetail\(\s*"([^"]+)"\s*,\s*"([^"]+)"/gu)].map(
+      (match) => `${match[1]}/${match[2]}`,
+    ),
+    ...[...registry.matchAll(/\b(workflow|business|app)\(\s*"([^"]+)"/gu)].map((match) => {
+      const section =
+        match[1] === "workflow" ? "use-cases" : match[1] === "app" ? "apps" : match[1];
+      return `${section}/${match[2]}`;
+    }),
+  ];
+  const planTiers =
+    source
+      .match(/const planPages = \(\[([^\]]+)\]/u)?.[1]
+      ?.match(/"([^"]+)"/gu)
+      ?.map((tier) => `plans/${tier.slice(1, -1)}`) ?? [];
+  return [...new Set([...paths, ...planTiers])].sort();
 }
 
 async function collectKova() {
@@ -175,14 +209,22 @@ async function collectKova() {
   const publicSlugs = [...publicContent.matchAll(/\bpage\(\s*"([^"]+)"/gu)]
     .map((match) => match[1])
     .sort();
+  const publicDetailContent = await readFile(
+    resolve(ROOT, "src/lib/public-detail-content.ts"),
+    "utf8",
+  );
+  const publicDetailPaths = extractPublicDetailPaths(publicDetailContent);
   return {
     routeTemplateCount: routeRows.length,
     uiRouteTemplateCount: routeRows.filter(({ route, file }) => isKovaUiRoute(route, file)).length,
     serviceRouteTemplateCount: routeRows.filter(({ route, file }) => !isKovaUiRoute(route, file))
       .length,
     routeTemplates: routeRows,
-    publicContentSlugCount: publicSlugs.length,
-    publicContentSlugs: publicSlugs,
+    publicIndexContentSlugCount: publicSlugs.length,
+    publicIndexContentSlugs: publicSlugs,
+    publicDetailPathCount: publicDetailPaths.length,
+    publicDetailPaths,
+    publicRegistryPageCount: publicSlugs.length + publicDetailPaths.length,
     reviewedPublicPathCount: PUBLIC_REVIEW_PATHS.length,
     reviewedPublicPaths: PUBLIC_REVIEW_PATHS,
     sitemapPathCount: PUBLIC_SITEMAP_ENTRIES.length,
@@ -213,5 +255,5 @@ const inventory = {
 await mkdir(dirname(OUTPUT), { recursive: true });
 await writeFile(OUTPUT, `${JSON.stringify(inventory, null, 2)}\n`);
 console.log(
-  `UI surface inventory: OpenAI ${openai.uniqueUrlCount} unique URLs; ChatGPT ${chatgpt.sitemapEntryCount} sitemap URLs + ${chatgpt.marketingNavigation.pathCount} marketing paths; KovaGPT ${kovagpt.uiRouteTemplateCount} UI templates + ${kovagpt.publicContentSlugCount} public registry pages.`,
+  `UI surface inventory: OpenAI ${openai.uniqueUrlCount} unique URLs; ChatGPT ${chatgpt.sitemapEntryCount} sitemap URLs + ${chatgpt.marketingNavigation.pathCount} marketing paths; KovaGPT ${kovagpt.uiRouteTemplateCount} UI templates + ${kovagpt.publicRegistryPageCount} public registry pages.`,
 );

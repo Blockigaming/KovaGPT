@@ -398,6 +398,12 @@ test("the forward migration quarantines Pro rows inferred by the unsafe trigger"
       );
       assert.deepEqual(inferred.rows, [{ price_id: currentProPriceId }]);
       assert.equal(await tier(db), "pro");
+      await db.query(
+        `UPDATE public.subscriptions
+         SET last_stripe_event_created_at = now(),
+             last_stripe_event_id = 'evt_legacy_unsafe_inference'
+         WHERE stripe_subscription_id = 'sub_unsafe_inference'`,
+      );
     },
   });
   try {
