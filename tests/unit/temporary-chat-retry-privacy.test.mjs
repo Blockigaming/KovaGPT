@@ -104,3 +104,12 @@ test("a current Retry action still executes and conversion advances its generati
   );
   assert.match(source, /requestRetryGeneration === retryGenerationRef\.current/);
 });
+
+test("temporary conversion stays unavailable during automatic retry backoff", () => {
+  const conversion = source.slice(
+    source.indexOf("const saveTemporaryChat"),
+    source.indexOf("const openCommandPalette"),
+  );
+  assert.match(conversion, /retryTimerRef\.current !== null/);
+  assert.match(source, /canSave=\{Boolean\([\s\S]*?retryTimerRef\.current === null/);
+});

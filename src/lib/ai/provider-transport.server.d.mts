@@ -5,6 +5,14 @@ export type ProviderTransportLog = (
   details: ProviderTransportLogDetails,
 ) => void;
 
+export const AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE: "https://ai.azure.com";
+export const AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE: "https://cognitiveservices.azure.com";
+export function managedIdentityResourceForAzureBaseUrl(
+  value: string,
+):
+  | typeof AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE
+  | typeof AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE;
+
 export class ProviderTransportTimeoutError extends Error {
   readonly code: "provider_timeout";
   readonly phase: string;

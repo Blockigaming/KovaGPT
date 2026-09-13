@@ -286,6 +286,8 @@ test("temporary conversion persists a memory boundary and excludes other private
   assert.equal(converted[0].temporary, false);
   assert.equal(converted[0].temporaryContext, undefined);
   assert.equal(converted[0].memoryStartIndex, active.messages.length);
+  assert.equal(converted[0].branchRootId, active.id);
+  assert.equal(converted[0].branchOrigin, undefined);
   assert.deepEqual(converted[0].messages, active.messages);
   assert.equal(active.temporary, true);
   assert.equal(loadConversations("account-a")[0].memoryStartIndex, active.messages.length);
