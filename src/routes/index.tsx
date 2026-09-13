@@ -2376,14 +2376,6 @@ function KovaGPT() {
           />
         )}
 
-        {tempChatStartOpen && (
-          <TemporaryChatStartDialog
-            open={tempChatStartOpen}
-            onOpenChange={setTempChatStartOpen}
-            onStart={startTemporaryChat}
-          />
-        )}
-
         {workspaceOpen && (
           <ChatWorkspaceDialog
             open={workspaceOpen}
