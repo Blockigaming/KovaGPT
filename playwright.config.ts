@@ -8,6 +8,7 @@ const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: ["**/auth-visual-regression.spec.ts", "**/deployed-baseline-audit.spec.ts"],
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,

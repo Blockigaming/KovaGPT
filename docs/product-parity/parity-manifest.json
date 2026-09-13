@@ -1,13 +1,11 @@
 {
   "schemaVersion": 1,
-  "auditDate": "2026-08-11",
-  "targets": { "reference": "https://chatgpt.com", "product": "https://kovagpt.com" },
-  "auditStatus": "live_capture_blocked_by_environment_proxy",
-  "evidence": {
-    "attemptedCommand": "npm run audit:ui-parity -- --quick",
-    "report": "artifacts/ui-parity/report.json",
-    "result": "Both origins returned ERR_TUNNEL_CONNECTION_FAILED; prompt baseline is retained but not represented as freshly reproduced."
+  "auditDate": "2026-09-05",
+  "targets": {
+    "reference": "https://chatgpt.com",
+    "product": "https://kovagpt.com"
   },
+  "auditStatus": "official_documentation_read_live_ui_not_verified",
   "matrix": {
     "viewports": [
       "320x568",
@@ -119,7 +117,7 @@
       "constraints": "No unlicensed map tiles or unsupported claims.",
       "decision": "Expose Apps and Deep research; add an honest privacy-first Maps decision-gate route without a map provider.",
       "owner": "Sidebar/MapsRoute",
-      "evidence": "repository source inspection",
+      "evidence": "Historical route correction; current Discovery/local functionality is tracked separately in the capability audit.",
       "testCoverage": "canonical route and source contract tests",
       "status": "implemented"
     },
@@ -130,12 +128,12 @@
       "state": "empty_chat",
       "viewportTheme": "matrix",
       "referenceObservation": "Full duplex voice entry is available in eligible states.",
-      "kovaObservation": "Dictation exists; full duplex Voice is intentionally excluded.",
+      "kovaObservation": "Voice, audio, dictation and recording are intentionally excluded.",
       "differenceType": "Missing feature",
       "severity": "medium",
       "referenceBetter": null,
       "constraints": "Requires explicit product approval, privacy review and voice infrastructure.",
-      "decision": "Keep dictation; do not ship a fake Voice control.",
+      "decision": "Keep microphone and speech functionality absent under the binding owner scope decision.",
       "owner": "ChatInput",
       "evidence": "intentional-exclusion register",
       "testCoverage": "voice exclusion source contract",
@@ -159,5 +157,18 @@
       "testCoverage": "unit manifest validation",
       "status": "implemented"
     }
-  ]
+  ],
+  "historicalCapture": {
+    "attemptedCommand": "npm run audit:ui-parity -- --quick",
+    "report": "artifacts/ui-parity/report.json",
+    "result": "Both origins returned ERR_TUNNEL_CONNECTION_FAILED; prompt baseline is retained but not represented as freshly reproduced."
+  },
+  "evidence": {
+    "sourceCommit": "1eb7ef53",
+    "capabilityAudit": "docs/product-parity/capability-audit.json",
+    "officialSources": "docs/product-parity/chatgpt-surface-audit.md",
+    "result": "Public official documents and plugin-directory landing page read; no current authenticated UI, staging or production verification. Historical visual capture remains historical."
+  },
+  "overallProgressBaseline": 23.2,
+  "progressRecalculated": false
 }

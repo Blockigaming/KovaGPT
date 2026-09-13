@@ -20,11 +20,13 @@ truncating, or deleting existing event rows.
 
 ## Fail-closed controls
 
-- The browser-run API returns `browser_agent_unavailable` with HTTP 503.
+- Both `/api/agents/runs` and `/api/agents/teams` return HTTP 503 for creation and drain
+  unread request bodies.
 - The Work and Agent workspace interfaces show execution as unavailable.
-- New `agent_jobs` inserts are rejected for authenticated and service-role callers.
+- New `agent_jobs` inserts are rejected for authenticated and service-role callers; the legacy
+  `agent_runs` team path also cannot enqueue.
 - `lease_agent_job` returns no rows.
-- Historical active jobs can be cancelled; paused jobs cannot be resumed.
+- Historical active jobs can be cancelled; paused jobs cannot be resumed or retried.
 - Pending approvals can be denied but cannot be approved into an unavailable runtime.
 - `workers/browser-agent.mjs` and `workers/agent-team-worker.mjs` exit immediately.
 
@@ -52,6 +54,16 @@ Set `AGENT_WORKER_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`, then ru
 `npm run worker:smoke`. It verifies the fail-closed readiness response and both event schemas. It
 does not enqueue a job, call an AI provider, create a user, or modify data.
 
-Browser or team execution must remain unavailable until one runtime has executable tests proving
-queue creation, ownership, bounded inputs and outputs, redirect/network policy, approval
-consumption, evidence storage, cancellation, retry semantics, and truthful client polling.
+Browser or team execution must remain unavailable until one unified runtime (not both legacy
+queues) has executable tests proving queue creation, ownership, bounded inputs and outputs,
+redirect/network policy, approval consumption, queued prompts and user questions, evidence storage,
+cancellation, background resume/recovery, notification delivery, retry semantics, and truthful
+client polling.
+
+Historical browser controls commit the run transition, child cancellation, bound approval denial,
+and safe audit event in one database transaction. Retrying a cancelled run repairs missing legacy
+cleanup/evidence. Pausing remains available for historical records; resuming remains disabled.
+`agent_run_approval_bindings` is service-owned and enforces matching run/approval ownership with
+foreign keys. Existing freeform event/request metadata is never treated as approval provenance or
+backfilled into bindings. Unbound legacy approvals cannot be denied through a run; cancellation
+remains available and leaves unrelated integration approvals unchanged.

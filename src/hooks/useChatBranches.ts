@@ -73,6 +73,7 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
     try {
       if (isSignedIn) {
         const rows = await listFn({ data: { chatId: rootChatId } });
+        if (!Array.isArray(rows)) throw new Error("Branches could not be loaded.");
         setBranches(rows.map(fromDto));
       } else {
         setBranches(
@@ -83,7 +84,11 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Branches could not be loaded.");
+      setError(
+        err instanceof Error && err.message !== "h.map is not a function"
+          ? err.message
+          : "Branches could not be loaded.",
+      );
     } finally {
       setLoading(false);
     }

@@ -16,7 +16,7 @@ const source = sources.join("\n"),
   rpcs = new Set([...source.matchAll(/\.rpc\(["']([a-zA-Z0-9_]+)["']/g)].map((m) => m[1]));
 const allowedTables = new Set(["objects"]);
 const missingTables = [...tables].filter(
-  (x) => !contract.tables.includes(x) && !allowedTables.has(x),
+  (x) => !contract.tables.includes(x) && !contract.views?.includes(x) && !allowedTables.has(x),
 );
 const missingRpcs = [...rpcs].filter((x) => !contract.functions.includes(x));
 if (missingTables.length || missingRpcs.length) {

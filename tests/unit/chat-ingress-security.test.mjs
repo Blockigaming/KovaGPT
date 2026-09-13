@@ -35,6 +35,32 @@ async function expectIngressError(request, code, status, maxBytes) {
   );
 }
 
+test("chat ingress cancels a stalled request body when its stage is aborted", async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    pull() {
+      return new Promise(() => {});
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const request = new Request("https://kovagpt.com/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+    duplex: "half",
+  });
+  const controller = new AbortController();
+  const pending = readChatRequest(request, 64, controller.signal);
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.abort(new DOMException("Request body timed out", "AbortError"));
+
+  await assert.rejects(pending, (error) => error?.name === "AbortError");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(cancelled, true);
+});
+
 test("chat ingress enforces streamed byte limits without trusting content-length", async () => {
   const encoder = new TextEncoder();
   const oversized = streamedRequest([
@@ -401,4 +427,14 @@ test("chat ingress error envelopes include deterministic request identifiers", (
     retryable: false,
     timestamp: "2026-08-02T00:00:00.000Z",
   });
+});
+
+test("chat ingress validates the converted Temporary memory boundary", () => {
+  const base = { messages: [{ role: "user", content: "Continue" }] };
+  assert.equal(normalizeChatPayload({ ...base, memoryStartIndex: 0 }).memoryStartIndex, 0);
+  for (const value of [-1, 2, 0.5, "0", null])
+    assert.throws(
+      () => normalizeChatPayload({ ...base, memoryStartIndex: value }),
+      /Invalid conversation memory boundary/,
+    );
 });

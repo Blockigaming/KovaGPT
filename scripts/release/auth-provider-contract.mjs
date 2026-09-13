@@ -66,7 +66,11 @@ export function inspectAuthProviderContract({
     if (path.startsWith("docs/") || path.startsWith("tests/") || path === "package-lock.json")
       continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
-    const source = readFileSync(join(root, path), "utf8");
+    const sourcePath = join(root, path);
+    // git ls-files can include a tracked file deleted in the working tree before
+    // it is staged. Treat it as absent so pre-commit contract checks remain usable.
+    if (!existsSync(sourcePath)) continue;
+    const source = readFileSync(sourcePath, "utf8");
     if (forbiddenImportPattern.test(source)) errors.push(`${path}:Clerk runtime import`);
     if (forbiddenCredentialPattern.test(source)) errors.push(`${path}:Clerk credential variable`);
   }

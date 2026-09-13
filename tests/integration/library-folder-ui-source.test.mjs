@@ -13,7 +13,10 @@ const [library, folders, client, functions, supabaseTypes] = await Promise.all([
 
 test("Library loads folder membership and scopes visible items", () => {
   assert.match(functions, /folder_id/);
-  assert.match(functions, /file_size, folder_id, created_at/);
+  assert.match(
+    functions,
+    /file_size, folder_id, metadata, content_generation, content_revision, created_at/,
+  );
   assert.match(supabaseTypes, /library_folders: \{/);
   assert.match(supabaseTypes, /folder_id: string \| null/);
   assert.match(supabaseTypes, /user_library_items_folder_id_fkey/);
@@ -94,7 +97,7 @@ test("page refresh cannot invalidate an active folder mutation", () => {
   assert.match(folders, /onBusyChange\(Boolean\(busy\)\)/);
   assert.match(library, /onBusyChange=\{setFolderBusy\}/);
   assert.match(library, /if \(folderBusy\) return/);
-  assert.match(library, /disabled=\{loading \|\| folderBusy\}/);
+  assert.match(library, /disabled=\{loading \|\| folderBusy \|\| sharesLoading\}/);
   assert.match(
     folders,
     /const folderStateUnavailable = loading \|\| Boolean\(error\) \|\| !foldersLoaded/,

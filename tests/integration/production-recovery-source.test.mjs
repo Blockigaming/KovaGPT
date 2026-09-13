@@ -11,6 +11,7 @@ const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 const packageJson = await readFile("package.json", "utf8");
 const changedFormat = await readFile("scripts/check-format-changed.mjs", "utf8");
+const prettierIgnore = await readFile(".prettierignore", "utf8");
 
 test("Supabase browser config is feature-scoped and cannot crash public boot", () => {
   assert.match(supabaseClient, /getSupabaseClientConfigStatus/);
@@ -48,12 +49,16 @@ test("root route has a safe branded error boundary with retry and home actions",
   assert.doesNotMatch(rootRoute, /diagnostic details server-side|while we log/i);
 });
 
-test("CI blocks changed-file formatting while isolating legacy repository drift", () => {
+test("CI blocks changed-file and repository-wide formatting", () => {
   assert.match(packageJson, /format:check:changed/);
   assert.match(changedFormat, /git/);
   assert.match(changedFormat, /prettier/);
   assert.match(workflow, /Formatting changed files/);
-  assert.match(workflow, /Legacy repository formatting audit/);
-  assert.match(workflow, /continue-on-error: true/);
+  assert.match(workflow, /Repository formatting audit/);
+  assert.doesNotMatch(
+    workflow,
+    /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/,
+  );
   assert.match(workflow, /Production build/);
+  assert.match(prettierIgnore, /^src\/integrations\/supabase\/types\.ts$/m);
 });

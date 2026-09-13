@@ -13,6 +13,7 @@ export const Route = createFileRoute("/$slug")({
   loader: ({ params }) => {
     if (isReservedPublicPath(`/${params.slug}`)) throw notFound();
     const item = PUBLIC_PAGE_BY_SLUG.get(params.slug);
+    if (item?.review) throw notFound();
     if (item) return { kind: "page" as const, item };
     if ((PUBLICATION_SECTIONS as readonly string[]).includes(params.slug))
       return {

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
 
+const billingDeletion = await readFile("src/lib/stripe-account-deletion.mjs", "utf8");
 const account = await readFile("src/routes/api/account.ts", "utf8");
 const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
 const write = await readFile("src/routes/api/write.ts", "utf8");
@@ -13,10 +14,12 @@ const home = await readFile("src/routes/index.tsx", "utf8");
 test("account deletion is authenticated, explicit, billing-safe, and server executed", () => {
   assert.match(account, /requireUser\(request\)/);
   assert.match(account, /confirmation !== "DELETE"/);
-  assert.match(account, /subscriptions\.cancel/);
-  assert.match(account, /auth\.admin\.deleteUser\(auth\.userId\)/);
-  assert.match(account, /account was not deleted/);
-  assert.match(settings, /authFetch\("\/api\/account"/);
+  assert.match(account, /retireStripeCustomerForAccountDeletion\(billing\)/);
+  assert.match(billingDeletion, /subscriptions\.cancel/);
+  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
+  assert.match(account, /irreversible/);
+  assert.doesNotMatch(account, /releaseAccountExportDeletionFence/);
+  assert.match(settings, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
   assert.match(settings, /deleteConfirmation !== "DELETE"/);
   assert.match(settings, /setDeleteAccountOpen\(true\)/);
 });
@@ -36,7 +39,12 @@ test("writing validates bounded input and provider availability before charging 
 });
 
 test("image and payment webhook parse failures return truthful bounded errors", () => {
-  assert.match(image, /return jsonError\("Invalid JSON\.", 400\)/);
+  assert.match(image, /readResponseBytesBounded\([\s\S]{0,150}16 \* 1024/u);
+  assert.match(image, /throw new ImageInputError\("Invalid image request JSON\."\)/u);
+  assert.match(
+    image,
+    /error instanceof ImageInputError\) return json\(\{ error: error\.message \}, error\.status\)/u,
+  );
   assert.match(stripe, /maxBodyBytes = 2 \* 1024 \* 1024/);
   assert.match(paymentWebhook, /invalid_environment/);
   assert.doesNotMatch(paymentWebhook, /received: true, ignored: "invalid env"/);

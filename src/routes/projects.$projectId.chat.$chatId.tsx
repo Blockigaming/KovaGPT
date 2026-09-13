@@ -29,7 +29,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
+import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import type { Message } from "@/lib/chat-store";
+import { normalizeResponseSources, type ResponseSource } from "@/lib/response-sources";
 import {
   getProjectChat,
   saveProjectChat,
@@ -186,6 +188,12 @@ function ProjectChatPage() {
     setSending(true);
 
     let assistant = "";
+    let assistantSources: ResponseSource[] | undefined;
+    const responseMessage = (): ProjectChatMessage => ({
+      role: "assistant",
+      content: assistant,
+      ...(assistantSources ? { sources: assistantSources } : {}),
+    });
     try {
       const response = await authFetch("/api/chat", {
         method: "POST",
@@ -209,59 +217,37 @@ function ProjectChatPage() {
         }),
       });
       if (!response.ok || !response.body) {
-        const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-        throw new Error(errorBody.error || "Chat failed");
+        throw await chatResponseError(response);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let receivedDone = false;
-
-      while (!receivedDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let lineEnd: number;
-        while ((lineEnd = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, lineEnd);
-          buffer = buffer.slice(lineEnd + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line || line.startsWith(":") || !line.startsWith("data: ")) continue;
-
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") {
-            receivedDone = true;
-            break;
-          }
-
-          try {
-            const parsed = JSON.parse(data);
-            const delta = parsed?.choices?.[0]?.delta?.content ?? "";
-            if (!delta) continue;
-            assistant += delta;
-            if (activeChatIdRef.current === requestChatId) {
-              setMessages([
-                ...nextHistory,
-                {
-                  role: "assistant",
-                  content: assistant,
-                },
-              ]);
+      await consumeChatSse(response.body, {
+        signal: controller.signal,
+        onEvent: (parsed) => {
+          const delta = (
+            parsed as {
+              choices?: Array<{
+                delta?: { content?: unknown; kind?: unknown; sources?: unknown };
+              }>;
             }
-          } catch {
-            // Ignore malformed or non-content SSE frames without losing the stream.
+          ).choices?.[0]?.delta;
+          if (delta?.kind === "web_sources") {
+            assistantSources = normalizeResponseSources(delta.sources);
           }
-        }
-      }
+          if (typeof delta?.content === "string" && delta.content) {
+            assistant += delta.content;
+          }
+          if (activeChatIdRef.current === requestChatId) {
+            setMessages([...nextHistory, responseMessage()]);
+          }
+        },
+      });
     } catch (error) {
       if (!isAbortError(error)) {
         toast.error(error instanceof Error ? error.message : "Failed to generate a response");
       }
     } finally {
       const finalMessages: ProjectChatMessage[] = assistant.trim()
-        ? [...nextHistory, { role: "assistant", content: assistant }]
+        ? [...nextHistory, responseMessage()]
         : nextHistory;
 
       if (activeChatIdRef.current === requestChatId) {
@@ -418,12 +404,14 @@ function ProjectChatPage() {
               <ChatMessage
                 key={messageId}
                 chatId={chatId}
+                projectId={projectId}
                 userKey={userKey}
                 principalResolved={isLoaded}
                 message={{
                   id: messageId,
                   role: message.role,
                   content: message.content,
+                  sources: message.sources,
                 }}
                 streaming={
                   sending && index === visibleMessages.length - 1 && message.role === "assistant"

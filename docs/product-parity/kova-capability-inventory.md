@@ -1,15 +1,24 @@
-# Kova capability inventory
+# Kova capability evidence index
 
-| Capability group                                                                        | Classification                             | Evidence / limitation                                                                        | Next gate                                                |
-| --------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Ordinary chat, history, search, message actions, markdown/code/tables, files, citations | partially complete                         | Components and stores exist; full acceptance matrix is not evidenced across every state      | Browser, a11y, tenancy, and failure-state matrix         |
-| Projects, instructions/files/collaboration                                              | partially complete                         | Released project routes and collaboration components                                         | Server role/tenant isolation verification                |
-| Images, writing, research, work, artifacts                                              | partially complete                         | Focused routes and runtime modules exist                                                     | Export/version-history and authoritative usage tests     |
-| Memory, personalization, model/mode selection, themes                                   | partially complete                         | Memory/settings/model components exist                                                       | Cross-device persistence and deletion proof              |
-| Agents, apps, connectors, MCP, skills/plugins                                           | partially complete                         | Runtime and integration modules exist; not all requested discovery/publishing journeys exist | Feature flags and permission tests                       |
-| Billing/subscriptions                                                                   | partially complete                         | Checkout and plan modules exist                                                              | Prepaid developer credit UI and end-to-end settlement    |
-| Dynamic developer API pricing                                                           | partially complete                         | Versioned schema, pure quote/reconciliation engine, margin unit tests                        | Wire into every paid ingress and production admin review |
-| SSO, SCIM, domains, groups, enterprise administration                                   | unsupported by current Kova infrastructure | No complete released server-authorized journey proven                                        | Identity and tenant administration project               |
-| Desktop/mobile installation                                                             | planned for later                          | No verified native distribution                                                              | Distribution infrastructure                              |
-| Voice                                                                                   | intentionally excluded                     | Not authorized                                                                               | Separate explicit approval                               |
-| OpenAI names, proprietary assets, private APIs, exact trade dress/copy                  | legally inappropriate to copy              | Deliberately excluded                                                                        | None                                                     |
+Updated **2026-09-12** against reviewed PR #319 implementation head
+`20940476881dadabfcedbfeadb4aba328dd8cd52`.
+
+Overall progress remains the owner-declared **76.5%** checkpoint. UI completion remains the separate
+owner-declared **1%** quality assessment.
+
+The canonical evidence sources are kept together:
+
+| Evidence             | Authority and interpretation                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controlling scope    | [September 11 final goal](../release/kova-final-goal-2026-09-11.md). New requirements remain specified or partial until evidence proves otherwise.              |
+| Requirement metadata | [Final-goal contract](../release/final-goal-contract.json), with stable IDs, owner, dependencies, acceptance tests, mappings, status, evidence, and boundaries. |
+| Current area status  | [27-area acceptance ledger](../release/acceptance-ledger.md) and its generated five-stage snapshot.                                                             |
+| Source/test evidence | This audit's [machine-readable surface inventory](capability-audit.json) plus feature-specific source documents and tests. Test existence is not a pass result. |
+| Remaining work       | [Current gap register](../remaining-chatgpt-gaps.md), including final-goal source gaps and genuine approval/live dependencies.                                  |
+| Hosted CI/review     | Exact reviewed commit and terminal workflow evidence. It verifies only the implemented scope on that tree.                                                      |
+| Staging/production   | Approved deployment record, real provider/account canaries, deployed SHA/image, monitoring, backup/recovery, and rollback. Not established by this audit.       |
+| Boundaries           | [Scope-boundary register](intentionally-excluded.md). Voice and native experiences are required incomplete scope, not exclusions.                               |
+
+A green suite, route, model label, empty app manifest, or historical audit must never be converted into
+full capability, provider availability, paid entitlement, production readiness, or a new progress
+percentage.

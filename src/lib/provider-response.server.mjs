@@ -7,6 +7,14 @@ export class ProviderResponseError extends Error {
   }
 }
 
+function isTransportInterruption(error) {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    (error.code === "provider_timeout" || error.name === "AbortError"),
+  );
+}
+
 function validateLimit(maxBytes) {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
     throw new TypeError("maxBytes must be a positive safe integer");
@@ -183,7 +191,7 @@ export async function createBoundedProviderStream(source, maxBytes, signal) {
         cleanup();
         await reader.cancel("provider_response_rejected").catch(() => undefined);
         controller.error(
-          error instanceof ProviderResponseError
+          error instanceof ProviderResponseError || isTransportInterruption(error)
             ? error
             : new ProviderResponseError("invalid_provider_response"),
         );
@@ -220,7 +228,7 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
     finished = true;
     await reader.cancel("provider_sse_rejected").catch(() => undefined);
     controller.error(
-      error instanceof ProviderResponseError
+      error instanceof ProviderResponseError || isTransportInterruption(error)
         ? error
         : new ProviderResponseError("invalid_provider_sse"),
     );

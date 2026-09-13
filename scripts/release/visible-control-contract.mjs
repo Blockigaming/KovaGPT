@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { extname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { extname, join } from "node:path";
 
 const root = process.cwd();
 const scannedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs"]);
@@ -39,7 +39,11 @@ function trackedProductSource() {
 export function inspectVisibleControlContract({ files = trackedProductSource() } = {}) {
   const errors = [];
   for (const path of files) {
-    const source = readFileSync(path, "utf8");
+    const sourcePath = join(root, path);
+    // A tracked source file can be deleted before staging; it is no longer a
+    // visible control and must not prevent the pre-commit contract check.
+    if (!existsSync(sourcePath)) continue;
+    const source = readFileSync(sourcePath, "utf8");
     for (const rule of strongPlaceholderPatterns) {
       if (rule.pattern.test(source)) errors.push(`${path}:${rule.label}`);
     }
@@ -68,8 +72,11 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
   if (!/scheduledTasks:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
     errors.push("capability-registry:scheduled execution limitation missing");
   }
-  if (!/voiceScope: "excluded"/u.test(capabilities)) {
-    errors.push("capability-registry:Voice exclusion missing");
+  if (!/voiceScope: "required_unavailable"/u.test(capabilities)) {
+    errors.push("capability-registry:required unavailable Voice scope missing");
+  }
+  if (!/voice:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
+    errors.push("capability-registry:Voice availability limitation missing");
   }
 
   return [...new Set(errors)].sort();
@@ -81,5 +88,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`Visible-control contract failed:\n${errors.join("\n")}`);
     process.exit(1);
   }
-  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=false");
+  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=required_unavailable");
 }

@@ -139,7 +139,7 @@ test("the core workspace layer owns shell and composer visual contracts", () => 
   assert.match(finalParityStyles, /grid-template-columns: 44px minmax\(0, 1fr\) auto !important/);
 });
 
-test("composer focus, menu placement, and truthful guest controls cannot regress", () => {
+test("composer focus, menu placement, and truthful guest controls cannot regress", async () => {
   assert.doesNotMatch(composer, /outlineWidth:\s*"2px"/);
   assert.doesNotMatch(composer, /outlineColor:\s*"currentColor"/);
   assert.match(composer, /surface\?: "empty" \| "conversation"/);
@@ -147,14 +147,21 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(composer, /bottom-\[calc\(100%\+1\.25rem\)\]/);
   assert.match(composer, /mobile \? "min-h-14[^"\n]+" : "min-h-11/);
   assert.match(home, /surface="empty"/);
-  assert.match(home, /EMPTY_STATE_STARTERS/);
-  assert.match(home, /setInput\(\(current\)/);
+  assert.match(home, /<HomeChatStarters setInput=\{setInput\}/);
+  assert.match(
+    await readFile("src/components/HomeChatStarters.tsx", "utf8"),
+    /EMPTY_STATE_STARTERS/,
+  );
+  assert.match(
+    await readFile("src/components/HomeChatStarters.tsx", "utf8"),
+    /setInput\(\(current\)/,
+  );
   assert.match(modelSelector, /kova-model-static/);
 
   const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
   assert.ok(lockedBranch, "locked model branch should remain explicit");
   assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /"Maps", Map, isOn\("\/maps"\), "Preview"/);
+  assert.match(sidebar, /"Discover", Globe, isOn\("\/discovery"\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 
@@ -178,9 +185,23 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 });
 
 test("streaming status reports only real activity instead of invented progression", () => {
-  assert.match(message, /let label = "Thinking"/);
+  assert.match(message, /CONTINUED_WAIT_MS = 8_000/);
+  assert.match(message, /EXTENDED_WAIT_MS = 30_000/);
+  assert.match(message, /Date\.now\(\) - startedAt/);
+  assert.match(message, /activity\.status === "running"/);
+  assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
+  assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
+  assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
+  assert.match(home, /startedAt: Date\.now\(\)/);
+  assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
+  assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
+  assert.match(message, /"Still thinking"/);
+  assert.match(message, /"Taking a little longer"/);
   assert.doesNotMatch(message, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(message, /kova-thinking-indicator/);
+  assert.match(message, /role="status"/);
+  assert.match(message, /aria-atomic="true"/);
+  assert.match(message, /activity\.status !== "running"/);
 });
 
 test("the public visual gate executes the focused Chromium interactions and screenshots", () => {

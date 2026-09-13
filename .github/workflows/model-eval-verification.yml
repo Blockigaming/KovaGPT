@@ -1,0 +1,67 @@
+name: Kova Model Evaluation Source
+
+on:
+  pull_request:
+    paths:
+      - "model/evals/**"
+      - "docs/model/**"
+      - "scripts/model-eval*.mjs"
+      - "tests/unit/model-eval*.test.mjs"
+      - ".github/workflows/model-eval-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kova-model-eval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head without stored credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Test evaluation source without API calls
+        run: node --test tests/unit/model-eval*.test.mjs
+      - name: Validate full smoke suite and no-spend default
+        run: |
+          node scripts/model-eval.mjs
+          node scripts/model-eval-run-openai.mjs
+      - name: Install isolated pinned formatter
+        run: npm install --prefix "$RUNNER_TEMP/kova-eval-format" --ignore-scripts --no-audit --no-fund prettier@3.7.3
+      - name: Format evaluation sources and check for drift
+        id: format
+        run: |
+          "$RUNNER_TEMP/kova-eval-format/node_modules/.bin/prettier" --write \
+            docs/model/kova-model-program.md docs/model/progress.md \
+            model/evals/README.md model/evals/run-manifest.example.json \
+            model/evals/kova-replacement-gate.v1.json \
+            scripts/model-eval*.mjs tests/unit/model-eval*.test.mjs \
+            .github/workflows/model-eval-verification.yml
+          git diff --exit-code
+      - name: Preserve formatted source for review
+        if: always() && steps.format.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: model-eval-formatted-source-${{ github.event.pull_request.head.sha }}
+          path: |
+            docs/model/kova-model-program.md
+            docs/model/progress.md
+            model/evals/README.md
+            model/evals/run-manifest.example.json
+            model/evals/kova-replacement-gate.v1.json
+            scripts/model-eval*.mjs
+            tests/unit/model-eval*.test.mjs
+            .github/workflows/model-eval-verification.yml
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error

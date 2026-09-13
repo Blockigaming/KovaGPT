@@ -2,7 +2,8 @@
 // callers and enforce per-user daily quotas. NEVER import from client code.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { BILLING_ENV, tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
+import type { BillingTier } from "@/lib/billing-plans";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { evaluateAuthenticatedUser, parseBearerToken } from "@/lib/auth-security.mjs";
 
 export const DAILY_IMAGE_LIMIT = 1;
@@ -138,16 +139,19 @@ export async function enforceQuota(
   kind: "images" | "chats" | "uploads",
   limit: number,
   increment = 1,
+  signal?: AbortSignal,
 ): Promise<Response | null> {
   // Atomic check-and-increment via SECURITY DEFINER RPC. Row-level locking
   // inside the function prevents TOCTOU races where concurrent requests all
   // pass the limit check before any increment lands.
-  const { data, error } = await caller.supabaseAdmin.rpc("try_increment_daily_usage", {
+  signal?.throwIfAborted();
+  const quotaQuery = caller.supabaseAdmin.rpc("try_increment_daily_usage", {
     _user_id: caller.userId,
     _kind: kind,
     _increment: increment,
     _limit: limit,
   });
+  const { data, error } = await (signal ? quotaQuery.abortSignal(signal) : quotaQuery);
   if (error) {
     console.error("[enforceQuota] rpc error", error);
     return jsonError("Quota check failed", 500);
@@ -195,57 +199,16 @@ export async function enforceStorage(
 
 export type CallerTier = BillingTier;
 
-function higherTier(left: CallerTier, right: CallerTier): CallerTier {
-  const rank: Record<CallerTier, number> = { free: 0, plus: 1, pro: 2 };
-  return rank[right] > rank[left] ? right : left;
-}
-
-async function resolveSubscriptionTier(caller: AuthedCaller, userId: string): Promise<CallerTier> {
-  const { data, error } = await caller.supabaseAdmin
-    .from("subscriptions")
-    .select("price_id, status, current_period_end")
-    .eq("user_id", userId)
-    .eq("environment", BILLING_ENV)
-    .order("created_at", { ascending: false })
-    .limit(5);
-  if (error || !data) {
-    if (error) console.error("[getCallerTier] subscription lookup failed");
-    return "free";
-  }
-
-  const now = Date.now();
-  let resolved: CallerTier = "free";
-  for (const row of data) {
-    const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
-    const active =
-      (["active", "trialing", "past_due"].includes(row.status) &&
-        (!row.current_period_end || end > now)) ||
-      (row.status === "canceled" && end > now);
-    if (!active) continue;
-    resolved = higherTier(resolved, tierForLookupKey(row.price_id));
-    if (resolved === "pro") break;
-  }
-  return resolved;
-}
-
 /**
- * Resolve the server-authoritative plan, including a higher family-owner plan.
- * Client labels and mode choices are never used for authorization.
+ * Resolve the server-authoritative effective plan, including family-owner
+ * inheritance, through the exact database registry.
  */
+export async function getUserTier(caller: AuthedCaller, userId: string): Promise<CallerTier> {
+  return resolveEffectiveBillingTier(caller.supabaseAdmin, userId);
+}
+
 export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
-  const ownTier = await resolveSubscriptionTier(caller, caller.userId);
-  if (ownTier === "pro") return ownTier;
-
-  const { data: ownerId, error } = await caller.supabaseAdmin.rpc("family_owner_of", {
-    _user_id: caller.userId,
-  });
-  if (error) {
-    console.error("[getCallerTier] family entitlement lookup failed");
-    return ownTier;
-  }
-  if (typeof ownerId !== "string" || !ownerId || ownerId === caller.userId) return ownTier;
-
-  return higherTier(ownTier, await resolveSubscriptionTier(caller, ownerId));
+  return getUserTier(caller, caller.userId);
 }
 
 /**

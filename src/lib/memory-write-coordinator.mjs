@@ -1,3 +1,5 @@
+import { MEMORY_SOURCES_CHANGED_EVENT } from "./memory-sources.mjs";
+
 let currentPrincipal = null;
 let writesEnabled = false;
 let generation = 0;
@@ -145,6 +147,7 @@ export async function deleteSavedMemoryAfterDraining({ principal, run }) {
     return await withPrincipalLock(normalized, async () => {
       if (currentPrincipal !== normalized) return "skipped";
       await run();
+      globalThis.window?.dispatchEvent?.(new Event(MEMORY_SOURCES_CHANGED_EVENT));
       return "deleted";
     });
   } finally {

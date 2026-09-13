@@ -1,8 +1,8 @@
+import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
-import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
+import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
   getMode,
-  STORAGE_LIMITS_BYTES,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
@@ -11,12 +11,11 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
-  enforceStorage,
   getCallerTier,
   optionalUser,
 } from "@/lib/api-auth.server";
 import {
-  getAvailableGoogleTools,
+  getGoogleToolContext,
   TOOL_ACTIVITY,
   WRITE_TOOL_NAMES,
   runGoogleTool,
@@ -27,11 +26,19 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  providerErrorFromResponse,
+  providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
-import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
+import {
+  NEWS_TRIGGER,
+  formatSearchResultsForPrompt,
+  searchWeb,
+  shouldRunWebSearch,
+} from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
+import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
 import {
   authorizeResearchPersistence,
   ResearchPersistenceAuthorizationError,
@@ -39,6 +46,7 @@ import {
   type ResearchAuthorizationClient,
 } from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
+import type { KovaSource } from "@/lib/ai/sources.server";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
@@ -73,6 +81,11 @@ import {
   readLockdownMode,
 } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import {
+  ChatPreflightError,
+  createChatPreflightRunner,
+  normalizeChatPreflightFailure,
+} from "@/lib/chat-preflight.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -105,7 +118,12 @@ type ChainableQueryLike = {
 
 type SupabaseAdminLike = {
   from: (table: string) => ChainableQueryLike;
-  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }> & {
+    abortSignal: (signal: AbortSignal) => PromiseLike<{ data: unknown; error: unknown }>;
+  };
 };
 
 const OWNER_EMAIL = "support@kovagpt.com";
@@ -175,6 +193,20 @@ function sseEvent(obj: Record<string, unknown>) {
     choices: [{ index: 0, delta: { role: "assistant", ...obj } }],
   };
   return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
+function responseSourcesDelta(sources: KovaSource[]) {
+  return {
+    kind: "web_sources",
+    sources: sources.slice(0, 12).map(({ id, title, url, domain, snippet, publishedAt }) => ({
+      id,
+      title,
+      url,
+      domain,
+      ...(snippet ? { snippet } : {}),
+      ...(publishedAt ? { publishedAt } : {}),
+    })),
+  };
 }
 
 function sseDone() {
@@ -288,13 +320,20 @@ async function handleDeepResearchRequest(
   options: {
     signal?: AbortSignal;
     persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
+    workflowSkillBlock?: string;
+    assertCurrent?: NonNullable<Parameters<typeof runDeepResearch>[1]>["assertCurrent"];
     logContext: SafeLogContext;
   },
 ): Promise<Response> {
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let terminalProgressEmitted = false;
       const emitProgress = (event: ResearchProgressEvent) => {
+        const terminal =
+          event.stage.id === "complete" ||
+          event.stage.status === "failed" ||
+          event.stage.status === "canceled";
         if (event.activity) {
           controller.enqueue(enc.encode(sseEvent(activityToSseDelta(event.activity))));
         }
@@ -310,11 +349,14 @@ async function handleDeepResearchRequest(
             }),
           ),
         );
+        terminalProgressEmitted ||= terminal;
       };
       try {
         const result = await runDeepResearch(prompt, {
           signal: options.signal,
           persistence: options.persistence,
+          workflowSkillBlock: options.workflowSkillBlock,
+          assertCurrent: options.assertCurrent,
           onProgress: emitProgress,
         });
         if (result.partialFailures.length) {
@@ -328,10 +370,34 @@ async function handleDeepResearchRequest(
             ),
           );
         }
+        controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(result.sources))));
         controller.enqueue(enc.encode(sseChunk(result.report)));
-      } catch {
+      } catch (error) {
         if (options.signal?.aborted) {
           controller.enqueue(enc.encode(sseChunk("_Deep Research was cancelled._")));
+        } else if (error instanceof ChatPreflightError) {
+          logSafeFailure("warn", "[chat] deep research context changed", options.logContext, {
+            status: error.status,
+            category: "server",
+            code: error.code,
+          });
+          if (!terminalProgressEmitted) {
+            emitProgress({
+              stage: {
+                id: "failed",
+                label: "Research context changed",
+                status: "failed",
+                detail: error.message,
+              },
+              progress: 1,
+              activity: createToolActivityEvent(
+                "write_report",
+                "Research context changed",
+                "failed",
+              ),
+            });
+          }
+          controller.enqueue(enc.encode(sseChunk(`_${error.message}_`)));
         } else {
           logSafeFailure("error", "[chat] deep research failed", options.logContext, {
             status: 502,
@@ -484,20 +550,37 @@ export const Route = createFileRoute("/api/chat")({
           }
         };
         const run = async (): Promise<Response> => {
+          const preflight = createChatPreflightRunner({
+            signal: request.signal,
+            onMilestone: (event) => {
+              console.info("[chat] preflight stage", {
+                requestId,
+                stage: event.stage,
+                state: event.state,
+                required: event.required,
+                durationMs: event.durationMs,
+                code: event.code,
+                status: event.status,
+              });
+            },
+          });
           try {
             let ingress;
             try {
-              ingress = await readChatRequest(request, CHAT_BODY_LIMIT_BYTES);
+              ingress = await preflight.run("request_body", (signal) =>
+                readChatRequest(request, CHAT_BODY_LIMIT_BYTES, signal),
+              );
             } catch (error) {
-              if (error instanceof ChatIngressError) {
-                return Response.json(toChatIngressErrorEnvelope(error, requestId), {
-                  status: error.status,
+              const ingressError = error instanceof ChatPreflightError ? error.cause : error;
+              if (ingressError instanceof ChatIngressError) {
+                return Response.json(toChatIngressErrorEnvelope(ingressError, requestId), {
+                  status: ingressError.status,
                 });
               }
               throw error;
             }
 
-            const auth = await optionalUser(request);
+            const auth = await preflight.run("session", () => optionalUser(request));
             if (auth instanceof Response) return auth;
 
             const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
@@ -517,12 +600,14 @@ export const Route = createFileRoute("/api/chat")({
               // guard, then consume an atomic Supabase bucket before any
               // optional search or provider work can begin. Generation has a
               // second authoritative reservation later in the request.
-              const distributedLimit = await consumeApplicationRateLimit({
-                identity: clientKey,
-                action: "guest_chat_preflight",
-                limit: 60,
-                windowSeconds: 3600,
-              });
+              const distributedLimit = await preflight.run("guest_rate_limit", () =>
+                consumeApplicationRateLimit({
+                  identity: clientKey,
+                  action: "guest_chat_preflight",
+                  limit: 60,
+                  windowSeconds: 3600,
+                }),
+              );
               if (!distributedLimit.allowed) {
                 return Response.json(
                   {
@@ -552,6 +637,9 @@ export const Route = createFileRoute("/api/chat")({
               projectId,
               temporary,
               temporaryContext,
+              memoryStartIndex,
+              historyOffset,
+              summaryProof,
               clientTool,
             } = ingress;
             // Lockdown Mode is a server-enforced account boundary. Explicit
@@ -567,8 +655,31 @@ export const Route = createFileRoute("/api/chat")({
             let lockdownBlocksNetwork = false;
             if (auth) {
               try {
-                lockdownBlocksNetwork = await readLockdownMode(auth.supabaseAdmin, auth.userId);
+                const lockdownResult = await preflight.run(
+                  "lockdown",
+                  () => readLockdownMode(auth.supabaseAdmin, auth.userId),
+                  { required: false },
+                );
+                if (typeof lockdownResult !== "boolean") {
+                  lockdownBlocksNetwork = true;
+                  if (explicitLockdownCapability) {
+                    return Response.json(
+                      {
+                        error: "Lockdown Mode could not be verified. Try again shortly.",
+                        code: "lockdown_status_unavailable",
+                        retryable: true,
+                      },
+                      {
+                        status: 503,
+                        headers: { "Cache-Control": "no-store", "Retry-After": "5" },
+                      },
+                    );
+                  }
+                } else {
+                  lockdownBlocksNetwork = lockdownResult;
+                }
               } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 lockdownBlocksNetwork = true;
                 if (explicitLockdownCapability) {
                   return (
@@ -607,7 +718,7 @@ export const Route = createFileRoute("/api/chat")({
 
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
-            const isImageRequest =
+            let isImageRequest =
               lastText.length > 0 &&
               (!lastUser?.attachments || lastUser.attachments.length === 0) &&
               (clientTool === "image" || detectImageIntent(lastText));
@@ -616,10 +727,16 @@ export const Route = createFileRoute("/api/chat")({
             let isOwner = false;
             if (auth) {
               try {
-                const { data } = await auth.supabaseAdmin.auth.admin.getUserById(auth.userId);
+                const ownerLookup = await preflight.run(
+                  "owner_lookup",
+                  () => auth.supabaseAdmin.auth.admin.getUserById(auth.userId),
+                  { required: false },
+                );
+                const data = ownerLookup?.data;
                 const email = data?.user?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 // ignore; treat as non-owner
               }
             }
@@ -627,10 +744,87 @@ export const Route = createFileRoute("/api/chat")({
             // Banned-user + maintenance + tier checks for signed-in callers.
             let callerTier: "free" | "plus" | "pro" = "free";
             if (auth) {
-              const banned = await assertNotBanned(auth);
+              const banned = await preflight.run("ban_check", () => assertNotBanned(auth));
               if (banned) return banned;
-              callerTier = isOwner ? "pro" : await getCallerTier(auth);
+              callerTier = isOwner
+                ? "pro"
+                : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
+
+            // A custom Kova supplies creator instructions and immutable knowledge,
+            // never the creator's credentials or an entitlement override.
+            let customKova: Awaited<
+              ReturnType<typeof import("@/lib/custom-kovas.server").resolveCustomKova>
+            > | null = null;
+            if (ingress.kova) {
+              if (!auth?.emailVerified)
+                return Response.json(
+                  { error: "Verify your account to use a custom Kova." },
+                  { status: 403 },
+                );
+              customKova = await preflight.run("custom_kova", async (signal) => {
+                const { resolveCustomKova } = await import("@/lib/custom-kovas.server");
+                return resolveCustomKova(auth.supabaseAdmin, auth.userId, ingress.kova!, signal);
+              });
+              const requiredTier = getMode(customKova.config.mode).tier;
+              const rank = { free: 0, plus: 1, pro: 2 };
+              if (!isOwner && rank[requiredTier] > rank[callerTier])
+                return Response.json(
+                  {
+                    error:
+                      "This Kova's model requires a higher plan. Choose another Kova or update your plan.",
+                  },
+                  { status: 403 },
+                );
+              if (clientTool === "deep_research")
+                return Response.json(
+                  { error: "Start Deep Research from regular chat." },
+                  { status: 400 },
+                );
+              if (clientTool === "web_search" && !customKova.allows("web"))
+                return Response.json(
+                  { error: "Web search is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (clientTool === "image" && !customKova.allows("images"))
+                return Response.json(
+                  { error: "Image generation is disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.attachmentsAllowed(messages))
+                return Response.json(
+                  { error: "Attachments are disabled for this Kova." },
+                  { status: 403 },
+                );
+              if (!customKova.allows("images")) isImageRequest = false;
+            }
+
+            // Workflow skills are exact, owner-scoped instruction/resource
+            // snapshots. Resolving one never changes tools, credentials,
+            // entitlements, model access, or approval policy.
+            let workflowSkill: Awaited<
+              ReturnType<typeof import("@/lib/workflow-skills.server").resolveWorkflowSkill>
+            > | null = null;
+            if (ingress.skill) {
+              if (!auth?.emailVerified)
+                return Response.json(
+                  { error: "Verify your account to use a workflow skill." },
+                  { status: 403 },
+                );
+              workflowSkill = await preflight.run("workflow_skill", async (signal) => {
+                const { resolveWorkflowSkill } = await import("@/lib/workflow-skills.server");
+                return resolveWorkflowSkill(auth.supabaseAdmin, auth.userId, ingress.skill, signal);
+              });
+            }
+
+            const assertSelectedContextsCurrent = async (signal: AbortSignal) => {
+              try {
+                await customKova?.assertCurrent(signal);
+                await workflowSkill?.assertCurrent(signal);
+              } catch (error) {
+                throw normalizeChatPreflightFailure("selected_context", error);
+              }
+            };
 
             // Deep Research is a paid, high-cost operation. Authorize it before
             // checking or invoking any AI/search provider so forged clientTool
@@ -655,33 +849,38 @@ export const Route = createFileRoute("/api/chat")({
             let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
             if (clientTool === "deep_research" && auth) {
               try {
-                authorizedResearchReferences = await authorizeResearchPersistence({
-                  supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
-                  chatId,
-                  projectId: usesExistingContext ? projectId : undefined,
-                });
+                authorizedResearchReferences = await preflight.run("research_authorization", () =>
+                  authorizeResearchPersistence({
+                    supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
+                    chatId: usesExistingContext ? chatId : undefined,
+                    projectId: usesExistingContext ? projectId : undefined,
+                  }),
+                );
               } catch (error) {
-                if (error instanceof ResearchPersistenceAuthorizationError) {
-                  if (error.status === 503) {
+                const authorizationError =
+                  error instanceof ChatPreflightError ? error.cause : error;
+                if (authorizationError instanceof ResearchPersistenceAuthorizationError) {
+                  if (authorizationError.status === 503) {
                     logSafeFailure(
                       "warn",
                       "[chat] research authorization unavailable",
                       logContext,
                       {
-                        status: error.status,
+                        status: authorizationError.status,
                         category: "server",
-                        code: error.code,
+                        code: authorizationError.code,
                       },
                     );
                   }
                   return Response.json(
-                    { error: error.publicMessage },
+                    { error: authorizationError.publicMessage },
                     {
-                      status: error.status,
+                      status: authorizationError.status,
                       headers: { "Cache-Control": "no-store" },
                     },
                   );
                 }
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("error", "[chat] research authorization failed", logContext, {
                   status: 503,
                   category: "server",
@@ -694,6 +893,20 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            if (clientTool === "deep_research" && currentAttachments.length > 0) {
+              return new Response(
+                JSON.stringify({
+                  error: "Deep Research doesn't support attachments yet. Remove them and retry.",
+                  category: "invalid_request",
+                  retryable: false,
+                }),
+                {
+                  status: 400,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
+            }
+
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
@@ -702,6 +915,23 @@ export const Route = createFileRoute("/api/chat")({
             // in text (esp. important when the user *explicitly declined* an
             // image but a keyword still slipped past the negation guard).
             if (isImageRequest && auth) {
+              // Image generation has no system-message channel, so append the same resolved,
+              // integrity-checked workflow block used by text chat. Bound the combined prompt
+              // before feature/quota work so an oversized valid package cannot consume quota.
+              const imagePrompt = boundedImageProviderPrompt(lastText, workflowSkill?.block);
+              if (imagePrompt === null)
+                return Response.json(
+                  {
+                    error:
+                      "The image prompt and workflow skill are too long together. Shorten the prompt or clear the skill before trying again.",
+                    category: "invalid_request",
+                    retryable: false,
+                  },
+                  { status: 400, headers: { "Cache-Control": "no-store" } },
+                );
+              const unavailableImageProvider = providerUnavailableResponse("image_generation");
+              if (unavailableImageProvider) return unavailableImageProvider;
+              await assertSelectedContextsCurrent(request.signal);
               if (!isOwner) {
                 if (!auth.emailVerified) {
                   return new Response(
@@ -715,20 +945,35 @@ export const Route = createFileRoute("/api/chat")({
                     },
                   );
                 }
-                const maint = await assertFeatureEnabled(auth, "images");
+                const maint = await preflight.run("image_feature", () =>
+                  assertFeatureEnabled(auth, "images"),
+                );
                 if (maint) return maint;
                 const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
-                const quota = await enforceQuota(auth, "images", imgLimit);
+                const quota = await preflight.run("image_quota", (signal) =>
+                  enforceQuota(auth, "images", imgLimit, 1, signal),
+                );
                 if (quota) return quota;
               }
-              return handleImageRequest(lastText, logContext);
+              // Recheck after quota authorization too, so a concurrent uninstall or
+              // version change cannot reach the provider after the quota boundary.
+              await assertSelectedContextsCurrent(request.signal);
+              return handleImageRequest(imagePrompt, logContext);
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
             if (auth && !isOwner) {
-              const maint = await assertFeatureEnabled(auth, "chat");
+              const maint = await preflight.run("chat_feature", () =>
+                assertFeatureEnabled(auth, "chat"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
+              // Research authorization can be slow. Recheck selected context
+              // after it and before quota so a revoked skill cannot consume a
+              // chat request without reaching a provider.
+              await assertSelectedContextsCurrent(request.signal);
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
+              );
               if (quota) return quota;
             }
 
@@ -740,7 +985,7 @@ export const Route = createFileRoute("/api/chat")({
               plus: 1,
               pro: 2,
             };
-            const requested = getMode(mode ?? "auto");
+            const requested = getMode(customKova?.config.mode ?? mode ?? "auto");
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
@@ -778,43 +1023,31 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 );
               }
-              const maint = await assertFeatureEnabled(auth, "uploads");
+              const maint = await preflight.run("upload_feature", () =>
+                assertFeatureEnabled(auth, "uploads"),
+              );
               if (maint) return maint;
-              const quota = await enforceQuota(
-                auth,
-                "uploads",
-                DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
-                totalAttachments,
+              const quota = await preflight.run("upload_quota", (signal) =>
+                enforceQuota(
+                  auth,
+                  "uploads",
+                  DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
+                  totalAttachments,
+                  signal,
+                ),
               );
               if (quota) return quota;
-              // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
-              let totalBytes = 0;
-              for (const att of currentAttachments) {
-                if (att.kind === "text_file") {
-                  totalBytes += new TextEncoder().encode(att.content).byteLength;
-                  continue;
-                }
-                if (att.kind !== "image") continue;
-                const url = att.dataUrl ?? "";
-                const commaIdx = url.indexOf(",");
-                if (commaIdx > -1) {
-                  // base64 length * 3/4 approx. raw byte size
-                  totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
-                } else {
-                  totalBytes += url.length;
-                }
-              }
-              const tier = await getCallerTier(auth);
-              const storage = await enforceStorage(auth, totalBytes, STORAGE_LIMITS_BYTES[tier]);
-              if (storage) return storage;
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
-            if (clientTool === "deep_research" && lastText && !hasAttachments) {
+            if (clientTool === "deep_research" && lastText) {
+              await assertSelectedContextsCurrent(request.signal);
               return handleDeepResearchRequest(lastText, {
                 signal: request.signal,
                 logContext,
+                workflowSkillBlock: workflowSkill?.block,
+                assertCurrent: assertSelectedContextsCurrent,
                 persistence: auth
                   ? {
                       supabase:
@@ -828,13 +1061,10 @@ export const Route = createFileRoute("/api/chat")({
               });
             }
 
-            // COST: only send the last ~12 turns to the model. Adaptive memory +
-            // cross-chat summaries (below) carry forward standing rules and
-            // long-term context, so we don't need to resend the full transcript
-            // on every call. The latest user message is always preserved.
-            // INTENTIONAL-DEFERRED(summarization): a future durable summary worker can
-            // background summary pass and store it in chat_memories instead of
-            // sending raw turns.
+            // Keep the latest 12 messages. The optional durable same-chat summary
+            // below can retain earlier context only after its exact eligible
+            // prefix is verified against this request. Existing cross-chat memory
+            // remains a separate, consent-bound source.
             const HISTORY_TURNS = 12;
             const trimmedMessages =
               messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
@@ -863,12 +1093,18 @@ export const Route = createFileRoute("/api/chat")({
                     } else if (att.kind === "library_file") {
                       let libraryContent = "";
                       if (auth && msg === lastUser) {
-                        const { data } = await auth.supabaseAdmin
-                          .from("user_library_items")
-                          .select("content_text")
-                          .eq("id", att.libraryItemId)
-                          .eq("user_id", auth.userId)
-                          .maybeSingle();
+                        const libraryResult = await preflight.run(
+                          "library_attachment",
+                          () =>
+                            auth.supabaseAdmin
+                              .from("user_library_items")
+                              .select("content_text")
+                              .eq("id", att.libraryItemId)
+                              .eq("user_id", auth.userId)
+                              .maybeSingle(),
+                          { required: false },
+                        );
+                        const data = libraryResult?.data;
                         const row = data as { content_text?: unknown } | null;
                         if (typeof row?.content_text === "string") {
                           libraryContent = row.content_text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
@@ -917,8 +1153,10 @@ export const Route = createFileRoute("/api/chat")({
             // out in settings except for explicit/time-sensitive search asks.
             // Fast mode skips web search entirely to stay instant.
             let webBlock = "";
+            let webSources: KovaSource[] = [];
             if (
               !lockdownBlocksNetwork &&
+              (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
               (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")
@@ -928,18 +1166,20 @@ export const Route = createFileRoute("/api/chat")({
                 clientTool === "deep_research" ||
                 shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
-                const activity = createToolActivityEvent(
-                  "search_web",
-                  "Searching the web",
-                  "running",
-                );
-                const result = await runWebSearch(
-                  lastText,
-                  clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                const result = await preflight.run(
+                  "web_search",
+                  async (signal) => {
+                    await assertSelectedContextsCurrent(signal);
+                    return searchWeb(lastText, {
+                      wantsNews: clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                      signal,
+                    });
+                  },
+                  { required: false, timeoutMs: 8_000 },
                 );
                 if (result) {
-                  webBlock = result;
-                  void activity;
+                  webBlock = formatSearchResultsForPrompt(result) ?? "";
+                  webSources = result.kovaSources;
                 }
               }
             }
@@ -949,6 +1189,7 @@ export const Route = createFileRoute("/api/chat")({
             // context across conversations. Consent is opt-in. A personalized
             // Temporary Chat may read existing memory but never writes it.
             let memoryBlock = "";
+            const memorySourceRefs: MemorySourceRef[] = [];
             if (
               auth &&
               (callerTier === "plus" || callerTier === "pro") &&
@@ -956,38 +1197,89 @@ export const Route = createFileRoute("/api/chat")({
               usesExistingContext
             ) {
               try {
-                const { data: memRows } = await (
-                  auth.supabaseAdmin as unknown as {
-                    from: (t: string) => ChainableQueryLike;
-                  }
-                )
-                  .from("chat_memories")
-                  .select("title, summary, updated_at")
-                  .eq("user_id", auth.userId)
-                  .order("updated_at", { ascending: false })
-                  .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0);
+                const memoryResult = await preflight.run(
+                  "memory_context",
+                  () =>
+                    (
+                      auth.supabaseAdmin as unknown as {
+                        from: (t: string) => ChainableQueryLike;
+                      }
+                    )
+                      .from("chat_memories")
+                      .select("id, title, summary, updated_at")
+                      .eq("user_id", auth.userId)
+                      .order("updated_at", { ascending: false })
+                      .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
+                  { required: false },
+                );
+                const memRows = memoryResult?.data;
                 if (Array.isArray(memRows) && memRows.length > 0) {
-                  const memories = (memRows as { title?: string | null; summary: string }[]).map(
-                    (r, i): KovaMemory => ({
-                      id: `chat-memory-${i + 1}`,
-                      userId: auth.userId,
-                      content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
-                      category: "personal_context",
-                    }),
-                  );
-                  memoryBlock = formatMemoryBlock(
-                    selectRelevantMemories(memories, lastText, {
-                      enabled: personalContext.rememberAcross === true,
-                      temporary: !usesExistingContext,
-                      maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
-                    }),
+                  const memories = (
+                    memRows as { id: string; title?: string | null; summary: string }[]
+                  ).map((r): KovaMemory => ({
+                    id: r.id,
+                    userId: auth.userId,
+                    content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
+                    category: "personal_context",
+                  }));
+                  const selectedMemories = selectRelevantMemories(memories, lastText, {
+                    enabled: personalContext.rememberAcross === true,
+                    temporary: !usesExistingContext,
+                    maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
+                  });
+                  memoryBlock = formatMemoryBlock(selectedMemories);
+                  memorySourceRefs.push(
+                    ...selectedMemories.map(({ id }) => ({ kind: "chat_memory" as const, id })),
                   );
                 }
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
                   code: "memory_context_unavailable",
+                });
+              }
+            }
+
+            // Same-chat summaries have a separate opt-in deployment gate. Never
+            // read Temporary turns or pre-conversion history; older clients
+            // without an explicit privacy boundary retain the recent-turn path.
+            let conversationSummary:
+              import("@/lib/chat-summary-policy.server.mjs").SummaryContext | null = null;
+            if (
+              auth &&
+              chatId &&
+              !temporary &&
+              memoryStartIndex !== undefined &&
+              (callerTier === "plus" || callerTier === "pro") &&
+              personalContext?.rememberAcross === true
+            ) {
+              const { buildChatSummaryContext } = await import("@/lib/chat-summary.server");
+              conversationSummary =
+                (await preflight.run(
+                  "conversation_summary",
+                  (signal) =>
+                    buildChatSummaryContext(
+                      auth.supabaseAdmin,
+                      {
+                        userId: auth.userId,
+                        chatId,
+                        messages,
+                        memoryStartIndex,
+                        historyOffset,
+                        summaryProof,
+                        temporary: Boolean(temporary),
+                        memoryEnabled: personalContext.rememberAcross === true,
+                      },
+                      signal,
+                    ),
+                  { required: false },
+                )) ?? null;
+              if (conversationSummary) {
+                memorySourceRefs.push({
+                  kind: "conversation_summary",
+                  id: conversationSummary.source.id,
                 });
               }
             }
@@ -1005,16 +1297,27 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
-                const { data: isMember } = await admin.rpc("is_project_member", {
-                  _user_id: auth.userId,
-                  _project_id: projectId,
-                });
+                const membershipResult = await preflight.run(
+                  "project_membership",
+                  () =>
+                    admin.rpc("is_project_member", {
+                      _user_id: auth.userId,
+                      _project_id: projectId,
+                    }),
+                  { required: false },
+                );
+                const isMember = membershipResult?.data;
                 if (isMember === true) {
-                  const projRes = await admin
-                    .from("projects")
-                    .select("id, name, system_prompt")
-                    .eq("id", projectId)
-                    .maybeSingle();
+                  const projRes = await preflight.run(
+                    "project_context",
+                    () =>
+                      admin
+                        .from("projects")
+                        .select("id, name, system_prompt")
+                        .eq("id", projectId)
+                        .maybeSingle(),
+                    { required: false },
+                  );
                   const proj = projRes?.data as {
                     id: string;
                     name: string;
@@ -1030,13 +1333,19 @@ export const Route = createFileRoute("/api/chat")({
                         `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
                       );
                     }
-                    const memRes = await admin
-                      .from("project_memory")
-                      .select("content")
-                      .eq("project_id", projectId)
-                      .order("created_at", { ascending: false })
-                      .limit(20);
-                    const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
+                    const memRes = await preflight.run(
+                      "project_memory",
+                      () =>
+                        admin
+                          .from("project_memory")
+                          .select("id, content")
+                          .eq("project_id", projectId)
+                          .order("created_at", { ascending: false })
+                          .limit(20),
+                      { required: false },
+                    );
+                    const memRows =
+                      (memRes?.data as Array<{ id: string; content: string }> | null) ?? [];
                     if (memRows.length > 0) {
                       parts.push(
                         "Project memory (facts the user has saved about this project - honor them):\n" +
@@ -1060,12 +1369,19 @@ export const Route = createFileRoute("/api/chat")({
                     }
                     if (q.trim()) {
                       const { retrieveProjectContext } = await import("@/lib/project-rag.server");
-                      const chunks = await retrieveProjectContext({
-                        supabase: admin,
-                        project_id: projectId,
-                        query: q,
-                        k: 6,
-                      });
+                      const chunks =
+                        (await preflight.run(
+                          "project_retrieval",
+                          (signal) =>
+                            retrieveProjectContext({
+                              supabase: admin,
+                              project_id: projectId,
+                              query: q,
+                              k: 6,
+                              signal,
+                            }),
+                          { required: false, timeoutMs: 5_000 },
+                        )) ?? [];
                       const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
                       if (rel.length > 0) {
                         parts.push(
@@ -1078,9 +1394,17 @@ export const Route = createFileRoute("/api/chat")({
                       "\n\n--- PROJECT CONTEXT ---\n" +
                       parts.join("\n\n") +
                       "\n--- END PROJECT CONTEXT ---";
+                    memorySourceRefs.push(
+                      ...memRows.map(({ id }) => ({
+                        kind: "project_memory" as const,
+                        id,
+                        projectId,
+                      })),
+                    );
                   }
                 }
-              } catch {
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
                 logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
                   status: 200,
                   category: "optional_context",
@@ -1097,12 +1421,17 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && typeof chatId === "string" && chatId && !temporary) {
               const { buildChatWorkspaceBlock } =
                 await import("@/lib/chat-workspace-context.server");
-              const workspace = await buildChatWorkspaceBlock(auth.supabaseAdmin, {
-                userId: auth.userId,
-                chatId,
-                temporary: Boolean(temporary),
-              });
-              chatWorkspaceBlock = workspace.block;
+              const workspace = await preflight.run(
+                "chat_workspace",
+                () =>
+                  buildChatWorkspaceBlock(auth.supabaseAdmin, {
+                    userId: auth.userId,
+                    chatId,
+                    temporary: Boolean(temporary),
+                  }),
+                { required: false },
+              );
+              chatWorkspaceBlock = workspace?.block ?? "";
             }
 
             const toolInstruction =
@@ -1144,8 +1473,11 @@ export const Route = createFileRoute("/api/chat")({
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
                     memoryBlock +
+                    (conversationSummary?.block ?? "") +
                     projectBlock +
                     chatWorkspaceBlock +
+                    (customKova?.block ?? "") +
+                    (workflowSkill?.block ?? "") +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
@@ -1179,10 +1511,23 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
-            const availableTools =
-              auth && usesExistingContext && !hasImages && m.id !== "instant" && lastText.length > 0
-                ? await getAvailableGoogleTools(auth.userId).catch(() => [])
-                : [];
+            const googleContext =
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasAttachments &&
+              m.id !== "instant" &&
+              lastText.length > 0
+                ? ((await preflight.run(
+                    "connector_tools",
+                    () => getGoogleToolContext(auth.userId),
+                    { required: false },
+                  )) ?? null)
+                : null;
+            const availableTools = customKova
+              ? customKova.filterTools(googleContext?.tools ?? [])
+              : (googleContext?.tools ?? []);
+            const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
             const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
@@ -1228,21 +1573,27 @@ export const Route = createFileRoute("/api/chat")({
             }
             let usageEventId: string;
             try {
-              const acquisition = await acquireGeneration({
-                requestId,
-                idempotencyKey,
-                userId: auth?.userId ?? null,
-                guestIpHash: clientKey ? await hashGuestIp(clientKey) : null,
-                conversationId: chatId,
-                mode: m.id,
-                plan: auth ? callerTier : "guest",
-                premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
-                model: catalogModel,
-                estimatedInputTokens: inputEstimate.tokens,
-                reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
-                estimatedCostUsd: estimatedCost,
-                contextTrimmed: messages.length > HISTORY_TURNS,
-              });
+              const guestIpHash = clientKey
+                ? await preflight.run("guest_identity", () => hashGuestIp(clientKey))
+                : null;
+              const acquisition = await preflight.run("usage_authorization", (signal) =>
+                acquireGeneration({
+                  requestId,
+                  idempotencyKey,
+                  userId: auth?.userId ?? null,
+                  guestIpHash,
+                  conversationId: chatId,
+                  mode: m.id,
+                  plan: auth ? callerTier : "guest",
+                  premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                  model: catalogModel,
+                  estimatedInputTokens: inputEstimate.tokens,
+                  reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                  estimatedCostUsd: estimatedCost,
+                  contextTrimmed: messages.length > HISTORY_TURNS,
+                  signal,
+                }),
+              );
               if ("rejection" in acquisition) {
                 const duplicate = acquisition.rejection === "duplicate";
                 return Response.json(
@@ -1256,20 +1607,70 @@ export const Route = createFileRoute("/api/chat")({
                 );
               }
               usageEventId = acquisition.eventId;
-            } catch {
+            } catch (error) {
+              if (error instanceof ChatPreflightError) throw error;
               return Response.json(
-                { error: "Usage authorization is temporarily unavailable." },
-                { status: 503 },
+                {
+                  error: "Usage authorization is temporarily unavailable.",
+                  code: "usage_authorization_unavailable",
+                  retryable: true,
+                },
+                { status: 503, headers: { "Retry-After": "5" } },
               );
             }
 
-            const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
+            const finalMessages = body.messages as unknown as ChatMsg[];
+            // A selected workflow resource may have influenced any earlier
+            // assistant response (and therefore a durable conversation summary).
+            // Tool planning gets a fresh, provenance-isolated transcript: only
+            // authoritative runtime instructions, the resource-free skill
+            // instructions, and the user's current text request. The complete
+            // conversation and resource bodies return only for the final call,
+            // where no connector tools are available.
+            const toolPlanningMessages: ChatMsg[] = workflowSkill
+              ? [
+                  {
+                    role: "system",
+                    content:
+                      m.systemPrompt +
+                      TONE_INSTRUCTION +
+                      ADAPTIVE_INSTRUCTION +
+                      UNRESTRICTED_INSTRUCTION +
+                      ACCURACY_INSTRUCTION +
+                      CHART_INSTRUCTION +
+                      CREATOR_INSTRUCTION +
+                      (customKova?.block ?? "") +
+                      workflowSkill.toolPlanningBlock +
+                      toolInstruction +
+                      (callerTier === "plus" || callerTier === "pro"
+                        ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                        : "") +
+                      `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                      buildCurrentDateInstruction(timezone, locale),
+                  },
+                  { role: "user", content: lastText },
+                ]
+              : finalMessages;
+            const workingMessages: ChatMsg[] = [...toolPlanningMessages];
+            const finalToolMessages: ChatMsg[] = [];
+            const appendToolMessage = (message: ChatMsg) => {
+              workingMessages.push(message);
+              finalToolMessages.push(message);
+            };
             let providerCalls = 0;
             const activityEvents: Array<{
               tool: string;
               label: string;
               args?: unknown;
             }> = [];
+            if (webSources.length) {
+              const activity = createToolActivityEvent(
+                "search_web",
+                `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
+                "complete",
+              );
+              activityEvents.push({ tool: activity.type, label: activity.label });
+            }
 
             if (enableTools) {
               const MAX_TOOL_HOPS = 3;
@@ -1306,6 +1707,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
+                  await assertSelectedContextsCurrent(hopCtl.signal);
                   providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
@@ -1359,13 +1761,56 @@ export const Route = createFileRoute("/api/chat")({
                   });
                   break;
                 }
+                // The selected package may be revoked while the non-streaming
+                // provider hop is in flight. Revalidate its exact installation
+                // and version before even inspecting returned tool calls; the
+                // per-call check below closes the remaining processing window.
+                try {
+                  await assertSelectedContextsCurrent(request.signal);
+                } catch (error) {
+                  await finalizeGeneration({
+                    eventId: usageEventId,
+                    status: request.signal.aborted ? "client_disconnected" : "aborted",
+                    model: catalogModel,
+                    inputTokens: inputEstimate.tokens * providerCalls,
+                    latencyMs: Date.now() - startedAt,
+                    toolCalls: activityEvents.length,
+                    error: request.signal.aborted
+                      ? "client_disconnected"
+                      : error instanceof ChatPreflightError
+                        ? error.code
+                        : "selected_context_unavailable",
+                  }).catch(() => undefined);
+                  throw error;
+                }
                 const msg = parsedHop.message;
                 const finish = parsedHop.finishReason;
                 if (!msg.tool_calls || msg.tool_calls.length === 0) {
-                  if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
+                  if (
+                    !workflowSkill &&
+                    toolsWereUsed &&
+                    typeof msg.content === "string" &&
+                    msg.content
+                  ) {
                     const enc = new TextEncoder();
                     const stream = new ReadableStream({
                       start(controller) {
+                        controller.enqueue(
+                          enc.encode(
+                            sseEvent(
+                              memorySourcesDelta(
+                                auth?.userId ?? null,
+                                memorySourceRefs,
+                                Boolean(temporary),
+                              ),
+                            ),
+                          ),
+                        );
+                        if (webSources.length) {
+                          controller.enqueue(
+                            enc.encode(sseEvent(responseSourcesDelta(webSources))),
+                          );
+                        }
                         for (const a of activityEvents) {
                           controller.enqueue(
                             enc.encode(
@@ -1425,13 +1870,13 @@ export const Route = createFileRoute("/api/chat")({
                     category: "policy",
                     code: "tool_budget_reached",
                   });
-                  workingMessages.push({
+                  appendToolMessage({
                     role: "assistant",
                     content: msg.content ?? null,
                     tool_calls: msg.tool_calls,
                   });
                   for (const tc of msg.tool_calls) {
-                    workingMessages.push({
+                    appendToolMessage({
                       role: "tool",
                       tool_call_id: tc.id,
                       content: JSON.stringify({
@@ -1445,13 +1890,28 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 totalToolCalls += msg.tool_calls.length;
                 toolsWereUsed = true;
-                workingMessages.push({
+                appendToolMessage({
                   role: "assistant",
                   content: msg.content ?? null,
                   tool_calls: msg.tool_calls,
                 });
                 const results = await Promise.all(
                   msg.tool_calls.map(async (tc): Promise<ToolResultMsg> => {
+                    if (!availableTools.some((tool) => tool.function.name === tc.function.name))
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "tool_not_allowed" }),
+                      };
+                    try {
+                      await assertSelectedContextsCurrent(request.signal);
+                    } catch {
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "custom_kova_unavailable" }),
+                      };
+                    }
                     let parsedArgs: Record<string, unknown> = {};
                     try {
                       parsedArgs = tc.function.arguments
@@ -1482,6 +1942,7 @@ export const Route = createFileRoute("/api/chat")({
                           auth!.userId,
                           tc.function.name,
                           parsedArgs,
+                          googleBinding,
                         );
                         pendingConfirms.push({
                           id: staged.id,
@@ -1509,7 +1970,12 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(auth!.userId, tc.function.name, parsedArgs);
+                      const out = await runGoogleTool(
+                        auth!.userId,
+                        tc.function.name,
+                        parsedArgs,
+                        googleBinding,
+                      );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
@@ -1525,13 +1991,14 @@ export const Route = createFileRoute("/api/chat")({
                     }
                   }),
                 );
-                for (const r of results) workingMessages.push(r);
+                for (const r of results) appendToolMessage(r);
                 if (finish === "stop") break;
                 if (request.signal?.aborted) return new Response(null, { status: 499 });
               }
               if (hopFailed) {
                 workingMessages.length = 0;
                 workingMessages.push(...(body.messages as unknown as ChatMsg[]));
+                finalToolMessages.length = 0;
               }
               // Stash pending confirms on the outer scope so the final
               // streaming branch can prepend them too.
@@ -1545,7 +2012,10 @@ export const Route = createFileRoute("/api/chat")({
             // === FINAL STREAMING CALL =============================================
             const finalBody = {
               ...body,
-              messages: workingMessages,
+              // Restore the complete selected package only after connected-tool
+              // planning is finished. Tool results remain, but untrusted resource
+              // bodies never participate in deciding which connector reads to run.
+              messages: workflowSkill ? [...finalMessages, ...finalToolMessages] : workingMessages,
               stream: true,
             };
             const activityCount = activityEvents.length;
@@ -1554,45 +2024,56 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
+              await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
-            } catch {
+            } catch (error) {
+              const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({
                 eventId: usageEventId,
-                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                status: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? "aborted"
+                    : "provider_failed",
                 model: catalogModel,
                 inputTokens: inputEstimate.tokens * providerCalls,
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
-                error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
+                error: request.signal.aborted
+                  ? "client_disconnected"
+                  : contextFailure
+                    ? error.code
+                    : "provider_network_error",
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
+              if (contextFailure) throw error;
+              const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
-                status: 502,
+                status: providerError.status,
                 category: "provider",
-                code: "final_provider_network_error",
+                code: providerError.code,
               });
-              return new Response(
-                JSON.stringify({
-                  error: "AI service is temporarily unavailable. Please try again.",
-                }),
+              return Response.json(
                 {
-                  status: 502,
-                  headers: { "Content-Type": "application/json" },
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, providerError.status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: providerError.status,
+                  headers: { "Cache-Control": "no-store" },
                 },
               );
             }
 
             if (!upstream.ok) {
-              const errMsg =
-                upstream.status === 429
-                  ? "Rate limit exceeded. Please wait a moment."
-                  : upstream.status === 402
-                    ? "Image provider quota exhausted."
-                    : "AI service is temporarily unavailable. Please try again.";
-              const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+              const providerError = mapProviderError(await providerErrorFromResponse(upstream));
+              const errMsg = providerError.message;
+              const status = providerError.status;
               await finalizeGeneration({
                 eventId: usageEventId,
                 status: "provider_rejected",
@@ -1602,7 +2083,6 @@ export const Route = createFileRoute("/api/chat")({
                 toolCalls: activityEvents.length,
                 error: `provider_http_${upstream.status}`,
               }).catch(() => undefined);
-              void upstream.body?.cancel().catch(() => undefined);
               logSafeFailure("error", "[chat] final provider rejected request", logContext, {
                 status: upstream.status,
                 category: "provider",
@@ -1651,7 +2131,19 @@ export const Route = createFileRoute("/api/chat")({
                         ),
                       );
                     }
-                    controller.enqueue(enc.encode(sseChunk(`\n\n_${errMsg}_`)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: errMsg,
+                          code: providerError.code,
+                          category: categorizeError(providerError, status),
+                          retryable: providerError.retryable,
+                          status,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                     controller.close();
                   },
@@ -1663,10 +2155,15 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 });
               }
-              return new Response(JSON.stringify({ error: errMsg }), {
-                status,
-                headers: { "Content-Type": "application/json" },
-              });
+              return Response.json(
+                {
+                  ...providerError.toSafeResponse(),
+                  category: categorizeError(providerError, status),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                { status, headers: { "Cache-Control": "no-store" } },
+              );
             }
 
             let boundedUpstreamBody: ReadableStream<Uint8Array>;
@@ -1763,6 +2260,20 @@ export const Route = createFileRoute("/api/chat")({
             };
             const stream = new ReadableStream({
               async start(controller) {
+                controller.enqueue(
+                  enc.encode(
+                    sseEvent(
+                      memorySourcesDelta(
+                        auth?.userId ?? null,
+                        memorySourceRefs,
+                        Boolean(temporary),
+                      ),
+                    ),
+                  ),
+                );
+                if (webSources.length) {
+                  controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(webSources))));
+                }
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(
@@ -1814,7 +2325,19 @@ export const Route = createFileRoute("/api/chat")({
                       category: "provider",
                       code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
                     });
-                    controller.enqueue(enc.encode(sseChunk(providerFailureMessage)));
+                    controller.enqueue(
+                      enc.encode(
+                        sseEvent({
+                          kind: "error",
+                          error: providerFailureMessage.trim(),
+                          code: providerFailureCode,
+                          category: providerTimedOut ? "model_timeout" : "streaming_interruption",
+                          retryable: true,
+                          status: providerTimedOut ? 504 : 502,
+                          request_id: requestId,
+                        }),
+                      ),
+                    );
                     controller.enqueue(enc.encode(sseDone()));
                   }
                 }
@@ -1838,6 +2361,27 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (e instanceof ChatPreflightError) {
+              logSafeFailure("error", "[chat] preflight failed", logContext, {
+                status: e.status,
+                category: "server",
+                code: e.code,
+              });
+              return Response.json(
+                {
+                  ...e.toEnvelope(),
+                  requestId,
+                  timestamp: new Date().toISOString(),
+                },
+                {
+                  status: e.status,
+                  headers: {
+                    "Cache-Control": "no-store",
+                    ...(e.retryable ? { "Retry-After": "5" } : {}),
+                  },
+                },
+              );
+            }
             if (request.signal.aborted) {
               return new Response(null, {
                 status: 499,
@@ -1846,7 +2390,12 @@ export const Route = createFileRoute("/api/chat")({
             }
             const providerError = mapProviderError(e);
             const status = providerError.status;
-            const envelope = buildErrorEnvelope(providerError, requestId, status);
+            const envelope = {
+              ...providerError.toSafeResponse(),
+              category: categorizeError(providerError, status),
+              requestId,
+              timestamp: new Date().toISOString(),
+            };
             logSafeFailure("error", "[chat] handler failed", logContext, {
               status,
               category: "server",
@@ -1856,6 +2405,8 @@ export const Route = createFileRoute("/api/chat")({
               status,
               headers: { "Content-Type": "application/json" },
             });
+          } finally {
+            preflight.close();
           }
         };
         return await withRequestId(await run());

@@ -1,7 +1,57 @@
+import { normalizeMemorySources, type MemorySources } from "./memory-sources.mjs";
 import type { ModeId } from "./modes";
+import {
+  chatHistoryView,
+  canWriteChatHistory,
+  chatHistorySnapshot,
+  invalidateChatHistorySnapshot,
+  CHAT_HISTORY_CHANGED_EVENT,
+} from "./chat-history-bridge.ts";
+import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
+
+export { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
+export type ConversationWorkflowSkill = {
+  installationId: string;
+  versionId: string;
+  name: string;
+};
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const CONVERSATION_WORKFLOW_SKILL_KEYS = new Set(["installationId", "versionId", "name"]);
+export function isConversationWorkflowSkill(value: unknown): value is ConversationWorkflowSkill {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  if (
+    keys.length !== CONVERSATION_WORKFLOW_SKILL_KEYS.size ||
+    keys.some((key) => !CONVERSATION_WORKFLOW_SKILL_KEYS.has(key))
+  )
+    return false;
+  const candidate = value as Partial<ConversationWorkflowSkill>;
+  return (
+    typeof candidate.installationId === "string" &&
+    UUID_PATTERN.test(candidate.installationId) &&
+    typeof candidate.versionId === "string" &&
+    UUID_PATTERN.test(candidate.versionId) &&
+    typeof candidate.name === "string" &&
+    candidate.name.trim().length > 0 &&
+    candidate.name.length <= 120
+  );
+}
+export type ComposerToolId =
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+const COMPOSER_TOOL_IDS = new Set<ComposerToolId>([
+  "web_search",
+  "deep_research",
+  "image",
+  "study",
+  "data_analysis",
+  "file_analysis",
+]);
+export function isComposerToolId(value: unknown): value is ComposerToolId {
+  return typeof value === "string" && COMPOSER_TOOL_IDS.has(value as ComposerToolId);
+}
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
@@ -19,7 +69,19 @@ export type Attachment =
       size?: number | null;
       sourceProject?: string | null;
     };
-export type Activity = { tool: string; label: string; status: "done" | "running" };
+export type Activity = {
+  tool: string;
+  label: string;
+  status: "done" | "running" | "failed" | "canceled";
+};
+export type ResearchProgress = {
+  stage: string;
+  label: string;
+  status: "created" | "pending" | "running" | "complete" | "failed" | "canceled";
+  detail?: string;
+  progress: number;
+  warnings?: string[];
+};
 export type PendingConfirm = {
   actionId: string;
   tool: string;
@@ -34,10 +96,62 @@ export type Message = {
   content: string;
   attachments?: Attachment[];
   pendingImage?: boolean;
+  /** Identifiers of context provided for this response; never memory bodies. */
+  memorySources?: MemorySources;
   activities?: Activity[];
+  /** Safe, provider-normalized web sources used to produce this response. */
+  sources?: ResponseSource[];
+  researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
+  /** A stopped or failed response remains retryable instead of reading as a completed answer. */
+  generationStatus?: "stopped" | "failed";
+  /** The explicit composer operation that created this response, retained for faithful retry. */
+  requestedTool?: ComposerToolId;
 };
+
+export function markAssistantStopped(messages: Message[], assistantMessageId: string): Message[] {
+  const assistantIndex = messages.findIndex(
+    (message) => message.id === assistantMessageId && message.role === "assistant",
+  );
+  if (assistantIndex === -1) return messages;
+
+  return messages.map((message, index) => {
+    if (index !== assistantIndex) return message;
+    const { pendingImage: _pendingImage, ...terminalMessage } = message;
+    const researchRunning =
+      message.researchProgress &&
+      !["complete", "failed", "canceled"].includes(message.researchProgress.status);
+    return {
+      ...terminalMessage,
+      generationStatus: "stopped" as const,
+      activities: message.activities?.map((activity) =>
+        activity.status === "running" ? { ...activity, status: "canceled" as const } : activity,
+      ),
+      ...(researchRunning && message.researchProgress
+        ? {
+            researchProgress: {
+              ...message.researchProgress,
+              label: "Research canceled",
+              status: "canceled" as const,
+            },
+          }
+        : {}),
+    };
+  });
+}
+/** Only content is replayed; attribution IDs and other response metadata stay private. */
+export function chatRequestMessages(previous: Message[], latest: Message) {
+  return [
+    ...previous.map(({ role, content }) => ({ role, content })),
+    { role: latest.role, content: latest.content, attachments: latest.attachments },
+  ];
+}
+
 export type Conversation = {
+  /** A selected Kova never carries link capabilities or another user's credentials. */
+  kova?: { id: string; versionId?: string };
+  /** An owner installation and immutable version reference; package text stays server-side. */
+  skill?: ConversationWorkflowSkill;
   id: string;
   title: string;
   messages: Message[];
@@ -87,6 +201,7 @@ function isConversation(value: unknown): value is Conversation {
     typeof candidate.createdAt === "number" &&
     typeof candidate.updatedAt === "number" &&
     typeof candidate.mode === "string" &&
+    (candidate.skill === undefined || isConversationWorkflowSkill(candidate.skill)) &&
     (candidate.memoryStartIndex === undefined ||
       (Number.isInteger(candidate.memoryStartIndex) && candidate.memoryStartIndex >= 0)) &&
     Array.isArray(candidate.messages) &&
@@ -100,7 +215,60 @@ function isConversation(value: unknown): value is Conversation {
   );
 }
 
-function boundConversations(value: unknown[]): Conversation[] {
+const researchStatuses = new Set<ResearchProgress["status"]>([
+  "created",
+  "pending",
+  "running",
+  "complete",
+  "failed",
+  "canceled",
+]);
+
+export function normalizeResearchProgress(
+  value: unknown,
+  interruptNonterminal = false,
+): ResearchProgress | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Partial<ResearchProgress>;
+  if (
+    typeof candidate.stage !== "string" ||
+    typeof candidate.label !== "string" ||
+    !researchStatuses.has(candidate.status as ResearchProgress["status"]) ||
+    typeof candidate.progress !== "number" ||
+    !Number.isFinite(candidate.progress)
+  )
+    return undefined;
+  const interrupted =
+    interruptNonterminal &&
+    candidate.status !== "complete" &&
+    candidate.status !== "failed" &&
+    candidate.status !== "canceled";
+  const warnings = Array.isArray(candidate.warnings)
+    ? candidate.warnings
+        .filter((warning): warning is string => typeof warning === "string")
+        .map((warning) => warning.trim().slice(0, 320))
+        .filter(Boolean)
+        .slice(-3)
+    : [];
+  return {
+    stage: candidate.stage.slice(0, 80),
+    label: interrupted ? "Research interrupted" : candidate.label.slice(0, 160),
+    status: interrupted ? "failed" : (candidate.status as ResearchProgress["status"]),
+    ...(interrupted
+      ? { detail: "This research stopped when the page reloaded. Retry to continue." }
+      : typeof candidate.detail === "string" && candidate.detail
+        ? { detail: candidate.detail.slice(0, 240) }
+        : {}),
+    progress: Math.min(1, Math.max(0, candidate.progress)),
+    ...(warnings.length ? { warnings } : {}),
+  };
+}
+
+function boundConversations(
+  value: unknown[],
+  userKey: ChatStorageUserKey,
+  interruptResearch = false,
+): Conversation[] {
   const seen = new Set<string>();
   return value
     .filter(isConversation)
@@ -113,7 +281,32 @@ function boundConversations(value: unknown[]): Conversation[] {
     .map((conversation) => {
       const messages = dedupeMessages(conversation.messages);
       const removedCount = Math.max(0, messages.length - MAX_MESSAGES_PER_CONVERSATION);
-      const boundedMessages = messages.slice(-MAX_MESSAGES_PER_CONVERSATION);
+      const boundedMessages = sanitizeMessageMemorySources(
+        messages.slice(-MAX_MESSAGES_PER_CONVERSATION),
+        userKey,
+        conversation.temporary,
+      ).map((message) => {
+        const { researchProgress: storedResearchProgress, ...messageWithoutResearchProgress } =
+          message;
+        const researchProgress = normalizeResearchProgress(
+          storedResearchProgress,
+          interruptResearch,
+        );
+        return {
+          ...messageWithoutResearchProgress,
+          ...(researchProgress ? { researchProgress } : {}),
+          ...(researchProgress?.label === "Research interrupted" &&
+          Array.isArray(messageWithoutResearchProgress.activities)
+            ? {
+                activities: messageWithoutResearchProgress.activities.map((activity) =>
+                  activity.status === "running"
+                    ? { ...activity, status: "failed" as const }
+                    : activity,
+                ),
+              }
+            : {}),
+        };
+      });
       return {
         ...conversation,
         messages: boundedMessages,
@@ -127,6 +320,48 @@ function boundConversations(value: unknown[]): Conversation[] {
           : {}),
       };
     });
+}
+
+function sanitizeMessageMemorySources(
+  messages: Message[],
+  userKey: ChatStorageUserKey,
+  temporary = false,
+): Message[] {
+  return messages.map((message) => {
+    const {
+      memorySources: rawSources,
+      sources: rawResponseSources,
+      generationStatus,
+      requestedTool,
+      ...rest
+    } = message;
+    const memorySources =
+      message.role === "assistant"
+        ? normalizeMemorySources(rawSources, userKey, temporary)
+        : undefined;
+    const responseSources =
+      message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
+    return {
+      ...rest,
+      ...(memorySources ? { memorySources } : {}),
+      ...(responseSources ? { sources: responseSources } : {}),
+      ...(message.role === "assistant" &&
+      (generationStatus === "stopped" || generationStatus === "failed")
+        ? { generationStatus }
+        : {}),
+      ...(message.role === "assistant" && isComposerToolId(requestedTool) ? { requestedTool } : {}),
+    };
+  });
+}
+
+function sanitizeArchivedConversations(
+  value: unknown[],
+  userKey: ChatStorageUserKey,
+): Conversation[] {
+  return value.filter(isConversation).map((conversation) => ({
+    ...conversation,
+    messages: sanitizeMessageMemorySources(conversation.messages, userKey, conversation.temporary),
+  }));
 }
 
 export function dedupeMessages(messages: Message[]): Message[] {
@@ -236,6 +471,8 @@ export function pendingActiveStorageKey(userKey: ChatStorageUserKey): string {
 
 export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
+  const synced = chatHistoryView(userKey);
+  if (synced?.ready) return synced.active;
   try {
     const raw = readWithGuestLegacyMigration(
       userKey,
@@ -244,18 +481,31 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
     );
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? boundConversations(parsed) : [];
+    return Array.isArray(parsed) ? boundConversations(parsed, userKey, true) : [];
   } catch {
     return [];
   }
 }
 
-export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]): boolean {
+export function saveConversations(
+  userKey: ChatStorageUserKey,
+  convs: Conversation[],
+  options?: { snapshot: number },
+): boolean | Promise<boolean> {
   if (typeof window === "undefined") return false;
+  if (!canWriteChatHistory(userKey)) return false;
+  if (options && options.snapshot !== chatHistorySnapshot(userKey)) return false;
+  if (!options) invalidateChatHistorySnapshot(userKey);
+  const synced = chatHistoryView(userKey);
+  if (synced) {
+    if (!synced.ready || !synced.writable) return false;
+    synced.markDirty();
+    return synced.write(convs, false, Boolean(options));
+  }
   try {
     localStorage.setItem(
       conversationStorageKey(userKey),
-      JSON.stringify(boundConversations(convs)),
+      JSON.stringify(boundConversations(convs, userKey)),
     );
     if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
     return true;
@@ -266,7 +516,34 @@ export function saveConversations(userKey: ChatStorageUserKey, convs: Conversati
   }
 }
 
+/** Persist an explicit temporary-to-regular conversion before updating the UI. */
+export async function persistTemporaryConversation(
+  userKey: ChatStorageUserKey,
+  active: Conversation,
+  conversations: Conversation[],
+): Promise<Conversation[] | null> {
+  if (!active.temporary || !conversations.some((conversation) => conversation.id === active.id)) {
+    return null;
+  }
+  const converted: Conversation = {
+    ...active,
+    temporary: false,
+    temporaryContext: undefined,
+    memoryStartIndex: active.messages.length,
+    // Temporary branches have no durable branch rows. Once their temporary
+    // source is discarded, the saved conversation must become its own root.
+    branchRootId: active.id,
+    branchOrigin: undefined,
+    updatedAt: Date.now(),
+  };
+  const nextConversations = conversations
+    .map((conversation) => (conversation.id === active.id ? converted : conversation))
+    .filter((conversation) => !conversation.temporary);
+  return (await saveConversations(userKey, nextConversations)) ? nextConversations : null;
+}
+
 export function clearConversations(userKey: ChatStorageUserKey) {
+  if (chatHistoryView(userKey)) return saveConversations(userKey, []);
   if (typeof window === "undefined") return;
   localStorage.removeItem(conversationStorageKey(userKey));
   if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
@@ -274,13 +551,16 @@ export function clearConversations(userKey: ChatStorageUserKey) {
 
 export function loadArchivedConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
+  const synced = chatHistoryView(userKey);
+  if (synced?.ready) return synced.archived;
   try {
     const raw = readWithGuestLegacyMigration(
       userKey,
       archivedConversationStorageKey(userKey),
       LEGACY_ARCHIVED_KEY,
     );
-    return JSON.parse(raw ?? "[]") as Conversation[];
+    const parsed: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(parsed) ? sanitizeArchivedConversations(parsed, userKey) : [];
   } catch {
     return [];
   }
@@ -290,24 +570,37 @@ export function archiveConversation(userKey: ChatStorageUserKey, conversation: C
   const next = [
     conversation,
     ...loadArchivedConversations(userKey).filter((item) => item.id !== conversation.id),
-  ].slice(0, 200);
-  saveArchivedConversations(userKey, next);
+  ];
+  return saveArchivedConversations(userKey, next);
 }
 
 export function saveArchivedConversations(
   userKey: ChatStorageUserKey,
   conversations: Conversation[],
-) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(
-    archivedConversationStorageKey(userKey),
-    JSON.stringify(conversations.slice(0, 500)),
-  );
-  if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
+): boolean | Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (!canWriteChatHistory(userKey)) return false;
+  invalidateChatHistorySnapshot(userKey);
+  const synced = chatHistoryView(userKey);
+  if (synced) {
+    if (!synced.ready || !synced.writable) return false;
+    synced.markDirty();
+    return synced.write(conversations, true);
+  }
+  try {
+    localStorage.setItem(
+      archivedConversationStorageKey(userKey),
+      JSON.stringify(sanitizeArchivedConversations(conversations.slice(0, 500), userKey)),
+    );
+    if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function removeArchivedConversation(userKey: ChatStorageUserKey, id: string) {
-  saveArchivedConversations(
+  return saveArchivedConversations(
     userKey,
     loadArchivedConversations(userKey).filter((item) => item.id !== id),
   );
@@ -413,7 +706,16 @@ export function subscribeToConversationChanges(
     if (event.key === key) listener(loadConversations(userKey));
   };
   window.addEventListener("storage", handle);
-  return () => window.removeEventListener("storage", handle);
+  const cloud = (event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.ownerId === userKey && detail.source === "cloud")
+      listener(loadConversations(userKey));
+  };
+  window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, cloud);
+  return () => {
+    window.removeEventListener("storage", handle);
+    window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, cloud);
+  };
 }
 
 /** Create a persisted, independent branch without mutating its source conversation. */
@@ -431,6 +733,13 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       id: newId(),
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
+      sources: message.sources?.map((source) => ({ ...source })),
+      researchProgress: message.researchProgress
+        ? {
+            ...message.researchProgress,
+            warnings: message.researchProgress.warnings?.slice(),
+          }
+        : undefined,
       pendingConfirms: message.pendingConfirms?.map((confirmation) => ({ ...confirmation })),
     })),
     createdAt: timestamp,
@@ -447,4 +756,15 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       title: source.title,
     },
   };
+}
+
+// Some environments report non-canonical locales (e.g. "en-US@posix"), which the
+// API rejects. Fall back to a canonical tag instead of failing the request.
+export function chatRequestLocale(): string {
+  const raw = typeof navigator !== "undefined" ? navigator.language : "en-US";
+  try {
+    return Intl.getCanonicalLocales(raw)[0] ?? "en-US";
+  } catch {
+    return "en-US";
+  }
 }

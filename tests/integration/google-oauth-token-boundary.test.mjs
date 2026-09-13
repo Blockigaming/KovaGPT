@@ -53,6 +53,13 @@ test("application token access remains in the server-only OAuth module", async (
     readSource("src/lib/google-client.ts"),
   ]);
 
-  assert.match(server, /\.from\("google_oauth_tokens"\)/u);
+  assert.match(server, /\.rpc\("google_connection_rpc"/u);
+  const migration = await readSource(
+    "supabase/migrations/20260905005417_google_multiaccount_lifecycle.sql",
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.google_connection_rpc\(uuid,text,jsonb\) FROM PUBLIC,anon,authenticated/,
+  );
   assert.doesNotMatch(browser, /google_oauth_tokens/u);
 });

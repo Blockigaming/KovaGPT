@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquareDashed, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, MessageSquareDashed, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -94,5 +94,81 @@ export function TemporaryChatStartDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function TemporaryChatBanner({
+  tempChatContext,
+  canSave,
+  isStreaming,
+  onSave,
+  onTurnOff,
+}: {
+  tempChatContext: TemporaryChatContext;
+  canSave: boolean;
+  isStreaming: boolean;
+  onSave: () => void;
+  onTurnOff: () => void;
+}) {
+  return (
+    <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+      <div className="flex min-w-0 items-center gap-2">
+        <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span>
+          {tempChatContext === "personalized"
+            ? "Temporary chat is on with existing context. It is not saved to history and will not create new saved memories."
+            : "Temporary chat is on. It is not saved to history and does not use or update saved memory, profile details, custom instructions, personality settings, or connected apps."}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {canSave ? (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isStreaming}
+            className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Save to history
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onTurnOff}
+          className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
+        >
+          Turn off
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function TemporaryChatToggle({
+  enabled,
+  confirmed,
+  onToggle,
+}: {
+  enabled: boolean;
+  confirmed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={enabled ? "Turn off temporary chat" : "Start temporary chat"}
+      aria-pressed={enabled}
+      title={enabled ? "Temporary chat on" : "Start temporary chat"}
+      className={`relative shrink-0 p-2 rounded-lg transition ${
+        enabled ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
+      }`}
+    >
+      <MessageSquareDashed className="w-5 h-5" />
+      {confirmed && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <Check className="w-4 h-4 text-primary drop-shadow" />
+        </span>
+      )}
+    </button>
   );
 }

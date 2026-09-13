@@ -325,11 +325,15 @@ export const createChatBranch = createServerFn({ method: "POST" })
         name: "create_chat_branch",
         args: definedArgs({
           p_chat_id: data.chatId,
+          p_conversation_id: data.conversationId,
           p_parent_branch_id: data.parentBranchId,
           p_branch_from_message_id: data.branchFromMessageId,
           p_branch_from_parent_message_id: data.branchFromParentMessageId,
+          p_branch_from_message_index: data.branchFromMessageIndex,
+          p_message_ids: data.messageIds,
           p_label: data.label,
           p_activate: data.active,
+          p_max_branches: MAX_BRANCHES_PER_CHAT,
         }),
       },
       {
@@ -352,26 +356,10 @@ export const createChatBranch = createServerFn({ method: "POST" })
     if (!row) throw new Error("That branch could not be created. Please try again.");
     const branchRow = row as unknown as BranchRow;
 
-    // The canonical RPC does not take a conversation mapping, so persist it on
-    // the owner's own row afterwards. If that write is rejected the branch is
-    // still real, and the caller keeps the conversation id it already knows.
-    if (!branchRow.conversation_id) {
-      const mapping = {
-        conversation_id: data.conversationId,
-        branch_from_message_index: data.branchFromMessageIndex,
-        message_ids: data.messageIds,
-      };
-      const { data: mapped } = await context.supabase
-        .from("chat_branches")
-        // The generated types lag the production columns; the migration in this
-        // release adds them, so the shape is checked by the schema contract test.
-        .update(mapping as never)
-        .eq("owner_id", context.userId)
-        .eq("id", branchRow.id)
-        .select(BRANCH_COLUMNS)
-        .maybeSingle();
-      if (mapped) return toBranch(mapped as unknown as BranchRow);
-      return toBranch({ ...branchRow, conversation_id: data.conversationId });
+    // Both supported RPCs persist the full conversation mapping atomically.
+    // Never report success for an incomplete/mismatched durable branch.
+    if (branchRow.conversation_id !== data.conversationId) {
+      throw new Error("That branch could not be created. Please try again.");
     }
     return toBranch(branchRow);
   });
@@ -733,6 +721,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
         .from("project_files")
         .select("id, name, project_id")
         .eq("project_id", pin.project_id ?? "")
+        .eq("status", "ready")
         .eq("id", pin.source_id)
         .maybeSingle();
       if (!file) {

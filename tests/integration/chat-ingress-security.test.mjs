@@ -10,10 +10,10 @@ test("chat uses the shared streamed byte-bounded JSON reader before provider rou
 
   assert.match(ingress, /mediaType !== "application\/json"/);
   assert.match(ingress, /unsupported_media_type/);
-  assert.match(ingress, /readBoundedJsonObject\(request, maxBytes\)/);
-  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES\)/);
-  assert.match(chat, /error instanceof ChatIngressError/);
-  assert.match(chat, /toChatIngressErrorEnvelope\(error, requestId\)/);
+  assert.match(ingress, /readBoundedJsonObject\(request, maxBytes, signal\)/);
+  assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES, signal\)/);
+  assert.match(chat, /ingressError instanceof ChatIngressError/);
+  assert.match(chat, /toChatIngressErrorEnvelope\(ingressError, requestId\)/);
   assert.ok(chat.indexOf("readChatRequest(request") < chat.indexOf("optionalUser(request)"));
   assert.ok(chat.indexOf("readChatRequest(request") < chat.indexOf("missingAiProviderResponse()"));
   assert.doesNotMatch(chat, /request\.text\(\)|request\.json\(\)/);
@@ -93,8 +93,10 @@ test("only the latest user turn can carry provider-bound attachments", () => {
   assert.match(chat, /const currentAttachments = lastUser\?\.attachments \?\? \[\]/);
   assert.ok(chat.indexOf("const currentAttachments") < chat.indexOf("missingAiProviderResponse()"));
 
-  assert.match(mainChat, /\.\.\.priorMessages\.map\(\(message\) => \(\{/);
-  assert.match(mainChat, /attachments: userMsg\.attachments/);
+  assert.match(mainChat, /chatRequestMessages\(priorMessages, userMsg\)/);
+  const store = read("src/lib/chat-store.ts");
+  assert.match(store, /previous\.map\(\(\{ role, content \}\) => \(\{ role, content \}\)\)/);
+  assert.match(store, /attachments: latest\.attachments/);
   assert.doesNotMatch(mainChat, /\[\.\.\.priorMessages, userMsg\]\.map/);
 
   assert.match(

@@ -191,16 +191,16 @@ test("automatic memory summarization never consumes the foreground chat quota", 
     new URL("../../src/routes/index.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(
-    clientSource,
-    /const memoryStartIndex = Math\.max\(0, active\.memoryStartIndex \?\? 0\)/,
+  const memoryPayload = await readFile(
+    new URL("../../src/lib/chat-summary-snapshot.mjs", import.meta.url),
+    "utf8",
   );
-  assert.match(clientSource, /active\.messages\.slice\(memoryStartIndex\)/);
-  assert.match(clientSource, /memoryMessages\s*\.slice\(-30\)/);
-  assert.match(clientSource, /const memoryTitle = deriveTitle\(/);
-  assert.match(clientSource, /title: memoryTitle\.slice\(0, 120\)/);
+  assert.match(clientSource, /scheduleMemoryWrites\(active, userKey, controller\.signal\)/);
+  assert.match(memoryPayload, /memoryMessages\s*\.slice\(-30\)/);
+  assert.match(memoryPayload, /const memoryTitle = deriveTitle\(/);
+  assert.match(memoryPayload, /title: memoryTitle\.slice\(0, 120\)/);
   assert.doesNotMatch(clientSource, /title: active\.title\.slice\(0, 120\)/);
-  assert.match(clientSource, /message\.content\.slice\(0, 2000\)/);
+  assert.match(memoryPayload, /message\.content\.slice\(0, 2000\)/);
 });
 
 test("memory persistence surfaces pruning lookup and deletion failures", async () => {

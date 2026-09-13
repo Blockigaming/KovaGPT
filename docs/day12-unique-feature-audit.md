@@ -80,4 +80,6 @@ Day 14 prioritizes execution and proactive behavior:
 - Predictive features must distinguish deterministic facts from AI-generated suggestions.
 - Existing mature systems should be composed rather than duplicated.
 - No fake controls or success states.
-- Voice remains intentionally excluded.
+- This historical checkpoint did not implement Voice. The September 11 final goal now
+  requires it, but Voice remains unavailable until its safety, privacy, device,
+  provider, latency, and cost gates are implemented.

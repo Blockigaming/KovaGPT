@@ -76,17 +76,25 @@ test("chat history is searchable from both the sidebar and command palette", asy
   assert.match(home, /onSelectArchived/);
 });
 
-test("all currently implementable gaps are closed and deferred gaps are classified", async () => {
+test("gap ledger separates autonomous work, unavailable scope, and owner activation", async () => {
   const ledger = await read("docs/remaining-chatgpt-gaps.md");
-  assert.match(ledger, /A — Fully implementable now[\s\S]*Empty after this checkpoint/);
   for (const category of [
-    "B — Requires backend work",
-    "C — Requires provider support",
-    "D — Requires proprietary OpenAI infrastructure",
+    "Highest-priority autonomous source work",
+    "Required but currently unavailable",
+    "Genuine owner or approved-live dependencies",
+    "Permanent truth boundaries",
   ]) {
-    assert.match(ledger, new RegExp(category));
+    assert.ok(ledger.includes(category), `missing gap category: ${category}`);
   }
-  assert.match(ledger, /Workspace Timeline/);
+  for (const priority of [1, 2, 3, 4]) {
+    assert.match(ledger, new RegExp(`\\| ${priority}\\s+\\|`));
+  }
+  for (const requirement of ["FG-07", "FG-X1", "FG-10", "FG-09"]) {
+    assert.match(ledger, new RegExp(requirement));
+  }
+  assert.match(ledger, /owner-declared \*\*76\.5%\*\*/i);
+  assert.match(ledger, /specified, implemented, locally verified, hosted verified/i);
+  assert.match(ledger, /Do not merge PR #319, deploy, apply live migrations/i);
 });
 
 test("Workspace Timeline and batch context workflows use existing authorized records", async () => {

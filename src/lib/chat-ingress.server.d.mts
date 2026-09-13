@@ -53,6 +53,8 @@ export type ChatAttachment =
     };
 
 export type NormalizedChatPayload = {
+  kova?: { id: string; versionId?: string };
+  skill?: { installationId: string; versionId: string };
   messages: Array<{
     role: "user" | "assistant";
     content: string;
@@ -63,6 +65,9 @@ export type NormalizedChatPayload = {
   timezone?: string;
   locale?: string;
   chatId?: string;
+  memoryStartIndex?: number;
+  historyOffset?: number;
+  summaryProof?: { id: string; start: number; count: number; digest: string };
   personality?: string;
   projectId?: string;
   temporary?: boolean;
@@ -81,6 +86,7 @@ export function normalizeChatPayload(value: unknown): NormalizedChatPayload;
 export function readChatRequest(
   request: Request,
   maxBytes?: number,
+  signal?: AbortSignal,
 ): Promise<NormalizedChatPayload>;
 export function toChatIngressErrorEnvelope(
   error: ChatIngressError,

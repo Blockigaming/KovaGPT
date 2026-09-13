@@ -106,5 +106,5 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(paymentWebhook, /resolveBillingPlan/);
   assert.match(paymentWebhook, /received: true,[\s\S]*duplicate: result\.duplicate/);
   assert.match(paymentWebhook, /processStripeEvent/);
-  assert.match(paymentWebhook, /status: verificationFailure \? 400 : 503/);
+  assert.match(paymentWebhook, /status: retryableFailure \? 503 : 400/);
 });

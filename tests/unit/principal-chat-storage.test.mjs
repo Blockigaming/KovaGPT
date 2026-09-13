@@ -11,9 +11,11 @@ import {
   loadConversations,
   loadDraft,
   loadPendingActive,
+  markAssistantStopped,
   pendingActiveStorageKey,
   saveArchivedConversations,
   saveConversations,
+  persistTemporaryConversation,
   saveDraft,
   savePendingActive,
 } from "../../src/lib/chat-store.ts";
@@ -66,6 +68,85 @@ function conversation(id, title = id) {
 }
 
 beforeEach(() => storage.clear());
+
+test("stopping preserves the latest assistant turn and closes only its active work", () => {
+  const messages = [
+    { id: "user", role: "user", content: "Explain this" },
+    {
+      id: "assistant",
+      role: "assistant",
+      content: "Partial answer",
+      activities: [
+        { tool: "search", label: "Searching", status: "running" },
+        { tool: "read", label: "Source ready", status: "done" },
+      ],
+      researchProgress: {
+        stage: "searching",
+        label: "Searching sources",
+        status: "running",
+        progress: 0.4,
+      },
+    },
+  ];
+
+  const stopped = markAssistantStopped(messages, "assistant");
+
+  assert.notEqual(stopped, messages);
+  assert.equal(stopped[0], messages[0]);
+  assert.equal(stopped[1].generationStatus, "stopped");
+  assert.deepEqual(
+    stopped[1].activities.map(({ status }) => status),
+    ["canceled", "done"],
+  );
+  assert.deepEqual(stopped[1].researchProgress, {
+    stage: "searching",
+    label: "Research canceled",
+    status: "canceled",
+    progress: 0.4,
+  });
+});
+
+test("a response stopped before its first token remains durable and retryable", () => {
+  const chat = {
+    ...conversation("stopped-chat"),
+    messages: markAssistantStopped(
+      [
+        { id: "user", role: "user", content: "Help" },
+        {
+          id: "assistant",
+          role: "assistant",
+          content: "",
+          pendingImage: true,
+          requestedTool: "image",
+        },
+      ],
+      "assistant",
+    ),
+  };
+
+  assert.equal(saveConversations("account-a", [chat]), true);
+  assert.deepEqual(loadConversations("account-a")[0].messages.at(-1), {
+    id: "assistant",
+    role: "assistant",
+    content: "",
+    generationStatus: "stopped",
+    requestedTool: "image",
+  });
+});
+
+test("stopping targets the in-flight assistant and clears image progress", () => {
+  const messages = [
+    { id: "older", role: "assistant", content: "Complete answer" },
+    { id: "user", role: "user", content: "Create an image" },
+    { id: "in-flight", role: "assistant", content: "", pendingImage: true },
+  ];
+
+  const stopped = markAssistantStopped(messages, "in-flight");
+
+  assert.equal(stopped[0], messages[0]);
+  assert.equal(stopped[2].generationStatus, "stopped");
+  assert.equal(stopped[2].pendingImage, undefined);
+});
 
 test("account switches isolate active chats, archives, drafts, and pending selection", () => {
   const accountA = "account-a";
@@ -186,4 +267,44 @@ test("every principal receives distinct deterministic storage keys", () => {
   assert.equal(new Set(principals.map(archivedConversationStorageKey)).size, principals.length);
   assert.equal(new Set(principals.map((value) => draftStorageKey(value, "chat"))).size, 3);
   assert.equal(new Set(principals.map(pendingActiveStorageKey)).size, principals.length);
+});
+
+test("temporary conversion persists a memory boundary and excludes other private chats", async () => {
+  const active = { ...conversation("temporary"), temporary: true, temporaryContext: "clean" };
+  const other = { ...conversation("other-private"), temporary: true };
+  const regular = conversation("regular");
+  const converted = await persistTemporaryConversation("account-a", active, [
+    active,
+    other,
+    regular,
+  ]);
+  assert.ok(converted);
+  assert.deepEqual(
+    converted.map((item) => item.id),
+    ["temporary", "regular"],
+  );
+  assert.equal(converted[0].temporary, false);
+  assert.equal(converted[0].temporaryContext, undefined);
+  assert.equal(converted[0].memoryStartIndex, active.messages.length);
+  assert.equal(converted[0].branchRootId, active.id);
+  assert.equal(converted[0].branchOrigin, undefined);
+  assert.deepEqual(converted[0].messages, active.messages);
+  assert.equal(active.temporary, true);
+  assert.equal(loadConversations("account-a")[0].memoryStartIndex, active.messages.length);
+  assert.deepEqual(loadConversations("account-b"), []);
+});
+
+test("temporary conversion reports storage failure without changing the private conversation", async () => {
+  const active = { ...conversation("temporary"), temporary: true };
+  const setItem = storage.setItem;
+  storage.setItem = () => {
+    throw new Error("quota exceeded");
+  };
+  try {
+    assert.equal(await persistTemporaryConversation("account-a", active, [active]), null);
+    assert.equal(active.temporary, true);
+    assert.equal(active.memoryStartIndex, undefined);
+  } finally {
+    storage.setItem = setItem;
+  }
 });

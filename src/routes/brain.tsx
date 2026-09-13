@@ -13,6 +13,7 @@ import {
   Target,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspaceSearch } from "@/components/WorkspaceSearch";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
   getKovaBrainSnapshot,
@@ -146,6 +147,7 @@ function BrainPage() {
           </Link>
         </header>
 
+        {enabled && user?.id ? <WorkspaceSearch key={user.id} userId={user.id} /> : null}
         {!isLoaded || (enabled && brain.isLoading) ? (
           <div className="mt-7 grid gap-4 lg:grid-cols-2">
             <div className="h-80 animate-pulse rounded-2xl bg-muted" />
