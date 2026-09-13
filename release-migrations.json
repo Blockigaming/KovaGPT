@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 146,
-  "latest": "20260910210000_workflow_skill_packages.sql",
+  "count": 147,
+  "latest": "20260913022249_stabilize_work_browser_session_timestamps.sql",
   "migrations": [
     {
       "order": 1,
@@ -3196,6 +3196,20 @@
         "workflow_skill_versions_owner_idx",
         "workflow_skill_installations_owner_idx"
       ]
+    },
+    {
+      "order": 147,
+      "filename": "20260913022249_stabilize_work_browser_session_timestamps.sql",
+      "timestamp": "20260913022249",
+      "sha256": "01a3f198633dd26ca38ee17ad70aa7c1a661059e1478686bfb18be06d278fb0f",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }
