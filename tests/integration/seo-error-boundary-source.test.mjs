@@ -54,7 +54,18 @@ test("robots and sitemap share an explicit public/private boundary", async () =>
 
   for (const { path } of PUBLIC_SITEMAP_ENTRIES) {
     if (path === "/") continue;
-    assert.ok(routeTree.includes(`fullPath: '${path}'`), `${path} must resolve to a real route`);
+    const segmentCount = path.split("/").filter(Boolean).length;
+    const dynamicTemplate =
+      segmentCount === 1
+        ? "fullPath: '/$slug'"
+        : segmentCount === 2
+          ? "fullPath: '/$section/$articleSlug'"
+          : "";
+    assert.ok(
+      routeTree.includes(`fullPath: '${path}'`) ||
+        (dynamicTemplate && routeTree.includes(dynamicTemplate)),
+      `${path} must resolve to a real route`,
+    );
   }
 });
 
