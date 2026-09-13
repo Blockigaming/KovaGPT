@@ -50,9 +50,22 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     rollout,
-    /recovers the exact Price ID from the durable nonterminal Checkout attempt/u,
+    /user-level Checkout attempt does not prove which subscription it created/u,
   );
-  assert.match(rollout, /requires exact-ID reconciliation before webhook retry/u);
+  assert.match(rollout, /remains visibly quarantined under that unmapped value/u);
+  assert.match(rollout, /grants no paid\s+entitlement/u);
+  assert.match(
+    rollout,
+    /quarantines exact-looking Pro rows[\s\S]*?no authoritative Stripe event or observation provenance/u,
+  );
+  assert.match(
+    rollout,
+    /If a row appears later, disable legacy intake and run exact-ID\s+reconciliation/u,
+  );
+  assert.match(
+    rollout,
+    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, and `20260913153000` in timestamp order/u,
+  );
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

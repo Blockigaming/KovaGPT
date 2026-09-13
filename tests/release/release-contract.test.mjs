@@ -21,6 +21,11 @@ test("CI contains all release gates and immutable actions", async () => {
     "git diff --check",
   ])
     assert.match(ci, new RegExp(gate.replaceAll(":", "\\:")));
+  assert.equal(
+    ci.match(/^\s+id: deployed_baseline$/gmu)?.length,
+    1,
+    "the deployed-baseline step ID must be unique within the verify job",
+  );
   assert.doesNotMatch(ci, /uses:\s+[^\n]+@v\d/);
 });
 test("smoke defaults to dry-run and never performs paid actions", async () => {
