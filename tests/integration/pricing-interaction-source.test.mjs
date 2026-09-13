@@ -41,6 +41,8 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     /historical Pro price\s+`price_1UAzhRAEZlsb6DBYlafU4mhc` \(USD 89\/month\)/u,
   );
   assert.match(manualHandoff, /do not offer it for\s+new USD 80 checkouts/u);
+  assert.match(manualHandoff, /do not create\s+another Price for this rollout/u);
+  assert.doesNotMatch(manualHandoff, /must\s+create a new immutable recurring Pro Price/u);
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

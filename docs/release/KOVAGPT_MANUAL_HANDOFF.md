@@ -42,12 +42,13 @@ before a write.
 | Supabase/Auth     | 2026-09-01: production project `mfbycmbjygcfkrsuepxf` reported Google enabled, but no successful production OAuth round trip was captured.                                                                                                                                                                                                     | Provider configuration is not end-to-end proof.                                              |
 
 **Pricing decision recorded 2026-09-07:** publish Plus at USD 16/month and Pro at USD 80/month.
-The dated live evidence above remains intentionally unchanged: Stripe still has the existing USD
-89/month Pro price. Before any release can advertise or charge USD 80, an authorized operator must
-create a new immutable recurring Pro Price at USD 80, move the `pro_monthly` lookup key under a
-reviewed migration, preserve recognition of existing subscription price IDs, and complete the
-approved sandbox/reconciliation evidence. This record is preparation only; no live Stripe write or
-real checkout was authorized or performed.
+The dated 2026-09-01 evidence above remains intentionally unchanged. A later 2026-09-13 handoff
+records the current immutable USD 80 Pro Price as `price_1UEw6FAEZlsb6DBYuksCKOBR`; do not create
+another Price for this rollout. The application and forward migration select that current Price
+while preserving recognition of the historical USD 89 Price
+`price_1UAzhRAEZlsb6DBYlafU4mhc` for existing subscriptions and webhook history. Before release,
+complete merge, database-lineage, Portal, sandbox, and reconciliation evidence. No real checkout
+was authorized or performed by this repository change.
 
 ## Non-negotiable entry gate
 
