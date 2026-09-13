@@ -5,9 +5,10 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("pricing keeps the published prices and production checkout lookup keys", async () => {
-  const [pricing, registry] = await Promise.all([
+  const [pricing, registry, billingPlans] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/lib/capability-registry.ts"),
+    read("src/lib/billing-plans.ts"),
   ]);
 
   assert.match(
@@ -18,6 +19,11 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     registry,
     /pro:\s*\{[\s\S]*?monthlyPriceUsd:\s*80,[\s\S]*?lookupKey:\s*BILLING_PLANS\.pro_monthly\.lookupKey/,
   );
+  assert.match(
+    billingPlans,
+    /pro_monthly:\s*\{[\s\S]*?lookupKey:\s*"pro_monthly",[\s\S]*?livePriceId:\s*"price_1UEw6FAEZlsb6DBYuksCKOBR"/,
+  );
+  assert.doesNotMatch(billingPlans, /price_1UAzhRAEZlsb6DBYlafU4mhc/);
   assert.match(pricing, /useStripeCheckout\(\)/);
   assert.match(
     pricing,
