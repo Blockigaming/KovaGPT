@@ -6,11 +6,14 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath =
   "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql";
+const proPriceRotationMigrationPath =
+  "supabase/migrations/20260913013131_register_pro_80_live_price.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
 const plusPriceId = "price_1UAzhHAEZlsb6DBYWw2oUCeO";
 const proPriceId = "price_1UAzhRAEZlsb6DBYlafU4mhc";
+const currentProPriceId = "price_1UEw6FAEZlsb6DBYuksCKOBR";
 const rotatedPlusPriceId = "price_RotatedPlus123";
 
 async function createDatabase({ beforeMigration } = {}) {
@@ -31,6 +34,9 @@ async function createDatabase({ beforeMigration } = {}) {
     CREATE TABLE public.family_links (
       member_id uuid PRIMARY KEY,
       owner_id uuid NOT NULL
+    );
+    CREATE TABLE public.account_deletion_fences (
+      user_id uuid PRIMARY KEY
     );
     CREATE FUNCTION public.family_owner_of(_user_id uuid)
     RETURNS uuid
@@ -90,6 +96,7 @@ async function createDatabase({ beforeMigration } = {}) {
   `);
   if (beforeMigration) await beforeMigration(database);
   await database.exec(await readFile(migrationPath, "utf8"));
+  await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
   return database;
 }
 
@@ -194,6 +201,45 @@ test("two exact historical Prices may share one lookup key without ambiguity", a
       subscriptionId: "sub_rotated",
     });
     assert.equal(await tier(database), "plus");
+  } finally {
+    await database.close();
+  }
+});
+
+test("the current Pro Price is checkout-eligible while the historical mapping remains", async () => {
+  const database = await createDatabase();
+  try {
+    await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
+    const mappings = await database.query(
+      `SELECT stripe_price_id, lookup_key, tier
+       FROM public.billing_plan_tiers
+       WHERE environment = 'live'
+         AND stripe_price_id IN ($1, $2)
+       ORDER BY stripe_price_id`,
+      [proPriceId, currentProPriceId],
+    );
+    assert.deepEqual(mappings.rows, [
+      { stripe_price_id: proPriceId, lookup_key: "pro_monthly", tier: "pro" },
+      { stripe_price_id: currentProPriceId, lookup_key: "pro_monthly", tier: "pro" },
+    ]);
+
+    await database.query(
+      `INSERT INTO public.stripe_customer_mappings
+         (environment, stripe_customer_id, user_id)
+       VALUES ('live', 'cus_current_pro', $1::uuid)`,
+      [userId],
+    );
+    const claim = await database.query(
+      `SELECT public.claim_stripe_checkout_attempt(
+         $1::uuid,
+         'live',
+         $2,
+         false
+       ) AS claim`,
+      [userId, currentProPriceId],
+    );
+    assert.equal(claim.rows[0]?.claim?.stripeCustomerId, "cus_current_pro");
+    assert.equal(claim.rows[0]?.claim?.trialEligible, false);
   } finally {
     await database.close();
   }
