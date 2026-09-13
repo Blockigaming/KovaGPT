@@ -534,7 +534,10 @@ type UserShape = {
   fullName?: string | null;
   imageUrl?: string | null;
   username?: string | null;
-  primaryEmailAddress?: { emailAddress?: string };
+  primaryEmailAddress?: {
+    emailAddress?: string;
+    verification?: { status: "verified" | "unverified" };
+  };
   emailAddresses?: Array<{ emailAddress?: string }>;
 } | null;
 
@@ -557,7 +560,12 @@ function adaptUser(u: SupabaseUser | null): UserShape {
       (meta.preferred_username as string | undefined) ??
       null,
     imageUrl,
-    primaryEmailAddress: email ? { emailAddress: email } : undefined,
+    primaryEmailAddress: email
+      ? {
+          emailAddress: email,
+          verification: { status: u.email_confirmed_at ? "verified" : "unverified" },
+        }
+      : undefined,
     emailAddresses: email ? [{ emailAddress: email }] : [],
   };
 }

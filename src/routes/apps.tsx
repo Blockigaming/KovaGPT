@@ -27,6 +27,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -40,6 +41,7 @@ import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
+import { WorkflowSkillsPanel } from "@/components/WorkflowSkillsPanel";
 import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
@@ -762,6 +764,7 @@ function GitHubManager() {
 function AppsPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
   const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
   const principalRef = useRef(principal);
@@ -774,6 +777,7 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [verificationBusy, setVerificationBusy] = useState(false);
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
@@ -786,6 +790,24 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+
+  const resendWorkflowVerification = async () => {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email || verificationBusy) return;
+    const generation = generationRef.current;
+    setVerificationBusy(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (generation !== generationRef.current) return;
+      if (error) throw error;
+      toast.success("Verification email sent. Follow its link, then refresh this page.");
+    } catch {
+      if (generation !== generationRef.current) return;
+      toast.error("Verification email could not be sent. Try again shortly.");
+    } finally {
+      if (generation === generationRef.current) setVerificationBusy(false);
+    }
+  };
 
   useEffect(() => {
     generationRef.current += 1;
@@ -1351,6 +1373,28 @@ function AppsPage() {
             </section>
 
             <GitHubManager key={principal ?? "unresolved"} />
+
+            {workflowSkillsAvailable ? (
+              <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+            ) : (
+              <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
+                <h2 id="skills-title" className="text-base font-semibold">
+                  Workflow skills
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Verify your primary email, then refresh this page to create or use workflow
+                  skills.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4 min-h-11"
+                  disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
+                  onClick={() => void resendWorkflowVerification()}
+                >
+                  {verificationBusy ? "Sending…" : "Resend verification email"}
+                </Button>
+              </section>
+            )}
 
             {filtered.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">

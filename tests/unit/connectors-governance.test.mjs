@@ -47,15 +47,18 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("voice stays disabled without adding provider secrets or billing claims", () => {
+test("required Voice stays unavailable without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
+  const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chat = read("src/components/ChatInput.tsx");
   const message = read("src/components/ChatMessage.tsx");
   const pricing = read("src/routes/pricing.tsx");
   const start = read("src/start.ts");
   const server = read("src/server.ts");
 
-  assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
+  assert.match(matrix, /Voice: REQUIRED \/ UNAVAILABLE/);
+  assert.match(capabilityRegistry, /voiceScope: "required_unavailable"/);
+  assert.match(capabilityRegistry, /voice:[\s\S]*availability: "unavailable"/);
   for (const source of [chat, message]) {
     assert.doesNotMatch(
       source,

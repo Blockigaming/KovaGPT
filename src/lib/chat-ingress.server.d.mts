@@ -54,6 +54,7 @@ export type ChatAttachment =
 
 export type NormalizedChatPayload = {
   kova?: { id: string; versionId?: string };
+  skill?: { installationId: string; versionId: string };
   messages: Array<{
     role: "user" | "assistant";
     content: string;

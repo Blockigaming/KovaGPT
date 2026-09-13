@@ -2,6 +2,7 @@
 const KEYS = Object.freeze({
   custom_kova_link_grants: ["kova_id", "user_id"],
   custom_kova_mutations: ["owner_id", "mutation_id"],
+  workflow_skill_mutation_export_rows: ["owner_id", "mutation_id"],
   agent_graph_preferences: ["owner_id", "run_id"],
   app_admin_roles: ["user_id"],
   banned_users: ["user_id"],

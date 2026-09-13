@@ -1,17 +1,24 @@
 # Kova capability evidence index
 
-Updated **2026-09-05**, source `1eb7ef53`; progress baseline remains **23.2%**.
+Updated **2026-09-12** against reviewed PR #319 implementation head
+`20940476881dadabfcedbfeadb4aba328dd8cd52`.
 
-The canonical human-readable inventory is [feature-parity.md](../feature-parity.md). Its [machine-readable companion](capability-audit.json) contains all 27 master areas with separate source, local, hosted, staging and production fields. Keep those records together when a package lands; do not maintain a second contradictory feature table here.
+Overall progress remains the owner-declared **76.5%** checkpoint. UI completion remains the separate
+owner-declared **1%** quality assessment.
 
-| Evidence                           | Authority / interpretation                                                                                                    |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Source scope and exact limitations | [27-area inventory](../feature-parity.md), feature-specific source documents and actual runtime paths.                        |
-| Actual tests                       | Per-surface test paths in the inventory. Test existence is not a current pass result.                                         |
-| Pending implementation/integration | [Remaining work](../remaining-chatgpt-gaps.md), including Work delegation/Sites, skills and active packages.                  |
-| Current public reference           | [Official source audit](chatgpt-surface-audit.md); unauthenticated public documents only.                                     |
-| Hosted CI/review                   | Exact final published commit/tree and terminal checks; this audit does not supply them.                                       |
-| Staging/production                 | Approved deployment record, real-provider/account canaries and rollback; not exercised by this audit.                         |
-| Exclusions                         | [Scope register](intentionally-excluded.md), including all voice/audio/dictation and native/proprietary/regulated boundaries. |
+The canonical evidence sources are kept together:
 
-A green local suite, source-complete adapter, empty exact-app manifest or route count must never be converted into full product parity, an available paid entitlement or production readiness.
+| Evidence             | Authority and interpretation                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controlling scope    | [September 11 final goal](../release/kova-final-goal-2026-09-11.md). New requirements remain specified or partial until evidence proves otherwise.              |
+| Requirement metadata | [Final-goal contract](../release/final-goal-contract.json), with stable IDs, owner, dependencies, acceptance tests, mappings, status, evidence, and boundaries. |
+| Current area status  | [27-area acceptance ledger](../release/acceptance-ledger.md) and its generated five-stage snapshot.                                                             |
+| Source/test evidence | This audit's [machine-readable surface inventory](capability-audit.json) plus feature-specific source documents and tests. Test existence is not a pass result. |
+| Remaining work       | [Current gap register](../remaining-chatgpt-gaps.md), including final-goal source gaps and genuine approval/live dependencies.                                  |
+| Hosted CI/review     | Exact reviewed commit and terminal workflow evidence. It verifies only the implemented scope on that tree.                                                      |
+| Staging/production   | Approved deployment record, real provider/account canaries, deployed SHA/image, monitoring, backup/recovery, and rollback. Not established by this audit.       |
+| Boundaries           | [Scope-boundary register](intentionally-excluded.md). Voice and native experiences are required incomplete scope, not exclusions.                               |
+
+A green suite, route, model label, empty app manifest, or historical audit must never be converted into
+full capability, provider availability, paid entitlement, production readiness, or a new progress
+percentage.

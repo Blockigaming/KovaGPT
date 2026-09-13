@@ -93,6 +93,21 @@ test("legacy migration requires an explicit choice and Temporary chats have no o
   assert.equal(state.records.secret, undefined);
   assert.throws(() => normalizeChatHistory({ ...chat(), temporary: true }, OWNER), /invalid/);
 });
+test("durable history preserves only the exact workflow skill selection tuple", () => {
+  const skill = {
+    installationId: "423e4567-e89b-42d3-a456-426614174000",
+    versionId: "523e4567-e89b-42d3-a456-426614174000",
+    name: "  Editorial review  ",
+  };
+  assert.deepEqual(normalizeChatHistory({ ...chat(), skill }, OWNER).skill, {
+    ...skill,
+    name: "Editorial review",
+  });
+  assert.throws(
+    () => normalizeChatHistory({ ...chat(), skill: { ...skill, instructions: "Injected" } }, OWNER),
+    /invalid/,
+  );
+});
 test("durable history preserves only terminal research and activity state", () => {
   const normalized = normalizeChatHistory(
     {
