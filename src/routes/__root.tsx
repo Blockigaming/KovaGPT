@@ -57,13 +57,6 @@ const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
   }
 })();`;
 
-const LOCALE_DOCUMENT_BOOTSTRAP = `(() => {
-  const segment = location.pathname.split("/")[1];
-  const supported = new Set(["en", "es", "fr", "de", "pt-BR", "ja", "ko", "ar"]);
-  if (!supported.has(segment)) return;
-  document.documentElement.lang = segment;
-  document.documentElement.dir = segment === "ar" ? "rtl" : "ltr";
-})();`;
 const EARLY_SHORTCUT_BOOTSTRAP = `(() => {
   const pendingShortcuts = [];
   const captureShortcut = (event) => {
@@ -290,7 +283,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>
-        <ScriptOnce>{LOCALE_DOCUMENT_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
         <Scripts />

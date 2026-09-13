@@ -104,8 +104,20 @@ test("public page system contains original truthfulness and review gates", () =>
   assert.match(content, /review\?: "legal" \| "admin"/);
   assert.match(shell, /legal review required/i);
   assert.match(root, /Skip to content/);
-  assert.match(root, /segment === "ar" \? "rtl" : "ltr"/u);
+  assert.doesNotMatch(root, /document\.documentElement\.(?:lang|dir)/u);
   assert.match(shell, /min-h-11/);
+});
+
+test("localized content scopes its language and direction without relabeling the English shell", () => {
+  for (const path of ["src/routes/$slug.tsx", "src/routes/$locale.home.tsx"]) {
+    const source = read(path);
+    assert.match(
+      source,
+      /<main\s+[\s\S]*?lang=\{(?:routeLocale|locale)\}[\s\S]*?dir=\{direction\}/u,
+    );
+    assert.match(source, /<span lang="en" className="sr-only">\s*Language/u);
+    assert.doesNotMatch(source, /document\.documentElement\.(?:lang|dir)/u);
+  }
 });
 
 test("public CTA audit prefers marked actions and retains legacy non-navigation coverage", () => {
@@ -113,6 +125,8 @@ test("public CTA audit prefers marked actions and retains legacy non-navigation 
   assert.match(audit, /const markedCtaTag/u);
   assert.match(audit, /main\.replace\(\/<nav/u);
   assert.match(audit, /const ctaTag = markedCtaTag \?\? legacyCtaTag/u);
+  assert.match(audit, /const duplicateDescriptions/u);
+  assert.match(audit, /duplicateDescriptions\.length/u);
 });
 
 test("public catch-all rejects every reserved application and security namespace", async () => {

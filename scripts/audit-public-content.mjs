@@ -131,6 +131,14 @@ const duplicateTitles = indexedRecords
       indexedRecords.findIndex(({ uniqueTitle }) => uniqueTitle === record.uniqueTitle) !== index,
   )
   .map(({ route, uniqueTitle }) => ({ route, title: uniqueTitle }));
+const duplicateDescriptions = indexedRecords
+  .filter(
+    (record, index) =>
+      indexedRecords.findIndex(
+        ({ uniqueDescription }) => uniqueDescription === record.uniqueDescription,
+      ) !== index,
+  )
+  .map(({ route, uniqueDescription }) => ({ route, description: uniqueDescription }));
 const duplicateCanonicals = indexedRecords
   .filter(
     (record, index) =>
@@ -145,6 +153,7 @@ console.log(
       failures: failures.map((record) => record.route),
       brokenInternalLinks,
       duplicateTitles,
+      duplicateDescriptions,
       duplicateCanonicals,
     },
     null,
@@ -155,6 +164,7 @@ if (
   failures.length ||
   brokenInternalLinks.length ||
   duplicateTitles.length ||
+  duplicateDescriptions.length ||
   duplicateCanonicals.length
 )
   process.exitCode = 1;

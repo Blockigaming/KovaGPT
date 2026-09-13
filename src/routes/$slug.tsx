@@ -1,5 +1,4 @@
 import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { PUBLIC_PAGE_BY_SLUG } from "@/lib/public-content";
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
@@ -410,50 +409,44 @@ function SourceLocaleHome({
   copy: (typeof translations)[SupportedLocale];
 }) {
   const direction = RTL_LOCALES.has(locale) ? "rtl" : "ltr";
-  useEffect(() => {
-    document.documentElement.lang = routeLocale;
-    document.documentElement.dir = direction;
-    return () => {
-      document.documentElement.lang = "en";
-      document.documentElement.dir = "ltr";
-    };
-  }, [direction, routeLocale]);
   return (
-    <div lang={routeLocale} dir={direction}>
-      <PublicSite>
-        <main
-          id="main-content"
-          className="mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-center px-4 py-16 sm:px-6"
-          tabIndex={-1}
+    <PublicSite>
+      <main
+        id="main-content"
+        lang={routeLocale}
+        dir={direction}
+        className="mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-center px-4 py-16 sm:px-6"
+        tabIndex={-1}
+      >
+        <p className="font-semibold text-muted-foreground">{copy.product}</p>
+        <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl">
+          {copy.title}
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{copy.description}</p>
+        <Link
+          to="/"
+          data-public-primary
+          className="mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
         >
-          <p className="font-semibold text-muted-foreground">{copy.product}</p>
-          <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl">
-            {copy.title}
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{copy.description}</p>
-          <Link
-            to="/"
-            data-public-primary
-            className="mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
+          {copy.open}
+        </Link>
+        <label className="mt-10 w-fit text-sm">
+          <span lang="en" className="sr-only">
+            Language
+          </span>
+          <select
+            value={routeLocale}
+            onChange={(event) => location.assign(`/${event.target.value}`)}
+            className="min-h-11 rounded-lg border bg-background px-3"
           >
-            {copy.open}
-          </Link>
-          <label className="mt-10 w-fit text-sm">
-            <span className="sr-only">Language</span>
-            <select
-              value={routeLocale}
-              onChange={(event) => location.assign(`/${event.target.value}`)}
-              className="min-h-11 rounded-lg border bg-background px-3"
-            >
-              {SOURCE_LOCALE_PATHS.map(({ path }) => (
-                <option key={path} value={path}>
-                  {path}
-                </option>
-              ))}
-            </select>
-          </label>
-        </main>
-      </PublicSite>
-    </div>
+            {SOURCE_LOCALE_PATHS.map(({ path }) => (
+              <option key={path} value={path}>
+                {path}
+              </option>
+            ))}
+          </select>
+        </label>
+      </main>
+    </PublicSite>
   );
 }
