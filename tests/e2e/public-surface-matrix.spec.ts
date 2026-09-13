@@ -4,6 +4,28 @@ import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
 const verificationProjects = new Set(["phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
+const expandedPublicRoutes = new Set([
+  "/academy",
+  "/business-data",
+  "/careers",
+  "/charter",
+  "/consumer-privacy",
+  "/economic-research-exchange",
+  "/enterprise-privacy",
+  "/interview-guide",
+  "/open-model-feedback",
+  "/open-models",
+  "/our-structure",
+  "/policies",
+  "/residency",
+  "/safety",
+  "/science",
+  "/security-and-privacy",
+  "/solutions",
+  "/student-collective",
+  "/transparency-and-content-moderation",
+  "/trust-and-transparency",
+]);
 
 function watchForRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -21,8 +43,13 @@ function watchForRuntimeErrors(page: Page) {
   return errors;
 }
 
-const routeGroups = Array.from({ length: 12 }, (_, groupIndex) =>
-  PUBLIC_REVIEW_PATHS.filter((_, routeIndex) => routeIndex % 12 === groupIndex),
+const routesUnderTest =
+  process.env.KOVA_PUBLIC_MATRIX_SCOPE === "expanded"
+    ? PUBLIC_REVIEW_PATHS.filter((route) => expandedPublicRoutes.has(route))
+    : PUBLIC_REVIEW_PATHS;
+const groupCount = process.env.KOVA_PUBLIC_MATRIX_SCOPE === "expanded" ? 4 : 12;
+const routeGroups = Array.from({ length: groupCount }, (_, groupIndex) =>
+  routesUnderTest.filter((_, routeIndex) => routeIndex % groupCount === groupIndex),
 );
 
 async function verifyRoute(
@@ -95,7 +122,7 @@ test.describe.parallel("complete public surface matrix", () => {
       page,
     }, testInfo) => {
       test.skip(!verificationProjects.has(testInfo.project.name));
-      test.setTimeout(4 * 60_000);
+      test.setTimeout(Math.max(4 * 60_000, routes.length * 2 * 20_000));
 
       const runtimeErrors = watchForRuntimeErrors(page);
       for (const colorScheme of ["light", "dark"] as const) {

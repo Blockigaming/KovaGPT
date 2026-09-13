@@ -43,11 +43,11 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.uiRouteTemplateCount, 72);
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
-  assert.equal(kovagpt.publicIndexContentSlugCount, 47);
+  assert.equal(kovagpt.publicIndexContentSlugCount, 66);
   assert.equal(kovagpt.publicDetailPathCount, 50);
-  assert.equal(kovagpt.publicRegistryPageCount, 97);
-  assert.equal(kovagpt.reviewedPublicPathCount, 160);
-  assert.equal(kovagpt.sitemapPathCount, 103);
+  assert.equal(kovagpt.publicRegistryPageCount, 116);
+  assert.equal(kovagpt.reviewedPublicPathCount, 180);
+  assert.equal(kovagpt.sitemapPathCount, 118);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
@@ -59,6 +59,10 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.routeTemplateCount,
   );
   assert.match(inventory.scope.adaptationRule, /original Kova-branded equivalents/u);
+  assert.match(
+    readFileSync("scripts/ui-surface-inventory.mjs", "utf8"),
+    /src\/lib\/public-content-expanded\.ts/u,
+  );
 });
 
 test("strict UI progress gives every discovered page equal weight", () => {
@@ -73,7 +77,7 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 84);
+  assert.equal(measurement.completedPageCount, 104);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,
@@ -90,4 +94,33 @@ test("strict UI progress gives every discovered page equal weight", () => {
         Boolean(sourcePath === kovaPath && status === "implemented_exact_path"),
       ),
   );
+
+  for (const sourcePath of [
+    "/academy",
+    "/business-data",
+    "/careers",
+    "/charter",
+    "/consumer-privacy",
+    "/economic-research-exchange",
+    "/enterprise-privacy",
+    "/interview-guide",
+    "/open-model-feedback",
+    "/open-models",
+    "/our-structure",
+    "/policies",
+    "/residency",
+    "/safety",
+    "/science",
+    "/security-and-privacy",
+    "/solutions",
+    "/student-collective",
+    "/transparency-and-content-moderation",
+    "/trust-and-transparency",
+  ]) {
+    const record = records.find(
+      (entry) => entry.source === "openai.com" && entry.sourcePath === sourcePath,
+    );
+    assert.equal(record?.completed, true, sourcePath);
+    assert.equal(record?.kovaPath, sourcePath, sourcePath);
+  }
 });

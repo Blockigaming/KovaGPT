@@ -21,6 +21,44 @@ const PAGE_ACTIONS = new Map([
   ["health", { primaryAction: { label: "Open KovaGPT", to: "/" } }],
   ["contact-sales", { primaryAction: { label: "Contact support", to: "/contact-support" } }],
   ["shopping", { primaryAction: { label: "Start shopping research", to: "/" } }],
+  ["academy", { primaryAction: { label: "Open learning guides", to: "/learn" } }],
+  ["business-data", { primaryAction: { label: "Review data controls", to: "/data-controls" } }],
+  ["careers", { primaryAction: { label: "Contact KovaGPT", to: "/contact-support" } }],
+  ["charter", { primaryAction: { label: "About KovaGPT", to: "/about" } }],
+  ["consumer-privacy", { primaryAction: { label: "Review data controls", to: "/data-controls" } }],
+  [
+    "economic-research-exchange",
+    { primaryAction: { label: "Explore KovaGPT research", to: "/research" } },
+  ],
+  [
+    "enterprise-privacy",
+    { primaryAction: { label: "Evaluate enterprise use", to: "/business/enterprise" } },
+  ],
+  ["interview-guide", { primaryAction: { label: "View careers status", to: "/careers" } }],
+  ["open-model-feedback", { primaryAction: { label: "Contact support", to: "/contact-support" } }],
+  ["open-models", { primaryAction: { label: "Review model guidance", to: "/developers/models" } }],
+  ["our-structure", { primaryAction: { label: "About KovaGPT", to: "/about" } }],
+  [
+    "policies",
+    {
+      primaryAction: { label: "Read terms", to: "/terms" },
+      secondaryAction: { label: "Read privacy information", to: "/privacy" },
+    },
+  ],
+  ["residency", { primaryAction: { label: "View careers status", to: "/careers" } }],
+  ["safety", { primaryAction: { label: "Review AI safety", to: "/ai-safety" } }],
+  ["science", { primaryAction: { label: "Open research tools", to: "/research-assistant" } }],
+  ["security-and-privacy", { primaryAction: { label: "Review security", to: "/security" } }],
+  ["solutions", { primaryAction: { label: "Explore business use", to: "/business" } }],
+  [
+    "student-collective",
+    { primaryAction: { label: "Explore student guidance", to: "/college-students" } },
+  ],
+  [
+    "transparency-and-content-moderation",
+    { primaryAction: { label: "Review moderation", to: "/moderation" } },
+  ],
+  ["trust-and-transparency", { primaryAction: { label: "Open the trust center", to: "/trust" } }],
 ]);
 
 const RELATED_PAGES = new Map<string, readonly { title: string; summary: string; to: string }[]>([
@@ -213,7 +251,7 @@ const label = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
 export const Route = createFileRoute("/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     if (params.slug === "scheduled") throw redirect({ to: "/scheduled-tasks", replace: true });
     if (isReservedPublicPath(`/${params.slug}`)) throw notFound();
     const locale = resolveSourceLocale(params.slug);
@@ -224,7 +262,11 @@ export const Route = createFileRoute("/$slug")({
         locale,
         copy: translations[locale],
       };
-    const item = PUBLIC_PAGE_BY_SLUG.get(params.slug);
+    let item = PUBLIC_PAGE_BY_SLUG.get(params.slug);
+    if (!item) {
+      const { EXPANDED_PUBLIC_PAGE_BY_SLUG } = await import("@/lib/public-content-expanded");
+      item = EXPANDED_PUBLIC_PAGE_BY_SLUG.get(params.slug);
+    }
     if (item?.review) throw notFound();
     if (item) return { kind: "page" as const, item };
     if ((PUBLICATION_SECTIONS as readonly string[]).includes(params.slug))

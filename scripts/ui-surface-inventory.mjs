@@ -227,7 +227,13 @@ async function collectKova() {
     routeRows.push({ route: rootShell ? "<root-shell>" : match[1], file: relative(ROOT, file) });
   }
   routeRows.sort((left, right) => left.route.localeCompare(right.route));
-  const publicContent = await readFile(resolve(ROOT, "src/lib/public-content.ts"), "utf8");
+  const publicContent = (
+    await Promise.all(
+      ["src/lib/public-content.ts", "src/lib/public-content-expanded.ts"].map((file) =>
+        readFile(resolve(ROOT, file), "utf8"),
+      ),
+    )
+  ).join("\n");
   const publicSlugs = [...publicContent.matchAll(/\bpage\(\s*"([^"]+)"/gu)]
     .map((match) => match[1])
     .sort();

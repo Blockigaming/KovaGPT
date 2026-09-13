@@ -325,10 +325,17 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     [
       {
         title: "No speculative listings",
-        body: "KovaGPT does not collect applications for roles that have not been approved.",
+        body: "KovaGPT does not collect applications, references, work samples, identity records, or demographic information for roles that have not been approved.",
+      },
+      {
+        title: "Verify every opening",
+        body: "A real opening should identify the work, location or remote expectations, employment basis, evaluation process, accessibility contact, and an authorized application destination.",
+      },
+      {
+        title: "Protect candidates",
+        body: "KovaGPT will not ask a candidate to purchase equipment, transfer money, expose account credentials, or provide banking information before a verified employment process requires it.",
       },
     ],
-    "admin",
   ),
   page(
     "partners",

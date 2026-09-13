@@ -84,7 +84,7 @@ test("route manifest includes reusable public, publishing, developer, assistant 
       routes.records.some(({ canonicalPath }) => canonicalPath === pattern),
       pattern,
     );
-  assert.equal(routes.reviewedPublicRouteCount, 160);
+  assert.equal(routes.reviewedPublicRouteCount, 180);
 });
 
 test("Local discovery is noindex, requests no device location, and preserves an accessible main", () => {
@@ -145,13 +145,14 @@ test("public catch-all rejects every reserved application and security namespace
     assert.equal(isReservedPublicPath(path), false, path);
   const catchAll = read("src/routes/$slug.tsx");
   assert.match(catchAll, /isReservedPublicPath\(`\/\$\{params\.slug\}`\)/);
+  assert.match(catchAll, /await import\("@\/lib\/public-content-expanded"\)/u);
 });
 
-test("all 160 reconciled public routes are reviewed and the sitemap retains 103 substantive routes", async () => {
+test("all 180 reconciled public routes are reviewed and the sitemap retains 118 substantive routes", async () => {
   const review = JSON.parse(read("docs/page-parity/indexable-content-review.json"));
   const developer = JSON.parse(read("docs/release-reconciliation/developer-contract-report.json"));
-  assert.equal(review.reviewedRouteCount, 160);
-  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 160);
+  assert.equal(review.reviewedRouteCount, 180);
+  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 180);
   for (const entry of review.records) {
     assert.ok(entry.h1, entry.route);
     assert.equal(entry.runtimeStatus, 200, entry.route);
@@ -170,18 +171,28 @@ test("all 160 reconciled public routes are reviewed and the sitemap retains 103 
   );
   const { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } =
     await import("../../src/lib/seo-policy.mjs");
-  assert.equal(PUBLIC_REVIEW_PATHS.length, 160);
-  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 103);
+  assert.equal(PUBLIC_REVIEW_PATHS.length, 180);
+  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 118);
   const indexed = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const { route } of developer.records) assert.equal(indexed.has(route), false, route);
+  for (const unavailableProgram of [
+    "/economic-research-exchange",
+    "/interview-guide",
+    "/open-model-feedback",
+    "/residency",
+    "/student-collective",
+  ]) {
+    assert.ok(PUBLIC_REVIEW_PATHS.includes(unavailableProgram), unavailableProgram);
+    assert.equal(indexed.has(unavailableProgram), false, unavailableProgram);
+  }
 });
 
 test("release route manifest is generated from all route files and one sitemap source", async () => {
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
   assert.equal(manifest.routeFileCount, 171);
   assert.equal(manifest.records.length, 171);
-  assert.equal(manifest.sitemapCount, 103);
-  assert.equal(manifest.reviewedPublicRouteCount, 160);
+  assert.equal(manifest.sitemapCount, 118);
+  assert.equal(manifest.reviewedPublicRouteCount, 180);
   assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 171);
   const { PUBLIC_SITEMAP_ENTRIES } = await import("../../src/lib/seo-policy.mjs");
   const associatedSitemapPaths = new Set(
