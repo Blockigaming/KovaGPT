@@ -50,9 +50,13 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     rollout,
-    /recovers the exact Price ID from the durable nonterminal Checkout attempt/u,
+    /user-level Checkout attempt does not prove which subscription it created/u,
   );
-  assert.match(rollout, /requires exact-ID reconciliation before webhook retry/u);
+  assert.match(rollout, /Do not route a first\s+Pro subscription webhook to the legacy handler/u);
+  assert.match(
+    rollout,
+    /`20260904231210`, `20260904231213`,\s*`20260913013131`, and `20260913023331` in timestamp order/u,
+  );
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {

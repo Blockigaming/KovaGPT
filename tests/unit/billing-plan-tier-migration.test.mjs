@@ -299,16 +299,13 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
        )`,
       [userId, currentProPriceId],
     );
-    await addSubscription(database, {
-      priceId: "pro_monthly",
-      subscriptionId: "sub_first_current_pro_webhook",
-    });
-    const recovered = await database.query(
-      `SELECT price_id
-       FROM public.subscriptions
-       WHERE stripe_subscription_id = 'sub_first_current_pro_webhook'`,
+    await assert.rejects(
+      addSubscription(database, {
+        priceId: "pro_monthly",
+        subscriptionId: "sub_unlinked_current_pro_webhook",
+      }),
+      /ambiguous_legacy_live_pro_price/u,
     );
-    assert.deepEqual(recovered.rows, [{ price_id: currentProPriceId }]);
 
     await database.query(
       `INSERT INTO public.stripe_checkout_attempts (
