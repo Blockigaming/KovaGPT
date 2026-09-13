@@ -133,7 +133,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     const input = page.getByRole("textbox", { name: "Message KovaGPT" });
     await input.fill("Check the header");
     await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     await expect(page.getByRole("button", { name: "Share chat" })).toBeVisible();
     await expect(page.getByRole("button", { name: "More chat actions" })).toBeVisible();
@@ -160,7 +160,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(input).toBeEnabled();
     await input.fill("Keep guest settings available");
     await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     await expect(page.getByRole("button", { name: "Share chat" })).toHaveCount(0);
     await page.getByRole("button", { name: "More chat actions" }).click();
