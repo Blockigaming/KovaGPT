@@ -145,6 +145,133 @@ const app = (
     { label: "App connection guidance", to: "/features/plugins" },
   );
 
+const unavailableApp = (slug: string, title: string): PublicDetailPage =>
+  detail(
+    "apps",
+    slug,
+    "KovaGPT app compatibility",
+    title,
+    `${title} is catalogued for KovaGPT compatibility review but is not currently a connectable integration.`,
+    `KovaGPT does not currently expose a working ${title} connection. This page records the boundary and points to integrations that are actually available.`,
+    { label: "Browse working Apps", to: "/apps" },
+    ["Not currently connectable", "No permissions requested", "No implied partnership"],
+    [
+      {
+        title: "Current availability",
+        body: `There is no active ${title} authorization flow in KovaGPT. Do not enter provider credentials or expect KovaGPT to read or change ${title} data.`,
+        points: [
+          "No account connection is offered",
+          "No background access is claimed",
+          "No provider endorsement is implied",
+        ],
+      },
+      {
+        title: "Use a supported path",
+        body: "The Apps directory distinguishes working integrations from unavailable catalog entries. A provider becomes actionable only after authorization, scope, disconnect, and end-to-end tool behavior are verified.",
+        points: [
+          "Review the working-app list",
+          "Use minimum permissions",
+          "Confirm consequential actions",
+        ],
+      },
+    ],
+    { label: "How Apps work", to: "/features/plugins" },
+  );
+
+const unavailableFeature = (slug: string, title: string): PublicDetailPage =>
+  detail(
+    "features",
+    slug,
+    "Feature availability",
+    title,
+    `${title} is not currently an available KovaGPT capability.`,
+    `KovaGPT documents ${title.toLowerCase()} without presenting an inactive control or implying that audio capture, playback, or live video is available.`,
+    { label: "Explore available features", to: "/features" },
+    ["Not currently available", "No hidden recording", "Availability must be verified"],
+    [
+      {
+        title: "Current boundary",
+        body: "KovaGPT currently accepts supported text and file inputs. No voice or live-video session starts from this page.",
+        points: [
+          "No microphone permission is requested",
+          "No recording begins in the background",
+          "No availability date is promised",
+        ],
+      },
+      {
+        title: "What readiness would require",
+        body: "A future release would need explicit permission, recording indicators, interruption controls, accessible alternatives, retention disclosure, and end-to-end verification before the interface becomes actionable.",
+        points: [
+          "Clear start and stop controls",
+          "Visible capture state",
+          "Text alternatives and privacy review",
+        ],
+      },
+    ],
+  );
+
+const unavailablePlan = (slug: string, title: string, audience: string): PublicDetailPage =>
+  detail(
+    "plans",
+    slug,
+    "Plan availability",
+    title,
+    `${title} is not currently an active KovaGPT subscription plan.`,
+    `${audience} can review KovaGPT's published Free, Plus, and Pro plans without being routed into an unavailable checkout.`,
+    { label: "Compare active plans", to: "/pricing" },
+    ["Not available for purchase", "No unpublished price", "No checkout dead end"],
+    [
+      {
+        title: "Published plans are authoritative",
+        body: "KovaGPT only treats plans backed by the product capability registry and active checkout configuration as purchasable.",
+        points: [
+          "Free, Plus, and Pro are the published individual plans",
+          "Checkout confirms current paid terms",
+          "Account eligibility can affect availability",
+        ],
+      },
+      {
+        title: "Needs are still welcome",
+        body: "Schools and organizations can document users, data boundaries, identity, review, accessibility, and support requirements without assuming a plan exists.",
+        points: [
+          "Define the intended workflow",
+          "Protect student and organizational data",
+          "Confirm commitments in writing",
+        ],
+      },
+    ],
+    { label: "Discuss organization needs", to: "/contact-sales" },
+  );
+
+const translationDetail = (slug: string, title: string): PublicDetailPage =>
+  detail(
+    "translate",
+    slug,
+    "Translation workflow",
+    title,
+    `${title} with KovaGPT while preserving context and human review.`,
+    "Provide the source text, audience, locale, tone, and terminology constraints, then review the result for meaning, nuance, and high-impact consequences.",
+    { label: "Open translation guidance", to: "/translation" },
+    ["Context-aware draft", "Terminology guidance", "Human review required"],
+    [
+      {
+        title: "Preserve meaning",
+        body: "Include the intended audience, regional usage, names, formatting, and terms that should remain unchanged. Ask for alternatives when wording is ambiguous.",
+        points: ["Keep the source text", "Name the target locale", "Review idiom and tone"],
+      },
+      {
+        title: "Use qualified review when needed",
+        body: "Generated translations can omit nuance or introduce errors. Legal, medical, safety, immigration, financial, and publication-ready material needs a qualified reviewer.",
+        points: [
+          "Verify critical terms",
+          "Protect private information",
+          "Do not rely on unchecked output",
+        ],
+      },
+    ],
+    { label: "Explore language workflows", to: "/translation" },
+  );
+
 const planPages = (["free", "plus", "pro"] as const).map((tier) => {
   const plan = CAPABILITY_REGISTRY.plans[tier];
   const price = plan.monthlyPriceUsd === 0 ? "$0" : `$${plan.monthlyPriceUsd} per month`;
@@ -299,7 +426,11 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
       },
     ],
   ),
+  unavailableFeature("voice", "Voice with KovaGPT"),
+  unavailableFeature("voice-with-video", "Voice with video"),
   ...planPages,
+  unavailablePlan("go", "KovaGPT Go", "People looking for a lower-cost plan"),
+  unavailablePlan("k12-teachers", "KovaGPT for K–12 teachers", "K–12 educators and schools"),
   workflow(
     "chat-with-presentations",
     "Work with presentations",
@@ -472,7 +603,7 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
   ),
   business(
     "enterprise",
-    "Enterprise evaluation",
+    "Enterprise AI deployment workflows",
     "Scope identity, retention, security, procurement, support, and deployment requirements before representing a capability as ready.",
     ["Map identity and access", "Document retention needs", "Verify contractual commitments"],
   ),
@@ -515,6 +646,123 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
       "Keep read and write scopes distinct",
       "Confirm repository changes",
     ],
+  ),
+  unavailableApp("canva", "Canva"),
+  unavailableApp("powerpoint", "Microsoft PowerPoint"),
+  unavailableApp("spotify", "Spotify"),
+  detail(
+    "codex",
+    "enterprise",
+    "Coding for organizations",
+    "KovaGPT coding workflows for enterprise teams",
+    "Evaluate KovaGPT coding workflows with repository, identity, data, review, and deployment boundaries.",
+    "Teams can assess coding assistance without assuming autonomous repository access, enterprise certification, or unreviewed deployment rights.",
+    { label: "Discuss requirements", to: "/contact-sales" },
+    ["Repository-scoped", "Human-reviewed", "Deployment controls required"],
+    [
+      {
+        title: "Scope the engineering workflow",
+        body: "Define repositories, data classes, allowed tools, branch protections, reviewers, and release controls before enabling AI-assisted changes.",
+        points: [
+          "Keep credentials server-side",
+          "Require tests and review",
+          "Preserve audit evidence",
+        ],
+      },
+      {
+        title: "Verify the environment",
+        body: "Identity, retention, networking, provider access, and contractual commitments depend on the configured deployment and written agreement.",
+        points: ["Map access roles", "Test failure recovery", "Confirm support boundaries"],
+      },
+    ],
+    { label: "Engineering use case", to: "/business/ai-for-engineering" },
+  ),
+  detail(
+    "codex",
+    "pricing",
+    "Coding plan guidance",
+    "KovaGPT coding access and pricing",
+    "Understand how KovaGPT coding tools relate to published plans without inventing a separate coding subscription.",
+    "KovaGPT does not publish a standalone coding price. Available models, tools, and limits come from the active plan and server capability registry.",
+    { label: "View current pricing", to: "/pricing" },
+    ["No separate coding plan", "Plan controls apply", "Checkout is authoritative"],
+    [
+      {
+        title: "Use the published plan catalog",
+        body: "The pricing page and checkout flow are the authoritative surfaces for active plans and commercial terms.",
+        points: ["Compare plan benefits", "Review usage limits", "Confirm checkout terms"],
+      },
+      {
+        title: "Tool access remains bounded",
+        body: "A paid plan does not bypass repository authorization, provider readiness, safety checks, or human review.",
+        points: [
+          "Connect only intended repositories",
+          "Review generated changes",
+          "Run required checks",
+        ],
+      },
+    ],
+    { label: "Explore coding workflows", to: "/codex" },
+  ),
+  translationDetail("english-to-french", "Translate English to French"),
+  translationDetail("english-to-hindi", "Translate English to Hindi"),
+  translationDetail("english-to-marathi", "Translate English to Marathi"),
+  translationDetail("english-to-portuguese", "Translate English to Portuguese"),
+  translationDetail("english-to-tagalog", "Translate English to Tagalog"),
+  translationDetail("english-to-tamil", "Translate English to Tamil"),
+  translationDetail("english-to-urdu", "Translate English to Urdu"),
+  translationDetail("hindi-to-english", "Translate Hindi to English"),
+  translationDetail("spanish-to-english", "Translate Spanish to English"),
+  translationDetail("tagalog-to-english", "Translate Tagalog to English"),
+  detail(
+    "writing",
+    "paraphrase",
+    "Writing workflow",
+    "Paraphrase with KovaGPT",
+    "Rewrite supplied text for clarity, tone, or structure while preserving meaning and attribution.",
+    "Use KovaGPT to draft alternatives, then compare them with the source so facts, quotations, citations, and the author's intent remain accurate.",
+    { label: "Open the AI writer", to: "/ai-writer" },
+    ["Meaning first", "Tone controls", "Attribution preserved"],
+    [
+      {
+        title: "Give a clear brief",
+        body: "State the audience, purpose, tone, length, reading level, and details that must not change.",
+        points: ["Provide the source", "Mark exact quotations", "Name required terminology"],
+      },
+      {
+        title: "Review the rewrite",
+        body: "Paraphrasing does not remove copyright, plagiarism, confidentiality, or attribution obligations.",
+        points: [
+          "Compare meaning line by line",
+          "Keep required citations",
+          "Follow publication rules",
+        ],
+      },
+    ],
+    { label: "Writing guidance", to: "/ai-writer" },
+  ),
+  detail(
+    "students",
+    "2026",
+    "Student guide",
+    "KovaGPT student guide for 2026",
+    "Use KovaGPT for learning, planning, and practice in 2026 while following current course and institution rules.",
+    "Build understanding with guided questions and reviewable drafts. Policies and product capabilities can change, so confirm both before relying on a workflow.",
+    { label: "Open Study", to: "/study" },
+    ["Active learning", "Current policy checks", "Academic integrity"],
+    [
+      {
+        title: "Learn actively",
+        body: "Set an objective, attempt the problem first, request targeted hints, and explain the final reasoning in your own words.",
+        points: ["Practice retrieval", "Ask for feedback", "Verify against course material"],
+      },
+      {
+        title: "Follow current rules",
+        body: "Your course, institution, and assessment instructions determine acceptable AI use. Disclose assistance and cite sources when required.",
+        points: ["Check the syllabus", "Protect student data", "Do not submit unchecked output"],
+      },
+    ],
+    { label: "Student resources", to: "/college-students" },
   ),
 ];
 

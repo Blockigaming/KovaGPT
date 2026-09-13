@@ -4,6 +4,12 @@ import { type ReactNode } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
+const DETAIL_SECTION_LANDINGS = new Map<string, string>([
+  ["students", "/use-cases/students"],
+  ["translate", "/translation"],
+  ["writing", "/ai-writer"],
+]);
+
 /**
  * Backwards-compatible public layout name. New public routes should use
  * PublicShell directly when they need a custom main-content layout.
@@ -98,7 +104,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               className="flex items-center gap-2 text-sm text-muted-foreground"
             >
               <Link
-                to={`/${item.section}` as never}
+                to={(DETAIL_SECTION_LANDINGS.get(item.section) ?? `/${item.section}`) as never}
                 className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {item.section.replaceAll("-", " ")}

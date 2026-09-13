@@ -7,9 +7,13 @@ const allDetailRoutes = [
   "/features/plugins",
   "/features/study-mode",
   "/features/chat-with-pdfs",
+  "/features/voice",
+  "/features/voice-with-video",
   "/plans/free",
   "/plans/plus",
   "/plans/pro",
+  "/plans/go",
+  "/plans/k12-teachers",
   "/use-cases/chat-with-presentations",
   "/use-cases/chat-with-spreadsheets",
   "/use-cases/fitness-wellness-and-health",
@@ -32,6 +36,23 @@ const allDetailRoutes = [
   "/apps/gmail",
   "/apps/google-calendar",
   "/apps/github",
+  "/apps/canva",
+  "/apps/powerpoint",
+  "/apps/spotify",
+  "/codex/enterprise",
+  "/codex/pricing",
+  "/students/2026",
+  "/translate/english-to-french",
+  "/translate/english-to-hindi",
+  "/translate/english-to-marathi",
+  "/translate/english-to-portuguese",
+  "/translate/english-to-tagalog",
+  "/translate/english-to-tamil",
+  "/translate/english-to-urdu",
+  "/translate/hindi-to-english",
+  "/translate/spanish-to-english",
+  "/translate/tagalog-to-english",
+  "/writing/paraphrase",
 ] as const;
 
 const responsiveRoutes = [
@@ -42,34 +63,46 @@ const responsiveRoutes = [
   "/apps/google-drive",
 ] as const;
 
-test("every public detail page has complete content and metadata", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(120_000);
+const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>
+  allDetailRoutes.filter((_, routeIndex) => routeIndex % 5 === groupIndex),
+);
 
-  for (const route of allDetailRoutes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), route).toBe(200);
-    await waitForKovaHydration(page);
+test.describe.parallel("complete public detail content", () => {
+  detailRouteGroups.forEach((routes, groupIndex) => {
+    test(`detail group ${groupIndex + 1} has complete content and metadata`, async ({
+      page,
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== "desktop-1440x900");
+      test.setTimeout(90_000);
 
-    await expect(page.locator("main#main-content"), route).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 }), route).toHaveCount(1);
-    await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
-    await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
-    await expect(page.locator("main article"), route).toHaveCount(2);
-    const primaryAction = page.locator("[data-public-primary]");
-    await expect(primaryAction, route).toHaveCount(1);
-    if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");
-    if (route === "/plans/plus" || route === "/plans/pro") {
-      await expect(primaryAction).toHaveAttribute("href", "/pricing");
-    }
-    const description = await page.locator('meta[name="description"]').getAttribute("content");
-    expect(description?.trim().length, `${route} description length`).toBeGreaterThanOrEqual(30);
-    await expect(page.locator('link[rel="canonical"]'), route).toHaveAttribute(
-      "href",
-      `https://kovagpt.com${route}`,
-    );
-    await expect(page.getByRole("contentinfo"), route).toBeVisible();
-  }
+      for (const route of routes) {
+        const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+        expect(response?.status(), route).toBe(200);
+        await waitForKovaHydration(page);
+
+        await expect(page.locator("main#main-content"), route).toHaveCount(1);
+        await expect(page.getByRole("heading", { level: 1 }), route).toHaveCount(1);
+        await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
+        await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
+        await expect(page.locator("main article"), route).toHaveCount(2);
+        const primaryAction = page.locator("[data-public-primary]");
+        await expect(primaryAction, route).toHaveCount(1);
+        if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");
+        if (["/plans/plus", "/plans/pro", "/plans/go", "/plans/k12-teachers"].includes(route)) {
+          await expect(primaryAction).toHaveAttribute("href", "/pricing");
+        }
+        const description = await page.locator('meta[name="description"]').getAttribute("content");
+        expect(description?.trim().length, `${route} description length`).toBeGreaterThanOrEqual(
+          30,
+        );
+        await expect(page.locator('link[rel="canonical"]'), route).toHaveAttribute(
+          "href",
+          `https://kovagpt.com${route}`,
+        );
+        await expect(page.getByRole("contentinfo"), route).toBeVisible();
+      }
+    });
+  });
 });
 
 test("representative detail families remain responsive in light and dark modes", async ({

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const inventory = JSON.parse(readFileSync("docs/ui-ux/live-surface-inventory.json", "utf8"));
+const pageProgress = JSON.parse(readFileSync("docs/ui-ux/page-by-page-progress.json", "utf8"));
 
 test("live UI inventory records the complete discoverable source snapshot", () => {
   assert.match(inventory.snapshotDate, /^\d{4}-\d{2}-\d{2}$/u);
@@ -42,15 +43,51 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.uiRouteTemplateCount, 72);
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
-  assert.equal(kovagpt.publicIndexContentSlugCount, 40);
-  assert.equal(kovagpt.publicDetailPathCount, 29);
-  assert.equal(kovagpt.publicRegistryPageCount, 69);
+  assert.equal(kovagpt.publicIndexContentSlugCount, 47);
+  assert.equal(kovagpt.publicDetailPathCount, 50);
+  assert.equal(kovagpt.publicRegistryPageCount, 97);
+  assert.equal(kovagpt.reviewedPublicPathCount, 160);
+  assert.equal(kovagpt.sitemapPathCount, 103);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
+  assert.ok(kovagpt.publicDetailPaths.includes("features/voice"));
+  assert.ok(kovagpt.publicDetailPaths.includes("apps/canva"));
+  assert.ok(kovagpt.publicDetailPaths.includes("codex/pricing"));
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
   );
   assert.match(inventory.scope.adaptationRule, /original Kova-branded equivalents/u);
+});
+
+test("strict UI progress gives every discovered page equal weight", () => {
+  const { measurement, records } = pageProgress;
+  const chatgptPaths = new Set([
+    ...inventory.chatgpt.urls.map((url) => new URL(url).pathname.replace(/\/+$/u, "") || "/"),
+    ...inventory.chatgpt.marketingNavigation.paths.map(
+      (path) => new URL(path, "https://chatgpt.com").pathname.replace(/\/+$/u, "") || "/",
+    ),
+  ]);
+
+  assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
+  assert.equal(records.length, measurement.sourcePageCount);
+  assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
+  assert.equal(measurement.completedPageCount, 84);
+  assert.equal(
+    measurement.remainingPageCount,
+    measurement.sourcePageCount - measurement.completedPageCount,
+  );
+  assert.ok(records.every(({ weight }) => weight === 1));
+  assert.equal(
+    new Set(records.map(({ source, sourceUrl }) => `${source}:${sourceUrl}`)).size,
+    records.length,
+  );
+  assert.ok(
+    records
+      .filter(({ completed }) => completed)
+      .every(({ sourcePath, kovaPath, status }) =>
+        Boolean(sourcePath === kovaPath && status === "implemented_exact_path"),
+      ),
+  );
 });

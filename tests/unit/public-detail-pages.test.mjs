@@ -11,6 +11,10 @@ test("public detail registry covers every approved missing marketing family", ()
     "features/plugins",
     "features/study-mode",
     "features/chat-with-pdfs",
+    "features/voice",
+    "features/voice-with-video",
+    "plans/go",
+    "plans/k12-teachers",
     "use-cases/chat-with-presentations",
     "use-cases/chat-with-spreadsheets",
     "use-cases/fitness-wellness-and-health",
@@ -33,12 +37,32 @@ test("public detail registry covers every approved missing marketing family", ()
     "apps/gmail",
     "apps/google-calendar",
     "apps/github",
+    "apps/canva",
+    "apps/powerpoint",
+    "apps/spotify",
+    "codex/enterprise",
+    "codex/pricing",
+    "students/2026",
+    "translate/english-to-french",
+    "translate/english-to-hindi",
+    "translate/english-to-marathi",
+    "translate/english-to-portuguese",
+    "translate/english-to-tagalog",
+    "translate/english-to-tamil",
+    "translate/english-to-urdu",
+    "translate/hindi-to-english",
+    "translate/spanish-to-english",
+    "translate/tagalog-to-english",
+    "writing/paraphrase",
   ]) {
     const [section, slug] = path.split("/");
     assert.match(source, new RegExp(`"${section}"[\\s\\S]*?"${slug}"`, "u"), path);
   }
   assert.match(source, /\["free", "plus", "pro"\] as const/u);
-  assert.doesNotMatch(source, /"features",\s*"voice(?:-with-video)?"/u);
+  assert.match(source, /unavailableFeature\("voice", "Voice with KovaGPT"\)/u);
+  assert.match(source, /No microphone permission is requested/u);
+  assert.match(source, /unavailableApp\("canva", "Canva"\)/u);
+  assert.match(source, /Not currently connectable/u);
 });
 
 test("detail route provides unique metadata, breadcrumbs, sections, and real actions", () => {
@@ -53,6 +77,10 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(route, /isPublicIndexableRoute/u);
   assert.match(route, /og:type/u);
   assert.match(view, /aria-label="Breadcrumb"/u);
+  assert.match(view, /\["students", "\/use-cases\/students"\]/u);
+  assert.match(view, /\["translate", "\/translation"\]/u);
+  assert.match(view, /\["writing", "\/ai-writer"\]/u);
+  assert.match(view, /DETAIL_SECTION_LANDINGS\.get\(item\.section\)/u);
   assert.match(view, /data-public-primary/u);
   assert.match(view, /item\.primaryAction\.to/u);
   assert.match(view, /item\.sections\.map/u);

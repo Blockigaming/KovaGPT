@@ -6,6 +6,7 @@ import { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } from "../src/lib/seo-poli
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT = resolve(ROOT, "docs/ui-ux/live-surface-inventory.json");
+const PAGE_PROGRESS_OUTPUT = resolve(ROOT, "docs/ui-ux/page-by-page-progress.json");
 const SNAPSHOT_DATE =
   process.env.KOVA_UI_SNAPSHOT_DATE?.trim() || new Date().toISOString().slice(0, 10);
 const AUTHENTICATED_OBSERVATION_DATE =
@@ -87,6 +88,12 @@ function normalizeMarketingPath(href) {
   if (/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,4}){0,2}$/u.test(firstSegment)) return null;
   const normalized = url.pathname.replace(/\/\.\/?$/u, "/").replace(/\/{2,}/gu, "/");
   return normalized === "/" ? normalized : normalized.replace(/\/$/u, "");
+}
+
+function normalizePath(urlOrPath, baseUrl = "https://kovagpt.com") {
+  const url = new URL(urlOrPath, baseUrl);
+  const normalized = url.pathname.replace(/\/{2,}/gu, "/").replace(/\/+$/u, "");
+  return normalized || "/";
 }
 
 async function collectOpenAi() {
@@ -179,9 +186,23 @@ function extractPublicDetailPaths(source) {
     ...[...registry.matchAll(/\bdetail\(\s*"([^"]+)"\s*,\s*"([^"]+)"/gu)].map(
       (match) => `${match[1]}/${match[2]}`,
     ),
-    ...[...registry.matchAll(/\b(workflow|business|app)\(\s*"([^"]+)"/gu)].map((match) => {
+    ...[
+      ...registry.matchAll(
+        /\b(workflow|business|app|unavailableApp|unavailableFeature|unavailablePlan|translationDetail)\(\s*"([^"]+)"/gu,
+      ),
+    ].map((match) => {
       const section =
-        match[1] === "workflow" ? "use-cases" : match[1] === "app" ? "apps" : match[1];
+        match[1] === "workflow"
+          ? "use-cases"
+          : match[1] === "app" || match[1] === "unavailableApp"
+            ? "apps"
+            : match[1] === "unavailableFeature"
+              ? "features"
+              : match[1] === "unavailablePlan"
+                ? "plans"
+                : match[1] === "translationDetail"
+                  ? "translate"
+                  : match[1];
       return `${section}/${match[2]}`;
     }),
   ];
@@ -244,7 +265,7 @@ const inventory = {
   snapshotDate: SNAPSHOT_DATE,
   scope: {
     definition:
-      "Every discoverable canonical page and reusable route template; excludes private instances, user-generated IDs, localized duplicates, assets, API endpoints, and verbatim replication.",
+      "Every discoverable public canonical page counts as one equally weighted item. ChatGPT marketing paths absent from its sitemap are included; private user data and non-page assets are not enumerable public pages.",
     adaptationRule:
       "KovaGPT implements original Kova-branded equivalents for relevant page families instead of copying third-party text, media, trademarks, or page-for-page editorial archives.",
   },
@@ -253,8 +274,82 @@ const inventory = {
   kovagpt,
 };
 
+const implementedKovaPaths = new Set([
+  ...kovagpt.reviewedPublicPaths.map((path) => normalizePath(path)),
+  ...kovagpt.routeTemplates
+    .filter(
+      ({ route, file }) =>
+        isKovaUiRoute(route, file) && route.startsWith("/") && !route.includes("$"),
+    )
+    .map(({ route }) => normalizePath(route)),
+]);
+const chatgptSitemapByPath = new Map(
+  chatgpt.urls.map((url) => [normalizePath(url, "https://chatgpt.com"), url]),
+);
+const chatgptPaths = new Set([
+  ...chatgptSitemapByPath.keys(),
+  ...chatgpt.marketingNavigation.paths.map((path) => normalizePath(path, "https://chatgpt.com")),
+]);
+
+function progressRecord(source, sourceUrl, sourcePath, sourceFamily, discovery) {
+  const completed = implementedKovaPaths.has(sourcePath);
+  return {
+    source,
+    sourceUrl,
+    sourcePath,
+    sourceFamily,
+    discovery,
+    weight: 1,
+    kovaPath: completed ? sourcePath : null,
+    status: completed ? "implemented_exact_path" : "missing_exact_equivalent",
+    completed,
+  };
+}
+
+const pageProgressRecords = [
+  ...openai.urls.map((url) =>
+    progressRecord("openai.com", url, normalizePath(url, "https://openai.com"), openAiFamily(url), [
+      "sitemap",
+    ]),
+  ),
+  ...[...chatgptPaths].sort().map((path) => {
+    const sitemapUrl = chatgptSitemapByPath.get(path);
+    const inMarketingNavigation = chatgpt.marketingNavigation.paths.some(
+      (marketingPath) => normalizePath(marketingPath, "https://chatgpt.com") === path,
+    );
+    return progressRecord(
+      "chatgpt.com",
+      sitemapUrl ?? `https://chatgpt.com${path === "/" ? "" : path}`,
+      path,
+      chatGptFamily(sitemapUrl ?? `https://chatgpt.com${path}`),
+      [sitemapUrl ? "sitemap" : null, inMarketingNavigation ? "marketing_navigation" : null].filter(
+        Boolean,
+      ),
+    );
+  }),
+];
+const completedPageCount = pageProgressRecords.filter(({ completed }) => completed).length;
+const pageProgress = {
+  schemaVersion: 1,
+  snapshotDate: SNAPSHOT_DATE,
+  measurement: {
+    definition:
+      "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
+    sourcePageCount: pageProgressRecords.length,
+    completedPageCount,
+    remainingPageCount: pageProgressRecords.length - completedPageCount,
+    completionPercent: Number(((completedPageCount / pageProgressRecords.length) * 100).toFixed(2)),
+    percentPerPage: Number((100 / pageProgressRecords.length).toFixed(6)),
+    sourceCounts: counts(pageProgressRecords.map(({ source }) => source)),
+  },
+  records: pageProgressRecords,
+};
+
 await mkdir(dirname(OUTPUT), { recursive: true });
-await writeFile(OUTPUT, `${JSON.stringify(inventory, null, 2)}\n`);
+await Promise.all([
+  writeFile(OUTPUT, `${JSON.stringify(inventory, null, 2)}\n`),
+  writeFile(PAGE_PROGRESS_OUTPUT, `${JSON.stringify(pageProgress, null, 2)}\n`),
+]);
 console.log(
-  `UI surface inventory: OpenAI ${openai.uniqueUrlCount} unique URLs; ChatGPT ${chatgpt.sitemapEntryCount} sitemap URLs + ${chatgpt.marketingNavigation.pathCount} marketing paths; KovaGPT ${kovagpt.uiRouteTemplateCount} UI templates + ${kovagpt.publicRegistryPageCount} public registry pages.`,
+  `UI surface inventory: OpenAI ${openai.uniqueUrlCount} unique URLs; ChatGPT ${chatgpt.sitemapEntryCount} sitemap URLs + ${chatgpt.marketingNavigation.pathCount} marketing paths; KovaGPT ${kovagpt.uiRouteTemplateCount} UI templates + ${kovagpt.publicRegistryPageCount} public registry pages; strict linear page progress ${completedPageCount}/${pageProgressRecords.length}.`,
 );

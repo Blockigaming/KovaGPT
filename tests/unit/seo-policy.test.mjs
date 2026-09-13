@@ -66,6 +66,9 @@ test("the public sitemap is unique and contains no private or service endpoints"
     "/apps/gmail",
     "/apps/google-calendar",
     "/apps/github",
+    "/apps/canva",
+    "/apps/powerpoint",
+    "/apps/spotify",
   ]);
 
   for (const path of paths) {
