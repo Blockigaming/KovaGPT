@@ -949,7 +949,7 @@ function KovaGPT() {
   );
 
   const saveTemporaryChat = useCallback(async () => {
-    if (!active?.temporary || isStreaming) return;
+    if (!active?.temporary || isStreaming || retryTimerRef.current !== null) return;
     // A scheduled retry still carries the immutable temporary-context closure.
     // Cancel it before conversion so no old temporary turn can land past the
     // new memory boundary and later be persisted as regular-chat memory.
@@ -1923,7 +1923,9 @@ function KovaGPT() {
           <Suspense fallback={null}>
             <TemporaryChatBanner
               tempChatContext={tempChatContext}
-              canSave={Boolean(active?.temporary && active.messages.length > 0)}
+              canSave={Boolean(
+                active?.temporary && active.messages.length > 0 && retryTimerRef.current === null,
+              )}
               isStreaming={isStreaming}
               onSave={saveTemporaryChat}
               onTurnOff={() => setTemporaryChatEnabled(false)}
@@ -2365,6 +2367,14 @@ function KovaGPT() {
             setSettings((previous) => ({ ...previous, responseLength }))
           }
         />
+
+        {tempChatStartOpen && (
+          <TemporaryChatStartDialog
+            open={tempChatStartOpen}
+            onOpenChange={setTempChatStartOpen}
+            onStart={startTemporaryChat}
+          />
+        )}
 
         {tempChatStartOpen && (
           <TemporaryChatStartDialog

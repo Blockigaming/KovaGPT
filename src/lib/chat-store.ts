@@ -530,6 +530,10 @@ export async function persistTemporaryConversation(
     temporary: false,
     temporaryContext: undefined,
     memoryStartIndex: active.messages.length,
+    // Temporary branches have no durable branch rows. Once their temporary
+    // source is discarded, the saved conversation must become its own root.
+    branchRootId: active.id,
+    branchOrigin: undefined,
     updatedAt: Date.now(),
   };
   const nextConversations = conversations
