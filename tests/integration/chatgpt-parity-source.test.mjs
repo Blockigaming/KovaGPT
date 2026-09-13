@@ -15,6 +15,10 @@ const [
   searchServer,
   deepResearchServer,
   modes,
+  workspaceModeSwitch,
+  workRoute,
+  onboarding,
+  shellSpec,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -28,7 +32,40 @@ const [
   readFile("src/lib/ai/search.server.ts", "utf8"),
   readFile("src/lib/ai/deep-research.server.ts", "utf8"),
   readFile("src/lib/modes.ts", "utf8"),
+  readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
+  readFile("src/routes/work.tsx", "utf8"),
+  readFile("src/components/OnboardingDialog.tsx", "utf8"),
+  readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
 ]);
+
+test("signed-in users can move clearly between Chat and Work", () => {
+  assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
+  assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
+  assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
+  assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
+  assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
+  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(
+    sidebar,
+    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
+  );
+});
+
+test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
+  assert.match(sidebar, /aria-label="More destinations"/);
+  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
+  );
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
+  );
+  assert.ok(
+    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
+  );
+});
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
@@ -47,18 +84,89 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
+test("signed-in empty chat removes guest-only onboarding clutter", () => {
+  assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
+  assert.match(
+    route,
+    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
+  );
+  assert.match(
+    route,
+    /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
+  );
+});
+
+test("signed-in onboarding hands real choices to the authenticated composer", () => {
+  assert.match(onboarding, /if \(!primaryUse \|\| !user\?\.id\) return/);
+  assert.match(onboarding, /const initiatingOwnerId = user\.id/);
+  assert.match(
+    onboarding,
+    /await persistOnboarding\(\);[\s\S]{0,180}operationRef\.current !== operation/,
+  );
+  assert.match(onboarding, /saveDraft\(initiatingOwnerId, null, starter\)/);
+  assert.ok(
+    onboarding.indexOf("await persistOnboarding();") <
+      onboarding.indexOf("saveDraft(initiatingOwnerId, null, starter)"),
+  );
+  assert.doesNotMatch(onboarding, /localStorage\.setItem\("kova-draft:__new__"/);
+  assert.match(onboarding, /onStarterSelected\?\.\(starter\)/);
+  assert.match(onboarding, /const responseLength = RESPONSE_LENGTH_BY_STYLE\[style\]/);
+  assert.match(onboarding, /onResponseLengthChange\?\.\(responseLength\)/);
+  assert.match(onboarding, /role="progressbar"/);
+  assert.match(onboarding, /aria-pressed=\{primaryUse === u\.id\}/);
+  assert.match(onboarding, /aria-pressed=\{style === s\.id\}/);
+  assert.match(onboarding, /We couldn't save your choices/);
+  assert.match(onboarding, /setPrimaryUse\(null\);[\s\S]{0,160}\}, \[user\?\.id\]\);/);
+  assert.match(route, /<OnboardingDialog[\s\S]{0,320}onStarterSelected=\{\(starter\)/);
+  assert.match(appShell, /<OnboardingDialog[\s\S]{0,240}onCompletion=/);
+  assert.match(appShell, /saveStoredSettings\(userKey, next\)/);
+  assert.match(appShell, /stageOnboardingHandoff\(completion\)/);
+  assert.match(route, /consumeOnboardingHandoff\(userKey\)/);
+  assert.match(
+    onboarding,
+    /const skip = async \(\) => \{[\s\S]{0,500}operationRef\.current = operation/,
+  );
+  assert.match(
+    onboarding,
+    /const skip = async \(\) => \{[\s\S]{0,900}finally \{[\s\S]{0,180}ownerIdRef\.current === initiatingOwnerId[\s\S]{0,100}operationRef\.current === operation/,
+  );
+});
+
+test("active desktop chat keeps one primary action and groups secondary controls", () => {
+  assert.doesNotMatch(shellSpec, /removeLocatorHandler\(onboarding\)/);
+  assert.doesNotMatch(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
+  assert.match(route, /aria-label="Share chat"/);
+  assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
+  assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);
+  assert.match(route, /<DropdownMenuContent align="end" className="w-56">/);
+  assert.match(
+    route,
+    /<DropdownMenuItem onSelect=\{\(\) => setWorkspaceOpen\(true\)\}>[\s\S]*?Chat settings/,
+  );
+  assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
+  assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
+});
+
 test("composer actions, message editing, and markdown stay reachable and lossless", () => {
   assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map/);
+  assert.match(chatInput, /COMPOSER_TOOLS\.filter/);
+  assert.match(chatInput, /tool\.id !== "deep_research" \|\| userTier !== "free"/);
+  assert.match(chatInput, /\.map\(\s*toolRow,\s*\)/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
+  assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
+  assert.ok(
+    chatMessage.indexOf("title={retryActionLabel}") <
+      chatMessage.indexOf('aria-label="More actions"'),
+  );
+  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
   assert.match(route, /setInput\(m\.content\);/);
   assert.match(
     route,
@@ -71,8 +179,10 @@ test("sending snapshots history and serializes automatic retries", () => {
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
   assert.ok(snapshot >= 0 && optimisticUpdate > snapshot);
   assert.match(route, /\|\| inFlightRef\.current\) return;/);
-  assert.match(route, /const payloadMessages = \[\s*\.\.\.priorMessages\.map/);
-  assert.match(route, /attachments: userMsg\.attachments/);
+  assert.match(
+    route,
+    /const historyPayload = await createChatHistoryPayload\(\s*chatRequestMessages\(priorMessages, userMsg\)/,
+  );
   assert.doesNotMatch(route, /\[\.\.\.priorMessages, userMsg\]\.map/);
   assert.match(route, /inFlightRef\.current = true;/);
   assert.match(route, /inFlightRef\.current = false;/);

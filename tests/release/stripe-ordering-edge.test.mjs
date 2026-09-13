@@ -5,10 +5,10 @@ const read = (p) => readFile(new URL(`../../${p}`, import.meta.url), "utf8");
 test("Stripe completion uses a DB lease sequence and keeps Event time audit-only", async () => {
   const reliability = await read("src/lib/webhook-reliability.mjs"),
     identitySql = await read(
-      "supabase/migrations/20260902023000_stripe_customer_identity_and_completion.sql",
+      "supabase/migrations/20260904231210_stripe_customer_identity_and_completion.sql",
     ),
     atomicSql = await read(
-      "supabase/migrations/20260902024000_billing_plan_tier_and_atomic_stripe_events.sql",
+      "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql",
     ),
     rollout = await read("docs/release/STRIPE_BILLING_ROLLOUT.md");
   assert.match(reliability, /rpc\("begin_stripe_event"/);

@@ -14,6 +14,8 @@ import {
   getValidGoogleAccessToken,
   getGoogleConnection,
   getGoogleConnectionHealth,
+  getGoogleExecutionBinding,
+  type GoogleAccountBinding,
   logAudit,
 } from "@/lib/google-oauth.server";
 import {
@@ -21,6 +23,7 @@ import {
   foldEmailAddressHeader,
   validateSupportedGoogleWrite,
 } from "@/lib/google-write-validation.server.mjs";
+import { hasGoogleCapability, googleToolCapability } from "@/lib/google-account-policy.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { LockdownPolicyError, assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 
@@ -281,27 +284,25 @@ export const ALL_TOOLS: ToolDef[] = [
   ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
 ];
 
-export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]> {
+export async function getAvailableGoogleTools(
+  userId: string,
+  binding?: GoogleAccountBinding,
+): Promise<ToolDef[]> {
   await assertLockdownAllows(admin(), userId, "connector_read");
-  const health = await getGoogleConnectionHealth(userId);
+  const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
-  return ALL_TOOLS.filter((tool) => {
-    const name = tool.function.name;
-    if (name.startsWith("gmail_")) {
-      if (name === "gmail_send") {
-        return (
-          health.has.gmailWrite ||
-          health.scopes.includes("https://www.googleapis.com/auth/gmail.send")
-        );
-      }
-      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
-    }
-    if (name.startsWith("calendar_")) {
-      return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
-    }
-    if (name.startsWith("drive_")) return health.has.drive;
-    return false;
-  });
+  return ALL_TOOLS.filter((tool) =>
+    hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
+  );
+}
+
+export async function getGoogleToolContext(userId: string) {
+  try {
+    const binding = await getGoogleExecutionBinding(userId);
+    return { binding, tools: await getAvailableGoogleTools(userId, binding) };
+  } catch {
+    return { binding: null, tools: [] as ToolDef[] };
+  }
 }
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1";
@@ -377,6 +378,7 @@ export async function runGoogleTool(
   userId: string,
   name: string,
   args: Record<string, unknown>,
+  binding?: GoogleAccountBinding,
 ): Promise<unknown> {
   try {
     await assertLockdownAllows(admin(), userId, "connector_read");
@@ -401,7 +403,10 @@ export async function runGoogleTool(
   }
   let token: string;
   try {
-    token = await getValidGoogleAccessToken(userId);
+    token = await getValidGoogleAccessToken(userId, {
+      ...binding,
+      capability: googleToolCapability(name),
+    });
   } catch {
     return {
       error: "google_not_connected",
@@ -644,8 +649,10 @@ export async function runGoogleTool(
 
 /** Cheap check: is the user's Google account connected at all? */
 export async function userHasGoogle(userId: string): Promise<boolean> {
-  const conn = await getGoogleConnection(userId);
-  return !!conn;
+  return getGoogleConnection(userId).then(
+    () => true,
+    () => false,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -745,16 +752,33 @@ export async function stagePendingAction(
   userId: string,
   tool: string,
   args: WriteArgs,
+  binding?: GoogleAccountBinding,
 ): Promise<PendingAction> {
   await assertLockdownAllows(admin(), userId, "connector_write");
   const validated = validateSupportedWrite(tool, args);
-  const connection = await getGoogleConnection(userId);
+  const connection = await getGoogleConnection(userId, binding?.connectionId);
   const stagedGoogleSub =
     connection && typeof connection.google_sub === "string" ? connection.google_sub : "";
-  if (!stagedGoogleSub) {
+  if (
+    !stagedGoogleSub ||
+    (binding?.grantId && binding.grantId !== connection.grant_id) ||
+    (binding?.expectedGoogleSub && binding.expectedGoogleSub !== stagedGoogleSub) ||
+    !hasGoogleCapability(connection.scopes, googleToolCapability(tool))
+  ) {
     throw new Error("Reconnect Google before preparing this action.");
   }
-  const { summary, preview } = summarizeWriteTool(tool, validated);
+  const summarized = summarizeWriteTool(tool, validated);
+  const summary = `${summarized.summary} · Google account: ${connection.email ?? "Selected account"}`;
+  const preview = {
+    ...summarized.preview,
+    google_account: connection.email,
+    connection_id: connection.id,
+  };
+  const stagedBinding = {
+    staged_google_sub: stagedGoogleSub,
+    staged_connection_id: connection.id,
+    staged_grant_id: connection.grant_id,
+  };
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
     .insert({
@@ -762,7 +786,7 @@ export async function stagePendingAction(
       tool,
       args: validated as never,
       summary,
-      result: { staged_google_sub: stagedGoogleSub },
+      result: stagedBinding,
     } as never)
     .select("id")
     .single();
@@ -945,12 +969,25 @@ export async function executePendingAction(
     };
   }
 
-  const claimResult = claimedAction.result as { staged_google_sub?: unknown } | null;
+  const claimResult = claimedAction.result as {
+    staged_google_sub?: unknown;
+    staged_connection_id?: unknown;
+    staged_grant_id?: unknown;
+  } | null;
   const stagedGoogleSub =
     claimResult && typeof claimResult.staged_google_sub === "string"
       ? claimResult.staged_google_sub
       : "";
-  if (!stagedGoogleSub) {
+  const stagedConnectionId =
+    typeof claimResult?.staged_connection_id === "string" ? claimResult.staged_connection_id : "";
+  const stagedGrantId =
+    typeof claimResult?.staged_grant_id === "string" ? claimResult.staged_grant_id : "";
+  const stagedBinding = {
+    staged_google_sub: stagedGoogleSub,
+    staged_connection_id: stagedConnectionId,
+    staged_grant_id: stagedGrantId,
+  };
+  if (!stagedGoogleSub || !stagedConnectionId || !stagedGrantId) {
     await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
       .update({ status: "cancelled", result: { error: "missing_staged_google_identity" } })
@@ -967,7 +1004,12 @@ export async function executePendingAction(
 
   let token: string;
   try {
-    token = await getValidGoogleAccessToken(userId, stagedGoogleSub);
+    token = await getValidGoogleAccessToken(userId, {
+      connectionId: stagedConnectionId,
+      grantId: stagedGrantId,
+      expectedGoogleSub: stagedGoogleSub,
+      capability: googleToolCapability(claimedTool),
+    });
   } catch (error) {
     const connectionChanged =
       error instanceof Error && error.message === "google_connection_changed";
@@ -975,9 +1017,7 @@ export async function executePendingAction(
       .from("pending_tool_actions")
       .update({
         status: connectionChanged ? "cancelled" : "pending",
-        result: connectionChanged
-          ? { error: "google_connection_changed" }
-          : { staged_google_sub: stagedGoogleSub },
+        result: connectionChanged ? { error: "google_connection_changed" } : stagedBinding,
       })
       .eq("id", actionId)
       .eq("user_id", userId)

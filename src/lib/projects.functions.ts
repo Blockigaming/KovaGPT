@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 import { z } from "zod";
 
 export type ProjectRole = "owner" | "editor" | "viewer";
@@ -19,6 +20,7 @@ export type ProjectSummary = {
   updated_at: string;
   pinned_at: string | null;
   archived_at: string | null;
+  deletion_requested_at: string | null;
 };
 
 export const PROJECT_LIMITS: Record<
@@ -54,6 +56,8 @@ export type ProjectDetail = {
   role: ProjectRole;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
+  deletion_requested_at: string | null;
 };
 
 export type ProjectMember = {
@@ -78,7 +82,11 @@ export type ProjectChatSummary = {
   created_by: string;
 };
 
-export type ProjectChatMessage = { role: "user" | "assistant" | "system"; content: string };
+export type ProjectChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+  sources?: ResponseSource[];
+};
 export type ProjectChatDetail = ProjectChatSummary & {
   snapshot: { messages: ProjectChatMessage[] };
   project_id: string;
@@ -93,10 +101,46 @@ export type PendingInvite = {
   created_at: string;
 };
 
-const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().max(100_000),
-});
+const ResponseSourceSchema = z
+  .object({
+    id: z.string().max(80),
+    title: z.string().max(180),
+    url: z.string().max(2_048),
+    domain: z.string().max(120),
+    snippet: z.string().max(500).optional(),
+    publishedAt: z.string().max(80).optional(),
+  })
+  .strict()
+  .transform((source, context): ResponseSource => {
+    const normalized = normalizeResponseSources([source])?.[0];
+    if (!normalized) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid response source" });
+      return z.NEVER;
+    }
+    return normalized;
+  });
+
+const MessageSchema = z
+  .object({
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.string().max(100_000),
+    sources: z.array(ResponseSourceSchema).max(12).optional(),
+  })
+  .strict()
+  .superRefine((message, context) => {
+    if (message.sources !== undefined && message.role !== "assistant") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Only responses can have sources" });
+    }
+  });
+
+function projectChatSnapshot(value: unknown): { messages: ProjectChatMessage[] } {
+  const messages =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as { messages?: unknown }).messages
+      : undefined;
+  const parsed = z.array(MessageSchema).max(500).safeParse(messages);
+  return { messages: parsed.success ? parsed.data : [] };
+}
 
 // -------- Projects CRUD --------
 
@@ -116,7 +160,7 @@ export const listProjects = createServerFn({ method: "GET" })
     const { data: projects, error: pErr } = await context.supabase
       .from("projects")
       .select(
-        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at",
+        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
       )
       .in("id", ids)
       .order("pinned_at", { ascending: false, nullsFirst: false })
@@ -128,7 +172,11 @@ export const listProjects = createServerFn({ method: "GET" })
     const [{ data: counts }, { data: chats }, { data: files }] = await Promise.all([
       context.supabase.from("project_members").select("project_id").in("project_id", ids),
       context.supabase.from("project_chats").select("project_id").in("project_id", ids),
-      context.supabase.from("project_files").select("project_id").in("project_id", ids),
+      context.supabase
+        .from("project_files")
+        .select("project_id")
+        .in("project_id", ids)
+        .eq("status", "ready"),
     ]);
     const countMap = new Map<string, number>();
     const chatMap = new Map<string, number>();
@@ -154,6 +202,7 @@ export const listProjects = createServerFn({ method: "GET" })
       updated_at: p.updated_at as string,
       pinned_at: (p.pinned_at as string | null) ?? null,
       archived_at: (p.archived_at as string | null) ?? null,
+      deletion_requested_at: (p.deletion_requested_at as string | null) ?? null,
     }));
   });
 
@@ -280,7 +329,9 @@ export const getProject = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ProjectDetail | null> => {
     const { data: p, error } = await context.supabase
       .from("projects")
-      .select("id, name, description, system_prompt, color, owner_id, created_at, updated_at")
+      .select(
+        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, archived_at, deletion_requested_at",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) {
@@ -329,10 +380,22 @@ export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
-    if (error) {
-      console.error("[deleteProject]", error.message);
-      throw new Error("Failed to delete project");
+    const [{ supabaseAdmin }, deletion] = await Promise.all([
+      import("@/integrations/supabase/client.server"),
+      import("@/lib/project-deletion.server"),
+    ]);
+    try {
+      await deletion.deleteProjectStorageFirst({
+        admin: supabaseAdmin,
+        userId: context.userId,
+        projectId: data.id,
+      });
+    } catch (error) {
+      console.error("[deleteProject] storage-first cleanup failed", {
+        code:
+          error instanceof deletion.ProjectDeletionError ? error.code : "project_deletion_failed",
+      });
+      throw new Error(deletion.projectDeletionPublicMessage(error), { cause: error });
     }
     return { ok: true };
   });
@@ -629,7 +692,7 @@ export const getProjectChat = createServerFn({ method: "GET" })
     if (error || !row) return null;
     return {
       ...row,
-      snapshot: (row.snapshot as { messages: ProjectChatMessage[] }) ?? { messages: [] },
+      snapshot: projectChatSnapshot(row.snapshot),
     } as ProjectChatDetail;
   });
 

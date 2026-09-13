@@ -103,12 +103,13 @@ test("project template queries are strict and bounded", () => {
     templateId: null,
     version: null,
     limit: 25,
+    after: null,
   });
   assert.deepEqual(
     parseProjectTemplateQuery(
       `https://kovagpt.com/api/project-templates?templateId=${templateId}&version=3&limit=10`,
     ),
-    { templateId, version: 3, limit: 10 },
+    { templateId, version: 3, limit: 10, after: null },
   );
   assert.throws(
     () => parseProjectTemplateQuery("https://kovagpt.com/api/project-templates?version=1"),
@@ -130,4 +131,28 @@ test("database errors map to stable HTTP status classes", () => {
   assert.equal(projectTemplateErrorStatus("42501"), 403);
   assert.equal(projectTemplateErrorStatus("22023"), 400);
   assert.equal(projectTemplateErrorStatus("XX000"), 503);
+});
+
+test("management cursors are exact UUIDs and cannot be mixed with a version lookup", () => {
+  assert.deepEqual(
+    parseProjectTemplateQuery(
+      `https://kovagpt.com/api/project-templates?limit=50&after=${templateId}`,
+    ),
+    {
+      templateId: null,
+      version: null,
+      limit: 50,
+      after: templateId,
+    },
+  );
+  for (const query of [
+    `after=no`,
+    `after=${templateId}&after=${templateId}`,
+    `templateId=${templateId}&after=${templateId}`,
+  ]) {
+    assert.throws(
+      () => parseProjectTemplateQuery(`https://kovagpt.com/api/project-templates?${query}`),
+      /cursor_invalid|query_invalid/u,
+    );
+  }
 });

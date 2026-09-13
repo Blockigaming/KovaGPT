@@ -47,15 +47,18 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("voice stays disabled without adding provider secrets or billing claims", () => {
+test("required Voice stays unavailable without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
+  const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chat = read("src/components/ChatInput.tsx");
   const message = read("src/components/ChatMessage.tsx");
   const pricing = read("src/routes/pricing.tsx");
   const start = read("src/start.ts");
   const server = read("src/server.ts");
 
-  assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
+  assert.match(matrix, /Voice: REQUIRED \/ UNAVAILABLE/);
+  assert.match(capabilityRegistry, /voiceScope: "required_unavailable"/);
+  assert.match(capabilityRegistry, /voice:[\s\S]*availability: "unavailable"/);
   for (const source of [chat, message]) {
     assert.doesNotMatch(
       source,
@@ -102,11 +105,11 @@ test("account deletion verifies every credential store before removing auth", ()
   const github = read("src/lib/github-oauth.server.ts");
   const finance = read("src/finances/plaid.server.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
-  const authDeletion = account.indexOf("auth.admin.deleteUser(auth.userId)");
+  const authDeletion = account.indexOf("auth.admin.deleteUser(");
 
   for (const cleanup of [
     "disconnectAllFinance(auth)",
-    "disconnectGoogle(auth.userId)",
+    "disconnectAllGoogle(auth.userId)",
     "disconnectAllGitHub(auth.userId)",
     "disconnectAllOAuth(auth.userId)",
   ]) {
@@ -114,8 +117,12 @@ test("account deletion verifies every credential store before removing auth", ()
     assert.ok(cleanupIndex > -1 && cleanupIndex < authDeletion, cleanup);
   }
 
-  assert.match(google, /\.from\("google_oauth_tokens"\)\.delete\(\)\.eq\("user_id", userId\)/);
-  assert.match(google, /google_token_purge_failed/);
+  assert.match(google, /disconnectAllGoogle\(userId: string\)/);
+  assert.match(google, /accountRuntime\(\)\.disconnect\(userId, null\)/);
+  const vault = read("supabase/migrations/20260905005417_google_multiaccount_lifecycle.sql");
+  assert.match(vault, /p_operation IN\s*\('disconnect','disconnect_all'\)/);
+  assert.match(vault, /access_token='',refresh_token=NULL/);
+  assert.match(vault, /WHERE user_id=p_user_id AND revoked_at IS NULL/);
   assert.match(account, /Google credentials could not be removed/);
 
   assert.match(github, /export async function disconnectAllGitHub\(ownerId: string\)/);

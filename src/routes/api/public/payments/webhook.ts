@@ -4,6 +4,7 @@ import {
   type StripeEnv,
   StripeWebhookVerificationError,
   verifyWebhook,
+  durableStripeBillingEnabled,
 } from "@/lib/stripe.server";
 import { resolveBillingPlan } from "@/lib/billing-plans";
 import { logOperationalEvent } from "@/lib/structured-log.server";
@@ -64,6 +65,8 @@ export async function handleWebhook(
   correlationId: string = crypto.randomUUID(),
 ) {
   const event = await verifyWebhook(req, env);
+  if (!durableStripeBillingEnabled())
+    throw new WebhookProcessingError("billing_rollout_pending", 503);
   const stripe = createStripeClient(env);
   return processStripeEvent({
     supabase: supabaseAdmin,

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ArchiveRestore, Search, Trash2, X } from "lucide-react";
 import {
   chatStoragePrincipal,
+  loadConversations,
+  saveConversations,
   loadArchivedConversations,
   removeArchivedConversation,
   saveArchivedConversations,
@@ -76,10 +78,10 @@ export function ArchivedChatsDialog({
             <button
               type="button"
               className="rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => {
+              onClick={async () => {
                 if (!window.confirm(`Permanently delete all ${items.length} archived chats?`))
                   return;
-                saveArchivedConversations(userKey, []);
+                if (!(await saveArchivedConversations(userKey, []))) return;
                 setArchiveState({ principal, items: [] });
               }}
             >
@@ -108,8 +110,15 @@ export function ArchivedChatsDialog({
                 </span>
               </span>
               <button
-                onClick={() => {
-                  removeArchivedConversation(userKey, chat.id);
+                onClick={async () => {
+                  if (
+                    !(await saveConversations(userKey, [
+                      chat,
+                      ...loadConversations(userKey).filter((c) => c.id !== chat.id),
+                    ])) ||
+                    !(await removeArchivedConversation(userKey, chat.id))
+                  )
+                    return;
                   onRestore(chat);
                   setArchiveState((current) =>
                     current.principal === principal
@@ -127,8 +136,8 @@ export function ArchivedChatsDialog({
                 <ArchiveRestore className="h-4 w-4" />
               </button>
               <button
-                onClick={() => {
-                  removeArchivedConversation(userKey, chat.id);
+                onClick={async () => {
+                  if (!(await removeArchivedConversation(userKey, chat.id))) return;
                   setArchiveState((current) =>
                     current.principal === principal
                       ? {

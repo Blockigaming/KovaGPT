@@ -7,11 +7,12 @@ import {
   CreditCard,
   FolderKanban,
   FolderOpen,
+  Globe,
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  Map,
   Blocks,
+  BriefcaseBusiness,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -84,6 +85,7 @@ export function Sidebar({
   const drawerRef = useRef<HTMLElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -93,6 +95,18 @@ export function Sidebar({
   const collapsed = !open;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
+  const moreRouteActive = [
+    "/kovas",
+    "/sites",
+    "/apps",
+    "/discovery",
+    "/scheduled-tasks",
+    "/pricing",
+  ].some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
+  useEffect(() => {
+    if (moreRouteActive) setMoreOpen(true);
+  }, [moreRouteActive]);
 
   useEffect(() => {
     const openSearch = () => {
@@ -181,6 +195,12 @@ export function Sidebar({
       aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+        />
+      ) : null}
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
       {badge && !collapsed ? (
@@ -207,6 +227,12 @@ export function Sidebar({
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
+      {activeId === c.id ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+        />
+      ) : null}
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
@@ -365,6 +391,14 @@ export function Sidebar({
             <Search className="h-[18px] w-[18px]" />
           </button>
           <Link
+            to="/work"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
+            aria-label="Work"
+            title="Work"
+          >
+            <BriefcaseBusiness className="h-[18px] w-[18px]" />
+          </Link>
+          <Link
             to="/images"
             className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
             aria-label="Images"
@@ -489,24 +523,58 @@ export function Sidebar({
                 <span className={labelClass}>Search</span>
               </button>
             ) : null}
-            {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
-            {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
-            {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Plugins", Blocks)}
-            {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "Preview")}
-
-            {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink(
-                  "/scheduled-tasks",
-                  "Scheduled tasks status",
-                  Calendar,
-                  isOn("/scheduled-tasks"),
-                )
-              : null}
-            {showSignedIn && tier !== "plus" && tier !== "pro"
-              ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
-              : null}
+            {showSignedIn ? (
+              <>
+                {renderNavLink("/work", "Work", BriefcaseBusiness)}
+                {renderNavLink("/projects", "Projects", FolderKanban)}
+                {renderNavLink("/library", "Library", FolderOpen)}
+                <div className="my-1 border-t border-border/50" aria-hidden="true" />
+                {renderNavLink("/images", "Images", ImageIcon)}
+                {renderNavLink("/research-planner", "Deep research", Telescope)}
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((current) => !current)}
+                  className={navItemClass(moreRouteActive)}
+                  aria-expanded={moreOpen}
+                  aria-controls="sidebar-more-destinations"
+                >
+                  <MoreHorizontal className="h-[18px] w-[18px] shrink-0" />
+                  <span className={labelClass}>More</span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className={`ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform ${moreOpen ? "rotate-90" : ""}`}
+                  />
+                </button>
+                {moreOpen ? (
+                  <div
+                    id="sidebar-more-destinations"
+                    role="group"
+                    aria-label="More destinations"
+                    className="ml-5 flex flex-col gap-0.5 border-l border-border/60 pl-2"
+                  >
+                    {renderNavLink("/kovas", "Kovas", Blocks)}
+                    {renderNavLink("/sites", "Sites", Globe)}
+                    {renderNavLink("/apps", "Plugins", Blocks)}
+                    {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
+                    {tier === "plus" || tier === "pro"
+                      ? renderNavLink(
+                          "/scheduled-tasks",
+                          "Scheduled tasks status",
+                          Calendar,
+                          isOn("/scheduled-tasks"),
+                        )
+                      : renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {renderNavLink("/images", "Images", ImageIcon)}
+                {renderNavLink("/apps", "Plugins", Blocks)}
+                {renderNavLink("/research-planner", "Deep research", Telescope)}
+                {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
+              </>
+            )}
           </div>
 
           <div

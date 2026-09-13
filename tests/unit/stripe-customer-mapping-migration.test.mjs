@@ -5,7 +5,7 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath =
-  "supabase/migrations/20260902023000_stripe_customer_identity_and_completion.sql";
+  "supabase/migrations/20260904231210_stripe_customer_identity_and_completion.sql";
 
 async function createDatabase() {
   const database = new PGlite();
@@ -112,6 +112,48 @@ test("migration aborts rather than guessing when one user has two Customers", as
     `);
     const migration = await readFile(migrationPath, "utf8");
     await assert.rejects(() => database.exec(migration), /stripe_customer_backfill_user_conflict/u);
+  } finally {
+    await database.close();
+  }
+});
+
+test("first Checkout reservation and account deletion are serialized by a durable fence", async () => {
+  const database = await createDatabase();
+  const user = "11111111-1111-4111-8111-111111111111";
+  try {
+    await database.exec(await readFile(migrationPath, "utf8"));
+    await database.query("INSERT INTO auth.users(id) VALUES ($1)", [user]);
+    const claim = await database.query(
+      "SELECT public.claim_stripe_customer_creation($1,'live') AS request",
+      [user],
+    );
+    await database.query("INSERT INTO public.account_deletion_fences(user_id) VALUES ($1)", [user]);
+    await assert.rejects(
+      database.query("SELECT public.prepare_stripe_account_deletion($1)", [user]),
+      /stripe_customer_creation_pending/u,
+    );
+    await assert.rejects(
+      database.query("SELECT public.claim_stripe_customer_creation($1,'sandbox')", [user]),
+      /account_deletion_pending/u,
+    );
+    await assert.rejects(
+      database.query("DELETE FROM auth.users WHERE id=$1", [user]),
+      /stripe_customer_creation_pending/u,
+    );
+    await database.query("DELETE FROM public.account_deletion_fences WHERE user_id=$1", [user]);
+    const requestId = claim.rows[0].request.requestId;
+    await database.query(
+      "SELECT public.complete_stripe_customer_creation($1,'live',$2,'cus_Settled')",
+      [user, requestId],
+    );
+    await database.query("INSERT INTO public.account_deletion_fences(user_id) VALUES ($1)", [user]);
+    const ready = await database.query(
+      "SELECT public.prepare_stripe_account_deletion($1) AS mappings",
+      [user],
+    );
+    assert.deepEqual(ready.rows[0].mappings, [
+      { environment: "live", stripe_customer_id: "cus_Settled" },
+    ]);
   } finally {
     await database.close();
   }

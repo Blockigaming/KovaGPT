@@ -5,9 +5,9 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const identityMigration =
-  "supabase/migrations/20260902023000_stripe_customer_identity_and_completion.sql";
+  "supabase/migrations/20260904231210_stripe_customer_identity_and_completion.sql";
 const atomicMigration =
-  "supabase/migrations/20260902024000_billing_plan_tier_and_atomic_stripe_events.sql";
+  "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const plusPriceId = "price_1UAzhHAEZlsb6DBYWw2oUCeO";
 const proPriceId = "price_1UAzhRAEZlsb6DBYlafU4mhc";
@@ -568,5 +568,83 @@ test("only terminal subscription rows permit a new Checkout attempt", async () =
     } finally {
       await database.close();
     }
+  }
+});
+
+test("ambiguous Session outcomes never expire into a new idempotency key", async () => {
+  const database = await createDatabase();
+  try {
+    const first = await claimCheckout(database, { trialEligible: false });
+    await database.query("SELECT public.mark_stripe_checkout_attempt($1,'live',$2,'pending')", [
+      userId,
+      first.idempotencyKey,
+    ]);
+    await database.query(
+      "UPDATE public.stripe_checkout_attempts SET session_expires_at=now()-interval '2 days',idempotency_expires_at=now()-interval '1 day' WHERE user_id=$1",
+      [userId],
+    );
+    const retry = await claimCheckout(database, { trialEligible: false });
+    assert.equal(retry.idempotencyKey, first.idempotencyKey);
+    assert.equal(retry.outcome, "pending");
+    await database.query("INSERT INTO public.account_deletion_fences(user_id) VALUES($1)", [
+      userId,
+    ]);
+    await assert.rejects(claimCheckout(database), /account_deletion_pending/u);
+  } finally {
+    await database.close();
+  }
+});
+
+test("expired local active status reaches a fresh verified Checkout claim", async () => {
+  const database = await createDatabase();
+  try {
+    await database.query(
+      `INSERT INTO public.subscriptions
+      (user_id,stripe_subscription_id,stripe_customer_id,product_id,price_id,status,environment,current_period_end)
+      VALUES ($1,'sub_stale','cus_trusted','prod_known',$2,'active','live',now()-interval '1 day')`,
+      [userId, plusPriceId],
+    );
+    const attempt = await claimCheckout(database, { trialEligible: false });
+    assert.ok(attempt.idempotencyKey);
+  } finally {
+    await database.close();
+  }
+});
+
+test("ready Sessions require exact expiry proof and terminal outcomes cannot regress", async () => {
+  const database = await createDatabase();
+  try {
+    const first = await claimCheckout(database, { trialEligible: false });
+    await database.query("SELECT public.mark_stripe_checkout_attempt($1,'live',$2,'pending')", [
+      userId,
+      first.idempotencyKey,
+    ]);
+    await database.query(
+      "SELECT public.mark_stripe_checkout_attempt($1,'live',$2,'ready','cs_known')",
+      [userId, first.idempotencyKey],
+    );
+    await database.query(
+      "UPDATE public.stripe_checkout_attempts SET session_expires_at=now()-interval '1 day' WHERE user_id=$1",
+      [userId],
+    );
+    assert.equal(
+      (await claimCheckout(database, { trialEligible: false })).idempotencyKey,
+      first.idempotencyKey,
+    );
+    await database.query(
+      "SELECT public.mark_stripe_checkout_attempt($1,'live',$2,'expired','cs_known')",
+      [userId, first.idempotencyKey],
+    );
+    const late = await database.query(
+      "SELECT public.mark_stripe_checkout_attempt($1,'live',$2,'ready','cs_known') AS accepted",
+      [userId, first.idempotencyKey],
+    );
+    assert.equal(late.rows[0].accepted, false);
+    assert.notEqual(
+      (await claimCheckout(database, { trialEligible: false })).idempotencyKey,
+      first.idempotencyKey,
+    );
+  } finally {
+    await database.close();
   }
 });

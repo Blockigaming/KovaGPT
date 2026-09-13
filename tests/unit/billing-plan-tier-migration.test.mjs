@@ -5,7 +5,7 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath =
-  "supabase/migrations/20260902024000_billing_plan_tier_and_atomic_stripe_events.sql";
+  "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
@@ -199,7 +199,7 @@ test("two exact historical Prices may share one lookup key without ambiguity", a
   }
 });
 
-test("multiple active subscriptions fail closed even when both map to Plus", async () => {
+test("multiple active subscriptions retain paid access when every row maps to Plus", async () => {
   const database = await createDatabase();
   try {
     await database.query(
@@ -216,9 +216,9 @@ test("multiple active subscriptions fail closed even when both map to Plus", asy
       priceId: rotatedPlusPriceId,
       subscriptionId: "sub_plus_b",
     });
-    assert.equal(await tier(database), "free");
+    assert.equal(await tier(database), "plus");
     const result = await summary(database);
-    assert.equal(result.tier, "free");
+    assert.equal(result.tier, "plus");
     assert.equal(result.billingConflict, true);
     assert.equal(result.activeSubscriptionCount, 2);
   } finally {
@@ -396,6 +396,21 @@ test("arbitrary-user resolvers remain service-role-only", async () => {
     const migration = await readFile(migrationPath, "utf8");
     assert.doesNotMatch(migration, /unique\s*\(environment,\s*lookup_key\)/iu);
     assert.match(migration, /mapping\.stripe_price_id\s*=\s*subscription\.price_id/u);
+  } finally {
+    await database.close();
+  }
+});
+
+test("missing billing periods do not grant direct or inherited paid access", async () => {
+  const database = await createDatabase();
+  try {
+    await addSubscription(database, { priceId: plusPriceId, subscriptionId: "sub_missing_period" });
+    await database.query(
+      "UPDATE public.subscriptions SET current_period_end=NULL WHERE user_id=$1",
+      [userId],
+    );
+    assert.equal(await tier(database), "free");
+    assert.equal((await summary(database)).tier, "free");
   } finally {
     await database.close();
   }

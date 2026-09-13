@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import {
+  type StripeEnv,
+  createStripeClient,
+  durableStripeBillingEnabled,
+} from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
 import { parseCheckoutRequest } from "@/lib/checkout-request.mjs";
@@ -7,6 +11,10 @@ import { BILLING_ENV, resolveBillingPlan } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveStripeCustomerId } from "@/lib/stripe-customer-mapping.mjs";
+import {
+  resolveDurableCheckoutSession,
+  StripeCheckoutPendingError,
+} from "@/lib/stripe-checkout-reconciliation.mjs";
 import { stripeSubscriptionBlocksCheckout } from "@/lib/stripe-subscription-status.mjs";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
@@ -26,6 +34,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     return parsed;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
+    if (!durableStripeBillingEnabled())
+      return { error: "Billing is awaiting its verified rollout. Contact support." };
     try {
       const plan = resolveBillingPlan(data.priceId);
       if (!plan) throw new Error("Invalid priceId");
@@ -45,21 +55,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (existingError) {
         return { error: "Billing status couldn't be verified. Try again." };
       }
-      const hasActiveSubscription = (subscriptionHistory ?? []).some((subscription) => {
-        const periodEnd = subscription.current_period_end
-          ? new Date(subscription.current_period_end).getTime()
-          : null;
-        return (
-          !["canceled", "incomplete_expired"].includes(subscription.status) ||
-          (subscription.status === "canceled" &&
-            (periodEnd === null || !Number.isFinite(periodEnd) || periodEnd > Date.now()))
-        );
-      });
-      if (hasActiveSubscription) {
-        return {
-          error:
-            "You already have an active subscription. Resume or manage it in Billing, or wait until it expires before starting another.",
-        };
+      // Keep ambiguous periods fail-closed; expired local status must reach the
+      // authoritative Stripe scan instead of becoming a permanent stale block.
+      if (hasStillActiveSubscription(subscriptionHistory ?? [])) {
+        return { error: "You already have an active subscription. Manage it from Billing." };
       }
 
       const prices = await stripe.prices.list({
@@ -112,6 +111,17 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const requestedTrialEligibility =
         plan.trialPeriodDays > 0 && (subscriptionHistory ?? []).length === 0 && !stripeHasHistory;
 
+      // The existing promise is a 30-day first-eligible Plus trial. Customer
+      // deletion removes the former email/history signal. Until the owner
+      // approves its replacement retention policy, never silently sell a
+      // no-trial plan or grant a second trial under an unverified identity.
+      if (requestedTrialEligibility) {
+        return {
+          error:
+            "Your 30-day trial eligibility needs verification. Contact support before starting Checkout.",
+        };
+      }
+
       const { data: checkoutAttempt, error: checkoutAttemptError } = await supabaseAdmin.rpc(
         "claim_stripe_checkout_attempt",
         {
@@ -150,7 +160,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         !idempotencyKey ||
         attemptCustomerId !== customerId ||
         !Number.isSafeInteger(sessionExpiresAt) ||
-        sessionExpiresAt <= Math.floor(Date.now() / 1000)
+        (sessionExpiresAt <= Math.floor(Date.now() / 1000) && attempt.outcome === "new")
       ) {
         throw new Error("Checkout attempt invalid");
       }
@@ -164,7 +174,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         expires_at: sessionExpiresAt,
         managed_payments: { enabled: true },
         customer: customerId,
-        metadata: { userId },
+        metadata: { userId, kovaCheckoutAttempt: idempotencyKey },
         subscription_data: {
           metadata: { userId },
           ...(attemptTrialEligible && {
@@ -172,8 +182,13 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           }),
         },
       };
-      const session = await stripe.checkout.sessions.create(sessionParams, {
-        idempotencyKey: `kova-checkout-${BILLING_ENV}-${userId}-${idempotencyKey}`,
+      const session = await resolveDurableCheckoutSession({
+        stripe,
+        supabase: supabaseAdmin,
+        userId,
+        environment: BILLING_ENV,
+        attempt,
+        params: sessionParams,
       });
 
       if (!session.client_secret) {
@@ -181,6 +196,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
       return { clientSecret: session.client_secret };
     } catch (error) {
+      if (error instanceof StripeCheckoutPendingError) {
+        return {
+          error:
+            "Checkout is being reconciled. Retry shortly or contact support; no second payment attempt was started.",
+        };
+      }
       console.error("[billing-checkout] Stripe request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
@@ -196,6 +217,8 @@ export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
+    if (!durableStripeBillingEnabled())
+      return { error: "Billing is awaiting its verified rollout. Contact support." };
     const { data: mapping, error: mappingError } = await supabaseAdmin
       .from("stripe_customer_mappings")
       .select("stripe_customer_id")
@@ -207,6 +230,21 @@ export const createPortalSession = createServerFn({ method: "POST" })
     }
     if (!mapping?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
+    }
+    const { data: rows, error: subscriptionError } = await context.supabase
+      .from("subscriptions")
+      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", BILLING_ENV)
+      .order("created_at", { ascending: false });
+    if (subscriptionError) return { error: "Billing account couldn't be verified. Try again." };
+    const sub = selectSubscriptionSummaryRow(rows ?? []);
+    if (
+      sub &&
+      hasVerifiedSubscriptionAccess(sub) &&
+      sub.stripe_customer_id !== mapping.stripe_customer_id
+    ) {
+      return { error: "Billing Customer identity needs reconciliation. Contact support." };
     }
     const configuration = billingPortalConfigurationId();
     if (!configuration) {
@@ -331,3 +369,55 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       billingPortalAvailable: hasBillingAccount && !!billingPortalConfigurationId(),
     };
   });
+
+type CheckoutSubscriptionRow = {
+  status: string;
+  current_period_end: string | null;
+};
+
+type SubscriptionWindowState = "open" | "closed" | "ambiguous";
+
+function subscriptionWindowState(
+  subscription: CheckoutSubscriptionRow,
+  now = Date.now(),
+): SubscriptionWindowState {
+  const isPotentiallyCurrent = ["active", "trialing", "past_due", "canceled"].includes(
+    subscription.status,
+  );
+  if (!isPotentiallyCurrent) return "closed";
+  if (!subscription.current_period_end) return "ambiguous";
+  const periodEnd = new Date(subscription.current_period_end).getTime();
+  if (!Number.isFinite(periodEnd)) return "ambiguous";
+  return periodEnd > now ? "open" : "closed";
+}
+
+function hasVerifiedSubscriptionAccess(
+  subscription: CheckoutSubscriptionRow,
+  now = Date.now(),
+): boolean {
+  return subscriptionWindowState(subscription, now) === "open";
+}
+
+function hasStillActiveSubscription(
+  rows: readonly CheckoutSubscriptionRow[],
+  now = Date.now(),
+): boolean {
+  // Ambiguous current-subscription data blocks another Checkout session but
+  // cannot grant paid access through the customer-facing summary.
+  return rows.some((subscription) => subscriptionWindowState(subscription, now) !== "closed");
+}
+
+type SubscriptionSummaryRow = CheckoutSubscriptionRow & {
+  stripe_customer_id: string | null;
+  price_id: string | null;
+  cancel_at_period_end: boolean | null;
+};
+
+function selectSubscriptionSummaryRow(
+  rows: readonly SubscriptionSummaryRow[],
+  now = Date.now(),
+): SubscriptionSummaryRow | null {
+  return (
+    rows.find((subscription) => hasVerifiedSubscriptionAccess(subscription, now)) ?? rows[0] ?? null
+  );
+}

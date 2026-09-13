@@ -37,6 +37,6 @@ test("does not expose a Checkout return URL browser input", async () => {
   assert.doesNotMatch(componentSource, /\breturnUrl\b/);
   assert.doesNotMatch(hookSource, /\breturnUrl\b/);
   assert.doesNotMatch(pricingSource, /\breturnUrl\b|window\.location\.origin/);
-  assert.match(returnSource, /verifying the subscription server-side/);
+  assert.match(returnSource, /Checking your account|Verifying your subscription/);
   assert.doesNotMatch(returnSource, /Subscription activated|Your subscription is active/);
 });

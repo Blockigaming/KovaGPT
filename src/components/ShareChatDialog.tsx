@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { shareChat } from "@/lib/shared-chats.functions";
@@ -25,6 +25,8 @@ export function ShareChatDialog({
 }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const recipientEmailId = useId();
+  const recipientHelpId = useId();
   const share = useServerFn(shareChat);
   const { user } = useUser();
   const myEmail = (user?.primaryEmailAddress?.emailAddress ?? "").trim().toLowerCase();
@@ -59,7 +61,7 @@ export function ShareChatDialog({
           snapshot: { messages },
         },
       });
-      toast.success("Chat shared.");
+      toast.success("Chat shared. You can manage it in Library.");
       setEmail("");
       onOpenChange(false);
     } catch (e) {
@@ -85,20 +87,25 @@ export function ShareChatDialog({
             <span className="font-medium">{conversation?.title ?? "Untitled"}</span>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Recipient email</label>
+            <label htmlFor={recipientEmailId} className="text-xs font-medium text-muted-foreground">
+              Recipient email
+            </label>
             <Input
+              id={recipientEmailId}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="friend@example.com"
               autoFocus
               disabled={busy}
+              aria-describedby={recipientHelpId}
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p id={recipientHelpId} className="text-[11px] text-muted-foreground">
             The recipient needs a KovaGPT account using this email to view the chat. Sharing creates
             a view-only snapshot of the branch you are currently viewing — other branches are not
-            included. Future replies in your chat won't update theirs.
+            included. Future replies in your chat won't update theirs. They can open the snapshot
+            from Library.
           </p>
         </div>
         <div className="flex justify-end gap-2 pt-2">

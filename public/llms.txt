@@ -1,14 +1,15 @@
 # KovaGPT
 
-> KovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.
+> KovaGPT is an AI workspace for conversational drafting, coding help, web-assisted answers, research, and image generation.
 
-KovaGPT combines a fast general-purpose chat assistant with specialized modes (Creative, Precise, Code, Study, Reasoning, Research, Writer Pro, Tutor Pro), live web search with fresh news, image generation, and voice input. Free to start, with Plus and Pro plans for higher usage.
+The current response modes are Instant, Medium, and Thinking. Plus adds High; Pro adds Extra high and Pro. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
 
 ## Pages
 
-- [Home](/): Chat with KovaGPT, pick a mode, attach files, generate images, and use voice.
-- [Images](/images): Generate AI images from text prompts and explore example styles.
+- [Home](/): Chat with KovaGPT, choose an available response mode, and attach supported files.
+- [Images](/images): Generate images when an image provider is configured.
 - [Pricing](/pricing): Compare Free, Plus, and Pro plans.
+- [Apps](/apps): Review the connections currently available to your account.
 
 ## Blog
 

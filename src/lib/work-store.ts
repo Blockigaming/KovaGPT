@@ -1,3 +1,14 @@
+import type { WorkSession } from "./work-session.mjs";
+import {
+  assertWorkSyncWritable,
+  readWorkSyncState,
+  replaceLocalWork,
+  visibleWorkRecords,
+  writeWorkSyncState,
+  WORK_STORE_CHANGED_EVENT,
+  type SavedWorkKind,
+} from "./work-sync-state.ts";
+
 export type WorkStatus = "planning" | "paused" | "completed" | "cancelled";
 export type WorkStep = {
   id: string;
@@ -20,6 +31,7 @@ export type WorkTask = {
 /** Pass null only after authentication has resolved to a confirmed guest. */
 export type WorkStorageUserKey = string | null;
 
+const WORK_SESSIONS_KEY_BASE = "kova-work-sessions-v1";
 const WORK_TASKS_KEY_BASE = "kova-work-tasks-v2";
 const WORK_TEMPLATES_KEY_BASE = "kova-work-templates-v2";
 const AGENT_WORKSPACE_KEY_BASE = "kova-agent-workspace-v2";
@@ -84,6 +96,10 @@ function parseArray<T>(raw: string): T[] | null {
 }
 
 function loadPrincipalArray<T>(userKey: WorkStorageUserKey, key: string, legacyKey: string): T[] {
+  if (userKey !== null) {
+    const synced = readWorkSyncState(localStorage, userKey);
+    if (synced) return visibleWorkRecords(synced, kindForKey(key)) as T[];
+  }
   const currentRaw = localStorage.getItem(key);
   if (currentRaw !== null || userKey !== null) {
     return currentRaw === null ? [] : (parseArray<T>(currentRaw) ?? []);
@@ -109,7 +125,19 @@ function savePrincipalArray<T>(
   legacyKey: string,
   values: T[],
 ): void {
+  if (userKey !== null) {
+    const synced = readWorkSyncState(localStorage, userKey);
+    if (synced) {
+      assertWorkSyncWritable(userKey);
+      writeWorkSyncState(localStorage, replaceLocalWork(synced, kindForKey(key), values));
+      window.dispatchEvent(
+        new CustomEvent(WORK_STORE_CHANGED_EVENT, { detail: { ownerId: userKey } }),
+      );
+      return;
+    }
+  }
   localStorage.setItem(key, JSON.stringify(values));
+  window.dispatchEvent(new CustomEvent(WORK_STORE_CHANGED_EVENT, { detail: { ownerId: userKey } }));
   if (userKey === null) {
     try {
       localStorage.removeItem(legacyKey);
@@ -117,6 +145,15 @@ function savePrincipalArray<T>(
       // The scoped guest value was saved; legacy cleanup remains best effort.
     }
   }
+}
+
+function kindForKey(key: string): SavedWorkKind {
+  if (key.startsWith(WORK_SESSIONS_KEY_BASE)) return "session";
+  return key.startsWith(WORK_TASKS_KEY_BASE)
+    ? "task"
+    : key.startsWith(WORK_TEMPLATES_KEY_BASE)
+      ? "template"
+      : "agent_draft";
 }
 
 export function loadWorkTasks(userKey: WorkStorageUserKey): WorkTask[] {
@@ -204,4 +241,24 @@ export function saveAgentRuns(userKey: WorkStorageUserKey, runs: AgentRun[]) {
       runs,
     );
   }
+}
+
+export function workSessionsStorageKey(userKey: WorkStorageUserKey): string {
+  return scopedKey(WORK_SESSIONS_KEY_BASE, userKey);
+}
+export function loadWorkSessions(userKey: WorkStorageUserKey): WorkSession[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return loadPrincipalArray<WorkSession>(
+      userKey,
+      workSessionsStorageKey(userKey),
+      "kova-work-sessions-none",
+    );
+  } catch {
+    return [];
+  }
+}
+export function saveWorkSessions(userKey: WorkStorageUserKey, values: WorkSession[]) {
+  if (typeof window !== "undefined")
+    savePrincipalArray(userKey, workSessionsStorageKey(userKey), "kova-work-sessions-none", values);
 }

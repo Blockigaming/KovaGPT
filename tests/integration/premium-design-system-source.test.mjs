@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 const styles = await readFile("src/styles.css", "utf8");
 const shell = await readFile("src/components/AppShell.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
+const historySync = await readFile("src/components/ChatHistorySync.tsx", "utf8");
 
 test("brand accents remain available while the primary shell stays neutral", () => {
   const lightTheme = styles.match(/^:root\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
@@ -47,4 +48,11 @@ test("shell removes decorative effects and keeps navigation neutral and reachabl
   assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
   assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
   assert.match(shell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
+});
+
+test("selected account navigation is visible while healthy sync stays visually quiet", () => {
+  assert.match(sidebar, /aria-hidden="true"[\s\S]*?w-0\.5 rounded-full bg-primary/);
+  assert.match(historySync, /if \(!visible\)[\s\S]*?className="sr-only"/);
+  assert.match(historySync, /rounded-xl border border-border\/70 bg-muted\/40/);
+  assert.match(historySync, /role="status" aria-live="polite"/);
 });

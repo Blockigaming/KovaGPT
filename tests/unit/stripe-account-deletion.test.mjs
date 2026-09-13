@@ -196,14 +196,14 @@ test("account deletion uses mappings and the Customer barrier before auth remova
     new URL("../../src/routes/api/account.ts", import.meta.url),
     "utf8",
   );
-  const mapping = source.indexOf('.from("stripe_customer_mappings")');
+  const fence = source.lastIndexOf("cleanupAccountExportsBeforeAccountDeletion(");
+  const prepare = source.indexOf("preparedBilling = await prepareStripeAccountDeletion");
+  const storage = source.lastIndexOf("cleanupOwnedStorageBeforeAccountDeletion(");
   const cleanup = source.indexOf("await disconnectAllOAuth(auth.userId)");
   const authoritative = source.lastIndexOf("retireStripeCustomerForAccountDeletion");
-  const authDelete = source.indexOf("auth.admin.deleteUser(auth.userId)");
-  assert.ok(
-    mapping >= 0 && cleanup > mapping && authoritative > cleanup && authDelete > authoritative,
-  );
-  assert.match(source, /unmappedOpenSubscription/);
+  const authDelete = source.indexOf("auth.admin.deleteUser(");
+  assert.ok(fence >= 0 && prepare > fence && storage > prepare);
+  assert.ok(authoritative > storage && cleanup > authoritative && authDelete > cleanup);
   assert.doesNotMatch(
     source,
     /createStripeClient\(environment\)\.subscriptions\.cancel\(\s*subscription\.stripe_subscription_id/,

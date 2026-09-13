@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
+import { parseGoogleBinding } from "@/lib/google-account-policy.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
@@ -81,7 +82,10 @@ export const Route = createFileRoute("/api/google/gmail")({
         }
         let token: string;
         try {
-          token = await getValidGoogleAccessToken(auth.userId);
+          token = await getValidGoogleAccessToken(
+            auth.userId,
+            parseGoogleBinding({ connectionId: body.connectionId, capability: "gmail.read" }),
+          );
         } catch {
           return Response.json({ error: "google_not_connected" }, { status: 400 });
         }

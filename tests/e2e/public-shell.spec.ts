@@ -68,13 +68,15 @@ test("public routes share one landmark and a working skip target", async ({ page
   await expect(page).toHaveURL(/\/privacy$/);
   await expect(page).toHaveTitle("KovaGPT Privacy");
 
-  await page.goto("/developers/quickstart");
+  const missingDeveloperDoc = await page.goto("/developers/__missing-e2e-guide", {
+    waitUntil: "domcontentloaded",
+  });
+  expect(missingDeveloperDoc?.status()).toBe(404);
   await waitForHydration(page);
   await expect(
-    page
-      .getByRole("navigation", { name: "Public navigation" })
-      .getByRole("link", { name: "Developers" }),
-  ).toHaveAttribute("aria-current", "page");
+    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Return home", exact: true })).toBeVisible();
 
   await page.goto("/privacy");
   await waitForHydration(page);

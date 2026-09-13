@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
@@ -38,7 +39,12 @@ export type CalendarEvent = {
   location: string | null;
   link: string | null;
 };
-export type GoogleStatus = { connected: boolean; email: string | null; scopes: string[] };
+export type GoogleStatus = {
+  connected: boolean;
+  email: string | null;
+  scopes: string[];
+  connectionId: string | null;
+};
 
 // -------- Recent projects --------
 export const getSummaryProjects = createServerFn({ method: "POST" })
@@ -139,29 +145,34 @@ export const getSummaryTasks = createServerFn({ method: "POST" })
 // -------- Google connection status --------
 export const getGoogleStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<GoogleStatus> => {
-    const { data } = await context.supabase
-      .from("google_oauth_tokens")
-      .select("email, scopes")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (!data) return { connected: false, email: null, scopes: [] };
-    const scopes =
-      typeof data.scopes === "string"
-        ? data.scopes.split(/\s+/).filter(Boolean)
-        : ((data.scopes as string[] | null) ?? []);
-    return { connected: true, email: (data as { email?: string | null }).email ?? null, scopes };
+  .inputValidator(z.object({ expectedUserId: z.string().uuid() }))
+  .handler(async ({ context, data }): Promise<GoogleStatus> => {
+    if (data.expectedUserId !== context.userId)
+      throw new Error("Your account changed. Reload and try again.");
+    const { getGoogleAccountsHealth } = await import("@/lib/google-oauth.server");
+    await assertLockdownAllows(context.supabase, context.userId, "connector_read");
+    const status = await getGoogleAccountsHealth(context.userId);
+    return {
+      connected: status.connected,
+      email: status.email ?? null,
+      scopes: status.scopes,
+      connectionId: status.selectedConnectionId,
+    };
   });
 
 // -------- Gmail summary (only if connected + gmail scope) --------
 export const getGmailSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ available: boolean; messages: GmailMessage[] }> => {
+  .validator((input: unknown) => z.object({ connectionId: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }): Promise<{ available: boolean; messages: GmailMessage[] }> => {
     const { getValidGoogleAccessToken } = await import("@/lib/google-oauth.server");
     let token: string;
     try {
       await assertLockdownAllows(context.supabase, context.userId, "connector_read");
-      token = await getValidGoogleAccessToken(context.userId);
+      token = await getValidGoogleAccessToken(context.userId, {
+        connectionId: data.connectionId,
+        capability: "gmail.read",
+      });
     } catch {
       return { available: false, messages: [] };
     }
@@ -201,12 +212,16 @@ export const getGmailSummary = createServerFn({ method: "POST" })
 // -------- Calendar summary --------
 export const getCalendarSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ available: boolean; events: CalendarEvent[] }> => {
+  .validator((input: unknown) => z.object({ connectionId: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }): Promise<{ available: boolean; events: CalendarEvent[] }> => {
     const { getValidGoogleAccessToken } = await import("@/lib/google-oauth.server");
     let token: string;
     try {
       await assertLockdownAllows(context.supabase, context.userId, "connector_read");
-      token = await getValidGoogleAccessToken(context.userId);
+      token = await getValidGoogleAccessToken(context.userId, {
+        connectionId: data.connectionId,
+        capability: "calendar.read",
+      });
     } catch {
       return { available: false, events: [] };
     }

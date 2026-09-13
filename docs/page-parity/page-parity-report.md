@@ -52,7 +52,7 @@ Nineteen topics were checked against registered routes and server libraries. Fif
 
 A root-level visible-on-focus skip link now provides a consistent keyboard entry point across application and public routes. The SSR content audit checked local HTTP 200, H1, unique metadata presence, canonical presence, and skip-link presence for every reviewed route. Four new Chromium cases visually checked the focused link at 320px, 390px, 1440px, and 1920px in light/dark and RTL states. The previously recorded 46 Chromium screenshot cases and 11-family 320px overflow matrix remain the broader responsive baseline.
 
-Reserved public-route rejection, unknown dynamic-slug fail-closed behavior, Supabase RLS, Stripe server enforcement, Azure/provider selection, endpoint allowlists, CSRF/CSP/CORS/session boundaries, and server-only secrets were not weakened. Full-duplex Voice remains excluded while browser dictation remains supported.
+Reserved public-route rejection, unknown dynamic-slug fail-closed behavior, Supabase RLS, Stripe server enforcement, Azure/provider selection, endpoint allowlists, CSRF/CSP/CORS/session boundaries, and server-only secrets were not weakened. This historical checkpoint did not implement full-duplex Voice. The September 11 final goal supersedes the earlier exclusion: Voice is required but remains unavailable pending its explicit safety, privacy, device, provider, latency, and cost gates.
 
 ## Remaining external gates
 

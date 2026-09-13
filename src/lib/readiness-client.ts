@@ -1,3 +1,4 @@
+import { fetchJsonWithTimeout } from "./fetch-with-timeout.ts";
 import { useCallback, useEffect, useState } from "react";
 
 export type ClientCapabilityState =
@@ -44,6 +45,30 @@ let expiresAt = 0;
 let pending: Promise<ClientReadiness> | undefined;
 const listeners = new Set<() => void>();
 
+export function waitForReadiness<T>(shared: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return shared;
+  if (signal.aborted) {
+    return Promise.reject(signal.reason ?? new DOMException("Request aborted", "AbortError"));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const aborted = () => {
+      signal.removeEventListener("abort", aborted);
+      reject(signal.reason ?? new DOMException("Request aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", aborted, { once: true });
+    shared.then(
+      (value) => {
+        signal.removeEventListener("abort", aborted);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", aborted);
+        reject(error);
+      },
+    );
+  });
+}
+
 function notify() {
   listeners.forEach((listener) => listener());
 }
@@ -55,11 +80,18 @@ export function invalidateReadiness() {
 
 export async function getReadiness(signal?: AbortSignal): Promise<ClientReadiness> {
   if (snapshot && Date.now() < expiresAt) return snapshot;
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("Request aborted", "AbortError");
+  }
   if (!pending) {
-    pending = fetch("/api/readyz", { signal, headers: { Accept: "application/json" } })
-      .then(async (response) => {
+    pending = fetchJsonWithTimeout<ClientReadiness>(
+      "/api/readyz",
+      { headers: { Accept: "application/json" } },
+      10_000,
+    )
+      .then(({ response, body }) => {
         if (!response.ok && response.status !== 503) throw new Error("readiness_unavailable");
-        return (await response.json()) as ClientReadiness;
+        return body;
       })
       .then((value) => {
         snapshot = value;
@@ -71,7 +103,7 @@ export async function getReadiness(signal?: AbortSignal): Promise<ClientReadines
         pending = undefined;
       });
   }
-  return pending;
+  return waitForReadiness(pending, signal);
 }
 
 export function useReadiness() {
@@ -80,11 +112,9 @@ export function useReadiness() {
   const refresh = useCallback(() => {
     invalidateReadiness();
     setError(false);
-    const controller = new AbortController();
-    void getReadiness(controller.signal)
+    void getReadiness()
       .then(setValue)
       .catch(() => setError(true));
-    return () => controller.abort();
   }, []);
   useEffect(() => {
     const listener = () => setValue(snapshot);
@@ -92,7 +122,9 @@ export function useReadiness() {
     const controller = new AbortController();
     void getReadiness(controller.signal)
       .then(setValue)
-      .catch(() => setError(true));
+      .catch(() => {
+        if (!controller.signal.aborted) setError(true);
+      });
     return () => {
       controller.abort();
       listeners.delete(listener);

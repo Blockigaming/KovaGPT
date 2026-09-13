@@ -23,14 +23,17 @@ const SnapshotMessage = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().max(50_000),
 });
+const SnapshotSchema = z.object({
+  messages: z.array(SnapshotMessage).min(1).max(500),
+});
 const ShareSchema = z.object({
   recipient_email: z.string().trim().email().max(255),
   title: z.string().trim().min(1).max(200),
   local_chat_reference: z.string().max(100).optional().nullable(),
-  snapshot: z.object({
-    messages: z.array(SnapshotMessage).min(1).max(500),
-  }),
+  snapshot: SnapshotSchema,
 });
+
+const SHARED_CHAT_PAGE_SIZE = 200;
 
 export const shareChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -64,57 +67,88 @@ export const shareChat = createServerFn({ method: "POST" })
 export const listMySharedChats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SharedChatSummary[]> => {
-    const { data, error } = await context.supabase
-      .from("shared_chats")
-      .select("id, title, recipient_email, status, created_at")
-      .eq("owner_user_id", context.userId)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (error) {
-      console.error("[listMySharedChats]", error.message);
-      throw new Error("Shared chats could not be loaded. Please try again.");
+    const sharedChats: SharedChatSummary[] = [];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("shared_chats")
+        .select("id, title, recipient_email, status, created_at")
+        .eq("owner_user_id", context.userId)
+        .neq("status", "revoked")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + SHARED_CHAT_PAGE_SIZE - 1);
+      if (error) {
+        console.error("[listMySharedChats]", error.message);
+        throw new Error("Shared chats could not be loaded. Please try again.");
+      }
+      const page = (data ?? []) as SharedChatSummary[];
+      sharedChats.push(...page);
+      if (page.length < SHARED_CHAT_PAGE_SIZE) break;
+      offset += SHARED_CHAT_PAGE_SIZE;
     }
-    return (data ?? []) as SharedChatSummary[];
+    return sharedChats;
   });
 
 export const listSharedWithMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SharedChatInbox[]> => {
-    // RLS already restricts to shares addressed to this user.
-    const { data, error } = await context.supabase
-      .from("shared_chats")
-      .select("id, title, owner_user_id, snapshot, created_at, status, owner_user_id")
-      .neq("status", "revoked")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (error) {
-      console.error("[listSharedWithMe]", error.message);
-      throw new Error("Chats shared with you could not be loaded. Please try again.");
+    const sharedChats: SharedChatInbox[] = [];
+    let offset = 0;
+    while (true) {
+      // RLS permits both owned and received rows. Exclude owned rows before
+      // paging so a large sent history cannot crowd out the recipient inbox.
+      const { data, error } = await context.supabase
+        .from("shared_chats")
+        .select("id, title, owner_user_id, snapshot, created_at, status")
+        .neq("owner_user_id", context.userId)
+        .neq("status", "revoked")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + SHARED_CHAT_PAGE_SIZE - 1);
+      if (error) {
+        console.error("[listSharedWithMe]", error.message);
+        throw new Error("Chats shared with you could not be loaded. Please try again.");
+      }
+
+      const page = data ?? [];
+      for (const row of page) {
+        const snapshot = SnapshotSchema.safeParse(row.snapshot);
+        if (!snapshot.success) {
+          console.warn("[listSharedWithMe] skipped malformed snapshot", row.id);
+          continue;
+        }
+        sharedChats.push({
+          id: row.id,
+          title: row.title,
+          owner_user_id: row.owner_user_id,
+          snapshot: snapshot.data,
+          created_at: row.created_at,
+        });
+      }
+      // Count database rows, including malformed snapshots, to avoid truncating
+      // the inbox when validation discards an entry on an otherwise full page.
+      if (page.length < SHARED_CHAT_PAGE_SIZE) break;
+      offset += SHARED_CHAT_PAGE_SIZE;
     }
-    // Exclude shares I created myself (owner sees them via My shares).
-    return (data ?? [])
-      .filter((r) => r.owner_user_id !== context.userId)
-      .map((r) => ({
-        id: r.id,
-        title: r.title,
-        owner_user_id: r.owner_user_id,
-        snapshot: (r.snapshot as { messages: SnapshotMessageDto[] }) ?? { messages: [] },
-        created_at: r.created_at,
-      }));
+    return sharedChats;
   });
 
 export const revokeSharedChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
+    const { data: revoked, error } = await context.supabase
       .from("shared_chats")
       .update({ status: "revoked" })
       .eq("id", data.id)
-      .eq("owner_user_id", context.userId);
+      .eq("owner_user_id", context.userId)
+      .select("id")
+      .maybeSingle();
     if (error) {
       console.error("[serverfn]", error.message);
       throw new Error("Request failed. Please try again.");
     }
+    if (!revoked) throw new Error("That shared snapshot was not found or is no longer yours.");
     return { ok: true };
   });

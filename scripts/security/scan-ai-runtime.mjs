@@ -74,7 +74,12 @@ function inspect(file, scope) {
     violations.push(`${rel}: direct browser provider request`);
   if (scope !== "fixtures" && unsafeLogging.test(source))
     violations.push(`${rel}: unsafe authorization/environment logging`);
-  for (const name of ["OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "FIRECRAWL_API_KEY"]) {
+  for (const name of [
+    "OPENAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_IMAGE_API_KEY",
+    "FIRECRAWL_API_KEY",
+  ]) {
     const value = process.env[name];
     if (value && value.length >= 16 && source.includes(value))
       violations.push(`${rel}: injected ${name} value`);

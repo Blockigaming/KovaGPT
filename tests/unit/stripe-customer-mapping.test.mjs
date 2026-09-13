@@ -1,172 +1,111 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
-
 import { resolveStripeCustomerId } from "../../src/lib/stripe-customer-mapping.mjs";
 
-class FakeQuery {
-  constructor(database, table) {
-    this.database = database;
-    this.table = table;
-    this.operation = null;
-    this.filters = [];
-  }
-
-  select(columns) {
-    if (!this.operation) this.operation = "select";
-    this.columns = columns;
-    return this;
-  }
-
-  insert(value) {
-    this.operation = "insert";
-    this.value = value;
-    return this;
-  }
-
-  eq(column, value) {
-    this.filters.push([column, value]);
-    return this;
-  }
-
-  maybeSingle() {
-    return this;
-  }
-
-  then(resolve, reject) {
-    const step = this.database.steps.shift();
-    assert.ok(step, `unexpected ${this.table}.${this.operation}`);
-    assert.equal(this.table, step.table);
-    assert.equal(this.operation, step.operation);
-    this.database.calls.push(this);
-    return Promise.resolve(step.result).then(resolve, reject);
-  }
-}
-
-class FakeSupabase {
-  constructor(steps) {
-    this.steps = [...steps];
-    this.calls = [];
-  }
-
-  from(table) {
-    return new FakeQuery(this, table);
-  }
-}
-
-test("an environment-scoped mapping is the only existing-customer identity source", async () => {
-  const supabase = new FakeSupabase([
-    {
-      table: "stripe_customer_mappings",
-      operation: "select",
-      result: { data: { stripe_customer_id: "cus_mapped" }, error: null },
+const userId = "11111111-1111-4111-8111-111111111111";
+const requestId = "22222222-2222-4222-8222-222222222222";
+function fixture({
+  mapped = null,
+  claimError = false,
+  existing = [],
+  expired = false,
+  createError = false,
+  completeError = false,
+} = {}) {
+  const calls = [];
+  const customer = {
+    id: "cus_New",
+    metadata: { userId, environment: "live", kovaCustomerCreation: requestId },
+  };
+  const query = {
+    select() {
+      return this;
     },
-  ]);
-  const stripe = {
-    customers: {
-      create: async () => assert.fail("must not create when a mapping exists"),
+    eq() {
+      return this;
+    },
+    maybeSingle: async () => ({ data: mapped ? { stripe_customer_id: mapped } : null }),
+  };
+  const supabase = {
+    from: () => query,
+    rpc: async (name, args) => {
+      calls.push(name);
+      if (name === "claim_stripe_customer_creation")
+        return claimError
+          ? { error: { message: "account_deletion_pending" } }
+          : {
+              data: {
+                requestId,
+                requestedAt: new Date(
+                  Date.now() - (expired ? 25 * 60 * 60 * 1000 : 0),
+                ).toISOString(),
+                state: "pending",
+              },
+            };
+      assert.equal(name, "complete_stripe_customer_creation");
+      assert.equal(args._request_id, requestId);
+      return completeError
+        ? { error: { message: "account_deletion_pending" } }
+        : { data: args._customer_id };
     },
   };
-
-  assert.equal(
-    await resolveStripeCustomerId({
-      stripe,
-      supabase,
-      environment: "live",
-      userId: "user_123",
-      email: "same@example.com",
-    }),
-    "cus_mapped",
-  );
-  assert.deepEqual(supabase.calls[0].filters, [
-    ["environment", "live"],
-    ["user_id", "user_123"],
-  ]);
-});
-
-test("a new Customer is inserted with a checked durable mapping", async () => {
-  const supabase = new FakeSupabase([
-    {
-      table: "stripe_customer_mappings",
-      operation: "select",
-      result: { data: null, error: null },
-    },
-    {
-      table: "stripe_customer_mappings",
-      operation: "insert",
-      result: { data: { stripe_customer_id: "cus_new" }, error: null },
-    },
-  ]);
-  const calls = [];
   const stripe = {
     customers: {
-      create: async (...args) => {
-        calls.push(args);
-        return { id: "cus_new" };
+      search: async ({ query }) => {
+        calls.push("search");
+        assert.match(query, /kovaCustomerCreation/u);
+        return { data: existing, has_more: false };
+      },
+      create: async (params, options) => {
+        calls.push("create");
+        assert.deepEqual(params.metadata, customer.metadata);
+        assert.equal(options.idempotencyKey, `kova-customer-live-${requestId}`);
+        if (createError) throw new Error("cached 500");
+        return customer;
       },
     },
   };
+  return {
+    input: { stripe, supabase, userId, environment: "live", email: "contact@example.test" },
+    calls,
+    customer,
+  };
+}
 
-  assert.equal(
-    await resolveStripeCustomerId({
-      stripe,
-      supabase,
-      environment: "sandbox",
-      userId: "user_456",
-      email: "contact@example.com",
-    }),
-    "cus_new",
-  );
-  assert.deepEqual(calls[0], [
-    {
-      email: "contact@example.com",
-      metadata: { userId: "user_456", environment: "sandbox" },
-    },
-    { idempotencyKey: "kova-customer-sandbox-user_456" },
-  ]);
-  assert.deepEqual(supabase.calls[1].value, {
-    environment: "sandbox",
-    stripe_customer_id: "cus_new",
-    user_id: "user_456",
-  });
+test("an immutable mapped Customer bypasses contact-email lookup and new creation", async () => {
+  const f = fixture({ mapped: "cus_Existing" });
+  assert.equal(await resolveStripeCustomerId(f.input), "cus_Existing");
+  assert.deepEqual(f.calls, []);
 });
-
-test("a concurrent mapping insert returns the database winner", async () => {
-  const supabase = new FakeSupabase([
-    {
-      table: "stripe_customer_mappings",
-      operation: "select",
-      result: { data: null, error: null },
-    },
-    {
-      table: "stripe_customer_mappings",
-      operation: "insert",
-      result: { data: null, error: { code: "23505" } },
-    },
-    {
-      table: "stripe_customer_mappings",
-      operation: "select",
-      result: { data: { stripe_customer_id: "cus_winner" }, error: null },
-    },
+test("Customer creation reserves durably before Stripe and finalizes exact request identity", async () => {
+  const f = fixture();
+  assert.equal(await resolveStripeCustomerId(f.input), "cus_New");
+  assert.deepEqual(f.calls, [
+    "claim_stripe_customer_creation",
+    "search",
+    "create",
+    "complete_stripe_customer_creation",
   ]);
-  const stripe = { customers: { create: async () => ({ id: "cus_loser" }) } };
-
-  assert.equal(
-    await resolveStripeCustomerId({
-      stripe,
-      supabase,
-      environment: "live",
-      userId: "user_789",
-    }),
-    "cus_winner",
-  );
 });
-
-test("checkout never reassigns a Stripe Customer by email", async () => {
-  const source = await readFile(
-    new URL("../../src/utils/payments.functions.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(source, /resolveStripeCustomerId/u);
-  assert.doesNotMatch(source, /customers\.(?:list|search|update)/u);
+test("an account-deletion fence stops the first Customer network request", async () => {
+  const f = fixture({ claimError: true });
+  await assert.rejects(resolveStripeCustomerId(f.input), /creation_claim_failed/u);
+  assert.deepEqual(f.calls, ["claim_stripe_customer_creation"]);
+});
+test("an expired unknown Customer request is never reissued with a new key", async () => {
+  const f = fixture({ expired: true });
+  await assert.rejects(resolveStripeCustomerId(f.input), /reconciliation_pending/u);
+  assert.deepEqual(f.calls, ["claim_stripe_customer_creation", "search"]);
+});
+test("a recovered exact Customer can finalize after the idempotency window", async () => {
+  const customer = fixture().customer;
+  const f = fixture({ expired: true, existing: [customer] });
+  assert.equal(await resolveStripeCustomerId(f.input), customer.id);
+  assert.equal(f.calls.includes("create"), false);
+});
+test("a cached500 or a deletion race cannot report a completed Customer mapping", async () => {
+  for (const options of [{ createError: true }, { completeError: true }]) {
+    const f = fixture(options);
+    await assert.rejects(resolveStripeCustomerId(f.input));
+  }
 });

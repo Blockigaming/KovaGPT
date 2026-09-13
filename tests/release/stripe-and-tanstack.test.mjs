@@ -14,18 +14,11 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
     ),
-    reliability = await readFile(
-      new URL("../../src/lib/webhook-reliability.mjs", import.meta.url),
-      "utf8",
-    ),
     pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
 
   assert.equal(pkg.dependencies.stripe, "22.6.0");
   assert.match(stripeSource, /apiVersion: "2026-08-26\.dahlia"/);
-  assert.match(stripeSource, /const stripeClients = new Map/);
-  assert.match(stripeSource, /cached\?\.apiKey === connectionApiKey/);
-  assert.match(stripeSource, /stripeClients\.set\(env,/);
-  assert.match(stripeSource, /req\.text\(\)/);
+  assert.match(stripeSource, /readUtf8BodyBounded\(req, maxBodyBytes\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
   assert.match(checkoutSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
@@ -54,11 +47,9 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   );
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
   assert.match(hook, /processStripeEvent/);
-  assert.match(reliability, /rpc\("begin_stripe_event"/);
-  assert.match(reliability, /rpc\("complete_stripe_event"/);
-  assert.doesNotMatch(reliability, /currentSubscriptionTimestamp/);
-  assert.match(reliability, /retrieveSubscription/);
-  assert.doesNotMatch(reliability, /processed_stripe_events"\)\s*\.delete/);
+  assert.match(hook, /stripe\.subscriptions\.retrieve/);
+  assert.match(hook, /status: retryableFailure \? 503 : 400/);
+  assert.match(hook, /"Retry-After": "5"/);
   assert.match(hook, /correlationId/);
   assert.doesNotMatch(hook, /console\.(log|error)/);
 });

@@ -65,6 +65,7 @@ function verify(bundleDir, overrides = {}) {
     bundleDir,
     supabaseUrl: SUPABASE_URL,
     publishableKey: PUBLISHABLE_KEY,
+    stripePublishableKey: "",
     sourceSha: SOURCE_SHA,
     sourceTree: SOURCE_TREE,
     sourceAttestationPath: join(root, ".kova-source-attestation.json"),
@@ -124,6 +125,57 @@ test("server-only configuration cannot satisfy browser verification", () => {
       assert.throws(
         () => verify(bundleDir),
         /intended Supabase URL was not found in executable browser assets/u,
+      );
+    },
+  );
+});
+
+test("compiled Stripe key is attested by fingerprint without retaining the key", () => {
+  const stripeKey = `pk_live_${"a".repeat(32)}`;
+  withBundle(
+    { "client/assets/app.js": browserSource(`const stripe="${stripeKey}";`) },
+    ({ bundleDir }) => {
+      const result = verify(bundleDir, { stripePublishableKey: stripeKey });
+      const written = readFileSync(result.provenancePath, "utf8");
+      assert.equal(JSON.parse(written).stripePublishableKeySha256, sha256(stripeKey));
+      assert.equal(written.includes(stripeKey), false);
+    },
+  );
+});
+
+test("Stripe verifier rejects missing, stale and second browser keys", () => {
+  const stripeKey = `pk_live_${"a".repeat(32)}`;
+  const otherStripeKey = `pk_test_${"b".repeat(32)}`;
+  withBundle({ "client/assets/app.js": browserSource() }, ({ bundleDir }) => {
+    assert.throws(
+      () => verify(bundleDir, { stripePublishableKey: stripeKey }),
+      /Stripe publishable key was not found/u,
+    );
+    assert.equal(verify(bundleDir).provenance.stripePublishableKeySha256, null);
+  });
+  for (const extra of [
+    `const stale="${stripeKey}";`,
+    `const expected="${stripeKey}";const other="${otherStripeKey}";`,
+  ]) {
+    withBundle({ "client/assets/app.js": browserSource(extra) }, ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /unexpected Stripe publishable key/u);
+      if (extra.includes(otherStripeKey)) {
+        assert.throws(
+          () => verify(bundleDir, { stripePublishableKey: stripeKey }),
+          /unexpected Stripe publishable key/u,
+        );
+      }
+    });
+  }
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/billing-info.txt": stripeKey,
+    },
+    ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir, { stripePublishableKey: stripeKey }),
+        /Stripe publishable key was not found/u,
       );
     },
   );

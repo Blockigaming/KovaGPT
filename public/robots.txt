@@ -32,3 +32,5 @@ Disallow: /write
 Disallow: /~oauth
 
 Sitemap: https://kovagpt.com/sitemap.xml
+
+Disallow: /share-inbox

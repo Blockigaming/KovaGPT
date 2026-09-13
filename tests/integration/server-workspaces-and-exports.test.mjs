@@ -25,18 +25,17 @@ test("writing server functions validate, scope, and bound documents and versions
   assert.match(source, /changed elsewhere/);
 });
 
-test("Writing lazily loads real DOCX and PDF generators", async () => {
+test("Writing keeps all real document writers behind the shared lazy export boundary", async () => {
   const route = await read("src/routes/write.tsx");
-  const docx = await read("src/lib/writing-export/docx.ts");
-  const pdf = await read("src/lib/writing-export/pdf.ts");
-  assert.match(route, /import\("@\/lib\/writing-export\/docx"\)/);
-  assert.match(route, /import\("@\/lib\/writing-export\/pdf"\)/);
-  assert.match(docx, /0x04034b50/);
-  assert.match(docx, /word\/document\.xml/);
-  assert.match(docx, /application\/vnd\.openxmlformats/);
-  assert.match(pdf, /%PDF-1\.4/);
-  assert.match(pdf, /startxref/);
-  assert.match(pdf, /application\/pdf/);
+  const canvas = await read("src/components/ArtifactEditor.tsx");
+  const dispatch = await read("src/lib/writing-export/export.ts");
+  assert.match(route, /import\("@\/lib\/writing-export\/export"\)/);
+  assert.match(canvas, /import\("@\/lib\/writing-export\/export"\)/);
+  for (const format of ["docx", "pdf", "xlsx", "pptx"])
+    assert.ok(dispatch.includes(`import("./${format}")`));
+  assert.match(dispatch, /if \(!isCurrent\(\)\) return false/);
+  // Real archive/PDF parsing and full-content preservation are covered by the
+  // document-export roundtrip and production-browser extraction regressions.
 });
 
 test("research sessions remain owner scoped and truthfully distinguish real runs", async () => {

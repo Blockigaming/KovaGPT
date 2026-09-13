@@ -1,0 +1,28 @@
+# Organization directory provisioning
+
+This source implements a bounded SCIM 2.0 Users/Groups adapter. It is disabled by default (`KOVA_ORGANIZATION_SCIM_ENABLED=false`) and also requires the existing organization administration/policy switches. No IdP, Azure, Supabase, token, domain or production setting was changed during implementation.
+
+After the operator deploys the migration/source and activates the feature, a current organization owner must configure its verified SSO provider, then explicitly issue a provisioning token in Organization → Directory provisioning. The token is shown once, expires in 90 days and is stored only as SHA-256. Rotation invalidates the previous token immediately. Disabling provisioning revokes only memberships still carrying this adapter's provenance. Manual membership, administrator/owner roles, personal content and global Auth accounts remain separate.
+
+The base URL shown in the owner controls is `/api/scim/v2/{organizationId}`. Bearer tokens work only for that tenant, current sponsoring owner, current verified domain and configured SSO provider. Operator mapping is checked again on requests. Sponsor account deletion retires the token without blocking Auth erasure; deletion of a bound person removes their SSO directory identifying fields while preserving the nonidentifying tombstone and audit provenance.
+
+## Supported IdP contract
+
+- Users: `externalId` **must be the exact immutable SSO subject / SAML NameID** represented by both `auth.identities.provider_id` and its authoritative `identity_data.sub`, under `provider = sso:{configuredProviderUUID}`. A matching email never binds or links an account. An unmatched directory record remains pending until that exact SSO account signs in and accesses Organization. Supabase SSO accounts cannot be linked to ordinary accounts; even equal email addresses can belong to distinct users.
+- `userName` is a single email address; `displayName`, boolean `active`, and a matching single `emails` entry are supported. Passwords, custom schema extensions, profile/name trees and arbitrary attributes are rejected. This adapter does not create Auth passwords or global Auth users.
+- Groups support `externalId`, `displayName`, and at most 100 exact same-tenant SCIM User IDs. They are durable directory records. They do **not** implicitly grant administrator roles, Project membership or content access.
+- GET, POST, PUT, PATCH and DELETE are available on Users/Groups. PUT/PATCH/DELETE require the displayed weak ETag in `If-Match`; stale versions receive 412 and missing versions 428. PATCH supports the disclosed attributes, whole member lists and exact `members[value eq "uuid"]` removal. Immutable subjects cannot be reassigned. Deleting and recreating a resource yields a new UUID, so delayed old commands cannot affect the replacement.
+- Read/list results contain no KovaGPT Auth UUID, token hash or Auth identity row. Pagination uses SCIM `startIndex` and `count` (maximum 100), deterministic resource UUID ordering, and exact `eq` filters for Users `userName`/`externalId` and Groups `displayName`/`externalId`. Offset pages reflect a live directory; clients requiring a consistent full reconciliation should retry if concurrent writes change it. Each tenant is bounded to 1,000 retained User records and 1,000 retained Group records, including tombstones.
+- Authenticated ServiceProviderConfig, ResourceTypes and Schemas discovery describe the supported subset. Bulk operations, password changes, sorting and unsupported filter syntax are rejected. Only IdP clients configured for this exact subject, attribute and conditional-write contract are supported; compatibility with arbitrary IdP provisioning defaults is not claimed.
+
+Current-identity checks apply to RLS as well as foreground reconciliation. Removal of the exact SSO identity, expired/disabled directory configuration, deleted account, Lockdown or deletion fence cannot retain a managed organization role. A manual revoke or role reassignment clears provenance, so later IdP refreshes cannot undo the owner's decision. SCIM offboarding never deletes personal Projects, chats, Library files or the Auth account.
+
+Account portability uses the service-only `organization_scim_user_export_rows` view, filtered by `user_id` and paged by `id`; it contains only that person's bound directory records. Tokens and configuration hashes are excluded. Directory-record retention and explicit Project retention are separate policies and must not be represented as already active by this provisioning adapter.
+
+## Verification and activation boundary
+
+Executable tests cover service-role Auth-table denial; email collision; exact subject binding; pending reconciliation; tenant isolation; member-only roles; manual override; group membership bounds; ETags; token rotation/disable; sponsor and person erasure; recreated-resource stale requests; identity-removal RLS; actual API parsing; explicit owner consent; and late browser responses across account changes.
+
+Only operator activation, live IdP configuration and its real compatibility smoke remain deployment tasks. Use a nonproduction tenant to verify the exact NameID mapping and If-Match behavior before any owner issues a production token. This document does not authorize those live actions.
+
+Primary protocol and identity references: [SCIM protocol RFC 7644](https://www.rfc-editor.org/rfc/rfc7644.html), [SCIM schema RFC 7643](https://www.rfc-editor.org/rfc/rfc7643.html), [Supabase enterprise SSO](https://supabase.com/docs/guides/auth/enterprise-sso/auth-sso-saml), [Supabase identities](https://supabase.com/docs/guides/auth/identities).

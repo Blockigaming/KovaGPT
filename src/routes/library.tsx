@@ -1,5 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
+import { WorkOutputDownloadAction } from "@/components/WorkOutputDownloadAction";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +40,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import type { SharedChatInbox, SharedChatSummary } from "@/lib/shared-chats.functions";
 import {
   LibraryFolderOrganizer,
   type LibraryFolderScope,
 } from "@/components/LibraryFolderOrganizer";
+
+function savedWorkLibraryItems(userKey: string | null): LibItem[] {
+  return loadWorkTasks(userKey).map((task): LibItem => ({
+    id: `work:${task.id}`,
+    title: task.objective,
+    item_type: "other",
+    source: "other",
+    content_text: [
+      task.context,
+      ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    file_url: null,
+    file_name: null,
+    file_type: "application/x-kova-work",
+    file_size: null,
+    created_at: new Date(task.updatedAt).toISOString(),
+  }));
+}
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -47,6 +78,9 @@ export const Route = createFileRoute("/library")({
 });
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
+const LibraryVersionsDialog = lazy(() =>
+  import("@/components/LibraryVersionsDialog").then((m) => ({ default: m.LibraryVersionsDialog })),
+);
 
 type FilterId = "all" | "favorites" | "chats" | "work" | "images" | "documents" | "other";
 type SortId = "newest" | "oldest" | "name" | "size";
@@ -61,6 +95,10 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
+import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
+import { isPrivateLibraryImagePath, resolveLibraryImageUrl } from "@/lib/library-image-url";
+import { observeLibraryImageApproach, queueLibraryImageSigning } from "@/lib/library-image-loading";
+import { safeImageUrl } from "@/lib/safe-image-url";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   addManyToContextPack,
@@ -79,6 +117,8 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
+const EMPTY_RECEIVED_SHARES: SharedChatInbox[] = [];
+const EMPTY_SENT_SHARES: SharedChatSummary[] = [];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function readFavorites(key: string | null): Set<string> {
@@ -114,9 +154,163 @@ function humanBytes(n: number | null | undefined): string | null {
   return `${(n / 1024 ** 3).toFixed(2)} GB`;
 }
 
+type LibraryImageSourceState = {
+  itemId: string | null;
+  url: string | null;
+  status: "idle" | "loading" | "error" | "ready";
+};
+
+function useLibraryImageSource(item: LibItem | null, enabled = true) {
+  const itemId = item?.id ?? null;
+  const fileUrl = item?.file_url ?? null;
+  const directUrl = safeImageUrl(fileUrl);
+  const privatePath = isPrivateLibraryImagePath(fileUrl);
+  const [state, setState] = useState<LibraryImageSourceState>({
+    itemId: null,
+    url: null,
+    status: "idle",
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const retryRef = useRef<{ itemId: string | null; count: number }>({ itemId: null, count: 0 });
+
+  const retry = useCallback(() => {
+    if (!enabled || !itemId || !fileUrl || directUrl || !privatePath) return;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
+    if (retryRef.current.count >= 2) {
+      setState({ itemId, url: null, status: "error" });
+      return;
+    }
+    retryRef.current.count += 1;
+    setState({ itemId, url: null, status: "loading" });
+    setRefreshKey((current) => current + 1);
+  }, [directUrl, enabled, fileUrl, itemId, privatePath]);
+
+  const markLoaded = useCallback(() => {
+    retryRef.current = { itemId, count: 0 };
+  }, [itemId]);
+
+  useEffect(() => {
+    if (!enabled || !itemId || !fileUrl || directUrl || !privatePath) return;
+    let cancelled = false;
+    if (retryRef.current.itemId !== itemId) retryRef.current = { itemId, count: 0 };
+    setState({ itemId, url: null, status: "loading" });
+
+    void (async () => {
+      try {
+        const url = await queueLibraryImageSigning(
+          async () => {
+            const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+            if (cancelled) return null;
+            return resolveLibraryImageUrl({ id: itemId, file_url: fileUrl }, (id) =>
+              getLibraryImageUrl({ data: { id } }),
+            );
+          },
+          () => cancelled,
+        );
+        if (cancelled) return;
+        if (!url) throw new Error("Invalid signed image URL");
+        if (!cancelled) setState({ itemId, url, status: "ready" });
+      } catch {
+        if (!cancelled) setState({ itemId, url: null, status: "error" });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [directUrl, enabled, fileUrl, itemId, privatePath, refreshKey]);
+
+  if (directUrl) return { url: directUrl, loading: false, error: false, retry, markLoaded };
+  if (!privatePath)
+    return { url: null, loading: false, error: Boolean(fileUrl), retry, markLoaded };
+  if (!enabled) return { url: null, loading: false, error: false, retry, markLoaded };
+  if (state.itemId !== itemId) return { url: null, loading: true, error: false, retry, markLoaded };
+  return {
+    url: state.url,
+    loading: state.status === "loading",
+    error: state.status === "error",
+    retry,
+    markLoaded,
+  };
+}
+
+function LibraryImageMedia({
+  item,
+  className,
+  fallbackClassName = "",
+  eager = false,
+}: {
+  item: LibItem;
+  className: string;
+  fallbackClassName?: string;
+  eager?: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemKey = `${item.id}:${item.file_url ?? ""}`;
+  const [approachedItem, setApproachedItem] = useState<string | null>(null);
+  const enabled = eager || approachedItem === itemKey;
+  const image = useLibraryImageSource(item, enabled);
+
+  useEffect(() => {
+    if (eager || !containerRef.current) return;
+    return observeLibraryImageApproach(containerRef.current, () => setApproachedItem(itemKey));
+  }, [eager, itemKey]);
+
+  return (
+    <div ref={containerRef} className={eager ? undefined : "h-full w-full"}>
+      {image.url ? (
+        <img
+          src={image.url}
+          alt={item.title}
+          loading={eager ? "eager" : "lazy"}
+          className={className}
+          onLoad={image.markLoaded}
+          onError={image.retry}
+        />
+      ) : (
+        <div
+          className={`flex h-full min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground ${fallbackClassName}`}
+          role="status"
+        >
+          <ImageIcon className="h-6 w-6" aria-hidden="true" />
+          <span className="text-xs">
+            {image.loading
+              ? "Loading image…"
+              : image.error
+                ? "Image preview unavailable"
+                : "Image preview"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LibraryImageDownloadAction({ item }: { item: LibItem }) {
+  const image = useLibraryImageSource(item);
+  if (image.url) {
+    return (
+      <DropdownMenuItem asChild>
+        <a href={image.url} target="_blank" rel="noopener noreferrer">
+          <Download className="mr-2 h-4 w-4" /> Open or download
+        </a>
+      </DropdownMenuItem>
+    );
+  }
+  return (
+    <DropdownMenuItem disabled>
+      <Download className="mr-2 h-4 w-4" />
+      {image.loading ? "Preparing image…" : "Image unavailable"}
+    </DropdownMenuItem>
+  );
+}
+
 function LibraryPage() {
   const { isSignedIn, isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
+  const ownerIdRef = useRef(userKey);
+  ownerIdRef.current = userKey;
+  const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const favoritesKey = isLoaded ? principalScopedStorageKey(FAVORITES_KEY, userKey) : null;
   const principalRef = useRef(principal);
@@ -145,6 +339,23 @@ function LibraryPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [libraryCleared, setLibraryCleared] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [nextPage, setNextPage] = useState<Record<string, unknown> | null>(null);
+  const pageCursor = useRef<Record<string, unknown> | null>(null);
+  const pageRequests = useRef(new Set<AbortController>());
+  const [versionItem, setVersionItem] = useState<LibItem | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+  useEffect(() => {
+    const requests = pageRequests.current;
+    return () => {
+      for (const controller of requests) controller.abort();
+      requests.clear();
+    };
+  }, []);
   const [filter, setFilter] = useState<FilterId>("all");
   const [sort, setSort] = useState<SortId>("newest");
   const [view, setView] = useState<ViewId>(() => {
@@ -162,6 +373,70 @@ function LibraryPage() {
   const visiblePreviewItem = principalReady ? previewItem : null;
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const shareLoadGenerationRef = useRef(0);
+  const [shareState, setShareState] = useState<{
+    principal: string | null;
+    received: SharedChatInbox[];
+    sent: SharedChatSummary[];
+    loading: boolean;
+    error: string | null;
+  }>({ principal: null, received: [], sent: [], loading: false, error: null });
+  const sharesReady = principal !== null && shareState.principal === principal;
+  const receivedShares = sharesReady ? shareState.received : EMPTY_RECEIVED_SHARES;
+  const sentShares = sharesReady ? shareState.sent : EMPTY_SENT_SHARES;
+  const sharesLoading = Boolean(isSignedIn) && (!sharesReady || shareState.loading);
+  const sharesError = sharesReady ? shareState.error : null;
+  const [sharedPreview, setSharedPreview] = useState<SharedChatInbox | null>(null);
+  const visibleSharedPreview = sharesReady ? sharedPreview : null;
+  const sharedPreviewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const [pendingRevokeShare, setPendingRevokeShare] = useState<SharedChatSummary | null>(null);
+  const [revokingShareId, setRevokingShareId] = useState<string | null>(null);
+
+  const loadShares = useCallback(async () => {
+    const generation = ++shareLoadGenerationRef.current;
+    if (!isLoaded || principal === null || !isSignedIn) {
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
+      return;
+    }
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      shareLoadGenerationRef.current === generation && principalRef.current === requestPrincipal;
+    setSharedPreview(null);
+    setShareState({
+      principal: requestPrincipal,
+      received: [],
+      sent: [],
+      loading: true,
+      error: null,
+    });
+    try {
+      const { listMySharedChats, listSharedWithMe } = await import("@/lib/shared-chats.functions");
+      const [received, sent] = await Promise.all([listSharedWithMe(), listMySharedChats()]);
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received,
+        sent,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      setShareState({
+        principal: requestPrincipal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: error instanceof Error ? error.message : "Shared chats could not be loaded.",
+      });
+    }
+  }, [isLoaded, isSignedIn, principal]);
   const [folderScope, setFolderScope] = useState<LibraryFolderScope>("all");
   const [folderRefreshKey, setFolderRefreshKey] = useState(0);
   const [folderBusy, setFolderBusy] = useState(false);
@@ -170,83 +445,134 @@ function LibraryPage() {
     [selected],
   );
 
-  const load = useCallback(async () => {
-    const generation = ++loadGenerationRef.current;
-    if (!isLoaded || principal === null) return;
-    const isCurrent = () =>
-      loadGenerationRef.current === generation && principalRef.current === principal;
-    setLoadError(null);
-    const localItems: LibItem[] = [
-      ...loadConversations(userKey).map((chat): LibItem => ({
-        id: `chat:${chat.id}`,
-        title: chat.title,
-        item_type: "chat_artifact",
-        source: "chat",
-        content_text: chat.messages
-          .map((message) => `${message.role}: ${message.content}`)
-          .join("\n\n"),
-        file_url: null,
-        file_name: null,
-        file_type: "application/x-kova-chat",
-        file_size: null,
-        created_at: new Date(chat.updatedAt).toISOString(),
-      })),
-      ...loadWorkTasks(userKey).map((task): LibItem => ({
-        id: `work:${task.id}`,
-        title: task.objective,
-        item_type: "other",
-        source: "other",
-        content_text: [
-          task.context,
-          ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        file_url: null,
-        file_name: null,
-        file_type: "application/x-kova-work",
-        file_size: null,
-        created_at: new Date(task.updatedAt).toISOString(),
-      })),
-    ];
-    if (!isSignedIn) {
-      if (isCurrent()) {
-        setItems([...localItems, ...loadGuestLibrary()]);
-        setLoading(false);
+  const favoriteIds = useMemo(
+    () =>
+      [...visibleFavorites]
+        .filter((id) => UUID_PATTERN.test(id))
+        .sort()
+        .join(","),
+    [visibleFavorites],
+  );
+  const load = useCallback(
+    async (more = false) => {
+      const generation = ++loadGenerationRef.current;
+      if (!isLoaded || principal === null || libraryCleared || (isSignedIn && !userKey)) return;
+      const isCurrent = () =>
+        loadGenerationRef.current === generation && principalRef.current === principal;
+      setLoadError(null);
+      if (!more) {
+        pageCursor.current = null;
+        setNextPage(null);
+        setSelected([]);
       }
-      return;
-    }
-    setLoading(true);
-    try {
-      const { listMyLibrary } = await import("@/lib/library.functions");
-      const { listWorkspaceRecents } = await import("@/lib/workspace.functions");
-      const [saved, workspace] = await Promise.all([listMyLibrary(), listWorkspaceRecents()]);
-      const savedIds = new Set(saved.map((item) => item.id));
-      const workspaceItems: LibItem[] = workspace
-        .filter((item) => item.type !== "library" && !savedIds.has(item.id))
-        .map((item) => ({
-          id: `workspace:${item.type}:${item.id}`,
-          title: item.title,
-          item_type: item.type === "image" ? "image" : "other",
-          source: "other",
-          content_text: item.subtitle,
+      const controller = new AbortController();
+      pageRequests.current.add(controller);
+      const localItems: LibItem[] = [
+        ...loadConversations(userKey).map((chat): LibItem => ({
+          id: `chat:${chat.id}`,
+          title: chat.title,
+          item_type: "chat_artifact",
+          source: "chat",
+          content_text: chat.messages
+            .map((message) => `${message.role}: ${message.content}`)
+            .join("\n\n"),
           file_url: null,
           file_name: null,
-          file_type: `application/x-kova-${item.type}`,
+          file_type: "application/x-kova-chat",
           file_size: null,
-          created_at: item.updatedAt,
-        }));
-      if (isCurrent()) setItems([...localItems, ...saved, ...workspaceItems]);
-    } catch (e) {
-      if (!isCurrent()) return;
-      console.error("[library] load failed");
-      setLoadError(e instanceof Error ? e.message : "Could not load your library.");
-      setSelected([]);
-      toast.error("Could not load your library.");
-    } finally {
-      if (isCurrent()) setLoading(false);
-    }
-  }, [isLoaded, isSignedIn, principal, setItems, userKey]);
+          created_at: new Date(chat.updatedAt).toISOString(),
+        })),
+        ...savedWorkLibraryItems(userKey),
+      ];
+      if (!isSignedIn) {
+        if (isCurrent()) {
+          setItems([...localItems, ...loadGuestLibrary()]);
+          setLoading(false);
+        }
+        pageRequests.current.delete(controller);
+        return;
+      }
+      setLoading(true);
+      try {
+        const { listLibraryPage } = await import("@/lib/library-items-client");
+        const { listWorkspaceRecents } = await import("@/lib/workspace.functions");
+        if (!isCurrent()) return;
+        const [page, workspace] = await Promise.all([
+          listLibraryPage(
+            userKey!,
+            {
+              query: searchQuery,
+              sort,
+              filter: ["chats", "work"].includes(filter) ? "all" : filter,
+              folder: folderScope,
+              favorites: favoriteIds,
+              cursor: more ? pageCursor.current : null,
+            },
+            controller.signal,
+          ),
+          more ? Promise.resolve([]) : listWorkspaceRecents(),
+        ]);
+        const saved = ["chats", "work"].includes(filter) ? [] : page.items;
+        const savedIds = new Set(saved.map((item) => item.id));
+        const workspaceItems: LibItem[] = workspace
+          .filter((item) => item.type !== "library" && !savedIds.has(item.id))
+          .map((item) => ({
+            id: `workspace:${item.type}:${item.id}`,
+            title: item.title,
+            item_type: item.type === "image" ? "image" : "other",
+            source: "other",
+            content_text: item.subtitle,
+            file_url: null,
+            file_name: null,
+            file_type: `application/x-kova-${item.type}`,
+            file_size: null,
+            created_at: item.updatedAt,
+          }));
+        if (isCurrent()) {
+          pageCursor.current = ["chats", "work"].includes(filter) ? null : page.cursor;
+          setNextPage(pageCursor.current);
+          setItems((previous) =>
+            more
+              ? [
+                  ...previous,
+                  ...saved.filter((item) => !previous.some((old) => old.id === item.id)),
+                ]
+              : [...localItems, ...saved, ...workspaceItems],
+          );
+        }
+      } catch (e) {
+        if (!isCurrent()) return;
+        console.error("[library] load failed");
+        setLoadError(e instanceof Error ? e.message : "Could not load your library.");
+        setSelected([]);
+        toast.error("Could not load your library.");
+      } finally {
+        pageRequests.current.delete(controller);
+        if (isCurrent()) setLoading(false);
+      }
+    },
+    [
+      isLoaded,
+      isSignedIn,
+      principal,
+      setItems,
+      userKey,
+      searchQuery,
+      sort,
+      filter,
+      folderScope,
+      favoriteIds,
+      libraryCleared,
+    ],
+  );
+
+  useEffect(() => {
+    if (!isLoaded || !principalReady) return;
+    setItems((current) => [
+      ...current.filter((item) => !item.id.startsWith("work:")),
+      ...savedWorkLibraryItems(userKey),
+    ]);
+  }, [isLoaded, principalReady, setItems, userKey, workRevision]);
 
   const refreshLibrary = useCallback(() => {
     if (folderBusy) return;
@@ -256,12 +582,29 @@ function LibraryPage() {
 
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
+    for (const controller of pageRequests.current) controller.abort();
+    pageRequests.current.clear();
+    pageCursor.current = null;
+    setNextPage(null);
+    setVersionItem(null);
+    setLibraryCleared(false);
     setQuery("");
     setFilter("all");
     setSort("newest");
     setPreviewItem(null);
     setSelected([]);
     setLoadError(null);
+    setSharedPreview(null);
+    setPendingRevokeShare(null);
+    setRevokingShareId(null);
+    shareLoadGenerationRef.current += 1;
+    setShareState({
+      principal,
+      received: [],
+      sent: [],
+      loading: false,
+      error: null,
+    });
     setFolderScope("all");
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
@@ -278,10 +621,27 @@ function LibraryPage() {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       loadGenerationRef.current += 1;
       lifecycleGenerationRef.current += 1;
+      for (const controller of pageRequests.current) controller.abort();
+      pageRequests.current.clear();
+      pageCursor.current = null;
+      setNextPage(null);
+      setVersionItem(null);
+      setLibraryCleared(true);
       setItemState({ principal, items: [] });
       setFavorites(new Set());
       setFavoritesPrincipal(principal);
       setPreviewItem(null);
+      setSharedPreview(null);
+      setPendingRevokeShare(null);
+      setRevokingShareId(null);
+      shareLoadGenerationRef.current += 1;
+      setShareState({
+        principal,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setFolderScope("all");
       setSelected([]);
       setQuery("");
@@ -297,13 +657,24 @@ function LibraryPage() {
   useEffect(() => {
     if (!isLoaded || principal === null) {
       loadGenerationRef.current += 1;
+      shareLoadGenerationRef.current += 1;
       setItemState({ principal: null, items: [] });
+      setShareState({
+        principal: null,
+        received: [],
+        sent: [],
+        loading: false,
+        error: null,
+      });
       setLoading(false);
       setLoadError(null);
       return;
     }
     void load();
   }, [isLoaded, load, principal]);
+  useEffect(() => {
+    if (isLoaded && principal && !libraryCleared) void loadShares();
+  }, [isLoaded, principal, loadShares, libraryCleared]);
 
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
@@ -329,19 +700,34 @@ function LibraryPage() {
     }
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
-      saveConversations(
-        userKey,
-        loadConversations(userKey).filter((chat) => `chat:${chat.id}` !== id),
-      );
+      if (
+        !(await saveConversations(
+          userKey,
+          loadConversations(userKey).filter((chat) => `chat:${chat.id}` !== id),
+        ))
+      ) {
+        if (isCurrent()) {
+          setItems(existing);
+          toast.error("Could not save chat deletion.");
+        }
+        return;
+      }
+      if (!isCurrent()) return;
       toast.success("Chat deleted.");
       return;
     }
     if (id.startsWith("work:")) {
-      saveWorkTasks(
-        userKey,
-        loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
-      );
-      toast.success("Work item deleted.");
+      try {
+        saveWorkTasks(
+          userKey,
+          loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
+        );
+        toast.success("Work item deleted.");
+      } catch {
+        if (!isCurrent()) return;
+        setItems(existing);
+        toast.error("Work item could not be deleted. Retry Work sync and try again.");
+      }
       return;
     }
     if (!isSignedIn) {
@@ -352,7 +738,15 @@ function LibraryPage() {
 
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
-      await deleteLibraryItem({ data: { id } });
+      await deleteLibraryItem({
+        data: {
+          id,
+          expectedOwnerId: userKey ?? undefined,
+          generation: existing.find((item) => item.id === id)?.original_generation,
+          contentGeneration: existing.find((item) => item.id === id)?.content_generation,
+          revision: existing.find((item) => item.id === id)?.content_revision,
+        },
+      });
       if (isCurrent()) toast.success("Deleted.");
     } catch {
       if (!isCurrent()) return;
@@ -366,10 +760,45 @@ function LibraryPage() {
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else {
+        if (next.size >= 1000) {
+          toast.error("Library supports up to 1,000 favorites.");
+          return prev;
+        }
+        next.add(id);
+      }
       writeFavorites(favoritesKey, next);
       return next;
     });
+  };
+
+  const revokeShare = async (id: string) => {
+    if (!sharesReady || !principal) return;
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
+    setRevokingShareId(id);
+    try {
+      const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
+      await revokeSharedChat({ data: { id } });
+      if (!isCurrent()) return;
+      setShareState((previous) =>
+        previous.principal === requestPrincipal
+          ? {
+              ...previous,
+              sent: previous.sent.map((share) =>
+                share.id === id ? { ...share, status: "revoked" } : share,
+              ),
+            }
+          : previous,
+      );
+      toast.success("Share revoked.");
+    } catch {
+      if (isCurrent()) toast.error("Could not revoke this shared snapshot. Please try again.");
+    } finally {
+      if (isCurrent()) setRevokingShareId(null);
+    }
   };
 
   const deleteSelected = async (confirmed = false) => {
@@ -391,7 +820,17 @@ function LibraryPage() {
         const results = await Promise.allSettled(
           selected
             .filter((id) => !id.startsWith("chat:") && !id.startsWith("work:"))
-            .map((id) => deleteLibraryItem({ data: { id } })),
+            .map((id) =>
+              deleteLibraryItem({
+                data: {
+                  id,
+                  expectedOwnerId: userKey ?? undefined,
+                  generation: existing.find((item) => item.id === id)?.original_generation,
+                  contentGeneration: existing.find((item) => item.id === id)?.content_generation,
+                  revision: existing.find((item) => item.id === id)?.content_revision,
+                },
+              }),
+            ),
         );
         if (results.some((result) => result.status === "rejected")) {
           await load();
@@ -404,10 +843,14 @@ function LibraryPage() {
           .forEach(deleteGuestItem);
       }
       if (!isCurrent()) return;
-      saveConversations(
-        userKey,
-        loadConversations(userKey).filter((chat) => !selected.includes(`chat:${chat.id}`)),
-      );
+      if (
+        !(await saveConversations(
+          userKey,
+          loadConversations(userKey).filter((chat) => !selected.includes(`chat:${chat.id}`)),
+        ))
+      )
+        throw new Error("Chat deletion could not be saved.");
+      if (!isCurrent()) return;
       saveWorkTasks(
         userKey,
         loadWorkTasks(userKey).filter((task) => !selected.includes(`work:${task.id}`)),
@@ -421,6 +864,29 @@ function LibraryPage() {
     }
   };
 
+  const withItem = async (item: LibItem, action: (value: LibItem) => void) => {
+    const owner = userKey,
+      version = lifecycleGenerationRef.current;
+    if (!principal) return;
+    const controller = new AbortController();
+    pageRequests.current.add(controller);
+    const current = () =>
+      owner === ownerIdRef.current &&
+      version === lifecycleGenerationRef.current &&
+      !controller.signal.aborted;
+    try {
+      const value =
+        item.content_loaded === false
+          ? (await import("@/lib/library-items-client")).readLibraryItem
+          : null;
+      const loaded = value ? await value(owner!, item, controller.signal) : item;
+      if (current()) action(loaded);
+    } catch {
+      if (current()) toast.error("This item could not be opened. Refresh Library and try again.");
+    } finally {
+      pageRequests.current.delete(controller);
+    }
+  };
   const reuseInChat = (item: LibItem) => {
     const context = item.content_text?.trim()
       ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
@@ -455,7 +921,8 @@ function LibraryPage() {
         if (filter === "images" && !isImageItem(item)) return false;
         if (filter === "documents" && !isDocumentItem(item)) return false;
         if (filter === "other" && (isImageItem(item) || isDocumentItem(item))) return false;
-        if (!q) return true;
+        if (!q || (isSignedIn && UUID_PATTERN.test(item.id) && searchQuery === query.trim()))
+          return true;
         return [
           item.title,
           item.file_name,
@@ -473,7 +940,7 @@ function LibraryPage() {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return sort === "oldest" ? -delta : delta;
       });
-  }, [filter, folderItems, query, sort, visibleFavorites]);
+  }, [filter, folderItems, query, sort, visibleFavorites, isSignedIn, searchQuery]);
 
   const storageKnown = items.some((item) => typeof item.file_size === "number");
   const storageTotal = storageKnown
@@ -508,22 +975,91 @@ function LibraryPage() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => setPreviewItem(item)}>
+        <DropdownMenuItem onClick={() => void withItem(item, setPreviewItem)}>
           <Eye className="mr-2 h-4 w-4" /> Preview
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => reuseInChat(item)}>
+        <DropdownMenuItem onClick={() => void withItem(item, reuseInChat)}>
           <MessageSquarePlus className="mr-2 h-4 w-4" /> Reuse in chat
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openInWork(toHandoff(item), userKey)}>
+        <DropdownMenuItem
+          onClick={() => void withItem(item, (value) => openInWork(toHandoff(value), userKey))}
+        >
           Open in Work
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => continueInResearch(toHandoff(item), userKey)}>
+        <DropdownMenuItem
+          onClick={() =>
+            void withItem(item, (value) => continueInResearch(toHandoff(value), userKey))
+          }
+        >
           Continue Research
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item), userKey)}>
+        <DropdownMenuItem
+          onClick={() =>
+            void withItem(item, (value) => addToContextPack(toHandoff(value), userKey))
+          }
+        >
           Add to Context Pack
         </DropdownMenuItem>
-        {safeNavigationUrl(item.file_url) ? (
+        {item.content_generation &&
+          !item.work_output &&
+          (item.original_generation || (!item.file_url && !isImageItem(item))) && (
+            <DropdownMenuItem onClick={() => void withItem(item, setVersionItem)}>
+              Versions and replacement
+            </DropdownMenuItem>
+          )}
+        {item.original_generation && principal ? (
+          <DropdownMenuItem
+            onClick={() => {
+              const owner = userKey,
+                generation = lifecycleGenerationRef.current;
+              const controller = new AbortController();
+              pageRequests.current.add(controller);
+              void import("@/lib/library-original-client")
+                .then(async ({ readOriginalLibraryFile }) => {
+                  if (
+                    controller.signal.aborted ||
+                    generation !== lifecycleGenerationRef.current ||
+                    ownerIdRef.current !== owner
+                  )
+                    return;
+                  if (!owner) return;
+                  const blob = await readOriginalLibraryFile(
+                    owner,
+                    item.id,
+                    item.original_generation!,
+                    controller.signal,
+                  );
+                  if (
+                    controller.signal.aborted ||
+                    generation !== lifecycleGenerationRef.current ||
+                    ownerIdRef.current !== owner
+                  )
+                    return;
+                  const url = URL.createObjectURL(blob),
+                    anchor = document.createElement("a");
+                  anchor.href = url;
+                  anchor.download = item.file_name ?? item.title;
+                  anchor.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                })
+                .catch(() => {
+                  if (
+                    !controller.signal.aborted &&
+                    generation === lifecycleGenerationRef.current &&
+                    ownerIdRef.current === owner
+                  )
+                    toast.error("The original file could not be downloaded. Please retry.");
+                })
+                .finally(() => pageRequests.current.delete(controller));
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" /> Download original
+          </DropdownMenuItem>
+        ) : item.work_output === true ? (
+          <WorkOutputDownloadAction id={item.id} />
+        ) : isImageItem(item) ? (
+          <LibraryImageDownloadAction item={item} />
+        ) : safeNavigationUrl(item.file_url) ? (
           <DropdownMenuItem asChild>
             <a href={safeNavigationUrl(item.file_url)!} target="_blank" rel="noopener noreferrer">
               <Download className="mr-2 h-4 w-4" /> Open or download
@@ -630,17 +1166,15 @@ function LibraryPage() {
         ) : null}
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
-            <img
-              src={item.file_url!}
-              alt={item.title}
-              loading="lazy"
-              className="h-full w-full object-cover "
-            />
+            <LibraryImageMedia item={item} className="h-full w-full object-cover" />
           </div>
         ) : (
           <div className="aspect-[4/3] bg-[var(--surface-secondary)] p-4 text-xs text-muted-foreground">
             <div className="line-clamp-6 whitespace-pre-wrap">
-              {(item.content_text ?? item.file_name ?? item.title).slice(0, 320)}
+              {(item.content_text ?? item.content_excerpt ?? item.file_name ?? item.title).slice(
+                0,
+                320,
+              )}
             </div>
           </div>
         )}
@@ -674,7 +1208,7 @@ function LibraryPage() {
           titleId="library-title"
           description="Chats, work, files, images, responses, and reusable context in one place."
           meta={
-            storageTotal !== null ? `Known file storage: ${humanBytes(storageTotal)}` : undefined
+            storageTotal !== null ? `Loaded file sizes: ${humanBytes(storageTotal)}` : undefined
           }
           actions={
             principalReady ? (
@@ -682,12 +1216,15 @@ function LibraryPage() {
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                onClick={refreshLibrary}
-                disabled={loading || folderBusy}
+                onClick={() => {
+                  refreshLibrary();
+                  void loadShares();
+                }}
+                disabled={loading || folderBusy || sharesLoading}
               >
                 <RefreshCw
                   aria-hidden="true"
-                  className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
+                  className={`mr-1.5 h-3.5 w-3.5 ${loading || sharesLoading ? "animate-spin motion-reduce:animate-none" : ""}`}
                 />{" "}
                 Refresh
               </Button>
@@ -713,6 +1250,107 @@ function LibraryPage() {
                 Sign in
               </Button>
             </SignInButton>
+          </section>
+        ) : null}
+
+        {isSignedIn && isLoaded ? (
+          <section className="kova-card space-y-4 p-4 sm:p-5" aria-labelledby="shared-chats-title">
+            <div>
+              <h2 id="shared-chats-title" className="font-medium">
+                Shared chats
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Open read-only snapshots shared with you, or revoke snapshots you sent.
+              </p>
+            </div>
+            {sharesError ? (
+              <div role="alert" className="rounded-xl border border-destructive/30 p-4">
+                <p className="text-sm font-medium text-destructive">Could not load shared chats</p>
+                <p className="mt-1 text-xs text-muted-foreground">{sharesError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 min-h-11"
+                  onClick={() => void loadShares()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : sharesLoading ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading shared chats…
+              </p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared with me</h3>
+                  {receivedShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      No chats have been shared with you.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {receivedShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {share.snapshot.messages.length} messages ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="min-h-11 shrink-0"
+                            onClick={(event) => {
+                              sharedPreviewReturnFocusRef.current = event.currentTarget;
+                              setSharedPreview(share);
+                            }}
+                          >
+                            Open snapshot
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Shared by me</h3>
+                  {sentShares.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                      You have not shared a chat. Use Share chat from a conversation to send a
+                      read-only snapshot.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border rounded-xl border border-border">
+                      {sentShares.map((share) => (
+                        <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{share.title}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              To {share.recipient_email} · {share.status} ·{" "}
+                              {new Date(share.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {share.status !== "revoked" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="min-h-11 shrink-0"
+                              disabled={revokingShareId === share.id}
+                              onClick={() => setPendingRevokeShare(share)}
+                            >
+                              Revoke
+                            </Button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         ) : null}
 
@@ -746,7 +1384,7 @@ function LibraryPage() {
           />
         ) : null}
 
-        {items.length > 0 && !loadError ? (
+        {(isSignedIn || items.length > 0) && !loadError ? (
           <>
             <section className="kova-toolbar" aria-label="Library toolbar">
               <label className="relative min-w-[220px] flex-1">
@@ -757,6 +1395,7 @@ function LibraryPage() {
                 />
                 <Input
                   value={query}
+                  maxLength={200}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search Library"
                   className="h-11 rounded-[var(--kova-radius-input)] pl-9"
@@ -842,6 +1481,10 @@ function LibraryPage() {
                   if (!favoritesReady || !favoritesKey) return;
                   const next = new Set(visibleFavorites);
                   selected.forEach((id) => next.add(id));
+                  if (next.size > 1000) {
+                    toast.error("Library supports up to 1,000 favorites.");
+                    return;
+                  }
                   setFavorites(next);
                   writeFavorites(favoritesKey, next);
                 }}
@@ -853,10 +1496,46 @@ function LibraryPage() {
                 variant="outline"
                 className="min-h-11"
                 onClick={() =>
-                  addManyToContextPack(
-                    items.filter((item) => selected.includes(item.id)).map(toHandoff),
-                    userKey,
-                  )
+                  void (async () => {
+                    const owner = userKey,
+                      version = lifecycleGenerationRef.current;
+                    if (!principal) return;
+                    if (selected.length > 20) {
+                      toast.error("Choose up to 20 items for one Context Pack action.");
+                      return;
+                    }
+                    const controller = new AbortController();
+                    pageRequests.current.add(controller);
+                    try {
+                      const { readLibraryItem } = await import("@/lib/library-items-client");
+                      const loaded = [];
+                      for (const item of items.filter((item) => selected.includes(item.id))) {
+                        controller.signal.throwIfAborted();
+                        loaded.push(
+                          item.content_loaded === false
+                            ? await readLibraryItem(owner!, item, controller.signal)
+                            : item,
+                        );
+                      }
+                      if (
+                        owner === ownerIdRef.current &&
+                        version === lifecycleGenerationRef.current &&
+                        !controller.signal.aborted
+                      )
+                        addManyToContextPack(loaded.map(toHandoff), userKey);
+                    } catch {
+                      if (
+                        owner === ownerIdRef.current &&
+                        version === lifecycleGenerationRef.current &&
+                        !controller.signal.aborted
+                      )
+                        toast.error(
+                          "The selected items could not be loaded. Refresh Library and try again.",
+                        );
+                    } finally {
+                      pageRequests.current.delete(controller);
+                    }
+                  })()
                 }
               >
                 Add to Context Pack
@@ -874,7 +1553,9 @@ function LibraryPage() {
           </section>
         ) : null}
 
-        {loadError ? (
+        {libraryCleared ? (
+          <p role="status">Saved browser data was cleared. Reload this page to reopen Library.</p>
+        ) : loadError ? (
           <section className="kova-empty-state" role="alert">
             <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <h2 className="mt-3 font-medium">Could not load Library</h2>
@@ -903,30 +1584,59 @@ function LibraryPage() {
           <section className="kova-empty-state" aria-labelledby="library-empty-title">
             <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <h2 id="library-empty-title" className="mt-3 font-medium">
-              {items.length === 0
-                ? isSignedIn
-                  ? "Your Library is empty"
-                  : "Nothing saved in this browser"
-                : query
-                  ? "No matches"
-                  : folderScope !== "all" && folderItems.length === 0
-                    ? "This folder is empty"
-                    : "No items match this filter"}
+              {query
+                ? "No matches"
+                : items.length === 0
+                  ? isSignedIn
+                    ? "Your Library is empty"
+                    : "Nothing saved in this browser"
+                  : query
+                    ? "No matches"
+                    : folderScope !== "all" && folderItems.length === 0
+                      ? "This folder is empty"
+                      : "No items match this filter"}
             </h2>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              {items.length === 0
-                ? "Saved uploads and generated files outside Temporary Chat appear here automatically."
-                : query
-                  ? `Nothing matches “${query}”.`
-                  : folderScope !== "all" && folderItems.length === 0
-                    ? "Move selected durable items here from All items or another folder."
-                    : "Try a different file-type filter."}
+              {query
+                ? `Nothing matches “${query}”.`
+                : items.length === 0
+                  ? "Saved uploads and generated files outside Temporary Chat appear here automatically."
+                  : query
+                    ? `Nothing matches “${query}”.`
+                    : folderScope !== "all" && folderItems.length === 0
+                      ? "Move selected durable items here from All items or another folder."
+                      : "Try a different file-type filter."}
             </p>
           </section>
         ) : (
           <ul className={view === "list" ? "kova-list" : "kova-grid"} aria-label="Library items">
             {filtered.map(renderItem)}
           </ul>
+        )}
+        {nextPage && !loadError && (
+          <div className="grid justify-items-center gap-2 py-4">
+            <p className="text-sm text-muted-foreground">
+              More matching saved items are available. File sizes shown cover loaded items.
+            </p>
+            <Button disabled={loading || folderBusy} onClick={() => void load(true)}>
+              {loading ? "Loading…" : "Load more saved items"}
+            </Button>
+          </div>
+        )}
+        {versionItem && principal && userKey && principalReady && (
+          <Suspense fallback={<p role="status">Loading version history…</p>}>
+            <LibraryVersionsDialog
+              key={`${principal}:${versionItem.id}:${versionItem.content_generation}:${versionItem.content_revision}`}
+              ownerId={userKey!}
+              item={versionItem}
+              onClose={() => setVersionItem(null)}
+              onUpdated={() => {
+                setVersionItem(null);
+                setPreviewItem(null);
+                void load();
+              }}
+            />
+          </Suspense>
         )}
         <Dialog
           open={Boolean(visiblePreviewItem)}
@@ -965,10 +1675,11 @@ function LibraryPage() {
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
                 {isImageItem(visiblePreviewItem) ? (
-                  <img
-                    src={visiblePreviewItem.file_url!}
-                    alt={visiblePreviewItem.title}
+                  <LibraryImageMedia
+                    item={visiblePreviewItem}
+                    eager
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
+                    fallbackClassName="min-h-64 rounded-xl bg-[var(--surface-secondary)]"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
@@ -978,6 +1689,46 @@ function LibraryPage() {
                   </pre>
                 )}
               </div>
+            </DialogContent>
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={Boolean(visibleSharedPreview)}
+          onOpenChange={(open) => {
+            if (!open) setSharedPreview(null);
+          }}
+        >
+          {visibleSharedPreview ? (
+            <DialogContent
+              className="gap-0 overflow-hidden p-0 sm:w-[min(92vw,768px)] sm:max-w-3xl sm:p-0"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const trigger = sharedPreviewReturnFocusRef.current;
+                if (trigger?.isConnected) trigger.focus();
+                sharedPreviewReturnFocusRef.current = null;
+              }}
+            >
+              <header className="border-b border-border p-4 pr-16">
+                <DialogTitle className="truncate text-base">
+                  {visibleSharedPreview.title}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Read-only snapshot · {visibleSharedPreview.snapshot.messages.length} messages ·{" "}
+                  shared {new Date(visibleSharedPreview.created_at).toLocaleDateString()}
+                </DialogDescription>
+              </header>
+              <ol className="max-h-[70dvh] space-y-4 overflow-auto p-4 sm:p-6">
+                {visibleSharedPreview.snapshot.messages.map((message, index) => (
+                  <li key={`${visibleSharedPreview.id}:${index}`} className="space-y-1">
+                    <p className="text-xs font-medium capitalize text-muted-foreground">
+                      {message.role}
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                      {message.content}
+                    </p>
+                  </li>
+                ))}
+              </ol>
             </DialogContent>
           ) : null}
         </Dialog>
@@ -993,6 +1744,23 @@ function LibraryPage() {
             setPendingDelete(null);
             if (pending?.kind === "one") void remove(pending.id, true);
             else if (pending?.kind === "many") void deleteSelected(true);
+          }}
+        />
+        <ConfirmActionDialog
+          open={pendingRevokeShare !== null}
+          onOpenChange={(open) => !open && setPendingRevokeShare(null)}
+          title="Revoke this shared snapshot?"
+          description={
+            pendingRevokeShare
+              ? `${pendingRevokeShare.recipient_email} will no longer be able to open “${pendingRevokeShare.title}”.`
+              : "The recipient will no longer be able to open this snapshot."
+          }
+          confirmLabel="Revoke"
+          destructive
+          onConfirm={() => {
+            const share = pendingRevokeShare;
+            setPendingRevokeShare(null);
+            if (share) void revokeShare(share.id);
           }}
         />
       </main>

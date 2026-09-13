@@ -106,17 +106,23 @@ function chunkText(text: string): string[] {
   return chunks;
 }
 
-async function embedBatch(inputs: string[]): Promise<number[][]> {
-  const resp = await embeddings({ model: embeddingModel(), input: inputs, dimensions: EMBED_DIMS });
+async function embedBatch(inputs: string[], signal?: AbortSignal): Promise<number[][]> {
+  signal?.throwIfAborted();
+  const resp = await embeddings(
+    { model: embeddingModel(), input: inputs, dimensions: EMBED_DIMS },
+    { signal },
+  );
+  signal?.throwIfAborted();
   if (!resp.ok) throw await providerErrorFromResponse(resp);
   const json = (await resp.json()) as { data?: Array<{ index: number; embedding: number[] }> };
+  signal?.throwIfAborted();
   const out: number[][] = new Array(inputs.length);
   for (const row of json.data ?? []) out[row.index] = row.embedding;
   return out;
 }
 
-async function embedOne(text: string): Promise<number[] | null> {
-  const [v] = await embedBatch([text]);
+async function embedOne(text: string, signal?: AbortSignal): Promise<number[] | null> {
+  const [v] = await embedBatch([text], signal);
   return v ?? null;
 }
 
@@ -192,28 +198,35 @@ export async function retrieveProjectContext(params: {
     rpc: (
       name: string,
       args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: unknown }>;
+    ) => PromiseLike<{ data: unknown; error: unknown }> & {
+      abortSignal: (signal: AbortSignal) => PromiseLike<{ data: unknown; error: unknown }>;
+    };
   };
   project_id: string;
   query: string;
   k?: number;
+  signal?: AbortSignal;
 }): Promise<Array<{ file_id: string; content: string; similarity: number }>> {
   const q = params.query.trim();
   if (!q) return [];
   try {
-    const vec = await embedOne(q.slice(0, 4000));
+    const vec = await embedOne(q.slice(0, 4000), params.signal);
+    params.signal?.throwIfAborted();
     if (!vec) return [];
-    const { data, error } = await params.supabase.rpc("match_project_chunks", {
+    const query = params.supabase.rpc("match_project_chunks", {
       _project_id: params.project_id,
       query_embedding: vec as unknown as string,
       match_count: Math.max(1, Math.min(params.k ?? 6, 12)),
     });
+    const { data, error } = await (params.signal ? query.abortSignal(params.signal) : query);
+    params.signal?.throwIfAborted();
     if (error) {
       console.warn("[retrieveProjectContext] rpc", error);
       return [];
     }
     return (data as Array<{ file_id: string; content: string; similarity: number }>) ?? [];
   } catch (e) {
+    if (params.signal?.aborted) return [];
     console.warn("[retrieveProjectContext]", (e as Error)?.message ?? e);
     return [];
   }

@@ -44,7 +44,9 @@ test("Azure OpenAI supports API-key and bounded Container Apps managed identity 
   const transport = read("src/lib/ai/provider-transport.server.mjs");
   const azure = read("src/lib/azure-runtime-env.server.ts");
   const runtime = `${provider}\n${transport}`;
-  assert.match(provider, /"api-key": env\("AZURE_OPENAI_API_KEY"\)!/u);
+  assert.match(provider, /"api-key": target\.apiKey!/u);
+  assert.match(provider, /env\("AZURE_OPENAI_API_KEY"\)/u);
+  assert.match(provider, /env\("AZURE_OPENAI_IMAGE_API_KEY"\)/u);
   assert.match(runtime, /IDENTITY_ENDPOINT/u);
   assert.match(runtime, /IDENTITY_HEADER/u);
   assert.match(runtime, /X-IDENTITY-HEADER/u);

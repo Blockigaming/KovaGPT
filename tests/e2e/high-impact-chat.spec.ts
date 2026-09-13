@@ -1,10 +1,283 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
 test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
+});
+
+test("web answers expose their real sources instead of a placeholder action", async ({ page }) => {
+  const sourcesEvent = {
+    choices: [
+      {
+        delta: {
+          kind: "web_sources",
+          sources: [
+            {
+              id: "src-1",
+              title: "Launch report",
+              url: "https://reader:secret@example.com/report#details",
+              domain: "spoofed.invalid",
+              snippet: "Verified launch details.",
+            },
+            {
+              id: "src-2",
+              title: "Pricing page",
+              url: "https://docs.example.org/pricing",
+              domain: "docs.example.org",
+            },
+            {
+              id: "unsafe",
+              title: "Unsafe result",
+              url: "javascript:alert(1)",
+              domain: "unsafe.invalid",
+            },
+            {
+              id: "expanded",
+              title: "Expanded URL",
+              url: `https://example.net/${"é".repeat(400)}`,
+              domain: "example.net",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body:
+        `data: ${JSON.stringify(sourcesEvent)}\n\n` +
+        'data: {"choices":[{"delta":{"content":"The launch report confirms the update."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find the launch details");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  const sourcesButton = page.getByRole("button", { name: "2 sources" });
+  await expect(sourcesButton).toBeVisible();
+  await sourcesButton.click();
+  const sources = page.getByRole("region", { name: "Sources for this response (2)" });
+  await expect(sources.getByRole("link", { name: /Launch report/ })).toHaveAttribute(
+    "href",
+    "https://example.com/report",
+  );
+  await expect(sources).toContainText("Verified launch details.");
+  await expect(sources.getByText("example.com", { exact: true })).toBeVisible();
+  await expect(sources).not.toContainText("spoofed.invalid");
+  await expect(sources).not.toContainText("Unsafe result");
+  await expect(sources).not.toContainText("Expanded URL");
+  await expect(sources.getByText("docs.example.org", { exact: true })).toBeVisible();
+});
+
+test("stopping before the first token preserves an honest response with immediate retry", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let chatRequests = 0;
+    const requestTools: unknown[] = [];
+    Reflect.defineProperty(window, "__kovaRequestTools", { value: requestTools });
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      if (typeof init?.body === "string") requestTools.push(JSON.parse(init.body).clientTool);
+      chatRequests += 1;
+      if (chatRequests > 1) {
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"Recovered response"}}]}\n\ndata: [DONE]\n\n',
+          { status: 200, headers: { "Content-Type": "text/event-stream" } },
+        );
+      }
+
+      const signal = init?.signal;
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Searching the web","status":"running"}}]}\n\ndata: {"choices":[{"delta":{"kind":"image_pending"}}]}\n\ndata: {"choices":[{"delta":{"content":"Partial response"}}]}\n\n',
+              ),
+            );
+            const abort = () =>
+              controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            if (signal?.aborted) abort();
+            else signal?.addEventListener("abort", abort, { once: true });
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.evaluate(() => {
+    window.requestAnimationFrame = (callback) =>
+      window.setTimeout(() => callback(performance.now()), 1_000);
+  });
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Search the web" }).click();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
+  await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Stop generating" }).click();
+
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
+  await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Retry stopped response" }).click();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("Recovered response");
+  await expect(page.getByText("Response stopped", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".kova-user-message")).toHaveCount(1);
+  await expect(page.locator(".kova-assistant-message")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { __kovaRequestTools: unknown[] }).__kovaRequestTools.slice(),
+      ),
+    )
+    .toEqual(["web_search", "web_search"]);
+});
+
+test("a late stopped request cannot clear the streaming state of its retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    let chatRequests = 0;
+    const requestState = { count: 0 };
+    Reflect.defineProperty(window, "__kovaChatRequestState", { value: requestState });
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      chatRequests += 1;
+      requestState.count = chatRequests;
+      if (chatRequests === 1) {
+        // Model an abort-insensitive auth/preflight wait that settles after Retry starts.
+        await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+        return new Response("data: [DONE]\n\n", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            window.setTimeout(() => {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'data: {"choices":[{"delta":{"content":"Replacement complete"}}]}\n\ndata: [DONE]\n\n',
+                ),
+              );
+              controller.close();
+            }, 3_500);
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Explain this safely");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __kovaChatRequestState: { count: number } })
+            .__kovaChatRequestState.count,
+      ),
+    )
+    .toBe(1);
+  await page.getByRole("button", { name: "Stop generating" }).click();
+  await page.getByRole("button", { name: "Retry stopped response" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __kovaChatRequestState: { count: number } })
+            .__kovaChatRequestState.count,
+      ),
+    )
+    .toBe(2);
+
+  await page.waitForTimeout(1_800);
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText(
+    "Replacement complete",
+  );
+});
+
+test("a longer first-token wait stays calm, truthful, and stoppable", async ({
+  page,
+}, testInfo) => {
+  await installAuthenticatedFixture(page);
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/chat")) return originalFetch(input, init);
+      const signal = init?.signal;
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Search complete","status":"done"}}]}\n\n',
+              ),
+            );
+            const abort = () =>
+              controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            if (signal?.aborted) abort();
+            else signal?.addEventListener("abort", abort, { once: true });
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "text/event-stream" } },
+      );
+    };
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.clock.install();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Work through this carefully");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  const status = page.getByRole("status").filter({ hasText: "Thinking" });
+  await expect(status).toHaveText("Thinking…");
+  await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
+  await page.clock.fastForward(8_000);
+  await expect(status).toHaveText("Still thinking…");
+  await page.clock.fastForward(22_000);
+  await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
+    "Taking a little longer…",
+  );
+
+  if (testInfo.project.name === "desktop-1440x900") {
+    await page.getByRole("button", { name: "New chat", exact: true }).click();
+    await page
+      .getByRole("button", { name: /^Open chat / })
+      .first()
+      .click();
+    await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
+      "Taking a little longer…",
+    );
+  }
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop generating" }).click();
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
 });
 
 async function startAttachedConversation(
@@ -19,7 +292,7 @@ async function startAttachedConversation(
   });
   await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Original prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-assistant-message")).toContainText(expectedResponse);
 }
 
@@ -43,7 +316,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toHaveValue("Original prompt");
   await composer.fill("Updated prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
   await expect(page.locator(".kova-user-message")).toContainText("Updated prompt");
@@ -76,8 +349,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Regenerated response");
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Retry" }).click();
+  await page.getByRole("button", { name: "Regenerate response" }).click();
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
   await expect(page.locator(".kova-assistant-message")).toContainText("Regenerated response");
@@ -140,7 +412,7 @@ test("signed-out chat history stays session-only", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Session-only prompt");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-assistant-message")).toContainText("Session response");
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
@@ -175,7 +447,7 @@ test("text files are attached as real request context and remain visible in hist
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
 
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("What is the revenue?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
 
   await expect(page.locator(".kova-user-message").last()).toContainText("What is the revenue?");
   await expect(page.getByText("quarterly.csv", { exact: true })).toBeVisible();

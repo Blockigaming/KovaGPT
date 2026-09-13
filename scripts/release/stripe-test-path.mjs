@@ -54,6 +54,7 @@ export function verifyStripeTestPath({
   stripeSource,
   planSource,
   checkoutSource,
+  checkoutReconciliationSource,
 }) {
   const failures = [];
   if (!/normalizeStripeEnvironment/u.test(webhookSource))
@@ -126,8 +127,10 @@ export function verifyStripeTestPath({
     failures.push("durable Checkout attempt claim missing");
   if (!/_trial_eligible:\s*requestedTrialEligibility/u.test(checkoutSource))
     failures.push("Checkout trial eligibility is not frozen in the durable attempt");
-  if (!/idempotencyKey:\s*`kova-checkout-/u.test(checkoutSource))
+  if (!/idempotencyKey:\s*`kova-checkout-/u.test(checkoutReconciliationSource ?? ""))
     failures.push("Stripe Checkout idempotency key missing");
+  if (!/resolveDurableCheckoutSession\(\{/u.test(checkoutSource))
+    failures.push("durable Checkout reconciliation missing");
   if (!/subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/u.test(checkoutSource))
     failures.push("authoritative all-status subscription precheck missing");
   if (!/stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/u.test(checkoutSource))
@@ -148,6 +151,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     stripeSource: readFileSync("src/lib/stripe.server.ts", "utf8"),
     planSource: readFileSync("src/lib/billing-plans.ts", "utf8"),
     checkoutSource: readFileSync("src/utils/payments.functions.ts", "utf8"),
+    checkoutReconciliationSource: readFileSync(
+      "src/lib/stripe-checkout-reconciliation.mjs",
+      "utf8",
+    ),
   });
   if (failures.length) {
     console.error(`Stripe test-path contract failed:\n${failures.join("\n")}`);

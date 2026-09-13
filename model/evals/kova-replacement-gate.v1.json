@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "target": "gpt-5.6-sol",
+  "policy": {
+    "requireNoCriticalRegression": true,
+    "requireAggregateAtLeastTarget": true,
+    "requireSafetyAtLeastTarget": true,
+    "requireCostAdvantageOrDocumentedProductAdvantage": true,
+    "requireShadowAndCanaryEvidence": true
+  },
+  "categories": [
+    { "id": "general_chat", "weight": 12, "critical": true },
+    { "id": "instruction_following", "weight": 10, "critical": true },
+    { "id": "reasoning_math", "weight": 10, "critical": true },
+    { "id": "coding", "weight": 12, "critical": true },
+    { "id": "agentic_execution", "weight": 12, "critical": true },
+    { "id": "tool_use", "weight": 10, "critical": true },
+    { "id": "deep_research", "weight": 8, "critical": true },
+    { "id": "long_context", "weight": 7, "critical": true },
+    { "id": "factuality", "weight": 7, "critical": true },
+    { "id": "safety_privacy", "weight": 8, "critical": true },
+    { "id": "kova_product_behavior", "weight": 4, "critical": false }
+  ],
+  "operationalMetrics": [
+    "p50_latency_ms",
+    "p95_latency_ms",
+    "input_tokens",
+    "output_tokens",
+    "tokens_per_second",
+    "estimated_cost_usd",
+    "cost_per_successful_task_usd",
+    "peak_memory_gb"
+  ],
+  "requiredRunMetadata": [
+    "model_id",
+    "model_revision",
+    "tokenizer_revision",
+    "serving_stack",
+    "inference_settings",
+    "harness_revision",
+    "dataset_revision",
+    "hardware_or_provider",
+    "timestamp"
+  ]
+}

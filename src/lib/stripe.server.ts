@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { timingSafeEqualText } from "@/lib/http-security.server";
 import { stripeEventMatchesEnvironment } from "@/lib/stripe-event-mode.mjs";
+import { readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -9,6 +10,12 @@ const getEnv = (key: string): string => {
 };
 
 export type StripeEnv = "sandbox" | "live";
+
+// New and legacy webhook writers cannot safely operate at the same time.
+// An operator enables this only after the source migration/drain checklist.
+export function durableStripeBillingEnabled(): boolean {
+  return process.env.STRIPE_BILLING_RUNTIME === "durable";
+}
 
 const stripeClients = new Map<StripeEnv, { apiKey: string; client: Stripe }>();
 
@@ -79,7 +86,11 @@ function parseVerifiedStripeEvent(body: string, env: StripeEnv): VerifiedStripeE
   if (typeof event.id !== "string" || !event.id.trim()) {
     rejectWebhook("Invalid webhook event id");
   }
-  if (typeof event.created !== "number" || !Number.isSafeInteger(event.created)) {
+  if (
+    typeof event.created !== "number" ||
+    !Number.isSafeInteger(event.created) ||
+    event.created < 0
+  ) {
     rejectWebhook("Invalid webhook event timestamp");
   }
   if (typeof event.type !== "string" || !event.type.trim()) {
@@ -104,13 +115,11 @@ function parseVerifiedStripeEvent(body: string, env: StripeEnv): VerifiedStripeE
 export async function verifyWebhook(req: Request, env: StripeEnv): Promise<VerifiedStripeEvent> {
   const signature = req.headers.get("stripe-signature");
   const maxBodyBytes = 2 * 1024 * 1024;
-  const contentLength = Number(req.headers.get("content-length") ?? "0");
-  if (!Number.isFinite(contentLength) || contentLength < 0 || contentLength > maxBodyBytes) {
-    rejectWebhook("Webhook payload too large");
-  }
-  const body = await req.text();
-  if (Buffer.byteLength(body, "utf8") > maxBodyBytes) {
-    rejectWebhook("Webhook payload too large");
+  let body: string;
+  try {
+    body = await readUtf8BodyBounded(req, maxBodyBytes);
+  } catch {
+    rejectWebhook("Invalid webhook body");
   }
   const secret =
     env === "sandbox"

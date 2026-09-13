@@ -1,11 +1,10 @@
-import { loadStripe, type Stripe } from "@stripe/stripe-js";
-import { PUBLIC_PAYMENTS_CLIENT_TOKEN } from "@/config/public-config";
+import { loadStripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
+import { COMPILED_PAYMENTS_CLIENT_TOKEN } from "@/lib/stripe-browser-config";
 
 type StripeEnv = "live";
 
-const clientToken =
-  (import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined) ||
-  PUBLIC_PAYMENTS_CLIENT_TOKEN;
+const clientToken = COMPILED_PAYMENTS_CLIENT_TOKEN;
 const environment: StripeEnv = "live";
 
 let stripePromise: Promise<Stripe | null> | null = null;

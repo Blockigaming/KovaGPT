@@ -1,5 +1,7 @@
-import { PUBLIC_STRIPE_ACCOUNT_ID } from "@/config/public-config";
 import { runtimeEnv } from "@/lib/runtime-env.server";
+import { PUBLIC_STRIPE_ACCOUNT_ID } from "@/config/public-config";
+import { COMPILED_PAYMENTS_CLIENT_TOKEN } from "@/lib/stripe-browser-config";
+import { providerCapabilityConfigured } from "@/lib/ai/provider.server";
 
 export type CapabilityState =
   | "ready"
@@ -31,34 +33,28 @@ function supabaseConfigured(): boolean {
   );
 }
 
-function stripeAccountConfigured(): boolean {
-  return runtimeEnv("STRIPE_LIVE_ACCOUNT_ID") === PUBLIC_STRIPE_ACCOUNT_ID;
-}
-
-function stripeServerKeyConfigured(): boolean {
-  return /^(?:rk|sk)_live_[A-Za-z0-9]+$/u.test(runtimeEnv("STRIPE_LIVE_API_KEY") ?? "");
+function stripeServerConfigured(): boolean {
+  return (
+    runtimeEnv("STRIPE_BILLING_RUNTIME") === "durable" &&
+    runtimeEnv("STRIPE_LIVE_ACCOUNT_ID") === PUBLIC_STRIPE_ACCOUNT_ID &&
+    /^(?:rk|sk)_live_[A-Za-z0-9]+$/u.test(runtimeEnv("STRIPE_LIVE_API_KEY") ?? "")
+  );
 }
 
 function stripeWebhookConfigured(): boolean {
   return (
-    stripeAccountConfigured() &&
-    stripeServerKeyConfigured() &&
+    stripeServerConfigured() &&
     /^whsec_[A-Za-z0-9]+$/u.test(runtimeEnv("PAYMENTS_LIVE_WEBHOOK_SECRET") ?? "")
   );
 }
 
 function stripeCheckoutConfigured(): boolean {
-  return (
-    stripeAccountConfigured() &&
-    stripeServerKeyConfigured() &&
-    /^pk_live_[A-Za-z0-9]+$/u.test(runtimeEnv("VITE_PAYMENTS_CLIENT_TOKEN") ?? "")
-  );
+  return stripeServerConfigured() && /^pk_live_[A-Za-z0-9]+$/u.test(COMPILED_PAYMENTS_CLIENT_TOKEN);
 }
 
 function stripePortalConfigured(): boolean {
   return (
-    stripeAccountConfigured() &&
-    stripeServerKeyConfigured() &&
+    stripeServerConfigured() &&
     /^bpc_[A-Za-z0-9]+$/u.test(runtimeEnv("STRIPE_BILLING_PORTAL_CONFIGURATION_ID") ?? "")
   );
 }
@@ -102,7 +98,7 @@ export function structuralReadiness(): ReadinessReport {
     ),
     scheduledTasks: capability(any("CRON_SECRET", "SCHEDULED_TASK_SECRET")),
     accountExports: capability(any("ACCOUNT_EXPORT_WORKER_SECRET", "CRON_SECRET")),
-    images: capability(aiProviderConfigured()),
+    images: capability(providerCapabilityConfigured("image_generation")),
     research: capability(any("FIRECRAWL_API_KEY")),
     storage: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     migrations: { state: "migration-required", optional: false },

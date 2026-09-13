@@ -92,7 +92,7 @@ test("long rich assistant output scrolls locally instead of widening the page", 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Show a rich response");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByRole("heading", { name: "Mobile report" })).toBeVisible();
   await expectNoPageOverflow(page);
   const code = page.locator("pre").first();
