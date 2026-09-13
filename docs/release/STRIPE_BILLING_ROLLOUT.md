@@ -85,15 +85,19 @@ cancellation. Do not advertise plan changes unless the owner separately enables 
 
 1. Snapshot and reconcile the remote migration ledger. Source/live drift was previously observed;
    never replay source-only migrations blindly.
-2. Run the isolated-database suite against both forward migrations. It must prove exact live Price
+2. Run the isolated-database suite against the billing foundation and Price-rotation migrations. It
+   must prove exact live Price
    mapping, legacy lookup-key normalization, family own/effective parity, duplicate-subscription
    conflict handling, lease crash/retry convergence, orphan completion, and Checkout claim
    convergence.
 3. Stop deliveries to the old webhook revision and wait for all old handlers to drain. Old and new
    handlers must never receive deliveries concurrently because the old revision does not honor the
    lease protocol.
-4. Apply forward billing migrations `20260904231210` and `20260904231213` in timestamp order. Verify the exact live Plus and Pro
-   Price IDs and retain a registry row for every still-valid historical Price ID.
+4. Apply forward billing migrations `20260904231210`, `20260904231213`,
+   `20260913013131`, and `20260913023331` in timestamp order. The last two register the current
+   USD 80/month Pro Price and preserve exact current-versus-historical Pro Price identity during a
+   rollback window. Verify the exact live Plus and Pro Price IDs and retain a registry row for every
+   still-valid historical Price ID.
 5. Verify the Cloudflare webhook-path rule uses Stripe's current official source-IP feed and rejects
    non-Stripe source networks before application signature verification.
 6. Confirm stripe_event_processing_claims is empty before switching revisions. Deploy the new

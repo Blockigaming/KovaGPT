@@ -53,6 +53,14 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     /recovers the exact Price ID from the durable nonterminal Checkout attempt/u,
   );
   assert.match(rollout, /requires exact-ID reconciliation before webhook retry/u);
+  for (const migration of [
+    "20260904231210",
+    "20260904231213",
+    "20260913013131",
+    "20260913023331",
+  ]) {
+    assert.match(rollout, new RegExp(`Apply forward billing migrations[\\s\\S]*${migration}`, "u"));
+  }
 });
 
 test("checkout uses an accessible modal with truthful loading and safe errors", async () => {
