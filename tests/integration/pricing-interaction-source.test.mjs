@@ -52,10 +52,15 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     rollout,
     /user-level Checkout attempt does not prove which subscription it created/u,
   );
-  assert.match(rollout, /Do not route a first\s+Pro subscription webhook to the legacy handler/u);
+  assert.match(rollout, /remains visibly quarantined under that unmapped value/u);
+  assert.match(rollout, /grants no paid\s+entitlement/u);
   assert.match(
     rollout,
-    /`20260904231210`, `20260904231213`,\s*`20260913013131`, and `20260913023331` in timestamp order/u,
+    /If a row appears later, disable legacy intake and run exact-ID\s+reconciliation/u,
+  );
+  assert.match(
+    rollout,
+    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, and `20260913153000` in timestamp order/u,
   );
 });
 

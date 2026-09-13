@@ -40,10 +40,25 @@ begin
       end if;
 
       if existing_pro_price_id is null then
-        -- A user-level Checkout attempt is not authoritative for a particular
-        -- Stripe subscription. A different subscription can exist for the same
-        -- user, so novel legacy writes stay blocked until an exact-ID-capable
-        -- handler or reconciliation pass has seeded this subscription row.
+        -- A Checkout that completed immediately before rollback may not have
+        -- produced its first subscription row yet. The durable attempt was
+        -- created before Stripe received the Session request and retains the
+        -- exact Price ID even though the old webhook reduces it to a lookup
+        -- key. Only a request that progressed past the pre-POST `new` state is
+        -- authoritative for this recovery path.
+        select mapping.stripe_price_id
+        into existing_pro_price_id
+        from public.stripe_checkout_attempts as attempt
+        join public.billing_plan_tiers as mapping
+          on mapping.environment = attempt.environment
+         and mapping.stripe_price_id = attempt.stripe_price_id
+        where attempt.environment = 'live'
+          and attempt.user_id = new.user_id
+          and attempt.outcome in ('pending', 'ready', 'complete')
+          and mapping.lookup_key = 'pro_monthly';
+      end if;
+
+      if existing_pro_price_id is null then
         raise exception 'ambiguous_legacy_live_pro_price'
           using errcode = '23514';
       end if;

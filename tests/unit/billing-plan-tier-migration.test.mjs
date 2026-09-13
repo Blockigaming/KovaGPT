@@ -10,6 +10,8 @@ const proPriceRotationMigrationPath =
   "supabase/migrations/20260913013131_register_pro_80_live_price.sql";
 const proRollbackCompatibilityMigrationPath =
   "supabase/migrations/20260913023331_preserve_rotated_pro_price_on_rollback.sql";
+const proRollbackQuarantineMigrationPath =
+  "supabase/migrations/20260913153000_quarantine_ambiguous_legacy_pro_price.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
@@ -100,6 +102,7 @@ async function createDatabase({ beforeMigration } = {}) {
   await database.exec(await readFile(migrationPath, "utf8"));
   await database.exec(await readFile(proPriceRotationMigrationPath, "utf8"));
   await database.exec(await readFile(proRollbackCompatibilityMigrationPath, "utf8"));
+  await database.exec(await readFile(proRollbackQuarantineMigrationPath, "utf8"));
   return database;
 }
 
@@ -299,13 +302,42 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
        )`,
       [userId, currentProPriceId],
     );
-    await assert.rejects(
-      addSubscription(database, {
-        priceId: "pro_monthly",
-        subscriptionId: "sub_unlinked_current_pro_webhook",
-      }),
-      /ambiguous_legacy_live_pro_price/u,
+    // The rollback webhook records its completed event before issuing this
+    // legacy upsert and does not inspect the upsert error. The database must
+    // therefore retain a recoverable subscription row rather than raising.
+    await database.query(
+      `INSERT INTO public.processed_stripe_events (
+         event_id, type, environment, subscription_id, outcome
+       ) VALUES (
+         'evt_legacy_first_pro', 'customer.subscription.created', 'live',
+         'sub_unlinked_current_pro_webhook', 'processed'
+       )`,
     );
+    await addSubscription(database, {
+      priceId: "pro_monthly",
+      subscriptionId: "sub_unlinked_current_pro_webhook",
+    });
+    const quarantined = await database.query(
+      `SELECT price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id = 'sub_unlinked_current_pro_webhook'`,
+    );
+    assert.deepEqual(quarantined.rows, [{ price_id: "pro_monthly" }]);
+    const completedLegacyEvent = await database.query(
+      `SELECT count(*)::integer AS count
+       FROM public.processed_stripe_events
+       WHERE event_id = 'evt_legacy_first_pro'`,
+    );
+    assert.deepEqual(completedLegacyEvent.rows, [{ count: 1 }]);
+    assert.equal(await tier(database), "free");
+
+    await database.query(
+      `UPDATE public.subscriptions
+       SET price_id = $1
+       WHERE stripe_subscription_id = 'sub_unlinked_current_pro_webhook'`,
+      [currentProPriceId],
+    );
+    assert.equal(await tier(database), "pro");
 
     await database.query(
       `INSERT INTO public.stripe_checkout_attempts (
@@ -317,19 +349,23 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
        )`,
       [ownerId, currentProPriceId],
     );
-    await assert.rejects(
-      database.query(
-        `INSERT INTO public.subscriptions (
-           user_id, stripe_subscription_id, stripe_customer_id, product_id,
-           price_id, status, current_period_end, environment
-         ) VALUES (
-           $1::uuid, 'sub_ambiguous_pro', 'cus_ambiguous_pro', 'prod_fixture',
-           'pro_monthly', 'active', now() + interval '30 days', 'live'
-         )`,
-        [ownerId],
-      ),
-      /ambiguous_legacy_live_pro_price/u,
+    await database.query(
+      `INSERT INTO public.subscriptions (
+         user_id, stripe_subscription_id, stripe_customer_id, product_id,
+         price_id, status, current_period_end, environment
+       ) VALUES (
+         $1::uuid, 'sub_ambiguous_pro', 'cus_ambiguous_pro', 'prod_fixture',
+         'pro_monthly', 'active', now() + interval '30 days', 'live'
+       )`,
+      [ownerId],
     );
+    const unrelatedAttempt = await database.query(
+      `SELECT price_id
+       FROM public.subscriptions
+       WHERE stripe_subscription_id = 'sub_ambiguous_pro'`,
+    );
+    assert.deepEqual(unrelatedAttempt.rows, [{ price_id: "pro_monthly" }]);
+    assert.equal(await tier(database, ownerId), "free");
   } finally {
     await database.close();
   }

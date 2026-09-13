@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 149,
-  "latest": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
+  "count": 150,
+  "latest": "20260913153000_quarantine_ambiguous_legacy_pro_price.sql",
   "migrations": [
     {
       "order": 1,
@@ -3229,7 +3229,21 @@
       "order": 149,
       "filename": "20260913023331_preserve_rotated_pro_price_on_rollback.sql",
       "timestamp": "20260913023331",
-      "sha256": "6064acfa78d3594d46ed8eb79a52d0860385d5c21c91e00be826815066ed846d",
+      "sha256": "d0d981d5693fdd9e6ca996a9208adba3c6b23c7b1fceb7383427e2d070b41862",
+      "tables": [],
+      "functions": ["normalize_legacy_live_subscription_price"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 150,
+      "filename": "20260913153000_quarantine_ambiguous_legacy_pro_price.sql",
+      "timestamp": "20260913153000",
+      "sha256": "e024255566c919c7ee413012d6a1a3cfe553b982c10e679a793a82c00904e10a",
       "tables": [],
       "functions": ["normalize_legacy_live_subscription_price"],
       "destructive": false,

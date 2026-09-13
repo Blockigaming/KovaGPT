@@ -93,8 +93,8 @@ cancellation. Do not advertise plan changes unless the owner separately enables 
    handlers must never receive deliveries concurrently because the old revision does not honor the
    lease protocol.
 4. Apply forward billing migrations `20260904231210`, `20260904231213`,
-   `20260913013131`, and `20260913023331` in timestamp order. Verify the exact live Plus and Pro Price IDs and retain a registry
-   row for every still-valid historical Price ID.
+   `20260913013131`, `20260913023331`, and `20260913153000` in timestamp order. Verify the exact live Plus and Pro Price IDs and
+   retain a registry row for every still-valid historical Price ID.
 5. Verify the Cloudflare webhook-path rule uses Stripe's current official source-IP feed and rejects
    non-Stripe source networks before application signature verification.
 6. Confirm stripe_event_processing_claims is empty before switching revisions. Deploy the new
@@ -153,11 +153,15 @@ Application rollback is not interchangeable with merely disabling one endpoint.
    and must never supply an exact Price ID for a novel legacy write. Keep the exact-ID-capable webhook
    or reconciliation revision available until every Checkout that can complete during the rollback
    window has either expired or seeded its subscription row with Stripe's exact Price ID. A novel
-   `pro_monthly` write is rejected until that exact-ID reconciliation completes.
+   legacy `pro_monthly` write remains visibly quarantined under that unmapped value, grants no paid
+   entitlement, and is recoverable by exact-ID reconciliation even if the legacy handler already
+   completed its event ledger entry. Do not infer the exact Price from a user-level Checkout attempt.
 4. Only after the new application revision is fully drained and the exact-ID reconciliation gate in
-   step 3 is closed may an old application revision receive webhook deliveries. Do not route a first
-   Pro subscription webhook to the legacy handler. Re-enable legacy intake only through an explicit
-   operator decision; the old handler has weaker email-identity and timestamp-ordering behavior.
+   step 3 is closed, and this query returns zero rows, may an old application revision receive webhook
+   deliveries: `select stripe_subscription_id from public.subscriptions where environment = 'live'
+and price_id = 'pro_monthly';`. If a row appears later, disable legacy intake and run exact-ID
+   reconciliation for that subscription; replay is not required. Re-enable legacy intake only through
+   an explicit operator decision; the old handler has weaker email-identity and timestamp-ordering behavior.
 5. Do not reverse the migrations or remove compatibility constraints/functions without a separate,
    post-stability contract migration and reviewed data-recovery plan.
 
