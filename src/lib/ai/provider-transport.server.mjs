@@ -1,5 +1,38 @@
 const DEFAULT_IDENTITY_RESPONSE_LIMIT_BYTES = 64 * 1024;
 
+export const AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE = "https://ai.azure.com";
+export const AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE =
+  "https://cognitiveservices.azure.com";
+
+export function managedIdentityResourceForAzureBaseUrl(value) {
+  let endpoint;
+  try {
+    endpoint = new URL(value);
+  } catch {
+    throw new Error("invalid_azure_openai_endpoint");
+  }
+
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.port ||
+    endpoint.search ||
+    endpoint.hash
+  ) {
+    throw new Error("invalid_azure_openai_endpoint");
+  }
+
+  const hostname = endpoint.hostname;
+  if (hostname.endsWith(".services.ai.azure.com")) {
+    return AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE;
+  }
+  if (hostname.endsWith(".openai.azure.com") || hostname.endsWith(".cognitiveservices.azure.com")) {
+    return AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE;
+  }
+  throw new Error("invalid_azure_openai_endpoint");
+}
+
 export class ProviderTransportTimeoutError extends Error {
   constructor(phase = "provider_request") {
     super("provider_timeout");

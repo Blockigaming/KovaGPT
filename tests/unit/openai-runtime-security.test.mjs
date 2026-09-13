@@ -17,6 +17,9 @@ test("normal AI calls use the Responses API through the approved direct provider
   assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
   assert.match(provider, /\.openai\.azure\.com/);
   assert.match(provider, /\.services\.ai\.azure\.com/);
+  assert.match(provider, /AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE/);
+  assert.match(provider, /AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE/);
+  assert.match(provider, /managedIdentityResourceForAzureBaseUrl\(target\.baseUrl\)/);
   assert.match(provider, /responsesStreamToChatStream/);
   assert.doesNotMatch(provider, /lovable\.(?:app|dev)|LOVABLE_|@lovable\.dev/iu);
   assert.doesNotMatch(provider, /OPENAI_BASE_URL|AI_PROVIDER_URL|VITE_.*API_KEY/);

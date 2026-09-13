@@ -27,7 +27,13 @@ test("the approved provider path supports Responses streaming and Azure managed 
   assert.match(transport, /IDENTITY_ENDPOINT/u);
   assert.match(transport, /IDENTITY_HEADER/u);
   assert.match(transport, /AZURE_CLIENT_ID/u);
-  assert.match(provider, /Bearer \$\{await fetchManagedIdentityToken\(signal\)\}/u);
+  assert.match(
+    provider,
+    /Bearer \$\{await fetchManagedIdentityTokenForTarget\(target, signal\)\}/u,
+  );
+  assert.match(provider, /managedIdentityResourceForAzureBaseUrl\(target\.baseUrl\)/u);
+  assert.match(transport, /AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE/u);
+  assert.match(transport, /AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE/u);
   assert.match(provider, /provider_timeout/u);
   assert.match(provider, /provider_rate_limited/u);
   assert.match(provider, /provider_unavailable/u);
