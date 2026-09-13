@@ -22,9 +22,14 @@ for (const path of auditPaths) {
   const descriptionTag = html.match(/<meta\b[^>]*name=["']description["'][^>]*>/iu)?.[0];
   const robotsTag = html.match(/<meta\b[^>]*name=["']robots["'][^>]*>/iu)?.[0];
   const canonicalTag = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*>/iu)?.[0];
-  const ctaTag = [...main.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)]
+  const markedCtaTag = [...main.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)]
     .map((match) => match[0])
     .find((tag) => /\bdata-public-primary(?:\s|=|>)/iu.test(tag));
+  const mainWithoutNavigation = main.replace(/<nav\b[^>]*>[\s\S]*?<\/nav>/giu, " ");
+  const legacyCtaTag = [...mainWithoutNavigation.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)].map(
+    (match) => match[0],
+  )[0];
+  const ctaTag = markedCtaTag ?? legacyCtaTag;
   const internalLinks = [...html.matchAll(/<a\b[^>]*href=["'](\/[^"]*?)["']/giu)]
     .map((match) => match[1].split(/[?#]/u, 1)[0])
     .filter((href) => href && !href.startsWith("//"));

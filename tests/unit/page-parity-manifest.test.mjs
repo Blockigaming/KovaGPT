@@ -107,6 +107,13 @@ test("public page system contains original truthfulness and review gates", () =>
   assert.match(shell, /min-h-11/);
 });
 
+test("public CTA audit prefers marked actions and retains legacy non-navigation coverage", () => {
+  const audit = read("scripts/audit-public-content.mjs");
+  assert.match(audit, /const markedCtaTag/u);
+  assert.match(audit, /main\.replace\(\/<nav/u);
+  assert.match(audit, /const ctaTag = markedCtaTag \?\? legacyCtaTag/u);
+});
+
 test("public catch-all rejects every reserved application and security namespace", async () => {
   const { isReservedPublicPath } = await import("../../src/lib/public-route-policy.mjs");
   const reserved = [
