@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
   isPublicIndexableRoute,
   normalizePathname,
@@ -48,12 +49,32 @@ test("successful reviewed pages remain followable without becoming indexable", (
     "/ar/home",
     "/apps",
     "/policies/privacy-policy",
+    "/business/plugins/google-drive",
+    "/business/partners/accenture",
   ]) {
     assert.equal(isPublicIndexableRoute(pathname), false, pathname);
     assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
   }
 
   assert.equal(robotsDirectiveForRoute("/ar", ["notFound"]), "noindex, nofollow");
+});
+
+test("ecosystem compatibility paths are complete and remain out of the public sitemap", () => {
+  assert.equal(PUBLIC_ECOSYSTEM_PATHS.length, 177);
+  assert.equal(new Set(PUBLIC_ECOSYSTEM_PATHS).size, 177);
+  assert.equal(
+    PUBLIC_ECOSYSTEM_PATHS.filter((path) => path.startsWith("/business/plugins")).length,
+    101,
+  );
+  assert.equal(
+    PUBLIC_ECOSYSTEM_PATHS.filter((path) => path.startsWith("/business/partners")).length,
+    76,
+  );
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_ECOSYSTEM_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
 });
 
 test("path normalization is conservative and deterministic", () => {

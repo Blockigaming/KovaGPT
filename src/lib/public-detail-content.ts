@@ -11,6 +11,7 @@ export type PublicDetailPage = Readonly<{
   summary: string;
   primaryAction: PublicDetailAction;
   secondaryAction?: PublicDetailAction;
+  relatedPages?: readonly Readonly<{ title: string; summary: string; to: string }>[];
   highlights: readonly string[];
   sections: readonly Readonly<{
     title: string;

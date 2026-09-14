@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   PUBLIC_BUSINESS_PATHS,
+  PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_POLICY_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
 } from "../../src/lib/seo-policy.mjs";
@@ -61,6 +62,7 @@ const allDetailRoutes = [
   ...PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path).filter((path) => path.startsWith("/academy/")),
   ...PUBLIC_POLICY_PATHS,
   ...PUBLIC_BUSINESS_PATHS,
+  ...PUBLIC_ECOSYSTEM_PATHS,
 ];
 
 const responsiveRoutes = [
@@ -73,6 +75,8 @@ const responsiveRoutes = [
   "/academy/chatgpt-work/how-data-science-teams-use-codex",
   "/policies/privacy-policy/california-privacy-rights-reporting",
   "/business/solutions/finance/workflows",
+  "/business/plugins/google-drive",
+  "/business/partners/accenture",
 ] as const;
 
 const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>

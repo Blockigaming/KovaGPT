@@ -4,9 +4,9 @@
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
     "sourcePageCount": 1850,
-    "completedPageCount": 264,
-    "remainingPageCount": 1586,
-    "completionPercent": 14.27,
+    "completedPageCount": 441,
+    "remainingPageCount": 1409,
+    "completionPercent": 23.84,
     "percentPerPage": 0.054054,
     "sourceCounts": {
       "openai.com": 1704,
@@ -1115,9 +1115,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1128,9 +1128,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/accenture-federal-services",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1141,9 +1141,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/accenture",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1154,9 +1154,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/aiworks",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1167,9 +1167,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/algorithmic-intelligence",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1180,9 +1180,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/altimetrik",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1193,9 +1193,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/altudo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1206,9 +1206,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/artefact",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1219,9 +1219,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/artium",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1232,9 +1232,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/aws",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1245,9 +1245,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/bain-and-company",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1258,9 +1258,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/blank-metal",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1271,9 +1271,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/blend360",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1284,9 +1284,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/booz-allen-hamilton",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1297,9 +1297,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/boston-consulting-group",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1310,9 +1310,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/canva",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1323,9 +1323,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/capco",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1336,9 +1336,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/capgemini",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1349,9 +1349,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/cdw",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1362,9 +1362,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/cgi",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1375,9 +1375,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/chieftns",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1388,9 +1388,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/clarinet",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1401,9 +1401,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/cloudwerx",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1414,9 +1414,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/cognita-reply",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1427,9 +1427,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/cognizant",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1440,9 +1440,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/corca",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1453,9 +1453,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/deepsense-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1466,9 +1466,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/dentsu-japan",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1479,9 +1479,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/distyl-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1492,9 +1492,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/dropbox",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1505,9 +1505,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/eliza",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1518,9 +1518,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/endava",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1531,9 +1531,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/epam",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1544,9 +1544,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/ernst-and-young",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1557,9 +1557,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/fellow-intelligence",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1570,9 +1570,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/fractal",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1583,9 +1583,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/fujitsu",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1596,9 +1596,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/globant",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1609,9 +1609,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/gusto",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1622,9 +1622,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/hcltech",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1635,9 +1635,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/hubspot",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1648,9 +1648,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/ibm",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1661,9 +1661,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/infosys",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1674,9 +1674,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/insurgence",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1687,9 +1687,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/kpmg",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1700,9 +1700,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/locator",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1713,9 +1713,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/mantel",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1726,9 +1726,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/mckinsey-and-company",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1739,9 +1739,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/merantix-momentum",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1752,9 +1752,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/ml6",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1765,9 +1765,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/nablon-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1778,9 +1778,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/nagarro",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1791,9 +1791,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/ntt-data",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1804,9 +1804,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/pathfindr",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1817,9 +1817,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/pwc",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1830,9 +1830,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/quantiphi",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1843,9 +1843,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/quantium",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1856,9 +1856,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/quickbooks",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1869,9 +1869,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/recursive",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1882,9 +1882,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/rosetree-solutions",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1895,9 +1895,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/samsung-sds",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1908,9 +1908,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/sb-oai-japan-gk",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1921,9 +1921,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/sdg-group",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1934,9 +1934,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/sia",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1947,9 +1947,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/sk-inc-ax",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1960,9 +1960,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/slalom",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1973,9 +1973,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/snorkel-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1986,9 +1986,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/statworx",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -1999,9 +1999,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/stripe",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2012,9 +2012,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/tcs",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2025,9 +2025,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/teamlab",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2038,9 +2038,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/thinking-machines-data-science",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2051,9 +2051,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/tredence",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2064,9 +2064,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/tribe-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2077,9 +2077,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/unit8",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2090,9 +2090,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/partners/zs",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2103,9 +2103,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2116,9 +2116,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/adobe-acrobat",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2129,9 +2129,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/adobe-express",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2142,9 +2142,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/adobe",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2155,9 +2155,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/aha",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2168,9 +2168,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/airtable",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2181,9 +2181,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/alation",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2194,9 +2194,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/alpaca",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2207,9 +2207,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/amplitude",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2220,9 +2220,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/asana",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2233,9 +2233,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/atlassian-rovo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2246,9 +2246,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/aws-data-analytics",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2259,9 +2259,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/bigquery",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2272,9 +2272,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/biorender",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2285,9 +2285,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/box",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2298,9 +2298,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/canva",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2311,9 +2311,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/clay",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2324,9 +2324,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/clickhouse",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2337,9 +2337,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/clickup",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2350,9 +2350,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/cloudinary",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2363,9 +2363,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/conductor",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2376,9 +2376,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/coupler-io",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2389,9 +2389,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/coveo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2402,9 +2402,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/creative-production",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2415,9 +2415,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/daloopa",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2428,9 +2428,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/data",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2441,9 +2441,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/databricks",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2454,9 +2454,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/datadog-experiments",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2467,9 +2467,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/dbt",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2480,9 +2480,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/deepnote",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2493,9 +2493,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/docusign",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2506,9 +2506,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/dropbox",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2519,9 +2519,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/egnyte",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2532,9 +2532,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/figma",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2545,9 +2545,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/firebase",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2558,9 +2558,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/fireflies",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2571,9 +2571,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/g2",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2584,9 +2584,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/github",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2597,9 +2597,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/gmail",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2610,9 +2610,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/google-calendar",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2623,9 +2623,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/google-drive",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2636,9 +2636,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/gusto",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2649,9 +2649,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/hex",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2662,9 +2662,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/highlevel",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2675,9 +2675,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/honeybook",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2688,9 +2688,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/hubspot",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2701,9 +2701,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/hugging-face",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2714,9 +2714,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/investment-banking",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2727,9 +2727,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/jam-dev",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2740,9 +2740,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/klaviyo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2753,9 +2753,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/linear",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2766,9 +2766,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/lovable",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2779,9 +2779,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/lseg",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2792,9 +2792,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/mailchimp",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2805,9 +2805,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/mercury",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2818,9 +2818,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/metabase",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2831,9 +2831,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-azure-cosmosdb",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2844,9 +2844,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-outlook-calendar",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2857,9 +2857,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-outlook-email",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2870,9 +2870,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-power-bi",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2883,9 +2883,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-sharepoint",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2896,9 +2896,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/microsoft-teams",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2909,9 +2909,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/mixpanel",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2922,9 +2922,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/monday-com",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2935,9 +2935,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/mongodb",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2948,9 +2948,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/morningstar",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2961,9 +2961,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/motherduck",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2974,9 +2974,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/netlify",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -2987,9 +2987,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/notion",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3000,9 +3000,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/omni",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3013,9 +3013,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/openai-certified",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3026,9 +3026,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/oracle-analytics",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3039,9 +3039,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/paypal",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3052,9 +3052,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/pitchbook",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3065,9 +3065,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/posthog",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3078,9 +3078,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/product-design",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3091,9 +3091,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/public-equity-investing",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3104,9 +3104,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/quickbooks",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3117,9 +3117,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/ramp",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3130,9 +3130,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/redis",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3143,9 +3143,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/replit",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3156,9 +3156,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/sales",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3169,9 +3169,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/salesforce",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3182,9 +3182,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/semrush",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3195,9 +3195,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/shopify",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3208,9 +3208,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/sigma",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3221,9 +3221,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/similarweb",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3234,9 +3234,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/slack",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3247,9 +3247,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/snowflake",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3260,9 +3260,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/spaceship",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3273,9 +3273,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/statsig",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3286,9 +3286,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/stripe",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3299,9 +3299,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/tableau",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3312,9 +3312,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/thoughtspot",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3325,9 +3325,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/vercel",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3338,9 +3338,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/villagesql",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3351,9 +3351,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/wisdomai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3364,9 +3364,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/wix",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3377,9 +3377,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/zoho-crm",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3390,9 +3390,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/zoom",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -3403,9 +3403,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/business/plugins/zoominfo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",

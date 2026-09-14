@@ -23,6 +23,11 @@ export const Route = createFileRoute("/$section/$articleSlug")({
     const detail = PUBLIC_DETAIL_PAGE_BY_KEY.get(key);
     if (detail) return { kind: "detail" as const, item: detail };
     if (params.section === "business") {
+      if (params.articleSlug === "plugins" || params.articleSlug === "partners") {
+        const { PUBLIC_ECOSYSTEM_PAGE_BY_KEY } = await import("@/lib/public-ecosystem-content");
+        const ecosystem = PUBLIC_ECOSYSTEM_PAGE_BY_KEY.get(key);
+        if (ecosystem) return { kind: "detail" as const, item: ecosystem };
+      }
       const { PUBLIC_BUSINESS_PAGE_BY_KEY } = await import("@/lib/public-business-content");
       const business = PUBLIC_BUSINESS_PAGE_BY_KEY.get(key);
       if (business) return { kind: "detail" as const, item: business };

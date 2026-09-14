@@ -65,6 +65,22 @@ test("public detail registry covers every approved missing marketing family", ()
   assert.match(source, /Not currently connectable/u);
 });
 
+test("Kova ecosystem references cover every plugin and partner path without false claims", async () => {
+  const { PUBLIC_ECOSYSTEM_PATHS } = await import("../../src/lib/seo-policy.mjs");
+  const source = read("src/lib/public-ecosystem-content.ts");
+  const twoSegmentRoute = read("src/routes/$section.$articleSlug.tsx");
+  const threeSegmentRoute = read("src/routes/$section.$category.$articleSlug.tsx");
+
+  assert.equal(PUBLIC_ECOSYSTEM_PATHS.length, 177);
+  assert.match(source, /KovaGPT does not currently represent/u);
+  assert.match(source, /does not activate/u);
+  assert.match(source, /No implied endorsement/u);
+  assert.match(source, /supportedApps/u);
+  assert.match(source, /PUBLIC_ECOSYSTEM_PAGES\.map/u);
+  assert.match(twoSegmentRoute, /PUBLIC_ECOSYSTEM_PAGE_BY_KEY/u);
+  assert.match(threeSegmentRoute, /PUBLIC_ECOSYSTEM_PAGE_BY_KEY/u);
+});
+
 test("detail route provides unique metadata, breadcrumbs, sections, and real actions", () => {
   const route = read("src/routes/$section.$articleSlug.tsx");
   const view = read("src/components/public/PublicSite.tsx");

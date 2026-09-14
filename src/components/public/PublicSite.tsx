@@ -197,6 +197,37 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           ))}
         </section>
 
+        {item.relatedPages?.length ? (
+          <section aria-labelledby="related-pages-heading" className="border-t border-border">
+            <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
+              <h2 id="related-pages-heading" className="text-3xl font-semibold tracking-[-.03em]">
+                Explore the directory
+              </h2>
+              <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
+                Open an entry to review its current KovaGPT availability and evaluation guidance.
+              </p>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {item.relatedPages.map((page) => (
+                  <Link
+                    key={page.to}
+                    to={page.to as never}
+                    className="group rounded-2xl border border-border bg-card p-5 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-semibold">{page.title}</h3>
+                      <ArrowRight
+                        className="mt-0.5 h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{page.summary}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="border-t border-border bg-foreground text-background">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-16 md:flex-row md:items-center">
             <div>

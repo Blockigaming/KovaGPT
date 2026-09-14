@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   PUBLIC_BUSINESS_PATHS,
+  PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_POLICY_PATHS,
   PUBLIC_REVIEW_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
@@ -265,6 +266,7 @@ async function collectKova() {
       ),
       ...PUBLIC_POLICY_PATHS.map((path) => path.slice(1)),
       ...PUBLIC_BUSINESS_PATHS.map((path) => path.slice(1)),
+      ...PUBLIC_ECOSYSTEM_PATHS.map((path) => path.slice(1)),
     ]),
   ].sort();
   return {

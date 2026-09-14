@@ -18,6 +18,12 @@ export const Route = createFileRoute("/$section/$category/$articleSlug")({
       return academy;
     }
     if (params.section === "business") {
+      if (params.category === "plugins" || params.category === "partners") {
+        const { PUBLIC_ECOSYSTEM_PAGE_BY_KEY } = await import("@/lib/public-ecosystem-content");
+        const ecosystem = PUBLIC_ECOSYSTEM_PAGE_BY_KEY.get(key);
+        if (!ecosystem) throw notFound();
+        return ecosystem;
+      }
       const { PUBLIC_BUSINESS_PAGE_BY_KEY } = await import("@/lib/public-business-content");
       const business = PUBLIC_BUSINESS_PAGE_BY_KEY.get(key);
       if (!business) throw notFound();
