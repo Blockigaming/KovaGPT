@@ -60,7 +60,7 @@ const TITLES: Readonly<Record<string, string>> = Object.freeze({
 type Topic = "education" | "policy" | "readiness" | "safety" | "status";
 
 const statusPattern =
-  /(?:aft$|announcement|jam-session|learning-accelerator|nonprofit-jam|partnership|partners-with|summit|testimony|questions-for-the-record|strategic-collaboration)/u;
+  /(?:aft$|announcement|introducing-openai-for-government|jam-session|learning-accelerator|nonprofit-jam|openai-for-countries|partnership|partners-with|summit|testimony|questions-for-the-record|strategic-collaboration)/u;
 const safetyPattern = /(?:deceptive|malicious|national-security|frontier-risk|open-weights)/u;
 const educationPattern = /(?:academy|college-students|learning)/u;
 const policyPattern =
@@ -216,6 +216,14 @@ const globalAffairsPage = (path: string): PublicDetailPage => {
       : ["Primary sources", "Local context", "Accountable safeguards"],
     primaryAction: primaryActionFor(topic),
     secondaryAction: { label: "Trust and transparency", to: "/trust-and-transparency" },
+    ...(status
+      ? {
+          closing: {
+            title: "Verify the current status",
+            body: "This reference does not offer program access or establish an external relationship. Use current KovaGPT pages and the named organization's primary sources before relying on a public claim.",
+          },
+        }
+      : {}),
     sections: contentFor(topic, title),
   };
 };

@@ -96,6 +96,12 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
   const currentPageSlug = slugSegments.at(-1) ?? item.slug;
   const categorySlugs = slugSegments.slice(0, -1);
   const sectionLanding = DETAIL_SECTION_LANDINGS.get(item.section);
+  const closing =
+    item.closing ??
+    ({
+      title: "Ready to put it to work?",
+      body: "Start with a clear goal, use only the context you need, and verify important output.",
+    } as const);
   return (
     <PublicShell>
       <main id="main-content" tabIndex={-1}>
@@ -234,12 +240,8 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         <section className="border-t border-border bg-foreground text-background">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-16 md:flex-row md:items-center">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-.025em]">
-                Ready to put it to work?
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-background/70">
-                Start with a clear goal, use only the context you need, and verify important output.
-              </p>
+              <h2 className="text-2xl font-semibold tracking-[-.025em]">{closing.title}</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-background/70">{closing.body}</p>
             </div>
             <Link
               to={item.primaryAction.to as never}

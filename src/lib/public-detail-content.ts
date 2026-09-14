@@ -11,6 +11,7 @@ export type PublicDetailPage = Readonly<{
   summary: string;
   primaryAction: PublicDetailAction;
   secondaryAction?: PublicDetailAction;
+  closing?: Readonly<{ title: string; body: string }>;
   relatedPages?: readonly Readonly<{ title: string; summary: string; to: string }>[];
   highlights: readonly string[];
   sections: readonly Readonly<{
@@ -146,8 +147,8 @@ const app = (
     { label: "App connection guidance", to: "/features/plugins" },
   );
 
-const unavailableApp = (slug: string, title: string): PublicDetailPage =>
-  detail(
+const unavailableApp = (slug: string, title: string): PublicDetailPage => ({
+  ...detail(
     "apps",
     slug,
     "KovaGPT app compatibility",
@@ -177,10 +178,15 @@ const unavailableApp = (slug: string, title: string): PublicDetailPage =>
       },
     ],
     { label: "How Apps work", to: "/features/plugins" },
-  );
+  ),
+  closing: {
+    title: "Choose a working connection",
+    body: `${title} is not currently connectable. Review the Apps directory before granting permissions or sharing data.`,
+  },
+});
 
-const unavailableFeature = (slug: string, title: string): PublicDetailPage =>
-  detail(
+const unavailableFeature = (slug: string, title: string): PublicDetailPage => ({
+  ...detail(
     "features",
     slug,
     "Feature availability",
@@ -209,10 +215,15 @@ const unavailableFeature = (slug: string, title: string): PublicDetailPage =>
         ],
       },
     ],
-  );
+  ),
+  closing: {
+    title: "Review available features",
+    body: `${title} is not currently available. Use the feature directory to choose a capability that KovaGPT supports today.`,
+  },
+});
 
-const unavailablePlan = (slug: string, title: string, audience: string): PublicDetailPage =>
-  detail(
+const unavailablePlan = (slug: string, title: string, audience: string): PublicDetailPage => ({
+  ...detail(
     "plans",
     slug,
     "Plan availability",
@@ -242,7 +253,12 @@ const unavailablePlan = (slug: string, title: string, audience: string): PublicD
       },
     ],
     { label: "Discuss organization needs", to: "/contact-sales" },
-  );
+  ),
+  closing: {
+    title: "Compare active plans",
+    body: `${title} is not currently available for purchase. Review the published plans or discuss documented organization requirements.`,
+  },
+});
 
 const translationDetail = (slug: string, title: string): PublicDetailPage =>
   detail(

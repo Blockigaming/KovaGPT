@@ -63,6 +63,9 @@ test("public detail registry covers every approved missing marketing family", ()
   assert.match(source, /No microphone permission is requested/u);
   assert.match(source, /unavailableApp\("canva", "Canva"\)/u);
   assert.match(source, /Not currently connectable/u);
+  assert.match(source, /title: "Choose a working connection"/u);
+  assert.match(source, /title: "Review available features"/u);
+  assert.match(source, /title: "Compare active plans"/u);
 });
 
 test("Kova ecosystem references cover every plugin and partner path without false claims", async () => {
@@ -102,6 +105,9 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(view, /sectionLanding\?\.label/u);
   assert.match(view, /data-public-primary/u);
   assert.match(view, /item\.primaryAction\.to/u);
+  assert.match(view, /item\.closing \?\?/u);
+  assert.match(view, /\{closing\.title\}/u);
+  assert.match(view, /\{closing\.body\}/u);
   assert.match(view, /item\.sections\.map/u);
   assert.match(view, /Page highlights/u);
 });
@@ -138,6 +144,9 @@ test("Kova global-affairs pages cover every exact source path without importing 
   assert.match(source, /No external relationship or participation is implied/u);
   assert.match(source, /This KovaGPT guide is not the external submission, legal text/u);
   assert.match(source, /partnership\|partners-with/u);
+  assert.match(source, /introducing-openai-for-government/u);
+  assert.match(source, /openai-for-countries\|partnership/u);
+  assert.match(source, /title: "Verify the current status"/u);
   assert.match(route, /PUBLIC_GLOBAL_AFFAIRS_PAGE_BY_KEY/u);
   assert.match(route, /params\.section === "global-affairs"/u);
 });
