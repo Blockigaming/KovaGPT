@@ -94,6 +94,7 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(route, /og:type/u);
   assert.match(view, /aria-label="Breadcrumb"/u);
   assert.match(view, /\["students", "\/use-cases\/students"\]/u);
+  assert.match(view, /\["form", "\/contact-support"\]/u);
   assert.match(view, /\["translate", "\/translation"\]/u);
   assert.match(view, /\["writing", "\/ai-writer"\]/u);
   assert.match(view, /DETAIL_SECTION_LANDINGS\.get\(item\.section\)/u);
@@ -101,6 +102,25 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(view, /item\.primaryAction\.to/u);
   assert.match(view, /item\.sections\.map/u);
   assert.match(view, /Page highlights/u);
+});
+
+test("Kova form status pages cover every exact source path without collecting submissions", async () => {
+  const source = read("src/lib/public-form-content.ts");
+  const twoSegmentRoute = read("src/routes/$section.$articleSlug.tsx");
+  const threeSegmentRoute = read("src/routes/$section.$category.$articleSlug.tsx");
+  const { PUBLIC_FORM_PATHS } = await import("../../src/lib/seo-policy.mjs");
+
+  assert.equal(PUBLIC_FORM_PATHS.length, 43);
+  assert.equal(new Set(PUBLIC_FORM_PATHS).size, 43);
+  assert.ok(PUBLIC_FORM_PATHS.every((path) => path.startsWith("/form/")));
+  assert.match(source, /PUBLIC_FORM_PATHS\.map\(formPage\)/u);
+  assert.match(source, /does not accept contact details, account credentials, documents/u);
+  assert.match(source, /does not claim that the corresponding external program/u);
+  assert.match(source, /label: "Return to KovaGPT", to: "\/"/u);
+  for (const route of [twoSegmentRoute, threeSegmentRoute]) {
+    assert.match(route, /PUBLIC_FORM_PAGE_BY_KEY/u);
+    assert.match(route, /params\.section === "form"/u);
+  }
 });
 
 test("business and app guidance actions lead to their intended public flows", () => {

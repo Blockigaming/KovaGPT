@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "snapshotDate": "2026-09-13",
+  "snapshotDate": "2026-09-14",
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
-    "sourcePageCount": 1850,
-    "completedPageCount": 441,
-    "remainingPageCount": 1409,
-    "completionPercent": 23.84,
-    "percentPerPage": 0.054054,
+    "sourcePageCount": 1852,
+    "completedPageCount": 484,
+    "remainingPageCount": 1368,
+    "completionPercent": 26.13,
+    "percentPerPage": 0.053996,
     "sourceCounts": {
-      "openai.com": 1704,
+      "openai.com": 1706,
       "chatgpt.com": 146
     }
   },
@@ -4118,9 +4118,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/100-chats-book-request",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4131,9 +4131,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/aardvark-beta-signup",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4144,9 +4144,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/au-osa-compliance",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4157,9 +4157,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/business/premium-offer",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4170,9 +4170,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/chat-model-feedback",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4183,9 +4183,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/chatgpt-pro-community",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4196,9 +4196,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/codex-enterprise-promo",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4209,9 +4209,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/codex-for-oss",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4222,9 +4222,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/codex-labs",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4235,9 +4235,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/codex-open-source-fund",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4248,9 +4248,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/codex-project-showcase-and-feedback",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4261,9 +4261,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/copyright-disputes",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4274,9 +4274,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/cybersecurity-grant-program",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4287,9 +4287,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/data-partnerships",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4300,9 +4300,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/daybreak-cyber-partner-program",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4313,9 +4313,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/economic-research-exchange",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4326,9 +4326,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/enterprise-trusted-access-for-cyber",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4339,9 +4339,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/eu-ai-act",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4352,9 +4352,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/feature-gpt",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4365,9 +4365,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/gdpval-customer-contribution",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4378,9 +4378,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/gpt-live-1-in-the-api",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4391,9 +4391,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/guaranteed-capacity",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4404,9 +4404,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/hackathon-support",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4417,9 +4417,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/learning-lab",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4430,9 +4430,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/mcp-connector-interest-form",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4443,9 +4443,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/model-behavior-feedback",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4456,9 +4456,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/model-spec-feedback",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4469,9 +4469,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/model-withdrawal",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4482,9 +4482,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/openai-for-government",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4495,9 +4495,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/openai-on-aws",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4508,9 +4508,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/real-world-knowledge-work",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4521,9 +4521,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/report-content",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4534,9 +4534,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/researcher-access-program",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4547,9 +4547,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/rosalind-biodefense-program",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4560,9 +4560,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/share-your-story",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4573,9 +4573,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/showcase-submission",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4586,9 +4586,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/stargate-infrastructure",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4599,9 +4599,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/subscribe-to-new-sub-processors",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4612,9 +4612,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/trademark-counterfeit-disputes",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4625,9 +4625,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/uk-osa-compliance",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4638,9 +4638,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/ultrafast",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4651,9 +4651,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/usage-policy-update",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4664,9 +4664,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/form/vc-partnerships-application",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -8284,6 +8284,19 @@
     },
     {
       "source": "openai.com",
+      "sourceUrl": "https://openai.com/index/detecting-wildfires-early/",
+      "sourcePath": "/index/detecting-wildfires-early",
+      "sourceFamily": "article_detail",
+      "discovery": [
+        "sitemap"
+      ],
+      "weight": 1,
+      "kovaPath": null,
+      "status": "missing_exact_equivalent",
+      "completed": false
+    },
+    {
+      "source": "openai.com",
       "sourceUrl": "https://openai.com/index/deutsche-telekom-collaboration/",
       "sourcePath": "/index/deutsche-telekom-collaboration",
       "sourceFamily": "article_detail",
@@ -10054,6 +10067,19 @@
       "source": "openai.com",
       "sourceUrl": "https://openai.com/index/function-calling-and-other-api-updates/",
       "sourcePath": "/index/function-calling-and-other-api-updates",
+      "sourceFamily": "article_detail",
+      "discovery": [
+        "sitemap"
+      ],
+      "weight": 1,
+      "kovaPath": null,
+      "status": "missing_exact_equivalent",
+      "completed": false
+    },
+    {
+      "source": "openai.com",
+      "sourceUrl": "https://openai.com/index/fyxer/",
+      "sourcePath": "/index/fyxer",
       "sourceFamily": "article_detail",
       "discovery": [
         "sitemap"

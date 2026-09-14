@@ -5,6 +5,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
 const DETAIL_SECTION_LANDINGS = new Map<string, string>([
+  ["form", "/contact-support"],
   ["students", "/use-cases/students"],
   ["translate", "/translation"],
   ["writing", "/ai-writer"],

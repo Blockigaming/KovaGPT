@@ -39,6 +39,7 @@ const expandedPublicRoutes = new Set([
   "/solutions/use-case/research",
   ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/academy/")),
   ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/business/")),
+  ...PUBLIC_REVIEW_PATHS.filter((route) => route.startsWith("/form/")),
 ]);
 
 function watchForRuntimeErrors(page: Page) {

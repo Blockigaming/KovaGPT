@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   PUBLIC_ECOSYSTEM_PATHS,
+  PUBLIC_FORM_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
   isPublicIndexableRoute,
   normalizePathname,
@@ -51,6 +52,7 @@ test("successful reviewed pages remain followable without becoming indexable", (
     "/policies/privacy-policy",
     "/business/plugins/google-drive",
     "/business/partners/accenture",
+    "/form/model-behavior-feedback",
   ]) {
     assert.equal(isPublicIndexableRoute(pathname), false, pathname);
     assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
@@ -72,6 +74,17 @@ test("ecosystem compatibility paths are complete and remain out of the public si
   );
   const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const path of PUBLIC_ECOSYSTEM_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
+});
+
+test("form compatibility paths are complete, followable, and excluded from the sitemap", () => {
+  assert.equal(PUBLIC_FORM_PATHS.length, 43);
+  assert.equal(new Set(PUBLIC_FORM_PATHS).size, 43);
+  assert.ok(PUBLIC_FORM_PATHS.every((path) => path.startsWith("/form/")));
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_FORM_PATHS) {
     assert.equal(sitemapPaths.has(path), false, path);
     assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
   }

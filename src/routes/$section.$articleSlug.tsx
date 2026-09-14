@@ -7,6 +7,12 @@ export const Route = createFileRoute("/$section/$articleSlug")({
     const key = publicationKey(params.section, params.articleSlug);
     const publication = PUBLICATION_BY_KEY.get(key);
     if (publication) return { kind: "publication" as const, item: publication };
+    if (params.section === "form") {
+      const { PUBLIC_FORM_PAGE_BY_KEY } = await import("@/lib/public-form-content");
+      const form = PUBLIC_FORM_PAGE_BY_KEY.get(key);
+      if (form) return { kind: "detail" as const, item: form };
+      throw notFound();
+    }
     if (params.section === "academy") {
       const { PUBLIC_ACADEMY_PAGE_BY_KEY } = await import("@/lib/public-academy-content");
       const academy = PUBLIC_ACADEMY_PAGE_BY_KEY.get(key);

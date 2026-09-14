@@ -12,7 +12,7 @@ test("live UI inventory records the complete discoverable source snapshot", () =
     /const SNAPSHOT_DATE = ["']\d{4}-\d{2}-\d{2}["']/u,
   );
   assert.equal(inventory.openai.sitemapCount, 38);
-  assert.equal(inventory.openai.uniqueUrlCount, 1704);
+  assert.equal(inventory.openai.uniqueUrlCount, 1706);
   assert.equal(inventory.chatgpt.sitemapEntryCount, 98);
   assert.ok(inventory.chatgpt.marketingNavigation.pathCount >= 49);
   assert.equal(inventory.chatgpt.authenticatedTemplates.observationDate, null);
@@ -44,9 +44,9 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 387);
-  assert.equal(kovagpt.publicRegistryPageCount, 453);
-  assert.equal(kovagpt.reviewedPublicPathCount, 517);
+  assert.equal(kovagpt.publicDetailPathCount, 430);
+  assert.equal(kovagpt.publicRegistryPageCount, 496);
+  assert.equal(kovagpt.reviewedPublicPathCount, 560);
   assert.equal(kovagpt.sitemapPathCount, 167);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
@@ -77,6 +77,8 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.ok(kovagpt.publicDetailPaths.includes("business/solutions/finance/workflows"));
   assert.ok(kovagpt.publicDetailPaths.includes("business/plugins/google-drive"));
   assert.ok(kovagpt.publicDetailPaths.includes("business/partners/accenture"));
+  assert.ok(kovagpt.publicDetailPaths.includes("form/model-behavior-feedback"));
+  assert.ok(kovagpt.publicDetailPaths.includes("form/business/premium-offer"));
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
@@ -100,9 +102,9 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 441);
-  assert.equal(measurement.remainingPageCount, 1409);
-  assert.equal(measurement.completionPercent, 23.84);
+  assert.equal(measurement.completedPageCount, 484);
+  assert.equal(measurement.remainingPageCount, 1368);
+  assert.equal(measurement.completionPercent, 26.13);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,

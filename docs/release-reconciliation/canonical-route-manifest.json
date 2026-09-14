@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13",
+  "generatedAt": "2026-09-14",
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
   "routeFileCount": 174,
   "sitemapCount": 167,
-  "reviewedPublicRouteCount": 517,
+  "reviewedPublicRouteCount": 560,
   "classificationCounts": {
     "dynamic": 6,
     "dynamic_public": 3,
