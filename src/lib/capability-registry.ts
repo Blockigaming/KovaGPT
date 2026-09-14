@@ -82,10 +82,8 @@ const MODE_PUBLIC_COPY: Record<ModeId, string> = {
   thinking: "Careful, structured response instructions for harder requests.",
   high: "Plus response instructions emphasizing verification and completeness.",
   extra_high: "Pro response instructions emphasizing alternatives and detail.",
-  pro: "Pro response instructions emphasizing polished, comprehensive answers.",
-  kova_5_5: "Previous generation Kova with balanced response instructions.",
-  kova_5_4: "Older generation Kova kept for consistency with past work.",
-  kova_o3: "Oldest available Kova generation.",
+  max: "Maximum-depth response instructions emphasizing polished, comprehensive answers.",
+  ultra: "The deepest response instructions for exhaustive, carefully verified answers.",
 };
 
 const modes: readonly PublishedMode[] = MODES.map((mode) => ({
@@ -133,7 +131,10 @@ function planFeatures(tier: Tier): readonly string[] {
     },
   }[tier];
   const features = [
-    `${modesByTier[tier].map((mode) => mode.label).join(", ")} modes`,
+    `${modesByTier[tier]
+      .map((mode) => mode.label)
+      .join(modesByTier[tier].length === 2 ? " and " : ", ")
+      .replace(/, ([^,]+)$/, ", and $1")} modes`,
     allowance.chat,
     allowance.image,
     allowance.upload,
@@ -295,6 +296,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     description:
       "Discuss organizational requirements with Kova. Availability and commercial terms are confirmed in writing before purchase.",
     features: [
+      "Custom access determined through sales",
       "Requirements and security review",
       "Custom commercial terms where available",
       "Deployment and support scope confirmed before purchase",

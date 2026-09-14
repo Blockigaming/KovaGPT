@@ -13,10 +13,8 @@ export const KOVA_MODES = Object.freeze([
   "thinking",
   "high",
   "extra_high",
-  "pro",
-  "kova_5_5",
-  "kova_5_4",
-  "kova_o3",
+  "max",
+  "ultra",
 ]);
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
 export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);
@@ -70,7 +68,7 @@ export function normalizeKovaConfig(value) {
     description: text(value.description ?? "", 0, 500),
     instructions: text(value.instructions, 1, 12000),
     starters: [],
-    mode: value.mode ?? "medium",
+    mode: value.mode ?? "instant",
     tools: choices(value.tools ?? [], KOVA_TOOLS),
     apps: choices(value.apps ?? [], KOVA_APPS),
     knowledge: [],

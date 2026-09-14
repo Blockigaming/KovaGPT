@@ -55,7 +55,7 @@ test("genuinely complex paid work auto-upgrades to advanced", () => {
 });
 
 test("deep mode upgrades to the premium model for premium tiers", () => {
-  const decision = routeModel({ task: "chat", mode: "pro", tier: "pro", text: "deep analysis" });
+  const decision = routeModel({ task: "chat", mode: "max", tier: "pro", text: "deep analysis" });
   assert.equal(decision.role, "PREMIUM_REASONING");
   assert.equal(decision.modelId, SOL);
 });
@@ -63,7 +63,7 @@ test("deep mode upgrades to the premium model for premium tiers", () => {
 test("free users can never reach the premium model", () => {
   const decision = routeModel({
     task: "chat",
-    mode: "pro",
+    mode: "max",
     tier: "free",
     deepMode: true,
     text: "extremely difficult reasoning",
@@ -78,7 +78,7 @@ test("utility tasks always use the utility model with a tight output cap", () =>
     const decision = routeModel({
       task: "utility",
       utilityTask,
-      mode: "pro",
+      mode: "max",
       tier: "pro",
       deepMode: true,
       text: "difficult debugging refactor architecture proof",

@@ -58,7 +58,9 @@ test("public capability copy excludes retired or unsupported claims", () => {
   const llms = read("public/llms.txt");
   const writer = read("src/routes/ai-writer.tsx");
 
-  assert.match(llms, /current response modes are Instant, Medium, and Thinking/);
+  assert.match(llms, /Free includes Instant and Thinking modes/);
+  assert.match(llms, /Plus includes Instant, Medium, and High modes/);
+  assert.match(llms, /Pro includes Instant, Medium, High, Extra High, Max, and Ultra modes/);
   assert.match(llms, /Voice input is not currently part of the supported web product/);
   assert.match(llms, /Scheduled background work and image editing are not currently available/);
   assert.doesNotMatch(llms, /Creative, Precise, Code, Study|use voice/);

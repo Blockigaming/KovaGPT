@@ -146,7 +146,7 @@ export async function reserveWorkStepCost(
     idempotencyKey: `work:${run.id}:${run.epoch}:${stepId}`,
     userId: run.ownerId,
     guestIpHash: null,
-    mode: ({ instant: "instant", normal: "medium", thinking: "high", deep: "pro" } as const)[
+    mode: ({ instant: "instant", normal: "medium", thinking: "high", deep: "max" } as const)[
       run.modelSelection?.mode ?? "normal"
     ],
     plan: run.plan,
