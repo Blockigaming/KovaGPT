@@ -13,6 +13,13 @@ export const Route = createFileRoute("/$section/$articleSlug")({
       if (form) return { kind: "detail" as const, item: form };
       throw notFound();
     }
+    if (params.section === "global-affairs") {
+      const { PUBLIC_GLOBAL_AFFAIRS_PAGE_BY_KEY } =
+        await import("@/lib/public-global-affairs-content");
+      const globalAffairs = PUBLIC_GLOBAL_AFFAIRS_PAGE_BY_KEY.get(key);
+      if (globalAffairs) return { kind: "detail" as const, item: globalAffairs };
+      throw notFound();
+    }
     if (params.section === "academy") {
       const { PUBLIC_ACADEMY_PAGE_BY_KEY } = await import("@/lib/public-academy-content");
       const academy = PUBLIC_ACADEMY_PAGE_BY_KEY.get(key);

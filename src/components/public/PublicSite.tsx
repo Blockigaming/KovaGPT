@@ -6,6 +6,7 @@ import type { PublicDetailPage } from "@/lib/public-detail-content";
 
 const DETAIL_SECTION_LANDINGS = new Map<string, string>([
   ["form", "/contact-support"],
+  ["global-affairs", "/trust-and-transparency"],
   ["students", "/use-cases/students"],
   ["translate", "/translation"],
   ["writing", "/ai-writer"],

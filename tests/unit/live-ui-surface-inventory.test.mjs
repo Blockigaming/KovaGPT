@@ -44,9 +44,9 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.serviceRouteTemplateCount, 99);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 430);
-  assert.equal(kovagpt.publicRegistryPageCount, 496);
-  assert.equal(kovagpt.reviewedPublicPathCount, 560);
+  assert.equal(kovagpt.publicDetailPathCount, 480);
+  assert.equal(kovagpt.publicRegistryPageCount, 546);
+  assert.equal(kovagpt.reviewedPublicPathCount, 610);
   assert.equal(kovagpt.sitemapPathCount, 167);
   assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
@@ -79,6 +79,10 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.ok(kovagpt.publicDetailPaths.includes("business/partners/accenture"));
   assert.ok(kovagpt.publicDetailPaths.includes("form/model-behavior-feedback"));
   assert.ok(kovagpt.publicDetailPaths.includes("form/business/premium-offer"));
+  assert.ok(kovagpt.publicDetailPaths.includes("global-affairs/a-primer-on-the-eu-ai-act"));
+  assert.ok(
+    kovagpt.publicDetailPaths.includes("global-affairs/the-washington-post-partners-with-openai"),
+  );
   assert.equal(
     new Set(kovagpt.routeTemplates.map(({ route }) => route)).size,
     kovagpt.routeTemplateCount,
@@ -102,9 +106,9 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 484);
-  assert.equal(measurement.remainingPageCount, 1368);
-  assert.equal(measurement.completionPercent, 26.13);
+  assert.equal(measurement.completedPageCount, 534);
+  assert.equal(measurement.remainingPageCount, 1318);
+  assert.equal(measurement.completionPercent, 28.83);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,
@@ -169,6 +173,13 @@ test("strict UI progress gives every discovered page equal weight", () => {
 
   for (const record of records.filter(({ sourceFamily }) => sourceFamily === "business_detail")) {
     if (!record.sourcePath.startsWith("/business/")) continue;
+    assert.equal(record.completed, true, record.sourcePath);
+    assert.equal(record.kovaPath, record.sourcePath, record.sourcePath);
+  }
+
+  for (const record of records.filter(
+    ({ sourceFamily }) => sourceFamily === "global-affairs_detail",
+  )) {
     assert.equal(record.completed, true, record.sourcePath);
     assert.equal(record.kovaPath, record.sourcePath, record.sourcePath);
   }

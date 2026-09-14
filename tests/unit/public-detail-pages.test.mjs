@@ -123,6 +123,23 @@ test("Kova form status pages cover every exact source path without collecting su
   }
 });
 
+test("Kova global-affairs pages cover every exact source path without importing claims", async () => {
+  const source = read("src/lib/public-global-affairs-content.ts");
+  const route = read("src/routes/$section.$articleSlug.tsx");
+  const { PUBLIC_GLOBAL_AFFAIRS_PATHS } = await import("../../src/lib/seo-policy.mjs");
+  assert.equal(PUBLIC_GLOBAL_AFFAIRS_PATHS.length, 50);
+  assert.equal(new Set(PUBLIC_GLOBAL_AFFAIRS_PATHS).size, 50);
+  assert.ok(PUBLIC_GLOBAL_AFFAIRS_PATHS.every((path) => path.startsWith("/global-affairs/")));
+  assert.equal((source.match(/^  (?:"[^"]+"|[a-z][a-z0-9-]*):/gmu) ?? []).length, 50);
+  assert.match(source, /PUBLIC_GLOBAL_AFFAIRS_PATHS\.map\(globalAffairsPage\)/u);
+  assert.match(source, /does not import or republish the external announcement/u);
+  assert.match(source, /No external relationship or participation is implied/u);
+  assert.match(source, /This KovaGPT guide is not the external submission, legal text/u);
+  assert.match(source, /partnership\|partners-with/u);
+  assert.match(route, /PUBLIC_GLOBAL_AFFAIRS_PAGE_BY_KEY/u);
+  assert.match(route, /params\.section === "global-affairs"/u);
+});
+
 test("business and app guidance actions lead to their intended public flows", () => {
   const source = read("src/lib/public-detail-content.ts");
   assert.match(source, /label: "Discuss requirements", to: "\/contact-sales"/u);

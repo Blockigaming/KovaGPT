@@ -4,6 +4,7 @@ import {
   PUBLIC_BUSINESS_PATHS,
   PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_FORM_PATHS,
+  PUBLIC_GLOBAL_AFFAIRS_PATHS,
   PUBLIC_POLICY_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
 } from "../../src/lib/seo-policy.mjs";
@@ -65,6 +66,7 @@ const allDetailRoutes = [
   ...PUBLIC_BUSINESS_PATHS,
   ...PUBLIC_ECOSYSTEM_PATHS,
   ...PUBLIC_FORM_PATHS,
+  ...PUBLIC_GLOBAL_AFFAIRS_PATHS,
 ];
 
 const responsiveRoutes = [
@@ -80,6 +82,8 @@ const responsiveRoutes = [
   "/business/plugins/google-drive",
   "/business/partners/accenture",
   "/form/model-behavior-feedback",
+  "/global-affairs/a-primer-on-the-eu-ai-act",
+  "/global-affairs/the-washington-post-partners-with-openai",
 ] as const;
 
 const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>

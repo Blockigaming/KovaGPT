@@ -4,9 +4,9 @@
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
     "sourcePageCount": 1852,
-    "completedPageCount": 484,
-    "remainingPageCount": 1368,
-    "completionPercent": 26.13,
+    "completedPageCount": 534,
+    "remainingPageCount": 1318,
+    "completionPercent": 28.83,
     "percentPerPage": 0.053996,
     "sourceCounts": {
       "openai.com": 1706,
@@ -4677,9 +4677,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/1000-scientist-ai-jam-session",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4690,9 +4690,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/a-primer-on-the-eu-ai-act",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4703,9 +4703,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/accelerating-ai-uptake-in-europe",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4716,9 +4716,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/aft",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4729,9 +4729,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/ai-stories-daily-benefits-bigger-opportunities",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4742,9 +4742,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/an-update-on-disrupting-deceptive-uses-of-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4755,9 +4755,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/argentinas-ai-opportunity",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4768,9 +4768,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/brazil-ai-moment-is-here",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4781,9 +4781,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/college-students-and-chatgpt",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4794,9 +4794,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/comment-on-ntia-ai-accountability-policy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4807,9 +4807,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/comments-to-the-ntia-on-data-center-growth-resilience-and-security",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4820,9 +4820,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/disrupting-malicious-uses-of-ai-june-2025",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4833,9 +4833,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/disrupting-malicious-uses-of-ai-october-2025",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4846,9 +4846,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/disrupting-malicious-uses-of-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4859,9 +4859,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/eu-code-of-practice",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4872,9 +4872,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/intellectual-freedom-by-design",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4885,9 +4885,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/introducing-chatgpt-gov",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4898,9 +4898,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/introducing-openai-for-government",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4911,9 +4911,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/introducing-the-intelligence-age",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4924,9 +4924,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/learning-accelerator",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4937,9 +4937,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/letter-to-governor-newsom-on-harmonized-regulation",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4950,9 +4950,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/new-economic-analysis",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4963,9 +4963,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/open-weights-and-ai-for-all",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4976,9 +4976,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-academy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -4989,9 +4989,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-and-uk-government-partnership",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5002,9 +5002,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-at-the-paris-ai-action-summit",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5015,9 +5015,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-chief-compliance-officer-announcement",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5028,9 +5028,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-chief-economist-announcement",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5041,9 +5041,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-for-australia",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5054,9 +5054,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-for-countries",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5067,9 +5067,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-for-germany",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5080,9 +5080,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-for-greece",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5093,9 +5093,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-nonprofit-jam",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5106,9 +5106,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-proposals-for-the-us-ai-action-plan",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5119,9 +5119,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openai-s-comment-to-the-ntia-on-open-model-weights",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5132,9 +5132,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openais-approach-to-ai-and-national-security",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5145,9 +5145,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openais-australia-economic-blueprint",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5158,9 +5158,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openais-economic-blueprint",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5171,9 +5171,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/openais-eu-economic-blueprint",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5184,9 +5184,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/our-approach-to-frontier-risk",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5197,9 +5197,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/response-to-department-of-energy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5210,9 +5210,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/response-to-nist-executive-order-on-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5223,9 +5223,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/response-to-uk-copyright-consultation",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5236,9 +5236,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/sam-altman-senate-questions-for-the-record",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5249,9 +5249,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/scaling-the-openai-academy",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5262,9 +5262,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/seizing-the-ai-opportunity",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5275,9 +5275,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/strategic-collaboration-with-japan-digital-agency",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5288,9 +5288,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/testimony-of-sam-altman-before-the-us-senate",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5301,9 +5301,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/the-power-of-personalized-ai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",
@@ -5314,9 +5314,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": null,
-      "status": "missing_exact_equivalent",
-      "completed": false
+      "kovaPath": "/global-affairs/the-washington-post-partners-with-openai",
+      "status": "implemented_exact_path",
+      "completed": true
     },
     {
       "source": "openai.com",

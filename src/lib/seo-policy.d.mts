@@ -9,6 +9,7 @@ export declare const PUBLIC_POLICY_PATHS: readonly string[];
 export declare const PUBLIC_BUSINESS_PATHS: readonly string[];
 export declare const PUBLIC_ECOSYSTEM_PATHS: readonly string[];
 export declare const PUBLIC_FORM_PATHS: readonly string[];
+export declare const PUBLIC_GLOBAL_AFFAIRS_PATHS: readonly string[];
 
 export declare function normalizePathname(pathname: string): string;
 

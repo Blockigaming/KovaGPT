@@ -6,6 +6,7 @@ import {
   PUBLIC_BUSINESS_PATHS,
   PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_FORM_PATHS,
+  PUBLIC_GLOBAL_AFFAIRS_PATHS,
   PUBLIC_POLICY_PATHS,
   PUBLIC_REVIEW_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
@@ -269,6 +270,7 @@ async function collectKova() {
       ...PUBLIC_BUSINESS_PATHS.map((path) => path.slice(1)),
       ...PUBLIC_ECOSYSTEM_PATHS.map((path) => path.slice(1)),
       ...PUBLIC_FORM_PATHS.map((path) => path.slice(1)),
+      ...PUBLIC_GLOBAL_AFFAIRS_PATHS.map((path) => path.slice(1)),
     ]),
   ].sort();
   return {

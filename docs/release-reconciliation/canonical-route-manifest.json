@@ -4,7 +4,7 @@
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
   "routeFileCount": 174,
   "sitemapCount": 167,
-  "reviewedPublicRouteCount": 560,
+  "reviewedPublicRouteCount": 610,
   "classificationCounts": {
     "dynamic": 6,
     "dynamic_public": 3,

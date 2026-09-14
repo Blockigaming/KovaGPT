@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   PUBLIC_ECOSYSTEM_PATHS,
   PUBLIC_FORM_PATHS,
+  PUBLIC_GLOBAL_AFFAIRS_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
   isPublicIndexableRoute,
   normalizePathname,
@@ -54,6 +55,7 @@ test("successful reviewed pages remain followable without becoming indexable", (
     "/business/plugins/google-drive",
     "/business/partners/accenture",
     "/form/model-behavior-feedback",
+    "/global-affairs/a-primer-on-the-eu-ai-act",
   ]) {
     assert.equal(isPublicIndexableRoute(pathname), false, pathname);
     assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
@@ -91,6 +93,17 @@ test("form compatibility paths are complete, followable, and excluded from the s
   assert.ok(PUBLIC_FORM_PATHS.every((path) => path.startsWith("/form/")));
   const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const path of PUBLIC_FORM_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
+});
+
+test("global-affairs references are complete, followable, and excluded from the sitemap", () => {
+  assert.equal(PUBLIC_GLOBAL_AFFAIRS_PATHS.length, 50);
+  assert.equal(new Set(PUBLIC_GLOBAL_AFFAIRS_PATHS).size, 50);
+  assert.ok(PUBLIC_GLOBAL_AFFAIRS_PATHS.every((path) => path.startsWith("/global-affairs/")));
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_GLOBAL_AFFAIRS_PATHS) {
     assert.equal(sitemapPaths.has(path), false, path);
     assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
   }
