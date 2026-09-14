@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -59,6 +60,11 @@ test("successful reviewed pages remain followable without becoming indexable", (
   }
 
   assert.equal(robotsDirectiveForRoute("/ar", ["notFound"]), "noindex, nofollow");
+});
+
+test("the declaration exposes the followable noindex directive", () => {
+  const declaration = readFileSync("src/lib/seo-policy.d.mts", "utf8");
+  assert.match(declaration, /"index, follow" \| "noindex, follow" \| "noindex, nofollow"/u);
 });
 
 test("ecosystem compatibility paths are complete and remain out of the public sitemap", () => {

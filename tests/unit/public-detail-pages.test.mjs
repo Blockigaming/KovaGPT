@@ -137,6 +137,13 @@ test("Google Drive guidance describes the unified Google authorization grant", (
   assert.doesNotMatch(source, /only requested Drive scopes/iu);
 });
 
+test("GitHub guidance describes the fixed OAuth grant truthfully", () => {
+  const source = read("src/lib/public-detail-content.ts");
+  assert.match(source, /fixed OAuth permissions/u);
+  assert.match(source, /read:user, user:email, repo, read:org, and workflow OAuth request/u);
+  assert.doesNotMatch(source, /Keep read and write scopes distinct/u);
+});
+
 test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
   const source = read("src/lib/public-detail-content.ts");
   assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);

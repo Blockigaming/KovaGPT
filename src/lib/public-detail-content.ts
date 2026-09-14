@@ -641,10 +641,10 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
   app(
     "github",
     "GitHub",
-    "Work with explicitly granted repositories while preserving installation, repository, and write-approval boundaries.",
+    "Connect GitHub with KovaGPT's fixed OAuth permissions, then choose KovaGPT repository grants and confirm repository-changing actions.",
     [
-      "Select allowed repositories",
-      "Keep read and write scopes distinct",
+      "Review the fixed read:user, user:email, repo, read:org, and workflow OAuth request",
+      "Choose which connected repositories KovaGPT may use",
       "Confirm repository changes",
     ],
   ),

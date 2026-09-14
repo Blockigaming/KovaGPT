@@ -20,4 +20,4 @@ export declare function isPublicIndexableRoute(
 export declare function robotsDirectiveForRoute(
   pathname: string,
   statuses?: readonly string[],
-): "index, follow" | "noindex, nofollow";
+): "index, follow" | "noindex, follow" | "noindex, nofollow";
