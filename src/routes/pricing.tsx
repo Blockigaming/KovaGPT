@@ -223,6 +223,7 @@ function PricingPage() {
             name={CAPABILITY_REGISTRY.plans.plus.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
             period="/ month"
+            taxNotice
             description={`Eligible first-time subscribers may receive a ${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial. Checkout confirms eligibility and price before purchase.`}
             cta="Start Plus"
             highlight
@@ -237,6 +238,7 @@ function PricingPage() {
             name={CAPABILITY_REGISTRY.plans.pro.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
             period="/ month"
+            taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
             onCta={(event) =>
@@ -354,6 +356,7 @@ type CardProps = {
   highlight?: boolean;
   enterprise?: boolean;
   ctaDisabled?: boolean;
+  taxNotice?: boolean;
   onCta?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
 };
 
@@ -368,6 +371,7 @@ function PlanCard({
   highlight,
   enterprise,
   ctaDisabled,
+  taxNotice,
   onCta,
 }: CardProps) {
   return (
@@ -399,6 +403,9 @@ function PlanCard({
           <span className="text-4xl font-bold leading-none">{price}</span>
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
         </div>
+        {taxNotice ? (
+          <span className="mt-1 text-xs leading-4 text-muted-foreground">+ applicable tax</span>
+        ) : null}
       </div>
       <p className="text-sm leading-6 text-muted-foreground">{description}</p>
       <div className="my-6 h-px bg-border" aria-hidden="true" />
