@@ -56,6 +56,23 @@ for (const { file, relativeFile, route } of routeSources) {
         .filter((path) => !declaredRoutes.has(path) && matchesTemplate(route, path))
         .sort()
     : [];
+  const resolvedPathEvidence = resolvedCanonicalPaths.map((path) => {
+    const pathReview = reviewByPath.get(path);
+    if (!pathReview) {
+      throw new Error(`Missing public content review evidence for ${path} resolved by ${route}`);
+    }
+    return {
+      canonicalPath: path,
+      canonicalUrl: `https://kovagpt.com${path === "/" ? "/" : path}`,
+      contentCompleteness: pathReview.decision,
+      legalReviewRequired: pathReview.legalReview === "required",
+      administratorContentRequired: pathReview.administratorContent === "required",
+      runtimeResult: `http_${pathReview.runtimeStatus}`,
+      metadataResult: "reviewed",
+      finalDecision: "retain_in_sitemap",
+      evidence: [file, "docs/page-parity/indexable-content-review.json"],
+    };
+  });
   const indexesResolvedPaths = resolvedCanonicalPaths.length > 0;
   const isService = /^\/(?:api|\.mcp|\.well-known|mcp)(?:\/|$)/u.test(route);
   const isReserved =
@@ -78,6 +95,7 @@ for (const { file, relativeFile, route } of routeSources) {
   records.push({
     canonicalPath: route,
     resolvedCanonicalPaths,
+    resolvedPathEvidence,
     routeFile: file,
     template: isDynamic,
     classification,
@@ -86,20 +104,36 @@ for (const { file, relativeFile, route } of routeSources) {
       : indexesResolvedPaths
         ? "index_resolved_paths"
         : "noindex_or_not_public",
-    sitemapIncluded: indexable.has(route) || indexesResolvedPaths,
+    sitemapIncluded: indexable.has(route),
     canonicalUrl: isReviewed ? `https://kovagpt.com${route === "/" ? "/" : route}` : null,
     contentOwner:
       isReviewed || indexesResolvedPaths
         ? "KovaGPT public content registry or explicit route"
         : "route subsystem owner",
-    contentSource: isReviewed ? "repository-owned source" : relativeFile,
-    contentCompleteness: contentReview?.decision || "fixture_or_contract_dependent",
-    legalReviewRequired: contentReview?.legalReview === "required",
-    administratorContentRequired: contentReview?.administratorContent === "required",
+    contentSource: isReviewed
+      ? "repository-owned source"
+      : indexesResolvedPaths
+        ? "resolved path evidence attached"
+        : relativeFile,
+    contentCompleteness:
+      contentReview?.decision ||
+      (indexesResolvedPaths ? "see_resolved_path_evidence" : "fixture_or_contract_dependent"),
+    legalReviewRequired:
+      contentReview?.legalReview === "required" ||
+      resolvedPathEvidence.some(({ legalReviewRequired }) => legalReviewRequired),
+    administratorContentRequired:
+      contentReview?.administratorContent === "required" ||
+      resolvedPathEvidence.some(({ administratorContentRequired }) => administratorContentRequired),
     runtimeResult: contentReview
       ? `http_${contentReview.runtimeStatus}`
-      : "not_crawled_requires_fixture",
-    metadataResult: contentReview ? "reviewed" : "not_applicable_or_fixture_required",
+      : indexesResolvedPaths
+        ? "see_resolved_path_evidence"
+        : "not_crawled_requires_fixture",
+    metadataResult: contentReview
+      ? "reviewed"
+      : indexesResolvedPaths
+        ? "see_resolved_path_evidence"
+        : "not_applicable_or_fixture_required",
     authorizationBoundary: isService
       ? "server handler authorization; public catch-all prohibited"
       : isReserved
@@ -107,9 +141,10 @@ for (const { file, relativeFile, route } of routeSources) {
         : isReviewed || indexesResolvedPaths
           ? "signed-out public response"
           : "application route; authentication and ownership remain route-specific",
-    finalDecision:
-      indexable.has(route) || indexesResolvedPaths
-        ? "retain_in_sitemap"
+    finalDecision: indexable.has(route)
+      ? "retain_in_sitemap"
+      : indexesResolvedPaths
+        ? "retain_resolved_paths_in_sitemap"
         : isReviewed
           ? "retain_noindex"
           : "retain_route_outside_public_sitemap",
@@ -129,7 +164,7 @@ await writeFile(
   "docs/release-reconciliation/canonical-route-manifest.json",
   `${JSON.stringify(
     {
-      schemaVersion: 1,
+      schemaVersion: 2,
       generatedAt,
       sourceOfTruth: "src/routes plus src/lib/seo-policy.mjs",
       routeFileCount: records.length,

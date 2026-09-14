@@ -214,10 +214,36 @@ test("release route manifest is generated from all route files and one sitemap s
   const associatedSitemapPaths = new Set(
     manifest.records.flatMap((record) => [
       ...(record.sitemapIncluded && !record.template ? [record.canonicalPath] : []),
-      ...(record.resolvedCanonicalPaths ?? []),
+      ...(record.resolvedPathEvidence ?? []).map(({ canonicalPath }) => canonicalPath),
     ]),
   );
   assert.deepEqual(associatedSitemapPaths, new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path)));
+  const dynamicPublicRecords = manifest.records.filter(
+    ({ classification }) => classification === "dynamic_public",
+  );
+  assert.ok(dynamicPublicRecords.length > 0);
+  for (const record of dynamicPublicRecords) {
+    assert.equal(record.sitemapIncluded, false, record.canonicalPath);
+    assert.equal(record.canonicalUrl, null, record.canonicalPath);
+    assert.equal(record.runtimeResult, "see_resolved_path_evidence", record.canonicalPath);
+    assert.equal(record.metadataResult, "see_resolved_path_evidence", record.canonicalPath);
+    assert.equal(
+      record.resolvedPathEvidence.length,
+      record.resolvedCanonicalPaths.length,
+      record.canonicalPath,
+    );
+    assert.deepEqual(
+      record.resolvedPathEvidence.map(({ canonicalPath }) => canonicalPath),
+      record.resolvedCanonicalPaths,
+      record.canonicalPath,
+    );
+    for (const evidence of record.resolvedPathEvidence) {
+      assert.match(evidence.canonicalUrl, /^https:\/\/kovagpt\.com\//u, evidence.canonicalPath);
+      assert.match(evidence.runtimeResult, /^http_2\d\d$/u, evidence.canonicalPath);
+      assert.equal(evidence.metadataResult, "reviewed", evidence.canonicalPath);
+      assert.equal(evidence.finalDecision, "retain_in_sitemap", evidence.canonicalPath);
+    }
+  }
   assert.ok(
     manifest.records
       .filter(({ classification }) => classification.startsWith("reserved_"))

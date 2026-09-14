@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-09-14",
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
   "routeFileCount": 174,
@@ -18,6 +18,7 @@
     {
       "canonicalPath": "/$locale/home",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/$locale.home.tsx",
       "template": true,
       "classification": "dynamic",
@@ -124,21 +125,1213 @@
         "/use-cases/veterans",
         "/writing/paraphrase"
       ],
+      "resolvedPathEvidence": [
+        {
+          "canonicalPath": "/academy/ai-fundamentals",
+          "canonicalUrl": "https://kovagpt.com/academy/ai-fundamentals",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/applications-of-ai",
+          "canonicalUrl": "https://kovagpt.com/academy/applications-of-ai",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/brainstorming",
+          "canonicalUrl": "https://kovagpt.com/academy/brainstorming",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/building-with-ai",
+          "canonicalUrl": "https://kovagpt.com/academy/building-with-ai",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/champion-programs",
+          "canonicalUrl": "https://kovagpt.com/academy/champion-programs",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-for-education",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-for-education",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-for-work",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-for-work",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-sites",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-sites",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-work",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-work",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/codex",
+          "canonicalUrl": "https://kovagpt.com/academy/codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/custom-gpts",
+          "canonicalUrl": "https://kovagpt.com/academy/custom-gpts",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/customer-success",
+          "canonicalUrl": "https://kovagpt.com/academy/customer-success",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/data-analysis",
+          "canonicalUrl": "https://kovagpt.com/academy/data-analysis",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/finance",
+          "canonicalUrl": "https://kovagpt.com/academy/finance",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/financial-services",
+          "canonicalUrl": "https://kovagpt.com/academy/financial-services",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/getting-started",
+          "canonicalUrl": "https://kovagpt.com/academy/getting-started",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/healthcare",
+          "canonicalUrl": "https://kovagpt.com/academy/healthcare",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/how-finance-teams-use-codex",
+          "canonicalUrl": "https://kovagpt.com/academy/how-finance-teams-use-codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/how-to-use-chatgpt-work-for-everyday-tasks",
+          "canonicalUrl": "https://kovagpt.com/academy/how-to-use-chatgpt-work-for-everyday-tasks",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/image-generation",
+          "canonicalUrl": "https://kovagpt.com/academy/image-generation",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/managers",
+          "canonicalUrl": "https://kovagpt.com/academy/managers",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/marketing",
+          "canonicalUrl": "https://kovagpt.com/academy/marketing",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/operations",
+          "canonicalUrl": "https://kovagpt.com/academy/operations",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/personalization",
+          "canonicalUrl": "https://kovagpt.com/academy/personalization",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/projects",
+          "canonicalUrl": "https://kovagpt.com/academy/projects",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/research",
+          "canonicalUrl": "https://kovagpt.com/academy/research",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/responsible-and-safe-use",
+          "canonicalUrl": "https://kovagpt.com/academy/responsible-and-safe-use",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/sales",
+          "canonicalUrl": "https://kovagpt.com/academy/sales",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/search-and-deep-research",
+          "canonicalUrl": "https://kovagpt.com/academy/search-and-deep-research",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/skills",
+          "canonicalUrl": "https://kovagpt.com/academy/skills",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/using-chatgpt",
+          "canonicalUrl": "https://kovagpt.com/academy/using-chatgpt",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/what-is-ai",
+          "canonicalUrl": "https://kovagpt.com/academy/what-is-ai",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/working-with-files",
+          "canonicalUrl": "https://kovagpt.com/academy/working-with-files",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/workspace-agents",
+          "canonicalUrl": "https://kovagpt.com/academy/workspace-agents",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/writing",
+          "canonicalUrl": "https://kovagpt.com/academy/writing",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/canva",
+          "canonicalUrl": "https://kovagpt.com/apps/canva",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/github",
+          "canonicalUrl": "https://kovagpt.com/apps/github",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/gmail",
+          "canonicalUrl": "https://kovagpt.com/apps/gmail",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/google-calendar",
+          "canonicalUrl": "https://kovagpt.com/apps/google-calendar",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/google-drive",
+          "canonicalUrl": "https://kovagpt.com/apps/google-drive",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/powerpoint",
+          "canonicalUrl": "https://kovagpt.com/apps/powerpoint",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/apps/spotify",
+          "canonicalUrl": "https://kovagpt.com/apps/spotify",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/ai-for-data-science-analytics",
+          "canonicalUrl": "https://kovagpt.com/business/ai-for-data-science-analytics",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/ai-for-engineering",
+          "canonicalUrl": "https://kovagpt.com/business/ai-for-engineering",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/ai-for-finance",
+          "canonicalUrl": "https://kovagpt.com/business/ai-for-finance",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/ai-for-product-management",
+          "canonicalUrl": "https://kovagpt.com/business/ai-for-product-management",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/ai-for-sales-marketing",
+          "canonicalUrl": "https://kovagpt.com/business/ai-for-sales-marketing",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/education",
+          "canonicalUrl": "https://kovagpt.com/business/education",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/business/enterprise",
+          "canonicalUrl": "https://kovagpt.com/business/enterprise",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/codex/enterprise",
+          "canonicalUrl": "https://kovagpt.com/codex/enterprise",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/codex/pricing",
+          "canonicalUrl": "https://kovagpt.com/codex/pricing",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/chat-with-pdfs",
+          "canonicalUrl": "https://kovagpt.com/features/chat-with-pdfs",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/deep-research",
+          "canonicalUrl": "https://kovagpt.com/features/deep-research",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/plugins",
+          "canonicalUrl": "https://kovagpt.com/features/plugins",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/study-mode",
+          "canonicalUrl": "https://kovagpt.com/features/study-mode",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/voice",
+          "canonicalUrl": "https://kovagpt.com/features/voice",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/features/voice-with-video",
+          "canonicalUrl": "https://kovagpt.com/features/voice-with-video",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/plans/free",
+          "canonicalUrl": "https://kovagpt.com/plans/free",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/plans/go",
+          "canonicalUrl": "https://kovagpt.com/plans/go",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/plans/k12-teachers",
+          "canonicalUrl": "https://kovagpt.com/plans/k12-teachers",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/plans/plus",
+          "canonicalUrl": "https://kovagpt.com/plans/plus",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/plans/pro",
+          "canonicalUrl": "https://kovagpt.com/plans/pro",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/students/2026",
+          "canonicalUrl": "https://kovagpt.com/students/2026",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-french",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-french",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-hindi",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-hindi",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-marathi",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-marathi",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-portuguese",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-portuguese",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-tagalog",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-tagalog",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-tamil",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-tamil",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/english-to-urdu",
+          "canonicalUrl": "https://kovagpt.com/translate/english-to-urdu",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/hindi-to-english",
+          "canonicalUrl": "https://kovagpt.com/translate/hindi-to-english",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/spanish-to-english",
+          "canonicalUrl": "https://kovagpt.com/translate/spanish-to-english",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/translate/tagalog-to-english",
+          "canonicalUrl": "https://kovagpt.com/translate/tagalog-to-english",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/chat-with-presentations",
+          "canonicalUrl": "https://kovagpt.com/use-cases/chat-with-presentations",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/chat-with-spreadsheets",
+          "canonicalUrl": "https://kovagpt.com/use-cases/chat-with-spreadsheets",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/fitness-wellness-and-health",
+          "canonicalUrl": "https://kovagpt.com/use-cases/fitness-wellness-and-health",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/money-and-finances",
+          "canonicalUrl": "https://kovagpt.com/use-cases/money-and-finances",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/recipes-cooking",
+          "canonicalUrl": "https://kovagpt.com/use-cases/recipes-cooking",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/science-medicine",
+          "canonicalUrl": "https://kovagpt.com/use-cases/science-medicine",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/students",
+          "canonicalUrl": "https://kovagpt.com/use-cases/students",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/teachers",
+          "canonicalUrl": "https://kovagpt.com/use-cases/teachers",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/travel-and-exploration",
+          "canonicalUrl": "https://kovagpt.com/use-cases/travel-and-exploration",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/university-educators",
+          "canonicalUrl": "https://kovagpt.com/use-cases/university-educators",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/use-cases/veterans",
+          "canonicalUrl": "https://kovagpt.com/use-cases/veterans",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/writing/paraphrase",
+          "canonicalUrl": "https://kovagpt.com/writing/paraphrase",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        }
+      ],
       "routeFile": "src/routes/$section.$articleSlug.tsx",
       "template": true,
       "classification": "dynamic_public",
       "indexingDecision": "index_resolved_paths",
-      "sitemapIncluded": true,
+      "sitemapIncluded": false,
       "canonicalUrl": null,
       "contentOwner": "KovaGPT public content registry or explicit route",
-      "contentSource": "$section.$articleSlug.tsx",
-      "contentCompleteness": "fixture_or_contract_dependent",
+      "contentSource": "resolved path evidence attached",
+      "contentCompleteness": "see_resolved_path_evidence",
       "legalReviewRequired": false,
       "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
+      "runtimeResult": "see_resolved_path_evidence",
+      "metadataResult": "see_resolved_path_evidence",
       "authorizationBoundary": "signed-out public response",
-      "finalDecision": "retain_in_sitemap",
+      "finalDecision": "retain_resolved_paths_in_sitemap",
       "evidence": ["src/routes/$section.$articleSlug.tsx", "npm run build"]
     },
     {
@@ -159,26 +1352,225 @@
         "/solutions/use-case/data-analysis",
         "/solutions/use-case/research"
       ],
+      "resolvedPathEvidence": [
+        {
+          "canonicalPath": "/academy/chatgpt-work/how-business-operations-teams-use-codex",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-work/how-business-operations-teams-use-codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-work/how-data-science-teams-use-codex",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-work/how-data-science-teams-use-codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/academy/chatgpt-work/how-sales-teams-use-codex",
+          "canonicalUrl": "https://kovagpt.com/academy/chatgpt-work/how-sales-teams-use-codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/blueprints/knowledge-retrieval",
+          "canonicalUrl": "https://kovagpt.com/solutions/blueprints/knowledge-retrieval",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/blueprints/mcpkit",
+          "canonicalUrl": "https://kovagpt.com/solutions/blueprints/mcpkit",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/industries/financial-services",
+          "canonicalUrl": "https://kovagpt.com/solutions/industries/financial-services",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/industries/government",
+          "canonicalUrl": "https://kovagpt.com/solutions/industries/government",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/industries/healthcare",
+          "canonicalUrl": "https://kovagpt.com/solutions/industries/healthcare",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/industries/retail",
+          "canonicalUrl": "https://kovagpt.com/solutions/industries/retail",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/use-case/agents",
+          "canonicalUrl": "https://kovagpt.com/solutions/use-case/agents",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/use-case/coding",
+          "canonicalUrl": "https://kovagpt.com/solutions/use-case/coding",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/use-case/content-creation",
+          "canonicalUrl": "https://kovagpt.com/solutions/use-case/content-creation",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/use-case/data-analysis",
+          "canonicalUrl": "https://kovagpt.com/solutions/use-case/data-analysis",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        },
+        {
+          "canonicalPath": "/solutions/use-case/research",
+          "canonicalUrl": "https://kovagpt.com/solutions/use-case/research",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": [
+            "src/routes/$section.$category.$articleSlug.tsx",
+            "docs/page-parity/indexable-content-review.json"
+          ]
+        }
+      ],
       "routeFile": "src/routes/$section.$category.$articleSlug.tsx",
       "template": true,
       "classification": "dynamic_public",
       "indexingDecision": "index_resolved_paths",
-      "sitemapIncluded": true,
+      "sitemapIncluded": false,
       "canonicalUrl": null,
       "contentOwner": "KovaGPT public content registry or explicit route",
-      "contentSource": "$section.$category.$articleSlug.tsx",
-      "contentCompleteness": "fixture_or_contract_dependent",
+      "contentSource": "resolved path evidence attached",
+      "contentCompleteness": "see_resolved_path_evidence",
       "legalReviewRequired": false,
       "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
+      "runtimeResult": "see_resolved_path_evidence",
+      "metadataResult": "see_resolved_path_evidence",
       "authorizationBoundary": "signed-out public response",
-      "finalDecision": "retain_in_sitemap",
+      "finalDecision": "retain_resolved_paths_in_sitemap",
       "evidence": ["src/routes/$section.$category.$articleSlug.tsx", "npm run build"]
     },
     {
       "canonicalPath": "/$section/$category/$subcategory/$articleSlug",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/$section.$category.$subcategory.$articleSlug.tsx",
       "template": true,
       "classification": "dynamic",
@@ -244,26 +1636,513 @@
         "/use-cases",
         "/voice"
       ],
+      "resolvedPathEvidence": [
+        {
+          "canonicalPath": "/about",
+          "canonicalUrl": "https://kovagpt.com/about",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/accessibility",
+          "canonicalUrl": "https://kovagpt.com/accessibility",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/business",
+          "canonicalUrl": "https://kovagpt.com/business",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/business-data",
+          "canonicalUrl": "https://kovagpt.com/business-data",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/careers",
+          "canonicalUrl": "https://kovagpt.com/careers",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/charter",
+          "canonicalUrl": "https://kovagpt.com/charter",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/codex",
+          "canonicalUrl": "https://kovagpt.com/codex",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/college-students",
+          "canonicalUrl": "https://kovagpt.com/college-students",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/consumer-privacy",
+          "canonicalUrl": "https://kovagpt.com/consumer-privacy",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/contact-sales",
+          "canonicalUrl": "https://kovagpt.com/contact-sales",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/data-controls",
+          "canonicalUrl": "https://kovagpt.com/data-controls",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/document-analysis",
+          "canonicalUrl": "https://kovagpt.com/document-analysis",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/download",
+          "canonicalUrl": "https://kovagpt.com/download",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/education",
+          "canonicalUrl": "https://kovagpt.com/education",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/enterprise-privacy",
+          "canonicalUrl": "https://kovagpt.com/enterprise-privacy",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/families",
+          "canonicalUrl": "https://kovagpt.com/families",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/features",
+          "canonicalUrl": "https://kovagpt.com/features",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/gpts",
+          "canonicalUrl": "https://kovagpt.com/gpts",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/health",
+          "canonicalUrl": "https://kovagpt.com/health",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/import-to-chatgpt",
+          "canonicalUrl": "https://kovagpt.com/import-to-chatgpt",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/merchants",
+          "canonicalUrl": "https://kovagpt.com/merchants",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/mission",
+          "canonicalUrl": "https://kovagpt.com/mission",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/model-behavior",
+          "canonicalUrl": "https://kovagpt.com/model-behavior",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/moderation",
+          "canonicalUrl": "https://kovagpt.com/moderation",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/open-models",
+          "canonicalUrl": "https://kovagpt.com/open-models",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/our-structure",
+          "canonicalUrl": "https://kovagpt.com/our-structure",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/overview",
+          "canonicalUrl": "https://kovagpt.com/overview",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/parent-resources",
+          "canonicalUrl": "https://kovagpt.com/parent-resources",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/plans",
+          "canonicalUrl": "https://kovagpt.com/plans",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/policies",
+          "canonicalUrl": "https://kovagpt.com/policies",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/remote",
+          "canonicalUrl": "https://kovagpt.com/remote",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/safety",
+          "canonicalUrl": "https://kovagpt.com/safety",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/science",
+          "canonicalUrl": "https://kovagpt.com/science",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/security-and-privacy",
+          "canonicalUrl": "https://kovagpt.com/security-and-privacy",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/shopping",
+          "canonicalUrl": "https://kovagpt.com/shopping",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/shopping-assistant",
+          "canonicalUrl": "https://kovagpt.com/shopping-assistant",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/solutions",
+          "canonicalUrl": "https://kovagpt.com/solutions",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/translation",
+          "canonicalUrl": "https://kovagpt.com/translation",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/transparency",
+          "canonicalUrl": "https://kovagpt.com/transparency",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/transparency-and-content-moderation",
+          "canonicalUrl": "https://kovagpt.com/transparency-and-content-moderation",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/trust",
+          "canonicalUrl": "https://kovagpt.com/trust",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/trust-and-transparency",
+          "canonicalUrl": "https://kovagpt.com/trust-and-transparency",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/use-cases",
+          "canonicalUrl": "https://kovagpt.com/use-cases",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        },
+        {
+          "canonicalPath": "/voice",
+          "canonicalUrl": "https://kovagpt.com/voice",
+          "contentCompleteness": "keep_indexable",
+          "legalReviewRequired": false,
+          "administratorContentRequired": false,
+          "runtimeResult": "http_200",
+          "metadataResult": "reviewed",
+          "finalDecision": "retain_in_sitemap",
+          "evidence": ["src/routes/$slug.tsx", "docs/page-parity/indexable-content-review.json"]
+        }
+      ],
       "routeFile": "src/routes/$slug.tsx",
       "template": true,
       "classification": "dynamic_public",
       "indexingDecision": "index_resolved_paths",
-      "sitemapIncluded": true,
+      "sitemapIncluded": false,
       "canonicalUrl": null,
       "contentOwner": "KovaGPT public content registry or explicit route",
-      "contentSource": "$slug.tsx",
-      "contentCompleteness": "fixture_or_contract_dependent",
+      "contentSource": "resolved path evidence attached",
+      "contentCompleteness": "see_resolved_path_evidence",
       "legalReviewRequired": false,
       "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
+      "runtimeResult": "see_resolved_path_evidence",
+      "metadataResult": "see_resolved_path_evidence",
       "authorizationBoundary": "signed-out public response",
-      "finalDecision": "retain_in_sitemap",
+      "finalDecision": "retain_resolved_paths_in_sitemap",
       "evidence": ["src/routes/$slug.tsx", "npm run build"]
     },
     {
       "canonicalPath": "/.mcp/invoke-tool/$tool",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/[.mcp]/invoke-tool/$tool.ts",
       "template": true,
       "classification": "reserved_service",
@@ -284,6 +2163,7 @@
     {
       "canonicalPath": "/.mcp/list-tools",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/[.mcp]/list-tools.ts",
       "template": false,
       "classification": "reserved_service",
@@ -304,6 +2184,7 @@
     {
       "canonicalPath": "/.well-known/oauth-authorization-server",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/[.well-known]/oauth-authorization-server.ts",
       "template": false,
       "classification": "reserved_service",
@@ -324,6 +2205,7 @@
     {
       "canonicalPath": "/.well-known/oauth-protected-resource",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/[.well-known]/oauth-protected-resource.ts",
       "template": false,
       "classification": "reserved_service",
@@ -344,6 +2226,7 @@
     {
       "canonicalPath": "<root-shell>",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/__root.tsx",
       "template": false,
       "classification": "root_shell",
@@ -364,6 +2247,7 @@
     {
       "canonicalPath": "/academy",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/academy.tsx",
       "template": false,
       "classification": "public",
@@ -384,6 +2268,7 @@
     {
       "canonicalPath": "/admin/kovas",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/admin/kovas.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -404,6 +2289,7 @@
     {
       "canonicalPath": "/ai-humanizer",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/ai-humanizer.tsx",
       "template": false,
       "classification": "public",
@@ -424,6 +2310,7 @@
     {
       "canonicalPath": "/ai-image-generator",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/ai-image-generator.tsx",
       "template": false,
       "classification": "public",
@@ -447,6 +2334,7 @@
     {
       "canonicalPath": "/ai-safety",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/ai-safety.tsx",
       "template": false,
       "classification": "public",
@@ -467,6 +2355,7 @@
     {
       "canonicalPath": "/ai-writer",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/ai-writer.tsx",
       "template": false,
       "classification": "public",
@@ -487,6 +2376,7 @@
     {
       "canonicalPath": "/api/account",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/account.ts",
       "template": false,
       "classification": "reserved_service",
@@ -507,6 +2397,7 @@
     {
       "canonicalPath": "/api/account/export",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/account/export.ts",
       "template": false,
       "classification": "reserved_service",
@@ -527,6 +2418,7 @@
     {
       "canonicalPath": "/api/admin/ai-usage",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/admin/ai-usage.ts",
       "template": false,
       "classification": "reserved_service",
@@ -547,6 +2439,7 @@
     {
       "canonicalPath": "/api/admin/developer-billing",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/admin/developer-billing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -567,6 +2460,7 @@
     {
       "canonicalPath": "/api/admin/diagnostics",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/admin/diagnostics.ts",
       "template": false,
       "classification": "reserved_service",
@@ -587,6 +2481,7 @@
     {
       "canonicalPath": "/api/admin/kovas",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/admin/kovas.ts",
       "template": false,
       "classification": "reserved_service",
@@ -607,6 +2502,7 @@
     {
       "canonicalPath": "/api/admin/pricing",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/admin/pricing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -627,6 +2523,7 @@
     {
       "canonicalPath": "/api/agents/runs",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/agents/runs.ts",
       "template": false,
       "classification": "reserved_service",
@@ -647,6 +2544,7 @@
     {
       "canonicalPath": "/api/agents/teams",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/agents/teams.ts",
       "template": false,
       "classification": "reserved_service",
@@ -667,6 +2565,7 @@
     {
       "canonicalPath": "/api/chat",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/chat.ts",
       "template": false,
       "classification": "reserved_service",
@@ -687,6 +2586,7 @@
     {
       "canonicalPath": "/api/chat/confirm",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/chat/confirm.ts",
       "template": false,
       "classification": "reserved_service",
@@ -707,6 +2607,7 @@
     {
       "canonicalPath": "/api/chat/history",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/chat/history.ts",
       "template": false,
       "classification": "reserved_service",
@@ -727,6 +2628,7 @@
     {
       "canonicalPath": "/api/developer/console",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/developer/console.ts",
       "template": false,
       "classification": "reserved_service",
@@ -747,6 +2649,7 @@
     {
       "canonicalPath": "/api/developer/files",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/developer/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -767,6 +2670,7 @@
     {
       "canonicalPath": "/api/developer/funding",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/developer/funding.ts",
       "template": false,
       "classification": "reserved_service",
@@ -787,6 +2691,7 @@
     {
       "canonicalPath": "/api/developer/mcp",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/developer/mcp.ts",
       "template": false,
       "classification": "reserved_service",
@@ -807,6 +2712,7 @@
     {
       "canonicalPath": "/api/developer/payments/webhook",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/developer/payments/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -827,6 +2733,7 @@
     {
       "canonicalPath": "/api/discovery",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/discovery.ts",
       "template": false,
       "classification": "reserved_service",
@@ -847,6 +2754,7 @@
     {
       "canonicalPath": "/api/finances/exchange",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/finances/exchange.ts",
       "template": false,
       "classification": "reserved_service",
@@ -867,6 +2775,7 @@
     {
       "canonicalPath": "/api/finances/link-token",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/finances/link-token.ts",
       "template": false,
       "classification": "reserved_service",
@@ -887,6 +2796,7 @@
     {
       "canonicalPath": "/api/finances/webhook",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/finances/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -907,6 +2817,7 @@
     {
       "canonicalPath": "/api/generate-image",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/generate-image.ts",
       "template": false,
       "classification": "reserved_service",
@@ -927,6 +2838,7 @@
     {
       "canonicalPath": "/api/github/auth",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/github/auth.ts",
       "template": false,
       "classification": "reserved_service",
@@ -947,6 +2859,7 @@
     {
       "canonicalPath": "/api/github/callback",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/github/callback.ts",
       "template": false,
       "classification": "reserved_service",
@@ -967,6 +2880,7 @@
     {
       "canonicalPath": "/api/github/tool",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/github/tool.ts",
       "template": false,
       "classification": "reserved_service",
@@ -987,6 +2901,7 @@
     {
       "canonicalPath": "/api/github/webhook",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/github/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1007,6 +2922,7 @@
     {
       "canonicalPath": "/api/google/auth",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/auth.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1027,6 +2943,7 @@
     {
       "canonicalPath": "/api/google/calendar",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/calendar.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1047,6 +2964,7 @@
     {
       "canonicalPath": "/api/google/callback",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/callback.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1067,6 +2985,7 @@
     {
       "canonicalPath": "/api/google/disconnect",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/disconnect.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1087,6 +3006,7 @@
     {
       "canonicalPath": "/api/google/drive",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/drive.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1107,6 +3027,7 @@
     {
       "canonicalPath": "/api/google/gmail",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/gmail.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1127,6 +3048,7 @@
     {
       "canonicalPath": "/api/google/select",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/select.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1147,6 +3069,7 @@
     {
       "canonicalPath": "/api/google/status",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/google/status.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1167,6 +3090,7 @@
     {
       "canonicalPath": "/api/health",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/health.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1187,6 +3111,7 @@
     {
       "canonicalPath": "/api/integrations/accounts",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/integrations/accounts.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1207,6 +3132,7 @@
     {
       "canonicalPath": "/api/integrations/oauth/callback/$provider",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/integrations/oauth/callback/$provider.ts",
       "template": true,
       "classification": "reserved_service",
@@ -1227,6 +3153,7 @@
     {
       "canonicalPath": "/api/integrations/oauth/disconnect",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/integrations/oauth/disconnect.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1247,6 +3174,7 @@
     {
       "canonicalPath": "/api/integrations/oauth/start",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/integrations/oauth/start.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1267,6 +3195,7 @@
     {
       "canonicalPath": "/api/internal/account-exports",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/account-exports.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1287,6 +3216,7 @@
     {
       "canonicalPath": "/api/internal/chat-summaries",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/chat-summaries.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1307,6 +3237,7 @@
     {
       "canonicalPath": "/api/internal/developer-billing",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/developer-billing.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1327,6 +3258,7 @@
     {
       "canonicalPath": "/api/internal/developer-funding",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/developer-funding.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1347,6 +3279,7 @@
     {
       "canonicalPath": "/api/internal/google-oauth-cleanup",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/google-oauth-cleanup.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1367,6 +3300,7 @@
     {
       "canonicalPath": "/api/internal/receipt-maintenance",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/receipt-maintenance.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1387,6 +3321,7 @@
     {
       "canonicalPath": "/api/internal/scheduled-execution",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/scheduled-execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1407,6 +3342,7 @@
     {
       "canonicalPath": "/api/internal/site-maintenance",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/site-maintenance.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1427,6 +3363,7 @@
     {
       "canonicalPath": "/api/internal/storage-artifact-cleanup",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/storage-artifact-cleanup.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1447,6 +3384,7 @@
     {
       "canonicalPath": "/api/internal/web-push",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/web-push.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1467,6 +3405,7 @@
     {
       "canonicalPath": "/api/internal/work-browser",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/work-browser.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1487,6 +3426,7 @@
     {
       "canonicalPath": "/api/internal/work-execution",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/work-execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1507,6 +3447,7 @@
     {
       "canonicalPath": "/api/internal/workspace-search",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/internal/workspace-search.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1527,6 +3468,7 @@
     {
       "canonicalPath": "/api/kovas",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/kovas.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1547,6 +3489,7 @@
     {
       "canonicalPath": "/api/kovas/directory",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/kovas/directory.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1567,6 +3510,7 @@
     {
       "canonicalPath": "/api/library/bulk-move",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/library/bulk-move.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1587,6 +3531,7 @@
     {
       "canonicalPath": "/api/library/files",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/library/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1607,6 +3552,7 @@
     {
       "canonicalPath": "/api/library/folders",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/library/folders.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1627,6 +3573,7 @@
     {
       "canonicalPath": "/api/library/items",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/library/items.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1647,6 +3594,7 @@
     {
       "canonicalPath": "/api/livez",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/livez.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1667,6 +3615,7 @@
     {
       "canonicalPath": "/api/memory",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/memory.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1687,6 +3636,7 @@
     {
       "canonicalPath": "/api/organizations",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/organizations.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1707,6 +3657,7 @@
     {
       "canonicalPath": "/api/organizations/scim",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/organizations/scim.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1727,6 +3678,7 @@
     {
       "canonicalPath": "/api/project-files",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/project-files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1747,6 +3699,7 @@
     {
       "canonicalPath": "/api/project-suggest",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/project-suggest.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1767,6 +3720,7 @@
     {
       "canonicalPath": "/api/project-templates",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/project-templates.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1787,6 +3741,7 @@
     {
       "canonicalPath": "/api/public/help-submit",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/public/help-submit.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1807,6 +3762,7 @@
     {
       "canonicalPath": "/api/public/payments/webhook",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/public/payments/webhook.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1827,6 +3783,7 @@
     {
       "canonicalPath": "/api/push",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/push.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1847,6 +3804,7 @@
     {
       "canonicalPath": "/api/push/revoke-device",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/push/revoke-device.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1867,6 +3825,7 @@
     {
       "canonicalPath": "/api/readyz",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/readyz.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1887,6 +3846,7 @@
     {
       "canonicalPath": "/api/scim/v2/$organizationId/$",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/scim/v2/$organizationId/$.ts",
       "template": true,
       "classification": "reserved_service",
@@ -1907,6 +3867,7 @@
     {
       "canonicalPath": "/api/security/lockdown",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/security/lockdown.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1927,6 +3888,7 @@
     {
       "canonicalPath": "/api/sites",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/sites.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1947,6 +3909,7 @@
     {
       "canonicalPath": "/api/tasks/event-sources",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/tasks/event-sources.ts",
       "template": false,
       "classification": "reserved_service",
@@ -1967,6 +3930,7 @@
     {
       "canonicalPath": "/api/tasks/events/$provider",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/tasks/events/$provider.ts",
       "template": true,
       "classification": "reserved_service",
@@ -1987,6 +3951,7 @@
     {
       "canonicalPath": "/api/title",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/title.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2007,6 +3972,7 @@
     {
       "canonicalPath": "/api/trusted-contacts",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/trusted-contacts.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2027,6 +3993,7 @@
     {
       "canonicalPath": "/api/v1/embeddings",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/embeddings.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2047,6 +4014,7 @@
     {
       "canonicalPath": "/api/v1/files",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/files.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2067,6 +4035,7 @@
     {
       "canonicalPath": "/api/v1/images",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/images.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2087,6 +4056,7 @@
     {
       "canonicalPath": "/api/v1/models",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/models.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2107,6 +4077,7 @@
     {
       "canonicalPath": "/api/v1/quotes",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/quotes.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2127,6 +4098,7 @@
     {
       "canonicalPath": "/api/v1/responses",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/v1/responses.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2147,6 +4119,7 @@
     {
       "canonicalPath": "/api/version",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/version.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2167,6 +4140,7 @@
     {
       "canonicalPath": "/api/weather",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/weather.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2187,6 +4161,7 @@
     {
       "canonicalPath": "/api/work/browser",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/work/browser.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2207,6 +4182,7 @@
     {
       "canonicalPath": "/api/work/execution",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/work/execution.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2227,6 +4203,7 @@
     {
       "canonicalPath": "/api/work/output",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/work/output.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2247,6 +4224,7 @@
     {
       "canonicalPath": "/api/work/sync",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/work/sync.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2267,6 +4245,7 @@
     {
       "canonicalPath": "/api/workspace/search",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/workspace/search.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2287,6 +4266,7 @@
     {
       "canonicalPath": "/api/write",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/api/write.ts",
       "template": false,
       "classification": "reserved_service",
@@ -2307,6 +4287,7 @@
     {
       "canonicalPath": "/apps",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/apps.tsx",
       "template": false,
       "classification": "public",
@@ -2327,6 +4308,7 @@
     {
       "canonicalPath": "/assistants/$assistantSlug",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/assistants.$assistantSlug.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2347,6 +4329,7 @@
     {
       "canonicalPath": "/assistants",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/assistants.tsx",
       "template": false,
       "classification": "public",
@@ -2367,6 +4350,7 @@
     {
       "canonicalPath": "/audit-log",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/audit-log.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2387,6 +4371,7 @@
     {
       "canonicalPath": "/auth",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/auth.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2407,6 +4392,7 @@
     {
       "canonicalPath": "/blog/ai-market-research-guide",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/blog.ai-market-research-guide.tsx",
       "template": false,
       "classification": "public",
@@ -2430,6 +4416,7 @@
     {
       "canonicalPath": "/blog/best-ai-assistants",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/blog.best-ai-assistants.tsx",
       "template": false,
       "classification": "public",
@@ -2453,6 +4440,7 @@
     {
       "canonicalPath": "/blog/best-ai-market-research-tools",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/blog.best-ai-market-research-tools.tsx",
       "template": false,
       "classification": "public",
@@ -2476,6 +4464,7 @@
     {
       "canonicalPath": "/brain",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/brain.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2496,6 +4485,7 @@
     {
       "canonicalPath": "/changelog",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/changelog.tsx",
       "template": false,
       "classification": "public",
@@ -2516,6 +4506,7 @@
     {
       "canonicalPath": "/chatgpt-alternative",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/chatgpt-alternative.tsx",
       "template": false,
       "classification": "public",
@@ -2539,6 +4530,7 @@
     {
       "canonicalPath": "/checkout/return",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/checkout.return.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2559,6 +4551,7 @@
     {
       "canonicalPath": "/code-helper",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/code-helper.tsx",
       "template": false,
       "classification": "public",
@@ -2579,6 +4572,7 @@
     {
       "canonicalPath": "/connect",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/connect.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2599,6 +4593,7 @@
     {
       "canonicalPath": "/contact-support",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/contact-support.tsx",
       "template": false,
       "classification": "public",
@@ -2622,6 +4617,7 @@
     {
       "canonicalPath": "/context-packs",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/context-packs.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2642,6 +4638,7 @@
     {
       "canonicalPath": "/developers/$docSlug",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.$docSlug.tsx",
       "template": true,
       "classification": "dynamic",
@@ -2662,6 +4659,7 @@
     {
       "canonicalPath": "/developers/authorize",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.authorize.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2682,6 +4680,7 @@
     {
       "canonicalPath": "/developers/connections",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.connections.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2702,6 +4701,7 @@
     {
       "canonicalPath": "/developers/console",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.console.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2722,6 +4722,7 @@
     {
       "canonicalPath": "/developers/",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.index.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2742,6 +4743,7 @@
     {
       "canonicalPath": "/developers/pricing",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/developers.pricing.tsx",
       "template": false,
       "classification": "public",
@@ -2765,6 +4767,7 @@
     {
       "canonicalPath": "/discovery",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/discovery.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2785,6 +4788,7 @@
     {
       "canonicalPath": "/email/unsubscribe",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/email/unsubscribe.ts",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -2805,6 +4809,7 @@
     {
       "canonicalPath": "/files",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/files.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2825,6 +4830,7 @@
     {
       "canonicalPath": "/getting-started",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/getting-started.tsx",
       "template": false,
       "classification": "public",
@@ -2848,6 +4854,7 @@
     {
       "canonicalPath": "/goals",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/goals.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2868,6 +4875,7 @@
     {
       "canonicalPath": "/help",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/help.tsx",
       "template": false,
       "classification": "public",
@@ -2888,6 +4896,7 @@
     {
       "canonicalPath": "/humanize-ai-text",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/humanize-ai-text.tsx",
       "template": false,
       "classification": "public",
@@ -2911,6 +4920,7 @@
     {
       "canonicalPath": "/images",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/images.tsx",
       "template": false,
       "classification": "public",
@@ -2931,6 +4941,7 @@
     {
       "canonicalPath": "/",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/index.tsx",
       "template": false,
       "classification": "public",
@@ -2951,6 +4962,7 @@
     {
       "canonicalPath": "/knowledge-graph",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/knowledge-graph.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2971,6 +4983,7 @@
     {
       "canonicalPath": "/kovas",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/kovas.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -2991,6 +5004,7 @@
     {
       "canonicalPath": "/library",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/library.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3011,6 +5025,7 @@
     {
       "canonicalPath": "/maps",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/maps.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3031,6 +5046,7 @@
     {
       "canonicalPath": "/mcp",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/mcp.ts",
       "template": false,
       "classification": "reserved_service",
@@ -3051,6 +5067,7 @@
     {
       "canonicalPath": "/memory",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/memory.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3071,6 +5088,7 @@
     {
       "canonicalPath": "/modes",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/modes.tsx",
       "template": false,
       "classification": "public",
@@ -3091,6 +5109,7 @@
     {
       "canonicalPath": "/notifications",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/notifications.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3111,6 +5130,7 @@
     {
       "canonicalPath": "/oauth/consent",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/oauth.consent.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -3131,6 +5151,7 @@
     {
       "canonicalPath": "/oauth/mcp/$action",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/oauth/mcp/$action.ts",
       "template": true,
       "classification": "reserved_auth_or_callback",
@@ -3151,6 +5172,7 @@
     {
       "canonicalPath": "/omega",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/omega.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3171,6 +5193,7 @@
     {
       "canonicalPath": "/organization",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/organization.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3191,6 +5214,7 @@
     {
       "canonicalPath": "/pricing",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/pricing.tsx",
       "template": false,
       "classification": "public",
@@ -3211,6 +5235,7 @@
     {
       "canonicalPath": "/privacy",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/privacy.tsx",
       "template": false,
       "classification": "public",
@@ -3231,6 +5256,7 @@
     {
       "canonicalPath": "/projects/$projectId/chat/$chatId",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/projects.$projectId.chat.$chatId.tsx",
       "template": true,
       "classification": "dynamic",
@@ -3251,6 +5277,7 @@
     {
       "canonicalPath": "/projects/$projectId",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/projects.$projectId.tsx",
       "template": true,
       "classification": "dynamic",
@@ -3271,6 +5298,7 @@
     {
       "canonicalPath": "/projects",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/projects.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3291,6 +5319,7 @@
     {
       "canonicalPath": "/prompt-studio",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/prompt-studio.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3311,6 +5340,7 @@
     {
       "canonicalPath": "/refund",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/refund.tsx",
       "template": false,
       "classification": "public",
@@ -3331,6 +5361,7 @@
     {
       "canonicalPath": "/research-assistant",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/research-assistant.tsx",
       "template": false,
       "classification": "public",
@@ -3354,6 +5385,7 @@
     {
       "canonicalPath": "/research-planner",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/research-planner.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3374,6 +5406,7 @@
     {
       "canonicalPath": "/reset-password",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/reset-password.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -3394,6 +5427,7 @@
     {
       "canonicalPath": "/scheduled-tasks",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/scheduled-tasks.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3414,6 +5448,7 @@
     {
       "canonicalPath": "/share-inbox",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/share-inbox.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3434,6 +5469,7 @@
     {
       "canonicalPath": "/sitemap.xml",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/sitemap[.]xml.ts",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3454,6 +5490,7 @@
     {
       "canonicalPath": "/sites",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/sites.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3474,6 +5511,7 @@
     {
       "canonicalPath": "/status",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/status.tsx",
       "template": false,
       "classification": "public",
@@ -3494,6 +5532,7 @@
     {
       "canonicalPath": "/study-assistant",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/study-assistant.tsx",
       "template": false,
       "classification": "public",
@@ -3517,6 +5556,7 @@
     {
       "canonicalPath": "/study",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/study.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3537,6 +5577,7 @@
     {
       "canonicalPath": "/summary",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/summary.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3557,6 +5598,7 @@
     {
       "canonicalPath": "/terms",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/terms.tsx",
       "template": false,
       "classification": "public",
@@ -3577,6 +5619,7 @@
     {
       "canonicalPath": "/trusted-contacts",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/trusted-contacts.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3597,6 +5640,7 @@
     {
       "canonicalPath": "/unsubscribe",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/unsubscribe.tsx",
       "template": false,
       "classification": "reserved_auth_or_callback",
@@ -3617,6 +5661,7 @@
     {
       "canonicalPath": "/work",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/work.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3637,6 +5682,7 @@
     {
       "canonicalPath": "/write",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/write.tsx",
       "template": false,
       "classification": "application_or_authenticated",
@@ -3657,6 +5703,7 @@
     {
       "canonicalPath": "/~oauth/callback",
       "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
       "routeFile": "src/routes/~oauth.callback.tsx",
       "template": false,
       "classification": "application_or_authenticated",
