@@ -6,11 +6,12 @@ const inventory = JSON.parse(readFileSync("docs/ui-ux/live-surface-inventory.jso
 const pageProgress = JSON.parse(readFileSync("docs/ui-ux/page-by-page-progress.json", "utf8"));
 
 test("live UI inventory records the complete discoverable source snapshot", () => {
+  const inventorySource = readFileSync("scripts/ui-surface-inventory.mjs", "utf8");
   assert.match(inventory.snapshotDate, /^\d{4}-\d{2}-\d{2}$/u);
-  assert.doesNotMatch(
-    readFileSync("scripts/ui-surface-inventory.mjs", "utf8"),
-    /const SNAPSHOT_DATE = ["']\d{4}-\d{2}-\d{2}["']/u,
-  );
+  assert.doesNotMatch(inventorySource, /const SNAPSHOT_DATE = ["']\d{4}-\d{2}-\d{2}["']/u);
+  assert.match(inventorySource, /const REQUEST_TIMEOUT_MS = 30_000/u);
+  assert.match(inventorySource, /signal: AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/u);
+  assert.match(inventorySource, /request timed out after \$\{REQUEST_TIMEOUT_MS\}ms/u);
   assert.equal(inventory.openai.sitemapCount, 38);
   assert.equal(inventory.openai.uniqueUrlCount, 1706);
   assert.equal(inventory.chatgpt.sitemapEntryCount, 98);

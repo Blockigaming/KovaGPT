@@ -19,6 +19,7 @@ const SNAPSHOT_DATE =
   process.env.KOVA_UI_SNAPSHOT_DATE?.trim() || new Date().toISOString().slice(0, 10);
 const AUTHENTICATED_OBSERVATION_DATE =
   process.env.KOVA_CHATGPT_AUTHENTICATED_OBSERVATION_DATE?.trim() || null;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 if (
   AUTHENTICATED_OBSERVATION_DATE &&
@@ -49,11 +50,19 @@ function extractLocations(xml) {
 }
 
 async function fetchText(url) {
-  const response = await fetch(url, {
-    headers: { "user-agent": "KovaGPT-UI-Surface-Audit/1.0" },
-  });
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-  return response.text();
+  try {
+    const response = await fetch(url, {
+      headers: { "user-agent": "KovaGPT-UI-Surface-Audit/1.0" },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+    return await response.text();
+  } catch (error) {
+    if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name)) {
+      throw new Error(`${url}: request timed out after ${REQUEST_TIMEOUT_MS}ms`, { cause: error });
+    }
+    throw error;
+  }
 }
 
 function counts(values) {

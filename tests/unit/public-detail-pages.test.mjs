@@ -93,11 +93,13 @@ test("detail route provides unique metadata, breadcrumbs, sections, and real act
   assert.match(route, /isPublicIndexableRoute/u);
   assert.match(route, /og:type/u);
   assert.match(view, /aria-label="Breadcrumb"/u);
-  assert.match(view, /\["students", "\/use-cases\/students"\]/u);
-  assert.match(view, /\["form", "\/contact-support"\]/u);
-  assert.match(view, /\["translate", "\/translation"\]/u);
-  assert.match(view, /\["writing", "\/ai-writer"\]/u);
+  assert.match(view, /\["students", \{ label: "students", to: "\/use-cases\/students" \}\]/u);
+  assert.match(view, /\["form", \{ label: "contact support", to: "\/contact-support" \}\]/u);
+  assert.match(view, /label: "trust and transparency", to: "\/trust-and-transparency"/u);
+  assert.match(view, /\["translate", \{ label: "translation", to: "\/translation" \}\]/u);
+  assert.match(view, /\["writing", \{ label: "AI writer", to: "\/ai-writer" \}\]/u);
   assert.match(view, /DETAIL_SECTION_LANDINGS\.get\(item\.section\)/u);
+  assert.match(view, /sectionLanding\?\.label/u);
   assert.match(view, /data-public-primary/u);
   assert.match(view, /item\.primaryAction\.to/u);
   assert.match(view, /item\.sections\.map/u);
@@ -148,9 +150,12 @@ test("business and app guidance actions lead to their intended public flows", ()
   assert.doesNotMatch(source, /label: "App connection guidance", to: "\/connect"/u);
 });
 
-test("Google Drive guidance describes the unified Google authorization grant", () => {
+test("every supported Google app describes the unified authorization grant", () => {
   const source = read("src/lib/public-detail-content.ts");
-  assert.match(source, /Review the unified Google grant for Drive, Gmail, and Calendar access/u);
+  assert.equal(
+    source.match(/Review the unified Google grant for Drive, Gmail, and Calendar access/gu)?.length,
+    3,
+  );
   assert.doesNotMatch(source, /only requested Drive scopes/iu);
 });
 

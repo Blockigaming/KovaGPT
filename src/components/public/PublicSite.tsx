@@ -4,12 +4,12 @@ import { type ReactNode } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
-const DETAIL_SECTION_LANDINGS = new Map<string, string>([
-  ["form", "/contact-support"],
-  ["global-affairs", "/trust-and-transparency"],
-  ["students", "/use-cases/students"],
-  ["translate", "/translation"],
-  ["writing", "/ai-writer"],
+const DETAIL_SECTION_LANDINGS = new Map<string, { label: string; to: string }>([
+  ["form", { label: "contact support", to: "/contact-support" }],
+  ["global-affairs", { label: "trust and transparency", to: "/trust-and-transparency" }],
+  ["students", { label: "students", to: "/use-cases/students" }],
+  ["translate", { label: "translation", to: "/translation" }],
+  ["writing", { label: "AI writer", to: "/ai-writer" }],
 ]);
 
 /**
@@ -95,6 +95,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
   const slugSegments = item.slug.split("/");
   const currentPageSlug = slugSegments.at(-1) ?? item.slug;
   const categorySlugs = slugSegments.slice(0, -1);
+  const sectionLanding = DETAIL_SECTION_LANDINGS.get(item.section);
   return (
     <PublicShell>
       <main id="main-content" tabIndex={-1}>
@@ -109,10 +110,10 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               className="flex items-center gap-2 text-sm text-muted-foreground"
             >
               <Link
-                to={(DETAIL_SECTION_LANDINGS.get(item.section) ?? `/${item.section}`) as never}
+                to={(sectionLanding?.to ?? `/${item.section}`) as never}
                 className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {item.section.replaceAll("-", " ")}
+                {sectionLanding?.label ?? item.section.replaceAll("-", " ")}
               </Link>
               {categorySlugs.map((category) => (
                 <span key={category} className="contents">

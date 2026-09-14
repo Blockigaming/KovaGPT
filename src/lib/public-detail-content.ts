@@ -623,9 +623,9 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
     "Gmail",
     "Draft and work with permitted email context while keeping sending and account authorization explicit.",
     [
+      "Review the unified Google grant for Drive, Gmail, and Calendar access",
       "Review recipients and message body",
       "Confirm before consequential sends",
-      "Do not expose unrelated mailbox data",
     ],
   ),
   app(
@@ -633,9 +633,9 @@ export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
     "Google Calendar",
     "Review permitted calendar context and prepare event actions with timezone and attendee details visible.",
     [
+      "Review the unified Google grant for Drive, Gmail, and Calendar access",
       "Confirm timezone and duration",
       "Review attendees",
-      "Confirm before creating or changing events",
     ],
   ),
   app(
