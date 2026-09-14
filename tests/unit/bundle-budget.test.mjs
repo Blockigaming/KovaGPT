@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  BUNDLE_BASELINE,
   BUNDLE_BUDGETS,
   HOME_ROUTE_MARKERS,
   evaluateBundleChecks,
@@ -104,4 +105,15 @@ test("the shared entry raw and gzip ceilings are enforced after selection", () =
     validManifest(),
   );
   assert.match(evaluateBundleChecks(gzipOverflow.chunks).failures.join("\n"), /main: gzip bytes/u);
+});
+
+test("the shared entry ceiling covers every recorded final-build observation tightly", () => {
+  const observations = BUNDLE_BASELINE.finalEntryObservations;
+  assert.ok(observations.length >= 2);
+  const largestRaw = Math.max(...observations.map(({ raw }) => raw));
+  const largestGzip = Math.max(...observations.map(({ gzip }) => gzip));
+  assert.ok(BUNDLE_BUDGETS.main.raw >= largestRaw);
+  assert.ok(BUNDLE_BUDGETS.main.gzip >= largestGzip);
+  assert.ok(BUNDLE_BUDGETS.main.raw <= largestRaw * 1.01);
+  assert.ok(BUNDLE_BUDGETS.main.gzip <= largestGzip * 1.01);
 });
