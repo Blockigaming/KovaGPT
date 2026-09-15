@@ -46,23 +46,41 @@ for (const theme of themes) {
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
       if (authenticated) {
-        for (const label of [
-          "New chat",
-          "Search",
-          "Work",
-          "Projects",
-          "Library",
-          "Images",
-          "Deep research",
-        ])
+        for (const label of ["New chat", "Search", "Work", "Projects", "Library", "Images"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
         await page.getByRole("button", { name: "More", exact: true }).click();
         await expect(page.getByRole("group", { name: "More destinations" })).toBeVisible();
         for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        for (const label of ["New chat", "Images", "Plugins", "Deep research", "Maps"])
+        const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+        await expect(primaryNavigation).toHaveAttribute(
+          "data-maps-release-approved",
+          /^(?:true|false)$/u,
+        );
+        const mapsReleaseApproved =
+          (await primaryNavigation.getAttribute("data-maps-release-approved")) === "true";
+        for (const label of [
+          "New chat",
+          "Work",
+          "Images",
+          "Library",
+          "Projects",
+          "Plugins",
+          "Discover",
+        ])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+        const mapsLink = primaryNavigation.getByRole("link", {
+          name: "Maps",
+          exact: true,
+          includeHidden: true,
+        });
+        if (mapsReleaseApproved) {
+          await expect(mapsLink).toHaveCount(1);
+          await expect(mapsLink).toBeVisible();
+        } else {
+          await expect(mapsLink).toHaveCount(0);
+        }
       }
     } else {
       await expect(page.locator(".kova-topbar")).toBeVisible();

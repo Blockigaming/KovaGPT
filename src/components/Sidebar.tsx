@@ -63,6 +63,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
+  mapsReleaseApproved = true,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -78,6 +79,7 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
+  mapsReleaseApproved?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
@@ -384,9 +386,11 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
-          <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
-            <Map />
-          </Link>
+          {mapsReleaseApproved ? (
+            <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+              <Map />
+            </Link>
+          ) : null}
           <button
             type="button"
             className="kova-rail-button"
@@ -420,6 +424,7 @@ export function Sidebar({
         style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
+        data-maps-release-approved={mapsReleaseApproved ? "true" : "false"}
         aria-modal={open && isMobileViewport() ? true : undefined}
         aria-hidden={collapsed ? true : undefined}
         inert={collapsed ? true : undefined}
@@ -500,7 +505,7 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {navLink("/maps", "Maps", Map)}
+              {mapsReleaseApproved ? navLink("/maps", "Maps", Map) : null}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"
