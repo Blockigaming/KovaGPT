@@ -36,7 +36,9 @@ export function fingerprintMigrationSchemaSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
     throw new Error("migration_schema_snapshot_invalid");
   }
-  if (snapshot.schemaVersion !== 1) throw new Error("migration_schema_snapshot_version_invalid");
+  if (snapshot.schemaVersion !== 1) {
+    throw new Error("migration_schema_snapshot_version_invalid");
+  }
   if (!snapshot.scope || typeof snapshot.scope !== "object" || Array.isArray(snapshot.scope)) {
     throw new Error("migration_schema_snapshot_scope_invalid");
   }
@@ -55,5 +57,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const input = process.env.KOVA_MIGRATION_SCHEMA_SNAPSHOT_FILE;
   if (!input) throw new Error("KOVA_MIGRATION_SCHEMA_SNAPSHOT_FILE_required");
   const snapshot = JSON.parse(readFileSync(resolve(input), "utf8"));
-  process.stdout.write(`${JSON.stringify(fingerprintMigrationSchemaSnapshot(snapshot), null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(fingerprintMigrationSchemaSnapshot(snapshot), null, 2)}\n`,
+  );
 }
