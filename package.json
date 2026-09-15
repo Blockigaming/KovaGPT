@@ -26,6 +26,7 @@
     "test:ui-parity:shell": "playwright test tests/e2e/chatgpt-shell-parity.spec.ts --config=playwright.release.config.ts",
     "smoke:deployment": "node scripts/post-deploy-smoke.mjs",
     "audit:ui-parity": "node scripts/ui-parity-audit.mjs",
+    "audit:ui-surfaces": "node scripts/ui-surface-inventory.mjs",
     "format:check:changed": "node scripts/check-format-changed.mjs",
     "worker:dev": "node --watch worker/src/index.mjs",
     "worker:start": "node worker/src/index.mjs",

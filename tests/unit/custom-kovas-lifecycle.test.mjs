@@ -48,6 +48,15 @@ async function fixture() {
         "utf8",
       ),
     );
+    await db.exec(
+      await readFile(
+        new URL(
+          "../../supabase/migrations/20260915004500_expand_custom_kova_mode_allowlist.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
     return db;
   } catch (e) {
     await db.close();
@@ -93,6 +102,18 @@ const read = (db, id, actor = A, scope = "read") =>
   rpc(db, "read_custom_kovas", [actor, scope, id, null]);
 const context = (db, id, actor = A, version = null) =>
   rpc(db, "resolve_custom_kova", [actor, id, version]);
+
+test("current Max and Ultra modes pass the database mutation boundary", async () => {
+  const db = await fixture();
+  try {
+    for (const mode of ["max", "ultra"]) {
+      const created = await mutate(db, "create", { config: config({ mode }) });
+      assert.equal((await read(db, created.id)).config.mode, mode);
+    }
+  } finally {
+    await db.close();
+  }
+});
 
 test("private Kovas have actual owner RLS, immutable versions and no service-role Auth table dependency", async () => {
   const db = await fixture();

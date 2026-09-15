@@ -12,10 +12,8 @@ export type ChatModeId =
   | "thinking"
   | "high"
   | "extra_high"
-  | "pro"
-  | "kova_5_5"
-  | "kova_5_4"
-  | "kova_o3";
+  | "max"
+  | "ultra";
 export type ChatClientTool = "web_search" | "image" | "study" | "data_analysis" | "file_analysis";
 
 export type ChatUserContext = {

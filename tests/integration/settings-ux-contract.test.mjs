@@ -25,7 +25,6 @@ test("signed-out storage copy matches the implemented guest lifecycle", () => {
 
 test("Settings select controls expose stable accessible names", () => {
   for (const label of [
-    "Settings section",
     "Preferred response length",
     "Response tone",
     "Filter library by item type",
@@ -36,19 +35,68 @@ test("Settings select controls expose stable accessible names", () => {
   assert.doesNotMatch(settingsSource, /aria-label="Language"/);
 });
 
-test("signed-in mobile navigation uses a grouped section picker", () => {
-  assert.match(
-    settingsSource,
-    /kova-settings-mobile-nav[\s\S]*?<Select value=\{tab\} onValueChange=\{setTab\}>/,
-  );
-  assert.match(settingsSource, /TAB_GROUPS\.map\(\(group\) => \([\s\S]*?<SelectGroup/);
-  assert.match(settingsSource, /<SelectLabel[\s\S]*?\{group\.title\}/);
-  assert.match(
-    settingsSource,
-    /<SelectItem[\s\S]*?key=\{v\}[\s\S]*?value=\{v\}[\s\S]*?className="kova-settings-mobile-section-option min-h-11 md:min-h-8"/,
-    "portaled mobile section options must keep a 44px target without forcing desktop density",
-  );
-  assert.doesNotMatch(settingsSource, /TAB_GROUPS\.flatMap/);
+test("signed-in settings uses searchable navigation and a purpose-built mobile drill-in", () => {
+  assert.match(settingsSource, /placeholder="Search settings"/);
+  assert.match(settingsSource, /No settings found/);
+  assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
+  assert.match(settingsSource, /item\.v === tab \|\| matchesSettingsQuery\(item\)/);
+  assert.match(settingsSource, /aria-label="Settings navigation"/);
+  assert.match(settingsSource, /aria-label="Back to settings"/);
+  assert.match(settingsSource, /setMobileHome\(false\)/);
+  assert.match(settingsSource, /closeLabel="Close settings"/);
+  assert.match(stylesSource, /\.kova-settings-sidebar\.mobile-hidden/);
+  assert.match(stylesSource, /\.kova-settings-content\.mobile-hidden/);
+});
+
+test("settings navigation is centralized and routes every rendered category", () => {
+  for (const category of [
+    "General",
+    "Personalization",
+    "Memory",
+    "Billing",
+    "Usage",
+    "Email",
+    "Appearance",
+    "Notifications",
+    "Keyboard shortcuts",
+    "Location",
+    "Parental controls",
+    "Safety & security",
+    "Data control",
+    "Storage",
+    "Apps",
+    "Family Center",
+    "Report an issue",
+    "Help center",
+    "About",
+    "Log out",
+  ])
+    assert.ok(settingsSource.includes(`label: "${category}"`), category);
+  assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
+  assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
+  assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
+  assert.match(settingsSource, /onValueChange=\{selectTab\}/);
+});
+
+test("mobile settings drill-in moves focus with the visible panel", () => {
+  assert.match(settingsSource, /pendingMobileFocusRef\.current = "content"/);
+  assert.match(settingsSource, /pendingMobileFocusRef\.current = "navigation"/);
+  assert.match(settingsSource, /setMobileFocusRequest\(\(request\) => request \+ 1\)/);
+  assert.match(settingsSource, /\[mobileFocusRequest, mobileHome, tab\]/);
+  assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\)/);
+  assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
+});
+
+test("usage and billing preserve real data states without invented allowances", () => {
+  assert.match(settingsSource, /getMyDailyUsage\(\)/);
+  assert.match(settingsSource, /getSubscriptionSummary/);
+  assert.match(settingsSource, /usage\.chats/);
+  assert.match(settingsSource, /usage\.images/);
+  assert.match(settingsSource, /usage\.uploads/);
+  assert.match(settingsSource, /does not currently[\s\S]*account allowance total/);
+  assert.match(settingsSource, /Loading usage/);
+  assert.match(settingsSource, /Usage data isn't available right now/);
+  assert.doesNotMatch(settingsSource, /52%/);
 });
 
 test("authenticated Settings fixture follows the tested deployment's Supabase project", () => {
@@ -96,6 +144,24 @@ test("theme changes cannot interpolate the Settings surface colors", () => {
     "Settings theme colors must switch atomically instead of interpolating",
   );
   assert.match(settingsSource, /kova-settings-surface[^"]*bg-\[var\(--surface-modal\)\]/);
+});
+
+test("workspace sizing is authenticated-only and mobile safe areas are applied once", () => {
+  assert.match(
+    stylesSource,
+    /\.kova-settings-dialog\.is-authenticated\s*\{[\s\S]*?width: min\(92vw, 1280px\)/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 767px\)[\s\S]*?\.kova-settings-dialog\s*\{[\s\S]*?width: 100vw !important;[\s\S]*?height: 100dvh !important;/,
+  );
+  const finalMobileRules = stylesSource.slice(
+    stylesSource.lastIndexOf("@media (max-width: 767px)"),
+  );
+  assert.doesNotMatch(
+    finalMobileRules,
+    /\.kova-settings-(?:sidebar|content-header|content > \[role="tabpanel"\])[^}]*var\(--safe-(?:top|bottom)\)/s,
+  );
 });
 
 test("Settings polish retains the billing portal safety gates", () => {

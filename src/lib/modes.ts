@@ -1,13 +1,10 @@
-export type ModeId =
-  | "instant"
-  | "medium"
-  | "thinking"
-  | "high"
-  | "extra_high"
-  | "pro"
-  | "kova_5_5"
-  | "kova_5_4"
-  | "kova_o3";
+import {
+  MODE_IDS_BY_TIER,
+  isModeAllowedForTier,
+  studyModeForTier,
+} from "@/lib/mode-entitlements.mjs";
+
+export type ModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "max" | "ultra";
 
 export type Tier = "free" | "plus" | "pro";
 
@@ -86,7 +83,7 @@ Mode: Instant. Optimize aggressively for speed and brevity.
     id: "medium",
     label: "Medium",
     description: "Balanced intelligence. The default KovaGPT experience.",
-    tier: "free",
+    tier: "plus",
     systemPrompt: BASE_SYSTEM,
   },
   {
@@ -113,39 +110,26 @@ Mode: Thinking. Think carefully and thoroughly before answering.
   {
     id: "extra_high",
     label: "Extra high",
-    description: "Maximum-depth reasoning before Pro mode.",
+    description: "Maximum-depth reasoning for complex work.",
     tier: "pro",
     reasoning: "high",
     systemPrompt: `${BASE_SYSTEM}\n\nMode: Extra high. Explore alternatives, verify details, and use all relevant conversation context before delivering the strongest practical result.`,
   },
   {
-    id: "pro",
-    label: "Pro",
+    id: "max",
+    label: "Max",
     description: "Maximum reasoning, context, and completeness.",
     tier: "pro",
     reasoning: "high",
-    systemPrompt: `${BASE_SYSTEM}\n\nMode: Pro. Use maximum available context and reasoning. Anticipate useful follow-through, check the result, and produce a polished, comprehensive answer.`,
+    systemPrompt: `${BASE_SYSTEM}\n\nMode: Max. Use maximum available context and reasoning. Anticipate useful follow-through, check the result, and produce a polished, comprehensive answer.`,
   },
   {
-    id: "kova_5_5",
-    label: "Kova 5.5",
-    description: "Previous generation Kova. Balanced and dependable.",
-    tier: "free",
-    systemPrompt: BASE_SYSTEM,
-  },
-  {
-    id: "kova_5_4",
-    label: "Kova 5.4",
-    description: "Older generation Kova kept for consistency with past work.",
-    tier: "free",
-    systemPrompt: BASE_SYSTEM,
-  },
-  {
-    id: "kova_o3",
-    label: "Kova o3",
-    description: "The oldest available Kova generation.",
-    tier: "free",
-    systemPrompt: BASE_SYSTEM,
+    id: "ultra",
+    label: "Ultra",
+    description: "The most exhaustive reasoning for the hardest work.",
+    tier: "pro",
+    reasoning: "high",
+    systemPrompt: `${BASE_SYSTEM}\n\nMode: Ultra. Apply the deepest available reasoning, verify every important assumption, and deliver an exhaustive, polished result.`,
   },
 ];
 
@@ -157,12 +141,7 @@ export type VersionGroup = {
 
 /** Version families shown in the model picker. 5.6 is current and multi mode. */
 export function versionGroupsForTier(tier: Tier): VersionGroup[] {
-  return [
-    { id: "5.6", label: "Kova 5.6", modes: modesForTier(tier) },
-    { id: "5.5", label: "Kova 5.5", modes: [getMode("kova_5_5")] },
-    { id: "5.4", label: "Kova 5.4", modes: [getMode("kova_5_4")] },
-    { id: "o3", label: "Kova o3", modes: [getMode("kova_o3")] },
-  ];
+  return [{ id: "5.6", label: "Kova 5.6", modes: modesForTier(tier) }];
 }
 
 // Legacy IDs from older localStorage payloads map safely to the new modes.
@@ -173,23 +152,24 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
   creative: "thinking",
   precise: "thinking",
   code: "thinking",
-  study: "medium",
+  study: "thinking",
   history: "medium",
   reason: "thinking",
   research: "thinking",
   writer: "thinking",
   tutor: "thinking",
+  pro: "max",
+  kova_5_5: "medium",
+  kova_5_4: "medium",
+  kova_o3: "medium",
 };
 
 /** Exact model menus promised by each plan. Pro intentionally replaces Thinking with deeper tiers. */
 export function modesForTier(tier: Tier): Mode[] {
-  const ids: Record<Tier, ModeId[]> = {
-    free: ["instant", "medium", "thinking"],
-    plus: ["instant", "medium", "thinking", "high"],
-    pro: ["instant", "medium", "high", "extra_high", "pro"],
-  };
-  return ids[tier].map((id) => MODES.find((mode) => mode.id === id)!);
+  return MODE_IDS_BY_TIER[tier].map((id) => MODES.find((mode) => mode.id === id)!);
 }
+
+export { isModeAllowedForTier, studyModeForTier };
 
 export function getMode(id: string | null | undefined): Mode {
   if (!id) return MODES[0];

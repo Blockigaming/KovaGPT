@@ -42,27 +42,22 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
   assert.match(
     sidebar,
     /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
   );
 });
-
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-label="More destinations"/);
-  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
+  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
   assert.ok(
-    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
+    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
   );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
-  );
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
+  assert.match(sidebar, /title="Health is coming soon"/);
+  assert.match(sidebar, /title="Finances is coming soon"/);
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
@@ -163,6 +158,13 @@ test("sending snapshots history and serializes automatic retries", () => {
   assert.match(route, /const retryHistory = active\.messages\.slice\(0, -2\);/);
   assert.match(route, /active\.id,\s+retryHistory,/);
   assert.doesNotMatch(route, /const attemptLabel|_Reconnecting…/);
+});
+
+test("web-backed answers keep exact clickable citations", () => {
+  assert.doesNotMatch(chatMessage, /replace\(\/\\\[\\d\+\\\]\/g/);
+  assert.match(searchServer, /Cite factual claims with Markdown links/);
+  assert.match(searchServer, /Do not invent or alter URLs/);
+  assert.match(modes, /source-name Markdown links using the exact supplied URLs/);
 });
 
 test("the neutral shell has one theme layer and accessible collapsed navigation", () => {

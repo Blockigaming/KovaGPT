@@ -64,7 +64,7 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     rollout,
-    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, and `20260913153000` in timestamp order/u,
+    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, `20260913153000`, and\s*`20260913210000` in timestamp order/u,
   );
 });
 
@@ -110,9 +110,10 @@ test("plan cards expose a coherent hierarchy and aligned, 44px actions", async (
   assert.match(pricing, /id="pricing-title"/);
   assert.match(pricing, /aria-label="KovaGPT plans"/);
   assert.match(pricing, /data-pricing-plan=\{name\.toLowerCase\(\)\}/);
-  assert.match(pricing, /<article[\s\S]*?<h2[\s\S]*?<ul[\s\S]*?<button/);
+  assert.match(pricing, /<article[\s\S]*?<h2[\s\S]*?<button[\s\S]*?<ul/);
+  assert.match(pricing, /row-span-7 grid h-full grid-rows-subgrid/);
   assert.match(pricing, /type="button"/);
-  assert.match(pricing, /mt-auto inline-flex min-h-11 w-full/);
+  assert.match(pricing, /inline-flex h-11 w-full/);
   assert.match(pricing, /shadow-lg shadow-foreground\/10/);
   assert.doesNotMatch(pricing, /hsl\(var\(--foreground\)/);
 });

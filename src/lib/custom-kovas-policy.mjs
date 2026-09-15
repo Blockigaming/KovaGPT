@@ -13,11 +13,17 @@ export const KOVA_MODES = Object.freeze([
   "thinking",
   "high",
   "extra_high",
-  "pro",
-  "kova_5_5",
-  "kova_5_4",
-  "kova_o3",
+  "max",
+  "ultra",
 ]);
+const LEGACY_KOVA_MODES = Object.freeze({
+  pro: "max",
+  // These modes were available to Free accounts. Instant is the only current
+  // mode shared by every plan, so it preserves access when an account changes.
+  kova_5_5: "instant",
+  kova_5_4: "instant",
+  kova_o3: "instant",
+});
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
 export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -64,13 +70,14 @@ export function normalizeKovaConfig(value) {
     "knowledge",
     "allowFork",
   ]);
+  const mode = LEGACY_KOVA_MODES[value.mode] ?? value.mode ?? "instant";
   const result = {
     name: text(value.name, 1, 120).trim(),
     icon: text(value.icon ?? "✦", 1, 16),
     description: text(value.description ?? "", 0, 500),
     instructions: text(value.instructions, 1, 12000),
     starters: [],
-    mode: value.mode ?? "medium",
+    mode,
     tools: choices(value.tools ?? [], KOVA_TOOLS),
     apps: choices(value.apps ?? [], KOVA_APPS),
     knowledge: [],
