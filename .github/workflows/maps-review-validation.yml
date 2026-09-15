@@ -1,0 +1,93 @@
+name: Maps Repair Validation
+
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/maps-review-validation.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable repair
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 6980bc26d1c756ff55821115614daf857e344ff9
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only the repair and preserve exact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation/files/src/components validation/files/tests/unit
+          node --version > validation/versions.txt
+          npm --version >> validation/versions.txt
+          node -p 'JSON.stringify({prettier:require("prettier/package.json").version,typescript:require("typescript/package.json").version})' >> validation/versions.txt
+          git rev-parse HEAD > validation/base.txt
+          sha256sum package-lock.json > validation/lock.sha256
+          ./node_modules/.bin/prettier --write src/components/KovaMaps.tsx tests/unit/maps-component-runtime.test.mjs tests/unit/maps-experience.test.mjs
+          git diff --binary > validation/formatted.patch
+          cp src/components/KovaMaps.tsx validation/files/src/components/
+          cp tests/unit/maps-component-runtime.test.mjs tests/unit/maps-experience.test.mjs validation/files/tests/unit/
+          git add src/components/KovaMaps.tsx tests/unit/maps-component-runtime.test.mjs tests/unit/maps-experience.test.mjs
+          git diff --cached --check
+          git write-tree > validation/formatted-tree.txt
+          tar -czf validation/format-tools.tar.gz -C node_modules prettier typescript
+      - name: Focused regression tests
+        id: focused
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test tests/unit/maps-component-runtime.test.mjs tests/unit/maps-experience.test.mjs tests/unit/maps-search-route-runtime.test.mjs tests/unit/maps-release-gate-source.test.mjs 2>&1 | tee validation/focused.log
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee validation/lint.log
+      - name: Typecheck
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee validation/typecheck.log
+      - name: Production build without deployment
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee validation/build.log
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: maps-repair-validation-6980bc26
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Require every validation step to pass
+        if: always()
+        env:
+          FOCUSED: ${{ steps.focused.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+        shell: bash
+        run: |
+          test "$FOCUSED" = success
+          test "$LINT" = success
+          test "$TYPECHECK" = success
+          test "$BUILD" = success
