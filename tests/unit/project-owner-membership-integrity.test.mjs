@@ -82,7 +82,7 @@ test("project owner membership cannot be removed, demoted, or impersonated", asy
   }
 });
 
-test("owner repair skips projects fenced for pending deletion", async () => {
+test("owner repair temporarily bypasses the fence for pending-deletion drift", async () => {
   const owner = "11111111-1111-4111-8111-111111111111";
   const member = "22222222-2222-4222-8222-222222222222";
   const activeProject = "33333333-3333-4333-8333-333333333333";
@@ -108,7 +108,7 @@ test("owner repair skips projects fenced for pending deletion", async () => {
         ('${deletingProject}', '${owner}', now());
       INSERT INTO public.project_members(project_id, user_id, role) VALUES
         ('${activeProject}', '${owner}', 'viewer'),
-        ('${deletingProject}', '${owner}', 'owner'),
+        ('${deletingProject}', '${owner}', 'viewer'),
         ('${deletingProject}', '${member}', 'owner');
 
       CREATE TRIGGER project_members_deletion_write_fence
@@ -126,7 +126,7 @@ test("owner repair skips projects fenced for pending deletion", async () => {
     assert.deepEqual(memberships.rows, [
       { project_id: activeProject, user_id: owner, role: "owner" },
       { project_id: deletingProject, user_id: owner, role: "owner" },
-      { project_id: deletingProject, user_id: member, role: "owner" },
+      { project_id: deletingProject, user_id: member, role: "editor" },
     ]);
   } finally {
     await db.close();

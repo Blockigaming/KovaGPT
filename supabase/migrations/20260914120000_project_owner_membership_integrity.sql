@@ -66,20 +66,43 @@ before insert or update or delete on public.project_members
 for each row execute function public.enforce_project_owner_membership();
 
 -- Repair historical drift before relying on the trigger for future writes.
--- Projects whose deletion has already started are intentionally left alone:
--- their child rows are protected by the deletion write fence and will be
--- removed by the metadata finalizer. Attempting an upsert for those projects
--- would fire that fence even when the owner membership is already correct.
+-- The deletion fence is bypassed only inside this migration so pending owners
+-- retain visibility and retry authority; the transaction restores the fence
+-- before application writes can resume.
+do $$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_trigger
+    where tgrelid = 'public.project_members'::regclass
+      and tgname = 'project_members_deletion_write_fence'
+  ) then
+    alter table public.project_members disable trigger project_members_deletion_write_fence;
+  end if;
+end;
+$$;
+
 insert into public.project_members(project_id, user_id, role)
 select p.id, p.owner_id, 'owner'::public.project_role
 from public.projects p
-where p.deletion_requested_at is null
 on conflict (project_id, user_id) do update set role = excluded.role;
 
 update public.project_members pm
 set role = 'editor'::public.project_role
 from public.projects p
 where p.id = pm.project_id
-  and p.deletion_requested_at is null
   and pm.user_id <> p.owner_id
   and pm.role = 'owner'::public.project_role;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_trigger
+    where tgrelid = 'public.project_members'::regclass
+      and tgname = 'project_members_deletion_write_fence'
+  ) then
+    alter table public.project_members enable trigger project_members_deletion_write_fence;
+  end if;
+end;
+$$;
