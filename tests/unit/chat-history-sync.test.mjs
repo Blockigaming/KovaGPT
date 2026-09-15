@@ -11,6 +11,7 @@ import {
   applyChatHistoryPage,
   resolveChatHistoryConflict,
   restoreChatHistoryState,
+  chatHistoryHash,
 } from "../../src/lib/chat-history-state.mjs";
 import { createChatHistoryController } from "../../src/lib/chat-history-controller.mjs";
 import { normalizeChatHistory } from "../../src/lib/chat-history-policy.mjs";
@@ -97,6 +98,49 @@ test("durable history translates legacy mode identifiers before validation", () 
   assert.equal(normalizeChatHistory({ ...chat(), mode: "pro" }, OWNER).mode, "max");
   assert.equal(normalizeChatHistory({ ...chat(), mode: "kova_5_5" }, OWNER).mode, "medium");
   assert.throws(() => normalizeChatHistory({ ...chat(), mode: "unknown" }, OWNER), /invalid/);
+});
+test("durable reload verifies legacy hashes before upgrading canonical modes", async () => {
+  const legacy = { ...chat(), mode: "pro" };
+  const legacyHash = await chatHistoryHash(legacy);
+  const stored = {
+    ...createChatHistoryState(OWNER),
+    epoch: EPOCH,
+    complete: true,
+    records: {
+      chat: {
+        id: "chat",
+        revision: 0,
+        serverHash: null,
+        local: legacy,
+        archived: false,
+        localHash: legacyHash,
+        dirty: true,
+        migration: false,
+        request: {
+          mutationId: crypto.randomUUID(),
+          epoch: EPOCH,
+          id: "chat",
+          expectedRevision: 0,
+          payload: legacy,
+          archived: false,
+          hash: legacyHash,
+        },
+        conflict: null,
+      },
+    },
+  };
+  const restored = await restoreChatHistoryState(stored, OWNER);
+  assert.equal(restored.records.chat.local.mode, "max");
+  assert.equal(restored.records.chat.localHash, await chatHistoryHash(restored.records.chat.local));
+  assert.equal(restored.records.chat.request.payload.mode, "max");
+  assert.equal(
+    restored.records.chat.request.hash,
+    await chatHistoryHash(restored.records.chat.request.payload),
+  );
+
+  const tampered = structuredClone(stored);
+  tampered.records.chat.local.messages[0].content = "changed after hashing";
+  await assert.rejects(restoreChatHistoryState(tampered, OWNER), /unavailable/);
 });
 test("durable history preserves only the exact workflow skill selection tuple", () => {
   const skill = {
@@ -367,7 +411,7 @@ test("durable reload rejects foreign owner, altered body hashes and Temporary sn
   await assert.rejects(restoreChatHistoryState(changed, OWNER), /unavailable/);
   const temporary = structuredClone(state);
   temporary.records.chat.local.temporary = true;
-  await assert.rejects(restoreChatHistoryState(temporary, OWNER), /invalid/);
+  await assert.rejects(restoreChatHistoryState(temporary, OWNER), /invalid|unavailable/);
 });
 function controllerHarness(transport, commitDevice = async () => {}) {
   const abort = new AbortController(),

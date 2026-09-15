@@ -68,10 +68,13 @@ export async function restoreChatHistoryState(stored, ownerId) {
       (row.serverHash !== null && !/^[a-f0-9]{64}$/u.test(row.serverHash))
     )
       throw new Error("chat_history_device_unavailable");
-    const local = row.local === null ? null : normalizeChatHistory(row.local, ownerId);
+    const storedLocal = row.local;
+    const storedLocalHash = await chatHistoryHash(storedLocal, row.archived);
+    if (storedLocalHash !== row.localHash) throw new Error("chat_history_device_unavailable");
+    const local = storedLocal === null ? null : normalizeChatHistory(storedLocal, ownerId);
     if (local && local.id !== id) throw new Error("chat_history_device_unavailable");
     const localHash = await chatHistoryHash(local, row.archived);
-    if (localHash !== row.localHash) throw new Error("chat_history_device_unavailable");
+    const localMigrated = localHash !== storedLocalHash;
     let request = null,
       conflict = null;
     if (row.request) {
@@ -85,13 +88,14 @@ export async function restoreChatHistoryState(stored, ownerId) {
         typeof request.archived !== "boolean"
       )
         throw new Error("chat_history_device_unavailable");
-      request.payload =
-        request.payload === null ? null : normalizeChatHistory(request.payload, ownerId);
-      if (
-        (request.payload && request.payload.id !== id) ||
-        request.hash !== (await chatHistoryHash(request.payload, request.archived))
-      )
+      const storedRequestPayload = request.payload;
+      if (request.hash !== (await chatHistoryHash(storedRequestPayload, request.archived)))
         throw new Error("chat_history_device_unavailable");
+      request.payload =
+        storedRequestPayload === null ? null : normalizeChatHistory(storedRequestPayload, ownerId);
+      if (request.payload && request.payload.id !== id)
+        throw new Error("chat_history_device_unavailable");
+      request.hash = await chatHistoryHash(request.payload, request.archived);
     }
     if (row.conflict) {
       conflict = {
@@ -106,7 +110,14 @@ export async function restoreChatHistoryState(stored, ownerId) {
       )
         throw new Error("chat_history_device_unavailable");
     }
-    records[id] = { ...row, local, request, conflict };
+    records[id] = {
+      ...row,
+      local,
+      localHash,
+      dirty: row.dirty || localMigrated,
+      request,
+      conflict,
+    };
   }
   return { ...stored, complete: false, records };
 }

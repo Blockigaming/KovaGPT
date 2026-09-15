@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 150,
-  "latest": "20260913153000_quarantine_ambiguous_legacy_pro_price.sql",
+  "count": 151,
+  "latest": "20260915000000_ai_usage_max_ultra_modes.sql",
   "migrations": [
     {
       "order": 1,
@@ -3246,6 +3246,20 @@
       "sha256": "ecc84a2cc1cc6990b390e6ea89387c20afb34f8c0cabfe7821d1527c2f51b437",
       "tables": [],
       "functions": ["normalize_legacy_live_subscription_price"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 151,
+      "filename": "20260915000000_ai_usage_max_ultra_modes.sql",
+      "timestamp": "20260915000000",
+      "sha256": "85c11aa1936656f94176cc5138567371eca0ee7178f646fe67e7f1b219cbaede",
+      "tables": [],
+      "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
