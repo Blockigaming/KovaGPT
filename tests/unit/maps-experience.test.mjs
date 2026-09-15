@@ -42,6 +42,9 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
     /authFetch\(\`\/api\/maps\/search[\s\S]*?AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
   );
   assert.match(source, /Map context \(untrusted provider data;/);
+  assert.match(source, /setViewSettling\(true\)[\s\S]{0,500}(?:fitBounds|flyTo)/);
+  assert.match(source, /map\.on\("moveend", updateView\)/);
+  assert.match(source, /disabled=\{!networkAllowed \|\| viewSettling \|\| !view\}/);
   assert.doesNotMatch(source, /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
