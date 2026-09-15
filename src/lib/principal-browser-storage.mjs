@@ -16,6 +16,7 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-memory-write-block-v1",
   "kova-write-draft",
   "kova-write-title",
+  "kova.write.versions.v1",
   "kova-prompt-studio-draft",
   "kova-library-favorites",
   "kovagpt-saved-message-ids",

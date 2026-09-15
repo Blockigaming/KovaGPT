@@ -37,9 +37,15 @@ function storage(entries) {
 test("browser estimate reads only the resolved principal and explicit device preferences", () => {
   const a = principal.listPrincipalBrowserStorageKeys("account-a", { purgeUnscopedPrivate: false });
   const b = principal.listPrincipalBrowserStorageKeys("account-b", { purgeUnscopedPrivate: false });
+  const writeVersionsKey = principal.principalScopedStorageKey(
+    "kova.write.versions.v1",
+    "account-a",
+  );
+  assert.ok(a.localExact.includes(writeVersionsKey));
   const entries = [
     [a.localExact[0], "mine"],
     [`${a.localPrefixes[0]}item`, "mine-too"],
+    [writeVersionsKey, '[{"title":"Saved version","text":"Private draft"}]'],
     [principal.DEVICE_PREFERENCE_KEYS[0], "dark"],
   ];
   const area = storage([
