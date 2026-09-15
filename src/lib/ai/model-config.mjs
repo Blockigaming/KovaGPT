@@ -62,9 +62,10 @@ export const MODE_MAX_OUTPUT_TOKENS = Object.freeze({
   thinking: 3000,
   high: 4000,
   extra_high: 6000,
-  // Premium-mode ceilings leave input-token headroom beneath the default $0.10 request budget.
-  max: 3500,
-  ultra: 4000,
+  // Tool-enabled chat reserves as many as nine provider calls. These ceilings
+  // keep even that worst-case zero-input reservation below the default $0.10 budget.
+  max: 350,
+  ultra: 400,
   kova_5_5: 1600,
   kova_5_4: 1200,
   kova_o3: 1200,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 151,
+  "migrationCount": 152,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -501,6 +501,7 @@
     "move_to_dlq",
     "move_to_dlq",
     "mutate_chat_history",
+    "mutate_custom_kova",
     "mutate_custom_kova",
     "mutate_kova_site",
     "mutate_kova_site",
@@ -2646,5 +2647,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "08f2726d0ae80e1e8c029ac6b85ad667b6208d7705c2140368e3be85e993f854"
+  "sha256": "6e4df927363372c4ec18a7e7c80b7caea346d446933ba2e35d4085d0604b008f"
 }

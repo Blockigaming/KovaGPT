@@ -18,10 +18,11 @@ export const KOVA_MODES = Object.freeze([
 ]);
 const LEGACY_KOVA_MODES = Object.freeze({
   pro: "max",
-  // Retired modes were available to Free accounts, so preserve that entitlement.
-  kova_5_5: "thinking",
-  kova_5_4: "thinking",
-  kova_o3: "thinking",
+  // Instant is the only current mode available on every plan, so legacy Kovas
+  // remain runnable after both upgrades and downgrades.
+  kova_5_5: "instant",
+  kova_5_4: "instant",
+  kova_o3: "instant",
 });
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
 export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);
