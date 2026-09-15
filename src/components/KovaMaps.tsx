@@ -91,11 +91,57 @@ export function KovaMaps() {
   const [searching, setSearching] = useState(false);
   const [satellite, setSatellite] = useState(false);
   const [threeD, setThreeD] = useState(true);
+  const [networkAccess, setNetworkAccess] = useState<{
+    ownerId: string;
+    allowed: boolean;
+  } | null>(null);
   const navigate = useNavigate();
-  const { isLoaded, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const networkAllowed =
+    isLoaded &&
+    isSignedIn &&
+    Boolean(user?.id) &&
+    networkAccess?.ownerId === user?.id &&
+    networkAccess?.allowed === true;
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!isLoaded) return;
+    const ownerId = user?.id;
+    setNetworkAccess(null);
+    setLoading(true);
+    if (!isSignedIn || !ownerId) {
+      setError("Sign in to use Maps.");
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    void fetch("/api/security/lockdown", { signal: controller.signal })
+      .then(async (response) => {
+        const payload = (await response.json()) as { enabled?: boolean };
+        if (!response.ok || typeof payload.enabled !== "boolean") throw new Error("unavailable");
+        if (payload.enabled) {
+          setError("Maps is unavailable while Lockdown Mode is on.");
+          setNetworkAccess({ ownerId, allowed: false });
+          setLoading(false);
+          return;
+        }
+        setError(null);
+        setNetworkAccess({ ownerId, allowed: true });
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.error("[maps] Lockdown status check failed", {
+          name: error instanceof Error ? error.name : "UnknownError",
+        });
+        setError("Maps access could not be verified. Refresh and try again.");
+        setNetworkAccess({ ownerId, allowed: false });
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [isLoaded, isSignedIn, user?.id]);
+
+  useEffect(() => {
+    if (!networkAllowed || !containerRef.current || mapRef.current) return;
     let disposed = false;
     void import("maplibre-gl")
       .then(({ default: maplibregl }) => {
@@ -154,7 +200,7 @@ export function KovaMaps() {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [networkAllowed]);
 
   const selectPlace = async (place: Place) => {
     const map = mapRef.current;
@@ -197,7 +243,10 @@ export function KovaMaps() {
     setSearching(true);
     setError(null);
     try {
-      const response = await fetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`);
+      if (!networkAllowed || !user?.id) throw new Error("Maps access is unavailable.");
+      const response = await fetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
+        headers: { "X-Kova-Expected-User": user.id },
+      });
       const payload = (await response.json()) as { results?: Place[]; error?: string };
       if (!response.ok) throw new Error(payload.error);
       const next = payload.results ?? [];
@@ -273,11 +322,16 @@ export function KovaMaps() {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         setError(null);
-        mapRef.current?.flyTo({
-          center: [coords.longitude, coords.latitude],
-          zoom: 15,
-          pitch: threeD ? 48 : 0,
-          duration: 1200,
+        setQuery("");
+        setResults([]);
+        void selectPlace({
+          id: `current:${coords.latitude},${coords.longitude}`,
+          name: "Current location",
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          type: "current_location",
+          address: {},
+          bounds: null,
         });
       },
       () =>
@@ -334,7 +388,7 @@ export function KovaMaps() {
             />
             <button
               type="submit"
-              disabled={searching}
+              disabled={searching || !networkAllowed}
               aria-label="Search maps"
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
             >

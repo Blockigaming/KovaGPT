@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 150,
+  "migrationCount": 151,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -268,6 +268,7 @@
     "web_push_subscription_export_rows",
     "workflow_skill_export_rows",
     "workflow_skill_mutation_export_rows",
+    "workspace_search_sources",
     "workspace_search_sources"
   ],
   "functions": [
@@ -2050,6 +2051,7 @@
     "select on public.workflow_skill_export_rows to service_role",
     "select on public.workflow_skill_mutation_export_rows to service_role",
     "select on public.workspace_search_index to authenticated",
+    "select on public.workspace_search_sources to authenticated, service_role",
     "select on public.workspace_search_sources to authenticated,service_role",
     "select on table public.account_export_jobs to authenticated",
     "select on table public.connected_account_audit_log to authenticated",
@@ -2593,6 +2595,7 @@
     "all on public.workflow_skill_versions from public, anon, authenticated",
     "all on public.workflow_skills from public, anon, authenticated",
     "all on public.workspace_search_index from public,anon,authenticated",
+    "all on public.workspace_search_sources from public, anon",
     "all on public.workspace_search_sources from public,anon",
     "all on public.writing_documents, public.writing_document_versions from anon",
     "all on schema kova_private from public, anon",
@@ -2646,5 +2649,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "7124154659ed0e166ad91a239a60ded41b5d375f327e689192465fb44602940b"
+  "sha256": "605077f1bccd3bd796fbfc7ce5561386d24d4894e5f31d9865241602dec42df5"
 }

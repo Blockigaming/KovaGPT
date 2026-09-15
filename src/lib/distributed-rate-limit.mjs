@@ -27,8 +27,8 @@ function assertContract(identity, action, limit, windowSeconds, timeoutMs) {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("limit must be an integer between 1 and 100");
   }
-  if (!Number.isSafeInteger(windowSeconds) || windowSeconds < 10 || windowSeconds > 3600) {
-    throw new TypeError("windowSeconds must be an integer between 10 and 3600");
+  if (!Number.isSafeInteger(windowSeconds) || windowSeconds < 1 || windowSeconds > 3600) {
+    throw new TypeError("windowSeconds must be an integer between 1 and 3600");
   }
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 10 || timeoutMs > 5000) {
     throw new TypeError("timeoutMs must be an integer between 10 and 5000");

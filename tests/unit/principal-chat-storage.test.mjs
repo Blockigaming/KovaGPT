@@ -122,6 +122,26 @@ test("a response stopped before its first token remains durable and retryable", 
   });
 });
 
+test("legacy interrupted research is terminalized when local history loads", () => {
+  const legacy = {
+    ...conversation("legacy-research"),
+    messages: [
+      {
+        id: "assistant",
+        role: "assistant",
+        content: "Partial result",
+        researchProgress: { status: "running", progress: 0.4 },
+        activities: [{ tool: "search", label: "Searching", status: "running" }],
+      },
+    ],
+  };
+  storage.setItem(conversationStorageKey("account-a"), JSON.stringify([legacy]));
+
+  const message = loadConversations("account-a")[0].messages[0];
+  assert.equal("researchProgress" in message, false);
+  assert.equal(message.activities[0].status, "failed");
+});
+
 test("stopping targets the in-flight assistant and clears image progress", () => {
   const messages = [
     { id: "older", role: "assistant", content: "Complete answer" },

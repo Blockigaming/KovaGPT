@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireUser } from "@/lib/api-auth.server";
+import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
 
 const MAX_RESULTS = 6;
-const recentRequests = new Map<string, number>();
 
 function json(value: unknown, status = 200) {
   return Response.json(value, {
@@ -33,18 +36,68 @@ export const Route = createFileRoute("/api/maps/search")({
         if (query.length < 2 || query.length > 160) {
           return json({ error: "Enter a location or place to search." }, 400);
         }
-        const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-        const client = forwarded || request.headers.get("cf-connecting-ip") || "unknown";
-        const now = Date.now();
-        const lastRequest = recentRequests.get(client) ?? 0;
-        if (now - lastRequest < 1_000) {
-          return json({ error: "Please wait a moment before searching again." }, 429);
+        const auth = await requireUser(request);
+        if (auth instanceof Response) return auth;
+        if (request.headers.get("x-kova-expected-user") !== auth.userId) {
+          return json({ error: "Map account changed. Reload and try again." }, 409);
         }
-        recentRequests.set(client, now);
-        if (recentRequests.size > 10_000) {
-          for (const [key, timestamp] of recentRequests) {
-            if (now - timestamp > 60_000) recentRequests.delete(key);
-          }
+        try {
+          await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "live_web");
+        } catch (error) {
+          return (
+            lockdownErrorResponse(error) ??
+            json({ error: "Map access could not be verified. Try again shortly." }, 503)
+          );
+        }
+
+        const clientLimit = await consumeApplicationRateLimit({
+          identity: resolveAnonymousClientKey(request.headers),
+          action: "maps_search_client",
+          limit: 30,
+          windowSeconds: 60,
+        });
+        if (!clientLimit.allowed) {
+          return Response.json(
+            {
+              error:
+                clientLimit.status === "limited"
+                  ? "Please wait a moment before searching again."
+                  : "Map search protection is temporarily unavailable.",
+            },
+            {
+              status: clientLimit.status === "limited" ? 429 : 503,
+              headers: {
+                "Cache-Control": "no-store",
+                "Retry-After": String(clientLimit.retryAfter),
+              },
+            },
+          );
+        }
+
+        // Nominatim's public service permits one request per second for the
+        // entire application, not per user or per server instance.
+        const providerLimit = await consumeApplicationRateLimit({
+          identity: "provider:nominatim:global",
+          action: "maps_nominatim_global",
+          limit: 1,
+          windowSeconds: 1,
+        });
+        if (!providerLimit.allowed) {
+          return Response.json(
+            {
+              error:
+                providerLimit.status === "limited"
+                  ? "Map search is busy. Please wait a moment and try again."
+                  : "Map search protection is temporarily unavailable.",
+            },
+            {
+              status: providerLimit.status === "limited" ? 429 : 503,
+              headers: {
+                "Cache-Control": "no-store",
+                "Retry-After": String(providerLimit.retryAfter),
+              },
+            },
+          );
         }
 
         const providerUrl = new URL("https://nominatim.openstreetmap.org/search");

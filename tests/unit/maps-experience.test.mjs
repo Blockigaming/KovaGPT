@@ -32,6 +32,10 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /Number\.isFinite\(latitude\)/);
   assert.match(route, /Place search is temporarily unavailable/);
   assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
+  assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
+  assert.match(route, /identity: "provider:nominatim:global"/);
+  assert.match(route, /limit: 1,[\s\S]*windowSeconds: 1/);
+  assert.match(route, /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/);
   assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
 });
 
