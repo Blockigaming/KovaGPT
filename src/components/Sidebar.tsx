@@ -448,7 +448,13 @@ export function Sidebar({
               className="kova-header-button hidden lg:flex"
               onClick={() => {
                 onToggle();
-                requestAnimationFrame(() => expandButtonRef.current?.focus());
+                requestAnimationFrame(() => {
+                  if (signedIn) expandButtonRef.current?.focus();
+                  else
+                    document
+                      .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
+                      ?.focus();
+                });
               }}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
