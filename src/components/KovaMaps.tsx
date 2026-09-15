@@ -13,10 +13,7 @@ import {
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { authFetch } from "@/lib/auth-fetch";
-import {
-  safeBrowserStorage,
-  writePrincipalHandoff,
-} from "@/lib/principal-browser-storage.mjs";
+import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 
 const VECTOR_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const SATELLITE_STYLE = {
@@ -52,16 +49,10 @@ type ViewContext = {
 
 function set3dResources(map: MapLibreMap, enabled: boolean) {
   map.setTerrain(
-    enabled && map.getSource("terrain")
-      ? { source: "terrain", exaggeration: 1.15 }
-      : null,
+    enabled && map.getSource("terrain") ? { source: "terrain", exaggeration: 1.15 } : null,
   );
   if (map.getLayer("kova-3d-buildings")) {
-    map.setLayoutProperty(
-      "kova-3d-buildings",
-      "visibility",
-      enabled ? "visible" : "none",
-    );
+    map.setLayoutProperty("kova-3d-buildings", "visibility", enabled ? "visible" : "none");
   }
 }
 
@@ -69,18 +60,14 @@ function addMapEnhancements(map: MapLibreMap, enabled: boolean) {
   if (enabled && !map.getSource("terrain")) {
     map.addSource("terrain", {
       type: "raster-dem",
-      tiles: [
-        "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
-      ],
+      tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
       tileSize: 256,
       encoding: "terrarium",
       maxzoom: 15,
     });
   }
   if (!map.getLayer("kova-3d-buildings") && map.getSource("openmaptiles")) {
-    const labelLayer = map
-      .getStyle()
-      .layers.find((layer) => layer.type === "symbol")?.id;
+    const labelLayer = map.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
     map.addLayer(
       {
         id: "kova-3d-buildings",
@@ -90,12 +77,7 @@ function addMapEnhancements(map: MapLibreMap, enabled: boolean) {
         minzoom: 14,
         paint: {
           "fill-extrusion-color": "#b8c2cc",
-          "fill-extrusion-height": [
-            "coalesce",
-            ["get", "render_height"],
-            ["get", "height"],
-            8,
-          ],
+          "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 8],
           "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
           "fill-extrusion-opacity": 0.72,
         },
@@ -132,11 +114,7 @@ export function KovaMaps() {
   } | null>(null);
   const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
-  activeOwnerRef.current = isLoaded
-    ? isSignedIn
-      ? (user?.id ?? null)
-      : null
-    : undefined;
+  activeOwnerRef.current = isLoaded ? (isSignedIn ? (user?.id ?? null) : null) : undefined;
   const networkAllowed =
     isLoaded &&
     isSignedIn &&
@@ -198,19 +176,12 @@ export function KovaMaps() {
       checkInFlight = true;
       try {
         const response = await authFetch("/api/security/lockdown", {
-          signal: AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(8_000),
-          ]),
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8_000)]),
         });
         const payload = (await response.json()) as { enabled?: boolean };
-        if (
-          generation !== principalGenerationRef.current ||
-          activeOwnerRef.current !== ownerId
-        )
+        if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
           return;
-        if (!response.ok || typeof payload.enabled !== "boolean")
-          throw new Error("unavailable");
+        if (!response.ok || typeof payload.enabled !== "boolean") throw new Error("unavailable");
         if (payload.enabled) {
           blockNetwork("Maps is unavailable while Lockdown Mode is on.");
           return;
@@ -229,18 +200,13 @@ export function KovaMaps() {
         console.error("[maps] Lockdown status check failed", {
           name: error instanceof Error ? error.name : "UnknownError",
         });
-        blockNetwork(
-          "Maps access could not be verified. Refresh and try again.",
-        );
+        blockNetwork("Maps access could not be verified. Refresh and try again.");
       } finally {
         checkInFlight = false;
       }
     };
     void verifyNetworkAccess();
-    const policyInterval = window.setInterval(
-      () => void verifyNetworkAccess(),
-      15_000,
-    );
+    const policyInterval = window.setInterval(() => void verifyNetworkAccess(), 15_000);
     const recheckVisiblePolicy = () => {
       if (document.visibilityState === "visible") void verifyNetworkAccess();
     };
@@ -292,15 +258,10 @@ export function KovaMaps() {
           if (!isCurrentMap()) return;
           setLoading(false);
           if (!searchAttemptedRef.current) {
-            setError(
-              "Map data is taking too long to load. Check your connection and try again.",
-            );
+            setError("Map data is taking too long to load. Check your connection and try again.");
           }
         }, 12_000);
-        map.addControl(
-          new maplibregl.NavigationControl({ visualizePitch: true }),
-          "top-right",
-        );
+        map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
         const updateView = () => {
           if (!isCurrentMap()) return;
@@ -328,14 +289,9 @@ export function KovaMaps() {
         map.on("moveend", updateView);
         map.on("error", (event) => {
           if (!isCurrentMap()) return;
-          console.error(
-            "[maps] map provider error",
-            event.error?.message ?? "unknown",
-          );
+          console.error("[maps] map provider error", event.error?.message ?? "unknown");
           if (!searchAttemptedRef.current) {
-            setError(
-              "Some map data could not load. Check your connection and try again.",
-            );
+            setError("Some map data could not load. Check your connection and try again.");
           }
           setLoading(false);
         });
@@ -423,18 +379,11 @@ export function KovaMaps() {
     const generation = principalGenerationRef.current;
     const ownerId = user?.id;
     try {
-      if (!networkAllowed || !ownerId)
-        throw new Error("Maps access is unavailable.");
-      const response = await authFetch(
-        `/api/maps/search?q=${encodeURIComponent(trimmed)}`,
-        {
-          headers: { "X-Kova-Expected-User": ownerId },
-          signal: AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(8_000),
-          ]),
-        },
-      );
+      if (!networkAllowed || !ownerId) throw new Error("Maps access is unavailable.");
+      const response = await authFetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
+        headers: { "X-Kova-Expected-User": ownerId },
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8_000)]),
+      });
       const payload = (await response.json()) as {
         results?: Place[];
         error?: string;
@@ -452,16 +401,10 @@ export function KovaMaps() {
         markerRef.current?.remove();
         markerRef.current = null;
         setSelected(null);
-        setError(
-          "No matching places were found. Check the spelling or add a city or country.",
-        );
+        setError("No matching places were found. Check the spelling or add a city or country.");
       } else await selectPlace(next[0], generation);
     } catch (caught) {
-      if (
-        controller.signal.aborted ||
-        generation !== principalGenerationRef.current
-      )
-        return;
+      if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
       setError(
         caught instanceof DOMException && caught.name === "TimeoutError"
           ? "Place search timed out. Try again."
@@ -470,8 +413,7 @@ export function KovaMaps() {
             : "Place search is unavailable. Try again.",
       );
     } finally {
-      if (searchControllerRef.current === controller)
-        searchControllerRef.current = null;
+      if (searchControllerRef.current === controller) searchControllerRef.current = null;
       if (generation === principalGenerationRef.current) setSearching(false);
     }
   };
@@ -613,10 +555,7 @@ export function KovaMaps() {
               void search();
             }}
           >
-            <Sparkles
-              className="ml-2 h-5 w-5 shrink-0 text-primary"
-              aria-hidden="true"
-            />
+            <Sparkles className="ml-2 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -662,12 +601,9 @@ export function KovaMaps() {
             <div className="flex gap-3">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div className="min-w-0">
-                <h1 className="line-clamp-2 text-sm font-semibold">
-                  {selected.name}
-                </h1>
+                <h1 className="line-clamp-2 text-sm font-semibold">{selected.name}</h1>
                 <p className="mt-1 text-xs capitalize text-muted-foreground">
-                  {selected.type.replaceAll("_", " ")} ·{" "}
-                  {selected.latitude.toFixed(5)},{" "}
+                  {selected.type.replaceAll("_", " ")} · {selected.latitude.toFixed(5)},{" "}
                   {selected.longitude.toFixed(5)}
                 </p>
                 <button
@@ -712,14 +648,10 @@ export function KovaMaps() {
             onClick={toggleStyle}
             disabled={!networkAllowed}
             aria-pressed={satellite}
-            aria-label={
-              satellite ? "Show street map" : "Show satellite imagery"
-            }
+            aria-label={satellite ? "Show street map" : "Show satellite imagery"}
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
           >
-            <Satellite
-              className={satellite ? "h-4 w-4 text-primary" : "h-4 w-4"}
-            />
+            <Satellite className={satellite ? "h-4 w-4 text-primary" : "h-4 w-4"} />
           </button>
         </div>
       </div>
