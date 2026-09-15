@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function integer(value, name) {
-  if (!Number.isInteger(value) || value < 0) throw new Error(`auth_migration_invalid_${name}`);
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`auth_migration_invalid_${name}`);
   return value;
 }
 
 export function validateAuthMigrationEvidence(value) {
-  if (!value || value.schemaVersion !== 1)
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== 1)
     throw new Error("auth_migration_evidence_schema_invalid");
   const sourceUsers = integer(value.sourceUsers, "source_users");
   const sourceIdentities = integer(value.sourceIdentities, "source_identities");
@@ -27,14 +27,26 @@ export function validateAuthMigrationEvidence(value) {
   if (duplicateProviderSubjects !== 0) {
     throw new Error("auth_migration_duplicate_provider_subjects_present");
   }
-  if (
-    !Array.isArray(value.expectedUserUuids) ||
-    !value.expectedUserUuids.every((id) => UUID.test(id))
-  ) {
+  if (!Array.isArray(value.expectedUserUuids)) {
     throw new Error("auth_migration_expected_uuids_invalid");
   }
   if (value.expectedUserUuids.length !== sourceUsers) {
     throw new Error("auth_migration_expected_uuid_count_mismatch");
+  }
+  const expectedUuids = new Set();
+  for (const id of value.expectedUserUuids) {
+    // Iteration also visits sparse entries; regex alone would coerce arrays/objects.
+    if (typeof id !== "string" || !UUID.test(id)) {
+      throw new Error("auth_migration_expected_uuids_invalid");
+    }
+    const canonicalId = id.toLowerCase();
+    if (expectedUuids.has(canonicalId)) {
+      throw new Error("auth_migration_expected_uuids_duplicate");
+    }
+    expectedUuids.add(canonicalId);
+  }
+  if (sourceUsers === 0 && sourceIdentities !== 0) {
+    throw new Error("auth_migration_source_counts_inconsistent");
   }
 
   const databaseState = `${destinationUsersBefore}|${destinationIdentitiesBefore}`;
