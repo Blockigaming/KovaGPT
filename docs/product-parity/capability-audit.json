@@ -84,20 +84,15 @@
     },
     {
       "id": "05",
-      "area": "Deep Research",
+      "area": "Deep Research (retired)",
       "sourceStatus": "partial_source",
-      "implementedScope": "Source preferences, research plan, bounded live search/synthesis, progress/cancel, persisted evidence/report and exports with current authorization.",
+      "implementedScope": "The dedicated product surface and execution path are removed while historical rows remain available to account export and deletion.",
       "sourceEvidence": [
-        "src/lib/ai/deep-research.server.ts",
-        "src/lib/research-persistence-authorization.server.mjs",
-        "src/routes/research-planner.tsx"
+        "src/lib/chat-history-policy.mjs",
+        "supabase/migrations/20260915003000_retire_deep_research_workspace_search.sql"
       ],
-      "testEvidence": [
-        "tests/unit/deep-research.test.mjs",
-        "tests/unit/deep-research-persistence.test.mjs",
-        "tests/unit/research-persistence-authorization.test.mjs"
-      ],
-      "boundary": "Provider-native paused/resumable runs and live redirection are not exposed by the current configured adapter. A provider contract is needed before promising those semantics; existing partial results are not a resumed provider run.",
+      "testEvidence": ["tests/unit/maps-experience.test.mjs"],
+      "boundary": "Ordinary web search remains supported. Dedicated Deep Research execution, navigation, progress, and report-management surfaces are intentionally absent.",
       "localStatus": "verified_for_implemented_scope_at_reviewed_candidate",
       "hostedStatus": "verified_for_reviewed_ancestor_scope",
       "stagingStatus": "not_exercised",

@@ -7,7 +7,6 @@ const routes = {
   project: await readFile("src/routes/projects.$projectId.tsx", "utf8"),
   files: await readFile("src/routes/files.tsx", "utf8"),
   memory: await readFile("src/routes/memory.tsx", "utf8"),
-  research: await readFile("src/routes/research-planner.tsx", "utf8"),
 };
 
 test("workspace routes provide the shell skip-link target in every render branch", () => {
@@ -36,14 +35,14 @@ test("project and collection loaders reject stale principal responses and expose
 });
 
 test("workspace route error panels never expose raw backend messages", () => {
-  for (const routeName of ["files", "memory", "projects", "project", "research"]) {
+  for (const routeName of ["files", "memory", "projects", "project"]) {
     const source = routes[routeName];
     assert.doesNotMatch(source, /description=\{loadError\}/, routeName);
     assert.doesNotMatch(source, />\s*\{(?:error|loadError)(?:\s*\?\?[^}]*)?\}\s*</, routeName);
   }
 });
 
-test("file sizes, memory identities, and research steps preserve their edge-case invariants", () => {
+test("file sizes and memory identities preserve their edge-case invariants", () => {
   assert.match(routes.files, /if \(n === 0\) return "0 B"/);
   assert.match(routes.files, /if \(n === null\) return "Size unavailable"/);
 
@@ -51,27 +50,13 @@ test("file sizes, memory identities, and research steps preserve their edge-case
   assert.match(routes.memory, /memoryRecordKey\(value\) === memoryRecordKey\(item\)/);
   assert.match(routes.memory, /memoryRecordKey\(duplicate\) === memoryRecordKey\(item\)/);
   assert.match(routes.memory, /editing === memoryRecordKey\(item\)/);
-
-  assert.match(
-    routes.research,
-    /steps\.length > 0 && steps\.every\(\(step\) => step\.trim\(\)\.length > 0\)/,
-  );
-  assert.match(routes.research, /disabled=\{steps\.length === 1\}/);
-  assert.match(routes.research, /!question\.trim\(\) \|\| !hasValidSteps/);
 });
 
 test("signed-out workspace states offer real authentication and hide data-only controls", () => {
-  for (const source of [
-    routes.projects,
-    routes.project,
-    routes.files,
-    routes.memory,
-    routes.research,
-  ]) {
+  for (const source of [routes.projects, routes.project, routes.files, routes.memory]) {
     assert.match(source, /<SignInButton mode="modal">/);
   }
 
   assert.match(routes.files, /!isSignedIn \? \(/);
   assert.match(routes.memory, /isSignedIn && !isLoading && !error/);
-  assert.match(routes.research, /Sign in to plan research/);
 });

@@ -92,7 +92,7 @@ export function KovaMaps() {
   const [satellite, setSatellite] = useState(false);
   const [threeD, setThreeD] = useState(true);
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { isLoaded, user } = useUser();
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -217,6 +217,7 @@ export function KovaMaps() {
   };
 
   const askKova = () => {
+    if (!isLoaded) return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
@@ -377,7 +378,8 @@ export function KovaMaps() {
                 <button
                   type="button"
                   onClick={askKova}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
+                  disabled={!isLoaded}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
                 </button>

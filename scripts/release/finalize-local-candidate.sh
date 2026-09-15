@@ -74,7 +74,6 @@ echo "FINALIZER_BASE_SHA=$BASE_SHA"
 
 run_logged lockfile npm install --package-lock-only --no-audit --no-fund
 run_logged dependencies npm install --no-audit --no-fund
-run_logged parity-source node scripts/release/apply-chatgpt-parity-source.mjs
 run_logged security-source node scripts/release/apply-security-source.mjs
 run_logged migration-manifest npm run release:manifest
 run_logged initial-build npm run build
@@ -120,7 +119,6 @@ else
   echo "SIGNED_IN_BROWSER_MATRIX=PENDING missing=KOVA_RELEASE_AUTH_STATE"
 fi
 
-run_logged source-transform-check node scripts/release/apply-chatgpt-parity-source.mjs --check
 run_logged security-transform-check node scripts/release/apply-security-source.mjs --check
 run_logged diff-check git diff --check
 

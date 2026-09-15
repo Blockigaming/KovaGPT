@@ -80,12 +80,6 @@ test("stopping preserves the latest assistant turn and closes only its active wo
         { tool: "search", label: "Searching", status: "running" },
         { tool: "read", label: "Source ready", status: "done" },
       ],
-      researchProgress: {
-        stage: "searching",
-        label: "Searching sources",
-        status: "running",
-        progress: 0.4,
-      },
     },
   ];
 
@@ -98,12 +92,6 @@ test("stopping preserves the latest assistant turn and closes only its active wo
     stopped[1].activities.map(({ status }) => status),
     ["canceled", "done"],
   );
-  assert.deepEqual(stopped[1].researchProgress, {
-    stage: "searching",
-    label: "Research canceled",
-    status: "canceled",
-    progress: 0.4,
-  });
 });
 
 test("a response stopped before its first token remains durable and retryable", () => {

@@ -181,6 +181,7 @@ const PackItem = z.object({
     "project",
     "artifact",
     "image",
+    "research",
     "prompt",
     "work",
   ]),

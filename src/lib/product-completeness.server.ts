@@ -69,7 +69,6 @@ export type EmptyStateRoute =
   | "apps"
   | "scheduled_tasks"
   | "canvas"
-  | "research_history"
   | "notifications"
   | "settings"
   | "shared_chats"

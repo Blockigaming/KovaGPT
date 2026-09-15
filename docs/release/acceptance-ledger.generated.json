@@ -63,10 +63,10 @@
         "acceptanceTest": "Run current-source web research and an approved signed-in browser task with citations, steering, confirmations, cancellation, durable recovery, and audit evidence.",
         "evidence": [
           "src/lib/ai/search.server.ts",
-          "src/lib/ai/deep-research.server.ts",
+          "src/routes/api/maps/search.ts",
           "docs/work-browser-authority.md"
         ],
-        "boundary": "Search and bounded research exist, but safe signed-in computer use and complete cross-source production acceptance remain unfinished.",
+        "boundary": "Ordinary web search and Maps exist; dedicated Deep Research is retired, while safe signed-in computer use and cross-source production acceptance remain unfinished.",
         "source": "docs/release/kova-final-goal-2026-09-11.md"
       },
       {
@@ -542,18 +542,19 @@
       "specified_unimplemented": 1,
       "not_verified": 1
     },
-    "evidencePaths": 167,
+    "evidencePaths": 165,
     "missingEvidencePaths": 0,
-    "retainedLegacyTests": 140,
+    "retainedLegacyTests": 135,
     "missingRetainedLegacyTests": 0,
-    "currentTestFiles": 500,
-    "currentTestInventorySha256": "34adc59bc6b54379b2fcd104dac9b491dd2e6082d7370a97828ab17f84bfb727",
+    "currentTestFiles": 495,
+    "currentTestInventorySha256": "5d7c1de8b9725055b4018cd43020caffe5b81c0f3e07d54b81887b4b86380e81",
     "statusCounts": {
-      "partial": 23,
+      "partial": 22,
       "verified_for_implemented_scope": 27,
       "verified_for_reviewed_ancestor_scope": 27,
       "not_verified": 54,
-      "accepted": 4
+      "accepted": 4,
+      "excluded": 1
     }
   },
   "rows": [
@@ -822,14 +823,13 @@
       "area": "Deep Research",
       "id": "05.source",
       "stage": "source",
-      "status": "partial",
-      "requirement": "Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated.",
+      "status": "excluded",
+      "requirement": "Dedicated execution, navigation, progress, and report-management surfaces are removed; historical rows remain exportable and deletable.",
       "evidence": [
-        "src/lib/ai/deep-research.server.ts",
-        "src/lib/research-persistence-authorization.server.mjs",
-        "src/routes/research-planner.tsx"
+        "src/lib/chat-history-policy.mjs",
+        "supabase/migrations/20260915003000_retire_deep_research_workspace_search.sql"
       ],
-      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "boundary": "Ordinary web search remains supported; retired Deep Research identifiers are accepted only as migration input and omitted from normalized output.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -839,12 +839,8 @@
       "stage": "local_automation",
       "status": "verified_for_implemented_scope",
       "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
-      "evidence": [
-        "tests/unit/deep-research.test.mjs",
-        "tests/unit/deep-research-persistence.test.mjs",
-        "tests/unit/research-persistence-authorization.test.mjs"
-      ],
-      "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
+      "evidence": ["tests/unit/maps-experience.test.mjs"],
+      "boundary": "Passing tests do not prove live provider, account, device, or production behavior.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -859,7 +855,7 @@
         "github:actions/34664358655:KovaGPT CI:success",
         "github:actions/34664358673:Azure Container Readiness:success"
       ],
-      "boundary": "Ancestor hosted gates verify only that implementation slice, not this revision or the missing source requirement.",
+      "boundary": "Ancestor hosted CI does not verify this revision or certify a live environment.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -870,7 +866,7 @@
       "status": "not_verified",
       "requirement": "Exercise the bounded behavior against matching staged services and accounts.",
       "evidence": [],
-      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "boundary": "Ordinary web search remains supported; retired Deep Research identifiers are accepted only as migration input and omitted from normalized output.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {
@@ -881,7 +877,7 @@
       "status": "not_verified",
       "requirement": "Verify the exact deployed SHA and image with production smoke and canary evidence.",
       "evidence": [],
-      "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
+      "boundary": "Ordinary web search remains supported; retired Deep Research identifiers are accepted only as migration input and omitted from normalized output.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
     {

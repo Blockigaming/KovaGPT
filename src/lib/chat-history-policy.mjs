@@ -29,6 +29,7 @@ const COMPOSER_TOOL_IDS = new Set([
   "data_analysis",
   "file_analysis",
 ]);
+const RETIRED_COMPOSER_TOOL_IDS = new Set(["deep_research"]);
 export function chatHistoryUuid(value) {
   if (typeof value !== "string" || !UUID.test(value)) throw new Error("chat_history_invalid");
   return value.toLowerCase();
@@ -181,9 +182,14 @@ export function normalizeChatHistory(value, ownerId) {
         item.generationStatus = message.generationStatus;
       }
       if (message.requestedTool !== undefined) {
-        if (message.role !== "assistant" || !COMPOSER_TOOL_IDS.has(message.requestedTool))
+        if (
+          message.role !== "assistant" ||
+          (!COMPOSER_TOOL_IDS.has(message.requestedTool) &&
+            !RETIRED_COMPOSER_TOOL_IDS.has(message.requestedTool))
+        )
           throw new Error("chat_history_invalid");
-        item.requestedTool = message.requestedTool;
+        if (COMPOSER_TOOL_IDS.has(message.requestedTool))
+          item.requestedTool = message.requestedTool;
       }
       // Running request state is never durable completion evidence. Terminal activity and
       if (Array.isArray(message.activities))

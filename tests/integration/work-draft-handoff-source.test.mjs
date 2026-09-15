@@ -6,7 +6,6 @@ const work = readFileSync("src/routes/work.tsx", "utf8");
 const producers = [
   readFileSync("src/lib/workspace-handoffs.ts", "utf8"),
   readFileSync("src/routes/context-packs.tsx", "utf8"),
-  readFileSync("src/routes/research-planner.tsx", "utf8"),
 ];
 
 test("every prepared Work producer has a principal-scoped one-time consumer", () => {

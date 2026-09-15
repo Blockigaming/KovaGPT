@@ -6,7 +6,6 @@ import {
   Brain,
   CalendarDays,
   CheckCircle2,
-  FlaskConical,
   Lightbulb,
   ListTodo,
   PackageOpen,
@@ -46,13 +45,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function BriefingRow({ item }: { item: BrainBriefingItem }) {
   const Icon =
-    item.category === "goal"
-      ? Target
-      : item.category === "research"
-        ? FlaskConical
-        : item.category === "task"
-          ? ListTodo
-          : CheckCircle2;
+    item.category === "goal" ? Target : item.category === "task" ? ListTodo : CheckCircle2;
 
   return (
     <Link
@@ -189,10 +182,9 @@ function BrainPage() {
                 </span>
               </div>
 
-              <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 <Stat label="Active goals" value={brain.data.counts.activeGoals} />
                 <Stat label="Open tasks" value={brain.data.counts.openTasks} />
-                <Stat label="Research" value={brain.data.counts.activeResearch} />
                 <Stat label="Memories" value={brain.data.counts.memories} />
                 <Stat label="Context Packs" value={brain.data.counts.contextPacks} />
                 <Stat label="Library items" value={brain.data.counts.libraryItems} />

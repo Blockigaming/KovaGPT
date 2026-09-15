@@ -27,7 +27,6 @@ const routes = [
   "/omega",
   "/prompt-studio",
   "/research-assistant",
-  "/research-planner",
   "/scheduled-tasks",
   "/status",
   "/study-assistant",

@@ -6,7 +6,10 @@ const recentRequests = new Map<string, number>();
 function json(value: unknown, status = 200) {
   return Response.json(value, {
     status,
-    headers: { "Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": status < 400 ? "private, max-age=60" : "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 

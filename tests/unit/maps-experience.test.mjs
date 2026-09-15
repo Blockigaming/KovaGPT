@@ -31,6 +31,7 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /query\.length < 2 \|\| query\.length > 160/);
   assert.match(route, /Number\.isFinite\(latitude\)/);
   assert.match(route, /Place search is temporarily unavailable/);
+  assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
   assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
 });
 
@@ -39,9 +40,12 @@ test("dedicated research product surfaces and route are absent", () => {
   const composer = read("src/components/ChatInput.tsx");
   const palette = read("src/components/CommandPalette.tsx");
   const pricing = read("src/lib/capability-registry.ts");
+  const packageManifest = read("package.json");
+  const localFinalizer = read("scripts/release/finalize-local-candidate.sh");
   const retiredLabels = ["Deep" + " Research", "deep" + "_research", "deep" + "-research"];
-  for (const source of [sidebar, composer, palette, pricing]) {
+  for (const source of [sidebar, composer, palette, pricing, packageManifest, localFinalizer]) {
     for (const label of retiredLabels) assert.equal(source.includes(label), false);
   }
   assert.throws(() => read(`src/routes/${"research" + "-planner"}.tsx`), /ENOENT/);
+  assert.match(read("src/lib/chat-history-policy.mjs"), /RETIRED_COMPOSER_TOOL_IDS/);
 });

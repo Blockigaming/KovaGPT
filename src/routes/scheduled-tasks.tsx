@@ -692,7 +692,7 @@ function ScheduledTasksPage() {
           )}
         </div>
         <RelatedWorkspaceItems
-          kinds={["project", "research", "context_pack", "file", "memory"]}
+          kinds={["project", "context_pack", "file", "memory"]}
           title="Context for automations"
         />
       </div>

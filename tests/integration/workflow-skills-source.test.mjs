@@ -101,6 +101,96 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
   );
 });
 
+test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
+  const imageBranch = chat.slice(
+    chat.indexOf("if (isImageRequest && auth)"),
+    chat.indexOf("// Anonymous chat is allowed"),
+  );
+  assert.match(chat, /handleImageRequest\(imagePrompt, logContext\)/u);
+  assert.ok(
+    imageBranch.indexOf("boundedImageProviderPrompt") < imageBranch.indexOf("enforceQuota"),
+  );
+  const imageQuota = imageBranch.indexOf("enforceQuota");
+  assert.ok(imageBranch.indexOf("assertSelectedContextsCurrent") < imageQuota);
+  assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
+  const chatQuotaBranch = chat.slice(
+    chat.indexOf("// Anonymous chat is allowed"),
+    chat.indexOf("// SECURITY: Server-side tier enforcement"),
+  );
+  const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
+  const chatQuota = chatQuotaBranch.indexOf('enforceQuota(auth, "chats"');
+  assert.ok(
+    contextBeforeChatQuota > -1 && contextBeforeChatQuota < chatQuota,
+    "selected context must be current immediately before generic chat quota",
+  );
+  const toolHopLoop = chat.slice(
+    chat.indexOf("for (let hop = 0; hop < MAX_TOOL_HOPS; hop++)"),
+    chat.indexOf("if (hopFailed)"),
+  );
+  const hopResponseParsed = toolHopLoop.indexOf("if (!parsedHop)");
+  const postHopCurrentness = toolHopLoop.indexOf(
+    "await assertSelectedContextsCurrent(request.signal)",
+    hopResponseParsed,
+  );
+  const toolCallsInspected = toolHopLoop.indexOf("const msg = parsedHop.message");
+  assert.ok(
+    hopResponseParsed > -1 &&
+      hopResponseParsed < postHopCurrentness &&
+      postHopCurrentness < toolCallsInspected,
+    "selected workflow context must be revalidated after the model hop and before tool calls",
+  );
+  const perCallCurrentness = toolHopLoop.indexOf(
+    "await assertSelectedContextsCurrent(request.signal)",
+    toolCallsInspected,
+  );
+  assert.ok(
+    perCallCurrentness > toolCallsInspected &&
+      perCallCurrentness < toolHopLoop.indexOf("stagePendingAction"),
+    "each returned tool call must be revalidated again immediately before processing",
+  );
+  assert.match(chat, /workflowSkill\.toolPlanningBlock/u);
+  const connectorGate = chat.slice(
+    chat.indexOf("const googleContext ="),
+    chat.indexOf("const availableTools ="),
+  );
+  assert.match(connectorGate, /!hasAttachments/u);
+  assert.doesNotMatch(connectorGate, /!hasImages/u);
+  const planningContext = chat.slice(
+    chat.indexOf("const toolPlanningMessages"),
+    chat.indexOf("const workingMessages"),
+  );
+  assert.match(planningContext, /\{ role: "user", content: lastText \}/u);
+  assert.doesNotMatch(planningContext, /finalMessages\.map/u);
+  assert.doesNotMatch(
+    planningContext,
+    /conversationSummary|memoryBlock|projectBlock|chatWorkspaceBlock/u,
+  );
+  const noMoreToolCalls = chat.slice(
+    chat.indexOf("if (!msg.tool_calls || msg.tool_calls.length === 0)"),
+    chat.indexOf("// Enforce total tool-call cap"),
+  );
+  assert.match(noMoreToolCalls, /!workflowSkill &&\s*toolsWereUsed/u);
+  const finalToolContext = chat.slice(
+    chat.indexOf("const finalBody ="),
+    chat.indexOf("const activityCount ="),
+  );
+  assert.match(finalToolContext, /\[\.\.\.finalMessages, \.\.\.finalToolMessages\]/u);
+  assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
+  assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
+  assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
+  const clearSkill = home.slice(
+    home.indexOf("const clearWorkflowSkill"),
+    home.indexOf("useEffect(() =>", home.indexOf("const clearWorkflowSkill")),
+  );
+  assert.match(clearSkill, /clearRetryTimer\(retryTimerRef\)/u);
+  assert.match(clearSkill, /retryGenerationRef\.current \+= 1/u);
+  assert.match(clearSkill, /retryActionEpochRef\.current\.set/u);
+  assert.match(home, /aria-label=\{`Clear workflow skill/u);
+  assert.match(home, /skill=\{/u);
+  assert.match(mobileTopBar, /aria-label=\{`Clear workflow skill/u);
+  assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
+});
+
 test("workflow skill lifecycle is immutable replay-safe exportable and visible in Apps", () => {
   const manifestEntry = JSON.parse(manifest).migrations.find(
     (entry) => entry.filename === "20260910210000_workflow_skill_packages.sql",

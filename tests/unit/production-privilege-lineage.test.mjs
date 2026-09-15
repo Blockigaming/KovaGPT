@@ -54,6 +54,7 @@ const triggerNames = [
   "enforce_supported_agent_job_kind",
   "set_feedback_submission_updated_at",
   "validate_agent_dependency_edge",
+  "set_deep_research_updated_at",
   "prevent_financial_entry_mutation",
   "touch_updated_at",
 ];

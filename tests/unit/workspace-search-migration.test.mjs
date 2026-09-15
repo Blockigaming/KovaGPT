@@ -25,6 +25,7 @@ async function fixture() {
     create table public.project_memory(id uuid primary key,project_id uuid,content text,created_at timestamptz default now());
     create table public.user_library_items(id uuid primary key,user_id uuid,title text,item_type text,content_text text,updated_at timestamptz default now());
     create table public.context_packs(id uuid primary key,user_id uuid,name text,description text,updated_at timestamptz default now());
+    create table public.deep_research_runs(id uuid primary key,user_id uuid,project_id uuid,query text,report text,updated_at timestamptz default now());
     create table public.scheduled_tasks(id uuid primary key,user_id uuid,title text,prompt text,updated_at timestamptz default now());
     create table public.prompt_templates(id uuid primary key,user_id uuid,project_id uuid,name text,body text,updated_at timestamptz default now());
     create table public.goals(id uuid primary key,owner_id uuid,project_id uuid,title text,description text,updated_at timestamptz default now());
@@ -39,6 +40,7 @@ async function fixture() {
   for (const table of [
     "user_library_items",
     "context_packs",
+    "deep_research_runs",
     "scheduled_tasks",
     "prompt_templates",
     "goals",

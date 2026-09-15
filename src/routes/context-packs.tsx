@@ -417,14 +417,11 @@ function ContextPacksPage() {
                           onClick={() => {
                             const handoff = writePrincipalHandoff(
                               safeBrowserStorage("sessionStorage"),
-                              "kova-research-draft",
+                              "kova-app-chat-context",
                               isLoaded ? userKey : undefined,
-                              {
-                                question: `Research with ${pack.name}`,
-                                context: pack.items
-                                  .map((item) => `${item.title}: ${item.content}`)
-                                  .join("\n\n"),
-                              },
+                              `Search the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
+                                .map((item) => `${item.title}: ${item.content}`)
+                                .join("\n\n")}`,
                             );
                             if (!handoff.ok) {
                               toast.error(
@@ -432,7 +429,7 @@ function ContextPacksPage() {
                               );
                               return;
                             }
-                            navigate({ to: "/discovery" });
+                            navigate({ to: "/" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
                         >
