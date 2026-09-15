@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { validateProductionProvenanceEvidence } from "../../scripts/azure/production-provenance-audit.mjs";
+import {
+  validateProductionProvenanceEvidence,
+} from "../../scripts/azure/production-provenance-audit.mjs";
 
 const image = `kovagptacr.azurecr.io/kovagpt@sha256:${"a".repeat(64)}`;
 const app = {
