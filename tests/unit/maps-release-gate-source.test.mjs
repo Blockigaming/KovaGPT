@@ -25,10 +25,7 @@ test("every Sidebar caller supplies the Maps release decision", () => {
   assert.deepEqual(callers, expectedSidebarCallers);
   for (const path of callers) {
     const source = readFileSync(path, "utf8");
-    assert.match(
-      source,
-      /import \{ MAPS_RELEASE_APPROVED \} from "@\/lib\/maps-release-gate";/u,
-    );
+    assert.match(source, /import \{ MAPS_RELEASE_APPROVED \} from "@\/lib\/maps-release-gate";/u);
     assert.match(
       source,
       /<Sidebar[\s\S]*?mapsReleaseApproved=\{MAPS_RELEASE_APPROVED\}[\s\S]*?\/>/u,
@@ -40,10 +37,7 @@ test("Sidebar exposes and applies the Maps release decision", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 
   assert.match(sidebar, /mapsReleaseApproved = true/u);
-  assert.match(
-    sidebar,
-    /data-maps-release-approved=\{mapsReleaseApproved \? "true" : "false"\}/u,
-  );
+  assert.match(sidebar, /data-maps-release-approved=\{mapsReleaseApproved \? "true" : "false"\}/u);
   assert.match(sidebar, /\{mapsReleaseApproved \? \(\s*<Link to="\/maps"/u);
   assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/u);
 });
