@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DIGEST_IMAGE = /^([a-z0-9][a-z0-9.-]*\.azurecr\.io)\/[a-z0-9]+(?:[._/-][a-z0-9]+)*@sha256:[a-f0-9]{64}$/u;
+const DIGEST_IMAGE =
+  /^([a-z0-9][a-z0-9.-]*\.azurecr\.io)\/[a-z0-9]+(?:[._/-][a-z0-9]+)*@sha256:[a-f0-9]{64}$/u;
 
 export function validateProductionProvenanceEvidence(app, revisions, expectedImage = "") {
   if (!app || typeof app !== "object" || Array.isArray(app)) {
@@ -52,7 +53,10 @@ export function validateProductionProvenanceEvidence(app, revisions, expectedIma
 if (import.meta.url === `file://${process.argv[1]}`) {
   const appPath = resolve(process.env.KOVA_AZURE_PRODUCTION_APP_EVIDENCE ?? "");
   const revisionsPath = resolve(process.env.KOVA_AZURE_PRODUCTION_REVISION_EVIDENCE ?? "");
-  if (!process.env.KOVA_AZURE_PRODUCTION_APP_EVIDENCE || !process.env.KOVA_AZURE_PRODUCTION_REVISION_EVIDENCE) {
+  if (
+    !process.env.KOVA_AZURE_PRODUCTION_APP_EVIDENCE ||
+    !process.env.KOVA_AZURE_PRODUCTION_REVISION_EVIDENCE
+  ) {
     throw new Error("production_provenance_evidence_paths_required");
   }
   const app = JSON.parse(readFileSync(appPath, "utf8"));
