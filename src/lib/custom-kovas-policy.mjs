@@ -18,9 +18,10 @@ export const KOVA_MODES = Object.freeze([
 ]);
 const LEGACY_KOVA_MODES = Object.freeze({
   pro: "max",
-  kova_5_5: "medium",
-  kova_5_4: "medium",
-  kova_o3: "medium",
+  // Retired modes were available to Free accounts, so preserve that entitlement.
+  kova_5_5: "thinking",
+  kova_5_4: "thinking",
+  kova_o3: "thinking",
 });
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
 export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);

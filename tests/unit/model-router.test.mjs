@@ -60,6 +60,18 @@ test("deep mode upgrades to the premium model for premium tiers", () => {
   assert.equal(decision.modelId, SOL);
 });
 
+test("premium modes stay beneath the default request budget before input is counted", () => {
+  for (const [mode, outputCap] of [
+    ["max", 3_500],
+    ["ultra", 4_000],
+  ]) {
+    const decision = routeModel({ task: "chat", mode, tier: "pro", text: "" });
+    assert.equal(decision.role, "PREMIUM_REASONING");
+    assert.equal(decision.maxOutputTokens, outputCap);
+    assert.ok(decision.estimatedCostUsd < 0.1);
+  }
+});
+
 test("free users can never reach the premium model", () => {
   const decision = routeModel({
     task: "chat",

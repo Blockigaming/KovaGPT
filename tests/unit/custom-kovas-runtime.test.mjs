@@ -83,7 +83,7 @@ test("Kova configuration has a closed model/tool policy and historical attachmen
 test("legacy custom Kova modes normalize to current modes", () => {
   assert.equal(config({ mode: "pro" }).mode, "max");
   for (const mode of ["kova_5_5", "kova_5_4", "kova_o3"])
-    assert.equal(config({ mode }).mode, "medium");
+    assert.equal(config({ mode }).mode, "thinking");
 });
 
 test("chat ingress and durable history preserve only the immutable Kova reference, never link tokens or creator grants", () => {

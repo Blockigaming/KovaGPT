@@ -39,15 +39,14 @@ async function fixture() {
       "INSERT INTO public.user_library_items VALUES($1,$2,'Private notes','Only explicitly shared notes')",
       [LIB, A],
     );
-    await db.exec(
-      await readFile(
-        new URL(
-          "../../supabase/migrations/20260905031401_custom_conversational_kovas.sql",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    );
+    for (const migration of [
+      "20260905031401_custom_conversational_kovas.sql",
+      "20260915120000_expand_custom_kova_mode_allowlist.sql",
+    ]) {
+      await db.exec(
+        await readFile(new URL(`../../supabase/migrations/${migration}`, import.meta.url), "utf8"),
+      );
+    }
     return db;
   } catch (e) {
     await db.close();
@@ -93,6 +92,18 @@ const read = (db, id, actor = A, scope = "read") =>
   rpc(db, "read_custom_kovas", [actor, scope, id, null]);
 const context = (db, id, actor = A, version = null) =>
   rpc(db, "resolve_custom_kova", [actor, id, version]);
+
+test("custom Kovas persist every newly exposed premium mode", async () => {
+  const db = await fixture();
+  try {
+    for (const mode of ["max", "ultra"]) {
+      const created = await mutate(db, "create", { config: config({ mode }) });
+      assert.equal((await read(db, created.id)).config.mode, mode);
+    }
+  } finally {
+    await db.close();
+  }
+});
 
 test("private Kovas have actual owner RLS, immutable versions and no service-role Auth table dependency", async () => {
   const db = await fixture();
