@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { PublicDetailPageView } from "@/components/public/PublicSite";
+import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
+import { PublicState } from "@/components/public/PublicState";
 import { PublicShell } from "@/components/public/PublicShell";
 import { SeoLanding } from "@/components/SeoLanding";
 import { LegalArticle } from "@/components/LegalArticle";
@@ -46,6 +47,56 @@ export function PublicFixture({ surface }: { surface: string }) {
     return () => window.removeEventListener("kova-fixture-page", select);
   }, []);
 
+  if (surface === "public-landing") {
+    return (
+      <PublicPageView
+        eyebrow="Synthetic fixture"
+        title="One consistent public workspace"
+        summary="A layout fixture for the shared landing page, not a statement of live capabilities."
+        primaryAction={{ label: "Open KovaGPT", to: "/" }}
+      >
+        <article className="min-w-0 rounded-3xl border bg-card p-6">
+          <h2 className="text-xl font-semibold">Clear hierarchy</h2>
+          <p className="mt-3">{longWord}</p>
+        </article>
+        <article className="min-w-0 rounded-3xl border bg-card p-6">
+          <h2 className="text-xl font-semibold">Room for the content</h2>
+          <p className="mt-3">
+            Real templates share space, controls and typography without copying page claims.
+          </p>
+        </article>
+      </PublicPageView>
+    );
+  }
+  if (surface === "public-detail") {
+    const detail = catalog.find(
+      (item) => item.section === "features" && item.slug === "study-mode",
+    );
+    if (!detail) throw new Error("The representative study-mode detail is missing");
+    return <PublicDetailPageView item={{ ...detail, faq: [{ q: faqQuestion, a: longWord }] }} />;
+  }
+  if (surface.startsWith("public-state-")) {
+    const kind = surface.slice("public-state-".length) as
+      "loading" | "empty" | "unavailable" | "error";
+    return (
+      <PublicShell>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full min-w-0 max-w-7xl px-4 py-12"
+        >
+          <h1 className="mb-8 text-4xl font-semibold">Public page state</h1>
+          <PublicState
+            kind={kind}
+            title={`${kind[0].toUpperCase()}${kind.slice(1)} fixture`}
+            action={{ label: "Return to KovaGPT", to: "/" }}
+          >
+            Synthetic state content, not a production error or availability claim.
+          </PublicState>
+        </main>
+      </PublicShell>
+    );
+  }
   if (surface === "public-catalog") {
     return (
       <>

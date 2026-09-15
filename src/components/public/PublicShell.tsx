@@ -1,3 +1,4 @@
+import "./public-foundation.css";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -40,7 +41,7 @@ function PublicNavigationLink({
       onClick={onNavigate}
       className={
         mobile
-          ? `flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-[15px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+          ? `flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-[0.9375rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
               currentSection
                 ? "bg-foreground text-background"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -127,6 +128,7 @@ export function PublicHeader() {
       {open ? (
         <nav
           id="public-mobile-navigation"
+          tabIndex={-1}
           className="min-h-0 overflow-y-auto overscroll-contain border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
           aria-label="Mobile public navigation"
         >
@@ -155,8 +157,32 @@ export function PublicHeader() {
 }
 
 export function PublicShell({ children }: { children: ReactNode }) {
+  const shellRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const shell = shellRef.current;
+    const header = shell?.querySelector("header");
+    if (!shell || !header) return;
+    const update = () =>
+      shell.style.setProperty(
+        "--kova-public-header-height",
+        `${header.getBoundingClientRect().height}px`,
+      );
+    update();
+    // Account for menu opening, wrapped navigation, text zoom and safe areas.
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(update);
+      observer.observe(header);
+      return () => observer.disconnect();
+    }
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   return (
-    <div className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground">
+    <div
+      ref={shellRef}
+      data-public-shell
+      className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
+    >
       <PublicHeader />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       <PublicFooter />

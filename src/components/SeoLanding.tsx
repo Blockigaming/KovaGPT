@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { PublicFaq } from "@/components/public/PublicFaq";
 import { PublicShell } from "@/components/public/PublicShell";
 
 export type SeoLandingCta = { label: string; to: string };
@@ -73,27 +74,11 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
           </ul>
         </section>
 
-        {faq && faq.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold mb-3">Frequently asked questions</h2>
-            <div className="divide-y divide-border rounded-lg border border-border bg-card">
-              {faq.map((f) => (
-                <details key={f.q} className="group px-4 py-3">
-                  <summary className="flex min-h-11 min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-sm py-2 font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <span className="min-w-0">{f.q}</span>
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 text-muted-foreground transition group-open:rotate-45 motion-reduce:transition-none"
-                    >
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        )}
+        {faq && faq.length > 0 ? (
+          <div className="mb-12">
+            <PublicFaq items={faq} />
+          </div>
+        ) : null}
 
         <nav
           aria-label="Related pages"

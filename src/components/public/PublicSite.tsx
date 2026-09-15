@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { type ReactNode } from "react";
+import { PublicFaq } from "@/components/public/PublicFaq";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
@@ -117,7 +118,8 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             >
               <Link
                 to={(sectionLanding?.to ?? `/${item.section}`) as never}
-                className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                data-public-breadcrumb
+                className="inline-flex min-h-11 min-w-0 max-w-full items-center rounded-md py-2.5 underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {sectionLanding?.label ?? item.section.replaceAll("-", " ")}
               </Link>
@@ -207,6 +209,12 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             </article>
           ))}
         </section>
+
+        {item.faq?.length ? (
+          <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-20">
+            <PublicFaq items={item.faq} />
+          </div>
+        ) : null}
 
         {item.relatedPages?.length ? (
           <section aria-labelledby="related-pages-heading" className="border-t border-border">
