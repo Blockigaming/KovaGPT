@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fingerprintMigrationSchemaSnapshot } from "../../scripts/release/migration-schema-fingerprint.mjs";
+import {
+  fingerprintMigrationSchemaSnapshot,
+} from "../../scripts/release/migration-schema-fingerprint.mjs";
 
 function snapshot(overrides = {}) {
   return {
