@@ -26,7 +26,7 @@ jobs:
           from pathlib import Path
           p=Path('src/styles.css')
           source=p.read_text()
-          assert subprocess.check_output(['git','hash-object',str(p)]).decode().strip() == '36ee99b4a9ea497c4b12c156a4c0a5e1db9aa123' if False else True
+          assert subprocess.check_output(['git','hash-object',str(p)]).decode().strip() == '36ee99b49b5162b68a65efa51a6164c731b822d2'
           start=source.index('@media (max-width: 767px)', source.index('/* Authenticated settings workspace */'))
           prefix, mobile=source[:start],source[start:]
           replacements=[
