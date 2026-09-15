@@ -148,6 +148,14 @@ test("Maps provider admission and chat handoffs use rolling byte bounds", () => 
   assert.match(retirement, /set status = 'canceled'/);
   assert.match(retirement, /completed_at = coalesce\(completed_at, now\(\)\)/);
   assert.match(retirement, /'writing_report', 'running'/);
+  for (const policy of [
+    "deep_research_runs_insert_own",
+    "deep_research_runs_update_own",
+    "deep_research_evidence_insert_own",
+    "deep_research_evidence_update_own",
+  ]) {
+    assert.match(retirement, new RegExp(`drop policy if exists "${policy}"`));
+  }
 });
 
 test("Maps waits for the authenticated account policy before loading remote tiles", () => {
