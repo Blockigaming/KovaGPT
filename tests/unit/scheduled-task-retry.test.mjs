@@ -21,6 +21,7 @@ function load({ available = true, principal = owner, rpcError = null } = {}) {
     from: () => query,
     rpc: (name, args) => ({
       abortSignal: async () => {
+        if (name === "effective_user_plan_tier") return { data: "plus", error: null };
         if (name === "scheduled_task_account_available") return { data: true, error: null };
         calls.push({ name, args });
         return { data: { taskId }, error: rpcError };
