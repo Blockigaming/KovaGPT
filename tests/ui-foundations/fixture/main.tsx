@@ -1,6 +1,7 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Button } from "@/components/ui/button";
+import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import {
   Dialog,
   DialogTrigger,
@@ -62,6 +63,7 @@ const confirmLabel = "Confirm changes to the selected project only";
 function Fixture() {
   const surface = new URLSearchParams(location.search).get("surface") ?? "dialog";
   const [result, setResult] = useState("No action taken");
+  const [mobileOpen, setMobileOpen] = useState(false);
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
@@ -69,7 +71,44 @@ function Fixture() {
     <main className="fixture-page">
       <h1 className="mb-4 text-lg font-semibold">Shared interface verification</h1>
       <p role="status">{result}</p>
-      {surface === "dialog" ? (
+      {surface.startsWith("mobile") ? (
+        <>
+          <Button data-testid="trigger" onClick={() => setMobileOpen(true)}>
+            Open example
+          </Button>
+          <MobileBottomSheet open={mobileOpen} onOpenChange={setMobileOpen} title="Choose a tool">
+            <div className="min-w-0 space-y-4 p-4">
+              <button hidden>Hidden action</button>
+              {surface === "mobile-nested" ? (
+                <Select defaultValue="initial" onValueChange={setResult}>
+                  <SelectTrigger aria-label="Choose a nested project">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[110]" data-testid="nested-select">
+                    <SelectItem value="initial">Initial project</SelectItem>
+                    <SelectItem value="other">Other project</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p>{detail}</p>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setMobileOpen(false)}>
+                  {cancelLabel}
+                </Button>
+                <Button
+                  onClick={() => {
+                    onConfirm();
+                    setMobileOpen(false);
+                  }}
+                >
+                  {confirmLabel}
+                </Button>
+              </DialogFooter>
+            </div>
+          </MobileBottomSheet>
+        </>
+      ) : surface === "dialog" ? (
         <Dialog>
           <DialogTrigger asChild>{trigger}</DialogTrigger>
           <DialogContent data-testid="surface">

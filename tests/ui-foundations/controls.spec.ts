@@ -59,11 +59,14 @@ for (const viewport of viewports) {
           "sheet-bottom",
           "sheet-left",
           "sheet-right",
+          "mobile",
         ]) {
           await test.step(surface, async () => {
             await visit(surface);
             await page.getByTestId("trigger").click();
-            const content = page.getByTestId("surface");
+            const content = page.getByTestId(
+              surface === "mobile" ? "mobile-bottom-sheet" : "surface",
+            );
             await bounded(content, page);
             // Keyboard focus stays within a modal even when the body is scrolled.
             for (let step = 0; step < 6; step++) {
@@ -147,4 +150,49 @@ test("nested dropdown escapes the scroll container and stays keyboard operable",
   await page.keyboard.press("Enter");
   await expect(page.getByRole("status")).toHaveText("Confirmed once");
   await expect(page.getByTestId("trigger")).toBeFocused();
+});
+
+test("mobile sheet isolates background, respects a nested Escape, and resets canceled gestures", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?surface=mobile-nested");
+  const originalOverflow = await page.evaluate(() => getComputedStyle(document.body).overflow);
+  await page.getByTestId("trigger").click();
+  const sheet = page.getByTestId("mobile-bottom-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Choose a tool" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Outside action", exact: true })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Close sheet", exact: true })).toBeFocused();
+
+  const nested = sheet.getByRole("combobox", { name: "Choose a nested project" });
+  await nested.click();
+  await expect(page.getByTestId("nested-select")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("nested-select")).toBeHidden();
+  await expect(sheet).toBeVisible();
+  await expect(nested).toBeFocused();
+
+  const handle = sheet.locator("[data-kova-sheet-handle]");
+  await handle.dispatchEvent("touchstart", { touches: [{ identifier: 0, clientY: 100 }] });
+  await handle.dispatchEvent("touchmove", { touches: [{ identifier: 0, clientY: 160 }] });
+  await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 60)");
+  await handle.dispatchEvent("touchcancel", { touches: [] });
+  await expect(sheet).toHaveCSS("transform", "none");
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(page.getByTestId("trigger")).toBeFocused();
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).overflow))
+    .toBe(originalOverflow);
+
+  await page.getByTestId("trigger").click();
+  await expect(sheet).toHaveCSS("transform", "none");
+  await handle.dispatchEvent("touchstart", { touches: [{ identifier: 0, clientY: 100 }] });
+  await handle.dispatchEvent("touchmove", { touches: [{ identifier: 0, clientY: 210 }] });
+  await handle.dispatchEvent("touchend", { touches: [] });
+  await expect(sheet).toBeHidden();
+  await expect(page.getByTestId("trigger")).toBeFocused();
+  await expect(page.getByRole("status")).toHaveText("No action taken");
 });

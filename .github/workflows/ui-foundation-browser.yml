@@ -8,6 +8,7 @@ on:
       - playwright.ui-foundations.config.ts
       - tests/ui-foundations/**
       - src/components/ui/**
+      - src/components/MobileBottomSheet.tsx
       - src/components/ConfirmActionDialog.tsx
       - src/lib/utils.ts
       - src/styles.css
