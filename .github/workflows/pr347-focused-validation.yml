@@ -18,67 +18,96 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 7094d15d9ccd7070b38150ac4246ca78d85d0238
+          ref: 9c832bc71c77be3f8358c44e18da92f1b3acc4aa
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - name: Reproduce unchanged tests
-        id: before
+      - name: Verify source quality and coverage gates
+        id: quality
         continue-on-error: true
-        shell: bash
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/before.json
-        run: |
-          mkdir -p validation
-          set -o pipefail
-          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts --project=phone-390x844 --project=desktop-1280x800 --project=desktop-1440x900 --workers=2 --reporter=list,json 2>&1 | tee validation/before.log
-          
-      - name: Apply two exact test corrections
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p validation
+          git rev-parse HEAD > validation/commit.txt
+          git rev-parse HEAD^{tree} > validation/tree.txt
+          npm run format:check 2>&1 | tee validation/format.log
+          npm run lint 2>&1 | tee validation/lint.log
+          npm run typecheck 2>&1 | tee validation/typecheck.log
+          node --test tests/unit/public-browser-sharding.test.mjs tests/unit/github-actions-budget.test.mjs tests/integration/browser-preview-config-source.test.mjs 2>&1 | tee validation/source-tests.log
+      - name: Verify actual Playwright collection partition
+        id: partition
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          for suite in all core public; do
+            KOVA_BROWSER_SUITE="$suite" npx playwright test --list --reporter=json > "validation/list-$suite.json"
+          done
           python3 - <<'PY'
+          import json
           from pathlib import Path
-          path = Path('tests/e2e/pricing-layout.spec.ts')
-          text = path.read_text()
-          old = 'Instant, Medium, High, Extra High, Max, and Ultra modes'
-          assert text.count(old) == 1
-          path.write_text(text.replace(old, 'Instant, Medium, High, Extra high, Max, and Ultra modes'))
-          path = Path('tests/e2e/deep-research-progress.spec.ts')
-          text = path.read_text()
-          old = "page.locator('button[aria-label=\"Account menu\"]:visible').first()"
-          assert text.count(old) == 1
-          path.write_text(text.replace(old, "page.locator('button[aria-label=\"Start temporary chat\"]:visible').first()"))
+          def collect(suites, parents=()):
+              found = set()
+              for suite in suites:
+                  titles = parents + (suite.get('title', ''),)
+                  for spec in suite.get('specs', []):
+                      for test in spec.get('tests', []):
+                          found.add((test['projectName'], spec['file'], titles + (spec['title'],)))
+                  found |= collect(suite.get('suites', []), titles)
+              return found
+          sets = {name: collect(json.loads(Path(f'validation/list-{name}.json').read_text())['suites']) for name in ['all', 'core', 'public']}
+          assert sets['all'] and sets['core'] and sets['public']
+          assert not (sets['core'] & sets['public'])
+          assert sets['core'] | sets['public'] == sets['all']
+          result = {'tests': {name: len(values) for name, values in sets.items()}, 'disjoint': True, 'complete': True}
+          Path('validation/collection-proof.json').write_text(json.dumps(result, indent=2))
+          print(result)
           PY
-          ./node_modules/.bin/prettier --write tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts
-          git diff --check
-          git diff --binary > validation/focused-fix.patch
-      - name: Rerun corrected tests
-        id: after
+      - name: Build Node browser preview
+        run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Recheck corrected browser cases on rebased source
+        id: focused
         continue-on-error: true
         shell: bash
         env:
-          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/after.json
+          KOVA_BROWSER_SUITE: core
+          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/focused.json
         run: |
           set -o pipefail
-          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts --project=phone-390x844 --project=desktop-1280x800 --project=desktop-1440x900 --workers=2 --reporter=list,json 2>&1 | tee validation/after.log
-      - name: Preserve comparison evidence
+          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts --project=phone-390x844 --project=desktop-1280x800 --project=desktop-1440x900 --workers=2 --reporter=list,json 2>&1 | tee validation/focused.log
+      - name: Exercise bounded public group in every verification viewport
+        id: public_sample
+        continue-on-error: true
+        shell: bash
+        env:
+          KOVA_BROWSER_SUITE: public
+          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/public-sample.json
+        run: |
+          set -o pipefail
+          npm run test:e2e -- --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900 --grep "route group 1 passes" --workers=2 --reporter=list,json 2>&1 | tee validation/public-sample.log
+      - name: Preserve exact-source evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: pr347-focused-validation
-          path: |
-            validation/
-            test-results/
+          name: pr347-final-validation-9c832bc7
+          path: validation/
           if-no-files-found: error
           retention-days: 7
-      - name: Require corrected tests to pass
+      - name: Require every validation to pass
         if: always()
         env:
-          AFTER: ${{ steps.after.outcome }}
-        run: test "$AFTER" = success
+          QUALITY: ${{ steps.quality.outcome }}
+          PARTITION: ${{ steps.partition.outcome }}
+          FOCUSED: ${{ steps.focused.outcome }}
+          PUBLIC_SAMPLE: ${{ steps.public_sample.outcome }}
+        run: |
+          test "$QUALITY" = success
+          test "$PARTITION" = success
+          test "$FOCUSED" = success
+          test "$PUBLIC_SAMPLE" = success
