@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { supabase } from "@/integrations/supabase/client";
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 
 const VECTOR_STYLE = "https://tiles.openfreemap.org/styles/liberty";
@@ -91,10 +92,57 @@ export function KovaMaps() {
   const [searching, setSearching] = useState(false);
   const [satellite, setSatellite] = useState(false);
   const [threeD, setThreeD] = useState(true);
+  const [providerAccess, setProviderAccess] = useState<"checking" | "allowed" | "blocked">(
+    "checking",
+  );
   const navigate = useNavigate();
-  const { isLoaded, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userId = user?.id;
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn || !userId) {
+      setProviderAccess("blocked");
+      setError("Sign in to use provider-backed Maps.");
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    void supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (controller.signal.aborted) return;
+        if (data.session?.user.id !== userId || !data.session.access_token) {
+          throw new Error("Sign in again to use Maps.");
+        }
+        const response = await fetch("/api/security/lockdown", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as { enabled?: boolean; error?: string };
+        if (!response.ok || payload.enabled !== false) {
+          throw new Error(
+            payload.enabled
+              ? "Maps is unavailable while Lockdown Mode is on."
+              : (payload.error ?? "Lockdown Mode could not be verified. Try again shortly."),
+          );
+        }
+        if (!controller.signal.aborted) setProviderAccess("allowed");
+      })
+      .catch((caught) => {
+        if (controller.signal.aborted) return;
+        setProviderAccess("blocked");
+        setLoading(false);
+        setError(caught instanceof Error ? caught.message : "Maps access could not be verified.");
+      });
+    return () => controller.abort();
+  }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(() => {
+    // Never initialize MapLibre until the authenticated account's live-web
+    // policy is resolved, because initialization itself contacts tile hosts.
+    if (providerAccess !== "allowed") return;
     if (!containerRef.current || mapRef.current) return;
     let disposed = false;
     void import("maplibre-gl")
@@ -154,7 +202,7 @@ export function KovaMaps() {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [providerAccess]);
 
   const selectPlace = async (place: Place) => {
     const map = mapRef.current;
@@ -197,7 +245,15 @@ export function KovaMaps() {
     setSearching(true);
     setError(null);
     try {
-      const response = await fetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`);
+      const { data } = await supabase.auth.getSession();
+      const sessionBearer = data.session?.access_token;
+      if (data.session?.user.id !== user?.id || !sessionBearer) {
+        throw new Error("Sign in again to search Maps.");
+      }
+      const response = await fetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${sessionBearer}` },
+      });
       const payload = (await response.json()) as { results?: Place[]; error?: string };
       if (!response.ok) throw new Error(payload.error);
       const next = payload.results ?? [];
@@ -302,7 +358,7 @@ export function KovaMaps() {
       />
       {loading ? (
         <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
-          Loading real map data…
+          {providerAccess === "checking" ? "Checking Maps access…" : "Loading real map data…"}
         </div>
       ) : null}
       {error && !mapRef.current ? (

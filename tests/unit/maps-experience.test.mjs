@@ -33,6 +33,34 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /Place search is temporarily unavailable/);
   assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
   assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
+  assert.match(route, /requireUser\(request\)/);
+  assert.match(route, /enforceLockdownCapability/);
+  assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
+  assert.match(route, /claim_maps_geocoder_provider_slot/);
+  assert.match(route, /release_maps_geocoder_provider_slot/);
+  assert.match(route, /maps_geocoder_cache/);
+  assert.doesNotMatch(route, /x-forwarded-for|recentRequests/);
+});
+
+test("Maps waits for authenticated Lockdown policy before loading remote tiles", () => {
+  const source = read("src/components/KovaMaps.tsx");
+  assert.match(source, /fetch\("\/api\/security\/lockdown"/);
+  assert.match(source, /providerAccess !== "allowed"/);
+  assert.match(source, /Authorization: `Bearer \$\{data\.session\.access_token\}`/);
+  assert.ok(
+    source.indexOf('providerAccess !== "allowed"') < source.indexOf('import("maplibre-gl")'),
+  );
+});
+
+test("Maps provider guard serializes cross-instance requests and keeps a shared cache", () => {
+  const migration = read("supabase/migrations/20260915120000_maps_geocoder_provider_guard.sql");
+  assert.match(migration, /maps_geocoder_provider_state/);
+  assert.match(migration, /maps_geocoder_cache/);
+  assert.match(migration, /interval '10 seconds'/);
+  assert.match(migration, /release_maps_geocoder_provider_slot/);
+  assert.match(migration, /interval '1 second'/);
+  assert.match(migration, /grant execute.+service_role/);
+  assert.match(migration, /revoke all.+anon, authenticated/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {
