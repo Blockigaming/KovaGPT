@@ -88,7 +88,7 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /const latitude = finiteCoordinate\(value\.lat\)/);
   assert.match(route, /latitude === null/);
   assert.match(route, /Place search is temporarily unavailable/);
-  assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
+  assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
   assert.match(route, /admit_maps_provider_request/);
   assert.match(route, /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/);
