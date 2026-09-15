@@ -20,6 +20,7 @@ function AccountStorageDashboard({ ownerId }: { ownerId: string | null }) {
   const [localBytes, setLocalBytes] = useState<number | null>(null);
   const [loading, setLoading] = useState(ownerId !== null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const activeRef = useRef(false);
   const requestRef = useRef(0);
 
   const load = useCallback(async () => {
@@ -34,21 +35,22 @@ function AccountStorageDashboard({ ownerId }: { ownerId: string | null }) {
     setLoading(true);
     try {
       const data = await getMyStorage();
-      if (request === requestRef.current) setRemote(data);
+      if (activeRef.current && request === requestRef.current) setRemote(data);
     } catch {
-      if (request === requestRef.current) {
+      if (activeRef.current && request === requestRef.current) {
         setLoadError("Cloud storage could not be loaded. Try refreshing your usage.");
       }
     } finally {
-      if (request === requestRef.current) setLoading(false);
+      if (activeRef.current && request === requestRef.current) setLoading(false);
     }
   }, [ownerId]);
 
   useEffect(() => {
+    activeRef.current = true;
     void load();
     return () => {
-      // A refresh or account transition invalidates the previous response.
-      requestRef.current++;
+      // The owner-keyed child unmounts across account transitions.
+      activeRef.current = false;
     };
   }, [load]);
 
