@@ -7,7 +7,10 @@ const migration = readFileSync(
   "supabase/migrations/20260722130000_product_completeness_reliability.sql",
   "utf8",
 );
-const help = readFileSync("src/routes/help.tsx", "utf8");
+const help = [
+  readFileSync("src/routes/help.tsx", "utf8"),
+  readFileSync("src/lib/help-center-data.ts", "utf8"),
+].join("\n");
 
 test("product-completeness migration adds owner-scoped tables with RLS", () => {
   for (const table of [
@@ -28,6 +31,24 @@ test("product-completeness migration adds owner-scoped tables with RLS", () => {
   assert.match(migration, /auth\.uid\(\) = owner_id/);
   assert.match(migration, /exists \(select 1 from public\.app_admin_roles/);
   assert.doesNotMatch(migration, /using \(true\).*app_admin_roles/i);
+});
+
+test("help center source covers scoped features and omits voice documentation", () => {
+  for (const topic of [
+    "Getting started",
+    "Search & research",
+    "Projects",
+    "Files & images",
+    "Temporary Chat",
+    "Memory",
+    "Google",
+    "Scheduled tasks",
+    "Library & sharing",
+    "Billing & plans",
+  ]) {
+    assert.match(help, new RegExp(topic, "i"));
+  }
+  assert.doesNotMatch(help, /\bvoice\b|microphone|dictation|read aloud/i);
 });
 
 test("support, feedback, admin, safety, and policy contracts avoid secret exposure", () => {

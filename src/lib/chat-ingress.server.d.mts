@@ -7,13 +7,7 @@ export const CHAT_MAX_TEXT_ATTACHMENT_CHARS: number;
 export const CHAT_MAX_ANON_BUCKETS: number;
 
 export type ChatModeId =
-  | "instant"
-  | "medium"
-  | "thinking"
-  | "high"
-  | "extra_high"
-  | "max"
-  | "ultra";
+  "instant" | "medium" | "thinking" | "high" | "extra_high" | "max" | "ultra";
 export type ChatClientTool = "web_search" | "image" | "study" | "data_analysis" | "file_analysis";
 
 export type ChatUserContext = {

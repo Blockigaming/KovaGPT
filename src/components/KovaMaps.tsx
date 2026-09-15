@@ -47,7 +47,16 @@ type ViewContext = {
   zoom: number;
 };
 
-function addMapEnhancements(map: MapLibreMap) {
+function set3dResources(map: MapLibreMap, enabled: boolean) {
+  map.setTerrain(
+    enabled && map.getSource("terrain") ? { source: "terrain", exaggeration: 1.15 } : null,
+  );
+  if (map.getLayer("kova-3d-buildings")) {
+    map.setLayoutProperty("kova-3d-buildings", "visibility", enabled ? "visible" : "none");
+  }
+}
+
+function addMapEnhancements(map: MapLibreMap, enabled: boolean) {
   if (!map.getSource("terrain")) {
     map.addSource("terrain", {
       type: "raster-dem",
@@ -57,7 +66,6 @@ function addMapEnhancements(map: MapLibreMap) {
       maxzoom: 15,
     });
   }
-  map.setTerrain({ source: "terrain", exaggeration: 1.15 });
   if (!map.getLayer("kova-3d-buildings") && map.getSource("openmaptiles")) {
     const labelLayer = map.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
     map.addLayer(
@@ -77,12 +85,16 @@ function addMapEnhancements(map: MapLibreMap) {
       labelLayer,
     );
   }
+  set3dResources(map, enabled);
 }
 
 export function KovaMaps() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
+  const principalGenerationRef = useRef(0);
+  const activeOwnerRef = useRef<string | null | undefined>(undefined);
+  const searchControllerRef = useRef<AbortController | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
@@ -98,6 +110,7 @@ export function KovaMaps() {
   } | null>(null);
   const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
+  activeOwnerRef.current = isLoaded ? (isSignedIn ? (user?.id ?? null) : null) : undefined;
   const networkAllowed =
     isLoaded &&
     isSignedIn &&
@@ -106,10 +119,27 @@ export function KovaMaps() {
     networkAccess?.allowed === true;
 
   useEffect(() => {
-    if (!isLoaded) return;
+    const generation = ++principalGenerationRef.current;
     const ownerId = user?.id;
+    searchControllerRef.current?.abort();
+    searchControllerRef.current = null;
+    markerRef.current?.remove();
+    markerRef.current = null;
+    mapRef.current?.remove();
+    mapRef.current = null;
+    setQuery("");
+    setResults([]);
+    setSelected(null);
+    setView(null);
+    setSearching(false);
+    setSatellite(false);
+    setThreeD(true);
     setNetworkAccess(null);
     setLoading(true);
+    if (!isLoaded) {
+      setError(null);
+      return;
+    }
     if (!isSignedIn || !ownerId) {
       setError("Sign in to use Maps.");
       setLoading(false);
@@ -119,6 +149,8 @@ export function KovaMaps() {
     void authFetch("/api/security/lockdown", { signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as { enabled?: boolean };
+        if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          return;
         if (!response.ok || typeof payload.enabled !== "boolean") throw new Error("unavailable");
         if (payload.enabled) {
           setError("Maps is unavailable while Lockdown Mode is on.");
@@ -130,7 +162,12 @@ export function KovaMaps() {
         setNetworkAccess({ ownerId, allowed: true });
       })
       .catch((error) => {
-        if (controller.signal.aborted) return;
+        if (
+          controller.signal.aborted ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId
+        )
+          return;
         console.error("[maps] Lockdown status check failed", {
           name: error instanceof Error ? error.name : "UnknownError",
         });
@@ -143,10 +180,18 @@ export function KovaMaps() {
 
   useEffect(() => {
     if (!networkAllowed || !containerRef.current || mapRef.current) return;
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     let disposed = false;
     void import("maplibre-gl")
       .then(({ default: maplibregl }) => {
-        if (disposed || !containerRef.current) return;
+        if (
+          disposed ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId ||
+          !containerRef.current
+        )
+          return;
         const map = new maplibregl.Map({
           container: containerRef.current,
           style: VECTOR_STYLE,
@@ -159,12 +204,16 @@ export function KovaMaps() {
         });
         mapRef.current = map;
         const loadTimeout = window.setTimeout(() => {
+          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+            return;
           setLoading(false);
           setError("Map data is taking too long to load. Check your connection and try again.");
         }, 12_000);
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
         const updateView = () => {
+          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+            return;
           const center = map.getCenter();
           const bounds = map.getBounds();
           setView({
@@ -179,19 +228,29 @@ export function KovaMaps() {
           });
         };
         map.on("load", () => {
+          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+            return;
           window.clearTimeout(loadTimeout);
-          addMapEnhancements(map);
+          addMapEnhancements(map, threeD);
           setLoading(false);
           updateView();
         });
         map.on("moveend", updateView);
         map.on("error", (event) => {
+          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+            return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
           setError("Some map data could not load. Check your connection and try again.");
           setLoading(false);
         });
       })
       .catch(() => {
+        if (
+          disposed ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId
+        )
+          return;
         setError("Maps could not start in this browser. Refresh the page or try another browser.");
         setLoading(false);
       });
@@ -203,10 +262,15 @@ export function KovaMaps() {
     };
   }, [networkAllowed]);
 
-  const selectPlace = async (place: Place) => {
+  const selectPlace = async (
+    place: Place,
+    generation = principalGenerationRef.current,
+    ownerId = activeOwnerRef.current,
+  ) => {
+    const { default: maplibregl } = await import("maplibre-gl");
+    if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId) return;
     const map = mapRef.current;
     if (!map) return;
-    const { default: maplibregl } = await import("maplibre-gl");
     markerRef.current?.remove();
     markerRef.current = new maplibregl.Marker({ color: "#1685fb" })
       .setLngLat([place.longitude, place.latitude])
@@ -243,26 +307,43 @@ export function KovaMaps() {
     }
     setSearching(true);
     setError(null);
+    searchControllerRef.current?.abort();
+    const controller = new AbortController();
+    searchControllerRef.current = controller;
+    const generation = principalGenerationRef.current;
+    const ownerId = user?.id;
     try {
-      if (!networkAllowed || !user?.id) throw new Error("Maps access is unavailable.");
+      if (!networkAllowed || !ownerId) throw new Error("Maps access is unavailable.");
       const response = await authFetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
-        headers: { "X-Kova-Expected-User": user.id },
+        headers: { "X-Kova-Expected-User": ownerId },
+        signal: controller.signal,
       });
       const payload = (await response.json()) as { results?: Place[]; error?: string };
+      if (
+        controller.signal.aborted ||
+        generation !== principalGenerationRef.current ||
+        activeOwnerRef.current !== ownerId
+      )
+        return;
       if (!response.ok) throw new Error(payload.error);
       const next = payload.results ?? [];
       setResults(next);
-      if (!next.length)
+      if (!next.length) {
+        markerRef.current?.remove();
+        markerRef.current = null;
+        setSelected(null);
         setError("No matching places were found. Check the spelling or add a city or country.");
-      else await selectPlace(next[0]);
+      } else await selectPlace(next[0], generation);
     } catch (caught) {
+      if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
       setError(
         caught instanceof Error && caught.message
           ? caught.message
           : "Place search is unavailable. Try again.",
       );
     } finally {
-      setSearching(false);
+      if (searchControllerRef.current === controller) searchControllerRef.current = null;
+      if (generation === principalGenerationRef.current) setSearching(false);
     }
   };
 
@@ -297,12 +378,16 @@ export function KovaMaps() {
   const toggleStyle = () => {
     const map = mapRef.current;
     if (!map) return;
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     const next = !satellite;
     setSatellite(next);
     map.setStyle(next ? SATELLITE_STYLE : VECTOR_STYLE);
     map.once("style.load", () => {
-      if (!next) addMapEnhancements(map);
-      if (selected) void selectPlace(selected);
+      if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+        return;
+      if (!next) addMapEnhancements(map, threeD);
+      if (selected) void selectPlace(selected, generation, ownerId);
     });
   };
 
@@ -312,7 +397,7 @@ export function KovaMaps() {
     const next = !threeD;
     setThreeD(next);
     map.easeTo({ pitch: next ? 48 : 0, bearing: next ? -8 : 0, duration: 700 });
-    map.setTerrain(next && !satellite ? { source: "terrain", exaggeration: 1.15 } : null);
+    set3dResources(map, next && !satellite);
   };
 
   const locate = () => {
@@ -320,8 +405,12 @@ export function KovaMaps() {
       setError("Current location is not supported by this browser.");
       return;
     }
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
+        if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          return;
         setError(null);
         setQuery("");
         setResults([]);
@@ -335,10 +424,12 @@ export function KovaMaps() {
           bounds: null,
         });
       },
-      () =>
+      () => {
+        if (generation !== principalGenerationRef.current) return;
         setError(
           "Location access was denied or unavailable. You can still search by place or address.",
-        ),
+        );
+      },
       { enableHighAccuracy: false, timeout: 8_000, maximumAge: 60_000 },
     );
   };

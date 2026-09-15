@@ -60,6 +60,18 @@ test("signed-in sidebar keeps core destinations visible and groups coming-soon i
   assert.match(sidebar, /title="Finances is coming soon"/);
 });
 
+test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
+  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
+  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
+  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
+  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
+});
+
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
@@ -138,6 +150,31 @@ test("active desktop chat keeps one primary action and groups secondary controls
   );
   assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
   assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
+});
+
+test("composer actions, message editing, and markdown stay reachable and lossless", () => {
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
+  assert.match(
+    chatInput,
+    /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
+  );
+  assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  assert.match(chatInput, /onToolSelect\?\.\(next\)/);
+  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
+  assert.match(chatInput, /kova-send-button is-enabled/);
+  assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
+  assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
+  assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
+  assert.ok(
+    chatMessage.indexOf("title={retryActionLabel}") <
+      chatMessage.indexOf('aria-label="More actions"'),
+  );
+  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
+  assert.match(route, /setInput\(m\.content\);/);
+  assert.match(
+    route,
+    /setEditingMessage\(\{\s*conversationId: active\.id,\s*messageId: m\.id,\s*\}\);/,
+  );
 });
 
 test("sending snapshots history and serializes automatic retries", () => {

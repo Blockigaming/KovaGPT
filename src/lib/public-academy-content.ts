@@ -618,7 +618,7 @@ const topics: readonly AcademyTopic[] = [
       "Check dates, methods, and conflicts of interest",
       "Do not fabricate certainty when evidence is limited",
     ],
-    action: { label: "Start a web search", to: "/" },
+    action: { label: "Open research assistant", to: "/research-assistant" },
   },
   {
     slug: "responsible-and-safe-use",

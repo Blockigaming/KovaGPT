@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 test("Maps navigation opens the responsive Maps workspace", async ({ page }) => {
   await page.goto("/");
@@ -12,11 +13,17 @@ test("Maps navigation opens the responsive Maps workspace", async ({ page }) => 
 });
 
 test("Maps shows a useful message for a failed place search", async ({ page }) => {
+  await installAuthenticatedFixture(page);
+  await page.route("**/api/security/lockdown", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: '{"enabled":false}' }),
+  );
   await page.route("**/api/maps/search?**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: '{"results":[]}' }),
   );
   await page.goto("/maps");
   await page.getByPlaceholder("Ask Kova about Maps").fill("Not a real place 987654321");
-  await page.getByRole("button", { name: "Search maps" }).click();
+  const search = page.getByRole("button", { name: "Search maps" });
+  await expect(search).toBeEnabled();
+  await search.click();
   await expect(page.getByRole("alert")).toContainText("No matching places were found");
 });

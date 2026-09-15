@@ -49,6 +49,7 @@ test("Kova inventory separates interface templates from service handlers", () =>
   assert.equal(kovagpt.publicRegistryPageCount, 544);
   assert.equal(kovagpt.reviewedPublicPathCount, 608);
   assert.equal(kovagpt.sitemapPathCount, 165);
+  assert.ok(!kovagpt.publicDetailPaths.includes("features/deep-research"));
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
   assert.ok(kovagpt.publicDetailPaths.includes("features/voice"));

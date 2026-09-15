@@ -3,6 +3,18 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const read = (path) => readFileSync(path, "utf8");
 
+test("workspace sources remain authorized while chat history stays searchable in the shell", () => {
+  const fn = read("src/lib/workspace.functions.ts"),
+    home = read("src/routes/index.tsx"),
+    sidebar = read("src/components/Sidebar.tsx"),
+    palette = read("src/components/CommandPalette.tsx");
+  for (const table of ["projects", "user_library_items", "scheduled_tasks"])
+    assert.match(fn, new RegExp(`\\"${table}\\"`));
+  assert.match(home, /loadConversations/);
+  assert.match(sidebar, /searchConversations/);
+  assert.match(sidebar, />Recents<\/h2>/);
+  assert.match(palette, /searchConversations/);
+});
 test("Memory Center supports real edit delete merge and source explanations", () => {
   const route = read("src/routes/memory.tsx"),
     fn = read("src/lib/workspace.functions.ts");

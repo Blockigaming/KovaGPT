@@ -149,6 +149,7 @@ import {
 } from "@/lib/principal-browser-storage.mjs";
 
 const USER_STOP_REASON = "kova_user_stopped_generation";
+type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -638,9 +639,14 @@ function KovaGPT() {
         );
     });
 
-    consume<string>("kova-app-chat-context", (appContext) => {
-      if (typeof appContext !== "string") throw new Error("invalid_app_handoff");
-      return () => setInput(appContext);
+    consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
+      if (typeof appContext === "string") return () => setInput(appContext);
+      if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
+        throw new Error("invalid_app_handoff");
+      return () => {
+        setInput(appContext.prompt);
+        setSelectedTool("web_search");
+      };
     });
 
     consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {

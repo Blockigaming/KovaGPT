@@ -21,8 +21,11 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
     "viewport",
     "writePrincipalHandoff",
     "authFetch",
+    "principalGenerationRef",
   ])
     assert.match(source, new RegExp(contract.replaceAll(".", "\\.")));
+  assert.match(source, /searchControllerRef\.current\?\.abort\(\)/);
+  assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
@@ -46,9 +49,17 @@ test("Maps provider admission and chat handoffs use rolling byte bounds", () => 
   const migration = read("supabase/migrations/20260915012500_maps_provider_throttle.sql");
   assert.match(contextPacks, /CHAT_CONTEXT_HANDOFF_MAX_BYTES = 30 \* 1024/);
   assert.match(contextPacks, /TextEncoder/);
+  assert.match(contextPacks, /tool: "web_search"/);
+  assert.match(read("src/routes/index.tsx"), /setSelectedTool\("web_search"\)/);
   assert.match(migration, /provider text primary key/);
   assert.match(migration, /interval '1 second'/);
   assert.match(migration, /next_request_at <= v_now/);
+  const retirement = read(
+    "supabase/migrations/20260915011500_retire_deep_research_workspace_search.sql",
+  );
+  assert.match(retirement, /set status = 'canceled'/);
+  assert.match(retirement, /completed_at = coalesce\(completed_at, now\(\)\)/);
+  assert.match(retirement, /'writing_report', 'running'/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {

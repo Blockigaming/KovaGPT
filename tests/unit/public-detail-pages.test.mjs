@@ -179,13 +179,13 @@ test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
   assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);
 });
 
-test("Kova Academy provides every retained exact-path, original learning guide", () => {
+test("Kova Academy provides all 37 retained exact-path, original learning guides", () => {
   const source = read("src/lib/public-academy-content.ts");
   const progress = JSON.parse(read("docs/ui-ux/page-by-page-progress.json"));
   const expected = progress.records
     .filter(
-      ({ source, sourcePath, completed }) =>
-        source === "openai.com" && sourcePath.startsWith("/academy/") && completed,
+      ({ source, sourcePath, kovaPath }) =>
+        source === "openai.com" && sourcePath.startsWith("/academy/") && kovaPath !== null,
     )
     .map(({ sourcePath }) => sourcePath.slice(1));
   const actual = [...source.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(

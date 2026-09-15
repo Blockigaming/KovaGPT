@@ -439,7 +439,7 @@ function ContextPacksPage() {
                               safeBrowserStorage("sessionStorage"),
                               "kova-app-chat-context",
                               isLoaded ? userKey : undefined,
-                              contextPackSearchPrompt(pack),
+                              { prompt: contextPackSearchPrompt(pack), tool: "web_search" },
                             );
                             if (!handoff.ok) {
                               toast.error(
