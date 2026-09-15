@@ -72,8 +72,16 @@ test("settings navigation is centralized and routes every rendered category", ()
   ])
     assert.ok(settingsSource.includes(`label: "${category}"`), category);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
-  assert.match(settingsSource, /aria-selected=\{tab === v\}/);
+  assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
+  assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
   assert.match(settingsSource, /onClick=\{\(\) => selectTab\(v\)\}/);
+});
+
+test("mobile settings drill-in moves focus with the visible panel", () => {
+  assert.match(settingsSource, /pendingMobileFocusRef\.current = "content"/);
+  assert.match(settingsSource, /pendingMobileFocusRef\.current = "navigation"/);
+  assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\)/);
+  assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
 });
 
 test("usage and billing preserve real data states without invented allowances", () => {
