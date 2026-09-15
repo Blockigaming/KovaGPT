@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 150,
+  "migrationCount": 151,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -395,6 +395,7 @@
     "effective_user_plan_tier",
     "enforce_family_member_cap",
     "enforce_family_member_cap",
+    "enforce_project_owner_membership",
     "enforce_supported_agent_job_kind",
     "enforce_work_saved_payload_capacity",
     "enforce_work_sync_receipt_capacity",
@@ -1267,6 +1268,7 @@
     "trg_library_touch",
     "trg_plaid_touch",
     "trg_project_chats_updated_at",
+    "trg_project_owner_membership_integrity",
     "trg_projects_add_owner",
     "trg_projects_updated_at",
     "trg_shared_touch",
@@ -1874,6 +1876,7 @@
     "execute on function public.dispatch_developer_billing_with_files(uuid,uuid,jsonb) to service_role",
     "execute on function public.effective_user_plan_tier(uuid)\n  to service_role",
     "execute on function public.enforce_family_member_cap() to service_role",
+    "execute on function public.enforce_project_owner_membership() to service_role",
     "execute on function public.enforce_work_saved_payload_capacity() to service_role",
     "execute on function public.enforce_work_sync_receipt_capacity() to service_role",
     "execute on function public.expire_developer_files(integer) to service_role",
@@ -2389,6 +2392,7 @@
     "all on function public.disconnect_github_account(uuid, boolean) from public, anon, authenticated",
     "all on function public.dispatch_developer_billing_with_files(uuid,uuid,jsonb) from public,anon,authenticated",
     "all on function public.enforce_family_member_cap() from public, anon, authenticated",
+    "all on function public.enforce_project_owner_membership() from public, anon, authenticated",
     "all on function public.enforce_work_saved_payload_capacity()\n  from public, anon, authenticated",
     "all on function public.enforce_work_sync_receipt_capacity()\n  from public, anon, authenticated",
     "all on function public.expire_developer_files(integer) from public,anon,authenticated",
@@ -2646,5 +2650,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "7124154659ed0e166ad91a239a60ded41b5d375f327e689192465fb44602940b"
+  "sha256": "19274db7f1ff63fd9c973bb94eafacdfa8a092b2f6d9139bcfea20e3c0fe846a"
 }
