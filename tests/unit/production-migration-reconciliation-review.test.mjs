@@ -83,7 +83,10 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
 });
 
 test("the reviewed evidence distinguishes the historical and current-state baselines", () => {
-  const report = readFileSync("docs/release-reconciliation/remote-only-migrations-20260915.md", "utf8");
+  const report = readFileSync(
+    "docs/release-reconciliation/remote-only-migrations-20260915.md",
+    "utf8",
+  );
   assert.match(report, /20260906024459/);
   assert.match(report, /20260903145843/);
   assert.match(report, /97-version baseline is not the 98-version current-state baseline/);
