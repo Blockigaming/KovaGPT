@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 import { validateAuthMigrationEvidence } from "../../scripts/release/auth-migration-preflight.mjs";
 
@@ -153,4 +158,98 @@ test("backups, rollback, approval, TLS and identity integrity still fail closed"
     { expectedUserUuids: [null] }, { expectedUserUuids: [] }]) {
     assert.throws(() => validateAuthMigrationEvidence({ ...ready, ...changes }), /auth_migration_/u);
   }
+});
+
+const cli = fileURLToPath(new URL("../../scripts/release/auth-migration-preflight.mjs", import.meta.url));
+const sensitiveCanary = "PRIVATE_INPUT_CANARY_MUST_NOT_LEAK";
+
+function withCliFile(contents, action) {
+  const dir = mkdtempSync(join(tmpdir(), "kova-preflight-cli-"));
+  const path = join(dir, `${sensitiveCanary}.json`);
+  try {
+    if (contents !== undefined) writeFileSync(path, contents);
+    const run = (args = [path], extraEnv = {}) => {
+      const env = { ...process.env, ...extraEnv };
+      delete env.KOVA_AUTH_MIGRATION_EVIDENCE_FILE;
+      if (extraEnv.KOVA_AUTH_MIGRATION_EVIDENCE_FILE !== undefined) {
+        env.KOVA_AUTH_MIGRATION_EVIDENCE_FILE = extraEnv.KOVA_AUTH_MIGRATION_EVIDENCE_FILE;
+      }
+      return spawnSync(process.execPath, [cli, ...args], {
+        encoding: "utf8", env, timeout: 10_000,
+      });
+    };
+    action({ dir, path, run });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function assertSafeFailure(result, code) {
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr.trim(), `AUTH_MIGRATION_PREFLIGHT_ERROR=${code}`);
+  assert.ok(!`${result.stdout}${result.stderr}`.includes(sensitiveCanary));
+}
+
+test("CLI malformed JSON never exposes source contents or a parser stack", () => {
+  withCliFile(`{"private":"${sensitiveCanary}", broken}`, ({ run }) => {
+    assertSafeFailure(run(), "auth_migration_evidence_input_invalid");
+  });
+});
+
+test("CLI missing and non-regular input paths fail without exposing their names", () => {
+  withCliFile(undefined, ({ run, dir }) => {
+    assertSafeFailure(run(), "auth_migration_evidence_input_invalid");
+    assertSafeFailure(run([dir]), "auth_migration_evidence_input_invalid");
+  });
+});
+
+test("CLI oversized evidence is rejected rather than parsed or printed", () => {
+  withCliFile(Buffer.alloc(4 * 1024 * 1024 + 1, 32), ({ run }) => {
+    assertSafeFailure(run(), "auth_migration_evidence_input_invalid");
+  });
+});
+
+test("CLI malformed UTF-8 cannot silently become replacement characters", () => {
+  const input = Buffer.concat([
+    Buffer.from('{"schemaVersion":1,"comment":"'), Buffer.from([0xff]), Buffer.from('"}'),
+  ]);
+  withCliFile(input, ({ run }) => {
+    assertSafeFailure(run(), "auth_migration_evidence_input_invalid");
+  });
+});
+
+test("CLI preserves fixed validation errors without dumping invalid evidence", () => {
+  withCliFile(JSON.stringify({ ...ready, tlsAuthorized: false, private: sensitiveCanary }), ({ run }) => {
+    assertSafeFailure(run(), "auth_migration_tls_not_authorized");
+  });
+});
+
+test("CLI valid input emits only the bounded decision, not UUIDs or private fields", () => {
+  withCliFile(JSON.stringify({ ...ready, private: sensitiveCanary }), ({ run }) => {
+    const result = run();
+    assert.equal(result.status, 0);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout.trim(), `AUTH_MIGRATION_PREFLIGHT=${JSON.stringify(validateAuthMigrationEvidence(ready))}`);
+    assert.ok(!result.stdout.includes(userId));
+    assert.ok(!result.stdout.includes(sensitiveCanary));
+  });
+});
+
+test("CLI retains the environment-file input and explicit no-rerun decision", () => {
+  const done = { ...ready, destinationUsersBefore: 1, destinationIdentitiesBefore: 1,
+    destinationMatchesExpected: true, exactlyOnceApproved: false };
+  withCliFile(JSON.stringify(done), ({ run, path }) => {
+    const result = run([], { KOVA_AUTH_MIGRATION_EVIDENCE_FILE: path });
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /"decision":"DO_NOT_RERUN"/u);
+    assert.equal(result.stderr, "");
+  });
+});
+
+test("CLI absent or excess arguments are reported with fixed safe codes", () => {
+  withCliFile(JSON.stringify(ready), ({ run, path }) => {
+    assertSafeFailure(run([]), "auth_migration_evidence_file_required");
+    assertSafeFailure(run([path, sensitiveCanary]), "auth_migration_evidence_input_invalid");
+  });
 });
