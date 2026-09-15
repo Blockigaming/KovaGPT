@@ -1,0 +1,45 @@
+name: PR347 Full Unit Diagnostic
+
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/pr347-unit-diagnostic.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 6cc7fb7e1e009d139f6dcd5f280499f942155db2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Complete unit suite
+        id: unit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p validation
+          git rev-parse HEAD > validation/commit.txt
+          git rev-parse HEAD^{tree} > validation/tree.txt
+          npm run test:unit > validation/unit.log 2>&1
+      - name: Preserve full diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr347-full-unit-6cc7fb7e
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Require full unit suite
+        if: always()
+        env:
+          UNIT_RESULT: ${{ steps.unit.outcome }}
+        run: test "$UNIT_RESULT" = success
