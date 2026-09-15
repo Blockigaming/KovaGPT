@@ -1,0 +1,84 @@
+name: PR347 Focused Validation
+
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/pr347-focused-validation.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KOVA_BROWSER_PREVIEW: node
+      PLAYWRIGHT_PREBUILT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 7094d15d9ccd7070b38150ac4246ca78d85d0238
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Reproduce unchanged tests
+        id: before
+        continue-on-error: true
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/before.json
+        run: |
+          mkdir -p validation
+          set -o pipefail
+          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts --project=phone-390x844 --project=desktop-1280x800 --project=desktop-1440x900 --workers=2 --reporter=list,json 2>&1 | tee validation/before.log
+          
+      - name: Apply two exact test corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/e2e/pricing-layout.spec.ts')
+          text = path.read_text()
+          old = 'Instant, Medium, High, Extra High, Max, and Ultra modes'
+          assert text.count(old) == 1
+          path.write_text(text.replace(old, 'Instant, Medium, High, Extra high, Max, and Ultra modes'))
+          path = Path('tests/e2e/deep-research-progress.spec.ts')
+          text = path.read_text()
+          old = "page.locator('button[aria-label=\"Account menu\"]:visible').first()"
+          assert text.count(old) == 1
+          path.write_text(text.replace(old, "page.locator('button[aria-label=\"Start temporary chat\"]:visible').first()"))
+          PY
+          ./node_modules/.bin/prettier --write tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts
+          git diff --check
+          git diff --binary > validation/focused-fix.patch
+      - name: Rerun corrected tests
+        id: after
+        continue-on-error: true
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/after.json
+        run: |
+          set -o pipefail
+          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/deep-research-progress.spec.ts --project=phone-390x844 --project=desktop-1280x800 --project=desktop-1440x900 --workers=2 --reporter=list,json 2>&1 | tee validation/after.log
+      - name: Preserve comparison evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr347-focused-validation
+          path: |
+            validation/
+            test-results/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Require corrected tests to pass
+        if: always()
+        env:
+          AFTER: ${{ steps.after.outcome }}
+        run: test "$AFTER" = success
