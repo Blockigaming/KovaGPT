@@ -650,14 +650,18 @@ export function SettingsDialog({
   const allTabs = TAB_GROUPS.flatMap((group) => group.tabs);
   const activeTab = allTabs.find((item) => item.v === tab) ?? allTabs[0];
   const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
+  const matchesSettingsQuery = (item: TabDef) =>
+    [item.label, ...(item.keywords ?? [])].some((term) =>
+      term.toLocaleLowerCase().includes(normalizedQuery),
+    );
+  const hasSettingsMatches =
+    !normalizedQuery || TAB_GROUPS.some((group) => group.tabs.some(matchesSettingsQuery));
   const filteredGroups = normalizedQuery
     ? TAB_GROUPS.map((group) => ({
         ...group,
-        tabs: group.tabs.filter((item) =>
-          [item.label, ...(item.keywords ?? [])].some((term) =>
-            term.toLocaleLowerCase().includes(normalizedQuery),
-          ),
-        ),
+        // Keep the selected trigger mounted so its tab panel retains a valid
+        // aria-labelledby target while the user searches other settings.
+        tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
       })).filter((group) => group.tabs.length > 0)
     : TAB_GROUPS;
   const selectTab = (value: string) => {
@@ -756,23 +760,22 @@ export function SettingsDialog({
                 />
               </label>
               <TabsList className="kova-settings-nav" aria-orientation="vertical">
-                {filteredGroups.length ? (
-                  filteredGroups.map((group) => (
-                    <section key={group.title} aria-label={group.title}>
-                      <p className="kova-settings-nav-group">{group.title}</p>
-                      {group.tabs.map(({ v, icon: Icon, label }) => (
-                        <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
-                          <Icon aria-hidden="true" />
-                          <span>{label}</span>
-                        </TabsTrigger>
-                      ))}
-                    </section>
-                  ))
-                ) : (
+                {filteredGroups.map((group) => (
+                  <section key={group.title} aria-label={group.title}>
+                    <p className="kova-settings-nav-group">{group.title}</p>
+                    {group.tabs.map(({ v, icon: Icon, label }) => (
+                      <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
+                        <Icon aria-hidden="true" />
+                        <span>{label}</span>
+                      </TabsTrigger>
+                    ))}
+                  </section>
+                ))}
+                {!hasSettingsMatches ? (
                   <p className="kova-settings-no-results" role="status">
                     No settings found
                   </p>
-                )}
+                ) : null}
               </TabsList>
             </aside>
 

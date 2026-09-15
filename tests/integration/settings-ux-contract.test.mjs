@@ -39,6 +39,7 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   assert.match(settingsSource, /placeholder="Search settings"/);
   assert.match(settingsSource, /No settings found/);
   assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
+  assert.match(settingsSource, /item\.v === tab \|\| matchesSettingsQuery\(item\)/);
   assert.match(settingsSource, /aria-label="Settings navigation"/);
   assert.match(settingsSource, /aria-label="Back to settings"/);
   assert.match(settingsSource, /setMobileHome\(false\)/);
@@ -141,6 +142,24 @@ test("theme changes cannot interpolate the Settings surface colors", () => {
     "Settings theme colors must switch atomically instead of interpolating",
   );
   assert.match(settingsSource, /kova-settings-surface[^"]*bg-\[var\(--surface-modal\)\]/);
+});
+
+test("workspace sizing is authenticated-only and mobile safe areas are applied once", () => {
+  assert.match(
+    stylesSource,
+    /\.kova-settings-dialog\.is-authenticated\s*\{[\s\S]*?width: min\(92vw, 1280px\)/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 767px\)[\s\S]*?\.kova-settings-dialog\s*\{[\s\S]*?width: 100vw !important;[\s\S]*?height: 100dvh !important;/,
+  );
+  const finalMobileRules = stylesSource.slice(
+    stylesSource.lastIndexOf("@media (max-width: 767px)"),
+  );
+  assert.doesNotMatch(
+    finalMobileRules,
+    /\.kova-settings-(?:sidebar|content-header|content > \[role="tabpanel"\])[^}]*var\(--safe-(?:top|bottom)\)/s,
+  );
 });
 
 test("Settings polish retains the billing portal safety gates", () => {
