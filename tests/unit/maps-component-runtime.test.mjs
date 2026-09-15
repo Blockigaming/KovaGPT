@@ -67,7 +67,10 @@ function fixture({ approved = true, lockdown = false } = {}) {
     }
     emit(name, event = {}) {
       const entries = [...(this.handlers.get(name) ?? [])];
-      this.handlers.set(name, entries.filter((entry) => !entry.once));
+      this.handlers.set(
+        name,
+        entries.filter((entry) => !entry.once),
+      );
       for (const entry of entries) entry.callback(event);
     }
     addControl() {}
