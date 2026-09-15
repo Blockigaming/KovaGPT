@@ -53,31 +53,49 @@ test("the September 15 review keeps all nineteen structural mappings blocked", (
   assert.equal(new Set(expected).size, 19);
   assert.equal(entries.size, 24);
   assert.equal(lineage.entries.filter((entry) => entry.status === "equivalent").length, 5);
+  assert.equal(lineage.entries.filter((entry) => entry.status === "schema_proven").length, 0);
 });
 
-for (const version of workspace) {
-  test(`${version} includes the canonical Day 15 reconciliation candidate`, () => {
-    assert.equal(entries.get(version).status, "requires_schema_proof");
+test("workspace candidates include the existing canonical reconciliation", () => {
+  for (const version of workspace) {
     assert.ok(entries.get(version).candidateSourceVersions.includes("20260904230332"));
-  });
-}
+  }
+});
 
-for (const version of privileges) {
-  test(`${version} includes the canonical privilege reconciliation candidate`, () => {
-    assert.equal(entries.get(version).status, "requires_schema_proof");
+test("privilege candidates include the existing production privilege reconciliation", () => {
+  for (const version of privileges) {
     assert.ok(entries.get(version).candidateSourceVersions.includes("20260904230329"));
-  });
-}
+  }
+});
 
-for (const version of unchanged) {
-  test(`${version} retains its reviewed candidate set`, () => {
-    assert.equal(entries.get(version).status, "requires_schema_proof");
-  });
-}
+test("the only lineage changes are the fifteen reviewed candidate additions", () => {
+  const restored = structuredClone(lineage);
+  const additions = new Map([
+    ...workspace.map((version) => [version, "20260904230332"]),
+    ...privileges.map((version) => [version, "20260904230329"]),
+  ]);
+  for (const entry of restored.entries) {
+    const candidate = additions.get(entry.remoteVersion);
+    if (!candidate) continue;
+    assert.equal(entry.candidateSourceVersions.filter((v) => v === candidate).length, 1);
+    entry.candidateSourceVersions = entry.candidateSourceVersions.filter((v) => v !== candidate);
+  }
+  // Pin the semantic content of main's 3f155680... lineage blob. This preserves
+  // the historical 93-source snapshot, all five equivalences, hashes, reasons,
+  // safety notes, and every pre-existing candidate without relying on formatting.
+  const digest = createHash("sha256").update(JSON.stringify(canonical(restored))).digest("hex");
+  assert.equal(digest, "a8aadcc911f244b39d49c6b6028fdbde52a41398cc14d2e6103ae2f65a76818e");
+});
 
-test("the reviewed lineage digest is stable", () => {
-  const digest = createHash("sha256")
-    .update(JSON.stringify(canonical(lineage)))
-    .digest("hex");
-  assert.equal(digest, "6e057176ed1e36697afca9cb0c1e5a98f02a8b20f6ff82d9b54fc81ebce1fab4");
+test("the reviewed evidence distinguishes the historical and current-state baselines", () => {
+  const report = readFileSync(
+    "docs/release-reconciliation/remote-only-migrations-20260915.md",
+    "utf8",
+  );
+  assert.match(report, /20260906024459/);
+  assert.match(report, /20260903145843/);
+  assert.match(report, /97-version baseline is not the 98-version current-state baseline/);
+  assert.match(report, /No additional equivalence is proven/);
+  const documented = [...report.matchAll(/^\| `(\d{14})` \|/gm)].map((match) => match[1]);
+  assert.deepEqual(documented.sort(), [...workspace, ...privileges, ...unchanged].sort());
 });
