@@ -3,8 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { twMerge } from "tailwind-merge";
 
-const read = (path) =>
-  readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const publicSite = read("src/components/public/PublicSite.tsx");
 
 for (const [file, primitive, variable] of [
@@ -13,31 +12,20 @@ for (const [file, primitive, variable] of [
   ["context-menu", "ContextMenu", "context-menu"],
 ]) {
   const source = read(`src/components/ui/${file}.tsx`);
-  for (const part of primitive === "Popover"
-    ? ["Content"]
-    : ["Content", "SubContent"]) {
+  for (const part of primitive === "Popover" ? ["Content"] : ["Content", "SubContent"]) {
     test(`${primitive}${part} keeps long content reachable within its collision boundary`, () => {
       const name = `${primitive}${part}`;
       const start = source.indexOf(`const ${name} = React.forwardRef<`);
       const end = source.indexOf(`${name}.displayName`, start);
-      assert.ok(
-        start >= 0 && end > start,
-        `${name} must remain a forwarded-ref component`,
-      );
+      assert.ok(start >= 0 && end > start, `${name} must remain a forwarded-ref component`);
       const body = source.slice(start, end);
       assert.ok(
-        body.includes(
-          `--radix-${variable}-content-available-height,var(--kova-overlay-vh)`,
-        ),
+        body.includes(`--radix-${variable}-content-available-height,var(--kova-overlay-vh)`),
       );
-      assert.ok(
-        body.includes(`--radix-${variable}-content-available-width,100vw`),
-      );
+      assert.ok(body.includes(`--radix-${variable}-content-available-width,100vw`));
       assert.ok(body.includes("[--kova-overlay-vh:100vh]"));
       assert.ok(body.includes("calc(var(--kova-overlay-vh)-1rem)"));
-      assert.ok(
-        body.includes("supports-[height:100dvh]:[--kova-overlay-vh:100dvh]"),
-      );
+      assert.ok(body.includes("supports-[height:100dvh]:[--kova-overlay-vh:100dvh]"));
       assert.ok(body.includes("calc(100vw-1rem)"));
       for (const token of [
         "overflow-y-auto",
@@ -53,18 +41,14 @@ for (const [file, primitive, variable] of [
       }
       assert.doesNotMatch(body, /\boverflow-hidden\b/);
       assert.match(body, /\[overflow-wrap:anywhere\][^"]*",\s*className,/);
-      const defaults = body.match(
-        /"([^"]*\[--kova-overlay-vh:100vh\][^"]*)"/,
-      )?.[1];
+      const defaults = body.match(/"([^"]*\[--kova-overlay-vh:100vh\][^"]*)"/)?.[1];
       assert.ok(defaults);
       const overridden = twMerge(defaults, "max-h-20");
       assert.match(overridden, /\bmax-h-20\b/);
       assert.doesNotMatch(overridden, /\bmax-h-\[min\(/);
       if (part === "SubContent") {
         assert.ok(
-          body.includes(
-            `min-w-[min(8rem,var(--radix-${variable}-content-available-width,100vw))]`,
-          ),
+          body.includes(`min-w-[min(8rem,var(--radix-${variable}-content-available-width,100vw))]`),
         );
       }
     });
@@ -82,18 +66,13 @@ test("both public layouts wrap long content instead of relying on clipping", () 
 });
 
 test("nested breadcrumbs wrap and keep the current-page text readable", () => {
-  const breadcrumb = publicSite.match(
-    /<nav\s[^>]*aria-label="Breadcrumb"[\s\S]*?<\/nav>/,
-  )?.[0];
+  const breadcrumb = publicSite.match(/<nav\s[^>]*aria-label="Breadcrumb"[\s\S]*?<\/nav>/)?.[0];
   assert.ok(breadcrumb);
   assert.match(breadcrumb, /flex-wrap/);
   assert.match(breadcrumb, /gap-x-2 gap-y-1/);
   assert.match(breadcrumb, /aria-current="page"/);
   assert.match(breadcrumb, /currentPageSlug\.replaceAll/);
-  assert.doesNotMatch(
-    breadcrumb,
-    /\btruncate\b|\bwhitespace-nowrap\b|\bline-clamp-/,
-  );
+  assert.doesNotMatch(breadcrumb, /\btruncate\b|\bwhitespace-nowrap\b|\bline-clamp-/);
   assert.doesNotMatch(breadcrumb, /className="contents"/);
   assert.match(
     breadcrumb,
@@ -107,11 +86,7 @@ test("nested breadcrumbs wrap and keep the current-page text readable", () => {
 });
 
 test("all public action pills can wrap with padding and visible keyboard focus", () => {
-  const actions = [
-    ...publicSite.matchAll(
-      /<Link\s[^>]*className="([^"]*min-h-11[^"]*)"[^>]*>/g,
-    ),
-  ];
+  const actions = [...publicSite.matchAll(/<Link\s[^>]*className="([^"]*min-h-11[^"]*)"[^>]*>/g)];
   assert.equal(actions.length, 5);
   for (const [, classes] of actions) {
     for (const token of [
@@ -122,16 +97,10 @@ test("all public action pills can wrap with padding and visible keyboard focus",
       "text-center",
       "focus-visible:ring-2",
     ]) {
-      assert.ok(
-        classes.split(" ").includes(token),
-        `Missing ${token} from action`,
-      );
+      assert.ok(classes.split(" ").includes(token), `Missing ${token} from action`);
     }
   }
-  assert.equal(
-    (publicSite.match(/className="h-4 w-4 shrink-0"/g) ?? []).length,
-    3,
-  );
+  assert.equal((publicSite.match(/className="h-4 w-4 shrink-0"/g) ?? []).length, 3);
 });
 
 test("public cards and the closing action remain shrinkable and bounded", () => {
@@ -146,14 +115,8 @@ test("public cards and the closing action remain shrinkable and bounded", () => 
 
 test("signed-in desktop collapse restores focus to the replacement rail control", () => {
   const sidebar = read("src/components/Sidebar.tsx");
-  assert.match(
-    sidebar,
-    /const expandButtonRef = useRef<HTMLButtonElement \| null>\(null\)/,
-  );
-  assert.match(
-    sidebar,
-    /ref=\{expandButtonRef\}[\s\S]*?aria-label="Expand sidebar"/,
-  );
+  assert.match(sidebar, /const expandButtonRef = useRef<HTMLButtonElement \| null>\(null\)/);
+  assert.match(sidebar, /ref=\{expandButtonRef\}[\s\S]*?aria-label="Expand sidebar"/);
   assert.match(
     sidebar,
     /onToggle\(\);[\s\S]*?requestAnimationFrame\(\(\) => expandButtonRef\.current\?\.focus\(\)\)/,
