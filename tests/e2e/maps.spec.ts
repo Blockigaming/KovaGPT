@@ -21,9 +21,11 @@ test("Maps shows a useful message for a failed place search", async ({ page }) =
     route.fulfill({ status: 200, contentType: "application/json", body: '{"results":[]}' }),
   );
   await page.goto("/maps");
-  await page.getByPlaceholder("Ask Kova about Maps").fill("Not a real place 987654321");
+  const query = page.getByPlaceholder("Ask Kova about Maps");
   const search = page.getByRole("button", { name: "Search maps" });
   await expect(search).toBeEnabled();
+  await query.fill("Not a real place 987654321");
+  await expect(query).toHaveValue("Not a real place 987654321");
   await search.click();
   await expect(page.getByRole("alert")).toContainText("No matching places were found");
 });
