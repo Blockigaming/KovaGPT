@@ -20,40 +20,45 @@ export const getMyFamily = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: owned } = await supabase
+    const { data: owned, error: ownerError } = await supabase
       .from("family_groups")
       .select("id, name, owner_id, created_at")
       .eq("owner_id", userId)
       .maybeSingle();
-    const { data: member } = await supabase
+    if (ownerError) throw new Error("Could not load your family group.");
+    const { data: member, error: memberError } = await supabase
       .from("family_members")
       .select("group_id, role")
       .eq("user_id", userId)
       .maybeSingle();
+    if (memberError) throw new Error("Could not load your family membership.");
     let group = owned;
     let role: "owner" | "member" | null = owned ? "owner" : null;
     if (!group && member?.group_id) {
-      const { data: g } = await supabase
+      const { data: g, error: groupError } = await supabase
         .from("family_groups")
         .select("id, name, owner_id, created_at")
         .eq("id", member.group_id)
         .maybeSingle();
+      if (groupError || !g) throw new Error("Could not load your family group.");
       group = g;
       role = (member.role as "owner" | "member") ?? "member";
     }
     if (!group) return { group: null, role: null, members: [], invites: [] };
-    const { data: members } = await supabase
+    const { data: members, error: membersError } = await supabase
       .from("family_members")
       .select("id, user_id, role, created_at")
       .eq("group_id", group.id);
-    const { data: invites } =
+    if (membersError) throw new Error("Could not load family members.");
+    const { data: invites, error: invitesError } =
       role === "owner"
         ? await supabase
             .from("family_invites")
             .select("id, token, invited_email, accepted_at, expires_at, created_at")
             .eq("group_id", group.id)
             .order("created_at", { ascending: false })
-        : { data: [] };
+        : { data: [], error: null };
+    if (invitesError) throw new Error("Could not load family invitations.");
     return { group, role, members: members ?? [], invites: invites ?? [] };
   });
 
