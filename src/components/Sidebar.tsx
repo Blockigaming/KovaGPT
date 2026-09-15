@@ -1,36 +1,32 @@
 import {
   Archive,
-  ArrowUpRight,
-  ChevronRight,
-  Calendar,
+  Clock3,
   Copy as CopyIcon,
-  CreditCard,
-  FolderKanban,
-  FolderOpen,
-  Globe,
-  HelpCircle,
-  ImageIcon,
-  LifeBuoy,
-  Blocks,
-  BriefcaseBusiness,
-  MoreHorizontal,
-  PanelLeft,
+  Ellipsis,
+  Folder,
+  HeartPulse,
+  Images,
+  LibraryBig,
+  MessageCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pin,
   PinOff,
+  PlugZap,
   Search,
-  Settings as SettingsIcon,
   Share2,
-  Sparkles,
-  Telescope,
+  ShoppingBag,
   SquarePen,
   Trash2,
+  WalletCards,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 
-import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,12 +34,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
+import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
 
-const EXPANDED_WIDTH = 260;
+const EXPANDED_WIDTH = 272;
 
 function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
@@ -63,7 +59,6 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
-  onOpenHelp,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -82,43 +77,43 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
+  const checkScheduled = useServerFn(isScheduledTasksEligible);
   const drawerRef = useRef<HTMLElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const [scheduledVisible, setScheduledVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
 
-  const showSignedIn = isLoaded && isSignedIn;
-  const showSignedOut = isLoaded && !isSignedIn;
+  const signedIn = isLoaded && isSignedIn;
   const collapsed = !open;
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isOn = (p: string) => pathname === p;
-  const moreRouteActive = [
-    "/kovas",
-    "/sites",
-    "/apps",
-    "/discovery",
-    "/scheduled-tasks",
-    "/pricing",
-  ].some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
 
   useEffect(() => {
-    if (moreRouteActive) setMoreOpen(true);
-  }, [moreRouteActive]);
+    if (!signedIn || !user?.id) {
+      setScheduledVisible(false);
+      return;
+    }
+    let active = true;
+    checkScheduled({ data: { expectedUserId: user.id } })
+      .then((result) => active && setScheduledVisible(result.eligible))
+      .catch(() => active && setScheduledVisible(false));
+    return () => {
+      active = false;
+    };
+  }, [checkScheduled, signedIn, user?.id]);
 
   useEffect(() => {
     const openSearch = () => {
       setSearchOpen(true);
       if (!open) onToggle();
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus();
-        });
-      });
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus(),
+      );
     };
-
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
   }, [open, onToggle]);
@@ -129,12 +124,7 @@ export function Sidebar({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
-    const focusable = drawerRef.current?.querySelector<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    focusable?.focus();
-
+    drawerRef.current?.querySelector<HTMLElement>("button, a[href]")?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -146,9 +136,9 @@ export function Sidebar({
         drawerRef.current.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
-      if (items.length === 0) return;
-      const first = items[0];
+      ).filter((element) => element.offsetParent !== null);
+      if (!items.length) return;
+      const [first] = items;
       const last = items[items.length - 1];
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
@@ -158,151 +148,131 @@ export function Sidebar({
         first.focus();
       }
     };
-
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
-      lastFocusedRef.current?.focus?.();
+      lastFocusedRef.current?.focus();
     };
   }, [open, onToggle]);
 
   const closeAfterMobileNavigation = () => {
     if (open && isMobileViewport()) onToggle();
   };
-
-  const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
-  const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-3";
-  const navItemClass = (active: boolean) =>
-    `kova-nav-row relative flex h-10 items-center rounded-xl py-1 text-sm transition-colors duration-100 ${iconOnly} ${
-      active
-        ? "bg-sidebar-active text-foreground font-medium"
-        : "text-sidebar-foreground hover:bg-sidebar-hover"
-    }`;
-
-  const renderNavLink = (
-    to: string,
-    title: string,
-    Icon: LucideIcon,
-    active = isOn(to),
-    badge?: string,
-  ) => (
+  const navRow = (active = false) => `kova-nav-row ${active ? "is-active" : ""}`;
+  const icon = (Icon: LucideIcon) => (
+    <span className="kova-sidebar-icon" aria-hidden="true">
+      <Icon />
+    </span>
+  );
+  const navLink = (to: string, label: string, Icon: LucideIcon, badge?: string) => (
     <Link
       to={to as never}
-      className={navItemClass(active)}
-      title={title}
-      aria-label={collapsed ? title : undefined}
-      aria-current={active ? "page" : undefined}
+      className={navRow(isOn(to))}
+      aria-current={isOn(to) ? "page" : undefined}
+      aria-label={collapsed ? label : undefined}
+      title={collapsed ? label : undefined}
       onClick={closeAfterMobileNavigation}
     >
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
-        />
-      ) : null}
-      <Icon className="h-[18px] w-[18px] shrink-0" />
-      <span className={labelClass}>{title}</span>
-      {badge && !collapsed ? (
-        <span className="ml-auto rounded-full bg-sidebar-hover px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {badge}
-        </span>
-      ) : null}
+      {icon(Icon)}
+      <span className="kova-sidebar-label">{label}</span>
+      {badge ? <span className="kova-sidebar-badge">{badge}</span> : null}
     </Link>
   );
 
-  const q = searchQuery.trim().toLowerCase();
-  const filtered = q
-    ? searchConversations(conversations, searchQuery).map((result) => result.conversation)
+  const query = searchQuery.trim();
+  const filtered = query
+    ? searchConversations(conversations, query).map((result) => result.conversation)
     : conversations;
   const pinned = filtered
-    .filter((c) => c.pinned)
+    .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+  const recents = filtered
+    .filter((conversation) => !conversation.pinned)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 
-  const renderRow = (c: Conversation) => (
+  const chatRow = (conversation: Conversation) => (
     <div
-      key={c.id}
-      className={`kova-chat-row group relative mx-2 flex min-h-10 items-center gap-1 rounded-xl px-1.5 text-sm transition-colors duration-100 ${
-        activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
-      }`}
+      key={conversation.id}
+      className={`kova-chat-row group ${activeId === conversation.id ? "is-active" : ""}`}
     >
-      {activeId === c.id ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
-        />
-      ) : null}
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+        className="kova-chat-row-main"
         onClick={() => {
-          onSelect(c.id);
+          onSelect(conversation.id);
           closeAfterMobileNavigation();
         }}
-        aria-label={`Open chat ${c.title}`}
-        aria-current={activeId === c.id ? "page" : undefined}
-        title={c.title}
+        aria-label={`Open chat ${conversation.title}`}
+        aria-current={activeId === conversation.id ? "page" : undefined}
+        title={conversation.title}
       >
-        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        {conversation.pinned ? icon(MessageCircle) : null}
+        <span className="truncate">{conversation.title}</span>
       </button>
-      {!collapsed ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="rounded p-1 opacity-100 transition hover:bg-background/40 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
-              aria-label="Chat options"
-            >
-              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
-            {onRename ? (
-              <DropdownMenuItem
-                aria-label={`Rename ${c.title}`}
-                onClick={() => {
-                  setRenameChat(c);
-                  setRenameTitle(c.title);
-                }}
-              >
-                Rename
-              </DropdownMenuItem>
-            ) : null}
-            {onTogglePin ? (
-              <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
-                {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
-                {c.pinned ? "Unpin" : "Pin"}
-              </DropdownMenuItem>
-            ) : null}
-            {onShare ? (
-              <DropdownMenuItem onClick={() => onShare(c.id)}>
-                <Share2 className="mr-2 h-4 w-4" /> Share
-              </DropdownMenuItem>
-            ) : null}
-            {onDuplicate ? (
-              <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
-                <CopyIcon className="mr-2 h-4 w-4" /> Duplicate
-              </DropdownMenuItem>
-            ) : null}
-            {onArchive ? (
-              <DropdownMenuItem onClick={() => onArchive(c.id)}>
-                <Archive className="mr-2 h-4 w-4" /> Archive
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="kova-chat-options"
+            aria-label={`Options for ${conversation.title}`}
+          >
+            <Ellipsis aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          {onRename ? (
             <DropdownMenuItem
-              onClick={() => onDelete(c.id)}
-              className="text-destructive focus:text-destructive"
+              onClick={() => {
+                setRenameChat(conversation);
+                setRenameTitle(conversation.title);
+              }}
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
+              Rename
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+          ) : null}
+          {onTogglePin ? (
+            <DropdownMenuItem onClick={() => onTogglePin(conversation.id)}>
+              {conversation.pinned ? (
+                <PinOff className="mr-2 h-4 w-4" />
+              ) : (
+                <Pin className="mr-2 h-4 w-4" />
+              )}
+              {conversation.pinned ? "Unpin" : "Pin"}
+            </DropdownMenuItem>
+          ) : null}
+          {onShare ? (
+            <DropdownMenuItem onClick={() => onShare(conversation.id)}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </DropdownMenuItem>
+          ) : null}
+          {onDuplicate ? (
+            <DropdownMenuItem onClick={() => onDuplicate(conversation.id)}>
+              <CopyIcon className="mr-2 h-4 w-4" />
+              Duplicate
+            </DropdownMenuItem>
+          ) : null}
+          {onArchive ? (
+            <DropdownMenuItem onClick={() => onArchive(conversation.id)}>
+              <Archive className="mr-2 h-4 w-4" />
+              Archive
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
+
+  const displayName =
+    user?.fullName || user?.firstName || user?.username || user?.email?.split("@")[0] || "Account";
+  const avatarUrl = user?.imageUrl || null;
+  const planLabel = tier === "pro" ? "Pro" : tier === "plus" ? "Plus" : "Free";
 
   return (
     <>
@@ -353,79 +323,88 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 backdrop-blur-[2px] lg:hidden"
+          className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 lg:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
 
-      {collapsed && showSignedIn ? (
-        <div
-          className="kova-sidebar-rail hidden h-[100dvh] w-[56px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+      {collapsed && signedIn ? (
+        <nav
+          className="kova-sidebar-rail hidden h-[100dvh] w-[64px] shrink-0 flex-col items-center bg-sidebar lg:flex"
           aria-label="Collapsed navigation"
         >
           <button
             type="button"
             onClick={onToggle}
-            className="mb-1 flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Open sidebar"
-            title="Open sidebar"
+            className="kova-rail-button"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
           >
-            <NovaLogo decorative mark className="h-[22px] w-[22px] text-foreground" />
+            <PanelLeftOpen />
           </button>
           <button
             type="button"
             onClick={onNew}
-            className="kova-new-chat flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            className="kova-rail-button kova-new-chat"
             aria-label="New chat"
             title="New chat"
           >
-            <SquarePen className="h-[18px] w-[18px]" />
+            <SquarePen />
+          </button>
+          <Link to="/images" className="kova-rail-button" aria-label="Images" title="Images">
+            <Images />
+          </Link>
+          <Link to="/library" className="kova-rail-button" aria-label="Library" title="Library">
+            <LibraryBig />
+          </Link>
+          <Link to="/projects" className="kova-rail-button" aria-label="Projects" title="Projects">
+            <Folder />
+          </Link>
+          {scheduledVisible ? (
+            <Link
+              to="/scheduled-tasks"
+              className="kova-rail-button"
+              aria-label="Scheduled"
+              title="Scheduled"
+            >
+              <Clock3 />
+            </Link>
+          ) : null}
+          <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
+            <PlugZap />
+          </Link>
+          <button
+            type="button"
+            className="kova-rail-button"
+            onClick={() => {
+              onToggle();
+              setMoreOpen(true);
+            }}
+            aria-label="More"
+            title="More"
+          >
+            <Ellipsis />
           </button>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new Event("kova-open-search"))}
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Search chats"
-            title="Search chats"
+            className="kova-rail-account"
+            onClick={() => onOpenSettings("general")}
+            aria-label={`${displayName}, ${planLabel} plan`}
+            title={`${displayName} · ${planLabel}`}
           >
-            <Search className="h-[18px] w-[18px]" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" />
+            ) : (
+              <span aria-hidden="true">{displayName.charAt(0).toUpperCase()}</span>
+            )}
           </button>
-          <Link
-            to="/work"
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
-            aria-label="Work"
-            title="Work"
-          >
-            <BriefcaseBusiness className="h-[18px] w-[18px]" />
-          </Link>
-          <Link
-            to="/images"
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
-            aria-label="Images"
-            title="Images"
-          >
-            <ImageIcon className="h-[18px] w-[18px]" />
-          </Link>
-          <div className="mt-auto flex flex-col items-center gap-1">
-            <div onClick={(e) => e.stopPropagation()}>
-              <UserButton />
-            </div>
-          </div>
-        </div>
+        </nav>
       ) : null}
 
       <aside
         ref={drawerRef}
-        style={
-          {
-            "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
-          } as React.CSSProperties
-        }
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
-          collapsed ? "lg:!w-0 lg:border-r-0" : ""
-        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
-          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
-        }`}
+        style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
         aria-hidden={collapsed ? true : undefined}
@@ -433,56 +412,39 @@ export function Sidebar({
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="kova-sidebar-inner flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
-          <div className="kova-sidebar-header relative z-20 flex min-h-[56px] items-center gap-1 bg-sidebar px-3 pt-[var(--safe-top)]">
-            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-              <NovaLogo decorative mark className="h-6 w-6 text-foreground" />
-              <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
-            </div>
-
-            {showSignedOut ? (
-              <button
-                type="button"
-                onClick={() => setSearchOpen((v) => !v)}
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="h-[18px] w-[18px]" />
-              </button>
-            ) : null}
-
+          <header className="kova-sidebar-header">
+            <span className="kova-sidebar-brand">KovaGPT</span>
             <button
-              onClick={onToggle}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-              aria-label="Close navigation"
-              title="Close navigation"
+              type="button"
+              className="kova-header-button"
+              onClick={() => setSearchOpen((value) => !value)}
+              aria-label="Search chats"
+              title="Search chats"
             >
-              <X className="h-[18px] w-[18px]" />
+              <Search />
             </button>
             <button
-              onClick={() => {
-                onToggle();
-                window.requestAnimationFrame(() => {
-                  document
-                    .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
-                    ?.focus({ preventScroll: true });
-                });
-              }}
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+              type="button"
+              className="kova-header-button lg:hidden"
+              onClick={onToggle}
+              aria-label="Close sidebar"
+              title="Close sidebar"
+            >
+              <X />
+            </button>
+            <button
+              type="button"
+              className="kova-header-button hidden lg:flex"
+              onClick={onToggle}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
-              <PanelLeft className="h-[17px] w-[17px]" />
+              <PanelLeftClose />
             </button>
-          </div>
+          </header>
 
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-border"
-          />
-
-          {searchOpen && !collapsed ? (
-            <div className="px-3 pb-1 pt-2">
+          {searchOpen ? (
+            <div className="kova-sidebar-search-wrap">
               <label className="sr-only" htmlFor="sidebar-chat-search">
                 Search chats
               </label>
@@ -490,252 +452,125 @@ export function Sidebar({
                 id="sidebar-chat-search"
                 autoFocus
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search titles, messages, or operators…"
-                className="kova-sidebar-search h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search chats"
+                className="kova-sidebar-search"
               />
             </div>
           ) : null}
 
-          <div className="kova-sidebar-primary flex flex-col gap-0.5 px-2 pt-2">
-            <button
-              onClick={() => {
-                onNew();
-                closeAfterMobileNavigation();
-              }}
-              className={navItemClass(isOn("/"))}
-              aria-label="New chat"
-              title="New chat"
-            >
-              <SquarePen className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>New chat</span>
-            </button>
-
-            {showSignedIn ? (
+          <div className="kova-sidebar-scroll">
+            <nav className="kova-sidebar-primary" aria-label="KovaGPT features">
               <button
                 type="button"
-                onClick={() => setSearchOpen((v) => !v)}
-                className={navItemClass(false)}
-                aria-label="Search chats"
-                title="Search chats"
+                onClick={() => {
+                  onNew();
+                  closeAfterMobileNavigation();
+                }}
+                className={`kova-new-chat ${isOn("/") && pathname === "/" ? "is-active" : ""}`}
               >
-                <Search className="h-[18px] w-[18px] shrink-0" />
-                <span className={labelClass}>Search</span>
+                {icon(SquarePen)}
+                <span>New chat</span>
               </button>
-            ) : null}
-            {showSignedIn ? (
-              <>
-                {renderNavLink("/work", "Work", BriefcaseBusiness)}
-                {renderNavLink("/projects", "Projects", FolderKanban)}
-                {renderNavLink("/library", "Library", FolderOpen)}
-                <div className="my-1 border-t border-border/50" aria-hidden="true" />
-                {renderNavLink("/images", "Images", ImageIcon)}
-                {renderNavLink("/research-planner", "Deep research", Telescope)}
+              {navLink("/images", "Images", Images)}
+              {navLink("/library", "Library", LibraryBig)}
+              {navLink("/projects", "Projects", Folder)}
+              {scheduledVisible ? navLink("/scheduled-tasks", "Scheduled", Clock3) : null}
+              {navLink("/apps", "Plugins", PlugZap)}
+              <button
+                type="button"
+                className={navRow()}
+                onClick={() => setMoreOpen((value) => !value)}
+                aria-expanded={moreOpen}
+                aria-controls="sidebar-more-items"
+              >
+                {icon(Ellipsis)}
+                <span className="kova-sidebar-label">More</span>
+              </button>
+              <div
+                id="sidebar-more-items"
+                className="kova-sidebar-more"
+                data-open={moreOpen || undefined}
+                aria-hidden={!moreOpen}
+              >
                 <button
                   type="button"
-                  onClick={() => setMoreOpen((current) => !current)}
-                  className={navItemClass(moreRouteActive)}
-                  aria-expanded={moreOpen}
-                  aria-controls="sidebar-more-destinations"
+                  disabled={!moreOpen}
+                  className="kova-sidebar-subrow"
+                  title="Health is coming soon"
                 >
-                  <MoreHorizontal className="h-[18px] w-[18px] shrink-0" />
-                  <span className={labelClass}>More</span>
-                  <ChevronRight
-                    aria-hidden="true"
-                    className={`ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform ${moreOpen ? "rotate-90" : ""}`}
-                  />
+                  {icon(HeartPulse)}
+                  <span>Health</span>
+                  <span className="kova-sidebar-badge">Coming soon</span>
                 </button>
-                {moreOpen ? (
-                  <div
-                    id="sidebar-more-destinations"
-                    role="group"
-                    aria-label="More destinations"
-                    className="ml-5 flex flex-col gap-0.5 border-l border-border/60 pl-2"
-                  >
-                    {renderNavLink("/kovas", "Kovas", Blocks)}
-                    {renderNavLink("/sites", "Sites", Globe)}
-                    {renderNavLink("/apps", "Plugins", Blocks)}
-                    {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
-                    {tier === "plus" || tier === "pro"
-                      ? renderNavLink(
-                          "/scheduled-tasks",
-                          "Scheduled tasks status",
-                          Calendar,
-                          isOn("/scheduled-tasks"),
-                        )
-                      : renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))}
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <>
-                {renderNavLink("/images", "Images", ImageIcon)}
-                {renderNavLink("/apps", "Plugins", Blocks)}
-                {renderNavLink("/research-planner", "Deep research", Telescope)}
-                {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
-              </>
-            )}
-          </div>
+                <button
+                  type="button"
+                  disabled={!moreOpen}
+                  className="kova-sidebar-subrow"
+                  title="Finances is coming soon"
+                >
+                  {icon(WalletCards)}
+                  <span>Finances</span>
+                  <span className="kova-sidebar-badge">Coming soon</span>
+                </button>
+              </div>
+            </nav>
 
-          <div
-            className="kova-sidebar-history relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
-            role="group"
-            aria-label="Chats"
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
-            />
-            {!collapsed && showSignedIn ? (
-              <>
-                {!isLoaded && conversations.length === 0 ? (
-                  <div className="space-y-2 px-3 pt-4" aria-hidden="true">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="mx-2 h-8 rounded-lg bg-sidebar-hover/50 animate-pulse"
-                        style={{ opacity: 1 - i * 0.15 }}
-                      />
-                    ))}
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <div className="px-5 py-3 text-sm text-muted-foreground">
-                    {q ? "No matches" : "No chats yet"}
-                  </div>
+            {signedIn ? (
+              <section className="kova-sidebar-history" aria-label="Chats">
+                <h2>Pinned</h2>
+                {pinned.length ? (
+                  pinned.map(chatRow)
                 ) : (
-                  <>
-                    {pinned.length > 0 ? (
-                      <>
-                        <div className="flex items-center gap-1.5 px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
-                          <Pin className="h-3 w-3" /> Pinned
-                        </div>
-                        {pinned.map(renderRow)}
-                      </>
-                    ) : null}
-                    <div className="px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
-                      Recent chats
-                    </div>
-                    {recents.length === 0 ? (
-                      <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>
-                    ) : (
-                      recents.map(renderRow)
-                    )}
-                  </>
+                  <p className="kova-sidebar-empty">No pinned chats</p>
                 )}
-              </>
-            ) : collapsed ? (
-              <div
-                className="px-2 pt-3 text-center text-xs text-muted-foreground"
-                aria-hidden="true"
-              >
-                •••
-              </div>
+                <h2 className="kova-recents-heading">Recents</h2>
+                {recents.length ? (
+                  recents.map(chatRow)
+                ) : (
+                  <p className="kova-sidebar-empty">{query ? "No matches" : "No recent chats"}</p>
+                )}
+              </section>
             ) : null}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
-            />
           </div>
 
-          <div
-            className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
-          >
-            {!isLoaded ? null : showSignedIn ? (
-              <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
+          <footer className="kova-sidebar-footer">
+            {signedIn ? (
+              <>
                 <button
-                  onClick={() => {
-                    onOpenSettings("general");
-                    closeAfterMobileNavigation();
-                  }}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Settings"
-                  title="Settings"
+                  type="button"
+                  className="kova-account-main"
+                  onClick={() => onOpenSettings("general")}
                 >
-                  <SettingsIcon className="h-[18px] w-[18px]" />
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenHelp();
-                    closeAfterMobileNavigation();
-                  }}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Help"
-                  title="Help"
-                >
-                  <HelpCircle className="h-[18px] w-[18px]" />
-                </button>
-                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                  <UserButton />
-                </div>
-                {!collapsed ? (
-                  <span className="min-w-0 truncate text-sm text-muted-foreground">
-                    {user?.firstName || "Account"}
+                  <span className="kova-account-avatar">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" />
+                    ) : (
+                      displayName.charAt(0).toUpperCase()
+                    )}
                   </span>
-                ) : null}
-              </div>
-            ) : showSignedOut ? (
-              <div className={collapsed ? "" : "-mx-2.5 -mb-2.5"}>
-                <div className={`flex flex-col gap-0.5 ${collapsed ? "" : "px-2 pb-2"}`}>
-                  <Link
-                    to="/pricing"
-                    className={navItemClass(isOn("/pricing"))}
-                    aria-label="See plans and pricing"
-                    title="See plans and pricing"
-                    onClick={closeAfterMobileNavigation}
-                  >
-                    <Sparkles className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>See plans and pricing</span>
-                    {!collapsed ? (
-                      <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : null}
-                  </Link>
-                  <button
-                    onClick={() => {
-                      onOpenSettings("general");
-                      closeAfterMobileNavigation();
-                    }}
-                    className={navItemClass(false)}
-                    aria-label="Settings"
-                    title="Settings"
-                  >
-                    <SettingsIcon className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>Settings</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenHelp();
-                      closeAfterMobileNavigation();
-                    }}
-                    className={navItemClass(false)}
-                    aria-label="Help"
-                    title="Help"
-                  >
-                    <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
-                    <span className={labelClass}>Help</span>
-                    {!collapsed ? (
-                      <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : null}
-                  </button>
-                </div>
-                {!collapsed ? (
-                  <div className="kova-sidebar-auth-card mx-1 rounded-2xl border border-border/70 px-4 pb-4 pt-4">
-                    <p className="text-[15px] font-semibold text-foreground">
-                      Get responses tailored to you
-                    </p>
-                    <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
-                      Log in to get answers based on saved chats, plus create images and use
-                      advanced models.
-                    </p>
-                    <SignInButton mode="modal">
-                      <button className="kova-sidebar-auth-button mt-4 flex min-h-11 w-full items-center justify-center rounded-full border border-transparent bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
-                        Log in
-                      </button>
-                    </SignInButton>
-                  </div>
-                ) : null}
-              </div>
+                  <span className="kova-account-copy">
+                    <strong>{displayName}</strong>
+                    <small>{planLabel}</small>
+                  </span>
+                </button>
+                <Link
+                  to="/pricing"
+                  className="kova-account-action"
+                  aria-label="View plans and account options"
+                  title="View plans"
+                >
+                  <ShoppingBag />
+                </Link>
+              </>
+            ) : isLoaded ? (
+              <SignInButton mode="modal">
+                <button type="button" className="kova-sign-in">
+                  Log in to KovaGPT
+                </button>
+              </SignInButton>
             ) : null}
-          </div>
+          </footer>
         </div>
       </aside>
     </>

@@ -2282,6 +2282,442 @@ body {
   animation: kova-scrim-in var(--motion-fast) var(--ease-standard) both;
 }
 
+/* Sidebar rhythm is centralized here so desktop, drawer, and compact rail share one system. */
+.kova-sidebar {
+  --sidebar-gutter: 0.75rem;
+  --sidebar-row-height: 3.5rem;
+  --sidebar-icon-slot: 1.75rem;
+  border-right: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.kova-sidebar-header {
+  display: flex;
+  min-height: calc(4.75rem + var(--safe-top));
+  align-items: center;
+  gap: 0.125rem;
+  padding: calc(1rem + var(--safe-top)) 1.25rem 0.5rem 1.75rem;
+  background: var(--sidebar);
+}
+
+.kova-sidebar-brand {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-header-button,
+.kova-rail-button,
+.kova-account-action {
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.kova-header-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+}
+
+.kova-header-button:hover,
+.kova-rail-button:hover,
+.kova-account-action:hover {
+  background: var(--sidebar-hover);
+}
+
+.kova-header-button:focus-visible,
+.kova-rail-button:focus-visible,
+.kova-nav-row:focus-visible,
+.kova-new-chat:focus-visible,
+.kova-chat-row-main:focus-visible,
+.kova-chat-options:focus-visible,
+.kova-account-main:focus-visible,
+.kova-account-action:focus-visible,
+.kova-sign-in:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.kova-header-button svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  stroke-width: 1.8;
+}
+
+.kova-sidebar-search-wrap {
+  padding: 0.35rem var(--sidebar-gutter) 0.5rem;
+}
+
+.kova-sidebar-search {
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--background) 78%, var(--sidebar));
+  padding: 0 0.9rem;
+  outline: none;
+}
+
+.kova-sidebar-search:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+
+.kova-sidebar-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.kova-sidebar-primary {
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem var(--sidebar-gutter) 0;
+}
+
+.kova-sidebar .kova-new-chat {
+  display: flex;
+  width: 100%;
+  height: 4.125rem;
+  flex: 0 0 4.125rem;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 0.4rem;
+  border-radius: 1.2rem;
+  background: var(--sidebar-active);
+  padding: 0 1.25rem;
+  color: var(--foreground);
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 150ms ease;
+}
+
+.kova-sidebar .kova-new-chat:hover {
+  background: color-mix(in oklab, var(--sidebar-active) 75%, var(--foreground) 5%);
+}
+
+.kova-sidebar .kova-new-chat:active {
+  background: var(--sidebar-hover);
+}
+
+.kova-sidebar .kova-nav-row,
+.kova-sidebar-subrow {
+  display: flex;
+  width: 100%;
+  height: var(--sidebar-row-height);
+  min-height: var(--sidebar-row-height) !important;
+  align-items: center;
+  gap: 0.875rem;
+  border-radius: 0.9rem !important;
+  padding: 0 1.1rem !important;
+  color: var(--sidebar-foreground);
+  font-size: 1.12rem !important;
+  font-weight: 450;
+  text-align: left;
+  transition: background-color 150ms ease;
+}
+
+.kova-sidebar .kova-nav-row:hover,
+.kova-sidebar-subrow:hover,
+.kova-sidebar .kova-nav-row.is-active {
+  background: var(--sidebar-hover);
+}
+
+.kova-sidebar .kova-nav-row.is-active {
+  color: var(--foreground);
+  font-weight: 520;
+}
+
+.kova-sidebar-icon {
+  display: flex;
+  width: var(--sidebar-icon-slot);
+  min-width: var(--sidebar-icon-slot);
+  align-items: center;
+  justify-content: center;
+}
+
+.kova-sidebar-icon svg,
+.kova-sidebar .kova-new-chat svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  stroke-width: 1.7;
+}
+
+.kova-sidebar .kova-new-chat svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.kova-sidebar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-sidebar-badge {
+  height: 1.55rem;
+  margin-left: auto;
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  line-height: calc(1.55rem - 2px);
+  white-space: nowrap;
+}
+
+.kova-sidebar-more {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 160ms ease,
+    opacity 130ms ease;
+}
+
+.kova-sidebar-more > * {
+  display: none;
+}
+
+.kova-sidebar-more[data-open] {
+  grid-template-rows: repeat(2, 1fr);
+  opacity: 1;
+}
+
+.kova-sidebar-more[data-open] > * {
+  display: flex;
+}
+
+.kova-sidebar-subrow {
+  padding-left: 2.15rem !important;
+  color: var(--muted-foreground);
+}
+
+.kova-sidebar-subrow:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.kova-sidebar-history {
+  padding: 1.85rem var(--sidebar-gutter) 1.5rem;
+}
+
+.kova-sidebar-history h2 {
+  margin: 0 0 0.45rem;
+  padding: 0 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.kova-sidebar-history .kova-recents-heading {
+  margin-top: 1.8rem;
+}
+
+.kova-sidebar-empty {
+  margin: 0;
+  padding: 0.65rem 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.kova-chat-row {
+  position: relative;
+  display: flex;
+  height: 3.35rem;
+  align-items: center;
+  border-radius: 0.85rem;
+  transition: background-color 150ms ease;
+}
+
+.kova-chat-row:hover,
+.kova-chat-row.is-active {
+  background: var(--sidebar-hover);
+}
+
+.kova-chat-row-main {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0 0.35rem 0 1.1rem;
+  overflow: hidden;
+  border-radius: inherit;
+  color: var(--sidebar-foreground);
+  font-size: 1.02rem;
+  text-align: left;
+}
+
+.kova-chat-options {
+  display: flex;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 2.35rem;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.35rem;
+  border-radius: 0.6rem;
+  opacity: 0;
+}
+
+.kova-chat-options svg {
+  width: 1.15rem;
+}
+
+.kova-chat-row:hover .kova-chat-options,
+.kova-chat-row:focus-within .kova-chat-options,
+.kova-chat-options[data-state="open"] {
+  opacity: 1;
+}
+
+.kova-sidebar-footer {
+  display: flex;
+  min-height: calc(5.75rem + var(--safe-bottom));
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent) !important;
+  padding: 0.8rem 1.1rem max(0.8rem, var(--safe-bottom));
+}
+
+.kova-account-main {
+  display: flex;
+  min-width: 0;
+  min-height: 3.25rem;
+  flex: 1;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  text-align: left;
+}
+
+.kova-account-avatar,
+.kova-rail-account {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sidebar-active);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.kova-account-avatar img,
+.kova-rail-account img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kova-account-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.kova-account-copy strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-account-copy small {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.kova-account-action {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+}
+
+.kova-account-action svg {
+  width: 1.35rem;
+}
+
+.kova-sign-in {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 600;
+}
+
+.kova-sidebar-rail {
+  gap: 0.35rem;
+  border-right: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+  padding: calc(0.75rem + var(--safe-top)) 0.6rem max(0.75rem, var(--safe-bottom));
+}
+
+.kova-rail-button {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+}
+
+.kova-rail-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.kova-rail-account {
+  margin-top: auto;
+}
+
+@media (max-width: 1023px) {
+  .kova-sidebar-header {
+    min-height: calc(4.5rem + var(--safe-top));
+    padding-left: 1.4rem;
+    padding-right: 0.8rem;
+  }
+
+  .kova-sidebar-footer {
+    min-height: calc(5.5rem + var(--safe-bottom));
+  }
+
+  .kova-chat-options {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar-more,
+  .kova-sidebar,
+  .kova-sidebar-scrim {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @keyframes kova-scrim-in {
   from {
     opacity: 0;
