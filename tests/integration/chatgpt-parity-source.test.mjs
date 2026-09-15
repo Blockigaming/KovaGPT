@@ -44,27 +44,18 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
-  assert.match(
-    sidebar,
-    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
-  );
+  assert.match(sidebar, /navLink\("\/research-planner", "Deep research", Telescope\)/);
 });
 
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-label="More destinations"/);
-  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
   assert.ok(
-    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
+    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
   );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
-  );
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
+  assert.match(sidebar, /title="Health is coming soon"/);
+  assert.match(sidebar, /title="Finances is coming soon"/);
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {

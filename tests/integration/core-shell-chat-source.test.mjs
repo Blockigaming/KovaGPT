@@ -14,9 +14,9 @@ const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
 
 test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap", () => {
-  assert.match(sidebar, /const EXPANDED_WIDTH = 260/);
-  assert.doesNotMatch(sidebar, /COLLAPSED_WIDTH/);
-  assert.match(sidebar, /lg:!w-0 lg:border-r-0/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 272/);
+  assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
+  assert.match(sidebar, /collapsed \? "lg:!w-0"/);
   assert.match(sidebar, /min\(88vw,320px\)/);
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
@@ -24,16 +24,16 @@ test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and f
   assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
   assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
   assert.match(sidebar, />\s*Rename\s*</);
-  assert.match(sidebar, /aria-label=\{`Rename \$\{c\.title\}`\}/);
+  assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
-    'aria-label="New chat"',
-    ">Search</span>",
-    'renderNavLink("/projects"',
-    'renderNavLink("/library"',
-    'renderNavLink("/images"',
-    'aria-label="More destinations"',
-    '"Scheduled tasks status",',
+    "<span>New chat</span>",
+    'navLink("/images"',
+    'navLink("/library"',
+    'navLink("/projects"',
+    'navLink("/scheduled-tasks"',
+    'navLink("/apps"',
+    '<span className="kova-sidebar-label">More</span>',
   ];
   let cursor = -1;
   for (const marker of order) {
@@ -41,7 +41,7 @@ test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and f
     assert.ok(next > cursor, `${marker} should appear after previous nav marker`);
     cursor = next;
   }
-  assert.match(sidebar, /renderNavLink\("\/apps"/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
@@ -49,9 +49,9 @@ test("mobile header and sidebar controls meet touch and accessible-name contract
   assert.match(topbar, /w-11 h-11/);
   assert.match(topbar, /aria-label="Open menu"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
-  assert.match(sidebar, /aria-label="Close navigation"/);
+  assert.match(sidebar, /aria-label="Close sidebar"/);
   assert.match(sidebar, /Close navigation menu/);
-  assert.doesNotMatch(sidebar, /aria-label="Expand sidebar"/);
+  assert.match(sidebar, /aria-label="Expand sidebar"/);
 });
 
 test("shared composer protects input, attachments, IME submission, and upload announcements", () => {

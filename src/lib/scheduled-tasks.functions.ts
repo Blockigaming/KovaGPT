@@ -115,7 +115,8 @@ async function mutate(
     payload: Record<string, unknown>;
   },
 ) {
-  const { admin, signal } = await access(userId, true);
+  const paidPlanActions = new Set(["create", "edit", "resume", "retry", "acceptCopy"]);
+  const { admin, signal } = await access(userId, true, paidPlanActions.has(action));
   if (["create", "resume", "retry"].includes(action) && !(await scheduledExecutionAvailable()))
     throw safeTaskError("55000", "task_execution_unavailable");
   const result = await admin

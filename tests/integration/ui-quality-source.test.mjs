@@ -68,7 +68,7 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
   assert.doesNotMatch(logo, /<img|kova-logo\.png/);
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
-  assert.match(sidebar, /<NovaLogo decorative mark className="h-6 w-6 text-foreground" \/>/);
+  assert.match(sidebar, /<span className="kova-sidebar-brand">KovaGPT<\/span>/);
   assert.match(home, /<NovaLogo decorative mark className="h-5 w-5" \/>/);
   assert.match(publicSite, /<PublicShell>/);
   assert.doesNotMatch(publicSite, /<NovaLogo/);
@@ -161,7 +161,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
   assert.ok(lockedBranch, "locked model branch should remain explicit");
   assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /"Discover", Globe, isOn\("\/discovery"\)/);
+  assert.match(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 
