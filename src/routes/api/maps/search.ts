@@ -89,10 +89,10 @@ export const Route = createFileRoute("/api/maps/search")({
 
         // This database-backed lease serializes provider calls across all
         // application instances. Cache hits above do not consume the lease.
-        const { data: claimed, error: claimError } = await auth.supabaseAdmin.rpc(
+        const { data: claimToken, error: claimError } = await auth.supabaseAdmin.rpc(
           "claim_maps_geocoder_provider_slot" as never,
         );
-        if (claimError || claimed !== true) {
+        if (claimError || typeof claimToken !== "string") {
           return Response.json(
             { error: "Map search is busy. Please wait a moment and try again." },
             {
@@ -173,6 +173,7 @@ export const Route = createFileRoute("/api/maps/search")({
         } finally {
           const { error: releaseError } = await auth.supabaseAdmin.rpc(
             "release_maps_geocoder_provider_slot" as never,
+            { p_claim_token: claimToken } as never,
           );
           if (releaseError) console.error("[maps] could not release geocoder provider slot");
         }

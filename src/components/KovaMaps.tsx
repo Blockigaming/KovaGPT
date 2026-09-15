@@ -145,9 +145,16 @@ export function KovaMaps() {
       setLoading(false);
       return;
     }
+    setError(null);
     const controller = new AbortController();
-    void authFetch("/api/security/lockdown", { signal: controller.signal })
-      .then(async (response) => {
+    let checkInFlight = false;
+    const verifyNetworkAccess = async () => {
+      if (checkInFlight) return;
+      checkInFlight = true;
+      try {
+        const response = await authFetch("/api/security/lockdown", {
+          signal: controller.signal,
+        });
         const payload = (await response.json()) as { enabled?: boolean };
         if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
           return;
@@ -159,9 +166,9 @@ export function KovaMaps() {
           return;
         }
         setError(null);
+        if (!mapRef.current) setLoading(true);
         setNetworkAccess({ ownerId, allowed: true });
-      })
-      .catch((error) => {
+      } catch (error) {
         if (
           controller.signal.aborted ||
           generation !== principalGenerationRef.current ||
@@ -174,8 +181,21 @@ export function KovaMaps() {
         setError("Maps access could not be verified. Refresh and try again.");
         setNetworkAccess({ ownerId, allowed: false });
         setLoading(false);
-      });
-    return () => controller.abort();
+      } finally {
+        checkInFlight = false;
+      }
+    };
+    void verifyNetworkAccess();
+    const policyInterval = window.setInterval(() => void verifyNetworkAccess(), 15_000);
+    const recheckVisiblePolicy = () => {
+      if (document.visibilityState === "visible") void verifyNetworkAccess();
+    };
+    document.addEventListener("visibilitychange", recheckVisiblePolicy);
+    return () => {
+      window.clearInterval(policyInterval);
+      document.removeEventListener("visibilitychange", recheckVisiblePolicy);
+      controller.abort();
+    };
   }, [isLoaded, isSignedIn, user?.id]);
 
   useEffect(() => {
@@ -204,7 +224,11 @@ export function KovaMaps() {
         });
         mapRef.current = map;
         const loadTimeout = window.setTimeout(() => {
-          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          if (
+            disposed ||
+            generation !== principalGenerationRef.current ||
+            activeOwnerRef.current !== ownerId
+          )
             return;
           setLoading(false);
           setError("Map data is taking too long to load. Check your connection and try again.");
@@ -212,7 +236,11 @@ export function KovaMaps() {
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
         const updateView = () => {
-          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          if (
+            disposed ||
+            generation !== principalGenerationRef.current ||
+            activeOwnerRef.current !== ownerId
+          )
             return;
           const center = map.getCenter();
           const bounds = map.getBounds();
@@ -228,7 +256,11 @@ export function KovaMaps() {
           });
         };
         map.on("load", () => {
-          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          if (
+            disposed ||
+            generation !== principalGenerationRef.current ||
+            activeOwnerRef.current !== ownerId
+          )
             return;
           window.clearTimeout(loadTimeout);
           addMapEnhancements(map, threeD);
@@ -237,7 +269,11 @@ export function KovaMaps() {
         });
         map.on("moveend", updateView);
         map.on("error", (event) => {
-          if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          if (
+            disposed ||
+            generation !== principalGenerationRef.current ||
+            activeOwnerRef.current !== ownerId
+          )
             return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
           setError("Some map data could not load. Check your connection and try again.");

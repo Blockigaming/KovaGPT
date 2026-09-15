@@ -28,6 +28,8 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
   assert.match(source, /if \(enabled && !map\.getSource\("terrain"\)\)/);
   assert.match(source, /disabled=\{!networkAllowed\}/);
+  assert.match(source, /setInterval\(\(\) => void verifyNetworkAccess\(\), 15_000\)/);
+  assert.match(source, /visibilitychange/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
@@ -66,8 +68,12 @@ test("Maps provider guard serializes cross-instance requests and keeps a shared 
   assert.match(migration, /maps_geocoder_provider_state/);
   assert.match(migration, /maps_geocoder_cache/);
   assert.match(migration, /interval '10 seconds'/);
+  assert.match(migration, /lease_token = v_claim_token/);
   assert.match(migration, /release_maps_geocoder_provider_slot/);
+  assert.match(migration, /lease_token = p_claim_token/);
   assert.match(migration, /interval '1 second'/);
+  assert.match(migration, /where expires_at <= clock_timestamp\(\)/);
+  assert.match(migration, /limit 250/);
   assert.match(migration, /grant execute.+service_role/);
   assert.match(migration, /revoke all.+anon, authenticated/);
 });

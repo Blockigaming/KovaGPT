@@ -3341,15 +3341,15 @@
       "order": 157,
       "filename": "20260915120000_maps_geocoder_provider_guard.sql",
       "timestamp": "20260915120000",
-      "sha256": "65cb3ff7e5a7e2f3aff4130b3fe3ef5a15f7982c451285453d632e7f1d3108e5",
+      "sha256": "d39ebea79843c2f8d416f14ec8858775cc853af68263ea45d68e37dd00c3b88d",
       "tables": ["maps_geocoder_provider_state", "maps_geocoder_cache"],
       "functions": ["claim_maps_geocoder_provider_slot", "release_maps_geocoder_provider_slot"],
-      "destructive": false,
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": ["maps_geocoder_provider_state", "maps_geocoder_cache"],
       "policies": [],
-      "indexes": []
+      "indexes": ["maps_geocoder_cache_expires_at_idx"]
     }
   ]
 }
