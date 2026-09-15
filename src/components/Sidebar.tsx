@@ -1,5 +1,6 @@
 import {
   Archive,
+  BriefcaseBusiness,
   Clock3,
   Copy as CopyIcon,
   Ellipsis,
@@ -353,6 +354,9 @@ export function Sidebar({
           >
             <SquarePen />
           </button>
+          <Link to="/work" className="kova-rail-button" aria-label="Work" title="Work">
+            <BriefcaseBusiness />
+          </Link>
           <Link to="/images" className="kova-rail-button" aria-label="Images" title="Images">
             <Images />
           </Link>
@@ -474,6 +478,7 @@ export function Sidebar({
                 {icon(SquarePen)}
                 <span>New chat</span>
               </button>
+              {navLink("/work", "Work", BriefcaseBusiness)}
               {navLink("/images", "Images", Images)}
               {navLink("/library", "Library", LibraryBig)}
               {navLink("/projects", "Projects", Folder)}

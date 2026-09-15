@@ -44,14 +44,14 @@ test("shell removes decorative effects and keeps navigation neutral and reachabl
   assert.doesNotMatch(sidebar, /bg-\[var\(--kova-blue\)\]/);
   assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
   assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
-  assert.match(sidebar, /group-focus-within:opacity-100/);
+  assert.match(styles, /\.kova-chat-row:focus-within \.kova-chat-options/);
   assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
   assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
   assert.match(shell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
 });
 
 test("selected account navigation is visible while healthy sync stays visually quiet", () => {
-  assert.match(sidebar, /aria-hidden="true"[\s\S]*?w-0\.5 rounded-full bg-primary/);
+  assert.match(styles, /\.kova-sidebar \.kova-nav-row\.is-active\s*\{/);
   assert.match(historySync, /if \(!visible\)[\s\S]*?className="sr-only"/);
   assert.match(historySync, /rounded-xl border border-border\/70 bg-muted\/40/);
   assert.match(historySync, /role="status" aria-live="polite"/);

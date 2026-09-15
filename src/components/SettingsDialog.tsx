@@ -288,6 +288,7 @@ export function SettingsDialog({
   const [usageLoaded, setUsageLoaded] = useState(false);
   const settingsSearchRef = useRef<HTMLInputElement>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
+  const pendingMobileFocusRef = useRef<"content" | "navigation" | null>(null);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -660,11 +661,21 @@ export function SettingsDialog({
       })).filter((group) => group.tabs.length > 0)
     : TAB_GROUPS;
   const selectTab = (value: string) => {
+    pendingMobileFocusRef.current = "content";
     setTab(value);
     setMobileHome(false);
     setSettingsQuery("");
-    requestAnimationFrame(() => contentHeadingRef.current?.focus());
   };
+  useEffect(() => {
+    const pendingFocus = pendingMobileFocusRef.current;
+    if (!pendingFocus) return;
+    pendingMobileFocusRef.current = null;
+    if (pendingFocus === "navigation" && mobileHome) {
+      settingsSearchRef.current?.focus();
+    } else if (pendingFocus === "content" && !mobileHome) {
+      contentHeadingRef.current?.focus();
+    }
+  }, [mobileHome, tab]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -725,7 +736,7 @@ export function SettingsDialog({
         ) : (
           <Tabs
             value={tab}
-            onValueChange={setTab}
+            onValueChange={selectTab}
             orientation="vertical"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
@@ -750,12 +761,7 @@ export function SettingsDialog({
                     <section key={group.title} aria-label={group.title}>
                       <p className="kova-settings-nav-group">{group.title}</p>
                       {group.tabs.map(({ v, icon: Icon, label }) => (
-                        <TabsTrigger
-                          key={v}
-                          value={v}
-                          className="kova-settings-nav-item"
-                          onClick={() => selectTab(v)}
-                        >
+                        <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
                           <Icon aria-hidden="true" />
                           <span>{label}</span>
                         </TabsTrigger>
@@ -779,8 +785,8 @@ export function SettingsDialog({
                   className="kova-settings-back"
                   aria-label="Back to settings"
                   onClick={() => {
+                    pendingMobileFocusRef.current = "navigation";
                     setMobileHome(true);
-                    requestAnimationFrame(() => settingsSearchRef.current?.focus());
                   }}
                 >
                   <ArrowLeft aria-hidden="true" />
