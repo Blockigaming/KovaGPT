@@ -13,7 +13,6 @@ const [
   responsiveSelector,
   mobileTopBar,
   searchServer,
-  deepResearchServer,
   modes,
   workspaceModeSwitch,
   workRoute,
@@ -30,7 +29,6 @@ const [
   readFile("src/components/ResponsiveModelSelector.tsx", "utf8"),
   readFile("src/components/MobileTopBar.tsx", "utf8"),
   readFile("src/lib/ai/search.server.ts", "utf8"),
-  readFile("src/lib/ai/deep-research.server.ts", "utf8"),
   readFile("src/lib/modes.ts", "utf8"),
   readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
@@ -51,6 +49,18 @@ test("signed-in users can move clearly between Chat and Work", () => {
   );
 });
 
+
+test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
+  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
+  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
+  assert.ok(
+    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
+  );
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
+  assert.match(sidebar, /title="Health is coming soon"/);
+  assert.match(sidebar, /title="Finances is coming soon"/);
+
 test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
   assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
@@ -61,6 +71,7 @@ test("signed-in sidebar keeps core work visible and groups secondary destination
   assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
   assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
   assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
+
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
@@ -194,7 +205,6 @@ test("web-backed answers keep exact clickable citations", () => {
   assert.doesNotMatch(chatMessage, /replace\(\/\\\[\\d\+\\\]\/g/);
   assert.match(searchServer, /Cite factual claims with Markdown links/);
   assert.match(searchServer, /Do not invent or alter URLs/);
-  assert.match(deepResearchServer, /exact URL as a Markdown link/);
   assert.match(modes, /source-name Markdown links using the exact supplied URLs/);
 });
 

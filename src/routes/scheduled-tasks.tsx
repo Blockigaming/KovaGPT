@@ -139,7 +139,12 @@ function ScheduledTasksPage() {
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
   const loadTasks = useCallback(async () => {
-    if (!dataReady || dataGeneration !== generationRef.current || plan !== "paid") return;
+    if (
+      !dataReady ||
+      dataGeneration !== generationRef.current ||
+      (plan !== "paid" && plan !== "free")
+    )
+      return;
     const generation = generationRef.current;
     setLoading(true);
     setLoadError(null);
@@ -651,7 +656,7 @@ function ScheduledTasksPage() {
                         {t.status === "failed" ? (
                           <button
                             onClick={() => retry(t)}
-                            disabled={!executionAvailable}
+                            disabled={visiblePlan !== "paid" || !executionAvailable}
                             className="p-2 rounded-md hover:bg-accent transition"
                             aria-label="Retry failed task"
                             title="Retry"
@@ -662,7 +667,10 @@ function ScheduledTasksPage() {
                         {["scheduled", "running", "paused"].includes(t.status) ? (
                           <button
                             onClick={() => togglePause(t)}
-                            disabled={t.status === "paused" && !executionAvailable}
+                            disabled={
+                              t.status === "paused" &&
+                              (visiblePlan !== "paid" || !executionAvailable)
+                            }
                             className="p-2 rounded-md hover:bg-accent transition"
                             aria-label={t.status === "paused" ? "Resume" : "Pause"}
                             title={t.status === "paused" ? "Resume" : "Pause"}

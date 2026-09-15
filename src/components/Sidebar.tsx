@@ -9,6 +9,7 @@ import {
   HeartPulse,
   Images,
   LibraryBig,
+  Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -19,7 +20,6 @@ import {
   Share2,
   ShoppingBag,
   SquarePen,
-  Telescope,
   Trash2,
   WalletCards,
   X,
@@ -486,7 +486,7 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {navLink("/research-planner", "Deep research", Telescope)}
+              {navLink("/maps", "Maps", Map)}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"
