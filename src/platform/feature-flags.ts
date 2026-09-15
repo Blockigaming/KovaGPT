@@ -18,7 +18,6 @@ export type FlagContext = {
 
 export const FEATURE_FLAGS: readonly FlagDefinition[] = Object.freeze([
   { id: "work_mode", defaultEnabled: true, plans: ["plus", "pro", "business"] },
-  { id: "research_planner", defaultEnabled: true, plans: ["plus", "pro", "business"] },
   { id: "context_packs", defaultEnabled: true, plans: ["plus", "pro", "business"] },
   { id: "prompt_studio", defaultEnabled: true, plans: ["plus", "pro", "business"] },
   { id: "knowledge_graph", defaultEnabled: true, plans: ["pro", "business"] },

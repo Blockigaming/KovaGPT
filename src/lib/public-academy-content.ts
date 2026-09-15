@@ -618,7 +618,7 @@ const topics: readonly AcademyTopic[] = [
       "Check dates, methods, and conflicts of interest",
       "Do not fabricate certainty when evidence is limited",
     ],
-    action: { label: "Open Research Planner", to: "/research-planner" },
+    action: { label: "Open research assistant", to: "/research-assistant" },
   },
   {
     slug: "responsible-and-safe-use",
@@ -659,26 +659,6 @@ const topics: readonly AcademyTopic[] = [
       "Confirm commercial terms with authorized owners",
     ],
     action: { label: "Open Work", to: "/work" },
-  },
-  {
-    slug: "search-and-deep-research",
-    title: "Choose between quick search and deep research",
-    description:
-      "Select the right KovaGPT research depth for the question, evidence standard, time available, and consequence of error.",
-    summary:
-      "Use focused lookup for narrow current facts and a planned multi-source workflow for questions that need comparison, synthesis, conflict resolution, or a durable report.",
-    outcomes: ["Match depth to need", "Inspect sources", "Know when to stop"],
-    practice: [
-      "Define the decision the research must support",
-      "Set source, freshness, and coverage requirements",
-      "Review citations and unresolved contradictions",
-    ],
-    safeguards: [
-      "Do not equate more sources with stronger evidence",
-      "Check that citations support nearby claims",
-      "Escalate high-impact conclusions for qualified review",
-    ],
-    action: { label: "Open Research Planner", to: "/research-planner" },
   },
   {
     slug: "skills",

@@ -29,6 +29,7 @@ import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
+import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -227,6 +228,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
+        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
       <div className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">

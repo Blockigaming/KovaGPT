@@ -21,7 +21,7 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
 
   const navigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(sidebar).toHaveCSS("width", "260px");
+  await expect(sidebar).toHaveCSS("width", "272px");
   const collapseSidebar = page.getByRole("button", { name: "Collapse sidebar" });
   await expect(collapseSidebar).toBeVisible();
   await expect(collapseSidebar).toBeFocused();

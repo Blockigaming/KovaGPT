@@ -214,7 +214,7 @@ const rows: Row[] = [
   [
     "Search & research",
     "Can KovaGPT cite sources?",
-    "Search and Deep Research can return linked sources. Open each citation and confirm it supports the nearby claim.",
+    "Search can return linked sources. Open each citation and confirm it supports the nearby claim.",
   ],
   [
     "Search & research",
@@ -225,16 +225,6 @@ const rows: Row[] = [
     "Search & research",
     "Why is Search unavailable?",
     "Search depends on configured providers and your remaining allowance. Refresh, confirm the tool is selected, and try again; if it remains unavailable, contact support.",
-  ],
-  [
-    "Search & research",
-    "What is Deep Research?",
-    `${features.deepResearch.summary} ${features.deepResearch.limitation}`,
-  ],
-  [
-    "Search & research",
-    "Who can use Deep Research?",
-    "Signed-in Plus and Pro users can use Deep Research when its providers are configured and available.",
   ],
   [
     "Files & images",
@@ -453,12 +443,12 @@ const rows: Row[] = [
   [
     "Local places",
     "What is Local places?",
-    "Local places is the Maps experience in KovaGPT. It finds sourced local web results for a place you enter and can hand off to external map services.",
+    "Local places is the planned Maps experience in KovaGPT. It remains unavailable until its provider, legal, privacy, capacity, and cost review is approved.",
   ],
   [
     "Local places",
     "Can it search real places?",
-    "Yes, when its search provider is available. Check the linked source and external map before traveling because listings can change.",
+    "Not in the current release. If Maps is approved later, it can search a reviewed third-party place provider; always verify listings before traveling because they can change.",
   ],
   [
     "Local places",
@@ -468,12 +458,12 @@ const rows: Row[] = [
   [
     "Local places",
     "Does KovaGPT use my device location?",
-    "No. KovaGPT does not request or store device coordinates in Settings. Enter a city, region, address, or place in your request.",
+    "Not while Maps is unavailable. If Maps is approved later, KovaGPT will request device coordinates only after you choose the explicit location control and will disclose the approved map providers that receive them. Maps does not store coordinates in Settings.",
   ],
   [
     "Local places",
     "Why is Local places unavailable?",
-    "You must be signed in, and its web search provider must be configured. Refresh, check your connection, and try again before contacting support.",
+    "Maps is intentionally disabled while provider, licensing, attribution, privacy, capacity, and cost approval is pending. The route does not request geolocation or call map providers in this state.",
   ],
   [
     "Settings & memory",

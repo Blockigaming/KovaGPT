@@ -205,10 +205,16 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   }
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.locator(".kova-settings-dialog")).toBeVisible();
-  const options = page.locator(".kova-settings-nav-item");
+  const settingsDialog = page.locator(".kova-settings-dialog");
+  await expect(settingsDialog).toBeVisible();
+  // The sidebar deliberately opens General. Return through the real mobile
+  // control before measuring the navigation list; hidden rows have no height.
+  await settingsDialog.getByRole("button", { name: "Back to settings", exact: true }).click();
+  await expect(settingsDialog.getByRole("textbox", { name: "Search settings" })).toBeVisible();
+  const options = settingsDialog.locator(".kova-settings-nav-item");
   await expect(options).toHaveCount(20);
   for (let index = 0; index < (await options.count()); index += 1) {
+    await expect(options.nth(index)).toBeVisible();
     const height = await options
       .nth(index)
       .evaluate((element: HTMLElement) => element.offsetHeight);

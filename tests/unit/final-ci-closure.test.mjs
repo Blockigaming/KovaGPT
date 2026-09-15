@@ -20,18 +20,21 @@ test("Azure readiness blocks changed-file formatting regressions and keeps the l
   );
 });
 
-test("Playwright report aggregation exits cleanly when source jobs produce no blob reports", async () => {
+test("Playwright aggregation requires complete validated reports before merging", async () => {
   const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-  assert.match(workflow, /name: Detect blob reports/u);
-  assert.match(workflow, /find blob-reports -type f -name '\*\.zip'/u);
-  assert.match(
-    workflow,
-    /name: Merge Playwright reports\s+if: steps\.reports\.outputs\.available == 'true'/u,
+  const reportJob = workflow.slice(
+    workflow.indexOf("\n  e2e-report:"),
+    workflow.indexOf("\n  isolated-database:"),
   );
-  assert.match(
-    workflow,
-    /name: Upload merged Playwright report\s+if: steps\.reports\.outputs\.available == 'true'/u,
+  assert.match(reportJob, /needs: release-e2e/u);
+  assert.match(reportJob, /name: Validate complete reports before merge/u);
+  assert.match(reportJob, /validate-playwright-reports\.py "\$directory" blob-reports/u);
+  assert.ok(
+    reportJob.indexOf("validate-playwright-reports.py") <
+      reportJob.indexOf("npx playwright merge-reports"),
   );
+  assert.doesNotMatch(reportJob, /skipping report merge|steps\.reports\.outputs\.available/u);
+  assert.match(reportJob, /name: Upload merged Playwright report[\s\S]*?if-no-files-found: error/u);
 });
 
 test("generated database contracts must remain committed and deterministic", async () => {

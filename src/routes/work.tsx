@@ -417,7 +417,7 @@ function WorkRoute() {
           </section>
           <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 xl:block">
             <RelatedWorkspaceItems
-              kinds={["project", "context_pack", "file", "artifact", "research", "memory"]}
+              kinds={["project", "context_pack", "file", "artifact", "memory"]}
               title="Recent context for Work"
             />
           </aside>

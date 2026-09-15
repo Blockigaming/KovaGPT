@@ -6,18 +6,14 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("chat API delegates model routing, activity, research, memory, and provider failure isolation", () => {
+test("chat API delegates model routing, activity, memory, web search, and failure isolation", () => {
   const chat = read("src/routes/api/chat.ts");
   for (const token of [
     "selectModelForMode",
     "routeDecision.modelId",
     "createToolActivityEvent",
-    "activityToSseDelta",
-    "runDeepResearch",
-    "ResearchProgressEvent",
     "selectRelevantMemories",
     "formatMemoryBlock",
-    'clientTool === "deep_research"',
     'clientTool === "web_search"',
   ]) {
     assert.match(
@@ -26,34 +22,11 @@ test("chat API delegates model routing, activity, research, memory, and provider
       `chat route should include ${token}`,
     );
   }
+  assert.doesNotMatch(chat, /clientTool === "deep_research"/u);
   assert.doesNotMatch(chat, /OPENAI_API_KEY\s*=/);
 });
 
-test("deep research exposes the full observable lifecycle and source-state tracking", () => {
-  const research = read("src/lib/ai/deep-research.server.ts");
-  for (const token of [
-    "created",
-    "planning",
-    "searching",
-    "reading",
-    "comparing",
-    "analyzing",
-    "writing_report",
-    "complete",
-    "failed",
-    "canceled",
-    "ResearchSourceState",
-    "sourceState",
-    "partialFailures",
-    "createToolActivityEvent",
-  ]) {
-    assert.match(research, new RegExp(`\\b${token}\\b`), `research should include ${token}`);
-  }
-  assert.match(research, /Markdown links whose labels name the source/);
-  assert.match(research, /Do not invent citations, sources, or URLs/);
-});
-
-test("web and Deep Research responses stream bounded source records to the message UI", () => {
+test("web-search responses stream bounded source records to the message UI", () => {
   const chat = read("src/routes/api/chat.ts");
   const home = read("src/routes/index.tsx");
   const message = read("src/components/ChatMessage.tsx");
@@ -62,7 +35,6 @@ test("web and Deep Research responses stream bounded source records to the messa
   const styles = read("src/styles/chatgpt-parity.css");
 
   assert.match(chat, /kind: "web_sources"/u);
-  assert.match(chat, /responseSourcesDelta\(result\.sources\)/u);
   assert.match(chat, /responseSourcesDelta\(webSources\)/u);
   assert.match(home, /normalizeResponseSources\(delta\.sources\)/u);
   assert.match(message, /Sources for this response/iu);

@@ -68,8 +68,6 @@ export function workspaceHealth(items: EvolutionItem[], now = Date.now()) {
   const active = items.filter(
     (item) =>
       item.kind === "work" ||
-      (item.kind === "research" &&
-        !["complete", "failed", "cancelled"].includes(item.status ?? "")) ||
       (item.kind === "automation" &&
         ["scheduled", "running", "paused"].includes(item.status ?? "")),
   );

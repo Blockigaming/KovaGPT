@@ -1,6 +1,5 @@
 export const LOCKDOWN_CAPABILITIES = Object.freeze([
   "live_web",
-  "deep_research",
   "agent",
   "connector_read",
   "connector_write",

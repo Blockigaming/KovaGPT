@@ -43,6 +43,34 @@ type Candidate = {
   title: string;
   content: string;
 };
+const MAX_SEARCH_HANDOFF_BYTES = 30 * 1024;
+const MAX_SEARCH_QUERY_CHARS = 240;
+function searchHandoffQuery(pack: ContextPack) {
+  return [pack.name, pack.description, ...pack.items.map((item) => item.title)]
+    .filter(Boolean)
+    .join(" — ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SEARCH_QUERY_CHARS);
+}
+function searchHandoffPrompt(pack: ContextPack) {
+  const query = searchHandoffQuery(pack);
+  const prompt = `Search query: ${query}\n\nSearch the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
+    .map((item) => `${item.title}: ${item.content}`)
+    .join("\n\n")}`;
+  const encoder = new TextEncoder();
+  if (encoder.encode(prompt).byteLength <= MAX_SEARCH_HANDOFF_BYTES) return prompt;
+  const notice = "\n\n[Additional context was omitted to fit the chat message limit.]";
+  const contentBudget = MAX_SEARCH_HANDOFF_BYTES - encoder.encode(notice).byteLength;
+  let low = 0;
+  let high = prompt.length;
+  while (low < high) {
+    const midpoint = Math.ceil((low + high) / 2);
+    if (encoder.encode(prompt.slice(0, midpoint)).byteLength <= contentBudget) low = midpoint;
+    else high = midpoint - 1;
+  }
+  return `${prompt.slice(0, low)}${notice}`;
+}
 function ContextPacksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -417,14 +445,9 @@ function ContextPacksPage() {
                           onClick={() => {
                             const handoff = writePrincipalHandoff(
                               safeBrowserStorage("sessionStorage"),
-                              "kova-research-draft",
+                              "kova-app-chat-context",
                               isLoaded ? userKey : undefined,
-                              {
-                                question: `Research with ${pack.name}`,
-                                context: pack.items
-                                  .map((item) => `${item.title}: ${item.content}`)
-                                  .join("\n\n"),
-                              },
+                              { prompt: searchHandoffPrompt(pack), tool: "web_search" },
                             );
                             if (!handoff.ok) {
                               toast.error(
@@ -432,11 +455,11 @@ function ContextPacksPage() {
                               );
                               return;
                             }
-                            navigate({ to: "/research-planner" });
+                            navigate({ to: "/" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
                         >
-                          Use in Research
+                          Use in Search
                         </button>
                         <button
                           aria-label={`Delete ${pack.name}`}

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "snapshotDate": "2026-09-14",
+  "snapshotDate": "2026-09-15",
   "measurement": {
     "definition": "One discovered OpenAI or ChatGPT public page equals one unit. A unit is complete only when the same normalized path exists in KovaGPT's reviewed public routes or concrete UI route templates.",
     "sourcePageCount": 1852,
-    "completedPageCount": 534,
-    "remainingPageCount": 1318,
-    "completionPercent": 28.83,
+    "completedPageCount": 532,
+    "remainingPageCount": 1320,
+    "completionPercent": 28.73,
     "percentPerPage": 0.053996,
     "sourceCounts": {
       "openai.com": 1706,
@@ -478,9 +478,9 @@
         "sitemap"
       ],
       "weight": 1,
-      "kovaPath": "/academy/search-and-deep-research",
-      "status": "implemented_exact_path",
-      "completed": true
+      "kovaPath": null,
+      "status": "missing_exact_equivalent",
+      "completed": false
     },
     {
       "source": "openai.com",
@@ -22618,9 +22618,9 @@
         "marketing_navigation"
       ],
       "weight": 1,
-      "kovaPath": "/features/deep-research",
-      "status": "implemented_exact_path",
-      "completed": true
+      "kovaPath": null,
+      "status": "missing_exact_equivalent",
+      "completed": false
     },
     {
       "source": "chatgpt.com",

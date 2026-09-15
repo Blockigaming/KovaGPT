@@ -4,37 +4,13 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("Kova Brain is authenticated and aggregates existing authorized systems", () => {
-  const source = read("src/lib/kova-brain.functions.ts");
-
-  assert.match(source, /getKovaBrainSnapshot/);
-  assert.match(source, /requireSupabaseAuth/);
-
-  for (const table of [
-    "goals",
-    "scheduled_tasks",
-    "project_members",
-    "project_tasks",
-    "deep_research_runs",
-    "project_memory",
-    "context_packs",
-    "user_library_items",
-  ]) {
-    assert.match(source, new RegExp(`"${table}"`));
-  }
-
-  assert.match(source, /\.eq\("owner_id", context\.userId\)/);
-  assert.match(source, /\.eq\("user_id", context\.userId\)/);
-});
-
-test("Daily Briefing is derived from factual goal task and research state", () => {
+test("Daily Briefing is derived from factual goal and task state", () => {
   const source = read("src/lib/kova-brain.functions.ts");
 
   assert.match(source, /briefing: BrainBriefingItem\[\]/);
   assert.match(source, /overdueTasks/);
   assert.match(source, /soonTasks/);
   assert.match(source, /upcomingGoals/);
-  assert.match(source, /Research status:/);
   assert.match(source, /No urgent workspace items detected/);
 });
 

@@ -123,10 +123,6 @@ test("workflow skills remain usable across durable chat, image requests, and ava
     contextBeforeChatQuota > -1 && contextBeforeChatQuota < chatQuota,
     "selected context must be current immediately before generic chat quota",
   );
-  const researchDispatch = chat.indexOf('if (clientTool === "deep_research" && lastText)');
-  const chatQuotaGlobal = chat.indexOf('enforceQuota(auth, "chats"');
-  assert.ok(chatQuotaGlobal > -1 && chatQuotaGlobal < researchDispatch);
-  assert.ok(chat.indexOf("assertSelectedContextsCurrent", researchDispatch) > researchDispatch);
   const toolHopLoop = chat.slice(
     chat.indexOf("for (let hop = 0; hop < MAX_TOOL_HOPS; hop++)"),
     chat.indexOf("if (hopFailed)"),
@@ -152,7 +148,6 @@ test("workflow skills remain usable across durable chat, image requests, and ava
       perCallCurrentness < toolHopLoop.indexOf("stagePendingAction"),
     "each returned tool call must be revalidated again immediately before processing",
   );
-  assert.match(chat, /workflowSkillBlock: workflowSkill\?\.block/u);
   assert.match(chat, /workflowSkill\.toolPlanningBlock/u);
   const connectorGate = chat.slice(
     chat.indexOf("const googleContext ="),

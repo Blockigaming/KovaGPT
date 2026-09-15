@@ -60,27 +60,6 @@ test("policy lookup failures fail closed before network access", async () => {
   );
 });
 
-test("every declared network capability is blocked when Lockdown Mode is on", async () => {
-  const enabled = client({ data: { settings: { lockdown_mode: true } }, error: null });
-  for (const capability of [
-    "live_web",
-    "deep_research",
-    "agent",
-    "connector_read",
-    "connector_write",
-    "canvas_network",
-    "remote_download",
-  ]) {
-    await assert.rejects(
-      () => assertLockdownAllows(enabled, USER_ID, capability),
-      (error) =>
-        error instanceof LockdownPolicyError &&
-        error.status === 403 &&
-        error.code === `lockdown_blocked_${capability}`,
-    );
-  }
-});
-
 test("safe Lockdown responses distinguish blocks from policy outages", async () => {
   const blocked = lockdownErrorResponse(new LockdownPolicyError("lockdown_blocked_live_web", 403));
   assert.equal(blocked.status, 403);

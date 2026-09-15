@@ -17,6 +17,7 @@ import {
   PinOff,
   PlugZap,
   Search,
+  Settings as SettingsIcon,
   Share2,
   ShoppingBag,
   SquarePen,
@@ -62,6 +63,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
+  mapsReleaseApproved = true,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -77,11 +79,13 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
+  mapsReleaseApproved?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
   const checkScheduled = useServerFn(isScheduledTasksEligible);
   const drawerRef = useRef<HTMLElement | null>(null);
+  const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [scheduledVisible, setScheduledVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -92,7 +96,9 @@ export function Sidebar({
 
   const signedIn = isLoaded && isSignedIn;
   const collapsed = !open;
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
 
   useEffect(() => {
@@ -337,6 +343,7 @@ export function Sidebar({
           aria-label="Collapsed navigation"
         >
           <button
+            ref={expandButtonRef}
             type="button"
             onClick={onToggle}
             className="kova-rail-button"
@@ -379,6 +386,11 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
+          {mapsReleaseApproved ? (
+            <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+              <Map />
+            </Link>
+          ) : null}
           <button
             type="button"
             className="kova-rail-button"
@@ -395,7 +407,7 @@ export function Sidebar({
             type="button"
             className="kova-rail-account"
             onClick={() => onOpenSettings("general")}
-            aria-label={`${displayName}, ${planLabel} plan`}
+            aria-label="Settings"
             title={`${displayName} · ${planLabel}`}
           >
             {avatarUrl ? (
@@ -412,6 +424,7 @@ export function Sidebar({
         style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
+        data-maps-release-approved={mapsReleaseApproved ? "true" : "false"}
         aria-modal={open && isMobileViewport() ? true : undefined}
         aria-hidden={collapsed ? true : undefined}
         inert={collapsed ? true : undefined}
@@ -441,7 +454,13 @@ export function Sidebar({
             <button
               type="button"
               className="kova-header-button hidden lg:flex"
-              onClick={onToggle}
+              onClick={() => {
+                onToggle();
+                requestAnimationFrame(() => {
+                  if (signedIn) expandButtonRef.current?.focus();
+                  else document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus();
+                });
+              }}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -486,7 +505,7 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {navLink("/maps", "Maps", Map)}
+              {mapsReleaseApproved ? navLink("/maps", "Maps", Map) : null}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"
@@ -552,6 +571,7 @@ export function Sidebar({
                   type="button"
                   className="kova-account-main"
                   onClick={() => onOpenSettings("general")}
+                  aria-label="Settings"
                 >
                   <span className="kova-account-avatar">
                     {avatarUrl ? (
@@ -577,11 +597,22 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
-                <SignInButton mode="modal">
-                  <button type="button" className="kova-sign-in">
-                    Log in to KovaGPT
+                <div className="flex items-center gap-2">
+                  <SignInButton mode="modal">
+                    <button type="button" className="kova-sign-in min-w-0 flex-1">
+                      Log in to KovaGPT
+                    </button>
+                  </SignInButton>
+                  <button
+                    type="button"
+                    className="kova-account-action"
+                    onClick={() => onOpenSettings("general")}
+                    aria-label="Settings"
+                    title="Settings"
+                  >
+                    <SettingsIcon aria-hidden="true" />
                   </button>
-                </SignInButton>
+                </div>
               </div>
             ) : null}
           </footer>

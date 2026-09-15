@@ -86,15 +86,20 @@ test("route manifest includes reusable public, publishing, developer, assistant 
       routes.records.some(({ canonicalPath }) => canonicalPath === pattern),
       pattern,
     );
-  assert.equal(routes.reviewedPublicRouteCount, 610);
+  assert.equal(routes.reviewedPublicRouteCount, 608);
 });
 
-test("Local discovery is noindex, requests no device location, and preserves an accessible main", () => {
+test("Maps is noindex and renders the dedicated provider-backed experience", () => {
   const maps = read("src/routes/maps.tsx");
+  const experience = read("src/components/KovaMaps.tsx");
   assert.match(maps, /name: "robots", content: "noindex"/);
-  assert.match(maps, /No location permission has been requested/);
-  assert.match(maps, /id="main-content"/);
-  assert.doesNotMatch(maps, /getCurrentPosition|watchPosition|mapbox|google\.maps/i);
+  assert.match(maps, /<KovaMaps \/>/);
+  assert.match(experience, /id="main-content"/);
+  assert.match(experience, /placeholder="Ask Kova about Maps"/);
+  assert.match(experience, /tiles\.openfreemap\.org/);
+  assert.match(experience, /kova-3d-buildings/);
+  assert.match(experience, /setTerrain/);
+  assert.match(experience, /getCurrentPosition/);
 });
 
 test("public page system contains original truthfulness and review gates", () => {
@@ -164,11 +169,11 @@ test("public catch-all rejects every reserved application and security namespace
   assert.match(catchAll, /await import\("@\/lib\/public-content-expanded"\)/u);
 });
 
-test("all 610 reconciled public routes are reviewed and the sitemap retains 167 substantive routes", async () => {
+test("all 608 reconciled public routes are reviewed and the sitemap retains 165 substantive routes", async () => {
   const review = JSON.parse(read("docs/page-parity/indexable-content-review.json"));
   const developer = JSON.parse(read("docs/release-reconciliation/developer-contract-report.json"));
-  assert.equal(review.reviewedRouteCount, 610);
-  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 610);
+  assert.equal(review.reviewedRouteCount, 608);
+  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 608);
   for (const entry of review.records) {
     assert.ok(entry.h1, entry.route);
     assert.equal(entry.runtimeStatus, 200, entry.route);
@@ -187,8 +192,8 @@ test("all 610 reconciled public routes are reviewed and the sitemap retains 167 
   );
   const { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } =
     await import("../../src/lib/seo-policy.mjs");
-  assert.equal(PUBLIC_REVIEW_PATHS.length, 610);
-  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 167);
+  assert.equal(PUBLIC_REVIEW_PATHS.length, 608);
+  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 165);
   const indexed = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const { route } of developer.records) assert.equal(indexed.has(route), false, route);
   for (const unavailableProgram of [
@@ -207,8 +212,8 @@ test("release route manifest is generated from all route files and one sitemap s
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
   assert.equal(manifest.routeFileCount, 174);
   assert.equal(manifest.records.length, 174);
-  assert.equal(manifest.sitemapCount, 167);
-  assert.equal(manifest.reviewedPublicRouteCount, 610);
+  assert.equal(manifest.sitemapCount, 165);
+  assert.equal(manifest.reviewedPublicRouteCount, 608);
   assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 174);
   const { PUBLIC_SITEMAP_ENTRIES } = await import("../../src/lib/seo-policy.mjs");
   const associatedSitemapPaths = new Set(

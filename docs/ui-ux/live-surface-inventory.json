@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "snapshotDate": "2026-09-14",
+  "snapshotDate": "2026-09-15",
   "scope": {
     "definition": "Every discoverable public canonical page counts as one equally weighted item. ChatGPT marketing paths absent from its sitemap are included; private user data and non-page assets are not enumerable public pages.",
     "adaptationRule": "KovaGPT implements original Kova-branded equivalents for relevant page families instead of copying third-party text, media, trademarks, or page-for-page editorial archives."
@@ -2194,8 +2194,8 @@
   },
   "kovagpt": {
     "routeTemplateCount": 174,
-    "uiRouteTemplateCount": 75,
-    "serviceRouteTemplateCount": 99,
+    "uiRouteTemplateCount": 74,
+    "serviceRouteTemplateCount": 100,
     "routeTemplates": [
       {
         "route": "/",
@@ -2500,6 +2500,10 @@
       {
         "route": "/api/livez",
         "file": "src/routes/api/livez.ts"
+      },
+      {
+        "route": "/api/maps/search",
+        "file": "src/routes/api/maps/search.ts"
       },
       {
         "route": "/api/memory",
@@ -2830,10 +2834,6 @@
         "file": "src/routes/research-assistant.tsx"
       },
       {
-        "route": "/research-planner",
-        "file": "src/routes/research-planner.tsx"
-      },
-      {
         "route": "/reset-password",
         "file": "src/routes/reset-password.tsx"
       },
@@ -2963,7 +2963,7 @@
       "use-cases",
       "voice"
     ],
-    "publicDetailPathCount": 480,
+    "publicDetailPathCount": 478,
     "publicDetailPaths": [
       "academy/ai-fundamentals",
       "academy/applications-of-ai",
@@ -2996,7 +2996,6 @@
       "academy/research",
       "academy/responsible-and-safe-use",
       "academy/sales",
-      "academy/search-and-deep-research",
       "academy/skills",
       "academy/using-chatgpt",
       "academy/what-is-ai",
@@ -3246,7 +3245,6 @@
       "codex/enterprise",
       "codex/pricing",
       "features/chat-with-pdfs",
-      "features/deep-research",
       "features/plugins",
       "features/study-mode",
       "features/voice",
@@ -3446,8 +3444,8 @@
       "use-cases/veterans",
       "writing/paraphrase"
     ],
-    "publicRegistryPageCount": 546,
-    "reviewedPublicPathCount": 610,
+    "publicRegistryPageCount": 544,
+    "reviewedPublicPathCount": 608,
     "reviewedPublicPaths": [
       "/",
       "/images",
@@ -3474,7 +3472,6 @@
       "/humanize-ai-text",
       "/overview",
       "/features",
-      "/features/deep-research",
       "/features/plugins",
       "/features/study-mode",
       "/features/chat-with-pdfs",
@@ -3609,7 +3606,6 @@
       "/academy/research",
       "/academy/responsible-and-safe-use",
       "/academy/sales",
-      "/academy/search-and-deep-research",
       "/academy/skills",
       "/academy/using-chatgpt",
       "/academy/what-is-ai",
@@ -4060,7 +4056,7 @@
       "/pt-BR",
       "/pt-PT"
     ],
-    "sitemapPathCount": 167,
+    "sitemapPathCount": 165,
     "sitemapPaths": [
       "/",
       "/images",
@@ -4087,7 +4083,6 @@
       "/humanize-ai-text",
       "/overview",
       "/features",
-      "/features/deep-research",
       "/features/plugins",
       "/features/study-mode",
       "/features/chat-with-pdfs",
@@ -4222,7 +4217,6 @@
       "/academy/research",
       "/academy/responsible-and-safe-use",
       "/academy/sales",
-      "/academy/search-and-deep-research",
       "/academy/skills",
       "/academy/using-chatgpt",
       "/academy/what-is-ai",

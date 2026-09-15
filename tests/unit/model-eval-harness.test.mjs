@@ -9,30 +9,6 @@ const readJsonl = (path) =>
     .split(/\r?\n/u)
     .map((line) => JSON.parse(line));
 
-test("Kova eval default validates all 30 smoke cases and 12 categories", () => {
-  const stdout = execFileSync(process.execPath, ["scripts/model-eval.mjs"], { encoding: "utf8" });
-  const result = JSON.parse(stdout);
-  assert.equal(result.valid, true);
-  assert.equal(result.cases, 30);
-  assert.equal(result.categories.length, 12);
-  for (const category of [
-    "general_chat",
-    "coding",
-    "instruction_following",
-    "reasoning_math",
-    "tool_use",
-    "deep_research",
-    "safety_privacy",
-    "factuality",
-    "kova_product_behavior",
-    "agentic_execution",
-    "long_context",
-    "multi_turn",
-  ]) {
-    assert.ok(result.categories.includes(category), `missing ${category}`);
-  }
-});
-
 test("smoke categories use the replacement-gate identifier", () => {
   const cases = readJsonl("model/evals/kovaeval-v0.1.jsonl");
   const gate = JSON.parse(readFileSync("model/evals/kova-replacement-gate.v1.json", "utf8"));

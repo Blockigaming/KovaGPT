@@ -1,9 +1,9 @@
 {
   "generatedAt": "2026-08-12",
-  "availableTestFiles": 140,
-  "unitTestFiles": 52,
+  "availableTestFiles": 135,
+  "unitTestFiles": 48,
   "classificationCounts": {
-    "retained": 140,
+    "retained": 135,
     "duplicate": 0,
     "superseded": 0,
     "incompatible": 0,
@@ -367,11 +367,6 @@
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
     },
     {
-      "file": "tests/integration/research-persistence-authorization-source.test.mjs",
-      "classification": "retained",
-      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
-    },
-    {
       "file": "tests/integration/secondary-screens-source.test.mjs",
       "classification": "retained",
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
@@ -517,16 +512,6 @@
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
     },
     {
-      "file": "tests/unit/deep-research-persistence.test.mjs",
-      "classification": "retained",
-      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
-    },
-    {
-      "file": "tests/unit/deep-research.test.mjs",
-      "classification": "retained",
-      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
-    },
-    {
       "file": "tests/unit/deliverable-content.test.mjs",
       "classification": "retained",
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
@@ -597,11 +582,6 @@
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
     },
     {
-      "file": "tests/unit/paid-feature-entitlements.test.mjs",
-      "classification": "retained",
-      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
-    },
-    {
       "file": "tests/unit/platform-architecture.test.mjs",
       "classification": "retained",
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
@@ -663,11 +643,6 @@
     },
     {
       "file": "tests/unit/reliability-handler-fault-injection.test.mjs",
-      "classification": "retained",
-      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
-    },
-    {
-      "file": "tests/unit/research-persistence-authorization.test.mjs",
       "classification": "retained",
       "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
     },

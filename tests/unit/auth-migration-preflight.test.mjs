@@ -68,29 +68,39 @@ const secondId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 test("duplicate expected user UUIDs cannot satisfy the source user count", () => {
   assert.throws(
-    () => validateAuthMigrationEvidence({
-      ...ready, sourceUsers: 2, expectedUserUuids: [userId, userId],
-    }),
+    () =>
+      validateAuthMigrationEvidence({
+        ...ready,
+        sourceUsers: 2,
+        expectedUserUuids: [userId, userId],
+      }),
     /auth_migration_expected_uuids_duplicate/u,
   );
 });
 
 test("UUID uniqueness is case insensitive", () => {
   assert.throws(
-    () => validateAuthMigrationEvidence({
-      ...ready, sourceUsers: 2, expectedUserUuids: [secondId, secondId.toUpperCase()],
-    }),
+    () =>
+      validateAuthMigrationEvidence({
+        ...ready,
+        sourceUsers: 2,
+        expectedUserUuids: [secondId, secondId.toUpperCase()],
+      }),
     /auth_migration_expected_uuids_duplicate/u,
   );
 });
 
 test("invalid expected UUID manifests cannot produce a completed decision", () => {
   assert.throws(
-    () => validateAuthMigrationEvidence({
-      ...ready, sourceUsers: 2, destinationUsersBefore: 2,
-      destinationIdentitiesBefore: 1, destinationMatchesExpected: true,
-      expectedUserUuids: [userId, userId],
-    }),
+    () =>
+      validateAuthMigrationEvidence({
+        ...ready,
+        sourceUsers: 2,
+        destinationUsersBefore: 2,
+        destinationIdentitiesBefore: 1,
+        destinationMatchesExpected: true,
+        expectedUserUuids: [userId, userId],
+      }),
     /auth_migration_expected_uuids_duplicate/u,
   );
 });
@@ -113,7 +123,8 @@ test("sparse UUID arrays fail closed rather than passing Array.every", () => {
 
 test("counts beyond exact integer precision are rejected", () => {
   assert.throws(
-    () => validateAuthMigrationEvidence({ ...ready, sourceIdentities: Number.MAX_SAFE_INTEGER + 1 }),
+    () =>
+      validateAuthMigrationEvidence({ ...ready, sourceIdentities: Number.MAX_SAFE_INTEGER + 1 }),
     /auth_migration_invalid_source_identities/u,
   );
 });
@@ -126,41 +137,82 @@ test("identities with zero source users contradict zero orphan identities", () =
 });
 
 test("all count fields require safe nonnegative integers", () => {
-  for (const key of ["sourceUsers", "sourceIdentities", "destinationUsersBefore",
-    "destinationIdentitiesBefore", "orphanIdentities", "duplicateProviderSubjects"]) {
+  for (const key of [
+    "sourceUsers",
+    "sourceIdentities",
+    "destinationUsersBefore",
+    "destinationIdentitiesBefore",
+    "orphanIdentities",
+    "duplicateProviderSubjects",
+  ]) {
     for (const count of [-1, 0.5, NaN, Infinity, "1", true, Number.MAX_SAFE_INTEGER + 1]) {
-      assert.throws(() => validateAuthMigrationEvidence({ ...ready, [key]: count }),
-        /auth_migration_invalid_/u);
+      assert.throws(
+        () => validateAuthMigrationEvidence({ ...ready, [key]: count }),
+        /auth_migration_invalid_/u,
+      );
     }
   }
 });
 
 test("valid distinct UUIDs retain ready and no-rerun behavior without mutating evidence", () => {
-  const value = { ...ready, sourceUsers: 2, sourceIdentities: 3,
-    expectedUserUuids: [userId, secondId.toUpperCase()] };
+  const value = {
+    ...ready,
+    sourceUsers: 2,
+    sourceIdentities: 3,
+    expectedUserUuids: [userId, secondId.toUpperCase()],
+  };
   const before = structuredClone(value);
-  assert.equal(validateAuthMigrationEvidence(value).decision, "READY_FOR_REHEARSAL_OR_APPROVED_RUN");
+  assert.equal(
+    validateAuthMigrationEvidence(value).decision,
+    "READY_FOR_REHEARSAL_OR_APPROVED_RUN",
+  );
   assert.deepEqual(value, before);
-  assert.equal(validateAuthMigrationEvidence({ ...value, destinationUsersBefore: 2,
-    destinationIdentitiesBefore: 3, destinationMatchesExpected: true,
-    exactlyOnceApproved: false }).decision, "DO_NOT_RERUN");
+  assert.equal(
+    validateAuthMigrationEvidence({
+      ...value,
+      destinationUsersBefore: 2,
+      destinationIdentitiesBefore: 3,
+      destinationMatchesExpected: true,
+      exactlyOnceApproved: false,
+    }).decision,
+    "DO_NOT_RERUN",
+  );
 });
 
 test("empty source evidence can still report an already matching empty destination", () => {
-  assert.equal(validateAuthMigrationEvidence({ ...ready, sourceUsers: 0, sourceIdentities: 0,
-    expectedUserUuids: [], destinationMatchesExpected: true }).decision, "DO_NOT_RERUN");
+  assert.equal(
+    validateAuthMigrationEvidence({
+      ...ready,
+      sourceUsers: 0,
+      sourceIdentities: 0,
+      expectedUserUuids: [],
+      destinationMatchesExpected: true,
+    }).decision,
+    "DO_NOT_RERUN",
+  );
 });
 
 test("backups, rollback, approval, TLS and identity integrity still fail closed", () => {
-  for (const changes of [{ backupReference: " " }, { rollbackPlan: "" },
-    { exactlyOnceApproved: "true" }, { tlsAuthorized: "true" },
-    { orphanIdentities: 1 }, { duplicateProviderSubjects: 1 },
-    { expectedUserUuids: [null] }, { expectedUserUuids: [] }]) {
-    assert.throws(() => validateAuthMigrationEvidence({ ...ready, ...changes }), /auth_migration_/u);
+  for (const changes of [
+    { backupReference: " " },
+    { rollbackPlan: "" },
+    { exactlyOnceApproved: "true" },
+    { tlsAuthorized: "true" },
+    { orphanIdentities: 1 },
+    { duplicateProviderSubjects: 1 },
+    { expectedUserUuids: [null] },
+    { expectedUserUuids: [] },
+  ]) {
+    assert.throws(
+      () => validateAuthMigrationEvidence({ ...ready, ...changes }),
+      /auth_migration_/u,
+    );
   }
 });
 
-const cli = fileURLToPath(new URL("../../scripts/release/auth-migration-preflight.mjs", import.meta.url));
+const cli = fileURLToPath(
+  new URL("../../scripts/release/auth-migration-preflight.mjs", import.meta.url),
+);
 const sensitiveCanary = "PRIVATE_INPUT_CANARY_MUST_NOT_LEAK";
 
 function withCliFile(contents, action) {
@@ -175,7 +227,9 @@ function withCliFile(contents, action) {
         env.KOVA_AUTH_MIGRATION_EVIDENCE_FILE = extraEnv.KOVA_AUTH_MIGRATION_EVIDENCE_FILE;
       }
       return spawnSync(process.execPath, [cli, ...args], {
-        encoding: "utf8", env, timeout: 10_000,
+        encoding: "utf8",
+        env,
+        timeout: 10_000,
       });
     };
     action({ dir, path, run });
@@ -212,7 +266,9 @@ test("CLI oversized evidence is rejected rather than parsed or printed", () => {
 
 test("CLI malformed UTF-8 cannot silently become replacement characters", () => {
   const input = Buffer.concat([
-    Buffer.from('{"schemaVersion":1,"comment":"'), Buffer.from([0xff]), Buffer.from('"}'),
+    Buffer.from('{"schemaVersion":1,"comment":"'),
+    Buffer.from([0xff]),
+    Buffer.from('"}'),
   ]);
   withCliFile(input, ({ run }) => {
     assertSafeFailure(run(), "auth_migration_evidence_input_invalid");
@@ -220,9 +276,12 @@ test("CLI malformed UTF-8 cannot silently become replacement characters", () => 
 });
 
 test("CLI preserves fixed validation errors without dumping invalid evidence", () => {
-  withCliFile(JSON.stringify({ ...ready, tlsAuthorized: false, private: sensitiveCanary }), ({ run }) => {
-    assertSafeFailure(run(), "auth_migration_tls_not_authorized");
-  });
+  withCliFile(
+    JSON.stringify({ ...ready, tlsAuthorized: false, private: sensitiveCanary }),
+    ({ run }) => {
+      assertSafeFailure(run(), "auth_migration_tls_not_authorized");
+    },
+  );
 });
 
 test("CLI valid input emits only the bounded decision, not UUIDs or private fields", () => {
@@ -230,15 +289,23 @@ test("CLI valid input emits only the bounded decision, not UUIDs or private fiel
     const result = run();
     assert.equal(result.status, 0);
     assert.equal(result.stderr, "");
-    assert.equal(result.stdout.trim(), `AUTH_MIGRATION_PREFLIGHT=${JSON.stringify(validateAuthMigrationEvidence(ready))}`);
+    assert.equal(
+      result.stdout.trim(),
+      `AUTH_MIGRATION_PREFLIGHT=${JSON.stringify(validateAuthMigrationEvidence(ready))}`,
+    );
     assert.ok(!result.stdout.includes(userId));
     assert.ok(!result.stdout.includes(sensitiveCanary));
   });
 });
 
 test("CLI retains the environment-file input and explicit no-rerun decision", () => {
-  const done = { ...ready, destinationUsersBefore: 1, destinationIdentitiesBefore: 1,
-    destinationMatchesExpected: true, exactlyOnceApproved: false };
+  const done = {
+    ...ready,
+    destinationUsersBefore: 1,
+    destinationIdentitiesBefore: 1,
+    destinationMatchesExpected: true,
+    exactlyOnceApproved: false,
+  };
   withCliFile(JSON.stringify(done), ({ run, path }) => {
     const result = run([], { KOVA_AUTH_MIGRATION_EVIDENCE_FILE: path });
     assert.equal(result.status, 0);

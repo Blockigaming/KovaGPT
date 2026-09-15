@@ -18,7 +18,7 @@ const table = (supabase: unknown, name: string) =>
 
 export type RecentItem = {
   id: string;
-  type: "project" | "library" | "image" | "task" | "research";
+  type: "project" | "library" | "image" | "task";
   title: string;
   subtitle: string;
   updatedAt: string;
@@ -28,7 +28,7 @@ export type RecentItem = {
 export const listWorkspaceRecents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RecentItem[]> => {
-    const [projects, projectChats, library, tasks, research] = await Promise.all([
+    const [projects, projectChats, library, tasks] = await Promise.all([
       table(context.supabase, "projects")
         .select("id,name,description,updated_at")
         .order("updated_at", { ascending: false })
@@ -47,13 +47,8 @@ export const listWorkspaceRecents = createServerFn({ method: "GET" })
         .eq("user_id", context.userId)
         .order("updated_at", { ascending: false })
         .limit(30),
-      table(context.supabase, "deep_research_runs")
-        .select("id,query,status,updated_at")
-        .eq("user_id", context.userId)
-        .order("updated_at", { ascending: false })
-        .limit(30),
     ]);
-    const fail = [projects, projectChats, library, tasks, research].find((result) => result.error);
+    const fail = [projects, projectChats, library, tasks].find((result) => result.error);
     if (fail?.error) throw new Error("Recent work could not be loaded");
     return [
       ...((projects.data ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -88,15 +83,6 @@ export const listWorkspaceRecents = createServerFn({ method: "GET" })
         status: String(row.status),
         updatedAt: String(row.updated_at),
         href: "/scheduled-tasks",
-      })),
-      ...((research.data ?? []) as Record<string, unknown>[]).map((row) => ({
-        id: String(row.id),
-        type: "research" as const,
-        title: String(row.query),
-        subtitle: "Deep Research",
-        status: String(row.status),
-        updatedAt: String(row.updated_at),
-        href: "/?mode=deep-research",
       })),
     ].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   });
@@ -259,7 +245,6 @@ export type WorkspaceSignal = {
     | "image"
     | "memory"
     | "context_pack"
-    | "research"
     | "automation"
     | "prompt"
     | "goal";
@@ -275,7 +260,7 @@ export type WorkspaceSignal = {
 export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WorkspaceSignal[]> => {
-    const [projects, chats, files, library, memory, packs, research, tasks, prompts, goals] =
+    const [projects, chats, files, library, memory, packs, tasks, prompts, goals] =
       await Promise.all([
         table(context.supabase, "projects")
           .select("id,name,description,updated_at,pinned_at")
@@ -303,11 +288,7 @@ export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
           .eq("user_id", context.userId)
           .order("updated_at", { ascending: false })
           .limit(30),
-        table(context.supabase, "deep_research_runs")
-          .select("id,project_id,query,status,updated_at")
-          .eq("user_id", context.userId)
-          .order("updated_at", { ascending: false })
-          .limit(40),
+
         table(context.supabase, "scheduled_tasks")
           .select("id,title,status,updated_at,next_run_at")
           .eq("user_id", context.userId)
@@ -324,18 +305,7 @@ export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
           .order("updated_at", { ascending: false })
           .limit(40),
       ]);
-    const results = [
-      projects,
-      chats,
-      files,
-      library,
-      memory,
-      packs,
-      research,
-      tasks,
-      prompts,
-      goals,
-    ];
+    const results = [projects, chats, files, library, memory, packs, tasks, prompts, goals];
     if (results.some((result) => result.error))
       throw new Error("Workspace intelligence could not be loaded");
     const signals: WorkspaceSignal[] = [];
@@ -404,17 +374,6 @@ export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
         subtitle: String(row.description ?? "Context Pack"),
         href: "/context-packs",
         updatedAt: String(row.updated_at),
-      });
-    for (const row of (research.data ?? []) as Record<string, unknown>[])
-      signals.push({
-        id: String(row.id),
-        kind: "research",
-        title: String(row.query),
-        subtitle: "Deep Research",
-        href: "/research-planner",
-        updatedAt: String(row.updated_at),
-        status: String(row.status),
-        projectId: row.project_id ? String(row.project_id) : undefined,
       });
     for (const row of (tasks.data ?? []) as Record<string, unknown>[])
       signals.push({

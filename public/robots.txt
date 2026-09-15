@@ -28,7 +28,6 @@ Disallow: /notifications
 Disallow: /omega
 Disallow: /projects
 Disallow: /prompt-studio
-Disallow: /research-planner
 Disallow: /reset-password
 Disallow: /scheduled-tasks
 Disallow: /settings

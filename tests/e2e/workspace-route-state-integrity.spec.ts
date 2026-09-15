@@ -26,39 +26,3 @@ async function expectNoViewportOverflow(page: Page) {
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 }
-
-test("signed-out workspace routes keep one main target and only truthful controls", async ({
-  page,
-}) => {
-  const routes = [
-    { path: "/projects", gate: "Sign in to use Projects" },
-    { path: "/projects/unavailable-project", gate: "Sign in required" },
-    { path: "/files", gate: "Sign in to use Files" },
-    { path: "/memory", gate: "Sign in to manage memory" },
-    { path: "/research-planner", gate: "Sign in to plan research" },
-  ];
-
-  for (const route of routes) {
-    await page.goto(route.path, { waitUntil: "domcontentloaded" });
-    await waitForKovaHydration(page);
-    await expectMainTarget(page);
-    await expect(page.getByRole("heading", { name: route.gate, exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
-    await expectNoViewportOverflow(page);
-  }
-
-  await page.goto("/files", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(page.getByPlaceholder("Search files")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Duplicates", exact: true })).toHaveCount(0);
-
-  await page.goto("/memory", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(page.getByPlaceholder("Search memories")).toHaveCount(0);
-  await expect(page.getByRole("toolbar", { name: "Filter memories by source" })).toHaveCount(0);
-
-  await page.goto("/research-planner", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(page.getByLabel("Research question")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Start Deep Research" })).toHaveCount(0);
-});

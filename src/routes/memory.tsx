@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
-import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
+import { addToContextPack, continueInChat, openInWork } from "@/lib/workspace-handoffs";
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   deleteMemoryRecord,
@@ -354,7 +354,7 @@ function MemoryPage() {
                     </button>
                     <button
                       onClick={() =>
-                        continueInResearch(
+                        continueInChat(
                           {
                             type: "memory",
                             id: item.id,
@@ -366,7 +366,7 @@ function MemoryPage() {
                       }
                       className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
                     >
-                      Research
+                      Ask Kova
                     </button>
                     <button
                       onClick={() =>

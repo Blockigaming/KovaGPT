@@ -659,7 +659,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Apps use the person chatting’s live connection and scopes. Your accounts and
-                  credentials are never shared. Deep Research starts in regular chat.
+                  credentials are never shared.
                 </p>
                 <label className="block text-sm">
                   <input

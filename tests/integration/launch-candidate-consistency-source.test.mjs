@@ -11,7 +11,6 @@ test("major workspaces share one accessible page header contract", async () => {
   assert.match(component, /kova-page-description/);
   assert.match(component, /aria-labelledby/);
   for (const route of [
-    "research-planner",
     "memory",
     "prompt-studio",
     "files",

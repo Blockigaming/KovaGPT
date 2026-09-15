@@ -7,7 +7,6 @@ const read = (path) => readFileSync(path, "utf8");
 test("public detail registry covers every approved missing marketing family", () => {
   const source = read("src/lib/public-detail-content.ts");
   for (const path of [
-    "features/deep-research",
     "features/plugins",
     "features/study-mode",
     "features/chat-with-pdfs",
@@ -180,20 +179,23 @@ test("the Free plan opens KovaGPT while paid plans continue to pricing", () => {
   assert.match(source, /to: tier === "free" \? "\/" : "\/pricing"/u);
 });
 
-test("Kova Academy provides all 38 exact-path, original learning guides", () => {
+test("Kova Academy provides every active original learning guide", () => {
   const source = read("src/lib/public-academy-content.ts");
   const progress = JSON.parse(read("docs/ui-ux/page-by-page-progress.json"));
   const expected = progress.records
     .filter(
-      ({ source, sourcePath }) => source === "openai.com" && sourcePath.startsWith("/academy/"),
+      ({ source, sourcePath }) =>
+        source === "openai.com" &&
+        sourcePath.startsWith("/academy/") &&
+        sourcePath !== "/academy/search-and-deep-research",
     )
     .map(({ sourcePath }) => sourcePath.slice(1));
   const actual = [...source.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(
     (match) => `academy/${match[1]}`,
   );
-  assert.equal(expected.length, 38);
+  assert.equal(expected.length, 37);
   assert.deepEqual(new Set(actual), new Set(expected));
-  assert.equal(new Set(actual).size, 38);
+  assert.equal(new Set(actual).size, 37);
   assert.match(source, /PUBLIC_ACADEMY_PAGE_BY_KEY/u);
   assert.match(source, /Treat every generated answer as a draft/u);
   assert.doesNotMatch(source, /OpenAI Academy|ChatGPT Academy/u);

@@ -15,17 +15,6 @@ test("collaboration is member scoped and supports roles comments mentions and ac
   assert.match(ui, /My mentions/);
   assert.match(project, /ProjectCollaboration/);
 });
-test("Research Planner provides editable reusable source-aware plans and real handoffs", () => {
-  const route = read("src/routes/research-planner.tsx"),
-    fn = read("src/lib/professional.functions.ts");
-  assert.match(route, /Move step/);
-  assert.match(route, /Website allow list/);
-  assert.match(route, /Save template/);
-  assert.match(route, /Start Deep Research/);
-  assert.match(route, /Continue in Work/);
-  assert.match(route, /Continue in Project/);
-  assert.match(fn, /research_templates/);
-});
 test("Knowledge Graph uses only authorized records and explicit edges", () => {
   const route = read("src/routes/knowledge-graph.tsx"),
     fn = read("src/lib/professional.functions.ts");

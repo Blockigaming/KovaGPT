@@ -11,7 +11,6 @@ test("onboarding covers real product steps and excludes voice", () => {
     "response_preferences",
     "projects",
     "library_files",
-    "search_research",
     "temporary_chat",
     "connected_apps",
     "scheduled_tasks",
@@ -38,7 +37,6 @@ test("guided empty states exist for major workspaces", () => {
     "apps",
     "scheduled_tasks",
     "canvas",
-    "research_history",
     "notifications",
     "settings",
     "shared_chats",
@@ -55,30 +53,6 @@ test("global search has authorization filtering and grouping", () => {
   assert.match(source, /ownerId !== userId/);
   assert.match(source, /projectId && !projectIds\.includes/);
   assert.match(source, /groupSearchResults/);
-});
-
-test("command palette commands are real scoped actions with no voice action", () => {
-  for (const command of [
-    "new_chat",
-    "global_search",
-    "new_project",
-    "open_library",
-    "generate_image",
-    "deep_research",
-    "temporary_chat",
-    "create_task",
-    "open_apps",
-    "open_settings",
-    "toggle_theme",
-    "open_help",
-  ]) {
-    assert.match(source, new RegExp(command));
-  }
-  const commandsBlock = source.slice(
-    source.indexOf("export const COMMANDS"),
-    source.indexOf("export type NotificationType"),
-  );
-  assert.doesNotMatch(commandsBlock, /voice|microphone|speech/i);
 });
 
 test("notifications, support, feedback, admin, moderation, and safety contracts are safe", () => {

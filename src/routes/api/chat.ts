@@ -38,16 +38,8 @@ import {
   searchWeb,
   shouldRunWebSearch,
 } from "@/lib/ai/search.server";
-import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
-import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
 import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
-import {
-  authorizeResearchPersistence,
-  ResearchPersistenceAuthorizationError,
-  type AuthorizedResearchReferences,
-  type ResearchAuthorizationClient,
-} from "@/lib/research-persistence-authorization.server.mjs";
-import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
+import { createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
@@ -317,116 +309,6 @@ function parseToolHopResponse(
   };
 }
 
-async function handleDeepResearchRequest(
-  prompt: string,
-  options: {
-    signal?: AbortSignal;
-    persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
-    workflowSkillBlock?: string;
-    assertCurrent?: NonNullable<Parameters<typeof runDeepResearch>[1]>["assertCurrent"];
-    logContext: SafeLogContext;
-  },
-): Promise<Response> {
-  const enc = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      let terminalProgressEmitted = false;
-      const emitProgress = (event: ResearchProgressEvent) => {
-        const terminal =
-          event.stage.id === "complete" ||
-          event.stage.status === "failed" ||
-          event.stage.status === "canceled";
-        if (event.activity) {
-          controller.enqueue(enc.encode(sseEvent(activityToSseDelta(event.activity))));
-        }
-        controller.enqueue(
-          enc.encode(
-            sseEvent({
-              kind: "research_progress",
-              stage: event.stage.id,
-              label: event.stage.label,
-              status: event.stage.status,
-              detail: event.stage.detail,
-              progress: event.progress,
-            }),
-          ),
-        );
-        terminalProgressEmitted ||= terminal;
-      };
-      try {
-        const result = await runDeepResearch(prompt, {
-          signal: options.signal,
-          persistence: options.persistence,
-          workflowSkillBlock: options.workflowSkillBlock,
-          assertCurrent: options.assertCurrent,
-          onProgress: emitProgress,
-        });
-        if (result.partialFailures.length) {
-          controller.enqueue(
-            enc.encode(
-              sseEvent({
-                kind: "research_warning",
-                label: "Some sources failed",
-                detail: result.partialFailures.slice(0, 3).join("; "),
-              }),
-            ),
-          );
-        }
-        controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(result.sources))));
-        controller.enqueue(enc.encode(sseChunk(result.report)));
-      } catch (error) {
-        if (options.signal?.aborted) {
-          controller.enqueue(enc.encode(sseChunk("_Deep Research was cancelled._")));
-        } else if (error instanceof ChatPreflightError) {
-          logSafeFailure("warn", "[chat] deep research context changed", options.logContext, {
-            status: error.status,
-            category: "server",
-            code: error.code,
-          });
-          if (!terminalProgressEmitted) {
-            emitProgress({
-              stage: {
-                id: "failed",
-                label: "Research context changed",
-                status: "failed",
-                detail: error.message,
-              },
-              progress: 1,
-              activity: createToolActivityEvent(
-                "write_report",
-                "Research context changed",
-                "failed",
-              ),
-            });
-          }
-          controller.enqueue(enc.encode(sseChunk(`_${error.message}_`)));
-        } else {
-          logSafeFailure("error", "[chat] deep research failed", options.logContext, {
-            status: 502,
-            category: "provider",
-            code: "deep_research_failed",
-          });
-          controller.enqueue(
-            enc.encode(
-              sseChunk(
-                "_Deep Research could not complete because search or the AI provider failed. Please retry._",
-              ),
-            ),
-          );
-        }
-      }
-      controller.enqueue(enc.encode(sseDone()));
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
-  });
-}
-
 async function handleImageRequest(prompt: string, logContext: SafeLogContext): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
@@ -648,12 +530,7 @@ export const Route = createFileRoute("/api/chat")({
             // network tools fail with a truthful policy response; implicit web
             // enrichment fails closed while ordinary local/model chat remains
             // available. Guests have no account setting to enforce.
-            const explicitLockdownCapability =
-              clientTool === "deep_research"
-                ? "deep_research"
-                : clientTool === "web_search"
-                  ? "live_web"
-                  : null;
+            const explicitLockdownCapability = clientTool === "web_search" ? "live_web" : null;
             let lockdownBlocksNetwork = false;
             if (auth) {
               try {
@@ -776,11 +653,6 @@ export const Route = createFileRoute("/api/chat")({
                   },
                   { status: 403 },
                 );
-              if (clientTool === "deep_research")
-                return Response.json(
-                  { error: "Start Deep Research from regular chat." },
-                  { status: 400 },
-                );
               if (clientTool === "web_search" && !customKova.allows("web"))
                 return Response.json(
                   { error: "Web search is disabled for this Kova." },
@@ -825,87 +697,6 @@ export const Route = createFileRoute("/api/chat")({
                 throw normalizeChatPreflightFailure("selected_context", error);
               }
             };
-
-            // Deep Research is a paid, high-cost operation. Authorize it before
-            // checking or invoking any AI/search provider so forged clientTool
-            // values cannot become a denial-of-wallet path.
-            const researchAccess = getDeepResearchAccess({
-              requested: clientTool === "deep_research",
-              authenticated: Boolean(auth),
-              tier: callerTier,
-              owner: isOwner,
-            });
-            if (!researchAccess.allowed) {
-              return Response.json(
-                { error: researchAccess.error },
-                { status: researchAccess.status },
-              );
-            }
-
-            // Deep Research persists through a service-role client. Prove that
-            // every caller-supplied relationship is visible through the
-            // authenticated user's RLS-scoped client before quota checks or
-            // provider execution. Unknown and cross-user ids fail closed.
-            let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
-            if (clientTool === "deep_research" && auth) {
-              try {
-                authorizedResearchReferences = await preflight.run("research_authorization", () =>
-                  authorizeResearchPersistence({
-                    supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
-                    chatId: usesExistingContext ? chatId : undefined,
-                    projectId: usesExistingContext ? projectId : undefined,
-                  }),
-                );
-              } catch (error) {
-                const authorizationError =
-                  error instanceof ChatPreflightError ? error.cause : error;
-                if (authorizationError instanceof ResearchPersistenceAuthorizationError) {
-                  if (authorizationError.status === 503) {
-                    logSafeFailure(
-                      "warn",
-                      "[chat] research authorization unavailable",
-                      logContext,
-                      {
-                        status: authorizationError.status,
-                        category: "server",
-                        code: authorizationError.code,
-                      },
-                    );
-                  }
-                  return Response.json(
-                    { error: authorizationError.publicMessage },
-                    {
-                      status: authorizationError.status,
-                      headers: { "Cache-Control": "no-store" },
-                    },
-                  );
-                }
-                if (error instanceof ChatPreflightError) throw error;
-                logSafeFailure("error", "[chat] research authorization failed", logContext, {
-                  status: 503,
-                  category: "server",
-                  code: "research_authorization_failed",
-                });
-                return Response.json(
-                  { error: "Research storage authorization is temporarily unavailable." },
-                  { status: 503, headers: { "Cache-Control": "no-store" } },
-                );
-              }
-            }
-
-            if (clientTool === "deep_research" && currentAttachments.length > 0) {
-              return new Response(
-                JSON.stringify({
-                  error: "Deep Research doesn't support attachments yet. Remove them and retry.",
-                  category: "invalid_request",
-                  retryable: false,
-                }),
-                {
-                  status: 400,
-                  headers: { "Content-Type": "application/json" },
-                },
-              );
-            }
 
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
@@ -1043,26 +834,6 @@ export const Route = createFileRoute("/api/chat")({
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
-            if (clientTool === "deep_research" && lastText) {
-              await assertSelectedContextsCurrent(request.signal);
-              return handleDeepResearchRequest(lastText, {
-                signal: request.signal,
-                logContext,
-                workflowSkillBlock: workflowSkill?.block,
-                assertCurrent: assertSelectedContextsCurrent,
-                persistence: auth
-                  ? {
-                      supabase:
-                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
-                      userId: auth.userId,
-                      chatId: authorizedResearchReferences?.chatId,
-                      projectId: authorizedResearchReferences?.projectId,
-                      temporary: Boolean(temporary),
-                    }
-                  : undefined,
-              });
-            }
-
             // Keep the latest 12 messages. The optional durable same-chat summary
             // below can retain earlier context only after its exact eligible
             // prefix is verified against this request. Existing cross-chat memory
@@ -1132,10 +903,10 @@ export const Route = createFileRoute("/api/chat")({
             // concrete model id, always choosing the cheapest capable option.
             const routeDecision = routeAiModel(
               {
-                task: clientTool === "deep_research" ? "deep_research" : "chat",
+                task: "chat",
                 mode: m.id,
                 tier: callerTier,
-                deepMode: m.id === "max" || m.id === "ultra" || clientTool === "deep_research",
+                deepMode: m.id === "max" || m.id === "ultra",
                 hasImages,
                 needsTools: m.id !== "instant" && Boolean(auth),
                 text: lastText ?? "",
@@ -1161,11 +932,10 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
-              (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")
+              (m.id !== "instant" || clientTool === "web_search")
             ) {
               if (
                 clientTool === "web_search" ||
-                clientTool === "deep_research" ||
                 shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
                 const result = await preflight.run(
@@ -1173,7 +943,7 @@ export const Route = createFileRoute("/api/chat")({
                   async (signal) => {
                     await assertSelectedContextsCurrent(signal);
                     return searchWeb(lastText, {
-                      wantsNews: clientTool === "deep_research" || NEWS_TRIGGER.test(lastText),
+                      wantsNews: NEWS_TRIGGER.test(lastText),
                       signal,
                     });
                   },
@@ -1437,15 +1207,13 @@ export const Route = createFileRoute("/api/chat")({
             }
 
             const toolInstruction =
-              clientTool === "deep_research"
-                ? "\n\nDEEP RESEARCH MODE: Create a structured research report. Use live web results above as sources when present, state uncertainty clearly, compare sources, and include a concise sources section with domains and URLs. If live results are unavailable, say exactly that and proceed without fabricated citations."
-                : clientTool === "web_search"
-                  ? "\n\nWEB SEARCH MODE: Use live web results above when present, cite source titles/domains naturally, and never fabricate links or citations."
-                  : clientTool === "study"
-                    ? "\n\nSTUDY MODE: Teach step by step, check understanding, and end with a short quiz."
-                    : clientTool === "data_analysis" || clientTool === "file_analysis"
-                      ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
-                      : "";
+              clientTool === "web_search"
+                ? "\n\nWEB SEARCH MODE: Use live web results above when present, cite source titles/domains naturally, and never fabricate links or citations."
+                : clientTool === "study"
+                  ? "\n\nSTUDY MODE: Teach step by step, check understanding, and end with a short quiz."
+                  : clientTool === "data_analysis" || clientTool === "file_analysis"
+                    ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
+                    : "";
 
             const body: Record<string, unknown> = {
               model,

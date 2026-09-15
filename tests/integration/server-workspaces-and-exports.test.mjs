@@ -38,22 +38,6 @@ test("Writing keeps all real document writers behind the shared lazy export boun
   // document-export roundtrip and production-browser extraction regressions.
 });
 
-test("research sessions remain owner scoped and truthfully distinguish real runs", async () => {
-  const migration = await read(
-    "supabase/migrations/20260801123000_research_session_management.sql",
-  );
-  const server = await read("src/lib/research.functions.ts");
-  const route = await read("src/routes/research-planner.tsx");
-  assert.match(migration, /archived_at/);
-  assert.match(migration, /char_length\(notes\)/);
-  assert.match(server, /requireSupabaseAuth/);
-  assert.match(server, /\.eq\("user_id", context\.userId\)/g);
-  assert.match(server, /\.limit\(100\)/);
-  assert.match(route, /Real provider-backed research runs/);
-  assert.match(route, /Real provider-backed research runs/);
-  assert.doesNotMatch(route, /Delete research run|Archive research run/);
-});
-
 test("universal search loads authorized workspace results asynchronously", async () => {
   const index = await read("src/routes/index.tsx");
   const palette = await read("src/components/CommandPalette.tsx");

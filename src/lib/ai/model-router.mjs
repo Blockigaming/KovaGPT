@@ -116,7 +116,7 @@ export function scoreComplexity(text, signals = {}) {
 
 /**
  * @typedef {Object} RouteInput
- * @property {"chat"|"utility"|"deep_research"|"image_generation"|"image_analysis"|"embedding"} task
+ * @property {"chat"|"utility"|"image_generation"|"image_analysis"|"embedding"} task
  * @property {string} [utilityTask]
  * @property {string} [mode]
  * @property {"free"|"plus"|"pro"|"business"} [tier]
@@ -190,7 +190,7 @@ export function routeModel(input) {
 
   // PREMIUM_REASONING requires explicit user intent AND a paid premium tier.
   // It is never selected automatically, and never for free users.
-  if (explicitDeep || input.task === "deep_research") {
+  if (explicitDeep) {
     if (premiumAllowed) {
       return decide("PREMIUM_REASONING", modeCap, [...reasons, "explicit_deep_mode"], score);
     }
