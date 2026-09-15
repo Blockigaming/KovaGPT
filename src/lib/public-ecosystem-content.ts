@@ -129,6 +129,13 @@ const directoryPage = (kind: "plugins" | "partners"): PublicDetailPage => ({
       ? { label: "Browse supported Apps", to: "/apps" }
       : { label: "Discuss requirements", to: "/contact-sales" },
   secondaryAction: { label: "Explore KovaGPT for business", to: "/business" },
+  closing: {
+    title: "Check status before proceeding",
+    body:
+      kind === "plugins"
+        ? "Use the Apps directory and actual authorization flow to confirm whether a connection is available and which permissions it requests."
+        : "Confirm any provider relationship and its scope in a current approved agreement before relying on it.",
+  },
   sections: [
     {
       title: kind === "plugins" ? "Status before access" : "Relationship status first",
@@ -191,6 +198,16 @@ const entryPage = (path: string): PublicDetailPage => {
       label: isPlugin ? "Back to connection directory" : "Back to provider directory",
       to: `/business/${kind}`,
     },
+    ...(!supportedDestination
+      ? {
+          closing: {
+            title: isPlugin ? "Choose a supported connection" : "Verify the relationship",
+            body: isPlugin
+              ? `${name} is not currently available as a KovaGPT connection. Use the Apps directory as the availability source of truth.`
+              : `KovaGPT does not claim a current ${name} relationship. Confirm any provider arrangement in an approved agreement before relying on it.`,
+          },
+        }
+      : {}),
     sections: [
       {
         title: supportedDestination ? "Use the supported Kova flow" : "Current KovaGPT status",

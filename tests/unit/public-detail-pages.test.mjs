@@ -235,9 +235,21 @@ test("Kova business resources cover every exact source path without unsupported 
   assert.match(source, /PUBLIC_BUSINESS_PATHS\.map\(businessPage\)/u);
   assert.match(source, /No unsupported claim/u);
   assert.match(source, /No third-party relationship or endorsement is implied/u);
+  assert.match(source, /title: "Verify the current offering"/u);
   assert.doesNotMatch(source, /guarantees? that capacity is available/iu);
   for (const route of [twoSegmentRoute, threeSegmentRoute, fourSegmentRoute]) {
     assert.match(route, /PUBLIC_BUSINESS_PAGE_BY_KEY/u);
     assert.match(route, /params\.section (?:===|!==) "business"/u);
   }
+});
+
+test("status-only public registries provide non-operational closing copy", () => {
+  const form = read("src/lib/public-form-content.ts");
+  const ecosystem = read("src/lib/public-ecosystem-content.ts");
+  const policy = read("src/lib/public-policy-content.ts");
+
+  assert.match(form, /title: "Choose a verified contact path"/u);
+  assert.match(ecosystem, /title: "Check status before proceeding"/u);
+  assert.match(ecosystem, /title: isPlugin \? "Choose a supported connection"/u);
+  assert.match(policy, /title: "Confirm the current document"/u);
 });

@@ -75,6 +75,10 @@ const policyPage = (path: string): PublicDetailPage => {
     ],
     primaryAction,
     secondaryAction: { label: "Policy center", to: "/policies" },
+    closing: {
+      title: "Confirm the current document",
+      body: "This compatibility route is not a standalone KovaGPT policy or agreement. Use the linked current document and any applicable signed agreement before relying on terms or obligations.",
+    },
     sections: [
       {
         title: `Status of ${title.toLowerCase()}`,

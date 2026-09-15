@@ -74,6 +74,10 @@ const formPage = (path: string): PublicDetailPage => {
     highlights: ["No intake form", "No sensitive data collected", "Verified KovaGPT destinations"],
     primaryAction: primaryActionFor(path),
     secondaryAction: { label: "Return to KovaGPT", to: "/" },
+    closing: {
+      title: "Choose a verified contact path",
+      body: "No intake form or application is available at this route. Use the linked KovaGPT destination and share only the information that channel requires.",
+    },
     sections: [
       {
         title: "What this route does not collect",

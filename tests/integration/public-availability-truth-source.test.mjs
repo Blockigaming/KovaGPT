@@ -39,6 +39,8 @@ test("external assistant and developer surfaces do not publish unfinished integr
   assert.match(developers, /noindex, nofollow/);
   assert.match(developerDoc, /throw notFound\(\)/);
   assert.match(developerDoc, /DEVELOPER_DOC_BY_SLUG/);
+  assert.match(developerDoc, /noindex, follow/);
+  assert.doesNotMatch(developerDoc, /noindex, nofollow/);
   assert.match(developerDoc, /Browser OAuth discovery\s+is available only when/);
 });
 

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/developers/$docSlug")({
           meta: [
             { title: `${doc.title} | KovaGPT Developers` },
             { name: "description", content: doc.description },
-            { name: "robots", content: "noindex, nofollow" },
+            { name: "robots", content: "noindex, follow" },
           ],
           links: [
             {

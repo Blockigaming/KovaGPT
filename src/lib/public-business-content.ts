@@ -78,6 +78,14 @@ const businessPage = (path: string): PublicDetailPage => {
       : ["Scoped workflow", "Approved information", "Accountable review"],
     primaryAction,
     secondaryAction: { label: "KovaGPT business overview", to: "/business" },
+    ...(statusOnly
+      ? {
+          closing: {
+            title: "Verify the current offering",
+            body: "This status page does not publish the referenced offer, event, relationship, capacity, or recognition. Confirm current KovaGPT capabilities and written commitments before relying on them.",
+          },
+        }
+      : {}),
     sections: statusOnly
       ? [
           {
