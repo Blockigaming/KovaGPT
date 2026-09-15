@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
+import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
 
 const MAX_RESULTS = 6;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
@@ -32,25 +32,29 @@ export const Route = createFileRoute("/api/maps/search")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const auth = await requireUser(request);
-        if (auth instanceof Response) return auth;
-
-        const lockdown = await enforceLockdownCapability(
-          auth.supabaseAdmin,
-          auth.userId,
-          "live_web",
-        );
-        if (lockdown) return lockdown;
-
         const requestUrl = new URL(request.url);
         const query = requestUrl.searchParams.get("q")?.trim() ?? "";
         if (query.length < 2 || query.length > 160) {
           return json({ error: "Enter a location or place to search." }, 400);
         }
+        const auth = await requireUser(request);
+        if (auth instanceof Response) return auth;
+        if (request.headers.get("x-kova-expected-user") !== auth.userId) {
+          return json({ error: "Map account changed. Reload and try again." }, 409);
+        }
+        try {
+          await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "live_web");
+        } catch (error) {
+          return (
+            lockdownErrorResponse(error) ??
+            json({ error: "Map access could not be verified. Try again shortly." }, 503)
+          );
+        }
+
         const clientLimit = await consumeApplicationRateLimit({
           identity: `${auth.userId}:${resolveAnonymousClientKey(request.headers)}`,
-          action: "maps_search",
-          limit: 20,
+          action: "maps_search_client",
+          limit: 30,
           windowSeconds: 60,
         });
         if (!clientLimit.allowed) {
@@ -58,8 +62,8 @@ export const Route = createFileRoute("/api/maps/search")({
             {
               error:
                 clientLimit.status === "limited"
-                  ? "Too many map searches. Please wait before trying again."
-                  : "Map request protection is temporarily unavailable.",
+                  ? "Please wait a moment before searching again."
+                  : "Map search protection is temporarily unavailable.",
             },
             {
               status: clientLimit.status === "limited" ? 429 : 503,
@@ -83,18 +87,20 @@ export const Route = createFileRoute("/api/maps/search")({
           return json((cached as { payload: unknown }).payload);
         }
 
-        // This database-backed lease is application-wide, including across
-        // server instances. It enforces Nominatim's absolute one request/second
-        // ceiling; a cache hit above does not consume a provider request.
+        // This database-backed lease serializes provider calls across all
+        // application instances. Cache hits above do not consume the lease.
         const { data: claimed, error: claimError } = await auth.supabaseAdmin.rpc(
           "claim_maps_geocoder_provider_slot" as never,
         );
         if (claimError || claimed !== true) {
           return Response.json(
-            { error: "Map search is busy. Please try again in a moment." },
+            { error: "Map search is busy. Please wait a moment and try again." },
             {
               status: claimError ? 503 : 429,
-              headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+              headers: {
+                "Cache-Control": "no-store",
+                "Retry-After": "1",
+              },
             },
           );
         }
@@ -165,8 +171,6 @@ export const Route = createFileRoute("/api/maps/search")({
             502,
           );
         } finally {
-          // Release only after the response body has been consumed, then retain
-          // a one-second gap before the next application instance may claim it.
           const { error: releaseError } = await auth.supabaseAdmin.rpc(
             "release_maps_geocoder_provider_slot" as never,
           );

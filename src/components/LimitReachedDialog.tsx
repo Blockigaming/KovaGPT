@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { Sparkles, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "any moment now";
@@ -78,8 +79,7 @@ export function LimitReachedDialog({
               <span className="text-sm font-semibold">1 month of Plus, free</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Start Plus today and get your first month on us. After that it's just $16/month.
-              Cancel anytime.
+              {`Start Plus today and get your first month on us. After that it's just $${CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd}/month + applicable tax. Cancel anytime.`}
             </p>
           </div>
 

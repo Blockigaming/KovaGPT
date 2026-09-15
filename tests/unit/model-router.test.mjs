@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   DEFAULT_MODELS,
+  MODE_MAX_OUTPUT_TOKENS,
   ROUTING_THRESHOLDS,
   getModelConfig,
   isValidModelId,
@@ -55,15 +56,32 @@ test("genuinely complex paid work auto-upgrades to advanced", () => {
 });
 
 test("deep mode upgrades to the premium model for premium tiers", () => {
-  const decision = routeModel({ task: "chat", mode: "pro", tier: "pro", text: "deep analysis" });
+  const decision = routeModel({ task: "chat", mode: "max", tier: "pro", text: "deep analysis" });
   assert.equal(decision.role, "PREMIUM_REASONING");
   assert.equal(decision.modelId, SOL);
+});
+
+test("default request budget can admit the full Ultra output reservation", () => {
+  const maximumProviderCalls = 9;
+  const outputReservation =
+    estimateCostUsd(SOL, 0, MODE_MAX_OUTPUT_TOKENS.ultra) * maximumProviderCalls;
+  assert.ok(outputReservation <= 1);
+});
+
+test("mode output ceilings remain monotonic through Max and Ultra", () => {
+  const modes = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
+  for (let index = 1; index < modes.length; index += 1) {
+    assert.ok(
+      MODE_MAX_OUTPUT_TOKENS[modes[index]] > MODE_MAX_OUTPUT_TOKENS[modes[index - 1]],
+      `${modes[index]} must exceed ${modes[index - 1]}`,
+    );
+  }
 });
 
 test("free users can never reach the premium model", () => {
   const decision = routeModel({
     task: "chat",
-    mode: "pro",
+    mode: "max",
     tier: "free",
     deepMode: true,
     text: "extremely difficult reasoning",
@@ -78,7 +96,7 @@ test("utility tasks always use the utility model with a tight output cap", () =>
     const decision = routeModel({
       task: "utility",
       utilityTask,
-      mode: "pro",
+      mode: "max",
       tier: "pro",
       deepMode: true,
       text: "difficult debugging refactor architecture proof",

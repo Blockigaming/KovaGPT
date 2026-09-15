@@ -35,12 +35,16 @@ test("root metadata is route-aware and does not expose private infrastructure", 
 });
 
 test("robots and sitemap share an explicit public/private boundary", async () => {
-  const [robots, sitemap, policy, routeTree] = await Promise.all([
+  const [robots, sitemap, policy, routeTree, runtimeAuditSource] = await Promise.all([
     readSource("public/robots.txt"),
     readSource("src/routes/sitemap[.]xml.ts"),
     readSource("src/lib/seo-policy.mjs"),
     readSource("src/routeTree.gen.ts"),
+    readSource("docs/page-parity/indexable-content-review.json"),
   ]);
+  const runtimeByRoute = new Map(
+    JSON.parse(runtimeAuditSource).records.map((record) => [record.route, record]),
+  );
 
   for (const path of ["/api/", "/account", "/chat", "/projects", "/settings", "/work"]) {
     assert.match(robots, new RegExp(`^Disallow: ${path.replace("/", "\\/")}`, "mu"), path);
@@ -54,7 +58,27 @@ test("robots and sitemap share an explicit public/private boundary", async () =>
 
   for (const { path } of PUBLIC_SITEMAP_ENTRIES) {
     if (path === "/") continue;
-    assert.ok(routeTree.includes(`fullPath: '${path}'`), `${path} must resolve to a real route`);
+    const segmentCount = path.split("/").filter(Boolean).length;
+    const dynamicTemplate =
+      segmentCount === 1
+        ? "fullPath: '/$slug'"
+        : segmentCount === 2
+          ? "fullPath: '/$section/$articleSlug'"
+          : segmentCount === 3
+            ? "fullPath: '/$section/$category/$articleSlug'"
+            : segmentCount === 4
+              ? "fullPath: '/$section/$category/$subcategory/$articleSlug'"
+              : "";
+    assert.ok(
+      routeTree.includes(`fullPath: '${path}'`) ||
+        (dynamicTemplate && routeTree.includes(dynamicTemplate)),
+      `${path} must resolve to a real route`,
+    );
+    assert.equal(
+      runtimeByRoute.get(path)?.runtimeStatus,
+      200,
+      `${path} must pass the generated runtime crawl instead of relying only on a dynamic template`,
+    );
   }
 });
 
@@ -78,4 +102,22 @@ test("the public status page does not invent live monitoring state", async () =>
   assert.match(status, /does not claim that all\s+systems are operational/u);
   assert.match(status, /href="\/api\/health"/u);
   assert.doesNotMatch(status, /No known issues|All systems operational/iu);
+});
+
+test("public discovery actions lead to populated Kova surfaces", async () => {
+  const [publicSlugRoute, academyRoute] = await Promise.all([
+    readSource("src/routes/$slug.tsx"),
+    readSource("src/routes/academy.tsx"),
+  ]);
+
+  assert.match(academyRoute, /Start Academy guides[\s\S]*\/academy\/ai-fundamentals/u);
+  assert.match(academyRoute, /PUBLIC_ACADEMY_PAGES\.map/u);
+  assert.match(
+    publicSlugRoute,
+    /economic-research-exchange[\s\S]*Explore KovaGPT research[\s\S]*\/research-assistant/u,
+  );
+  assert.doesNotMatch(
+    publicSlugRoute,
+    /economic-research-exchange[\s\S]{0,240}to:\s*"\/research"/u,
+  );
 });

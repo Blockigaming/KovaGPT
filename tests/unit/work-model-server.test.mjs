@@ -195,7 +195,7 @@ test("actual quota broker records the chosen Work mode and exact model", async (
     ["instant", "instant"],
     ["normal", "medium"],
     ["thinking", "high"],
-    ["deep", "pro"],
+    ["deep", "max"],
   ]) {
     await api.reserveWorkStepCost(
       {

@@ -20,8 +20,14 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
     "selectedLocation",
     "viewport",
     "writePrincipalHandoff",
+    "authFetch",
+    "principalGenerationRef",
   ])
     assert.match(source, new RegExp(contract.replaceAll(".", "\\.")));
+  assert.match(source, /searchControllerRef\.current\?\.abort\(\)/);
+  assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
+  assert.match(source, /if \(enabled && !map\.getSource\("terrain"\)\)/);
+  assert.match(source, /disabled=\{!networkAllowed\}/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
@@ -32,24 +38,27 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /Number\.isFinite\(latitude\)/);
   assert.match(route, /Place search is temporarily unavailable/);
   assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
-  assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
-  assert.match(route, /requireUser\(request\)/);
-  assert.match(route, /enforceLockdownCapability/);
   assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
+  assert.match(route, /requireUser\(request\)/);
   assert.match(route, /claim_maps_geocoder_provider_slot/);
   assert.match(route, /release_maps_geocoder_provider_slot/);
   assert.match(route, /maps_geocoder_cache/);
+  assert.match(route, /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/);
+  assert.match(read("src/components/KovaMaps.tsx"), /authFetch\("\/api\/security\/lockdown"/);
+  assert.match(read("src/components/KovaMaps.tsx"), /authFetch\(`\/api\/maps\/search/);
+  assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
   assert.doesNotMatch(route, /x-forwarded-for|recentRequests/);
 });
 
 test("Maps waits for authenticated Lockdown policy before loading remote tiles", () => {
   const source = read("src/components/KovaMaps.tsx");
-  assert.match(source, /fetch\("\/api\/security\/lockdown"/);
-  assert.match(source, /providerAccess !== "allowed"/);
-  assert.match(source, /Authorization: `Bearer \$\{data\.session\.access_token\}`/);
-  assert.ok(
-    source.indexOf('providerAccess !== "allowed"') < source.indexOf('import("maplibre-gl")'),
+  assert.match(source, /authFetch\("\/api\/security\/lockdown"/);
+  assert.match(source, /networkAccess\?\.ownerId === user\?\.id/);
+  assert.match(
+    source,
+    /if \(!networkAllowed \|\| !containerRef\.current \|\| mapRef\.current\) return/,
   );
+  assert.ok(source.indexOf("if (!networkAllowed") < source.indexOf('import("maplibre-gl")'));
 });
 
 test("Maps provider guard serializes cross-instance requests and keeps a shared cache", () => {
@@ -61,6 +70,24 @@ test("Maps provider guard serializes cross-instance requests and keeps a shared 
   assert.match(migration, /interval '1 second'/);
   assert.match(migration, /grant execute.+service_role/);
   assert.match(migration, /revoke all.+anon, authenticated/);
+});
+
+test("Maps provider admission and chat handoffs use rolling byte bounds", () => {
+  const contextPacks = read("src/routes/context-packs.tsx");
+  const migration = read("supabase/migrations/20260915012500_maps_provider_throttle.sql");
+  assert.match(contextPacks, /CHAT_CONTEXT_HANDOFF_MAX_BYTES = 30 \* 1024/);
+  assert.match(contextPacks, /TextEncoder/);
+  assert.match(contextPacks, /tool: "web_search"/);
+  assert.match(read("src/routes/index.tsx"), /setSelectedTool\("web_search"\)/);
+  assert.match(migration, /provider text primary key/);
+  assert.match(migration, /interval '1 second'/);
+  assert.match(migration, /next_request_at <= v_now/);
+  const retirement = read(
+    "supabase/migrations/20260915011500_retire_deep_research_workspace_search.sql",
+  );
+  assert.match(retirement, /set status = 'canceled'/);
+  assert.match(retirement, /completed_at = coalesce\(completed_at, now\(\)\)/);
+  assert.match(retirement, /'writing_report', 'running'/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {

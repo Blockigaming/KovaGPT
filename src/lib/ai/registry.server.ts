@@ -273,14 +273,16 @@ export function selectModelForMode(
       ? "instant"
       : mode === "thinking"
         ? "thinking"
-        : ["high", "extra_high", "pro"].includes(mode)
+        : ["high", "extra_high", "max", "ultra"].includes(mode)
           ? "deep"
           : "normal";
   const preferred = modelForPolicy(policy).id;
   return selectModelForCapabilities(
     preferred,
     required,
-    ["thinking", "high", "extra_high", "pro"].includes(mode) ? "advanced_chat" : "normal_chat",
+    ["thinking", "high", "extra_high", "max", "ultra"].includes(mode)
+      ? "advanced_chat"
+      : "normal_chat",
   );
 }
 

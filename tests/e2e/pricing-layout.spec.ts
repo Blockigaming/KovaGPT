@@ -18,8 +18,14 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(page.locator("[data-pricing-plan]")).toHaveCount(4);
   await expect(page.getByText("$16", { exact: true })).toBeVisible();
   await expect(page.getByText("$80", { exact: true })).toBeVisible();
+  await expect(page.getByText("+ applicable tax", { exact: true })).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Start Plus" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toBeVisible();
+  await expect(page.getByText("Instant and Thinking modes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Instant, Medium, and High modes", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Instant, Medium, High, Extra High, Max, and Ultra modes", { exact: true }),
+  ).toBeVisible();
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.
   await expect(page.getByRole("dialog", { name: "Secure checkout" })).toHaveCount(0);
 
@@ -36,12 +42,15 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   }
 
   if (testInfo.project.name === "desktop-1440x900") {
-    const actionBottoms = await actions.evaluateAll((buttons) =>
+    const actionBoxes = await actions.evaluateAll((buttons) =>
       buttons.map((button) => {
         const box = button.getBoundingClientRect();
-        return Math.round(box.bottom);
+        return { top: Math.round(box.top), bottom: Math.round(box.bottom), height: box.height };
       }),
     );
-    expect(Math.max(...actionBottoms) - Math.min(...actionBottoms)).toBeLessThanOrEqual(2);
+    for (const coordinate of ["top", "bottom", "height"] as const) {
+      const values = actionBoxes.map((box) => box[coordinate]);
+      expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(2);
+    }
   }
 });

@@ -42,27 +42,34 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
   assert.match(
     sidebar,
     /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
   );
 });
+test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
+  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
+  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
+  assert.ok(
+    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
+  );
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
+  assert.match(sidebar, /title="Health is coming soon"/);
+  assert.match(sidebar, /title="Finances is coming soon"/);
+});
 
 test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-label="More destinations"/);
-  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
-  );
+  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
+  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
+  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
@@ -145,6 +152,31 @@ test("active desktop chat keeps one primary action and groups secondary controls
   assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
 });
 
+test("composer actions, message editing, and markdown stay reachable and lossless", () => {
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
+  assert.match(
+    chatInput,
+    /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
+  );
+  assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  assert.match(chatInput, /onToolSelect\?\.\(next\)/);
+  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
+  assert.match(chatInput, /kova-send-button is-enabled/);
+  assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
+  assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
+  assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
+  assert.ok(
+    chatMessage.indexOf("title={retryActionLabel}") <
+      chatMessage.indexOf('aria-label="More actions"'),
+  );
+  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
+  assert.match(route, /setInput\(m\.content\);/);
+  assert.match(
+    route,
+    /setEditingMessage\(\{\s*conversationId: active\.id,\s*messageId: m\.id,\s*\}\);/,
+  );
+});
+
 test("sending snapshots history and serializes automatic retries", () => {
   const snapshot = route.indexOf("const priorMessages =");
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
@@ -163,6 +195,13 @@ test("sending snapshots history and serializes automatic retries", () => {
   assert.match(route, /const retryHistory = active\.messages\.slice\(0, -2\);/);
   assert.match(route, /active\.id,\s+retryHistory,/);
   assert.doesNotMatch(route, /const attemptLabel|_Reconnecting…/);
+});
+
+test("web-backed answers keep exact clickable citations", () => {
+  assert.doesNotMatch(chatMessage, /replace\(\/\\\[\\d\+\\\]\/g/);
+  assert.match(searchServer, /Cite factual claims with Markdown links/);
+  assert.match(searchServer, /Do not invent or alter URLs/);
+  assert.match(modes, /source-name Markdown links using the exact supplied URLs/);
 });
 
 test("the neutral shell has one theme layer and accessible collapsed navigation", () => {

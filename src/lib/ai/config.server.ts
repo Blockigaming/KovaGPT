@@ -11,7 +11,7 @@ const ConfigSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
-  maxCostUsdPerRequest: z.coerce.number().positive().max(10).default(0.1),
+  maxCostUsdPerRequest: z.coerce.number().positive().max(10).default(1),
   maxTokensPerUserDay: positiveInteger(50_000, 10_000_000),
   maxTokensPerUserMonth: positiveInteger(500_000, 100_000_000),
   maxPremiumRequestsPeriod: positiveInteger(50, 100_000),

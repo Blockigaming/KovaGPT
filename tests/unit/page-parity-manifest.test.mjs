@@ -76,6 +76,8 @@ test("route manifest includes reusable public, publishing, developer, assistant 
   for (const pattern of [
     "/$slug",
     "/$section/$articleSlug",
+    "/$section/$category/$articleSlug",
+    "/$section/$category/$subcategory/$articleSlug",
     "/developers/$docSlug",
     "/assistants/$assistantSlug",
     "/$locale/home",
@@ -84,7 +86,7 @@ test("route manifest includes reusable public, publishing, developer, assistant 
       routes.records.some(({ canonicalPath }) => canonicalPath === pattern),
       pattern,
     );
-  assert.equal(routes.reviewedPublicRouteCount, 87);
+  assert.equal(routes.reviewedPublicRouteCount, 608);
 });
 
 test("Maps is noindex and renders the dedicated provider-backed experience", () => {
@@ -108,8 +110,29 @@ test("public page system contains original truthfulness and review gates", () =>
   assert.match(content, /review\?: "legal" \| "admin"/);
   assert.match(shell, /legal review required/i);
   assert.match(root, /Skip to content/);
-  assert.match(root, /segment === "ar" \? "rtl" : "ltr"/u);
+  assert.doesNotMatch(root, /document\.documentElement\.(?:lang|dir)/u);
   assert.match(shell, /min-h-11/);
+});
+
+test("localized content scopes its language and direction without relabeling the English shell", () => {
+  for (const path of ["src/routes/$slug.tsx", "src/routes/$locale.home.tsx"]) {
+    const source = read(path);
+    assert.match(
+      source,
+      /<main\s+[\s\S]*?lang=\{(?:routeLocale|locale)\}[\s\S]*?dir=\{direction\}/u,
+    );
+    assert.match(source, /<span lang="en" className="sr-only">\s*Language/u);
+    assert.doesNotMatch(source, /document\.documentElement\.(?:lang|dir)/u);
+  }
+});
+
+test("public CTA audit prefers marked actions and retains legacy non-navigation coverage", () => {
+  const audit = read("scripts/audit-public-content.mjs");
+  assert.match(audit, /const markedCtaTag/u);
+  assert.match(audit, /main\.replace\(\/<nav/u);
+  assert.match(audit, /const ctaTag = markedCtaTag \?\? legacyCtaTag/u);
+  assert.match(audit, /const duplicateDescriptions/u);
+  assert.match(audit, /duplicateDescriptions\.length/u);
 });
 
 test("public catch-all rejects every reserved application and security namespace", async () => {
@@ -143,18 +166,19 @@ test("public catch-all rejects every reserved application and security namespace
     assert.equal(isReservedPublicPath(path), false, path);
   const catchAll = read("src/routes/$slug.tsx");
   assert.match(catchAll, /isReservedPublicPath\(`\/\$\{params\.slug\}`\)/);
+  assert.match(catchAll, /await import\("@\/lib\/public-content-expanded"\)/u);
 });
 
-test("all 87 reconciled public routes are reviewed and the sitemap retains only 23 substantive routes", async () => {
+test("all 608 reconciled public routes are reviewed and the sitemap retains 165 substantive routes", async () => {
   const review = JSON.parse(read("docs/page-parity/indexable-content-review.json"));
   const developer = JSON.parse(read("docs/release-reconciliation/developer-contract-report.json"));
-  assert.equal(review.reviewedRouteCount, 87);
-  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 87);
+  assert.equal(review.reviewedRouteCount, 608);
+  assert.equal(new Set(review.records.map((entry) => entry.route)).size, 608);
   for (const entry of review.records) {
     assert.ok(entry.h1, entry.route);
     assert.equal(entry.runtimeStatus, 200, entry.route);
-    assert.equal(entry.mobileResult, "baseline_pass_2026-08-11", entry.route);
-    assert.equal(entry.darkModeResult, "baseline_pass_2026-08-11", entry.route);
+    assert.equal(entry.mobileResult, "not_verified", entry.route);
+    assert.equal(entry.darkModeResult, "not_verified", entry.route);
     assert.equal(entry.keyboardResult, "skip_link_present", entry.route);
     assert.ok(entry.uniqueTitle, entry.route);
     assert.ok(entry.uniqueDescription, entry.route);
@@ -168,19 +192,63 @@ test("all 87 reconciled public routes are reviewed and the sitemap retains only 
   );
   const { PUBLIC_REVIEW_PATHS, PUBLIC_SITEMAP_ENTRIES } =
     await import("../../src/lib/seo-policy.mjs");
-  assert.equal(PUBLIC_REVIEW_PATHS.length, 87);
-  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 23);
+  assert.equal(PUBLIC_REVIEW_PATHS.length, 608);
+  assert.equal(PUBLIC_SITEMAP_ENTRIES.length, 165);
   const indexed = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
   for (const { route } of developer.records) assert.equal(indexed.has(route), false, route);
+  for (const unavailableProgram of [
+    "/economic-research-exchange",
+    "/interview-guide",
+    "/open-model-feedback",
+    "/residency",
+    "/student-collective",
+  ]) {
+    assert.ok(PUBLIC_REVIEW_PATHS.includes(unavailableProgram), unavailableProgram);
+    assert.equal(indexed.has(unavailableProgram), false, unavailableProgram);
+  }
 });
 
-test("release route manifest is generated from all route files and one sitemap source", () => {
+test("release route manifest is generated from all route files and one sitemap source", async () => {
   const manifest = JSON.parse(read("docs/release-reconciliation/canonical-route-manifest.json"));
-  assert.equal(manifest.routeFileCount, 103);
-  assert.equal(manifest.records.length, 103);
-  assert.equal(manifest.sitemapCount, 23);
-  assert.equal(manifest.reviewedPublicRouteCount, 87);
-  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 103);
+  assert.equal(manifest.routeFileCount, 174);
+  assert.equal(manifest.records.length, 174);
+  assert.equal(manifest.sitemapCount, 165);
+  assert.equal(manifest.reviewedPublicRouteCount, 608);
+  assert.equal(new Set(manifest.records.map(({ routeFile }) => routeFile)).size, 174);
+  const { PUBLIC_SITEMAP_ENTRIES } = await import("../../src/lib/seo-policy.mjs");
+  const associatedSitemapPaths = new Set(
+    manifest.records.flatMap((record) => [
+      ...(record.sitemapIncluded && !record.template ? [record.canonicalPath] : []),
+      ...(record.resolvedPathEvidence ?? []).map(({ canonicalPath }) => canonicalPath),
+    ]),
+  );
+  assert.deepEqual(associatedSitemapPaths, new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path)));
+  const dynamicPublicRecords = manifest.records.filter(
+    ({ classification }) => classification === "dynamic_public",
+  );
+  assert.ok(dynamicPublicRecords.length > 0);
+  for (const record of dynamicPublicRecords) {
+    assert.equal(record.sitemapIncluded, false, record.canonicalPath);
+    assert.equal(record.canonicalUrl, null, record.canonicalPath);
+    assert.equal(record.runtimeResult, "see_resolved_path_evidence", record.canonicalPath);
+    assert.equal(record.metadataResult, "see_resolved_path_evidence", record.canonicalPath);
+    assert.equal(
+      record.resolvedPathEvidence.length,
+      record.resolvedCanonicalPaths.length,
+      record.canonicalPath,
+    );
+    assert.deepEqual(
+      record.resolvedPathEvidence.map(({ canonicalPath }) => canonicalPath),
+      record.resolvedCanonicalPaths,
+      record.canonicalPath,
+    );
+    for (const evidence of record.resolvedPathEvidence) {
+      assert.match(evidence.canonicalUrl, /^https:\/\/kovagpt\.com\//u, evidence.canonicalPath);
+      assert.match(evidence.runtimeResult, /^http_2\d\d$/u, evidence.canonicalPath);
+      assert.equal(evidence.metadataResult, "reviewed", evidence.canonicalPath);
+      assert.equal(evidence.finalDecision, "retain_in_sitemap", evidence.canonicalPath);
+    }
+  }
   assert.ok(
     manifest.records
       .filter(({ classification }) => classification.startsWith("reserved_"))
@@ -188,4 +256,16 @@ test("release route manifest is generated from all route files and one sitemap s
   );
   assert.match(read("src/routes/$slug.tsx"), /name: "robots", content: "noindex, follow"/u);
   assert.match(read("src/routes/developers.$docSlug.tsx"), /throw notFound\(\)/u);
+  const robots = read("public/robots.txt");
+  for (const path of [
+    "github",
+    "gmail",
+    "google-calendar",
+    "google-drive",
+    "canva",
+    "powerpoint",
+    "spotify",
+  ]) {
+    assert.match(robots, new RegExp(`^Allow: \/apps\/${path}$`, "mu"));
+  }
 });

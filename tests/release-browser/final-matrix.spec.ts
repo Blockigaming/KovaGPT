@@ -53,7 +53,17 @@ for (const theme of themes) {
         for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+        for (const label of [
+          "New chat",
+          "Work",
+          "Images",
+          "Library",
+          "Projects",
+          "Plugins",
+          "Maps",
+          "Discover",
+        ])
+          await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       }
     } else {
       await expect(page.locator(".kova-topbar")).toBeVisible();

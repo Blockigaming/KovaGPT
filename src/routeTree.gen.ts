@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AcademyRouteImport } from './routes/academy'
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
@@ -104,6 +105,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
+import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
@@ -171,6 +173,7 @@ import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
+import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './routes/$section.$category.$subcategory.$articleSlug'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
@@ -188,6 +191,11 @@ const IndexRoute = IndexRouteImport.update({
 const SlugRoute = SlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcademyRoute = AcademyRouteImport.update({
+  id: '/academy',
+  path: '/academy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiHumanizerRoute = AiHumanizerRouteImport.update({
@@ -660,6 +668,12 @@ const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SectionCategoryArticleSlugRoute =
+  SectionCategoryArticleSlugRouteImport.update({
+    id: '/$section/$category/$articleSlug',
+    path: '/$section/$category/$articleSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -1008,6 +1022,12 @@ const OauthMcpActionRoute = OauthMcpActionRouteImport.update({
   path: '/oauth/mcp/$action',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SectionCategorySubcategoryArticleSlugRoute =
+  SectionCategorySubcategoryArticleSlugRouteImport.update({
+    id: '/$section/$category/$subcategory/$articleSlug',
+    path: '/$section/$category/$subcategory/$articleSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1059,6 +1079,7 @@ const ApiScimV2OrganizationIdSplatRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1152,6 +1173,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1219,6 +1241,7 @@ export interface FileRoutesByFullPath {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1231,6 +1254,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1324,6 +1348,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1391,6 +1416,7 @@ export interface FileRoutesByTo {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1404,6 +1430,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/academy': typeof AcademyRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
@@ -1497,6 +1524,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -1564,6 +1592,7 @@ export interface FileRoutesById {
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
+  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1578,6 +1607,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -1671,6 +1701,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -1738,6 +1769,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -1750,6 +1782,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -1843,6 +1876,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -1910,6 +1944,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -1922,6 +1957,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$slug'
+    | '/academy'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
@@ -2015,6 +2051,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
+    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
     | '/api/admin/ai-usage'
@@ -2082,6 +2119,7 @@ export interface FileRouteTypes {
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
+    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2095,6 +2133,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
+  AcademyRoute: typeof AcademyRoute
   AiHumanizerRoute: typeof AiHumanizerRoute
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
@@ -2186,6 +2225,7 @@ export interface RootRouteChildren {
   OauthConsentRoute: typeof OauthConsentRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
+  SectionCategoryArticleSlugRoute: typeof SectionCategoryArticleSlugRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
@@ -2247,6 +2287,7 @@ export interface RootRouteChildren {
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   OauthMcpActionRoute: typeof OauthMcpActionRoute
+  SectionCategorySubcategoryArticleSlugRoute: typeof SectionCategorySubcategoryArticleSlugRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
@@ -2270,6 +2311,13 @@ declare module '@tanstack/react-router' {
       path: '/$slug'
       fullPath: '/$slug'
       preLoaderRoute: typeof SlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/academy': {
+      id: '/academy'
+      path: '/academy'
+      fullPath: '/academy'
+      preLoaderRoute: typeof AcademyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-humanizer': {
@@ -2923,6 +2971,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$section/$category/$articleSlug': {
+      id: '/$section/$category/$articleSlug'
+      path: '/$section/$category/$articleSlug'
+      fullPath: '/$section/$category/$articleSlug'
+      preLoaderRoute: typeof SectionCategoryArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -3392,6 +3447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthMcpActionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$section/$category/$subcategory/$articleSlug': {
+      id: '/$section/$category/$subcategory/$articleSlug'
+      path: '/$section/$category/$subcategory/$articleSlug'
+      fullPath: '/$section/$category/$subcategory/$articleSlug'
+      preLoaderRoute: typeof SectionCategorySubcategoryArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -3548,6 +3610,7 @@ const ApiPushRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
+  AcademyRoute: AcademyRoute,
   AiHumanizerRoute: AiHumanizerRoute,
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
@@ -3641,6 +3704,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthConsentRoute: OauthConsentRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
+  SectionCategoryArticleSlugRoute: SectionCategoryArticleSlugRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,
@@ -3703,6 +3767,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiWorkspaceSearchRoute: ApiWorkspaceSearchRoute,
   OauthMcpActionRoute: OauthMcpActionRoute,
+  SectionCategorySubcategoryArticleSlugRoute:
+    SectionCategorySubcategoryArticleSlugRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,

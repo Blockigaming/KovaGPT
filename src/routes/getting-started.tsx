@@ -30,7 +30,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "2. Choose a mode",
-    body: "Choose Instant, Medium, or Thinking on Free; Plus also unlocks High; Pro exposes its published Pro mode menu. Search is a separate tool with provider requirements.",
+    body: "Free includes Instant and Thinking. Plus includes Instant, Medium, and High. Pro includes Instant, Medium, High, Extra High, Max, and Ultra. Search is a separate tool with provider requirements.",
   },
   {
     title: "3. Sign in to save your work",

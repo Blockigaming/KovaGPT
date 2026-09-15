@@ -19,8 +19,13 @@ export const Route = createFileRoute("/developers/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing administration | KovaGPT" },
+      {
+        name: "description",
+        content: "Review KovaGPT developer pricing proposals and approved credit offers.",
+      },
       { name: "robots", content: "noindex, nofollow" },
     ],
+    links: [{ rel: "canonical", href: "https://kovagpt.com/developers/pricing" }],
   }),
 });
 function PricingAdministration() {
