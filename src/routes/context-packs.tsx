@@ -43,15 +43,24 @@ type Candidate = {
   title: string;
   content: string;
 };
-const CHAT_CONTEXT_HANDOFF_MAX_CHARS = 30 * 1024;
+const CHAT_CONTEXT_HANDOFF_MAX_BYTES = 30 * 1024;
 
 function contextPackSearchPrompt(pack: ContextPack): string {
   const prompt = `Search the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
     .map((item) => `${item.title}: ${item.content}`)
     .join("\n\n")}`;
-  if (prompt.length <= CHAT_CONTEXT_HANDOFF_MAX_CHARS) return prompt;
+  const encoder = new TextEncoder();
+  if (encoder.encode(prompt).byteLength <= CHAT_CONTEXT_HANDOFF_MAX_BYTES) return prompt;
   const notice = "\n\n[Context truncated to fit the chat input.]";
-  return `${prompt.slice(0, CHAT_CONTEXT_HANDOFF_MAX_CHARS - notice.length)}${notice}`;
+  const contentBudget = CHAT_CONTEXT_HANDOFF_MAX_BYTES - encoder.encode(notice).byteLength;
+  let low = 0;
+  let high = prompt.length;
+  while (low < high) {
+    const midpoint = Math.ceil((low + high) / 2);
+    if (encoder.encode(prompt.slice(0, midpoint)).byteLength <= contentBudget) low = midpoint;
+    else high = midpoint - 1;
+  }
+  return `${prompt.slice(0, low)}${notice}`;
 }
 
 function ContextPacksPage() {

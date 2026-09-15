@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 151,
+  "migrationCount": 152,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -142,6 +142,7 @@
     "library_folders",
     "library_image_uploads",
     "library_text_versions",
+    "maps_provider_throttle",
     "mcp_oauth_clients",
     "mcp_oauth_codes",
     "mcp_oauth_grants",
@@ -287,6 +288,7 @@
     "activate_chat_branch",
     "admit_developer_billing",
     "admit_discovery_request",
+    "admit_maps_provider_request",
     "admit_scheduled_task_event",
     "admit_work_browser_owner",
     "approve_developer_pricing_draft",
@@ -1424,6 +1426,7 @@
     "library_folders",
     "library_image_uploads",
     "library_text_versions",
+    "maps_provider_throttle",
     "mcp_oauth_clients",
     "mcp_oauth_codes",
     "mcp_oauth_grants",
@@ -1814,6 +1817,7 @@
     "execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role",
     "execute on function public.admit_developer_billing(uuid,text,text,text,text,text,uuid,jsonb,jsonb),\n  public.dispatch_developer_billing(uuid,uuid),public.finish_developer_billing(uuid,uuid,text,jsonb),\n  public.recover_developer_billing(integer) to service_role",
     "execute on function public.admit_discovery_request(uuid,integer,integer) to service_role",
+    "execute on function public.admit_maps_provider_request(text) to service_role",
     "execute on function public.admit_scheduled_task_event(uuid,text,jsonb) to service_role",
     "execute on function public.admit_work_browser_owner(uuid,uuid,uuid,bigint,bigint,text) to service_role",
     "execute on function public.archive_project_template(uuid,uuid,uuid,bigint) to service_role",
@@ -2339,6 +2343,7 @@
     "all on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) from public,anon,authenticated",
     "all on function public.admit_developer_billing(uuid,text,text,text,text,text,uuid,jsonb,jsonb),\n  public.dispatch_developer_billing(uuid,uuid),public.finish_developer_billing(uuid,uuid,text,jsonb),\n  public.recover_developer_billing(integer) from public,anon,authenticated",
     "all on function public.admit_discovery_request(uuid,integer,integer) from public,anon,authenticated",
+    "all on function public.admit_maps_provider_request(text)\n  from public, anon, authenticated",
     "all on function public.admit_scheduled_task_event(uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.admit_work_browser_owner(uuid,uuid,uuid,bigint,bigint,text) from public,anon,authenticated",
     "all on function public.archive_project_template(uuid,uuid,uuid,bigint) from public, anon, authenticated",
@@ -2606,6 +2611,7 @@
     "all on sequences from public, anon, authenticated",
     "all on table public.account_deletion_fences from public, anon, authenticated",
     "all on table public.account_export_jobs from public, anon, authenticated",
+    "all on table public.maps_provider_throttle from public, anon, authenticated",
     "all on table public.project_template_audit_events from public, anon, authenticated",
     "all on table public.project_template_grants from public, anon, authenticated",
     "all on table public.project_template_mutations from public, anon, authenticated",
@@ -2649,5 +2655,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "605077f1bccd3bd796fbfc7ce5561386d24d4894e5f31d9865241602dec42df5"
+  "sha256": "d7eaed373b634ecf1ed8bd81709452116af017b3eda180b5d0d23b819a359d7e"
 }

@@ -20,6 +20,7 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
     "selectedLocation",
     "viewport",
     "writePrincipalHandoff",
+    "authFetch",
   ])
     assert.match(source, new RegExp(contract.replaceAll(".", "\\.")));
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
@@ -33,12 +34,21 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /Place search is temporarily unavailable/);
   assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
   assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
-  assert.match(route, /identity: "provider:nominatim:global"/);
-  assert.match(route, /limit: 1,[\s\S]*windowSeconds: 1/);
+  assert.match(route, /admit_maps_provider_request/);
   assert.match(route, /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/);
   assert.match(read("src/components/KovaMaps.tsx"), /authFetch\("\/api\/security\/lockdown"/);
   assert.match(read("src/components/KovaMaps.tsx"), /authFetch\(`\/api\/maps\/search/);
   assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
+});
+
+test("Maps provider admission and chat handoffs use rolling byte bounds", () => {
+  const contextPacks = read("src/routes/context-packs.tsx");
+  const migration = read("supabase/migrations/20260915012500_maps_provider_throttle.sql");
+  assert.match(contextPacks, /CHAT_CONTEXT_HANDOFF_MAX_BYTES = 30 \* 1024/);
+  assert.match(contextPacks, /TextEncoder/);
+  assert.match(migration, /provider text primary key/);
+  assert.match(migration, /interval '1 second'/);
+  assert.match(migration, /next_request_at <= v_now/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {

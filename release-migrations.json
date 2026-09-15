@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 151,
-  "latest": "20260915003000_retire_deep_research_workspace_search.sql",
+  "count": 152,
+  "latest": "20260915012500_maps_provider_throttle.sql",
   "migrations": [
     {
       "order": 1,
@@ -3264,6 +3264,20 @@
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 152,
+      "filename": "20260915012500_maps_provider_throttle.sql",
+      "timestamp": "20260915012500",
+      "sha256": "2f81af7291fbf9dda5aa8f4a81afbc7691aa6d7087bf6dff167c5d3e74062a44",
+      "tables": ["maps_provider_throttle"],
+      "functions": ["admit_maps_provider_request"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["maps_provider_throttle"],
       "policies": [],
       "indexes": []
     }

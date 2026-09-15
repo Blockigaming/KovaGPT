@@ -75,26 +75,35 @@ export const Route = createFileRoute("/api/maps/search")({
         }
 
         // Nominatim's public service permits one request per second for the
-        // entire application, not per user or per server instance.
-        const providerLimit = await consumeApplicationRateLimit({
-          identity: "provider:nominatim:global",
-          action: "maps_nominatim_global",
-          limit: 1,
-          windowSeconds: 1,
-        });
-        if (!providerLimit.allowed) {
+        // entire application, not per user or per server instance. This RPC is
+        // an atomic rolling boundary rather than a fixed time bucket.
+        const providerAdmission = await auth.supabaseAdmin.rpc(
+          "admit_maps_provider_request" as never,
+          { p_provider: "nominatim" } as never,
+        );
+        const providerRow = Array.isArray(providerAdmission.data)
+          ? providerAdmission.data[0]
+          : providerAdmission.data;
+        if (
+          providerAdmission.error ||
+          !providerRow ||
+          typeof providerRow !== "object" ||
+          typeof (providerRow as { allowed?: unknown }).allowed !== "boolean" ||
+          !Number.isSafeInteger((providerRow as { retry_after?: unknown }).retry_after)
+        ) {
           return Response.json(
+            { error: "Map search protection is temporarily unavailable." },
+            { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "1" } },
+          );
+        }
+        if (!(providerRow as { allowed: boolean }).allowed) {
+          return Response.json(
+            { error: "Map search is busy. Please wait a moment and try again." },
             {
-              error:
-                providerLimit.status === "limited"
-                  ? "Map search is busy. Please wait a moment and try again."
-                  : "Map search protection is temporarily unavailable.",
-            },
-            {
-              status: providerLimit.status === "limited" ? 429 : 503,
+              status: 429,
               headers: {
                 "Cache-Control": "no-store",
-                "Retry-After": String(providerLimit.retryAfter),
+                "Retry-After": String((providerRow as { retry_after: number }).retry_after),
               },
             },
           );
