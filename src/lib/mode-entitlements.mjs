@@ -11,3 +11,10 @@ export function isModeAllowedForTier(tier, modeId) {
     MODE_IDS_BY_TIER[tier].includes(modeId)
   );
 }
+
+/** Choose a structured-output-capable Study mode from the caller's exact entitlement set. */
+export function studyModeForTier(tier) {
+  if (tier === "free") return "thinking";
+  if (tier === "plus" || tier === "pro") return "high";
+  return "instant";
+}

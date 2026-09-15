@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MODE_IDS_BY_TIER, isModeAllowedForTier } from "../../src/lib/mode-entitlements.mjs";
+import {
+  MODE_IDS_BY_TIER,
+  isModeAllowedForTier,
+  studyModeForTier,
+} from "../../src/lib/mode-entitlements.mjs";
 import { readFileSync } from "node:fs";
 
 const ALL_MODES = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
@@ -24,6 +28,16 @@ test("unknown plans and obsolete modes fail closed", () => {
   assert.equal(isModeAllowedForTier("enterprise", "instant"), false);
   assert.equal(isModeAllowedForTier("pro", "pro"), false);
   assert.equal(isModeAllowedForTier("free", "kova_5_5"), false);
+});
+
+test("Study selects a capable mode within every plan's exact entitlements", () => {
+  assert.equal(studyModeForTier("free"), "thinking");
+  assert.equal(studyModeForTier("plus"), "high");
+  assert.equal(studyModeForTier("pro"), "high");
+  for (const tier of Object.keys(EXPECTED)) {
+    assert.equal(isModeAllowedForTier(tier, studyModeForTier(tier)), true);
+  }
+  assert.equal(studyModeForTier("enterprise"), "instant");
 });
 
 test("Free Study generation requests an entitled structured-output mode", () => {

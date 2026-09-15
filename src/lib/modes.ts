@@ -1,4 +1,8 @@
-import { MODE_IDS_BY_TIER, isModeAllowedForTier } from "@/lib/mode-entitlements.mjs";
+import {
+  MODE_IDS_BY_TIER,
+  isModeAllowedForTier,
+  studyModeForTier,
+} from "@/lib/mode-entitlements.mjs";
 
 export type ModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "max" | "ultra";
 
@@ -148,7 +152,7 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
   creative: "thinking",
   precise: "thinking",
   code: "thinking",
-  study: "medium",
+  study: "thinking",
   history: "medium",
   reason: "thinking",
   research: "thinking",
@@ -165,7 +169,7 @@ export function modesForTier(tier: Tier): Mode[] {
   return MODE_IDS_BY_TIER[tier].map((id) => MODES.find((mode) => mode.id === id)!);
 }
 
-export { isModeAllowedForTier };
+export { isModeAllowedForTier, studyModeForTier };
 
 export function getMode(id: string | null | undefined): Mode {
   if (!id) return MODES[0];

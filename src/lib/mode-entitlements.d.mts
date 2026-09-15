@@ -4,3 +4,4 @@ export type EntitledModeId =
 
 export const MODE_IDS_BY_TIER: Readonly<Record<EntitlementTier, readonly EntitledModeId[]>>;
 export function isModeAllowedForTier(tier: EntitlementTier, modeId: string): boolean;
+export function studyModeForTier(tier: EntitlementTier | string): EntitledModeId;
