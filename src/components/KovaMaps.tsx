@@ -452,8 +452,7 @@ export function KovaMaps() {
   };
 
   const askKova = () => {
-    if (!networkAllowed || viewSettling || !view || !isLoaded || !isSignedIn || !user?.id)
-      return;
+    if (!networkAllowed || viewSettling || !view || !isLoaded || !isSignedIn || !user?.id) return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
