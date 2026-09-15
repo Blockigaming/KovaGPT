@@ -1,0 +1,76 @@
+name: Import Reviewed Local Foundation Objects
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/import-public-foundation.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify immutable source transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/hybrid-candidate/part-{00..09} > /tmp/foundation.bundle
+          echo '3a2ab5a1d5c0e41a39944e689d31941e8020f700771ba6144969dfef952c4dc1  /tmp/foundation.bundle' | sha256sum -c -
+          git fetch --no-tags --depth=1 origin 3b0b33247be242b7784337525a9c570de11a4504
+          git bundle verify /tmp/foundation.bundle
+          git fetch /tmp/foundation.bundle HEAD
+          test "$(git rev-parse FETCH_HEAD)" = df016212bd59c1b851ff1ec24e355054d8944d27
+          test "$(git rev-parse FETCH_HEAD^{tree})" = cf6701a3dc0c1bbeb9a5b0c831a6d9aeabd90262
+      - name: Import only Git objects without changing any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          python3 - <<'PY'
+          import base64, json, os, subprocess, urllib.request
+          from pathlib import Path
+          repository = 'Blockigaming/KovaGPT'
+          target = 'df016212bd59c1b851ff1ec24e355054d8944d27'
+          parent = '3b0b33247be242b7784337525a9c570de11a4504'
+          expected_tree = 'cf6701a3dc0c1bbeb9a5b0c831a6d9aeabd90262'
+          def git(*args):
+              return subprocess.check_output(['git', *args])
+          def post(endpoint, payload):
+              assert endpoint in ['blobs', 'trees', 'commits']
+              req = urllib.request.Request('https://api.github.com/repos/' + repository + '/git/' + endpoint, data=json.dumps(payload).encode(), method='POST', headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+          paths = git('diff', '--name-only', parent, target).decode().splitlines()
+          assert len(paths) == 25
+          assert all(p.startswith(('src/', 'tests/', 'scripts/publication/', 'docs/')) or p in ['package.json', '.github/workflows/public-foundation.yml'] for p in paths)
+          elements = []
+          for path in paths:
+              content = git('show', target + ':' + path)
+              assert len(content) < 200000
+              blob = post('blobs', {'encoding': 'base64', 'content': base64.b64encode(content).decode()})
+              expected_blob = git('rev-parse', target + ':' + path).decode().strip()
+              assert blob['sha'] == expected_blob
+              elements.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': blob['sha']})
+          base_tree = git('rev-parse', parent + '^{tree}').decode().strip()
+          tree = post('trees', {'base_tree': base_tree, 'tree': elements})
+          assert tree['sha'] == expected_tree
+          fields = git('show', '-s', '--format=%an%n%ae%n%aI%n%cn%n%ce%n%cI', target).decode().splitlines()
+          message = git('show', '-s', '--format=%B', target).decode().rstrip() + '\n'
+          commit = post('commits', {'tree': expected_tree, 'parents': [parent], 'message': message, 'author': {'name': fields[0], 'email': fields[1], 'date': fields[2]}, 'committer': {'name': fields[3], 'email': fields[4], 'date': fields[5]}})
+          result = {'commit': commit['sha'], 'tree': tree['sha'], 'parent': parent, 'transport_source_commit': target, 'paths': paths, 'branch_updated': False}
+          Path('validation/import.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result))
+          PY
+      - name: Preserve object provenance
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-foundation-import
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
