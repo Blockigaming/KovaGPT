@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
-const migration = readFileSync(
+const migrations = [
   "supabase/migrations/20260803130000_ai_usage_accounting.sql",
-  "utf8",
-);
+  "supabase/migrations/20260915000000_ai_usage_max_ultra_modes.sql",
+].map((path) => readFileSync(path, "utf8"));
 
 async function database() {
   const db = new PGlite();
@@ -16,7 +16,7 @@ async function database() {
     create table auth.users(id uuid primary key default gen_random_uuid());
     create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
   `);
-  await db.exec(migration);
+  for (const migration of migrations) await db.exec(migration);
   return db;
 }
 
@@ -76,6 +76,19 @@ test("AI usage migration applies and atomic reservation state machine reconciles
     actual_billable_tokens: 140,
     lease_expires_at: null,
   });
+  await db.close();
+});
+
+test("AI usage accounting accepts Max and Ultra mode reservations", async () => {
+  const db = await database();
+  const userId = (await db.query("insert into auth.users default values returning id")).rows[0].id;
+  for (const mode of ["max", "ultra"]) {
+    const result = await db.query(
+      "select * from acquire_ai_generation($1,$2,$3,null,null,$4,'pro',true,'gpt-5.6',100,600,.001,false,10000,5000,10,5,10,2,120,now(),now()+interval '1 month')",
+      [`request-${mode}`, `idem-${mode}`, userId, mode],
+    );
+    assert.equal(result.rows[0].decision, "acquired");
+  }
   await db.close();
 });
 

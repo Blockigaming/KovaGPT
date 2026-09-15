@@ -19,6 +19,13 @@ const MODES = new Set([
   "kova_5_4",
   "kova_o3",
 ]);
+const LEGACY_MODES = Object.freeze({
+  pro: "max",
+  kova_5_5: "medium",
+  kova_5_4: "medium",
+  kova_o3: "medium",
+});
+const normalizeMode = (value) => LEGACY_MODES[value] ?? value;
 const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) => typeof v === "string" && v.length <= max;
 const time = (v) => Number.isSafeInteger(v) && v >= 0 && v <= 8_640_000_000_000_000;
@@ -130,11 +137,12 @@ function responseSource(value, index) {
 
 /** Canonical durable fields only. Temporary chats never enter the cloud outbox. */
 export function normalizeChatHistory(value, ownerId) {
+  const mode = normalizeMode(value?.mode);
   if (
     !object(value) ||
     value.temporary === true ||
     !text(value.title, 500) ||
-    !MODES.has(value.mode) ||
+    !MODES.has(mode) ||
     !time(value.createdAt) ||
     !time(value.updatedAt) ||
     !Array.isArray(value.messages) ||
@@ -145,7 +153,7 @@ export function normalizeChatHistory(value, ownerId) {
   const result = {
     id: chatHistoryId(value.id),
     title: value.title,
-    mode: value.mode,
+    mode,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     messages: value.messages.map((message) => {

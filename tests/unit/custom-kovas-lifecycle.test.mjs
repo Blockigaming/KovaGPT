@@ -20,6 +20,14 @@ const config = (changes) =>
     allowFork: false,
     ...changes,
   });
+
+test("persisted custom Kovas translate legacy mode identifiers before validation", () => {
+  assert.equal(config({ mode: "pro" }).mode, "max");
+  assert.equal(config({ mode: "kova_5_5" }).mode, "medium");
+  assert.equal(config({ mode: "kova_5_4" }).mode, "medium");
+  assert.equal(config({ mode: "kova_o3" }).mode, "medium");
+  assert.throws(() => config({ mode: "unknown" }), /custom_kova_invalid/);
+});
 async function fixture() {
   const db = new PGlite();
   try {
