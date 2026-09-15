@@ -112,3 +112,13 @@ test("public cards and the closing action remain shrinkable and bounded", () => 
   assert.match(publicSite, /item\.closing \?\?/);
   assert.match(publicSite, /data-public-primary/);
 });
+
+test("signed-in desktop collapse restores focus to the replacement rail control", () => {
+  const sidebar = read("src/components/Sidebar.tsx");
+  assert.match(sidebar, /const expandButtonRef = useRef<HTMLButtonElement \| null>\(null\)/);
+  assert.match(sidebar, /ref=\{expandButtonRef\}[\s\S]*?aria-label="Expand sidebar"/);
+  assert.match(
+    sidebar,
+    /onToggle\(\);[\s\S]*?requestAnimationFrame\(\(\) => expandButtonRef\.current\?\.focus\(\)\)/,
+  );
+});
