@@ -83,6 +83,7 @@ export function Sidebar({
   const { tier } = useTier();
   const checkScheduled = useServerFn(isScheduledTasksEligible);
   const drawerRef = useRef<HTMLElement | null>(null);
+  const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [scheduledVisible, setScheduledVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -93,7 +94,9 @@ export function Sidebar({
 
   const signedIn = isLoaded && isSignedIn;
   const collapsed = !open;
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
 
   useEffect(() => {
@@ -338,6 +341,7 @@ export function Sidebar({
           aria-label="Collapsed navigation"
         >
           <button
+            ref={expandButtonRef}
             type="button"
             onClick={onToggle}
             className="kova-rail-button"
@@ -447,9 +451,10 @@ export function Sidebar({
               className="kova-header-button hidden lg:flex"
               onClick={() => {
                 onToggle();
-                requestAnimationFrame(() =>
-                  document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus(),
-                );
+                requestAnimationFrame(() => {
+                  if (signedIn) expandButtonRef.current?.focus();
+                  else document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus();
+                });
               }}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
@@ -586,8 +591,13 @@ export function Sidebar({
               </>
             ) : isLoaded ? (
               <div className="w-full">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">Get responses tailored to you</p>
+                <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
+                <div className="flex items-center gap-2">
+                  <SignInButton mode="modal">
+                    <button type="button" className="kova-sign-in min-w-0 flex-1">
+                      Log in to KovaGPT
+                    </button>
+                  </SignInButton>
                   <button
                     type="button"
                     className="kova-account-action"
@@ -598,11 +608,6 @@ export function Sidebar({
                     <SettingsIcon aria-hidden="true" />
                   </button>
                 </div>
-                <SignInButton mode="modal">
-                  <button type="button" className="kova-sign-in">
-                    Log in to KovaGPT
-                  </button>
-                </SignInButton>
               </div>
             ) : null}
           </footer>

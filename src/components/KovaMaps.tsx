@@ -96,12 +96,12 @@ export function KovaMaps() {
   const activeOwnerRef = useRef<string | null | undefined>(undefined);
   const networkAllowedRef = useRef(false);
   const searchControllerRef = useRef<AbortController | null>(null);
-  const searchAttemptedRef = useRef(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
   const [view, setView] = useState<ViewContext | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [satellite, setSatellite] = useState(false);
@@ -121,6 +121,8 @@ export function KovaMaps() {
     Boolean(user?.id) &&
     networkAccess?.ownerId === user?.id &&
     networkAccess?.allowed === true;
+  const blockingError = !searchError && !mapRef.current ? error : null;
+  const inlineError = searchError ?? (mapRef.current ? error : null);
 
   useEffect(() => {
     const generation = ++principalGenerationRef.current;
@@ -128,6 +130,7 @@ export function KovaMaps() {
     networkAllowedRef.current = false;
     searchControllerRef.current?.abort();
     searchControllerRef.current = null;
+    setSearchError(null);
     markerRef.current?.remove();
     markerRef.current = null;
     mapRef.current?.remove();
@@ -141,7 +144,6 @@ export function KovaMaps() {
     setThreeD(true);
     setNetworkAccess(null);
     setLoading(true);
-    searchAttemptedRef.current = false;
     if (!isLoaded) {
       setError(null);
       return;
@@ -158,6 +160,7 @@ export function KovaMaps() {
       networkAllowedRef.current = false;
       searchControllerRef.current?.abort();
       searchControllerRef.current = null;
+      setSearchError(null);
       markerRef.current?.remove();
       markerRef.current = null;
       const map = mapRef.current;
@@ -186,9 +189,12 @@ export function KovaMaps() {
           blockNetwork("Maps is unavailable while Lockdown Mode is on.");
           return;
         }
-        setError(null);
-        if (!mapRef.current) setLoading(true);
+        const wasAllowed = networkAllowedRef.current;
         networkAllowedRef.current = true;
+        if (!wasAllowed) {
+          setError(null);
+          if (!mapRef.current) setLoading(true);
+        }
         setNetworkAccess({ ownerId, allowed: true });
       } catch (error) {
         if (
@@ -257,9 +263,7 @@ export function KovaMaps() {
         loadTimeout = window.setTimeout(() => {
           if (!isCurrentMap()) return;
           setLoading(false);
-          if (!searchAttemptedRef.current) {
-            setError("Map data is taking too long to load. Check your connection and try again.");
-          }
+          setError("Map data is taking too long to load. Check your connection and try again.");
         }, 12_000);
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
@@ -283,6 +287,7 @@ export function KovaMaps() {
           if (loadTimeout !== null) window.clearTimeout(loadTimeout);
           loadTimeout = null;
           addMapEnhancements(map, threeDRef.current);
+          setError(null);
           setLoading(false);
           updateView();
         });
@@ -290,9 +295,7 @@ export function KovaMaps() {
         map.on("error", (event) => {
           if (!isCurrentMap()) return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
-          if (!searchAttemptedRef.current) {
-            setError("Some map data could not load. Check your connection and try again.");
-          }
+          setError("Some map data could not load. Check your connection and try again.");
           setLoading(false);
         });
       })
@@ -304,11 +307,7 @@ export function KovaMaps() {
           activeOwnerRef.current !== ownerId
         )
           return;
-        if (!searchAttemptedRef.current) {
-          setError(
-            "Maps could not start in this browser. Refresh the page or try another browser.",
-          );
-        }
+        setError("Maps could not start in this browser. Refresh the page or try another browser.");
         setLoading(false);
       });
     return () => {
@@ -367,12 +366,11 @@ export function KovaMaps() {
   const search = async () => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setError("Enter a location, address, or place to search.");
+      setSearchError("Enter a location, address, or place to search.");
       return;
     }
-    searchAttemptedRef.current = true;
+    setSearchError(null);
     setSearching(true);
-    setError(null);
     searchControllerRef.current?.abort();
     const controller = new AbortController();
     searchControllerRef.current = controller;
@@ -401,11 +399,16 @@ export function KovaMaps() {
         markerRef.current?.remove();
         markerRef.current = null;
         setSelected(null);
-        setError("No matching places were found. Check the spelling or add a city or country.");
-      } else await selectPlace(next[0], generation);
+        setSearchError(
+          "No matching places were found. Check the spelling or add a city or country.",
+        );
+      } else {
+        setSearchError(null);
+        await selectPlace(next[0], generation);
+      }
     } catch (caught) {
       if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
-      setError(
+      setSearchError(
         caught instanceof DOMException && caught.name === "TimeoutError"
           ? "Place search timed out. Try again."
           : caught instanceof Error && caught.message
@@ -413,8 +416,10 @@ export function KovaMaps() {
             : "Place search is unavailable. Try again.",
       );
     } finally {
-      if (searchControllerRef.current === controller) searchControllerRef.current = null;
-      if (generation === principalGenerationRef.current) setSearching(false);
+      if (searchControllerRef.current === controller) {
+        searchControllerRef.current = null;
+        if (generation === principalGenerationRef.current) setSearching(false);
+      }
     }
   };
 
@@ -477,6 +482,10 @@ export function KovaMaps() {
 
   const locate = () => {
     if (!networkAllowed) return;
+    searchControllerRef.current?.abort();
+    searchControllerRef.current = null;
+    setSearching(false);
+    setSearchError(null);
     if (!navigator.geolocation) {
       setError("Current location is not supported by this browser.");
       return;
@@ -491,7 +500,6 @@ export function KovaMaps() {
           !networkAllowedRef.current
         )
           return;
-        setError(null);
         setQuery("");
         setResults([]);
         void selectPlace({
@@ -536,12 +544,12 @@ export function KovaMaps() {
           Loading real map data…
         </div>
       ) : null}
-      {error && !mapRef.current ? (
+      {blockingError ? (
         <div className="absolute inset-0 grid place-items-center p-8 text-center">
-          <div className="max-w-sm rounded-2xl border bg-card p-6 shadow-xl">
+          <div role="alert" className="max-w-sm rounded-2xl border bg-card p-6 shadow-xl">
             <MapPin className="mx-auto mb-3 h-7 w-7 text-primary" />
             <h1 className="font-semibold">Maps unavailable</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{blockingError}</p>
           </div>
         </div>
       ) : null}
@@ -558,7 +566,13 @@ export function KovaMaps() {
             <Sparkles className="ml-2 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                searchControllerRef.current?.abort();
+                searchControllerRef.current = null;
+                setSearching(false);
+                setQuery(event.target.value);
+                setSearchError(null);
+              }}
               placeholder="Ask Kova about Maps"
               aria-label="Ask Kova about Maps"
               className="h-11 min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground"
@@ -572,9 +586,9 @@ export function KovaMaps() {
               <ArrowUp className="h-5 w-5" />
             </button>
           </form>
-          {error ? (
+          {inlineError ? (
             <p role="alert" className="px-3 pb-1 pt-2 text-sm text-destructive">
-              {error}
+              {inlineError}
             </p>
           ) : null}
           {results.length > 1 ? (

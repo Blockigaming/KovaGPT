@@ -46,6 +46,38 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
+test("Maps keeps search feedback scoped to the current search intent", () => {
+  const source = read("src/components/KovaMaps.tsx");
+  assert.match(source, /const \[searchError, setSearchError\] = useState<string \| null>\(null\)/);
+  assert.match(source, /const blockingError = !searchError && !mapRef\.current \? error : null/);
+  assert.match(source, /const inlineError = searchError \?\? \(mapRef\.current \? error : null\)/);
+  assert.match(source, /const blockNetwork[\s\S]{0,600}setSearchError\(null\)/);
+  assert.match(
+    source,
+    /onChange=\{\(event\) => \{[\s\S]{0,300}searchControllerRef\.current\?\.abort\(\)[\s\S]{0,300}setSearchError\(null\)/,
+  );
+  assert.match(source, /const locate = \(\) => \{[\s\S]{0,300}setSearchError\(null\)/);
+  assert.match(
+    source,
+    /if \(!next\.length\)[\s\S]{0,400}setSearchError\(\s*"No matching places were found/,
+  );
+  assert.match(source, /\{blockingError \?[\s\S]{0,250}role="alert"/);
+  assert.match(source, /\{inlineError \?[\s\S]{0,150}role="alert"/);
+  assert.match(
+    source,
+    /const wasAllowed = networkAllowedRef\.current;[\s\S]{0,180}if \(!wasAllowed\) \{[\s\S]{0,80}setError\(null\)/,
+  );
+  const searchBody = source.slice(
+    source.indexOf("const search ="),
+    source.indexOf("const askKova ="),
+  );
+  const locateStart = source.indexOf("const locate =");
+  const locateBody = source.slice(locateStart, source.indexOf("return (", locateStart));
+  assert.doesNotMatch(searchBody, /setError\(/);
+  assert.doesNotMatch(locateBody, /setError\(null\)/);
+  assert.doesNotMatch(source, /searchAttemptedRef|searchFeedbackRef/);
+});
+
 test("Maps search is server-side, bounded, provider-resolved, and fails safely", () => {
   const route = read("src/routes/api/maps/search.ts");
   assert.match(route, /nominatim\.openstreetmap\.org\/search/);
