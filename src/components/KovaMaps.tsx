@@ -95,6 +95,9 @@ export function KovaMaps() {
   const markerRef = useRef<MapLibreMarker | null>(null);
   const principalGenerationRef = useRef(0);
   const actionGenerationRef = useRef(0);
+  const styleGenerationRef = useRef(0);
+  const mapReadyRef = useRef(false);
+  const [mapReady, setMapReady] = useState(false);
   const activeOwnerRef = useRef<string | null | undefined>(undefined);
   const networkAllowedRef = useRef(false);
   const searchControllerRef = useRef<AbortController | null>(null);
@@ -124,6 +127,7 @@ export function KovaMaps() {
     Boolean(user?.id) &&
     networkAccess?.ownerId === user?.id &&
     networkAccess?.allowed === true;
+  const mapActionsReady = networkAllowed && mapReady;
   const blockingError = !searchError && !mapRef.current ? error : null;
   const inlineError = searchError ?? (mapRef.current ? error : null);
 
@@ -132,6 +136,8 @@ export function KovaMaps() {
     actionGenerationRef.current += 1;
     const ownerId = user?.id;
     networkAllowedRef.current = false;
+    mapReadyRef.current = false;
+    setMapReady(false);
     searchControllerRef.current?.abort();
     searchControllerRef.current = null;
     setSearchError(null);
@@ -169,6 +175,8 @@ export function KovaMaps() {
     const blockNetwork = (message: string) => {
       actionGenerationRef.current += 1;
       networkAllowedRef.current = false;
+      mapReadyRef.current = false;
+      setMapReady(false);
       searchControllerRef.current?.abort();
       searchControllerRef.current = null;
       setSearchError(null);
@@ -244,6 +252,8 @@ export function KovaMaps() {
     const generation = principalGenerationRef.current;
     const ownerId = activeOwnerRef.current;
     let disposed = false;
+    mapReadyRef.current = false;
+    setMapReady(false);
     let loadTimeout: number | null = null;
     void import("maplibre-gl")
       .then((maplibregl) => {
@@ -300,6 +310,8 @@ export function KovaMaps() {
           if (loadTimeout !== null) window.clearTimeout(loadTimeout);
           loadTimeout = null;
           addMapEnhancements(map, threeDRef.current);
+          mapReadyRef.current = true;
+          setMapReady(true);
           setError(null);
           setLoading(false);
           updateView();
@@ -325,6 +337,7 @@ export function KovaMaps() {
       });
     return () => {
       disposed = true;
+      mapReadyRef.current = false;
       if (loadTimeout !== null) window.clearTimeout(loadTimeout);
       markerRef.current?.remove();
       const map = mapRef.current;
@@ -340,13 +353,14 @@ export function KovaMaps() {
     actionGeneration = actionGenerationRef.current,
   ) => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReadyRef.current || !networkAllowedRef.current) return;
     const maplibregl = await import("maplibre-gl");
     if (
       generation !== principalGenerationRef.current ||
       actionGeneration !== actionGenerationRef.current ||
       activeOwnerRef.current !== ownerId ||
       !networkAllowedRef.current ||
+      !mapReadyRef.current ||
       mapRef.current !== map
     )
       return;
@@ -380,6 +394,8 @@ export function KovaMaps() {
   };
 
   const search = async () => {
+    if (!networkAllowed || !networkAllowedRef.current || !mapReadyRef.current || !mapRef.current)
+      return;
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setSearchError("Enter a location, address, or place to search.");
@@ -452,7 +468,17 @@ export function KovaMaps() {
   };
 
   const askKova = () => {
-    if (!networkAllowed || viewSettling || !view || !isLoaded || !isSignedIn || !user?.id) return;
+    if (
+      !networkAllowed ||
+      !networkAllowedRef.current ||
+      !mapReadyRef.current ||
+      viewSettling ||
+      !view ||
+      !isLoaded ||
+      !isSignedIn ||
+      !user?.id
+    )
+      return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
@@ -479,28 +505,32 @@ export function KovaMaps() {
 
   const toggleStyle = () => {
     const map = mapRef.current;
-    if (!networkAllowed || !map) return;
+    if (!networkAllowed || !networkAllowedRef.current || !mapReadyRef.current || !map) return;
     const generation = principalGenerationRef.current;
     const ownerId = activeOwnerRef.current;
+    const styleGeneration = ++styleGenerationRef.current;
     const next = !satellite;
     setSatellite(next);
-    map.setStyle(next ? SATELLITE_STYLE : VECTOR_STYLE);
     map.once("style.load", () => {
       if (
         generation !== principalGenerationRef.current ||
+        styleGeneration !== styleGenerationRef.current ||
         activeOwnerRef.current !== ownerId ||
         !networkAllowedRef.current ||
+        !mapReadyRef.current ||
         mapRef.current !== map
       )
         return;
-      if (!next) addMapEnhancements(map, threeD);
-      if (selected) void selectPlace(selected, generation, ownerId);
+      if (!next) addMapEnhancements(map, threeDRef.current);
+      // Markers and camera state belong to the map, not the replaced style.
+      // Never replay a selection captured before a newer search or location.
     });
+    map.setStyle(next ? SATELLITE_STYLE : VECTOR_STYLE);
   };
 
   const toggle3d = () => {
     const map = mapRef.current;
-    if (!networkAllowed || !map) return;
+    if (!networkAllowed || !networkAllowedRef.current || !mapReadyRef.current || !map) return;
     const next = !threeD;
     setThreeD(next);
     map.easeTo({ pitch: next ? 48 : 0, bearing: next ? -8 : 0, duration: 700 });
@@ -509,7 +539,8 @@ export function KovaMaps() {
   };
 
   const locate = () => {
-    if (!networkAllowed) return;
+    if (!networkAllowed || !networkAllowedRef.current || !mapReadyRef.current || !mapRef.current)
+      return;
     const actionGeneration = ++actionGenerationRef.current;
     searchControllerRef.current?.abort();
     searchControllerRef.current = null;
@@ -632,7 +663,7 @@ export function KovaMaps() {
             />
             <button
               type="submit"
-              disabled={searching || !networkAllowed}
+              disabled={searching || !mapActionsReady}
               aria-label="Search maps"
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
             >
@@ -650,6 +681,7 @@ export function KovaMaps() {
                 <button
                   key={place.id}
                   type="button"
+                  disabled={!mapActionsReady}
                   onClick={() => void selectPlace(place)}
                   className="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
                 >
@@ -676,7 +708,7 @@ export function KovaMaps() {
                 <button
                   type="button"
                   onClick={askKova}
-                  disabled={!networkAllowed || viewSettling || !view}
+                  disabled={!mapActionsReady || viewSettling || !view}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
@@ -689,7 +721,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={locate}
-            disabled={!networkAllowed}
+            disabled={!mapActionsReady}
             aria-label="Use my current location"
             title="Use my current location"
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
@@ -699,7 +731,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={toggle3d}
-            disabled={!networkAllowed}
+            disabled={!mapActionsReady}
             aria-pressed={threeD}
             aria-label={threeD ? "Switch to 2D" : "Switch to 3D"}
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
@@ -713,7 +745,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={toggleStyle}
-            disabled={!networkAllowed}
+            disabled={!mapActionsReady}
             aria-pressed={satellite}
             aria-label={satellite ? "Show street map" : "Show satellite imagery"}
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"

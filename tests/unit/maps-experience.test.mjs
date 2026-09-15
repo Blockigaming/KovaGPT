@@ -27,7 +27,7 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /searchControllerRef\.current\?\.abort\(\)/);
   assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
   assert.match(source, /if \(enabled && !map\.getSource\("terrain"\)\)/);
-  assert.match(source, /disabled=\{!networkAllowed\}/);
+  assert.match(source, /disabled=\{!mapActionsReady\}/);
   assert.match(source, /setInterval\(\(\) => void verifyNetworkAccess\(\), 15_000\)/);
   assert.match(source, /addEventListener\("visibilitychange", recheckVisiblePolicy\)/);
   assert.match(source, /removeEventListener\("visibilitychange", recheckVisiblePolicy\)/);
@@ -44,7 +44,7 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /Map context \(untrusted provider data;/);
   assert.match(source, /setViewSettling\(true\)[\s\S]{0,500}(?:fitBounds|flyTo)/);
   assert.match(source, /map\.on\("moveend", updateView\)/);
-  assert.match(source, /disabled=\{!networkAllowed \|\| viewSettling \|\| !view\}/);
+  assert.match(source, /disabled=\{!mapActionsReady \|\| viewSettling \|\| !view\}/);
   assert.doesNotMatch(source, /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
