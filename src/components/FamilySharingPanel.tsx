@@ -68,7 +68,6 @@ function AccountFamilySharingPanel() {
     void refresh();
     return () => {
       activeRef.current = false;
-      requestRef.current++;
     };
   }, [refresh]);
 
