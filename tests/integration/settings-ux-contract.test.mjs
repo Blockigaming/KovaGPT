@@ -81,6 +81,8 @@ test("settings navigation is centralized and routes every rendered category", ()
 test("mobile settings drill-in moves focus with the visible panel", () => {
   assert.match(settingsSource, /pendingMobileFocusRef\.current = "content"/);
   assert.match(settingsSource, /pendingMobileFocusRef\.current = "navigation"/);
+  assert.match(settingsSource, /setMobileFocusRequest\(\(request\) => request \+ 1\)/);
+  assert.match(settingsSource, /\[mobileFocusRequest, mobileHome, tab\]/);
   assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\)/);
   assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
 });
