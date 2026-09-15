@@ -63,7 +63,9 @@ const routesUnderTest =
   process.env.KOVA_PUBLIC_MATRIX_SCOPE === "expanded"
     ? PUBLIC_REVIEW_PATHS.filter((route) => expandedPublicRoutes.has(route))
     : PUBLIC_REVIEW_PATHS;
-const groupCount = process.env.KOVA_PUBLIC_MATRIX_SCOPE === "expanded" ? 4 : 12;
+// Bound each shardable test rather than letting one group consume a whole CI job.
+// Every route still runs in both themes on every verification project.
+const groupCount = Math.max(1, Math.ceil(routesUnderTest.length / 12));
 const routeGroups = Array.from({ length: groupCount }, (_, groupIndex) =>
   routesUnderTest.filter((_, routeIndex) => routeIndex % groupCount === groupIndex),
 );
@@ -75,7 +77,7 @@ async function verifyRoute(
   runtimeErrors: string[],
 ) {
   runtimeErrors.length = 0;
-  const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+  const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
   expect(response?.status(), `${route} ${colorScheme} status`).toBe(200);
   await waitForKovaHydration(page);
 
@@ -143,7 +145,10 @@ test.describe.parallel("complete public surface matrix", () => {
       const runtimeErrors = watchForRuntimeErrors(page);
       for (const colorScheme of ["light", "dark"] as const) {
         await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-        for (const route of routes) await verifyRoute(page, route, colorScheme, runtimeErrors);
+        for (const route of routes) {
+          await test.step(`${colorScheme} ${route}`, () =>
+            verifyRoute(page, route, colorScheme, runtimeErrors));
+        }
       }
     });
   });

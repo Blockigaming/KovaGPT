@@ -210,14 +210,46 @@ jobs:
             tests/e2e/*-snapshots
           if-no-files-found: ignore
 
-  browser:
+  public-surface:
     if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    name: Browser (${{ matrix.id }})
     needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      KOVA_BROWSER_PREVIEW: "node"
+      KOVA_BROWSER_SUITE: "public"
+      PLAYWRIGHT_PREBUILT: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [phone-390x844, tablet-1024x768, desktop-1440x900]
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Complete public route and detail checks
+        run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
+      - name: Preserve public suite evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: e2e-blob-public-${{ matrix.project }}-${{ matrix.shard }}
+          path: blob-report
+          if-no-files-found: error
+
+  browser:
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    name: Browser (${{ matrix.id }})
+    needs: [verify, public-surface]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
       KOVA_BROWSER_PREVIEW: "node"
+      KOVA_BROWSER_SUITE: "core"
     strategy:
       fail-fast: false
       matrix:
@@ -243,6 +275,11 @@ jobs:
             projects: --project=desktop-1728x1117
             shard: 1/1
     steps:
+      # Keep the existing required check names red if any public shard fails or is skipped.
+      - name: Require complete public coverage
+        env:
+          PUBLIC_RESULT: ${{ needs.public-surface.result }}
+        run: test "$PUBLIC_RESULT" = success
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -277,17 +314,23 @@ jobs:
           if-no-files-found: ignore
 
   release-e2e:
-    if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    needs: verify
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    needs: [verify, public-surface]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       KOVA_BROWSER_PREVIEW: "node"
+      KOVA_BROWSER_SUITE: "core"
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
     steps:
+      # Keep the existing required check names red if any public shard fails or is skipped.
+      - name: Require complete public coverage
+        env:
+          PUBLIC_RESULT: ${{ needs.public-surface.result }}
+        run: test "$PUBLIC_RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }

@@ -24,7 +24,7 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(page.getByText("Instant and Thinking modes", { exact: true })).toBeVisible();
   await expect(page.getByText("Instant, Medium, and High modes", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Instant, Medium, High, Extra High, Max, and Ultra modes", { exact: true }),
+    page.getByText("Instant, Medium, High, Extra high, Max, and Ultra modes", { exact: true }),
   ).toBeVisible();
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.
   await expect(page.getByRole("dialog", { name: "Secure checkout" })).toHaveCount(0);
