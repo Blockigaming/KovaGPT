@@ -9,6 +9,7 @@ export {
   deleteProject,
   listMembers,
   removeMember,
+  leaveProject,
   updateMemberRole,
   listProjectChats,
   getProjectChat,

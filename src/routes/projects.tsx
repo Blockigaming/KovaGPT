@@ -102,6 +102,7 @@ function ProjectsPage() {
     return localStorage.getItem("kova-projects-view") === "list" ? "list" : "grid";
   });
   const [showArchived, setShowArchived] = useState(false);
+  const [scope, setScope] = useState<"all" | "owned" | "shared">("all");
   const [deletingProject, setDeletingProject] = useState<ProjectSummary | null>(null);
   const [deletingProjectIds, setDeletingProjectIds] = useState<Set<string>>(() => new Set());
   const [resolvedUserKey, setResolvedUserKey] = useState<string | null>(null);
@@ -560,11 +561,19 @@ function ProjectsPage() {
         ) : (
           (() => {
             const q = query.trim().toLowerCase();
-            const matches = (p: ProjectSummary) =>
-              !q ||
-              p.name.toLowerCase().includes(q) ||
-              (p.description ?? "").toLowerCase().includes(q) ||
-              (p.instructions_preview ?? "").toLowerCase().includes(q);
+            const matches = (p: ProjectSummary) => {
+              const inScope =
+                scope === "all" ||
+                (scope === "owned" && p.role === "owner") ||
+                (scope === "shared" && p.role !== "owner");
+              return (
+                inScope &&
+                (!q ||
+                  p.name.toLowerCase().includes(q) ||
+                  (p.description ?? "").toLowerCase().includes(q) ||
+                  (p.instructions_preview ?? "").toLowerCase().includes(q))
+              );
+            };
             const sortFn = (a: ProjectSummary, b: ProjectSummary) => {
               if (sortBy === "name") return a.name.localeCompare(b.name);
               if (sortBy === "members") return b.member_count - a.member_count;
@@ -582,7 +591,7 @@ function ProjectsPage() {
               .filter((p) => !p.pinned_at && !p.archived_at && matches(p))
               .sort(sortFn);
             const archived = projects.filter((p) => p.archived_at && matches(p)).sort(sortFn);
-            const noMatches = q && pinned.length + active.length + archived.length === 0;
+            const noMatches = pinned.length + active.length + archived.length === 0;
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div
@@ -789,6 +798,33 @@ function ProjectsPage() {
 
             return (
               <div>
+                <div
+                  className="mb-3 flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border p-1"
+                  role="group"
+                  aria-label="Filter projects"
+                >
+                  {(
+                    [
+                      ["all", "All"],
+                      ["owned", "My projects"],
+                      ["shared", "Shared with me"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setScope(value)}
+                      aria-pressed={scope === value}
+                      className={`min-h-11 shrink-0 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        scope === value
+                          ? "bg-[var(--surface-selected)] text-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div className="kova-toolbar">
                   <div className="relative flex-1">
                     <SearchIcon className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -839,12 +875,18 @@ function ProjectsPage() {
                 {noMatches ? (
                   <EmptyState
                     icon={SearchIcon}
-                    title="No matches"
-                    description={`Nothing matches "${query}". Try a different search.`}
+                    title={scope === "shared" && !query ? "No shared projects yet" : "No matches"}
+                    description={
+                      scope === "shared" && !query
+                        ? "Projects other people share with you will appear here."
+                        : `No projects match "${query}".`
+                    }
                     action={
-                      <Button className="min-h-11" variant="outline" onClick={() => setQuery("")}>
-                        Clear search
-                      </Button>
+                      query ? (
+                        <Button className="min-h-11" variant="outline" onClick={() => setQuery("")}>
+                          Clear search
+                        </Button>
+                      ) : undefined
                     }
                   />
                 ) : (
