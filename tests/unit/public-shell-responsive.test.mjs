@@ -19,7 +19,11 @@ function fixture(initialPath = "/features") {
   const { PublicFooter } = loadUiModule("src/components/PublicFooter.tsx", dependencies);
   const { PublicHeader } = loadUiModule(
     "src/components/public/PublicShell.tsx",
-    { ...dependencies, "@/components/PublicFooter": { PublicFooter } },
+    {
+      ...dependencies,
+      "@/components/PublicFooter": { PublicFooter },
+      "./public-foundation.css": {},
+    },
     {
       document: {
         addEventListener: (name, handler) => listeners.set(name, handler),

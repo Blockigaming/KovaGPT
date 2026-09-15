@@ -82,7 +82,11 @@
     "azure:staging:validate": "node scripts/azure/validate-staging-template.mjs",
     "test:a11y:source": "node --test tests/a11y/*.test.mjs",
     "test:a11y:browser": "KOVA_BROWSER_PREVIEW=node playwright test --config=playwright.config.ts tests/e2e/signed-out-runtime-qa.spec.ts --grep @a11y --project=phone-390x844 --project=desktop-1440x900",
-    "test:deployed-baseline:audit": "playwright test --config=playwright.deployed-audit.config.ts"
+    "test:deployed-baseline:audit": "playwright test --config=playwright.deployed-audit.config.ts",
+    "public:audit": "node scripts/publication/audit.mjs --audit-only",
+    "public:ready": "node scripts/publication/audit.mjs",
+    "public:render": "node scripts/publication/render.mjs",
+    "public:test": "node --test tests/unit/publication-contract.test.mjs tests/unit/capability-truth.test.mjs tests/unit/public-foundation.test.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.50.0",

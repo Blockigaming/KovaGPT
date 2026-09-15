@@ -86,7 +86,11 @@ test("nested breadcrumbs wrap and keep the current-page text readable", () => {
 });
 
 test("all public action pills can wrap with padding and visible keyboard focus", () => {
-  const actions = [...publicSite.matchAll(/<Link\s[^>]*className="([^"]*min-h-11[^"]*)"[^>]*>/g)];
+  const links = [...publicSite.matchAll(/<Link\s[^>]*className="([^"]*min-h-11[^"]*)"[^>]*>/g)];
+  const breadcrumbs = links.filter(([source]) => source.includes("data-public-breadcrumb"));
+  assert.equal(breadcrumbs.length, 1);
+  assert.match(breadcrumbs[0][1], /min-h-11.*min-w-0.*py-2\.5/);
+  const actions = links.filter(([source]) => !source.includes("data-public-breadcrumb"));
   assert.equal(actions.length, 5);
   for (const [, classes] of actions) {
     for (const token of [

@@ -1,0 +1,44 @@
+/* Public-only primitives. Do not alter the authenticated workspace cascade. */
+[data-public-shell] {
+  --kova-public-header-height: 6rem;
+  --kova-public-reading-width: 68ch;
+}
+
+[data-public-shell] :where(h1, h2, h3, [id], a, button, summary, input, textarea, select) {
+  scroll-margin-block-start: calc(var(--kova-public-header-height) + 1.5rem);
+  scroll-margin-block-end: 2rem;
+}
+
+[data-public-shell] :where(main, article, section) > p {
+  text-wrap: pretty;
+}
+
+[data-public-shell] :where(article) :where(p, li) {
+  max-inline-size: var(--kova-public-reading-width);
+}
+
+[data-public-shell] :where(img, video, svg) {
+  max-inline-size: 100%;
+}
+
+[data-public-shell] summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-public-shell],
+  [data-public-shell] *,
+  [data-public-shell] *::before,
+  [data-public-shell] *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-public-shell] :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}

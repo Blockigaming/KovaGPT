@@ -13,9 +13,11 @@ test("legal and SEO helpers wrap references and keep keyboard controls discovera
   }
   assert.match(legal, /text-\[0\.9375rem\]/);
   assert.doesNotMatch(legal, /text-\[15px\]/);
-  assert.match(seo, /<summary className="flex min-h-11/);
+  const faq = read("src/components/public/PublicFaq.tsx");
+  assert.match(seo, /<PublicFaq items=\{faq\}/);
+  assert.match(faq, /<summary className="flex min-h-11/);
   assert.match(seo, /aria-label="Related pages"/);
-  assert.match(seo, /aria-hidden="true"[\s\S]*shrink-0/);
+  assert.match(faq, /aria-hidden="true"[\s\S]*shrink-0/);
 });
 
 test("every dynamically loaded public detail family is included in browser rendering", () => {

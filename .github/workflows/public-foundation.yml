@@ -1,0 +1,99 @@
+name: Public Foundation
+
+on:
+  push:
+    branches: [hybrid/public-foundation-20260915]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify source and complete unit suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/publication-validation
+          git rev-parse HEAD > artifacts/publication-validation/commit.txt
+          git rev-parse 'HEAD^{tree}' > artifacts/publication-validation/tree.txt
+          node --version > artifacts/publication-validation/node.txt
+          npm run format:check 2>&1 | tee artifacts/publication-validation/format.log
+          npm run lint 2>&1 | tee artifacts/publication-validation/lint.log
+          npm run typecheck 2>&1 | tee artifacts/publication-validation/typecheck.log
+          npm run test:unit 2>&1 | tee artifacts/publication-validation/unit.log
+          npm run public:test 2>&1 | tee artifacts/publication-validation/contract.log
+          npm run build 2>&1 | tee artifacts/publication-validation/build.log
+          git diff --check
+      - name: Generate truthful audit and prove absent evidence is rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run public:audit
+          set +e
+          npm run public:ready > artifacts/publication-validation/strict-gate.log 2>&1
+          result=$?
+          set -e
+          test "$result" = 1
+          node --input-type=module -e 'import fs from "node:fs"; const report=JSON.parse(fs.readFileSync("artifacts/publication/readiness.json")); if(report.counts.publishReady!==0 || report.counts.routes===0 || report.counts.blocked!==report.counts.routes) throw new Error("Missing QA was treated as a pass");'
+      - name: Preserve source and checker evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-contract-${{ github.sha }}
+          path: |
+            artifacts/publication-validation/
+            artifacts/publication/
+          if-no-files-found: error
+          retention-days: 7
+
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
+      - run: npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+      - name: Complete shared UI and public template matrix
+        run: npx --no-install playwright test --config playwright.ui-foundations.config.ts --project "${{ matrix.browser }}"
+      - name: Record source
+        if: always()
+        run: |
+          mkdir -p test-results/ui-foundations
+          git rev-parse HEAD > test-results/ui-foundations/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/ui-foundations/tree.txt
+          sha256sum package-lock.json > test-results/ui-foundations/lock.sha256
+      - name: Preserve real-browser evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-foundation-${{ matrix.browser }}-${{ github.sha }}
+          path: test-results/ui-foundations/
+          if-no-files-found: error
+          retention-days: 7
