@@ -93,6 +93,48 @@ test("legacy research progress loads as terminal history", () => {
   assert.equal(loaded.messages[0].activities[0].status, "failed");
 });
 
+test("malformed stored activities cannot hide valid history", () => {
+  const validActivity = { tool: "search", label: "Source ready", status: "done" };
+  const active = {
+    ...conversation("active"),
+    messages: [
+      {
+        id: "invalid-container",
+        role: "assistant",
+        content: "Keep this message",
+        activities: { broken: true },
+      },
+      {
+        id: "mixed-entries",
+        role: "assistant",
+        content: "Keep valid activity",
+        activities: [null, { tool: "search", label: "Bad", status: "unknown" }, validActivity],
+      },
+    ],
+  };
+  const archived = {
+    ...conversation("archived"),
+    messages: [
+      {
+        id: "archived-invalid-container",
+        role: "assistant",
+        content: "Keep archived message",
+        activities: "legacy",
+      },
+    ],
+  };
+  storage.setItem(conversationStorageKey("account-a"), JSON.stringify([active]));
+  storage.setItem(archivedConversationStorageKey("account-a"), JSON.stringify([archived]));
+
+  const [loadedActive] = loadConversations("account-a");
+  const [loadedArchived] = loadArchivedConversations("account-a");
+  assert.equal(loadedActive.id, "active");
+  assert.equal("activities" in loadedActive.messages[0], false);
+  assert.deepEqual(loadedActive.messages[1].activities, [validActivity]);
+  assert.equal(loadedArchived.id, "archived");
+  assert.equal("activities" in loadedArchived.messages[0], false);
+});
+
 test("stopping preserves the latest assistant turn and closes only its active work", () => {
   const messages = [
     { id: "user", role: "user", content: "Explain this" },
