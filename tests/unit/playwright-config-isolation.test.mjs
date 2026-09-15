@@ -1,8 +1,26 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
 
 const readRootFile = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+
+function evaluateGeneralConfig(source, suite) {
+  const exports = {};
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  vm.runInNewContext(compiled, {
+    exports,
+    process: { env: suite === undefined ? {} : { KOVA_BROWSER_SUITE: suite } },
+    require(name) {
+      assert.equal(name, "@playwright/test");
+      return { defineConfig: (value) => value };
+    },
+  });
+  return exports.default;
+}
 
 test("the general Playwright matrix excludes dedicated QA specs", async () => {
   const [generalConfig, authVisualConfig, deployedAuditConfig] = await Promise.all([
@@ -11,10 +29,25 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
     readRootFile("playwright.deployed-audit.config.ts"),
   ]);
 
-  assert.match(
-    generalConfig,
-    /testIgnore:\s*\[\s*"\*\*\/auth-visual-regression\.spec\.ts",\s*"\*\*\/deployed-baseline-audit\.spec\.ts",?\s*\]/u,
-  );
+  const dedicatedSpecs = [
+    "**/auth-visual-regression.spec.ts",
+    "**/deployed-baseline-audit.spec.ts",
+  ];
+  const publicSpecs = ["**/public-surface-matrix.spec.ts", "**/public-detail-pages.spec.ts"];
+  // Check the evaluated exclusions, not the spelling of a literal array. The
+  // core suite may omit only the public specs exercised by its dedicated jobs.
+  for (const suite of [undefined, "all", "core", "public"]) {
+    const config = evaluateGeneralConfig(generalConfig, suite);
+    assert.deepEqual(
+      Array.from(config.testIgnore),
+      [...dedicatedSpecs, ...(suite === "core" ? publicSpecs : [])],
+      `Unexpected exclusions for ${suite ?? "default"} browser suite`,
+    );
+    assert.deepEqual(
+      config.testMatch === undefined ? undefined : Array.from(config.testMatch),
+      suite === "public" ? publicSpecs : undefined,
+    );
+  }
   assert.match(authVisualConfig, /testMatch:\s*"auth-visual-regression\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /testMatch:\s*"deployed-baseline-audit\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /timeout:\s*90_000/u);

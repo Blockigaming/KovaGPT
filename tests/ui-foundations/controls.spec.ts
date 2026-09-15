@@ -11,6 +11,35 @@ const viewports = [
 const cancelLabel = "Cancel and keep my current project settings";
 const confirmLabel = "Confirm changes to the selected project only";
 
+async function dispatchSheetTouch(
+  locator: Locator,
+  type: "touchstart" | "touchmove" | "touchcancel" | "touchend",
+  positions: number[],
+) {
+  await locator.evaluate(
+    (element, { type, positions }) => {
+      const touches = positions.map((clientY, identifier) => ({
+        identifier,
+        clientY,
+        target: element,
+      }));
+      const options = { bubbles: true, cancelable: true };
+      if (typeof Touch === "function" && typeof TouchEvent === "function") {
+        element.dispatchEvent(
+          new TouchEvent(type, { ...options, touches: touches.map((point) => new Touch(point)) }),
+        );
+      } else {
+        // Desktop Firefox has no Touch constructor. Exercise the same React
+        // handlers with their consumed fields, without patching browser globals.
+        const event = new Event(type, options);
+        Object.defineProperty(event, "touches", { value: touches });
+        element.dispatchEvent(event);
+      }
+    },
+    { type, positions },
+  );
+}
+
 async function bounded(locator: Locator, page: Page) {
   await expect(locator).toBeVisible();
   await expect
@@ -174,10 +203,10 @@ test("mobile sheet isolates background, respects a nested Escape, and resets can
   await expect(nested).toBeFocused();
 
   const handle = sheet.locator("[data-kova-sheet-handle]");
-  await handle.dispatchEvent("touchstart", { touches: [{ identifier: 0, clientY: 100 }] });
-  await handle.dispatchEvent("touchmove", { touches: [{ identifier: 0, clientY: 160 }] });
+  await dispatchSheetTouch(handle, "touchstart", [100]);
+  await dispatchSheetTouch(handle, "touchmove", [160]);
   await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 60)");
-  await handle.dispatchEvent("touchcancel", { touches: [] });
+  await dispatchSheetTouch(handle, "touchcancel", []);
   await expect(sheet).toHaveCSS("transform", "none");
   await expect(sheet).toBeVisible();
   await page.keyboard.press("Escape");
@@ -189,9 +218,9 @@ test("mobile sheet isolates background, respects a nested Escape, and resets can
 
   await page.getByTestId("trigger").click();
   await expect(sheet).toHaveCSS("transform", "none");
-  await handle.dispatchEvent("touchstart", { touches: [{ identifier: 0, clientY: 100 }] });
-  await handle.dispatchEvent("touchmove", { touches: [{ identifier: 0, clientY: 210 }] });
-  await handle.dispatchEvent("touchend", { touches: [] });
+  await dispatchSheetTouch(handle, "touchstart", [100]);
+  await dispatchSheetTouch(handle, "touchmove", [210]);
+  await dispatchSheetTouch(handle, "touchend", []);
   await expect(sheet).toBeHidden();
   await expect(page.getByTestId("trigger")).toBeFocused();
   await expect(page.getByRole("status")).toHaveText("No action taken");
