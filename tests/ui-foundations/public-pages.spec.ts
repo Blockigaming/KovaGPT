@@ -1,5 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// Trace settings are worker-scoped; keep this at file level. Coverage JSON and
+// failure screenshots retain evidence without thousands of catalog snapshots.
+test.use({ trace: "off" });
+
 const viewports = [
   { width: 320, height: 568 },
   { width: 390, height: 844 },
@@ -84,7 +88,6 @@ for (const viewport of viewports) {
 test.describe("every declared public detail record", () => {
   // Each record is rendered from its real registry data. Per-case coverage JSON
   // and failure screenshots avoid retaining thousands of identical DOM traces.
-  test.use({ trace: "off" });
   for (const viewport of viewports) {
     for (const dark of [false, true]) {
       for (const enlarged of [false, true]) {
