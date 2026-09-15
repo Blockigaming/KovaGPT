@@ -4,6 +4,7 @@ import {
   Copy as CopyIcon,
   Ellipsis,
   Folder,
+  Globe,
   HeartPulse,
   Images,
   LibraryBig,
@@ -17,6 +18,7 @@ import {
   Share2,
   ShoppingBag,
   SquarePen,
+  Telescope,
   Trash2,
   WalletCards,
   X,
@@ -364,8 +366,8 @@ export function Sidebar({
             <Link
               to="/scheduled-tasks"
               className="kova-rail-button"
-              aria-label="Scheduled"
-              title="Scheduled"
+              aria-label="Scheduled tasks status"
+              title="Scheduled tasks status"
             >
               <Clock3 />
             </Link>
@@ -475,8 +477,12 @@ export function Sidebar({
               {navLink("/images", "Images", Images)}
               {navLink("/library", "Library", LibraryBig)}
               {navLink("/projects", "Projects", Folder)}
-              {scheduledVisible ? navLink("/scheduled-tasks", "Scheduled", Clock3) : null}
+              {scheduledVisible
+                ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
+                : null}
               {navLink("/apps", "Plugins", PlugZap)}
+              {navLink("/research-planner", "Deep research", Telescope)}
+              {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"
                 className={navRow()}
@@ -564,11 +570,14 @@ export function Sidebar({
                 </Link>
               </>
             ) : isLoaded ? (
-              <SignInButton mode="modal">
-                <button type="button" className="kova-sign-in">
-                  Log in to KovaGPT
-                </button>
-              </SignInButton>
+              <div className="w-full">
+                <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
+                <SignInButton mode="modal">
+                  <button type="button" className="kova-sign-in">
+                    Log in to KovaGPT
+                  </button>
+                </SignInButton>
+              </div>
             ) : null}
           </footer>
         </div>

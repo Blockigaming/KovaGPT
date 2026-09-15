@@ -11,8 +11,10 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/images", "Images", Images)',
     'navLink("/library", "Library", LibraryBig)',
     'navLink("/projects", "Projects", Folder)',
-    'navLink("/scheduled-tasks", "Scheduled", Clock3)',
+    'navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)',
     'navLink("/apps", "Plugins", PlugZap)',
+    'navLink("/research-planner", "Deep research", Telescope)',
+    'navLink("/discovery", "Discover", Globe)',
     ">More</span>",
     ">Pinned</h2>",
     ">Recents</h2>",
@@ -44,7 +46,7 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
 
 test("Scheduled visibility and data access both use server-authoritative eligibility", () => {
   assert.match(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
-  assert.match(sidebar, /scheduledVisible \? navLink\("\/scheduled-tasks"/);
+  assert.match(sidebar, /scheduledVisible[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
   assert.match(scheduled, /function scheduledPlanEligible\(tier: unknown\)/);
   assert.match(scheduled, /tier !== "free"/);
   assert.match(scheduled, /if \(requireEligiblePlan\)/);
