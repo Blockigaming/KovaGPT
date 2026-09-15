@@ -305,7 +305,9 @@ export function KovaMaps() {
         )
           return;
         if (!searchAttemptedRef.current) {
-          setError("Maps could not start in this browser. Refresh the page or try another browser.");
+          setError(
+            "Maps could not start in this browser. Refresh the page or try another browser.",
+          );
         }
         setLoading(false);
       });

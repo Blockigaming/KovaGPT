@@ -448,9 +448,7 @@ export function Sidebar({
               onClick={() => {
                 onToggle();
                 requestAnimationFrame(() =>
-                  document
-                    .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
-                    ?.focus(),
+                  document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus(),
                 );
               }}
               aria-label="Collapse sidebar"
