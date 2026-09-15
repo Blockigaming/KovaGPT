@@ -35,14 +35,23 @@ test("accepts one immutable serving production image with 100 percent traffic", 
 
 test("rejects mutable production image tags", () => {
   assert.throws(
-    () => validateProductionProvenanceEvidence({ ...app, image: "kovagptacr.azurecr.io/kovagpt:latest" }, revisions),
+    () =>
+      validateProductionProvenanceEvidence(
+        { ...app, image: "kovagptacr.azurecr.io/kovagpt:latest" },
+        revisions,
+      ),
     /production_provenance_image_not_immutable/u,
   );
 });
 
 test("rejects a running image that differs from the approved digest", () => {
   assert.throws(
-    () => validateProductionProvenanceEvidence(app, revisions, `kovagptacr.azurecr.io/kovagpt@sha256:${"c".repeat(64)}`),
+    () =>
+      validateProductionProvenanceEvidence(
+        app,
+        revisions,
+        `kovagptacr.azurecr.io/kovagpt@sha256:${"c".repeat(64)}`,
+      ),
     /production_provenance_image_mismatch/u,
   );
 });
