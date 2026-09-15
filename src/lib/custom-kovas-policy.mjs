@@ -16,6 +16,12 @@ export const KOVA_MODES = Object.freeze([
   "max",
   "ultra",
 ]);
+const LEGACY_KOVA_MODES = Object.freeze({
+  pro: "max",
+  kova_5_5: "medium",
+  kova_5_4: "medium",
+  kova_o3: "medium",
+});
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
 export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -62,13 +68,14 @@ export function normalizeKovaConfig(value) {
     "knowledge",
     "allowFork",
   ]);
+  const mode = LEGACY_KOVA_MODES[value.mode] ?? value.mode ?? "instant";
   const result = {
     name: text(value.name, 1, 120).trim(),
     icon: text(value.icon ?? "✦", 1, 16),
     description: text(value.description ?? "", 0, 500),
     instructions: text(value.instructions, 1, 12000),
     starters: [],
-    mode: value.mode ?? "instant",
+    mode,
     tools: choices(value.tools ?? [], KOVA_TOOLS),
     apps: choices(value.apps ?? [], KOVA_APPS),
     knowledge: [],

@@ -93,6 +93,9 @@ test("legacy migration requires an explicit choice and Temporary chats have no o
   assert.equal(state.records.secret, undefined);
   assert.throws(() => normalizeChatHistory({ ...chat(), temporary: true }, OWNER), /invalid/);
 });
+test("legacy Pro history is accepted and normalized to Max", () => {
+  assert.equal(normalizeChatHistory({ ...chat(), mode: "pro" }, OWNER).mode, "max");
+});
 test("durable history preserves only the exact workflow skill selection tuple", () => {
   const skill = {
     installationId: "423e4567-e89b-42d3-a456-426614174000",

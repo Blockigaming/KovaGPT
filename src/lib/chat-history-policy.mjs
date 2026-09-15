@@ -13,6 +13,7 @@ const MODES = new Set([
   "thinking",
   "high",
   "extra_high",
+  "pro",
   "max",
   "ultra",
   "kova_5_5",
@@ -145,7 +146,7 @@ export function normalizeChatHistory(value, ownerId) {
   const result = {
     id: chatHistoryId(value.id),
     title: value.title,
-    mode: value.mode,
+    mode: value.mode === "pro" ? "max" : value.mode,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     messages: value.messages.map((message) => {

@@ -767,9 +767,7 @@ export const Route = createFileRoute("/api/chat")({
                 const { resolveCustomKova } = await import("@/lib/custom-kovas.server");
                 return resolveCustomKova(auth.supabaseAdmin, auth.userId, ingress.kova!, signal);
               });
-              const requiredTier = getMode(customKova.config.mode).tier;
-              const rank = { free: 0, plus: 1, pro: 2 };
-              if (!isOwner && rank[requiredTier] > rank[callerTier])
+              if (!isOwner && !isModeAllowedForTier(callerTier, getMode(customKova.config.mode).id))
                 return Response.json(
                   {
                     error:
