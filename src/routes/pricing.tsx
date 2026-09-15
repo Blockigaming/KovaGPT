@@ -226,6 +226,7 @@ function PricingPage() {
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
+            note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
             }
@@ -349,6 +350,7 @@ type CardProps = {
   price: string;
   period: string;
   description: string;
+  note?: string;
   cta: string;
   features: readonly string[];
   highlight?: boolean;
@@ -363,6 +365,7 @@ function PlanCard({
   price,
   period,
   description,
+  note,
   cta,
   features,
   highlight,
@@ -402,7 +405,10 @@ function PlanCard({
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
         </div>
       </div>
-      <p className="pt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+      <p className="pt-2 text-sm leading-6 text-muted-foreground">
+        {description}
+        {note ? <span className="mt-1 block text-xs leading-5">{note}</span> : null}
+      </p>
       <button
         type="button"
         onClick={onCta}
