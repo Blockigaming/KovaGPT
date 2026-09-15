@@ -1,0 +1,72 @@
+name: Shared UI Browser
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/ui-foundation-browser.yml
+      - playwright.ui-foundations.config.ts
+      - tests/ui-foundations/**
+      - src/components/ui/**
+      - src/components/ConfirmActionDialog.tsx
+      - src/lib/utils.ts
+      - src/styles.css
+      - src/styles/**
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-foundation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build isolated UI fixture with application CSS
+        run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Exercise responsive layouts and real keyboard interactions
+        run: npx --no-install playwright test --config playwright.ui-foundations.config.ts
+      - name: Record exact source provenance
+        if: always()
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/ui-foundations
+          printf '%s\n' "$SOURCE_SHA" > test-results/ui-foundations/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/ui-foundations/tree.txt
+          sha256sum package-lock.json > test-results/ui-foundations/lock.sha256
+      - name: Upload reproducible fixture and browser evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ui-foundations-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/ui-foundations/
+          if-no-files-found: error
+          retention-days: 7
