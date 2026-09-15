@@ -54,6 +54,9 @@ import {
   Users,
   Keyboard,
   MapPin,
+  Search,
+  ArrowLeft,
+  BarChart3,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
@@ -169,7 +172,7 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "concise", label: "Concise", hint: "Short, direct answers" },
 ];
 
-type TabDef = { v: string; label: string; icon: typeof Cog };
+type TabDef = { v: string; label: string; icon: typeof Cog; keywords?: string[] };
 type TabGroup = { title: string; hint?: string; tabs: TabDef[] };
 
 // Settings are grouped into clear sections with headers so it doesn't read as
@@ -183,7 +186,18 @@ const TAB_GROUPS: TabGroup[] = [
       { v: "general", label: "General", icon: Cog },
       { v: "personalization", label: "Personalization", icon: User2 },
       { v: "memory", label: "Memory", icon: Brain },
-      { v: "subscription", label: "Subscription", icon: CreditCard },
+      {
+        v: "billing",
+        label: "Billing",
+        icon: CreditCard,
+        keywords: ["plan", "subscription", "payment", "invoice"],
+      },
+      {
+        v: "usage",
+        label: "Usage",
+        icon: BarChart3,
+        keywords: ["limits", "messages", "images", "uploads"],
+      },
       { v: "email", label: "Email", icon: Mail },
     ],
   },
@@ -265,9 +279,16 @@ export function SettingsDialog({
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
   const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
-  const [tab, setTab] = useState<string>(initialTab ?? "general");
+  const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
+  const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
+  const [settingsQuery, setSettingsQuery] = useState("");
+  const [mobileHome, setMobileHome] = useState(true);
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [usageLoaded, setUsageLoaded] = useState(false);
+  const settingsSearchRef = useRef<HTMLInputElement>(null);
+  const contentHeadingRef = useRef<HTMLHeadingElement>(null);
+  const pendingMobileFocusRef = useRef<"content" | "navigation" | null>(null);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -283,6 +304,8 @@ export function SettingsDialog({
   const deletionPending = deletionStatus?.ownerId === userKey && deletionStatus.state !== "active";
   useEffect(() => {
     deletionOperationRef.current++;
+    setUsage(null);
+    setUsageLoaded(false);
     setDeletionStatus(null);
     setDeleteAccountBusy(false);
     setDeleteAccountOpen(false);
@@ -323,8 +346,9 @@ export function SettingsDialog({
   const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
   useEffect(() => {
-    if (!open || tab !== "subscription" || !loggedIn) return;
+    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
     let cancelled = false;
+    setUsageLoaded(false);
     setUsageLoading(true);
     getMyDailyUsage()
       .then((u) => {
@@ -334,7 +358,10 @@ export function SettingsDialog({
         if (!cancelled) setUsage(null);
       })
       .finally(() => {
-        if (!cancelled) setUsageLoading(false);
+        if (!cancelled) {
+          setUsageLoading(false);
+          setUsageLoaded(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -342,7 +369,7 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   useEffect(() => {
-    if (!open || tab !== "subscription" || !loggedIn) return;
+    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
     let cancelled = false;
     setSubSummary(null);
     setSubscriptionError(null);
@@ -384,7 +411,14 @@ export function SettingsDialog({
     }
   };
   useEffect(() => {
-    if (open && initialTab) setTab(initialTab);
+    if (open && initialTab) {
+      setTab(initialTab === "subscription" ? "billing" : initialTab);
+      setMobileHome(false);
+    }
+    if (!open) {
+      setSettingsQuery("");
+      setMobileHome(true);
+    }
   }, [open, initialTab]);
 
   const setMode = (m: ThemeMode) => {
@@ -613,10 +647,45 @@ export function SettingsDialog({
     return () => clearTimeout(t);
   }, [settings, open]);
 
+  const allTabs = TAB_GROUPS.flatMap((group) => group.tabs);
+  const activeTab = allTabs.find((item) => item.v === tab) ?? allTabs[0];
+  const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
+  const matchesSettingsQuery = (item: TabDef) =>
+    [item.label, ...(item.keywords ?? [])].some((term) =>
+      term.toLocaleLowerCase().includes(normalizedQuery),
+    );
+  const hasSettingsMatches =
+    !normalizedQuery || TAB_GROUPS.some((group) => group.tabs.some(matchesSettingsQuery));
+  const filteredGroups = normalizedQuery
+    ? TAB_GROUPS.map((group) => ({
+        ...group,
+        // Keep the selected trigger mounted so its tab panel retains a valid
+        // aria-labelledby target while the user searches other settings.
+        tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
+      })).filter((group) => group.tabs.length > 0)
+    : TAB_GROUPS;
+  const selectTab = (value: string) => {
+    pendingMobileFocusRef.current = "content";
+    setTab(value);
+    setMobileHome(false);
+    setSettingsQuery("");
+  };
+  useEffect(() => {
+    const pendingFocus = pendingMobileFocusRef.current;
+    if (!pendingFocus) return;
+    pendingMobileFocusRef.current = null;
+    if (pendingFocus === "navigation" && mobileHome) {
+      settingsSearchRef.current?.focus();
+    } else if (pendingFocus === "content" && !mobileHome) {
+      contentHeadingRef.current?.focus();
+    }
+  }, [mobileHome, tab]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-settings-dialog bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
+        closeLabel="Close settings"
+        className={`kova-settings-dialog ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -631,7 +700,9 @@ export function SettingsDialog({
           document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
         }}
       >
-        <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
+        <DialogHeader
+          className={`px-5 sm:px-7 pt-5 pb-4 border-b border-border ${loggedIn ? "hidden" : ""}`}
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-semibold tracking-tight font-display">
@@ -669,75 +740,74 @@ export function SettingsDialog({
         ) : (
           <Tabs
             value={tab}
-            onValueChange={setTab}
+            onValueChange={selectTab}
             orientation="vertical"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
-            {/* Mobile: one grouped picker keeps every section reachable without a 19-tab rail. */}
-            <div className="kova-settings-mobile-nav flex shrink-0 items-center gap-3 border-b border-border px-4 py-2 md:hidden">
-              <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                Settings section
-              </span>
-              <Select value={tab} onValueChange={setTab}>
-                <SelectTrigger
-                  aria-label="Settings section"
-                  className="ml-auto h-11 min-w-0 max-w-56 rounded-xl bg-[var(--surface-modal)]"
+            <aside
+              className={`kova-settings-sidebar ${mobileHome ? "mobile-home" : "mobile-hidden"}`}
+              aria-label="Settings navigation"
+            >
+              <div className="kova-settings-sidebar-top" aria-hidden="true" />
+              <label className="kova-settings-search">
+                <Search aria-hidden="true" />
+                <span className="sr-only">Search settings</span>
+                <input
+                  ref={settingsSearchRef}
+                  value={settingsQuery}
+                  onChange={(event) => setSettingsQuery(event.target.value)}
+                  placeholder="Search settings"
+                />
+              </label>
+              <TabsList className="kova-settings-nav" aria-orientation="vertical">
+                {filteredGroups.map((group) => (
+                  <section key={group.title} aria-label={group.title}>
+                    <p className="kova-settings-nav-group">{group.title}</p>
+                    {group.tabs.map(({ v, icon: Icon, label }) => (
+                      <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
+                        <Icon aria-hidden="true" />
+                        <span>{label}</span>
+                      </TabsTrigger>
+                    ))}
+                  </section>
+                ))}
+                {!hasSettingsMatches ? (
+                  <p className="kova-settings-no-results" role="status">
+                    No settings found
+                  </p>
+                ) : null}
+              </TabsList>
+            </aside>
+
+            <div
+              className={`kova-settings-content flex-1 overflow-hidden flex flex-col ${mobileHome ? "mobile-hidden" : "mobile-content"}`}
+            >
+              <header className="kova-settings-content-header">
+                <button
+                  type="button"
+                  className="kova-settings-back"
+                  aria-label="Back to settings"
+                  onClick={() => {
+                    pendingMobileFocusRef.current = "navigation";
+                    setMobileHome(true);
+                  }}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(70dvh,32rem)]">
-                  {TAB_GROUPS.map((group) => (
-                    <SelectGroup key={group.title}>
-                      <SelectLabel className="text-xs text-muted-foreground">
-                        {group.title}
-                      </SelectLabel>
-                      {group.tabs.map(({ v, icon: Icon, label }) => (
-                        <SelectItem
-                          key={v}
-                          value={v}
-                          className="kova-settings-mobile-section-option min-h-11 md:min-h-8"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                            <span>{label}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Desktop: grouped sidebar */}
-            <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
-              {TAB_GROUPS.map((group) => (
-                <div key={group.title} className="flex flex-col gap-0.5">
-                  <div className="px-2 pt-1 pb-1.5">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                      {group.title}
-                    </div>
-                    {group.hint && (
-                      <div className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">
-                        {group.hint}
-                      </div>
-                    )}
-                  </div>
-                  {group.tabs.map(({ v, icon: Icon, label }) => (
-                    <TabsTrigger
-                      key={v}
-                      value={v}
-                      className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-colors"
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="truncate text-left">{label}</span>
-                    </TabsTrigger>
-                  ))}
+                  <ArrowLeft aria-hidden="true" />
+                </button>
+                <div>
+                  <h2 ref={contentHeadingRef} tabIndex={-1}>
+                    {activeTab.label}
+                  </h2>
+                  <p>Manage your KovaGPT {activeTab.label.toLocaleLowerCase()} settings.</p>
                 </div>
-              ))}
-            </TabsList>
-
-            <div className="flex-1 overflow-hidden flex flex-col">
+                <span
+                  aria-live="polite"
+                  className={savedPulse ? "kova-settings-saved visible" : "kova-settings-saved"}
+                >
+                  <Check aria-hidden="true" />
+                  Saved
+                </span>
+              </header>
               {/* GENERAL */}
               <TabsContent value="general" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
                 <section className="space-y-4">
@@ -991,11 +1061,81 @@ export function SettingsDialog({
                 </p>
               </TabsContent>
 
-              {/* SUBSCRIPTION */}
-              <TabsContent
-                value="subscription"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              {/* USAGE */}
+              <TabsContent value="usage" className="overflow-y-auto px-7 pb-8 space-y-7 py-6">
+                <section className="space-y-3">
+                  <h3>Plan limits</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Daily activity shared across KovaGPT chat, image generation, and file uploads.
+                  </p>
+                  <div className="kova-settings-usage-card" aria-busy={usageLoading}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xl font-medium">Today's usage</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {usage
+                            ? `Resets ${new Date(usage.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                            : "Daily counters reset at midnight UTC."}
+                        </p>
+                      </div>
+                      {subSummary?.effectiveTier && (
+                        <span className="kova-settings-plan-badge">
+                          {subSummary.effectiveTier === "free"
+                            ? "Free"
+                            : subSummary.effectiveTier === "plus"
+                              ? "Plus"
+                              : "Pro"}
+                        </span>
+                      )}
+                    </div>
+                    {(!usageLoaded || usageLoading) && !usage ? (
+                      <div className="kova-settings-skeleton" role="status">
+                        Loading usage…
+                      </div>
+                    ) : usage ? (
+                      <dl className="kova-settings-metrics">
+                        <div>
+                          <dt>Messages</dt>
+                          <dd>{usage.chats}</dd>
+                        </div>
+                        <div>
+                          <dt>Images</dt>
+                          <dd>{usage.images}</dd>
+                        </div>
+                        <div>
+                          <dt>File uploads</dt>
+                          <dd>{usage.uploads}</dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      <div className="kova-settings-inline-error" role="alert">
+                        <p>Usage data isn't available right now.</p>
+                        <button type="button" onClick={() => selectTab("billing")}>
+                          Check billing status
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </section>
+                <section className="kova-settings-section">
+                  <h3>How limits work</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your current allowance is enforced by KovaGPT when you use a limited feature.
+                    Exact percentage progress is not shown because the service does not currently
+                    provide an account allowance total.
+                  </p>
+                  <Link
+                    to="/pricing"
+                    onClick={() => onOpenChange(false)}
+                    className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                  >
+                    Compare Kova plans
+                  </Link>
+                </section>
+              </TabsContent>
+
+              {/* BILLING */}
+              <TabsContent value="billing" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
                 <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium">Current plan</div>
