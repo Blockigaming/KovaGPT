@@ -354,12 +354,13 @@ function SupportForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [touched, setTouched] = useState(false);
-  const initialized = useRef(false);
+  const initializedUserId = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (initialized.current || !user) return;
-    initialized.current = true;
-    setName(user.fullName ?? user.firstName ?? "");
-    setEmail(user.primaryEmailAddress?.emailAddress ?? "");
+    const userId = user?.id ?? null;
+    if (initializedUserId.current === userId) return;
+    initializedUserId.current = userId;
+    setName(user?.fullName ?? user?.firstName ?? "");
+    setEmail(user?.primaryEmailAddress?.emailAddress ?? "");
   }, [user]);
   const cleanEmail = email.trim();
   const emailError = !cleanEmail

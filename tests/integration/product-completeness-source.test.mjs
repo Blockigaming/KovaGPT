@@ -7,7 +7,9 @@ const migration = readFileSync(
   "supabase/migrations/20260722130000_product_completeness_reliability.sql",
   "utf8",
 );
-const help = readFileSync("src/routes/help.tsx", "utf8");
+const help = ["src/routes/help.tsx", "src/lib/help-center-data.ts"]
+  .map((path) => readFileSync(path, "utf8"))
+  .join("\n");
 
 test("product-completeness migration adds owner-scoped tables with RLS", () => {
   for (const table of [
@@ -37,7 +39,7 @@ test("help center source covers scoped features and omits voice documentation", 
     "Projects",
     "Files",
     "Images",
-    "Data analysis",
+    "dataAnalysis",
     "Canvas",
     "Temporary Chat",
     "Memory",

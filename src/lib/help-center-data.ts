@@ -48,11 +48,7 @@ const rows: Row[] = [
     "How do I start a new chat?",
     "Select New chat in the sidebar. Choose a mode or tool in the composer, enter your message, and send it.",
   ],
-  [
-    "Getting started",
-    "Where are my previous chats?",
-    "Ordinary signed-in chats appear in your conversation history when sync is available. Temporary Chats are intentionally excluded, and offline changes remain on the current device until sync succeeds.",
-  ],
+  ["Getting started", "Where are my previous chats?", features.cloudHistory.summary],
   [
     "Getting started",
     "Can I use KovaGPT without an account?",
@@ -178,7 +174,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "What is Extra high mode?",
-    "Extra high explores alternatives and detail with maximum-depth reasoning before Pro mode. It is available on Pro.",
+    "Extra high emphasizes alternatives and detail before Pro mode. It is available on Pro.",
   ],
   [
     "Chat & modes",
