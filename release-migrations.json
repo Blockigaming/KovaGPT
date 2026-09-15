@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 153,
-  "latest": "20260915003000_expand_ai_usage_mode_allowlist.sql",
+  "count": 154,
+  "latest": "20260915004500_expand_custom_kova_mode_allowlist.sql",
   "migrations": [
     {
       "order": 1,
@@ -3286,6 +3286,20 @@
       "filename": "20260915003000_expand_ai_usage_mode_allowlist.sql",
       "timestamp": "20260915003000",
       "sha256": "5c9dc75b6b418383013451725451f7552df13487e9d8a0cc5f74b7d12cc5732c",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 154,
+      "filename": "20260915004500_expand_custom_kova_mode_allowlist.sql",
+      "timestamp": "20260915004500",
+      "sha256": "c0599b404f3892028881a699f4a8668d062c5320fccb89b2a73e5cf1836aa485",
       "tables": [],
       "functions": [],
       "destructive": false,

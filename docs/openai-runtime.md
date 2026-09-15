@@ -39,7 +39,7 @@ All critical settings are parsed once through a strict Zod schema in `config.ser
 
 | Variable                           |     Default | Enforcement                                                                |
 | ---------------------------------- | ----------: | -------------------------------------------------------------------------- |
-| `KOVA_MAX_COST_USD_PER_REQUEST`    |    USD 0.10 | catalog price x conservative full input/output reservation before provider |
+| `KOVA_MAX_COST_USD_PER_REQUEST`    |    USD 1.00 | catalog price x conservative full input/output reservation before provider |
 | `KOVA_MAX_TOKENS_PER_USER_DAY`     |      50,000 | atomic `acquire_ai_generation`, UTC day                                    |
 | `KOVA_MAX_TOKENS_PER_USER_MONTH`   |     500,000 | same transaction, UTC month                                                |
 | `KOVA_MAX_PREMIUM_REQUESTS_PERIOD` |          50 | Thinking+Deep combined, authoritative subscription period                  |

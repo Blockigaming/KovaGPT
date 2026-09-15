@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   DEFAULT_MODELS,
+  MODE_MAX_OUTPUT_TOKENS,
   ROUTING_THRESHOLDS,
   getModelConfig,
   isValidModelId,
@@ -58,6 +59,13 @@ test("deep mode upgrades to the premium model for premium tiers", () => {
   const decision = routeModel({ task: "chat", mode: "max", tier: "pro", text: "deep analysis" });
   assert.equal(decision.role, "PREMIUM_REASONING");
   assert.equal(decision.modelId, SOL);
+});
+
+test("default request budget can admit the full Ultra output reservation", () => {
+  const maximumProviderCalls = 9;
+  const outputReservation =
+    estimateCostUsd(SOL, 0, MODE_MAX_OUTPUT_TOKENS.ultra) * maximumProviderCalls;
+  assert.ok(outputReservation <= 1);
 });
 
 test("free users can never reach the premium model", () => {

@@ -111,6 +111,7 @@ test("plan cards expose a coherent hierarchy and aligned, 44px actions", async (
   assert.match(pricing, /aria-label="KovaGPT plans"/);
   assert.match(pricing, /data-pricing-plan=\{name\.toLowerCase\(\)\}/);
   assert.match(pricing, /<article[\s\S]*?<h2[\s\S]*?<button[\s\S]*?<ul/);
+  assert.match(pricing, /row-span-7 grid h-full grid-rows-subgrid/);
   assert.match(pricing, /type="button"/);
   assert.match(pricing, /inline-flex h-11 w-full/);
   assert.match(pricing, /shadow-lg shadow-foreground\/10/);

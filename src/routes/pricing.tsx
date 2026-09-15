@@ -380,7 +380,7 @@ function PlanCard({
   return (
     <article
       data-pricing-plan={name.toLowerCase()}
-      className={`kova-plan-card relative grid h-full grid-rows-[1.5rem_3rem_3.25rem_6rem_2.75rem_1px_minmax(0,1fr)] rounded-2xl border p-6 transition-colors ${
+      className={`kova-plan-card relative row-span-7 grid h-full grid-rows-subgrid rounded-2xl border p-6 transition-colors ${
         enterprise
           ? "border-foreground/25 bg-card"
           : highlight
