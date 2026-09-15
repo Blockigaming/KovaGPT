@@ -104,6 +104,8 @@ export function KovaMaps() {
   const [searching, setSearching] = useState(false);
   const [satellite, setSatellite] = useState(false);
   const [threeD, setThreeD] = useState(true);
+  const threeDRef = useRef(threeD);
+  threeDRef.current = threeD;
   const [networkAccess, setNetworkAccess] = useState<{
     ownerId: string;
     allowed: boolean;
@@ -184,7 +186,7 @@ export function KovaMaps() {
     const ownerId = activeOwnerRef.current;
     let disposed = false;
     void import("maplibre-gl")
-      .then(({ default: maplibregl }) => {
+      .then((maplibregl) => {
         if (
           disposed ||
           generation !== principalGenerationRef.current ||
@@ -231,7 +233,7 @@ export function KovaMaps() {
           if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
             return;
           window.clearTimeout(loadTimeout);
-          addMapEnhancements(map, threeD);
+          addMapEnhancements(map, threeDRef.current);
           setLoading(false);
           updateView();
         });
@@ -267,7 +269,7 @@ export function KovaMaps() {
     generation = principalGenerationRef.current,
     ownerId = activeOwnerRef.current,
   ) => {
-    const { default: maplibregl } = await import("maplibre-gl");
+    const maplibregl = await import("maplibre-gl");
     if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId) return;
     const map = mapRef.current;
     if (!map) return;
