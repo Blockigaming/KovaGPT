@@ -20,9 +20,9 @@ jobs:
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify source and complete unit suite
@@ -53,7 +53,7 @@ jobs:
           node --input-type=module -e 'import fs from "node:fs"; const report=JSON.parse(fs.readFileSync("artifacts/publication/readiness.json")); if(report.counts.publishReady!==0 || report.counts.routes===0 || report.counts.blocked!==report.counts.routes) throw new Error("Missing QA was treated as a pass");'
       - name: Preserve source and checker evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: public-contract-${{ github.sha }}
           path: |
@@ -73,9 +73,9 @@ jobs:
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
@@ -91,7 +91,7 @@ jobs:
           sha256sum package-lock.json > test-results/ui-foundations/lock.sha256
       - name: Preserve real-browser evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: public-foundation-${{ matrix.browser }}-${{ github.sha }}
           path: test-results/ui-foundations/
