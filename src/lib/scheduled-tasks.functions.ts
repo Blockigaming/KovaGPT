@@ -115,7 +115,7 @@ async function mutate(
     payload: Record<string, unknown>;
   },
 ) {
-  const paidPlanActions = new Set(["create", "edit", "resume", "retry", "acceptCopy"]);
+  const paidPlanActions = new Set(["create", "edit", "resume", "retry", "shareCopy", "acceptCopy"]);
   const { admin, signal } = await access(userId, true, paidPlanActions.has(action));
   if (["create", "resume", "retry"].includes(action) && !(await scheduledExecutionAvailable()))
     throw safeTaskError("55000", "task_execution_unavailable");
@@ -180,7 +180,8 @@ export const listScheduledTasks = createServerFn({ method: "POST" })
   .validator((value: unknown) => taskReadIdentity.parse(value))
   .handler(async ({ data, context }): Promise<ScheduledTask[]> => {
     assertTaskPrincipal(data, context.userId);
-    const { admin, signal } = await access(context.userId);
+    // A downgrade must not hide records that the user can still pause or delete.
+    const { admin, signal } = await access(context.userId, false, false);
     const rows: ScheduledTask[] = [];
     let cursor: string | null = null;
     for (let page = 0; page < 100; page++) {

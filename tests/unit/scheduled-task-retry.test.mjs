@@ -11,14 +11,25 @@ const owner = "11111111-1111-4111-8111-111111111111",
 function load({ available = true, principal = owner, rpcError = null, plan = "plus" } = {}) {
   const calls = [],
     exports = {};
-  const query = {
-    select: () => query,
-    eq: () => query,
-    maybeSingle: () => query,
-    abortSignal: async () => ({ data: { id: taskId, status: "scheduled" }, error: null }),
+  const task = { id: taskId, status: "scheduled" };
+  const taskQuery = () => {
+    let single = false;
+    const query = {
+      select: () => query,
+      eq: () => query,
+      gt: () => query,
+      order: () => query,
+      limit: () => query,
+      maybeSingle: () => {
+        single = true;
+        return query;
+      },
+      abortSignal: async () => ({ data: single ? task : [task], error: null }),
+    };
+    return query;
   };
   const admin = {
-    from: () => query,
+    from: taskQuery,
     rpc: (name, args) => ({
       abortSignal: async () => {
         if (name === "effective_user_plan_tier") return { data: plan, error: null };
@@ -128,6 +139,23 @@ test("downgraded accounts can pause and delete tasks but cannot resume them", as
     calls.map(({ args }) => args.p_action),
     ["pause", "delete"],
   );
+});
+
+test("downgraded accounts can load tasks but cannot share copies", async () => {
+  const { api, calls } = load({ plan: "free" });
+  const tasks = await api.listScheduledTasks({
+    data: { expectedUserId: owner },
+    context: { userId: owner },
+  });
+  assert.equal(tasks.length, 1);
+  await assert.rejects(
+    api.offerScheduledTaskCopy({
+      data: { ...data(), email: "recipient@example.com" },
+      context: { userId: owner },
+    }),
+    /active Plus or Pro plan/,
+  );
+  assert.equal(calls.length, 0);
 });
 
 test("every Tasks endpoint rejects an old account draft even when middleware and current credentials now belong to another account", async () => {

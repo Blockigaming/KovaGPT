@@ -44,7 +44,11 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /navLink\("\/research-planner", "Deep research", Telescope\)/);
+  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(
+    sidebar,
+    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
+  );
 });
 
 test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
