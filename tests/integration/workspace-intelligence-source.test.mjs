@@ -24,9 +24,7 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
   assert.match(packs, /const MAX_SEARCH_QUERY_CHARS = 240/);
   assert.match(packs, /const query = searchHandoffQuery\(pack\)/);
   assert.match(packs, /Search query: \$\{query\}\\n\\nSearch the web/);
-  assert.ok(
-    packs.indexOf("Search query: ${query}") < packs.indexOf("Context pack: ${pack.name}"),
-  );
+  assert.ok(packs.indexOf("Search query: ${query}") < packs.indexOf("Context pack: ${pack.name}"));
   for (const type of ["artifact", "image", "research", "prompt", "work"]) {
     assert.match(packs, new RegExp(`\"${type}\"`));
   }
