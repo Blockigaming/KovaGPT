@@ -89,7 +89,7 @@
       "implementedScope": "The dedicated product surface and execution path are removed while historical rows remain available to account export and deletion.",
       "sourceEvidence": [
         "src/lib/chat-history-policy.mjs",
-        "supabase/migrations/20260915011500_retire_deep_research_workspace_search.sql"
+        "supabase/migrations/20260915005500_retire_deep_research_workspace_search.sql"
       ],
       "testEvidence": ["tests/unit/maps-experience.test.mjs"],
       "boundary": "Ordinary web search remains supported. Dedicated Deep Research execution, navigation, progress, and report-management surfaces are intentionally absent.",

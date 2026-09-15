@@ -1,19 +1,42 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import { optionalUser } from "@/lib/api-auth.server";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
+import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const MAX_RESULTS = 6;
+const MAX_PROVIDER_RESPONSE_BYTES = 256 * 1024;
 
-function json(value: unknown, status = 200) {
+function json(value: unknown, status = 200, retryAfter?: number) {
   return Response.json(value, {
     status,
     headers: {
       "Cache-Control": status < 400 ? "private, max-age=60" : "no-store",
       "X-Content-Type-Options": "nosniff",
+      ...(retryAfter ? { "Retry-After": String(retryAfter) } : {}),
     },
   });
+}
+
+type MapsAdmin = {
+  rpc(
+    name: string,
+    args?: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: { code?: string } | null }> & {
+    abortSignal(signal: AbortSignal): PromiseLike<{
+      data: unknown;
+      error: { code?: string } | null;
+    }>;
+  };
+};
+
+const mapsAdmin = supabaseAdmin as unknown as MapsAdmin;
+
+async function cacheKey(query: string, language: string) {
+  const bytes = new TextEncoder().encode(`${query.toLowerCase()}\n${language.toLowerCase()}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 type NominatimPlace = {
@@ -36,77 +59,72 @@ export const Route = createFileRoute("/api/maps/search")({
         if (query.length < 2 || query.length > 160) {
           return json({ error: "Enter a location or place to search." }, 400);
         }
-        const auth = await requireUser(request);
+
+        const auth = await optionalUser(request);
         if (auth instanceof Response) return auth;
-        if (request.headers.get("x-kova-expected-user") !== auth.userId) {
-          return json({ error: "Map account changed. Reload and try again." }, 409);
-        }
-        try {
-          await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "live_web");
-        } catch (error) {
-          return (
-            lockdownErrorResponse(error) ??
-            json({ error: "Map access could not be verified. Try again shortly." }, 503)
+        if (auth) {
+          const lockdown = await enforceLockdownCapability(
+            auth.supabaseAdmin,
+            auth.userId,
+            "live_web",
           );
+          if (lockdown) return lockdown;
         }
 
-        const clientLimit = await consumeApplicationRateLimit({
-          identity: resolveAnonymousClientKey(request.headers),
-          action: "maps_search_client",
+        const rate = await consumeApplicationRateLimit({
+          identity: auth ? `user:${auth.userId}` : resolveAnonymousClientKey(request.headers),
+          action: "maps_search",
           limit: 30,
           windowSeconds: 60,
         });
-        if (!clientLimit.allowed) {
-          return Response.json(
+        if (!rate.allowed) {
+          return json(
             {
               error:
-                clientLimit.status === "limited"
+                rate.status === "limited"
                   ? "Please wait a moment before searching again."
-                  : "Map search protection is temporarily unavailable.",
+                  : "Place search protection is temporarily unavailable.",
             },
-            {
-              status: clientLimit.status === "limited" ? 429 : 503,
-              headers: {
-                "Cache-Control": "no-store",
-                "Retry-After": String(clientLimit.retryAfter),
-              },
-            },
+            rate.status === "limited" ? 429 : 503,
+            rate.retryAfter,
           );
         }
 
-        // Nominatim's public service permits one request per second for the
-        // entire application, not per user or per server instance. This RPC is
-        // an atomic rolling boundary rather than a fixed time bucket.
-        const providerAdmission = await auth.supabaseAdmin.rpc(
-          "admit_maps_provider_request" as never,
-          { p_provider: "nominatim" } as never,
-        );
-        const providerRow = Array.isArray(providerAdmission.data)
-          ? providerAdmission.data[0]
-          : providerAdmission.data;
-        if (
-          providerAdmission.error ||
-          !providerRow ||
-          typeof providerRow !== "object" ||
-          typeof (providerRow as { allowed?: unknown }).allowed !== "boolean" ||
-          !Number.isSafeInteger((providerRow as { retry_after?: unknown }).retry_after)
-        ) {
-          return Response.json(
-            { error: "Map search protection is temporarily unavailable." },
-            { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "1" } },
+        const language = (request.headers.get("accept-language") ?? "en")
+          .split(",")[0]
+          .trim()
+          .slice(0, 32);
+        const key = await cacheKey(query, language || "en");
+        const deadline = AbortSignal.any([request.signal, AbortSignal.timeout(10_000)]);
+        const cached = await mapsAdmin
+          .rpc("read_maps_search_cache", { p_query_hash: key })
+          .abortSignal(deadline);
+        if (cached.error) {
+          return json(
+            { error: "Place search is temporarily unavailable. Try again shortly." },
+            503,
           );
         }
-        if (!(providerRow as { allowed: boolean }).allowed) {
-          return Response.json(
-            { error: "Map search is busy. Please wait a moment and try again." },
-            {
-              status: 429,
-              headers: {
-                "Cache-Control": "no-store",
-                "Retry-After": String((providerRow as { retry_after: number }).retry_after),
-              },
-            },
+        if (cached.data && typeof cached.data === "object" && !Array.isArray(cached.data)) {
+          return json(cached.data);
+        }
+
+        const claim = await mapsAdmin.rpc("claim_maps_provider_request").abortSignal(deadline);
+        const admission = Array.isArray(claim.data) ? claim.data[0] : claim.data;
+        if (claim.error || !admission || typeof admission !== "object") {
+          return json(
+            { error: "Place search is temporarily unavailable. Try again shortly." },
+            503,
           );
+        }
+        const providerAdmission = admission as { allowed?: unknown; retry_after?: unknown };
+        if (providerAdmission.allowed !== true) {
+          const retryAfter =
+            Number.isSafeInteger(providerAdmission.retry_after) &&
+            Number(providerAdmission.retry_after) > 0
+              ? Number(providerAdmission.retry_after)
+              : 1;
+          return json({ error: "Please wait a moment before searching again." }, 429, retryAfter);
         }
 
         const providerUrl = new URL("https://nominatim.openstreetmap.org/search");
@@ -114,10 +132,7 @@ export const Route = createFileRoute("/api/maps/search")({
         providerUrl.searchParams.set("format", "jsonv2");
         providerUrl.searchParams.set("addressdetails", "1");
         providerUrl.searchParams.set("limit", String(MAX_RESULTS));
-        providerUrl.searchParams.set(
-          "accept-language",
-          request.headers.get("accept-language") ?? "en",
-        );
+        providerUrl.searchParams.set("accept-language", language || "en");
 
         try {
           const response = await fetch(providerUrl, {
@@ -134,7 +149,11 @@ export const Route = createFileRoute("/api/maps/search")({
               502,
             );
           }
-          const raw = (await response.json()) as NominatimPlace[];
+          const rawText = await response.text();
+          if (new TextEncoder().encode(rawText).length > MAX_PROVIDER_RESPONSE_BYTES) {
+            return json({ error: "Place search returned an invalid response." }, 502);
+          }
+          const raw = JSON.parse(rawText) as NominatimPlace[];
           const results = (Array.isArray(raw) ? raw : []).flatMap((place) => {
             const latitude = Number(place.lat);
             const longitude = Number(place.lon);
@@ -156,7 +175,13 @@ export const Route = createFileRoute("/api/maps/search")({
               },
             ];
           });
-          return json({ results });
+          const payload = { results };
+          const stored = await mapsAdmin
+            .rpc("store_maps_search_cache", { p_query_hash: key, p_payload: payload })
+            .abortSignal(deadline);
+          if (stored.error)
+            console.error("[maps] shared cache write failed", { code: stored.error.code });
+          return json(payload);
         } catch (error) {
           console.error("[maps] geocoder request failed", {
             name: error instanceof Error ? error.name : "UnknownError",

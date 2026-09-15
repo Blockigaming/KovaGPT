@@ -1,16 +1,6 @@
--- Deep Research is retired from the product surface. Preserve historical rows
+-- Deep Research is retired from the product surface; preserve historical rows
 -- for account export and deletion, but stop indexing or linking them to the
 -- removed planner route.
-update public.deep_research_runs
-set status = 'canceled',
-    completed_at = coalesce(completed_at, now()),
-    updated_at = now(),
-    error = coalesce(error, 'Canceled because Deep Research was retired.')
-where status in (
-  'created', 'planning', 'searching', 'reading', 'comparing',
-  'analyzing', 'writing_report', 'running'
-);
-
 drop trigger if exists workspace_search_invalidation on public.deep_research_runs;
 
 delete from public.workspace_search_index where source_table = 'deep_research_runs';

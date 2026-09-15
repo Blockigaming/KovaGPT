@@ -60,18 +60,6 @@ test("signed-in sidebar keeps core destinations visible and groups coming-soon i
   assert.match(sidebar, /title="Finances is coming soon"/);
 });
 
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
-  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
-  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
-});
-
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
@@ -159,6 +147,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
   assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);

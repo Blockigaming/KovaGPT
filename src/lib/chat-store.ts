@@ -231,30 +231,29 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const legacyMessage = message as Message & { researchProgress?: unknown };
     const {
       memorySources: rawSources,
       sources: rawResponseSources,
       generationStatus,
       requestedTool,
+      researchProgress: _retiredResearchProgress,
       activities: rawActivities,
-      researchProgress: retiredResearchProgress,
       ...rest
-    } = legacyMessage;
+    } = message as Message & { researchProgress?: unknown };
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
     const responseSources =
       message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
-    const activities = rawActivities?.map((activity) =>
-      retiredResearchProgress !== undefined && activity.status === "running"
-        ? { ...activity, status: "failed" as const }
-        : activity,
-    );
+    const activities = Array.isArray(rawActivities)
+      ? rawActivities.map((activity) =>
+          activity.status === "running" ? { ...activity, status: "failed" as const } : activity,
+        )
+      : undefined;
     return {
       ...rest,
-      ...(activities?.length ? { activities } : {}),
+      ...(activities ? { activities } : {}),
       ...(memorySources ? { memorySources } : {}),
       ...(responseSources ? { sources: responseSources } : {}),
       ...(message.role === "assistant" &&

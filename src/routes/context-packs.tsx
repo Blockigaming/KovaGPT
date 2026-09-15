@@ -43,16 +43,15 @@ type Candidate = {
   title: string;
   content: string;
 };
-const CHAT_CONTEXT_HANDOFF_MAX_BYTES = 30 * 1024;
-
-function contextPackSearchPrompt(pack: ContextPack): string {
+const MAX_SEARCH_HANDOFF_BYTES = 30 * 1024;
+function searchHandoffPrompt(pack: ContextPack) {
   const prompt = `Search the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
     .map((item) => `${item.title}: ${item.content}`)
     .join("\n\n")}`;
   const encoder = new TextEncoder();
-  if (encoder.encode(prompt).byteLength <= CHAT_CONTEXT_HANDOFF_MAX_BYTES) return prompt;
-  const notice = "\n\n[Context truncated to fit the chat input.]";
-  const contentBudget = CHAT_CONTEXT_HANDOFF_MAX_BYTES - encoder.encode(notice).byteLength;
+  if (encoder.encode(prompt).byteLength <= MAX_SEARCH_HANDOFF_BYTES) return prompt;
+  const notice = "\n\n[Additional context was omitted to fit the chat message limit.]";
+  const contentBudget = MAX_SEARCH_HANDOFF_BYTES - encoder.encode(notice).byteLength;
   let low = 0;
   let high = prompt.length;
   while (low < high) {
@@ -62,7 +61,6 @@ function contextPackSearchPrompt(pack: ContextPack): string {
   }
   return `${prompt.slice(0, low)}${notice}`;
 }
-
 function ContextPacksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -439,7 +437,7 @@ function ContextPacksPage() {
                               safeBrowserStorage("sessionStorage"),
                               "kova-app-chat-context",
                               isLoaded ? userKey : undefined,
-                              { prompt: contextPackSearchPrompt(pack), tool: "web_search" },
+                              { prompt: searchHandoffPrompt(pack), tool: "web_search" },
                             );
                             if (!handoff.ok) {
                               toast.error(
