@@ -2985,6 +2985,14 @@ body {
 @media (max-width: 767px) {
   .kova-settings-dialog {
     background: var(--surface-modal);
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    transform: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
   }
   .kova-settings-dialog > [data-kova-dialog-close] {
     left: auto;

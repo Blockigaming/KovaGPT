@@ -55,7 +55,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   const billing = read("src/utils/payments.functions.ts");
   const pricing = read("src/routes/pricing.tsx");
 
-  assert.match(settings, /\{ v: "subscription", label: "Subscription"/);
+  assert.match(settings, /v: "billing",\s*label: "Billing"/);
   assert.doesNotMatch(
     settings,
     /hideSubscription|tabs\.filter\(\(t\) => t\.v !== "subscription"\)/,

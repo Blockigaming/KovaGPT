@@ -288,6 +288,7 @@ export function SettingsDialog({
   const [usageLoaded, setUsageLoaded] = useState(false);
   const settingsSearchRef = useRef<HTMLInputElement>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
+  const pendingMobileFocusRef = useRef<"navigation" | "content" | null>(null);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -660,11 +661,20 @@ export function SettingsDialog({
       })).filter((group) => group.tabs.length > 0)
     : TAB_GROUPS;
   const selectTab = (value: string) => {
+    pendingMobileFocusRef.current = "content";
     setTab(value);
     setMobileHome(false);
     setSettingsQuery("");
-    requestAnimationFrame(() => contentHeadingRef.current?.focus());
   };
+
+  useEffect(() => {
+    if (!open || !pendingMobileFocusRef.current) return;
+
+    const destination = pendingMobileFocusRef.current;
+    pendingMobileFocusRef.current = null;
+    if (destination === "navigation") settingsSearchRef.current?.focus();
+    else contentHeadingRef.current?.focus();
+  }, [mobileHome, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -779,8 +789,8 @@ export function SettingsDialog({
                   className="kova-settings-back"
                   aria-label="Back to settings"
                   onClick={() => {
+                    pendingMobileFocusRef.current = "navigation";
                     setMobileHome(true);
-                    requestAnimationFrame(() => settingsSearchRef.current?.focus());
                   }}
                 >
                   <ArrowLeft aria-hidden="true" />
