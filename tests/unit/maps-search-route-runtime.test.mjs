@@ -20,6 +20,7 @@ const place = {
 };
 
 function fixture({
+  mapsReleaseApproved = true,
   userId = "user-a",
   authResponse = null,
   lockdownError = null,
@@ -101,6 +102,10 @@ function fixture({
       lockdownErrorResponse: () =>
         lockdownError ? Response.json({ error: "Lockdown Mode is on." }, { status: 403 }) : null,
     },
+    "@/lib/maps-release-gate": {
+      MAPS_RELEASE_APPROVED: mapsReleaseApproved,
+      MAPS_RELEASE_UNAVAILABLE_MESSAGE: "Maps approval is pending.",
+    },
   };
   const exports = {};
   vm.runInNewContext(compiled, {
@@ -140,6 +145,15 @@ function fixture({
     });
   return { calls, get, request, writes };
 }
+
+test("the open release gate fails closed before validation, auth, or provider access", async () => {
+  const f = fixture({ mapsReleaseApproved: false });
+  const response = await f.get({ request: f.request("x") });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "Maps approval is pending." });
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(f.calls, []);
+});
 
 test("a valid Maps cache hit skips provider admission and fetch", async () => {
   const f = fixture({ cacheData: { payload: { results: [place] } } });

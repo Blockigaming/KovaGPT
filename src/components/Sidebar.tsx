@@ -42,6 +42,7 @@ import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
+import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 
 const EXPANDED_WIDTH = 272;
 
@@ -384,9 +385,11 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
-          <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
-            <Map />
-          </Link>
+          {MAPS_RELEASE_APPROVED ? (
+            <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+              <Map />
+            </Link>
+          ) : null}
           <button
             type="button"
             className="kova-rail-button"
@@ -500,7 +503,7 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {navLink("/maps", "Maps", Map)}
+              {MAPS_RELEASE_APPROVED ? navLink("/maps", "Maps", Map) : null}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"

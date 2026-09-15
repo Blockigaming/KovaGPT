@@ -4,6 +4,7 @@ import { readBoundedUtf8 } from "@/lib/bounded-json.server.mjs";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
+import { MAPS_RELEASE_APPROVED, MAPS_RELEASE_UNAVAILABLE_MESSAGE } from "@/lib/maps-release-gate";
 
 const MAX_RESULTS = 6;
 const MAX_PROVIDER_RESPONSE_BYTES = 256 * 1024;
@@ -178,6 +179,9 @@ export const Route = createFileRoute("/api/maps/search")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        if (!MAPS_RELEASE_APPROVED) {
+          return json({ error: MAPS_RELEASE_UNAVAILABLE_MESSAGE }, 503);
+        }
         const requestUrl = new URL(request.url);
         const query = requestUrl.searchParams.get("q")?.trim() ?? "";
         if (query.length < 2 || query.length > 160) {

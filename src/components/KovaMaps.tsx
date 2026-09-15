@@ -13,6 +13,7 @@ import {
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { authFetch } from "@/lib/auth-fetch";
+import { MAPS_RELEASE_APPROVED, MAPS_RELEASE_UNAVAILABLE_MESSAGE } from "@/lib/maps-release-gate";
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 
 const VECTOR_STYLE = "https://tiles.openfreemap.org/styles/liberty";
@@ -93,6 +94,7 @@ export function KovaMaps() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
   const principalGenerationRef = useRef(0);
+  const actionGenerationRef = useRef(0);
   const activeOwnerRef = useRef<string | null | undefined>(undefined);
   const networkAllowedRef = useRef(false);
   const searchControllerRef = useRef<AbortController | null>(null);
@@ -126,6 +128,7 @@ export function KovaMaps() {
 
   useEffect(() => {
     const generation = ++principalGenerationRef.current;
+    actionGenerationRef.current += 1;
     const ownerId = user?.id;
     networkAllowedRef.current = false;
     searchControllerRef.current?.abort();
@@ -144,6 +147,11 @@ export function KovaMaps() {
     setThreeD(true);
     setNetworkAccess(null);
     setLoading(true);
+    if (!MAPS_RELEASE_APPROVED) {
+      setError(MAPS_RELEASE_UNAVAILABLE_MESSAGE);
+      setLoading(false);
+      return;
+    }
     if (!isLoaded) {
       setError(null);
       return;
@@ -157,6 +165,7 @@ export function KovaMaps() {
     const controller = new AbortController();
     let checkInFlight = false;
     const blockNetwork = (message: string) => {
+      actionGenerationRef.current += 1;
       networkAllowedRef.current = false;
       searchControllerRef.current?.abort();
       searchControllerRef.current = null;
@@ -324,12 +333,14 @@ export function KovaMaps() {
     place: Place,
     generation = principalGenerationRef.current,
     ownerId = activeOwnerRef.current,
+    actionGeneration = actionGenerationRef.current,
   ) => {
     const map = mapRef.current;
     if (!map) return;
     const maplibregl = await import("maplibre-gl");
     if (
       generation !== principalGenerationRef.current ||
+      actionGeneration !== actionGenerationRef.current ||
       activeOwnerRef.current !== ownerId ||
       !networkAllowedRef.current ||
       mapRef.current !== map
@@ -371,6 +382,7 @@ export function KovaMaps() {
     }
     setSearchError(null);
     setSearching(true);
+    const actionGeneration = ++actionGenerationRef.current;
     searchControllerRef.current?.abort();
     const controller = new AbortController();
     searchControllerRef.current = controller;
@@ -389,6 +401,7 @@ export function KovaMaps() {
       if (
         controller.signal.aborted ||
         generation !== principalGenerationRef.current ||
+        actionGeneration !== actionGenerationRef.current ||
         activeOwnerRef.current !== ownerId
       )
         return;
@@ -404,10 +417,20 @@ export function KovaMaps() {
         );
       } else {
         setSearchError(null);
-        await selectPlace(next[0], generation);
+        await selectPlace(next[0], generation, ownerId, actionGeneration);
       }
     } catch (caught) {
-      if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
+      if (
+        controller.signal.aborted ||
+        generation !== principalGenerationRef.current ||
+        actionGeneration !== actionGenerationRef.current ||
+        activeOwnerRef.current !== ownerId
+      )
+        return;
+      setResults([]);
+      markerRef.current?.remove();
+      markerRef.current = null;
+      setSelected(null);
       setSearchError(
         caught instanceof DOMException && caught.name === "TimeoutError"
           ? "Place search timed out. Try again."
@@ -482,6 +505,7 @@ export function KovaMaps() {
 
   const locate = () => {
     if (!networkAllowed) return;
+    const actionGeneration = ++actionGenerationRef.current;
     searchControllerRef.current?.abort();
     searchControllerRef.current = null;
     setSearching(false);
@@ -496,25 +520,32 @@ export function KovaMaps() {
       ({ coords }) => {
         if (
           generation !== principalGenerationRef.current ||
+          actionGeneration !== actionGenerationRef.current ||
           activeOwnerRef.current !== ownerId ||
           !networkAllowedRef.current
         )
           return;
         setQuery("");
         setResults([]);
-        void selectPlace({
-          id: `current:${coords.latitude},${coords.longitude}`,
-          name: "Current location",
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          type: "current_location",
-          address: {},
-          bounds: null,
-        });
+        void selectPlace(
+          {
+            id: `current:${coords.latitude},${coords.longitude}`,
+            name: "Current location",
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            type: "current_location",
+            address: {},
+            bounds: null,
+          },
+          generation,
+          ownerId,
+          actionGeneration,
+        );
       },
       () => {
         if (
           generation !== principalGenerationRef.current ||
+          actionGeneration !== actionGenerationRef.current ||
           activeOwnerRef.current !== ownerId ||
           !networkAllowedRef.current
         )
@@ -526,6 +557,22 @@ export function KovaMaps() {
       { enableHighAccuracy: false, timeout: 8_000, maximumAge: 60_000 },
     );
   };
+
+  if (!MAPS_RELEASE_APPROVED) {
+    return (
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="grid h-full min-h-0 flex-1 place-items-center bg-background p-8 text-center"
+      >
+        <div role="alert" className="max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+          <MapPin className="mx-auto mb-3 h-7 w-7 text-primary" />
+          <h1 className="font-semibold">Maps unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{MAPS_RELEASE_UNAVAILABLE_MESSAGE}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -567,6 +614,7 @@ export function KovaMaps() {
             <input
               value={query}
               onChange={(event) => {
+                actionGenerationRef.current += 1;
                 searchControllerRef.current?.abort();
                 searchControllerRef.current = null;
                 setSearching(false);
