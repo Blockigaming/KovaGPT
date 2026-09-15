@@ -289,6 +289,7 @@ export function SettingsDialog({
   const settingsSearchRef = useRef<HTMLInputElement>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
   const pendingMobileFocusRef = useRef<"content" | "navigation" | null>(null);
+  const [mobileFocusRequest, setMobileFocusRequest] = useState(0);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -669,6 +670,7 @@ export function SettingsDialog({
     setTab(value);
     setMobileHome(false);
     setSettingsQuery("");
+    setMobileFocusRequest((request) => request + 1);
   };
   useEffect(() => {
     const pendingFocus = pendingMobileFocusRef.current;
@@ -679,7 +681,7 @@ export function SettingsDialog({
     } else if (pendingFocus === "content" && !mobileHome) {
       contentHeadingRef.current?.focus();
     }
-  }, [mobileHome, tab]);
+  }, [mobileFocusRequest, mobileHome, tab]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -790,6 +792,7 @@ export function SettingsDialog({
                   onClick={() => {
                     pendingMobileFocusRef.current = "navigation";
                     setMobileHome(true);
+                    setMobileFocusRequest((request) => request + 1);
                   }}
                 >
                   <ArrowLeft aria-hidden="true" />
