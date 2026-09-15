@@ -44,8 +44,18 @@ type Candidate = {
   content: string;
 };
 const MAX_SEARCH_HANDOFF_BYTES = 30 * 1024;
+const MAX_SEARCH_QUERY_CHARS = 240;
+function searchHandoffQuery(pack: ContextPack) {
+  return [pack.name, pack.description, ...pack.items.map((item) => item.title)]
+    .filter(Boolean)
+    .join(" — ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SEARCH_QUERY_CHARS);
+}
 function searchHandoffPrompt(pack: ContextPack) {
-  const prompt = `Search the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
+  const query = searchHandoffQuery(pack);
+  const prompt = `Search query: ${query}\n\nSearch the web using this context pack, cite current sources, and distinguish sourced facts from the supplied context.\n\nContext pack: ${pack.name}\n${pack.items
     .map((item) => `${item.title}: ${item.content}`)
     .join("\n\n")}`;
   const encoder = new TextEncoder();
