@@ -3,12 +3,7 @@ import { resolve } from "node:path";
 
 import { validateMigrationLineage } from "./migration-preflight.mjs";
 
-const FINGERPRINT_FIELDS = [
-  "schemaSha256",
-  "aclSha256",
-  "rlsSha256",
-  "functionSha256",
-];
+const FINGERPRINT_FIELDS = ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"];
 
 export function buildMigrationSchemaProofPlan(lineage, manifest) {
   const analysis = validateMigrationLineage(lineage, manifest);
