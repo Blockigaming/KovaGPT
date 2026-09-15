@@ -53,7 +53,7 @@ const TOPICS = [
 
 function normalizeHelpSearch(value: string) {
   return value
-    .toLocaleLowerCase()
+    .toLowerCase()
     .replace(/[’']/g, "")
     .replace(/\b(cannot|cant)\b/g, "can not")
     .replace(/\b(login|log-in)\b/g, "sign in")
@@ -352,13 +352,14 @@ function SupportForm() {
   const [message, setMessage] = useState("");
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [submissionError, setSubmissionError] = useState("");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [touched, setTouched] = useState(false);
-  const initializedUserId = useRef<string | null | undefined>(undefined);
+  const initializedFor = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    const userId = user?.id ?? null;
-    if (initializedUserId.current === userId) return;
-    initializedUserId.current = userId;
+    const userKey = user?.id ?? null;
+    if (initializedFor.current === userKey) return;
+    initializedFor.current = userKey;
     setName(user?.fullName ?? user?.firstName ?? "");
     setEmail(user?.primaryEmailAddress?.emailAddress ?? "");
   }, [user]);
@@ -378,6 +379,7 @@ function SupportForm() {
     event.preventDefault();
     setTouched(true);
     setStatus("idle");
+    setSubmissionError("");
     if (invalid) return;
     setStatus("sending");
     try {
@@ -399,17 +401,37 @@ function SupportForm() {
         },
         20_000,
       );
-      if (!response.ok) throw new Error("request_failed");
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
+        const serverMessage =
+          typeof payload?.error === "string" && payload.error.trim() ? payload.error.trim() : null;
+        const retryAfter = response.headers.get("Retry-After");
+        const fallback =
+          response.status === 429
+            ? `Too many requests. Please wait${retryAfter ? ` ${retryAfter} seconds` : " a while"} before trying again.`
+            : "KovaGPT Support could not accept this request. Please review the form and try again.";
+        throw new Error(serverMessage ?? fallback);
+      }
       setSubmittedEmail(cleanEmail);
       setStatus("sent");
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setSubmissionError(
+        message && message !== "request_failed"
+          ? message
+          : "We couldn’t send your message. Please check your connection and try again.",
+      );
       setStatus("error");
     }
   };
   if (status === "sent")
     return (
       <section id="support-form" className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-6 text-center sm:p-10">
+        <div
+          role="status"
+          aria-live="polite"
+          className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-6 text-center sm:p-10"
+        >
           <CheckCircle2 className="mx-auto size-10 text-primary" />
           <h2 className="mt-4 text-2xl font-semibold">Message sent</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
@@ -559,8 +581,7 @@ function SupportForm() {
               role="alert"
               className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
             >
-              We couldn’t send your message. Please check your connection and try again. Your
-              message is still here.
+              {submissionError} Your message is still here.
             </div>
           )}
           <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">

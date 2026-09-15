@@ -52,7 +52,7 @@ const rows: Row[] = [
   [
     "Getting started",
     "Can I use KovaGPT without an account?",
-    "You can view public pages while signed out, but creating chats and using account features requires sign-in.",
+    "Yes. Guests can create session-only chats. Sign in to synchronize chat history and use account-backed features.",
   ],
   [
     "Getting started",
@@ -352,7 +352,7 @@ const rows: Row[] = [
   [
     "Projects",
     "Can I leave a shared project?",
-    "Use the membership control available in the shared project. The owner retains the project and its content.",
+    "Ask the project owner to remove your membership. The owner retains the project and its content.",
   ],
   [
     "Projects",
