@@ -23,7 +23,7 @@ test.describe("mobile shell UI truth", () => {
     expect(box!.y).toBeLessThanOrEqual(1);
     expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
-    const close = page.getByRole("button", { name: "Close navigation", exact: true });
+    const close = page.getByRole("button", { name: "Close sidebar", exact: true });
     const closeBox = await close.boundingBox();
     expect(closeBox?.width).toBeGreaterThanOrEqual(44);
     expect(closeBox?.height).toBeGreaterThanOrEqual(44);
