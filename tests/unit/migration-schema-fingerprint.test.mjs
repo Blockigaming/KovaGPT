@@ -86,7 +86,12 @@ test("fingerprints bind every category to the declared proof scope", () => {
     }),
   );
 
-  for (const field of ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"]) {
+  for (const field of [
+    "schemaSha256",
+    "aclSha256",
+    "rlsSha256",
+    "functionSha256",
+  ]) {
     assert.notEqual(first[field], second[field]);
   }
 });
