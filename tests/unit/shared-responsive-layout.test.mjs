@@ -119,6 +119,7 @@ test("signed-in desktop collapse restores focus to the replacement rail control"
   assert.match(sidebar, /ref=\{expandButtonRef\}[\s\S]*?aria-label="Expand sidebar"/);
   assert.match(
     sidebar,
-    /onToggle\(\);[\s\S]*?requestAnimationFrame\(\(\) => expandButtonRef\.current\?\.focus\(\)\)/,
+    /onToggle\(\);[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?if \(signedIn\) expandButtonRef\.current\?\.focus\(\)/,
   );
+  assert.match(sidebar, /querySelector<HTMLElement>\('\[aria-label="Open sidebar"\]'\)/);
 });
