@@ -97,6 +97,8 @@ export function validateRecord(record, { routes, capabilityById = new Map() }) {
       record.highlights.some((value) => !text(value))
     )
       errors.push("missing-highlights");
+  }
+  if (record.template === "detail" || record.primaryAction !== undefined) {
     const error = actionError(record.primaryAction, routes);
     if (error) errors.push(`primary-action:${error}`);
   }
@@ -191,6 +193,8 @@ export function validateEvidence(evidence, fingerprint, now = Date.now(), maxAge
       failures.push("editorial-claims-not-reviewed");
     if (kind === "responsive") {
       const requiredWidths = [320, 390, 768, 1024, 1280, 1440, 1728];
+      if (list(item.cases).some((row) => !object(row) || row.status !== "pass"))
+        failures.push("failed-or-malformed-responsive-evidence");
       const cases = new Set(
         list(item.cases)
           .filter((row) => row?.status === "pass")
