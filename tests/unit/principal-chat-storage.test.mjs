@@ -69,6 +69,30 @@ function conversation(id, title = id) {
 
 beforeEach(() => storage.clear());
 
+test("legacy research progress loads as terminal history", () => {
+  storage.setItem(
+    conversationStorageKey("account-a"),
+    JSON.stringify([
+      {
+        ...conversation("legacy-research"),
+        messages: [
+          {
+            id: "assistant",
+            role: "assistant",
+            content: "Interrupted research",
+            researchProgress: { phase: "searching" },
+            activities: [{ tool: "research", label: "Searching", status: "running" }],
+          },
+        ],
+      },
+    ]),
+  );
+
+  const [loaded] = loadConversations("account-a");
+  assert.equal("researchProgress" in loaded.messages[0], false);
+  assert.equal(loaded.messages[0].activities[0].status, "failed");
+});
+
 test("stopping preserves the latest assistant turn and closes only its active work", () => {
   const messages = [
     { id: "user", role: "user", content: "Explain this" },

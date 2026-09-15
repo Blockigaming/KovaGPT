@@ -11,6 +11,7 @@ import {
 import { waitForKovaHydration } from "./hydration";
 
 const allDetailRoutes = [
+  "/features/deep-research",
   "/features/plugins",
   "/features/study-mode",
   "/features/chat-with-pdfs",
@@ -69,7 +70,7 @@ const allDetailRoutes = [
 ];
 
 const responsiveRoutes = [
-  "/features/plugins",
+  "/features/deep-research",
   "/plans/pro",
   "/use-cases/chat-with-spreadsheets",
   "/business/ai-for-engineering",
