@@ -5,6 +5,9 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - .github/workflows/candidate-source-evidence.yml
+      - src/components/public/**
+      - src/components/ui/**
+      - tests/unit/shared-responsive-layout.test.mjs
   push:
     branches:
       - codex/integrate-automatic-i-20260904
