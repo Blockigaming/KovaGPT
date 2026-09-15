@@ -60,6 +60,7 @@ import {
   listMembers,
   removeMember,
   updateMemberRole,
+  leaveProject,
   listInvites,
   inviteMember,
   revokeInvite,
@@ -125,6 +126,7 @@ function ProjectDetailPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [deletionBusy, setDeletionBusy] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const currentRequestKeyRef = useRef(requestKey);
   const requestSequenceRef = useRef(0);
   currentRequestKeyRef.current = requestKey;
@@ -136,6 +138,7 @@ function ProjectDetailPage() {
   const fnListMembers = useServerFn(listMembers);
   const fnListInvites = useServerFn(listInvites);
   const fnListChats = useServerFn(listProjectChats);
+  const fnLeave = useServerFn(leaveProject);
 
   const refresh = useCallback(async () => {
     if (!isSignedIn || !requestKey || currentRequestKeyRef.current !== requestKey) return;
@@ -194,6 +197,7 @@ function ProjectDetailPage() {
     setSearchOpen(false);
     setArchiveBusy(false);
     setDeletionBusy(false);
+    setLeaveOpen(false);
 
     if (!isSignedIn || !requestKey) {
       setResolvedRequestKey(null);
@@ -392,6 +396,10 @@ function ProjectDetailPage() {
               <Search className="w-4 h-4 mr-1.5" />
               Search
             </Button>
+            <Button size="sm" onClick={() => setTab("members")}>
+              <Users className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {isOwner ? "Share" : "People"}
+            </Button>
             {isOwner && (
               <Button
                 variant="outline"
@@ -493,12 +501,10 @@ function ProjectDetailPage() {
             <TabsTrigger value="collaboration">
               <MessageCircle className="mr-1.5 h-4 w-4" /> Collaboration
             </TabsTrigger>
-            {isOwner && (
-              <TabsTrigger value="settings">
-                <SettingsIcon className="w-4 h-4 mr-1.5" />
-                Settings
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="settings">
+              <SettingsIcon className="w-4 h-4 mr-1.5" />
+              {isOwner ? "Settings" : "Access"}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -598,6 +604,20 @@ function ProjectDetailPage() {
               />
             </TabsContent>
           )}
+          {!isOwner && (
+            <TabsContent value="settings" className="mt-4">
+              <div className="rounded-xl border border-destructive/40 p-4">
+                <h2 className="text-sm font-medium">Leave project</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  You will lose access, but the project and its content will stay available to its
+                  owner and other members.
+                </p>
+                <Button className="mt-4" variant="destructive" onClick={() => setLeaveOpen(true)}>
+                  Leave project
+                </Button>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
@@ -608,6 +628,27 @@ function ProjectDetailPage() {
         onNavigate={(kind) => {
           setSearchOpen(false);
           setTab(kind === "chat" ? "chats" : kind === "file" ? "files" : kind);
+        }}
+      />
+      <ConfirmDialog
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title={`Leave “${project.name}”?`}
+        message="You will immediately lose access. Your existing content will not be deleted."
+        confirmLabel="Leave project"
+        destructive
+        onConfirm={async () => {
+          const operationRequestKey = requestKey;
+          try {
+            await fnLeave({ data: { project_id: projectId } });
+            if (currentRequestKeyRef.current !== operationRequestKey) return;
+            setLeaveOpen(false);
+            toast.success("You left the project");
+            await navigate({ to: "/projects" });
+          } catch (error) {
+            if (currentRequestKeyRef.current !== operationRequestKey) return;
+            toast.error(error instanceof Error ? error.message : "Could not leave the project");
+          }
         }}
       />
     </AppShell>
