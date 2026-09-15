@@ -122,14 +122,16 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
                 {sectionLanding?.label ?? item.section.replaceAll("-", " ")}
               </Link>
               {categorySlugs.map((category) => (
-                <span key={category} className="contents">
+                <span key={category} className="inline-flex min-w-0 items-baseline gap-2">
                   <span aria-hidden="true">/</span>
-                  <span>{category.replaceAll("-", " ")}</span>
+                  <span className="min-w-0">{category.replaceAll("-", " ")}</span>
                 </span>
               ))}
-              <span aria-hidden="true">/</span>
-              <span aria-current="page" className="min-w-0 text-foreground">
-                {currentPageSlug.replaceAll("-", " ")}
+              <span className="inline-flex min-w-0 items-baseline gap-2">
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="min-w-0 text-foreground">
+                  {currentPageSlug.replaceAll("-", " ")}
+                </span>
               </span>
             </nav>
 

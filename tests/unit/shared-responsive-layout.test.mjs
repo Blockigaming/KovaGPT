@@ -63,6 +63,15 @@ test("nested breadcrumbs wrap and keep the current-page text readable", () => {
   assert.match(breadcrumb, /aria-current="page"/);
   assert.match(breadcrumb, /currentPageSlug\.replaceAll/);
   assert.doesNotMatch(breadcrumb, /\btruncate\b|\bwhitespace-nowrap\b|\bline-clamp-/);
+  assert.doesNotMatch(breadcrumb, /className="contents"/);
+  assert.match(
+    breadcrumb,
+    /inline-flex min-w-0 items-baseline gap-2[\s\S]*aria-hidden="true">\/[\s\S]*category\.replaceAll/,
+  );
+  assert.match(
+    breadcrumb,
+    /inline-flex min-w-0 items-baseline gap-2[\s\S]*aria-hidden="true">\/[\s\S]*aria-current="page"/,
+  );
   assert.match(breadcrumb, /sectionLanding\?\.to \?\? `\/\$\{item\.section\}`/);
 });
 
