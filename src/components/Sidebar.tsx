@@ -450,10 +450,7 @@ export function Sidebar({
                 onToggle();
                 requestAnimationFrame(() => {
                   if (signedIn) expandButtonRef.current?.focus();
-                  else
-                    document
-                      .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
-                      ?.focus();
+                  else document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus();
                 });
               }}
               aria-label="Collapse sidebar"
