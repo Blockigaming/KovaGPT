@@ -40,12 +40,12 @@ function PublicNavigationLink({
       onClick={onNavigate}
       className={
         mobile
-          ? `flex min-h-11 items-center rounded-xl px-3 text-[15px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+          ? `flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-[15px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
               currentSection
                 ? "bg-foreground text-background"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`
-          : `inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+          : `inline-flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
               currentSection
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -81,20 +81,20 @@ export function PublicHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 flex max-h-screen min-w-0 flex-col border-b border-border/70 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh supports-[backdrop-filter]:bg-background/80">
       <nav
-        className="mx-auto flex min-h-16 max-w-7xl items-center gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
+        className="mx-auto flex min-h-16 w-full min-w-0 max-w-7xl shrink-0 flex-wrap items-center gap-2 sm:gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
         aria-label="Public navigation"
       >
         <Link
           to="/"
-          className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg pr-2 font-semibold tracking-[-0.01em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg pr-2 font-semibold tracking-[-0.01em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <NovaLogo decorative className="h-7 w-7" />
-          <span>KovaGPT</span>
+          <span className="min-w-0">KovaGPT</span>
         </Link>
 
-        <div className="ml-auto hidden items-center gap-1 lg:flex">
+        <div className="ml-auto hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-1 lg:flex">
           {navigation.map((item) => (
             <PublicNavigationLink key={item.to} {...item} pathname={pathname} />
           ))}
@@ -102,7 +102,7 @@ export function PublicHeader() {
 
         <Link
           to="/"
-          className="ml-1 hidden min-h-11 items-center rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
+          className="ml-1 hidden min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
         >
           Open KovaGPT
         </Link>
@@ -110,7 +110,7 @@ export function PublicHeader() {
         <button
           ref={menuButtonRef}
           type="button"
-          className="ml-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={open}
@@ -127,7 +127,7 @@ export function PublicHeader() {
       {open ? (
         <nav
           id="public-mobile-navigation"
-          className="border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
+          className="min-h-0 overflow-y-auto overscroll-contain border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
           aria-label="Mobile public navigation"
         >
           <div className="mx-auto grid max-w-7xl gap-1">
@@ -143,7 +143,7 @@ export function PublicHeader() {
             <Link
               to="/"
               onClick={() => setOpen(false)}
-              className="mt-2 inline-flex min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="mt-2 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Open KovaGPT
             </Link>
@@ -156,9 +156,9 @@ export function PublicHeader() {
 
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
+    <div className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground">
       <PublicHeader />
-      <div className="flex flex-1 flex-col">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       <PublicFooter />
     </div>
   );
