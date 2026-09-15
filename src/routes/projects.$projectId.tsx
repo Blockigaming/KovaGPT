@@ -197,6 +197,7 @@ function ProjectDetailPage() {
     setSearchOpen(false);
     setArchiveBusy(false);
     setDeletionBusy(false);
+    setLeaveOpen(false);
 
     if (!isSignedIn || !requestKey) {
       setResolvedRequestKey(null);
@@ -637,9 +638,17 @@ function ProjectDetailPage() {
         confirmLabel="Leave project"
         destructive
         onConfirm={async () => {
-          await fnLeave({ data: { project_id: projectId } });
-          toast.success("You left the project");
-          await navigate({ to: "/projects" });
+          const operationRequestKey = requestKey;
+          try {
+            await fnLeave({ data: { project_id: projectId } });
+            if (currentRequestKeyRef.current !== operationRequestKey) return;
+            setLeaveOpen(false);
+            toast.success("You left the project");
+            await navigate({ to: "/projects" });
+          } catch (error) {
+            if (currentRequestKeyRef.current !== operationRequestKey) return;
+            toast.error(error instanceof Error ? error.message : "Could not leave the project");
+          }
         }}
       />
     </AppShell>
