@@ -249,9 +249,9 @@ for (const theme of ["light", "dark"] as const) {
     expect(greetingMarkStyle.contrast).toBeGreaterThanOrEqual(3);
     expect(greetingMarkStyle.paths).toBeGreaterThanOrEqual(2);
     if (page.viewportSize()!.width >= 1024) {
-      const sidebarMark = page.locator(".kova-sidebar-header .kova-logo-mark:visible");
-      await expect(sidebarMark).toHaveCount(1);
-      await expect(sidebarMark).toBeVisible();
+      const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
+      await expect(sidebarBrand).toHaveCount(1);
+      await expect(sidebarBrand).toHaveText("KovaGPT");
     }
     expect(rasterLogoRequests).toBe(0);
     expect(hydrationErrors).toEqual([]);
