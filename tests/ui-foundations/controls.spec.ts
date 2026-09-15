@@ -96,6 +96,10 @@ for (const viewport of viewports) {
           await page.keyboard.press("ArrowDown");
           await bounded(page.getByTestId("surface"), page);
           await page.keyboard.press("End");
+          // Radix schedules keyboard focus; await the actual target, not a timer.
+          await expect(
+            page.getByRole("option", { name: "Final project", exact: true }),
+          ).toBeFocused();
           await page.keyboard.press("Enter");
           await expect(page.getByRole("status")).toHaveText("final");
           await expect(page.getByTestId("trigger")).toBeFocused();
