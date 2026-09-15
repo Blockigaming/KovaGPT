@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { twMerge } from "tailwind-merge";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const publicSite = read("src/components/public/PublicSite.tsx");
@@ -18,9 +19,13 @@ for (const [file, primitive, variable] of [
       const end = source.indexOf(`${name}.displayName`, start);
       assert.ok(start >= 0 && end > start, `${name} must remain a forwarded-ref component`);
       const body = source.slice(start, end);
-      assert.ok(body.includes(`--radix-${variable}-content-available-height,100dvh`));
+      assert.ok(
+        body.includes(`--radix-${variable}-content-available-height,var(--kova-overlay-vh)`),
+      );
       assert.ok(body.includes(`--radix-${variable}-content-available-width,100vw`));
-      assert.ok(body.includes("calc(100dvh-1rem)"));
+      assert.ok(body.includes("[--kova-overlay-vh:100vh]"));
+      assert.ok(body.includes("calc(var(--kova-overlay-vh)-1rem)"));
+      assert.ok(body.includes("supports-[height:100dvh]:[--kova-overlay-vh:100dvh]"));
       assert.ok(body.includes("calc(100vw-1rem)"));
       for (const token of [
         "overflow-y-auto",
@@ -35,7 +40,12 @@ for (const [file, primitive, variable] of [
         assert.ok(body.includes(token), `${name} must retain ${token}`);
       }
       assert.doesNotMatch(body, /\boverflow-hidden\b/);
-      assert.match(body, /\[overflow-wrap:anywhere\]",\s*className,/);
+      assert.match(body, /\[overflow-wrap:anywhere\][^"]*",\s*className,/);
+      const defaults = body.match(/"([^"]*\[--kova-overlay-vh:100vh\][^"]*)"/)?.[1];
+      assert.ok(defaults);
+      const overridden = twMerge(defaults, "max-h-20");
+      assert.match(overridden, /\bmax-h-20\b/);
+      assert.doesNotMatch(overridden, /\bmax-h-\[min\(/);
       if (part === "SubContent") {
         assert.ok(
           body.includes(`min-w-[min(8rem,var(--radix-${variable}-content-available-width,100vw))]`),
