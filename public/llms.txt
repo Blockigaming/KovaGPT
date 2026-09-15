@@ -2,7 +2,7 @@
 
 > KovaGPT is an AI workspace for conversational drafting, coding help, web-assisted answers, research, and image generation.
 
-The current response modes are Instant, Medium, and Thinking. Plus adds High; Pro adds Extra high and Pro. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
+Free includes Instant and Thinking modes. Plus includes Instant, Medium, and High modes. Pro includes Instant, Medium, High, Extra High, Max, and Ultra modes. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
 
 ## Pages
 

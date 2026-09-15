@@ -224,9 +224,10 @@ function PricingPage() {
             price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
             period="/ month"
             taxNotice
-            description={`Eligible first-time subscribers may receive a ${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial. Checkout confirms eligibility and price before purchase.`}
+            description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
+            note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
             }
@@ -351,6 +352,7 @@ type CardProps = {
   price: string;
   period: string;
   description: string;
+  note?: string;
   cta: string;
   features: readonly string[];
   highlight?: boolean;
@@ -366,6 +368,7 @@ function PlanCard({
   price,
   period,
   description,
+  note,
   cta,
   features,
   highlight,
@@ -377,7 +380,7 @@ function PlanCard({
   return (
     <article
       data-pricing-plan={name.toLowerCase()}
-      className={`kova-plan-card relative flex h-full flex-col rounded-2xl border p-6 transition-colors ${
+      className={`kova-plan-card relative row-span-7 grid h-full grid-rows-subgrid rounded-2xl border p-6 transition-colors ${
         enterprise
           ? "border-foreground/25 bg-card"
           : highlight
@@ -385,12 +388,14 @@ function PlanCard({
             : "border-border bg-card"
       }`}
     >
-      {highlight && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
-          MOST POPULAR
-        </div>
-      )}
-      <div className="mb-3 flex items-center gap-2.5">
+      <div className="flex h-6 items-center justify-center" aria-hidden={!highlight}>
+        {highlight ? (
+          <span className="rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
+            MOST POPULAR
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 flex items-center gap-2.5">
         {Icon ? (
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
             <Icon className="h-4 w-4" aria-hidden="true" />
@@ -398,7 +403,7 @@ function PlanCard({
         ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
-      <div className="mb-2 flex min-h-[3.25rem] flex-col justify-end">
+      <div className="flex min-h-[3.25rem] flex-col justify-end">
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
           <span className="text-4xl font-bold leading-none">{price}</span>
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
@@ -407,21 +412,15 @@ function PlanCard({
           <span className="mt-1 text-xs leading-4 text-muted-foreground">+ applicable tax</span>
         ) : null}
       </div>
-      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
-      <div className="my-6 h-px bg-border" aria-hidden="true" />
-      <ul className="mb-7 flex-1 space-y-3 text-sm">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="pt-2 text-sm leading-6 text-muted-foreground">
+        {description}
+        {note ? <span className="mt-1 block text-xs leading-5">{note}</span> : null}
+      </p>
       <button
         type="button"
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`mt-auto inline-flex min-h-11 w-full items-center justify-center rounded-full border px-4 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        className={`inline-flex h-11 w-full items-center justify-center rounded-full border px-4 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           highlight
             ? "border-foreground bg-foreground text-background hover:opacity-90"
             : enterprise
@@ -431,6 +430,15 @@ function PlanCard({
       >
         {cta}
       </button>
+      <div className="my-auto h-px bg-border" aria-hidden="true" />
+      <ul className="flex min-h-0 flex-col justify-around gap-3 pt-4 text-sm">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
     </article>
   );
 }

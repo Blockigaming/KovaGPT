@@ -68,7 +68,7 @@ const empty = () =>
     icon: "✦",
     description: "",
     instructions: "Help the user with their task.",
-    mode: "medium",
+    mode: "instant",
     starters: [],
     tools: [],
     apps: [],

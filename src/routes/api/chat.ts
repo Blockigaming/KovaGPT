@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
   getMode,
+  isModeAllowedForTier,
+  studyModeForTier,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
@@ -766,9 +768,7 @@ export const Route = createFileRoute("/api/chat")({
                 const { resolveCustomKova } = await import("@/lib/custom-kovas.server");
                 return resolveCustomKova(auth.supabaseAdmin, auth.userId, ingress.kova!, signal);
               });
-              const requiredTier = getMode(customKova.config.mode).tier;
-              const rank = { free: 0, plus: 1, pro: 2 };
-              if (!isOwner && rank[requiredTier] > rank[callerTier])
+              if (!isOwner && !isModeAllowedForTier(callerTier, getMode(customKova.config.mode).id))
                 return Response.json(
                   {
                     error:
@@ -980,13 +980,15 @@ export const Route = createFileRoute("/api/chat")({
             // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
             // only honored if the user's resolved tier permits it; anything
             // above their tier is silently downgraded to "auto". Owner bypasses.
-            const TIER_RANK: Record<"free" | "plus" | "pro", number> = {
-              free: 0,
-              plus: 1,
-              pro: 2,
-            };
-            const requested = getMode(customKova?.config.mode ?? mode ?? "auto");
-            const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
+            // Study needs enough structured-output capacity for its six-card JSON.
+            // Select it from the server-authoritative tier so paid users do not
+            // silently fall back when the client sends the Free Study mode.
+            const requested = getMode(
+              !customKova && clientTool === "study" && auth
+                ? studyModeForTier(callerTier)
+                : (customKova?.config.mode ?? mode ?? "auto"),
+            );
+            const allowed = isOwner || isModeAllowedForTier(callerTier, requested.id);
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
             const m = !auth ? getMode("instant") : allowed ? requested : getMode("auto");
@@ -1133,7 +1135,7 @@ export const Route = createFileRoute("/api/chat")({
                 task: clientTool === "deep_research" ? "deep_research" : "chat",
                 mode: m.id,
                 tier: callerTier,
-                deepMode: m.id === "pro" || clientTool === "deep_research",
+                deepMode: m.id === "max" || m.id === "ultra" || clientTool === "deep_research",
                 hasImages,
                 needsTools: m.id !== "instant" && Boolean(auth),
                 text: lastText ?? "",
@@ -1455,7 +1457,7 @@ export const Route = createFileRoute("/api/chat")({
                   ? "instant"
                   : m.id === "thinking"
                     ? "thinking"
-                    : ["high", "extra_high", "pro"].includes(m.id)
+                    : ["high", "extra_high", "max", "ultra"].includes(m.id)
                       ? "deep"
                       : "normal",
               ).outputCeiling,
@@ -1585,7 +1587,7 @@ export const Route = createFileRoute("/api/chat")({
                   conversationId: chatId,
                   mode: m.id,
                   plan: auth ? callerTier : "guest",
-                  premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                  premium: ["thinking", "high", "extra_high", "max", "ultra"].includes(m.id),
                   model: catalogModel,
                   estimatedInputTokens: inputEstimate.tokens,
                   reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,

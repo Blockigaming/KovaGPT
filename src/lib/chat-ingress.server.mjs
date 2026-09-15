@@ -28,18 +28,12 @@ const MODE_ALIASES = Object.freeze({
   research: "thinking",
   writer: "thinking",
   tutor: "thinking",
+  pro: "max",
+  kova_5_5: "medium",
+  kova_5_4: "medium",
+  kova_o3: "medium",
 });
-const MODE_IDS = new Set([
-  "instant",
-  "medium",
-  "thinking",
-  "high",
-  "extra_high",
-  "pro",
-  "kova_5_5",
-  "kova_5_4",
-  "kova_o3",
-]);
+const MODE_IDS = new Set(["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]);
 const CLIENT_TOOLS = new Set([
   "web_search",
   "deep_research",

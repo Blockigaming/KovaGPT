@@ -47,8 +47,13 @@ function ModesPage() {
               <h2 className="font-semibold mb-1">{mode.label}</h2>
               <p className="text-sm text-muted-foreground">{mode.description}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                <span className="font-medium text-foreground">Minimum plan:</span>{" "}
-                {CAPABILITY_REGISTRY.plans[mode.minimumTier].name}
+                <span className="font-medium text-foreground">Available on:</span>{" "}
+                {(["free", "plus", "pro"] as const)
+                  .filter((tier) =>
+                    CAPABILITY_REGISTRY.modesByTier[tier].some((entry) => entry.id === mode.id),
+                  )
+                  .map((tier) => CAPABILITY_REGISTRY.plans[tier].name)
+                  .join(", ")}
               </p>
             </div>
           ))}
