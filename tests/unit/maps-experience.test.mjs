@@ -37,6 +37,12 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /disposed \|\|[\s\S]*?generation !== principalGenerationRef\.current/);
   assert.match(source, /mapRef\.current !== map/);
   assert.match(source, /if \(loadTimeout !== null\) window\.clearTimeout\(loadTimeout\)/);
+  assert.match(
+    source,
+    /authFetch\(\`\/api\/maps\/search[\s\S]*?AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
+  );
+  assert.match(source, /Map context \(untrusted provider data;/);
+  assert.doesNotMatch(source, /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
