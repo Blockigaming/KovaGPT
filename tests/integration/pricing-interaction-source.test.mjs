@@ -64,7 +64,7 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
   assert.match(
     rollout,
-    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, and `20260913153000` in timestamp order/u,
+    /`20260904231210`, `20260904231213`,\s*`20260913013131`, `20260913023331`, `20260913153000`, and\s*`20260913210000` in timestamp order/u,
   );
 });
 

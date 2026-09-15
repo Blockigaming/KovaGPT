@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  PUBLIC_ECOSYSTEM_PATHS,
+  PUBLIC_FORM_PATHS,
+  PUBLIC_GLOBAL_AFFAIRS_PATHS,
   PUBLIC_SITEMAP_ENTRIES,
   isPublicIndexableRoute,
   normalizePathname,
@@ -16,7 +20,6 @@ test("only intentional public routes are indexable", () => {
 
   for (const pathname of [
     "/api/chat",
-    "/apps",
     "/chat/abc",
     "/projects",
     "/projects/abc/chat/def",
@@ -40,6 +43,72 @@ test("route failures and not-found responses are never indexable", () => {
   }
 });
 
+test("successful reviewed pages remain followable without becoming indexable", () => {
+  for (const pathname of [
+    "/ar",
+    "/fr-FR",
+    "/pt-BR",
+    "/en/home",
+    "/ar/home",
+    "/apps",
+    "/policies/privacy-policy",
+    "/business/plugins/google-drive",
+    "/business/partners/accenture",
+    "/form/model-behavior-feedback",
+    "/global-affairs/a-primer-on-the-eu-ai-act",
+  ]) {
+    assert.equal(isPublicIndexableRoute(pathname), false, pathname);
+    assert.equal(robotsDirectiveForRoute(pathname), "noindex, follow", pathname);
+  }
+
+  assert.equal(robotsDirectiveForRoute("/ar", ["notFound"]), "noindex, nofollow");
+});
+
+test("the declaration exposes the followable noindex directive", () => {
+  const declaration = readFileSync("src/lib/seo-policy.d.mts", "utf8");
+  assert.match(declaration, /"index, follow" \| "noindex, follow" \| "noindex, nofollow"/u);
+});
+
+test("ecosystem compatibility paths are complete and remain out of the public sitemap", () => {
+  assert.equal(PUBLIC_ECOSYSTEM_PATHS.length, 177);
+  assert.equal(new Set(PUBLIC_ECOSYSTEM_PATHS).size, 177);
+  assert.equal(
+    PUBLIC_ECOSYSTEM_PATHS.filter((path) => path.startsWith("/business/plugins")).length,
+    101,
+  );
+  assert.equal(
+    PUBLIC_ECOSYSTEM_PATHS.filter((path) => path.startsWith("/business/partners")).length,
+    76,
+  );
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_ECOSYSTEM_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
+});
+
+test("form compatibility paths are complete, followable, and excluded from the sitemap", () => {
+  assert.equal(PUBLIC_FORM_PATHS.length, 43);
+  assert.equal(new Set(PUBLIC_FORM_PATHS).size, 43);
+  assert.ok(PUBLIC_FORM_PATHS.every((path) => path.startsWith("/form/")));
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_FORM_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
+});
+
+test("global-affairs references are complete, followable, and excluded from the sitemap", () => {
+  assert.equal(PUBLIC_GLOBAL_AFFAIRS_PATHS.length, 50);
+  assert.equal(new Set(PUBLIC_GLOBAL_AFFAIRS_PATHS).size, 50);
+  assert.ok(PUBLIC_GLOBAL_AFFAIRS_PATHS.every((path) => path.startsWith("/global-affairs/")));
+  const sitemapPaths = new Set(PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path));
+  for (const path of PUBLIC_GLOBAL_AFFAIRS_PATHS) {
+    assert.equal(sitemapPaths.has(path), false, path);
+    assert.equal(robotsDirectiveForRoute(path), "noindex, follow", path);
+  }
+});
+
 test("path normalization is conservative and deterministic", () => {
   assert.equal(normalizePathname("/pricing/"), "/pricing");
   assert.equal(normalizePathname("/pricing?from=test"), "/pricing");
@@ -55,13 +124,21 @@ test("the public sitemap is unique and contains no private or service endpoints"
   const privatePrefixes = [
     "/api",
     "/account",
-    "/apps",
     "/chat",
     "/checkout",
     "/projects",
     "/settings",
     "/work",
   ];
+  const publicAppDetails = new Set([
+    "/apps/google-drive",
+    "/apps/gmail",
+    "/apps/google-calendar",
+    "/apps/github",
+    "/apps/canva",
+    "/apps/powerpoint",
+    "/apps/spotify",
+  ]);
 
   for (const path of paths) {
     assert.match(path, /^\/(?:[^?#]*)$/u);
@@ -70,5 +147,8 @@ test("the public sitemap is unique and contains no private or service endpoints"
       false,
       path,
     );
+    if (path === "/apps" || path.startsWith("/apps/")) {
+      assert.equal(publicAppDetails.has(path), true, path);
+    }
   }
 });
