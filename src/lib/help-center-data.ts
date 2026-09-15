@@ -48,15 +48,11 @@ const rows: Row[] = [
     "How do I start a new chat?",
     "Select New chat in the sidebar. Choose a mode or tool in the composer, enter your message, and send it.",
   ],
-  [
-    "Getting started",
-    "Where are my previous chats?",
-    "Ordinary signed-in chats appear in your conversation history when sync is available. Temporary Chats are intentionally excluded, and offline changes remain on the current device until sync succeeds.",
-  ],
+  ["Getting started", "Where are my previous chats?", features.cloudHistory.summary],
   [
     "Getting started",
     "Can I use KovaGPT without an account?",
-    "You can view public pages while signed out, but creating chats and using account features requires sign-in.",
+    "Yes. Guests can create session-only chats. Sign in to synchronize chat history and use account-backed features.",
   ],
   [
     "Getting started",
@@ -178,7 +174,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "What is Extra high mode?",
-    "Extra high explores alternatives and detail with maximum-depth reasoning before Pro mode. It is available on Pro.",
+    "Extra high explores alternatives with more detailed reasoning before Pro mode. It is available on Pro.",
   ],
   [
     "Chat & modes",
@@ -356,7 +352,7 @@ const rows: Row[] = [
   [
     "Projects",
     "Can I leave a shared project?",
-    "Use the membership control available in the shared project. The owner retains the project and its content.",
+    "Ask the project owner to remove your membership. The owner retains the project and its content.",
   ],
   [
     "Projects",
