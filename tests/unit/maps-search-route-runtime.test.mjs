@@ -159,6 +159,7 @@ test("a valid Maps cache hit skips provider admission and fetch", async () => {
   const f = fixture({ cacheData: { payload: { results: [place] } } });
   const response = await f.get({ request: f.request() });
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual((await response.json()).results, [place]);
   assert.deepEqual(
     f.calls.map(([name]) => name),
@@ -172,6 +173,7 @@ test("a cache miss admits, fetches, sanitizes, and writes a 24-hour shared entry
   const before = Date.now();
   const response = await f.get({ request: f.request("10 Main Street", "en-US") });
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual((await response.json()).results, [place]);
   assert.deepEqual(
     f.calls.map(([name]) => name),
