@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { authFetch } from "@/lib/auth-fetch";
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 
 const VECTOR_STYLE = "https://tiles.openfreemap.org/styles/liberty";
@@ -115,7 +116,7 @@ export function KovaMaps() {
       return;
     }
     const controller = new AbortController();
-    void fetch("/api/security/lockdown", { signal: controller.signal })
+    void authFetch("/api/security/lockdown", { signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as { enabled?: boolean };
         if (!response.ok || typeof payload.enabled !== "boolean") throw new Error("unavailable");
@@ -244,7 +245,7 @@ export function KovaMaps() {
     setError(null);
     try {
       if (!networkAllowed || !user?.id) throw new Error("Maps access is unavailable.");
-      const response = await fetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
+      const response = await authFetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
         headers: { "X-Kova-Expected-User": user.id },
       });
       const payload = (await response.json()) as { results?: Place[]; error?: string };
