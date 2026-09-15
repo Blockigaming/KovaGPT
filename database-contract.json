@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 151,
+  "migrationCount": 152,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -2650,5 +2650,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "19274db7f1ff63fd9c973bb94eafacdfa8a092b2f6d9139bcfea20e3c0fe846a"
+  "sha256": "2024ff25359a9ed7bb4357a8864524d2c3d09e632bddb1132fb54a0504760fff"
 }

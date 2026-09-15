@@ -41,7 +41,10 @@ for (const [order, filename] of files.entries()) {
     tables,
     functions,
     destructive: /\b(drop|truncate)\s+(table|function)|\bdelete\s+from\b/i.test(sql),
-    dataBackfill: /\bupdate\s+\w+\s+set\b|\binsert\s+into\b/i.test(sql),
+    dataBackfill:
+      /\bupdate\s+(?:only\s+)?(?:"[^"]+"|\w+)(?:\s*\.\s*(?:"[^"]+"|\w+))?(?:(?:\s+as)?\s+(?!set\b)(?:"[^"]+"|\w+))?\s+set\b|\binsert\s+into\b/i.test(
+        sql,
+      ),
     reversible: false,
     rls: [
       ...sql.matchAll(/alter\s+table\s+(?:public\.)?([\w"]+)\s+enable\s+row\s+level\s+security/gi),

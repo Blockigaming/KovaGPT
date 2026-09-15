@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 151,
+  "count": 152,
   "latest": "20260914120000_project_owner_membership_integrity.sql",
   "migrations": [
     {
@@ -331,7 +331,7 @@
       "tables": [],
       "functions": [],
       "destructive": false,
-      "dataBackfill": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],
@@ -1536,7 +1536,7 @@
         "fail_scheduled_task_execution"
       ],
       "destructive": false,
-      "dataBackfill": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],
@@ -3247,7 +3247,7 @@
       "tables": [],
       "functions": ["normalize_legacy_live_subscription_price"],
       "destructive": false,
-      "dataBackfill": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],
@@ -3255,6 +3255,20 @@
     },
     {
       "order": 151,
+      "filename": "20260913210000_quarantine_legacy_pro_rows_with_event_metadata.sql",
+      "timestamp": "20260913210000",
+      "sha256": "2924ebe65809179c3076a54fcb9fb0b18d3592ed758d91ae387667de2b40ea54",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 152,
       "filename": "20260914120000_project_owner_membership_integrity.sql",
       "timestamp": "20260914120000",
       "sha256": "f5267ae1e57e5e34e55fac897644a9965bbc2640cdb6b8b437b01779644c5eaf",

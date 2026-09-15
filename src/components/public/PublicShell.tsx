@@ -7,6 +7,7 @@ import { PublicFooter } from "@/components/PublicFooter";
 const navigation = [
   { label: "Product", to: "/features" },
   { label: "Use cases", to: "/use-cases" },
+  { label: "Business", to: "/business" },
   { label: "Developers", to: "/developers" },
   { label: "Trust", to: "/trust" },
   { label: "Pricing", to: "/pricing" },
@@ -93,7 +94,7 @@ export function PublicHeader() {
           <span>KovaGPT</span>
         </Link>
 
-        <div className="ml-auto hidden items-center gap-1 md:flex">
+        <div className="ml-auto hidden items-center gap-1 lg:flex">
           {navigation.map((item) => (
             <PublicNavigationLink key={item.to} {...item} pathname={pathname} />
           ))}
@@ -101,7 +102,7 @@ export function PublicHeader() {
 
         <Link
           to="/"
-          className="ml-1 hidden min-h-11 items-center rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:inline-flex"
+          className="ml-1 hidden min-h-11 items-center rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
         >
           Open KovaGPT
         </Link>
@@ -109,7 +110,7 @@ export function PublicHeader() {
         <button
           ref={menuButtonRef}
           type="button"
-          className="ml-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          className="ml-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={open}
@@ -126,7 +127,7 @@ export function PublicHeader() {
       {open ? (
         <nav
           id="public-mobile-navigation"
-          className="border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg md:hidden"
+          className="border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
           aria-label="Mobile public navigation"
         >
           <div className="mx-auto grid max-w-7xl gap-1">

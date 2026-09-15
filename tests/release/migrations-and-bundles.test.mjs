@@ -10,6 +10,13 @@ test("release manifest is ordered, unique, and content-addressed", async () => {
     [...m.migrations.map((x) => x.filename)].sort(),
   );
   assert.ok(m.migrations.every((x) => /^[a-f0-9]{64}$/.test(x.sha256)));
+  assert.equal(
+    m.migrations.find(
+      (entry) => entry.filename === "20260913153000_quarantine_ambiguous_legacy_pro_price.sql",
+    )?.dataBackfill,
+    true,
+    "schema-qualified UPDATE statements with aliases must be classified as data backfills",
+  );
 });
 test("function inventories preserve plain schema-qualified function names", async () => {
   const manifest = JSON.parse(

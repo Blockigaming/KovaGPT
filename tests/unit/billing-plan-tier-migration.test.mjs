@@ -12,6 +12,8 @@ const proRollbackCompatibilityMigrationPath =
   "supabase/migrations/20260913023331_preserve_rotated_pro_price_on_rollback.sql";
 const proRollbackQuarantineMigrationPath =
   "supabase/migrations/20260913153000_quarantine_ambiguous_legacy_pro_price.sql";
+const proRollbackQuarantineCorrectionMigrationPath =
+  "supabase/migrations/20260913210000_quarantine_legacy_pro_rows_with_event_metadata.sql";
 const userId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
 const memberId = "33333333-3333-4333-8333-333333333333";
@@ -104,6 +106,7 @@ async function createDatabase({ beforeMigration, beforeQuarantineMigration } = {
   await database.exec(await readFile(proRollbackCompatibilityMigrationPath, "utf8"));
   if (beforeQuarantineMigration) await beforeQuarantineMigration(database);
   await database.exec(await readFile(proRollbackQuarantineMigrationPath, "utf8"));
+  await database.exec(await readFile(proRollbackQuarantineCorrectionMigrationPath, "utf8"));
   return database;
 }
 
@@ -372,7 +375,7 @@ test("rollback lookup-key writes preserve each subscription's exact Pro Price", 
   }
 });
 
-test("the forward migration quarantines Pro rows inferred by the unsafe trigger", async () => {
+test("a new forward migration quarantines unsafe Pro rows that include legacy event metadata", async () => {
   const database = await createDatabase({
     beforeQuarantineMigration: async (db) => {
       await db.query(
@@ -398,6 +401,12 @@ test("the forward migration quarantines Pro rows inferred by the unsafe trigger"
       );
       assert.deepEqual(inferred.rows, [{ price_id: currentProPriceId }]);
       assert.equal(await tier(db), "pro");
+      await db.query(
+        `UPDATE public.subscriptions
+         SET last_stripe_event_created_at = now(),
+             last_stripe_event_id = 'evt_legacy_unsafe_inference'
+         WHERE stripe_subscription_id = 'sub_unsafe_inference'`,
+      );
     },
   });
   try {

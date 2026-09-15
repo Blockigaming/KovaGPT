@@ -325,10 +325,17 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     [
       {
         title: "No speculative listings",
-        body: "KovaGPT does not collect applications for roles that have not been approved.",
+        body: "KovaGPT does not collect applications, references, work samples, identity records, or demographic information for roles that have not been approved.",
+      },
+      {
+        title: "Verify every opening",
+        body: "A real opening should identify the work, location or remote expectations, employment basis, evaluation process, accessibility contact, and an authorized application destination.",
+      },
+      {
+        title: "Protect candidates",
+        body: "KovaGPT will not ask a candidate to purchase equipment, transfer money, expose account credentials, or provide banking information before a verified employment process requires it.",
       },
     ],
-    "admin",
   ),
   page(
     "partners",
@@ -525,6 +532,227 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
       {
         title: "Continuous verification",
         body: "Automated checks support—but do not replace—testing with people and assistive technologies.",
+      },
+    ],
+  ),
+  page(
+    "overview",
+    "Meet KovaGPT",
+    "Product overview",
+    "Explore KovaGPT chat, research, images, files, projects, apps, and workspaces.",
+    "KovaGPT brings focused AI workflows into one workspace with explicit limits, account controls, and provider-aware availability.",
+    [
+      {
+        title: "Start with conversation",
+        body: "Draft, explain, compare, and plan in chat, then move longer work into Projects, Library, Study, Research, Images, or Work.",
+      },
+      {
+        title: "Know what is real",
+        body: "Plan eligibility, server authorization, provider readiness, and privacy mode determine what can run. Unavailable tools stay visibly unavailable.",
+      },
+    ],
+  ),
+  page(
+    "college-students",
+    "KovaGPT for college students",
+    "Education",
+    "Use KovaGPT for explanation, practice, research planning, and organization while following course rules.",
+    "Build understanding with guided questions and reviewable drafts—not unchecked answers submitted as your own work.",
+    [
+      {
+        title: "Learn actively",
+        body: "Set a learning objective, attempt the problem first, ask for targeted hints, and explain the final reasoning in your own words.",
+      },
+      {
+        title: "Protect your work",
+        body: "Do not upload unnecessary personal, institutional, research, or participant data. Cite sources and disclose AI assistance when required.",
+      },
+    ],
+  ),
+  page(
+    "parent-resources",
+    "Resources for parents and caregivers",
+    "Families",
+    "Practical guidance for discussing AI limits, privacy, safety, and verification with young people.",
+    "Set clear expectations about what information to share, what claims to verify, and when a trusted adult or qualified professional needs to step in.",
+    [
+      {
+        title: "Use AI together",
+        body: "Review generated answers, ask where facts came from, and compare important claims with trusted age-appropriate sources.",
+      },
+      {
+        title: "Set boundaries",
+        body: "Avoid sharing sensitive identifiers, private school records, health details, or information about other people that is not needed.",
+      },
+    ],
+  ),
+  page(
+    "health",
+    "Health information with clear boundaries",
+    "Safety",
+    "Use KovaGPT to organize general health questions without treating it as diagnosis, treatment, or emergency care.",
+    "Generated health information can be incomplete, outdated, or wrong. A qualified clinician and authoritative guidance remain the source for medical decisions.",
+    [
+      {
+        title: "Prepare better questions",
+        body: "Organize symptoms, timing, medication questions, or appointment notes, then review them with a qualified professional.",
+      },
+      {
+        title: "Know when not to wait",
+        body: "For urgent symptoms, danger, or crisis, contact local emergency or crisis services rather than relying on an AI response.",
+      },
+    ],
+  ),
+  page(
+    "contact-sales",
+    "Talk with KovaGPT about your organization",
+    "Contact",
+    "Discuss organizational requirements without assuming features, certifications, pricing, or deployment terms.",
+    "Share the workflow, users, data boundaries, identity needs, review requirements, and deployment constraints you need evaluated.",
+    [
+      {
+        title: "Bring requirements",
+        body: "Describe the use case, expected scale, sensitive data classes, access model, retention needs, and required integrations.",
+      },
+      {
+        title: "Confirm before relying",
+        body: "Availability, support, security commitments, commercial terms, and implementation timing are confirmed in writing before purchase.",
+      },
+    ],
+  ),
+  page(
+    "shopping",
+    "Shopping research with KovaGPT",
+    "Use case",
+    "Compare products and tradeoffs without implying live inventory, fulfillment, endorsement, or guaranteed prices.",
+    "Turn needs into criteria, compare supported evidence, and verify the final price, seller, warranty, availability, and return terms directly.",
+    [
+      {
+        title: "Compare what matters",
+        body: "Separate must-haves from preferences, set a budget, and ask for explicit tradeoffs instead of a single unexplained recommendation.",
+      },
+      {
+        title: "Check before buying",
+        body: "Listings and prices change. Confirm product identity, merchant reputation, shipping, warranty, compatibility, and return policy at the seller.",
+      },
+    ],
+  ),
+  page(
+    "codex",
+    "Coding with KovaGPT",
+    "Coding",
+    "Use KovaGPT to plan, explain, review, and test code with repository and human-review boundaries.",
+    "KovaGPT supports coding workflows through chat, files, GitHub authorization, and reviewable outputs without claiming autonomous or unrestricted repository control.",
+    [
+      {
+        title: "Work from real context",
+        body: "Provide the relevant code, runtime, constraints, failing behavior, and expected outcome. Connect GitHub only when the intended repository and scopes are clear.",
+      },
+      {
+        title: "Verify every change",
+        body: "Run tests, static checks, security review, and human code review before merging or deploying generated changes.",
+      },
+    ],
+  ),
+  page(
+    "gpts",
+    "KovaGPT assistants",
+    "Assistants",
+    "Browse KovaGPT assistants without copying third-party GPT listings or user-generated content.",
+    "KovaGPT's assistant directory contains Kova-owned or explicitly published assistant configurations with clear capability and ownership boundaries.",
+    [
+      {
+        title: "Published assistants only",
+        body: "An assistant appears when its configuration is available through KovaGPT. External names, instructions, files, conversations, ratings, and creator content are not imported without authorization.",
+      },
+      {
+        title: "Review before use",
+        body: "Check an assistant's description, tools, data needs, and limitations. Generated output still requires verification appropriate to the task.",
+      },
+    ],
+  ),
+  page(
+    "download",
+    "Use KovaGPT on the web",
+    "Access",
+    "Open KovaGPT in a supported browser; no native desktop or mobile download is currently published.",
+    "KovaGPT is currently delivered as a web application. This page avoids presenting an installer, app-store badge, or download that does not exist.",
+    [
+      {
+        title: "Current access",
+        body: "Use the web application and your browser's supported install or shortcut features where available. Browser-created shortcuts are not native KovaGPT applications.",
+      },
+      {
+        title: "Verify future downloads",
+        body: "Any future native client must be published through a verified KovaGPT channel with platform, signing, update, privacy, and support details.",
+      },
+    ],
+  ),
+  page(
+    "import-to-chatgpt",
+    "Bring content into KovaGPT",
+    "Import guidance",
+    "Move supported content into KovaGPT without implying direct access to another service or account.",
+    "KovaGPT can work with text you provide and supported files you upload. It does not claim a direct ChatGPT account-import connection.",
+    [
+      {
+        title: "Use supported inputs",
+        body: "Copy only content you are authorized to use or upload supported files through KovaGPT's file workflow. Keep originals until you verify the result.",
+      },
+      {
+        title: "Protect private data",
+        body: "Review exports before upload, remove unnecessary personal information, and do not assume histories, settings, memories, or account metadata transfer automatically.",
+      },
+    ],
+  ),
+  page(
+    "merchants",
+    "Merchant integration status",
+    "Shopping",
+    "Understand KovaGPT's shopping-research boundary without an unavailable merchant onboarding flow.",
+    "KovaGPT does not currently offer merchant enrollment, catalog ingestion, sponsored placement, checkout, or fulfillment services.",
+    [
+      {
+        title: "No merchant onboarding",
+        body: "This page does not collect feeds, credentials, commercial terms, inventory, or payment details because those operational systems are not available.",
+      },
+      {
+        title: "Shopping remains research",
+        body: "Users can organize requirements and compare evidence, then verify price, availability, seller identity, warranty, and return terms directly.",
+      },
+    ],
+  ),
+  page(
+    "remote",
+    "Remote work with KovaGPT",
+    "Work",
+    "Plan and review remote knowledge-work tasks while keeping access, execution, and approval boundaries explicit.",
+    "KovaGPT can help organize work and, where configured, use bounded tools. It does not imply unattended access to a computer, network, repository, or account.",
+    [
+      {
+        title: "Define the boundary",
+        body: "State the goal, allowed systems, credentials, time limit, expected output, and actions that require confirmation before work begins.",
+      },
+      {
+        title: "Review consequential actions",
+        body: "Inspect generated artifacts, tool output, external messages, code changes, purchases, and account changes before they take effect.",
+      },
+    ],
+  ),
+  page(
+    "voice",
+    "Voice availability in KovaGPT",
+    "Feature availability",
+    "Voice conversation is not currently an available KovaGPT capability.",
+    "KovaGPT keeps voice controls absent until microphone permission, recording state, interruption, playback, retention, privacy, accessibility, and end-to-end behavior are ready.",
+    [
+      {
+        title: "No recording from this page",
+        body: "KovaGPT does not request microphone permission or begin audio capture here. Use text and supported file inputs for current workflows.",
+      },
+      {
+        title: "Readiness before release",
+        body: "A future voice experience requires visible start and stop controls, clear recording indicators, text alternatives, data disclosures, and verified recovery behavior.",
       },
     ],
   ),

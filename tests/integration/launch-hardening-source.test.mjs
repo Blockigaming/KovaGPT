@@ -50,7 +50,9 @@ test("commercial surfaces avoid fake success and preserve recoverable work", asy
     read("src/routes/prompt-studio.tsx"),
     read("src/lib/fetch-with-timeout.ts"),
     read("src/routes/projects.tsx"),
-    read("src/routes/help.tsx"),
+    Promise.all([read("src/routes/help.tsx"), read("src/lib/help-center-data.ts")]).then(
+      (sources) => sources.join("\n"),
+    ),
     read("src/components/states.tsx"),
   ]);
   assert.doesNotMatch(apps, /connected and ready/);
