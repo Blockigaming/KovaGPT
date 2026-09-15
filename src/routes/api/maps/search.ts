@@ -14,7 +14,7 @@ function json(value: unknown, status = 200) {
   return Response.json(value, {
     status,
     headers: {
-      "Cache-Control": status < 400 ? "private, max-age=60" : "no-store",
+      "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     },
   });
