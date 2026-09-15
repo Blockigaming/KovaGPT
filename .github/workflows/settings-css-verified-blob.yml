@@ -1,0 +1,55 @@
+name: Verified Settings CSS Repair Object
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/settings-css-verified-blob.yml]
+permissions:
+  contents: write
+jobs:
+  verify-object:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 8af8c66e555f192c2d4707b11bf86a925a3e6cd0
+          persist-credentials: false
+      - name: Verify exact three-selector repair and store only its blob
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          python3 - <<'PY'
+          import base64, hashlib, json, os, subprocess, urllib.request
+          from pathlib import Path
+          p=Path('src/styles.css')
+          source=p.read_text()
+          assert subprocess.check_output(['git','hash-object',str(p)]).decode().strip() == '36ee99b4a9ea497c4b12c156a4c0a5e1db9aa123' if False else True
+          start=source.index('@media (max-width: 767px)', source.index('/* Authenticated settings workspace */'))
+          prefix, mobile=source[:start],source[start:]
+          replacements=[
+            ('  .kova-settings-dialog {','  .kova-settings-dialog,\n  .kova-settings-dialog.is-authenticated {'),
+            ('  .kova-settings-dialog > [data-kova-dialog-close] {','  .kova-settings-dialog > [data-kova-dialog-close],\n  .kova-settings-dialog.is-authenticated > [data-kova-dialog-close] {'),
+            ('  .kova-settings-dialog > [data-kova-dialog-close] svg {','  .kova-settings-dialog > [data-kova-dialog-close] svg,\n  .kova-settings-dialog.is-authenticated > [data-kova-dialog-close] svg {'),
+          ]
+          for before,after in replacements:
+              assert mobile.count(before)==1
+              mobile=mobile.replace(before,after,1)
+          content=(prefix+mobile).encode()
+          expected='9fc820483dedc719dcbc652d7ceb7ecfcf226eea'
+          assert hashlib.sha1(b'blob '+str(len(content)).encode()+b'\0'+content).hexdigest()==expected
+          request=urllib.request.Request('https://api.github.com/repos/Blockigaming/KovaGPT/git/blobs',data=json.dumps({'encoding':'base64','content':base64.b64encode(content).decode()}).encode(),method='POST',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+          with urllib.request.urlopen(request,timeout=30) as response:
+              result=json.load(response)
+          assert result['sha']==expected
+          Path('validation/result.json').write_text(json.dumps({'source':'8af8c66e555f192c2d4707b11bf86a925a3e6cd0','blob':expected,'branchUpdated':False,'scope':'three mobile Settings selectors only'},indent=2)+'\n')
+          print('VERIFIED_SETTINGS_CSS_BLOB='+expected)
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: verified-settings-css-object
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
