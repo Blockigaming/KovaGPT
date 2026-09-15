@@ -24,12 +24,7 @@ const privileges = [
   "20260823215454",
   "20260823215619",
 ];
-const unchanged = [
-  "20260823092107",
-  "20260823092450",
-  "20260823215848",
-  "20260824085042",
-];
+const unchanged = ["20260823092107", "20260823092450", "20260823215848", "20260824085042"];
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -88,10 +83,7 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
 });
 
 test("the reviewed evidence distinguishes the historical and current-state baselines", () => {
-  const report = readFileSync(
-    "docs/release-reconciliation/remote-only-migrations-20260915.md",
-    "utf8",
-  );
+  const report = readFileSync("docs/release-reconciliation/remote-only-migrations-20260915.md", "utf8");
   assert.match(report, /20260906024459/);
   assert.match(report, /20260903145843/);
   assert.match(report, /97-version baseline is not the 98-version current-state baseline/);
