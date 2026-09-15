@@ -33,8 +33,8 @@ export const UTILITY_TASKS = /** @type {const} */ ([
 
 const UTILITY_TASK_SET = new Set(UTILITY_TASKS);
 
-const ADVANCED_MODES = new Set(["thinking", "high", "extra_high", "pro"]);
-const PREMIUM_MODES = new Set(["pro"]);
+const ADVANCED_MODES = new Set(["thinking", "high", "extra_high", "max", "ultra"]);
+const PREMIUM_MODES = new Set(["max", "ultra"]);
 
 // Signals that extra reasoning will noticeably improve the answer. Length is
 // deliberately NOT one of them.
