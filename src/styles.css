@@ -2689,8 +2689,6 @@ body {
   }
 }
 
-/* End core workspace overhaul. Keep this section last in the stylesheet. */
-
 /* Authenticated settings workspace */
 .kova-settings-dialog {
   width: min(92vw, 1280px) !important;
@@ -2701,7 +2699,7 @@ body {
   box-shadow: 0 18px 60px rgb(0 0 0 / 18%);
 }
 
-.kova-settings-dialog > [data-kova-dialog-close] {
+.kova-settings-dialog.is-authenticated > [data-kova-dialog-close] {
   left: 22px;
   right: auto;
   top: 22px;
@@ -2715,16 +2713,16 @@ body {
   z-index: 5;
 }
 
-.kova-settings-dialog > [data-kova-dialog-close] svg {
+.kova-settings-dialog.is-authenticated > [data-kova-dialog-close] svg {
   width: 30px;
   height: 30px;
 }
 
-.kova-settings-dialog > [data-kova-dialog-close]:hover {
+.kova-settings-dialog.is-authenticated > [data-kova-dialog-close]:hover {
   background: color-mix(in oklab, var(--surface-raised) 68%, var(--foreground) 10%);
 }
 
-.kova-settings-dialog > [data-kova-dialog-close]:active {
+.kova-settings-dialog.is-authenticated > [data-kova-dialog-close]:active {
   transform: scale(0.96);
 }
 
@@ -2774,10 +2772,18 @@ body {
 }
 
 .kova-settings-nav {
+  display: block;
+  width: 100%;
+  height: auto;
   min-height: 0;
+  justify-content: flex-start;
   overflow-y: auto;
   overscroll-behavior: contain;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
   scrollbar-width: thin;
+  padding-block: 0;
   padding-right: 2px;
 }
 
@@ -2804,7 +2810,9 @@ body {
   color: var(--muted-foreground);
   font-size: 17px;
   font-weight: 450;
+  justify-content: flex-start;
   text-align: left;
+  box-shadow: none;
   transition:
     color 120ms ease,
     background-color 120ms ease,
@@ -3056,3 +3064,5 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* End core workspace overhaul. Keep this section last in the stylesheet. */

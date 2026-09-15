@@ -285,6 +285,9 @@ export function SettingsDialog({
   const [mobileHome, setMobileHome] = useState(true);
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [usageLoaded, setUsageLoaded] = useState(false);
+  const settingsSearchRef = useRef<HTMLInputElement>(null);
+  const contentHeadingRef = useRef<HTMLHeadingElement>(null);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -300,6 +303,8 @@ export function SettingsDialog({
   const deletionPending = deletionStatus?.ownerId === userKey && deletionStatus.state !== "active";
   useEffect(() => {
     deletionOperationRef.current++;
+    setUsage(null);
+    setUsageLoaded(false);
     setDeletionStatus(null);
     setDeleteAccountBusy(false);
     setDeleteAccountOpen(false);
@@ -342,6 +347,7 @@ export function SettingsDialog({
   useEffect(() => {
     if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
     let cancelled = false;
+    setUsageLoaded(false);
     setUsageLoading(true);
     getMyDailyUsage()
       .then((u) => {
@@ -351,7 +357,10 @@ export function SettingsDialog({
         if (!cancelled) setUsage(null);
       })
       .finally(() => {
-        if (!cancelled) setUsageLoading(false);
+        if (!cancelled) {
+          setUsageLoading(false);
+          setUsageLoaded(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -654,13 +663,14 @@ export function SettingsDialog({
     setTab(value);
     setMobileHome(false);
     setSettingsQuery("");
+    requestAnimationFrame(() => contentHeadingRef.current?.focus());
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         closeLabel="Close settings"
-        className="kova-settings-dialog bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0"
+        className={`kova-settings-dialog ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -728,28 +738,27 @@ export function SettingsDialog({
                 <Search aria-hidden="true" />
                 <span className="sr-only">Search settings</span>
                 <input
+                  ref={settingsSearchRef}
                   value={settingsQuery}
                   onChange={(event) => setSettingsQuery(event.target.value)}
                   placeholder="Search settings"
                 />
               </label>
-              <div className="kova-settings-nav" role="tablist" aria-orientation="vertical">
+              <TabsList className="kova-settings-nav" aria-orientation="vertical">
                 {filteredGroups.length ? (
                   filteredGroups.map((group) => (
                     <section key={group.title} aria-label={group.title}>
                       <p className="kova-settings-nav-group">{group.title}</p>
                       {group.tabs.map(({ v, icon: Icon, label }) => (
-                        <button
+                        <TabsTrigger
                           key={v}
-                          type="button"
-                          role="tab"
-                          aria-selected={tab === v}
+                          value={v}
                           className="kova-settings-nav-item"
                           onClick={() => selectTab(v)}
                         >
                           <Icon aria-hidden="true" />
                           <span>{label}</span>
-                        </button>
+                        </TabsTrigger>
                       ))}
                     </section>
                   ))
@@ -758,7 +767,7 @@ export function SettingsDialog({
                     No settings found
                   </p>
                 )}
-              </div>
+              </TabsList>
             </aside>
 
             <div
@@ -769,12 +778,17 @@ export function SettingsDialog({
                   type="button"
                   className="kova-settings-back"
                   aria-label="Back to settings"
-                  onClick={() => setMobileHome(true)}
+                  onClick={() => {
+                    setMobileHome(true);
+                    requestAnimationFrame(() => settingsSearchRef.current?.focus());
+                  }}
                 >
                   <ArrowLeft aria-hidden="true" />
                 </button>
                 <div>
-                  <h2>{activeTab.label}</h2>
+                  <h2 ref={contentHeadingRef} tabIndex={-1}>
+                    {activeTab.label}
+                  </h2>
                   <p>Manage your KovaGPT {activeTab.label.toLocaleLowerCase()} settings.</p>
                 </div>
                 <span
@@ -1065,7 +1079,7 @@ export function SettingsDialog({
                         </span>
                       )}
                     </div>
-                    {usageLoading && !usage ? (
+                    {(!usageLoaded || usageLoading) && !usage ? (
                       <div className="kova-settings-skeleton" role="status">
                         Loading usage…
                       </div>
