@@ -45,7 +45,10 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
   await waitForKovaHydration(page);
   const viewport = page.viewportSize();
   if (viewport && viewport.width >= 1024) {
-    await expect(page.locator("aside .kova-logo-mark")).toHaveCount(1);
+    const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
+    await expect(sidebarBrand).toHaveCount(1);
+    await expect(sidebarBrand).toHaveText("KovaGPT");
+    await expect(sidebarBrand).toBeVisible();
     await expect(page.locator("aside").getByText("KovaGPT", { exact: true })).toHaveCount(1);
   } else {
     await expect(
