@@ -26,6 +26,8 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
     assert.match(source, new RegExp(contract.replaceAll(".", "\\.")));
   assert.match(source, /searchControllerRef\.current\?\.abort\(\)/);
   assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
+  assert.match(source, /if \(enabled && !map\.getSource\("terrain"\)\)/);
+  assert.match(source, /disabled=\{!networkAllowed\}/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 

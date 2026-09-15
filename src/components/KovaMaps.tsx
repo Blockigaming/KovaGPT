@@ -57,7 +57,7 @@ function set3dResources(map: MapLibreMap, enabled: boolean) {
 }
 
 function addMapEnhancements(map: MapLibreMap, enabled: boolean) {
-  if (!map.getSource("terrain")) {
+  if (enabled && !map.getSource("terrain")) {
     map.addSource("terrain", {
       type: "raster-dem",
       tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
@@ -348,7 +348,7 @@ export function KovaMaps() {
   };
 
   const askKova = () => {
-    if (!isLoaded) return;
+    if (!networkAllowed || !isLoaded || !isSignedIn || !user?.id) return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
@@ -365,7 +365,7 @@ export function KovaMaps() {
     const written = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
       "kova-app-chat-context",
-      user?.id ?? null,
+      user.id,
       prompt,
     );
     if (!written.ok) {
@@ -397,7 +397,8 @@ export function KovaMaps() {
     const next = !threeD;
     setThreeD(next);
     map.easeTo({ pitch: next ? 48 : 0, bearing: next ? -8 : 0, duration: 700 });
-    set3dResources(map, next && !satellite);
+    if (next && !satellite) addMapEnhancements(map, true);
+    else set3dResources(map, false);
   };
 
   const locate = () => {
@@ -524,7 +525,7 @@ export function KovaMaps() {
                 <button
                   type="button"
                   onClick={askKova}
-                  disabled={!isLoaded}
+                  disabled={!networkAllowed}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
