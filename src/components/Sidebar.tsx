@@ -46,10 +46,7 @@ import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
 const EXPANDED_WIDTH = 272;
 
 function isMobileViewport() {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 1023px)").matches
-  );
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
 }
 
 export function Sidebar({
@@ -100,8 +97,7 @@ export function Sidebar({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const isOn = (path: string) =>
-    pathname === path || pathname.startsWith(`${path}/`);
+  const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
 
   useEffect(() => {
     if (!signedIn || !user?.id) {
@@ -122,9 +118,7 @@ export function Sidebar({
       setSearchOpen(true);
       if (!open) onToggle();
       requestAnimationFrame(() =>
-        document
-          .querySelector<HTMLInputElement>("#sidebar-chat-search")
-          ?.focus(),
+        document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus(),
       );
     };
     window.addEventListener("kova-open-search", openSearch);
@@ -134,9 +128,7 @@ export function Sidebar({
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
     lastFocusedRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     drawerRef.current?.querySelector<HTMLElement>("button, a[href]")?.focus();
@@ -174,19 +166,13 @@ export function Sidebar({
   const closeAfterMobileNavigation = () => {
     if (open && isMobileViewport()) onToggle();
   };
-  const navRow = (active = false) =>
-    `kova-nav-row ${active ? "is-active" : ""}`;
+  const navRow = (active = false) => `kova-nav-row ${active ? "is-active" : ""}`;
   const icon = (Icon: LucideIcon) => (
     <span className="kova-sidebar-icon" aria-hidden="true">
       <Icon />
     </span>
   );
-  const navLink = (
-    to: string,
-    label: string,
-    Icon: LucideIcon,
-    badge?: string,
-  ) => (
+  const navLink = (to: string, label: string, Icon: LucideIcon, badge?: string) => (
     <Link
       to={to as never}
       className={navRow(isOn(to))}
@@ -203,9 +189,7 @@ export function Sidebar({
 
   const query = searchQuery.trim();
   const filtered = query
-    ? searchConversations(conversations, query).map(
-        (result) => result.conversation,
-      )
+    ? searchConversations(conversations, query).map((result) => result.conversation)
     : conversations;
   const pinned = filtered
     .filter((conversation) => conversation.pinned)
@@ -283,10 +267,7 @@ export function Sidebar({
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => onDelete(conversation.id)}
-          >
+          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
@@ -296,11 +277,7 @@ export function Sidebar({
   );
 
   const displayName =
-    user?.fullName ||
-    user?.firstName ||
-    user?.username ||
-    user?.email?.split("@")[0] ||
-    "Account";
+    user?.fullName || user?.firstName || user?.username || user?.email?.split("@")[0] || "Account";
   const avatarUrl = user?.imageUrl || null;
   const planLabel = tier === "pro" ? "Pro" : tier === "plus" ? "Plus" : "Free";
 
@@ -382,36 +359,16 @@ export function Sidebar({
           >
             <SquarePen />
           </button>
-          <Link
-            to="/work"
-            className="kova-rail-button"
-            aria-label="Work"
-            title="Work"
-          >
+          <Link to="/work" className="kova-rail-button" aria-label="Work" title="Work">
             <BriefcaseBusiness />
           </Link>
-          <Link
-            to="/images"
-            className="kova-rail-button"
-            aria-label="Images"
-            title="Images"
-          >
+          <Link to="/images" className="kova-rail-button" aria-label="Images" title="Images">
             <Images />
           </Link>
-          <Link
-            to="/library"
-            className="kova-rail-button"
-            aria-label="Library"
-            title="Library"
-          >
+          <Link to="/library" className="kova-rail-button" aria-label="Library" title="Library">
             <LibraryBig />
           </Link>
-          <Link
-            to="/projects"
-            className="kova-rail-button"
-            aria-label="Projects"
-            title="Projects"
-          >
+          <Link to="/projects" className="kova-rail-button" aria-label="Projects" title="Projects">
             <Folder />
           </Link>
           {scheduledVisible ? (
@@ -424,12 +381,7 @@ export function Sidebar({
               <Clock3 />
             </Link>
           ) : null}
-          <Link
-            to="/apps"
-            className="kova-rail-button"
-            aria-label="Plugins"
-            title="Plugins"
-          >
+          <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
           <button
@@ -454,9 +406,7 @@ export function Sidebar({
             {avatarUrl ? (
               <img src={avatarUrl} alt="" />
             ) : (
-              <span aria-hidden="true">
-                {displayName.charAt(0).toUpperCase()}
-              </span>
+              <span aria-hidden="true">{displayName.charAt(0).toUpperCase()}</span>
             )}
           </button>
         </nav>
@@ -464,9 +414,7 @@ export function Sidebar({
 
       <aside
         ref={drawerRef}
-        style={
-          { "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties
-        }
+        style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
@@ -599,9 +547,7 @@ export function Sidebar({
                 {recents.length ? (
                   recents.map(chatRow)
                 ) : (
-                  <p className="kova-sidebar-empty">
-                    {query ? "No matches" : "No recent chats"}
-                  </p>
+                  <p className="kova-sidebar-empty">{query ? "No matches" : "No recent chats"}</p>
                 )}
               </section>
             ) : null}
@@ -640,9 +586,7 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">
-                    Get responses tailored to you
-                  </p>
+                  <p className="text-sm font-semibold">Get responses tailored to you</p>
                   <button
                     type="button"
                     className="kova-account-action"
