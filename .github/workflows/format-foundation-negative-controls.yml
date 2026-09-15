@@ -1,0 +1,53 @@
+name: Format Foundation Negative Controls
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/format-foundation-negative-controls.yml]
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 633ba2c64e0c6ef337eee9a673642394bf3dd58e
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only the reviewed file
+        run: |
+          test "$(git hash-object tests/unit/publication-negative-controls.test.mjs)" = d87a4d1c0c2dab1768697941b6556e195b2ea132
+          npx --no-install prettier --write tests/unit/publication-negative-controls.test.mjs
+          npm run format:check
+          node --test tests/unit/publication-negative-controls.test.mjs
+      - name: Store only formatted blob, never a commit or ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p validation
+          git diff -- tests/unit/publication-negative-controls.test.mjs > validation/format.diff
+          python3 - <<'PY'
+          import base64, hashlib, json, os, subprocess, urllib.request
+          from pathlib import Path
+          path='tests/unit/publication-negative-controls.test.mjs'
+          assert subprocess.check_output(['git','diff','--name-only']).decode().splitlines()==[path]
+          data=Path(path).read_bytes()
+          expected=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+          request=urllib.request.Request('https://api.github.com/repos/Blockigaming/KovaGPT/git/blobs', data=json.dumps({'encoding':'base64','content':base64.b64encode(data).decode()}).encode(), method='POST', headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+          with urllib.request.urlopen(request,timeout=30) as response:
+              result=json.load(response)
+          assert result['sha']==expected
+          Path('validation/result.json').write_text(json.dumps({'source':'633ba2c64e0c6ef337eee9a673642394bf3dd58e','path':path,'blob':expected,'branchUpdated':False},indent=2)+'\n')
+          Path('validation/formatted.test.mjs').write_bytes(data)
+          print('VERIFIED_FORMATTED_BLOB='+expected)
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: foundation-negative-controls-format
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
