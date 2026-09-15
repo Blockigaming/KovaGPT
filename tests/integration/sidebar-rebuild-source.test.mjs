@@ -13,7 +13,7 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/projects", "Projects", Folder)',
     'navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)',
     'navLink("/apps", "Plugins", PlugZap)',
-    'navLink("/research-planner", "Deep research", Telescope)',
+    'navLink("/maps", "Maps", Map)',
     'navLink("/discovery", "Discover", Globe)',
     ">More</span>",
     ">Pinned</h2>",
