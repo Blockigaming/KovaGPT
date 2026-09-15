@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 156,
-  "latest": "20260915010000_coordinate_maps_provider_requests.sql",
+  "count": 157,
+  "latest": "20260915120000_maps_geocoder_cache.sql",
   "migrations": [
     {
       "order": 1,
@@ -3311,9 +3311,9 @@
     },
     {
       "order": 155,
-      "filename": "20260915005500_retire_deep_research_workspace_search.sql",
-      "timestamp": "20260915005500",
-      "sha256": "3ba384f9f5dd4b9d36d3b74c3802477d3f4ac60c9304d28dbd896985ae47b58d",
+      "filename": "20260915011500_retire_deep_research_workspace_search.sql",
+      "timestamp": "20260915011500",
+      "sha256": "013dca7e0343ec3d0aa689aa36da7cf5cc2b4cd83e7cf4ec87957e9f957283bb",
       "tables": [],
       "functions": [],
       "destructive": true,
@@ -3325,21 +3325,31 @@
     },
     {
       "order": 156,
-      "filename": "20260915010000_coordinate_maps_provider_requests.sql",
-      "timestamp": "20260915010000",
-      "sha256": "a00d0fb5a0f99e11a7064acb0142d581fae65a686744af049792a2f864be51cf",
-      "tables": ["maps_provider_throttle", "maps_search_cache"],
-      "functions": [
-        "claim_maps_provider_request",
-        "read_maps_search_cache",
-        "store_maps_search_cache"
-      ],
-      "destructive": true,
+      "filename": "20260915012500_maps_provider_throttle.sql",
+      "timestamp": "20260915012500",
+      "sha256": "2f81af7291fbf9dda5aa8f4a81afbc7691aa6d7087bf6dff167c5d3e74062a44",
+      "tables": ["maps_provider_throttle"],
+      "functions": ["admit_maps_provider_request"],
+      "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": ["maps_provider_throttle", "maps_search_cache"],
+      "rls": ["maps_provider_throttle"],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 157,
+      "filename": "20260915120000_maps_geocoder_cache.sql",
+      "timestamp": "20260915120000",
+      "sha256": "3f0c0473b56071db4d1eacd9a048810cfe44f174f7e89159caba2660c14434ca",
+      "tables": ["maps_geocoder_cache"],
+      "functions": ["prune_maps_geocoder_cache_expired"],
+      "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["maps_geocoder_cache"],
+      "policies": [],
+      "indexes": ["maps_geocoder_cache_expires_idx"]
     }
   ]
 }

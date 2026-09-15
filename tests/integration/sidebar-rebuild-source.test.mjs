@@ -28,6 +28,7 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
   assert.match(sidebar, /KovaGPT/);
   assert.match(sidebar, /Health is coming soon/);
   assert.match(sidebar, /Finances is coming soon/);
+  assert.match(sidebar, /<Link to="\/maps" className="kova-rail-button" aria-label="Maps"/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });

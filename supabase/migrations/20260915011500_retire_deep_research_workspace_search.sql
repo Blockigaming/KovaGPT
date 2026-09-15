@@ -1,4 +1,4 @@
--- Deep Research is retired from the product surface; preserve historical rows
+-- Deep Research is retired from the product surface. Preserve historical rows
 -- for account export and deletion, but stop indexing or linking them to the
 -- removed planner route.
 update public.deep_research_runs

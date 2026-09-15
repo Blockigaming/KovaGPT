@@ -547,7 +547,7 @@
     "retainedLegacyTests": 135,
     "missingRetainedLegacyTests": 0,
     "currentTestFiles": 504,
-    "currentTestInventorySha256": "9004cb364c8bd497b98d29ca2b5f566fbd3c3940ae4da28e35318083cdf821cc",
+    "currentTestInventorySha256": "8240016611cfb0d0a5a38d60e2c372807777d7dfb0d8d3e7a043b7b1e7721c23",
     "statusCounts": {
       "partial": 22,
       "verified_for_implemented_scope": 27,
@@ -827,7 +827,7 @@
       "requirement": "Dedicated execution, navigation, progress, and report-management surfaces are removed; historical rows remain exportable and deletable.",
       "evidence": [
         "src/lib/chat-history-policy.mjs",
-        "supabase/migrations/20260915005500_retire_deep_research_workspace_search.sql"
+        "supabase/migrations/20260915011500_retire_deep_research_workspace_search.sql"
       ],
       "boundary": "Ordinary web search remains supported; retired Deep Research identifiers are accepted only as migration input and omitted from normalized output.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]

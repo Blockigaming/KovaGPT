@@ -11,7 +11,6 @@ test("onboarding covers real product steps and excludes voice", () => {
     "response_preferences",
     "projects",
     "library_files",
-    "search_research",
     "temporary_chat",
     "connected_apps",
     "scheduled_tasks",

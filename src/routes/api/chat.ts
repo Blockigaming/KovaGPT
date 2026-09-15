@@ -39,7 +39,7 @@ import {
   shouldRunWebSearch,
 } from "@/lib/ai/search.server";
 import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
-import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
+import { createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";

@@ -379,6 +379,9 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
+          <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+            <Map />
+          </Link>
           <button
             type="button"
             className="kova-rail-button"

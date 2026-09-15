@@ -1,9 +1,9 @@
 {
   "generatedAt": "2026-08-12",
-  "availableTestFiles": 140,
-  "unitTestFiles": 52,
+  "availableTestFiles": 135,
+  "unitTestFiles": 48,
   "classificationCounts": {
-    "retained": 140,
+    "retained": 135,
     "duplicate": 0,
     "superseded": 0,
     "incompatible": 0,

@@ -56,8 +56,8 @@ function set3dResources(map: MapLibreMap, enabled: boolean) {
   }
 }
 
-function addMapEnhancements(map: MapLibreMap, threeD: boolean) {
-  if (threeD && !map.getSource("terrain")) {
+function addMapEnhancements(map: MapLibreMap, enabled: boolean) {
+  if (enabled && !map.getSource("terrain")) {
     map.addSource("terrain", {
       type: "raster-dem",
       tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
@@ -85,16 +85,17 @@ function addMapEnhancements(map: MapLibreMap, threeD: boolean) {
       labelLayer,
     );
   }
-  set3dResources(map, threeD);
+  set3dResources(map, enabled);
 }
 
 export function KovaMaps() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
-  const principalRef = useRef("pending");
-  const searchAbortRef = useRef<AbortController | null>(null);
-  const threeDRef = useRef(true);
+  const principalGenerationRef = useRef(0);
+  const activeOwnerRef = useRef<string | null | undefined>(undefined);
+  const networkAllowedRef = useRef(false);
+  const searchControllerRef = useRef<AbortController | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
@@ -104,100 +105,136 @@ export function KovaMaps() {
   const [searching, setSearching] = useState(false);
   const [satellite, setSatellite] = useState(false);
   const [threeD, setThreeD] = useState(true);
+  const threeDRef = useRef(threeD);
   threeDRef.current = threeD;
-  const [networkPolicy, setNetworkPolicy] = useState<{
-    principal: string;
+  const [networkAccess, setNetworkAccess] = useState<{
+    ownerId: string;
     allowed: boolean;
-    message: string | null;
   } | null>(null);
   const navigate = useNavigate();
-  const { isLoaded, user } = useUser();
-  const principal = !isLoaded ? "pending" : user?.id ? `user:${user.id}` : "guest";
-  principalRef.current = principal;
-  const networkAllowed = networkPolicy?.principal === principal ? networkPolicy.allowed : null;
+  const { isLoaded, isSignedIn, user } = useUser();
+  activeOwnerRef.current = isLoaded ? (isSignedIn ? (user?.id ?? null) : null) : undefined;
+  const networkAllowed =
+    isLoaded &&
+    isSignedIn &&
+    Boolean(user?.id) &&
+    networkAccess?.ownerId === user?.id &&
+    networkAccess?.allowed === true;
 
   useEffect(() => {
-    if (!isLoaded) return;
-    searchAbortRef.current?.abort();
+    const generation = ++principalGenerationRef.current;
+    const ownerId = user?.id;
+    networkAllowedRef.current = false;
+    searchControllerRef.current?.abort();
+    searchControllerRef.current = null;
     markerRef.current?.remove();
     markerRef.current = null;
+    mapRef.current?.remove();
+    mapRef.current = null;
     setQuery("");
     setResults([]);
     setSelected(null);
     setView(null);
-    setError(null);
     setSearching(false);
-    setLoading(true);
     setSatellite(false);
     setThreeD(true);
-    setNetworkPolicy(null);
-    if (!user?.id) {
-      setNetworkPolicy({ principal, allowed: true, message: null });
+    setNetworkAccess(null);
+    setLoading(true);
+    if (!isLoaded) {
+      setError(null);
       return;
     }
+    if (!isSignedIn || !ownerId) {
+      setError("Sign in to use Maps.");
+      setLoading(false);
+      return;
+    }
+    setError(null);
     const controller = new AbortController();
+    let checkInFlight = false;
     const blockNetwork = (message: string) => {
-      searchAbortRef.current?.abort();
-      searchAbortRef.current = null;
+      networkAllowedRef.current = false;
+      searchControllerRef.current?.abort();
+      searchControllerRef.current = null;
       markerRef.current?.remove();
       markerRef.current = null;
+      const map = mapRef.current;
+      mapRef.current = null;
+      map?.remove();
       setResults([]);
       setSelected(null);
       setView(null);
       setSearching(false);
+      setError(message);
+      setNetworkAccess({ ownerId, allowed: false });
       setLoading(false);
-      setNetworkPolicy({ principal, allowed: false, message });
     };
-    const checkPolicy = async () => {
+    const verifyNetworkAccess = async () => {
+      if (checkInFlight) return;
+      checkInFlight = true;
       try {
-        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(8_000)]);
-        const response = await authFetch("/api/security/lockdown", { signal });
-        const payload = (await response.json().catch(() => null)) as { enabled?: boolean } | null;
-        if (controller.signal.aborted || principalRef.current !== principal) return;
-        if (!response.ok || typeof payload?.enabled !== "boolean") {
-          blockNetwork("KovaGPT could not verify Lockdown Mode. Try again shortly.");
-          return;
-        }
-        if (payload.enabled) {
-          blockNetwork(
-            "Maps is unavailable while Lockdown Mode is on. Turn it off in Settings to load network map data.",
-          );
-          return;
-        }
-        if (!payload.enabled && !mapRef.current) setLoading(true);
-        setNetworkPolicy({
-          principal,
-          allowed: true,
-          message: null,
+        const response = await authFetch("/api/security/lockdown", {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8_000)]),
         });
-      } catch {
-        if (!controller.signal.aborted && principalRef.current === principal) {
-          blockNetwork("KovaGPT could not verify Lockdown Mode. Try again shortly.");
+        const payload = (await response.json()) as { enabled?: boolean };
+        if (generation !== principalGenerationRef.current || activeOwnerRef.current !== ownerId)
+          return;
+        if (!response.ok || typeof payload.enabled !== "boolean") throw new Error("unavailable");
+        if (payload.enabled) {
+          blockNetwork("Maps is unavailable while Lockdown Mode is on.");
+          return;
         }
+        setError(null);
+        if (!mapRef.current) setLoading(true);
+        networkAllowedRef.current = true;
+        setNetworkAccess({ ownerId, allowed: true });
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId
+        )
+          return;
+        console.error("[maps] Lockdown status check failed", {
+          name: error instanceof Error ? error.name : "UnknownError",
+        });
+        blockNetwork("Maps access could not be verified. Refresh and try again.");
+      } finally {
+        checkInFlight = false;
       }
     };
-    void checkPolicy();
-    const interval = window.setInterval(() => void checkPolicy(), 15_000);
-    const checkWhenVisible = () => {
-      if (document.visibilityState === "visible") void checkPolicy();
+    void verifyNetworkAccess();
+    const policyInterval = window.setInterval(() => void verifyNetworkAccess(), 15_000);
+    const recheckVisiblePolicy = () => {
+      if (document.visibilityState === "visible") void verifyNetworkAccess();
     };
-    document.addEventListener("visibilitychange", checkWhenVisible);
+    document.addEventListener("visibilitychange", recheckVisiblePolicy);
     return () => {
+      window.clearInterval(policyInterval);
+      document.removeEventListener("visibilitychange", recheckVisiblePolicy);
+      networkAllowedRef.current = false;
       controller.abort();
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", checkWhenVisible);
+      searchControllerRef.current?.abort();
+      searchControllerRef.current = null;
     };
-  }, [isLoaded, principal, user?.id]);
+  }, [isLoaded, isSignedIn, user?.id]);
 
   useEffect(() => {
-    if (networkAllowed !== true || !containerRef.current || mapRef.current) return;
-    const mapPrincipal = principal;
+    if (!networkAllowed || !containerRef.current || mapRef.current) return;
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     let disposed = false;
     let loadTimeout: number | null = null;
-    const isCurrent = () => !disposed && principalRef.current === mapPrincipal;
     void import("maplibre-gl")
       .then((maplibregl) => {
-        if (!isCurrent() || !containerRef.current) return;
+        if (
+          disposed ||
+          !networkAllowedRef.current ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId ||
+          !containerRef.current
+        )
+          return;
         const map = new maplibregl.Map({
           container: containerRef.current,
           style: VECTOR_STYLE,
@@ -209,15 +246,21 @@ export function KovaMaps() {
           maxPitch: 70,
         });
         mapRef.current = map;
+        const isCurrentMap = () =>
+          !disposed &&
+          networkAllowedRef.current &&
+          generation === principalGenerationRef.current &&
+          activeOwnerRef.current === ownerId &&
+          mapRef.current === map;
         loadTimeout = window.setTimeout(() => {
-          if (!isCurrent()) return;
+          if (!isCurrentMap()) return;
           setLoading(false);
           setError("Map data is taking too long to load. Check your connection and try again.");
         }, 12_000);
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
         const updateView = () => {
-          if (!isCurrent()) return;
+          if (!isCurrentMap()) return;
           const center = map.getCenter();
           const bounds = map.getBounds();
           setView({
@@ -232,22 +275,29 @@ export function KovaMaps() {
           });
         };
         map.on("load", () => {
-          if (!isCurrent()) return;
+          if (!isCurrentMap()) return;
           if (loadTimeout !== null) window.clearTimeout(loadTimeout);
+          loadTimeout = null;
           addMapEnhancements(map, threeDRef.current);
           setLoading(false);
           updateView();
         });
         map.on("moveend", updateView);
         map.on("error", (event) => {
-          if (!isCurrent()) return;
+          if (!isCurrentMap()) return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
           setError("Some map data could not load. Check your connection and try again.");
           setLoading(false);
         });
       })
       .catch(() => {
-        if (!isCurrent()) return;
+        if (
+          disposed ||
+          !networkAllowedRef.current ||
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId
+        )
+          return;
         setError("Maps could not start in this browser. Refresh the page or try another browser.");
         setLoading(false);
       });
@@ -255,17 +305,27 @@ export function KovaMaps() {
       disposed = true;
       if (loadTimeout !== null) window.clearTimeout(loadTimeout);
       markerRef.current?.remove();
-      mapRef.current?.remove();
+      const map = mapRef.current;
       mapRef.current = null;
+      map?.remove();
     };
-  }, [networkAllowed, principal]);
+  }, [networkAllowed]);
 
-  const selectPlace = async (place: Place) => {
+  const selectPlace = async (
+    place: Place,
+    generation = principalGenerationRef.current,
+    ownerId = activeOwnerRef.current,
+  ) => {
     const map = mapRef.current;
     if (!map) return;
-    const selectionPrincipal = principal;
     const maplibregl = await import("maplibre-gl");
-    if (principalRef.current !== selectionPrincipal || mapRef.current !== map) return;
+    if (
+      generation !== principalGenerationRef.current ||
+      activeOwnerRef.current !== ownerId ||
+      !networkAllowedRef.current ||
+      mapRef.current !== map
+    )
+      return;
     markerRef.current?.remove();
     markerRef.current = new maplibregl.Marker({ color: "#1685fb" })
       .setLngLat([place.longitude, place.latitude])
@@ -295,7 +355,6 @@ export function KovaMaps() {
   };
 
   const search = async () => {
-    if (networkAllowed !== true) return;
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setError("Enter a location, address, or place to search.");
@@ -303,43 +362,48 @@ export function KovaMaps() {
     }
     setSearching(true);
     setError(null);
-    markerRef.current?.remove();
-    markerRef.current = null;
-    setSelected(null);
-    setResults([]);
-    searchAbortRef.current?.abort();
+    searchControllerRef.current?.abort();
     const controller = new AbortController();
-    searchAbortRef.current = controller;
-    const requestPrincipal = principal;
+    searchControllerRef.current = controller;
+    const generation = principalGenerationRef.current;
+    const ownerId = user?.id;
     try {
+      if (!networkAllowed || !ownerId) throw new Error("Maps access is unavailable.");
       const response = await authFetch(`/api/maps/search?q=${encodeURIComponent(trimmed)}`, {
+        headers: { "X-Kova-Expected-User": ownerId },
         signal: controller.signal,
       });
       const payload = (await response.json()) as { results?: Place[]; error?: string };
-      if (principalRef.current !== requestPrincipal) return;
+      if (
+        controller.signal.aborted ||
+        generation !== principalGenerationRef.current ||
+        activeOwnerRef.current !== ownerId
+      )
+        return;
       if (!response.ok) throw new Error(payload.error);
       const next = payload.results ?? [];
       setResults(next);
-      if (!next.length)
+      if (!next.length) {
+        markerRef.current?.remove();
+        markerRef.current = null;
+        setSelected(null);
         setError("No matching places were found. Check the spelling or add a city or country.");
-      else await selectPlace(next[0]);
+      } else await selectPlace(next[0], generation);
     } catch (caught) {
-      if (controller.signal.aborted || principalRef.current !== requestPrincipal) return;
+      if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
       setError(
         caught instanceof Error && caught.message
           ? caught.message
           : "Place search is unavailable. Try again.",
       );
     } finally {
-      if (searchAbortRef.current === controller) {
-        searchAbortRef.current = null;
-        setSearching(false);
-      }
+      if (searchControllerRef.current === controller) searchControllerRef.current = null;
+      if (generation === principalGenerationRef.current) setSearching(false);
     }
   };
 
   const askKova = () => {
-    if (!isLoaded || networkAllowed !== true) return;
+    if (!networkAllowed || !isLoaded || !isSignedIn || !user?.id) return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
@@ -356,7 +420,7 @@ export function KovaMaps() {
     const written = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
       "kova-app-chat-context",
-      user?.id ?? null,
+      user.id,
       prompt,
     );
     if (!written.ok) {
@@ -368,21 +432,28 @@ export function KovaMaps() {
 
   const toggleStyle = () => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!networkAllowed || !map) return;
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     const next = !satellite;
-    const stylePrincipal = principal;
     setSatellite(next);
     map.setStyle(next ? SATELLITE_STYLE : VECTOR_STYLE);
     map.once("style.load", () => {
-      if (principalRef.current !== stylePrincipal || mapRef.current !== map) return;
+      if (
+        generation !== principalGenerationRef.current ||
+        activeOwnerRef.current !== ownerId ||
+        !networkAllowedRef.current ||
+        mapRef.current !== map
+      )
+        return;
       if (!next) addMapEnhancements(map, threeD);
-      if (selected) void selectPlace(selected);
+      if (selected) void selectPlace(selected, generation, ownerId);
     });
   };
 
   const toggle3d = () => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!networkAllowed || !map) return;
     const next = !threeD;
     setThreeD(next);
     map.easeTo({ pitch: next ? 48 : 0, bearing: next ? -8 : 0, duration: 700 });
@@ -391,32 +462,44 @@ export function KovaMaps() {
   };
 
   const locate = () => {
+    if (!networkAllowed) return;
     if (!navigator.geolocation) {
       setError("Current location is not supported by this browser.");
       return;
     }
-    const requestPrincipal = principal;
+    const generation = principalGenerationRef.current;
+    const ownerId = activeOwnerRef.current;
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        if (principalRef.current !== requestPrincipal || networkAllowed !== true) return;
+        if (
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId ||
+          !networkAllowedRef.current
+        )
+          return;
         setError(null);
         setQuery("");
         setResults([]);
         void selectPlace({
-          id: "current-location",
+          id: `current:${coords.latitude},${coords.longitude}`,
           name: "Current location",
           latitude: coords.latitude,
           longitude: coords.longitude,
-          type: "current location",
+          type: "current_location",
           address: {},
           bounds: null,
         });
       },
       () => {
-        if (principalRef.current === requestPrincipal)
-          setError(
-            "Location access was denied or unavailable. You can still search by place or address.",
-          );
+        if (
+          generation !== principalGenerationRef.current ||
+          activeOwnerRef.current !== ownerId ||
+          !networkAllowedRef.current
+        )
+          return;
+        setError(
+          "Location access was denied or unavailable. You can still search by place or address.",
+        );
       },
       { enableHighAccuracy: false, timeout: 8_000, maximumAge: 60_000 },
     );
@@ -434,19 +517,6 @@ export function KovaMaps() {
         className="absolute inset-0 bg-muted"
         aria-label="Interactive map"
       />
-      {networkAllowed !== true ? (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-background p-8 text-center">
-          <div className="max-w-sm rounded-2xl border bg-card p-6 shadow-xl">
-            <MapPin className="mx-auto mb-3 h-7 w-7 text-primary" />
-            <h1 className="font-semibold">
-              {networkAllowed === null ? "Checking Maps access" : "Maps unavailable"}
-            </h1>
-            {networkPolicy?.message ? (
-              <p className="mt-2 text-sm text-muted-foreground">{networkPolicy.message}</p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
       {loading ? (
         <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
           Loading real map data…
@@ -481,7 +551,7 @@ export function KovaMaps() {
             />
             <button
               type="submit"
-              disabled={searching || networkAllowed !== true}
+              disabled={searching || !networkAllowed}
               aria-label="Search maps"
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
             >
@@ -512,7 +582,7 @@ export function KovaMaps() {
       </header>
 
       <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 z-10 flex max-w-[calc(100%-1.5rem)] items-end gap-2 sm:bottom-5 sm:left-5">
-        {selected && networkAllowed === true ? (
+        {selected ? (
           <section className="max-w-sm rounded-2xl border border-border/70 bg-background/92 p-4 shadow-xl backdrop-blur-xl">
             <div className="flex gap-3">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
@@ -525,7 +595,7 @@ export function KovaMaps() {
                 <button
                   type="button"
                   onClick={askKova}
-                  disabled={!isLoaded || networkAllowed !== true}
+                  disabled={!networkAllowed}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
@@ -538,7 +608,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={locate}
-            disabled={networkAllowed !== true}
+            disabled={!networkAllowed}
             aria-label="Use my current location"
             title="Use my current location"
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
@@ -548,7 +618,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={toggle3d}
-            disabled={networkAllowed !== true}
+            disabled={!networkAllowed}
             aria-pressed={threeD}
             aria-label={threeD ? "Switch to 2D" : "Switch to 3D"}
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
@@ -562,7 +632,7 @@ export function KovaMaps() {
           <button
             type="button"
             onClick={toggleStyle}
-            disabled={networkAllowed !== true}
+            disabled={!networkAllowed}
             aria-pressed={satellite}
             aria-label={satellite ? "Show street map" : "Show satellite imagery"}
             className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
