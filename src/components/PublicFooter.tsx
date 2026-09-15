@@ -1,13 +1,44 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NovaLogo } from "@/components/NovaLogo";
 
-const footerLinks = [
-  { label: "Privacy", to: "/privacy" },
-  { label: "Terms", to: "/terms" },
-  { label: "Security", to: "/security" },
-  { label: "Accessibility", to: "/accessibility" },
-  { label: "Help", to: "/help" },
-  { label: "Contact", to: "/contact-support" },
+const footerGroups = [
+  {
+    label: "Product",
+    links: [
+      { label: "Overview", to: "/overview" },
+      { label: "Features", to: "/features" },
+      { label: "Plans", to: "/pricing" },
+      { label: "Apps", to: "/apps" },
+    ],
+  },
+  {
+    label: "Workflows",
+    links: [
+      { label: "Use cases", to: "/use-cases" },
+      { label: "Business", to: "/business" },
+      { label: "Education", to: "/education" },
+      { label: "Developers", to: "/developers" },
+    ],
+  },
+  {
+    label: "Company",
+    links: [
+      { label: "About", to: "/about" },
+      { label: "Trust", to: "/trust" },
+      { label: "Status", to: "/status" },
+      { label: "Help", to: "/help" },
+      { label: "Contact", to: "/contact-support" },
+    ],
+  },
+  {
+    label: "Legal",
+    links: [
+      { label: "Privacy", to: "/privacy" },
+      { label: "Terms", to: "/terms" },
+      { label: "Security", to: "/security" },
+      { label: "Accessibility", to: "/accessibility" },
+    ],
+  },
 ] as const;
 
 export function PublicFooter() {
@@ -15,7 +46,7 @@ export function PublicFooter() {
 
   return (
     <footer className="border-t border-border bg-muted/20">
-      <div className="mx-auto grid max-w-7xl gap-8 py-10 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] md:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="mx-auto grid max-w-7xl gap-10 py-12 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:grid-cols-[minmax(16rem,1.3fr)_2fr]">
         <div>
           <div className="flex items-center gap-2 font-semibold tracking-[-0.01em]">
             <NovaLogo decorative mark className="h-6 w-6" />
@@ -33,22 +64,32 @@ export function PublicFooter() {
         </div>
 
         <nav
-          className="grid grid-cols-2 gap-x-8 text-sm sm:grid-cols-3"
+          className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4"
           aria-label="Footer navigation"
         >
-          {footerLinks.map((item) => {
-            const currentPage = pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to as never}
-                aria-current={currentPage ? "page" : undefined}
-                className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+          {footerGroups.map((group) => (
+            <div key={group.label}>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
+                {group.label}
+              </h2>
+              <ul className="mt-3">
+                {group.links.map((item) => {
+                  const currentPage = pathname === item.to;
+                  return (
+                    <li key={item.to}>
+                      <Link
+                        to={item.to as never}
+                        aria-current={currentPage ? "page" : undefined}
+                        className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
       </div>
     </footer>

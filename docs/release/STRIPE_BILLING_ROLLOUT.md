@@ -93,7 +93,8 @@ cancellation. Do not advertise plan changes unless the owner separately enables 
    handlers must never receive deliveries concurrently because the old revision does not honor the
    lease protocol.
 4. Apply forward billing migrations `20260904231210`, `20260904231213`,
-   `20260913013131`, `20260913023331`, and `20260913153000` in timestamp order. Verify the exact live Plus and Pro Price IDs and
+   `20260913013131`, `20260913023331`, `20260913153000`, and
+   `20260913210000` in timestamp order. Verify the exact live Plus and Pro Price IDs and
    retain a registry row for every still-valid historical Price ID.
 5. Verify the Cloudflare webhook-path rule uses Stripe's current official source-IP feed and rejects
    non-Stripe source networks before application signature verification.

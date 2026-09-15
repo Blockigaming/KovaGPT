@@ -18,14 +18,16 @@ function readRouteTree(directory) {
 const registry = read("src/lib/capability-registry.ts");
 const modes = read("src/routes/modes.tsx");
 const pricing = read("src/routes/pricing.tsx");
-const help = read("src/routes/help.tsx");
+const helpRoute = read("src/routes/help.tsx");
+const helpData = read("src/lib/help-center-data.ts");
+const help = [helpRoute, helpData].join("\n");
 const aiWriter = read("src/routes/ai-writer.tsx");
 const publicRoutes = [modes, pricing, help].join("\n");
 const publishedSources = [registry, publicRoutes, aiWriter].join("\n");
 const allRouteCopy = readRouteTree(resolve(root, "src/routes")).join("\n");
 
 test("Modes, Pricing, and Help consume one typed capability registry", () => {
-  for (const source of [modes, pricing, help]) {
+  for (const source of [modes, pricing, helpData]) {
     assert.match(source, /import \{ CAPABILITY_REGISTRY \} from "@\/lib\/capability-registry"/);
   }
 
@@ -117,11 +119,11 @@ test("known limitations and required unavailable Voice remain explicit", () => {
 });
 
 test("Help answers for high-risk capabilities come from the registry", () => {
-  assert.match(help, /FEATURES\.attachments\.summary/);
-  assert.match(help, /FEATURES\.dataAnalysis\.limitation/);
-  assert.match(help, /FEATURES\.imageEditing\.summary/);
-  assert.match(help, /FEATURES\.library\.summary/);
-  assert.match(help, /FEATURES\.cloudHistory\.summary/);
-  assert.match(help, /FEATURES\.scheduledTasks\.summary/);
+  assert.match(help, /features\.attachments\.summary/);
+  assert.match(help, /features\.dataAnalysis\.limitation/);
+  assert.match(help, /features\.imageEditing\.summary/);
+  assert.match(help, /features\.library\.summary/);
+  assert.match(help, /features\.cloudHistory\.summary/);
+  assert.match(help, /features\.scheduledTasks\.summary/);
   assert.match(help, /CAPABILITY_REGISTRY\.workingApps\.join/);
 });

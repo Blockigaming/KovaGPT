@@ -287,6 +287,7 @@ function ProjectsPage() {
     setLoadError(null);
     setQuery("");
     setShowArchived(false);
+    setScope("all");
     setDropProjectId(null);
     setCreateOpen(false);
     setTemplatesOpen(false);

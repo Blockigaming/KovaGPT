@@ -68,7 +68,12 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error("Check the task schedule, context, and trigger settings.");
   return new Error("Tasks are temporarily unavailable. Please retry.");
 }
-async function access(userId: string, mutation = false) {
+function scheduledPlanEligible(tier: unknown): boolean {
+  // The database is authoritative. Unknown future paid tiers are eligible by
+  // default; only an absent/free result is denied.
+  return typeof tier === "string" && tier.length > 0 && tier !== "free";
+}
+async function access(userId: string, mutation = false, requireEligiblePlan = true) {
   const request = getRequest();
   if (mutation && isCrossSiteMutation(request)) throw new Error("Cross-site request blocked.");
   const auth = await requireVerifiedUser(request);
@@ -83,6 +88,14 @@ async function access(userId: string, mutation = false) {
   if (!rate.allowed) throw new Error("Tasks are busy. Please try again shortly.");
   const admin = auth.supabaseAdmin as unknown as Admin;
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(10000)]);
+  if (requireEligiblePlan) {
+    const plan = await admin
+      .rpc("effective_user_plan_tier", { _user_id: userId })
+      .abortSignal(signal);
+    if (plan.error || !scheduledPlanEligible(plan.data)) {
+      throw safeTaskError(plan.error?.code, "task_plan_required");
+    }
+  }
   const current = await admin
     .rpc("scheduled_task_account_available", { p_user_id: userId })
     .abortSignal(signal);
@@ -149,14 +162,14 @@ export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .validator((value: unknown) => taskReadIdentity.parse(value))
   .handler(async ({ data, context }) => {
     assertTaskPrincipal(data, context.userId);
-    const { admin, signal } = await access(context.userId);
+    const { admin, signal } = await access(context.userId, false, false);
     const plan = await admin
       .rpc("effective_user_plan_tier", { _user_id: context.userId })
       .abortSignal(signal);
     if (plan.error) throw safeTaskError(plan.error.code);
     const ready = await activeScheduledExecutionReadiness();
     return {
-      eligible: plan.data === "plus" || plan.data === "pro",
+      eligible: scheduledPlanEligible(plan.data),
       executionAvailable: ready.configured,
       reason: ready.reason,
     };

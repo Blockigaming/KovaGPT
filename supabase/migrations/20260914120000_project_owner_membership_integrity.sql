@@ -15,19 +15,6 @@ declare
   candidate_role public.project_role := coalesce(new.role, old.role);
   candidate_project uuid := coalesce(new.project_id, old.project_id);
 begin
-  if tg_op = 'UPDATE' then
-    select p.owner_id
-      into previous_canonical_owner
-    from public.projects p
-    where p.id = old.project_id;
-
-    if old.user_id = previous_canonical_owner
-      and (new.project_id is distinct from old.project_id
-        or new.user_id is distinct from old.user_id) then
-      raise exception 'project_owner_membership_required' using errcode = '23514';
-    end if;
-  end if;
-
   select p.owner_id
     into canonical_owner
   from public.projects p
@@ -41,6 +28,20 @@ begin
 
   if tg_op = 'DELETE' and old.user_id = canonical_owner then
     raise exception 'project_owner_membership_required' using errcode = '23514';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    select p.owner_id
+      into previous_canonical_owner
+    from public.projects p
+    where p.id = old.project_id;
+
+    if old.user_id = previous_canonical_owner and (
+      new.project_id is distinct from old.project_id
+      or new.user_id is distinct from old.user_id
+    ) then
+      raise exception 'project_owner_membership_required' using errcode = '23514';
+    end if;
   end if;
 
   if candidate_user = canonical_owner and candidate_role <> 'owner'::public.project_role then
@@ -65,20 +66,43 @@ before insert or update or delete on public.project_members
 for each row execute function public.enforce_project_owner_membership();
 
 -- Repair historical drift before relying on the trigger for future writes.
--- Projects whose deletion has already started are intentionally left alone:
--- their child rows are protected by the deletion write fence and will be
--- removed by the metadata finalizer. Attempting an upsert for those projects
--- would fire that fence even when the owner membership is already correct.
+-- The deletion fence is bypassed only inside this migration so pending owners
+-- retain visibility and retry authority; the transaction restores the fence
+-- before application writes can resume.
+do $$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_trigger
+    where tgrelid = 'public.project_members'::regclass
+      and tgname = 'project_members_deletion_write_fence'
+  ) then
+    alter table public.project_members disable trigger project_members_deletion_write_fence;
+  end if;
+end;
+$$;
+
 insert into public.project_members(project_id, user_id, role)
 select p.id, p.owner_id, 'owner'::public.project_role
 from public.projects p
-where p.deletion_requested_at is null
 on conflict (project_id, user_id) do update set role = excluded.role;
 
 update public.project_members pm
 set role = 'editor'::public.project_role
 from public.projects p
 where p.id = pm.project_id
-  and p.deletion_requested_at is null
   and pm.user_id <> p.owner_id
   and pm.role = 'owner'::public.project_role;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_trigger
+    where tgrelid = 'public.project_members'::regclass
+      and tgname = 'project_members_deletion_write_fence'
+  ) then
+    alter table public.project_members enable trigger project_members_deletion_write_fence;
+  end if;
+end;
+$$;

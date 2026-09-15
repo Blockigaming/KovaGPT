@@ -139,8 +139,7 @@ function ScheduledTasksPage() {
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
   const loadTasks = useCallback(async () => {
-    if (!dataReady || dataGeneration !== generationRef.current || !["paid", "free"].includes(plan))
-      return;
+    if (!dataReady || dataGeneration !== generationRef.current || plan !== "paid") return;
     const generation = generationRef.current;
     setLoading(true);
     setLoadError(null);
