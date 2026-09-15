@@ -6,7 +6,9 @@ on:
     paths:
       - .github/workflows/candidate-source-evidence.yml
       - src/components/public/**
+      - src/components/PublicFooter.tsx
       - src/components/ui/**
+      - tests/unit/public-shell-responsive.test.mjs
       - tests/unit/shared-responsive-layout.test.mjs
   push:
     branches:
