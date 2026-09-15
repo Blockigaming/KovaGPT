@@ -72,12 +72,7 @@ export type Activity = {
   label: string;
   status: "done" | "running" | "failed" | "canceled";
 };
-const ACTIVITY_STATUSES = new Set<Activity["status"]>([
-  "done",
-  "running",
-  "failed",
-  "canceled",
-]);
+const ACTIVITY_STATUSES = new Set<Activity["status"]>(["done", "running", "failed", "canceled"]);
 function isActivity(value: unknown): value is Activity {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Partial<Activity>;
@@ -264,11 +259,13 @@ function sanitizeMessageMemorySources(
     const responseSources =
       message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
     const activities = Array.isArray(rawActivities)
-      ? rawActivities.filter(isActivity).map((activity) =>
-          retiredResearchProgress !== undefined && activity.status === "running"
-            ? { ...activity, status: "failed" as const }
-            : activity,
-        )
+      ? rawActivities
+          .filter(isActivity)
+          .map((activity) =>
+            retiredResearchProgress !== undefined && activity.status === "running"
+              ? { ...activity, status: "failed" as const }
+              : activity,
+          )
       : undefined;
     return {
       ...rest,
