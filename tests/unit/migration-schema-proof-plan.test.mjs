@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildMigrationSchemaProofPlan } from "../../scripts/release/migration-schema-proof-plan.mjs";
+import {
+  buildMigrationSchemaProofPlan,
+} from "../../scripts/release/migration-schema-proof-plan.mjs";
 
 const manifest = {
   migrations: [
