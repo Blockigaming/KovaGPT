@@ -61,6 +61,6 @@ test("commercial surfaces avoid fake success and preserve recoverable work", asy
   assert.match(prompt, /PROMPT_DRAFT_KEY/);
   assert.match(timeout, /TimeoutError/);
   assert.match(projects, /fetchWithTimeout/);
-  assert.match(help, /Your message is still here/);
+  assert.match(help, /Your\s+message is still here/);
   assert.match(states, /Reconnect before retrying unsaved actions/);
 });

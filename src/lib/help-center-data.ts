@@ -174,7 +174,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "What is Extra high mode?",
-    "Extra high explores alternatives with more detailed reasoning before Pro mode. It is available on Pro.",
+    "Extra high emphasizes alternatives and detail before Pro mode. It is available on Pro.",
   ],
   [
     "Chat & modes",

@@ -30,6 +30,7 @@ test("Modes, Pricing, and Help consume one typed capability registry", () => {
   for (const source of [modes, pricing, helpData]) {
     assert.match(source, /import \{ CAPABILITY_REGISTRY \} from "@\/lib\/capability-registry"/);
   }
+  assert.match(helpRoute, /from "@\/lib\/help-center-data"/);
 
   assert.match(registry, /satisfies CapabilityRegistry/);
   assert.match(registry, /MODES/);
