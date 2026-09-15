@@ -8,6 +8,7 @@ on:
       - playwright.ui-foundations.config.ts
       - tests/ui-foundations/**
       - src/components/ui/**
+      - src/components/CommandPalette.tsx
       - src/components/MobileBottomSheet.tsx
       - src/components/LegalArticle.tsx
       - src/components/SeoLanding.tsx
@@ -32,6 +33,11 @@ concurrency:
 
 jobs:
   browser:
+    name: Shared UI (${{ matrix.browser }})
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -53,10 +59,10 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build isolated UI fixture with application CSS
         run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
+      - name: Install browser
+        run: npx --no-install playwright install --with-deps "${{ matrix.browser }}"
       - name: Exercise responsive layouts and real keyboard interactions
-        run: npx --no-install playwright test --config playwright.ui-foundations.config.ts
+        run: npx --no-install playwright test --config playwright.ui-foundations.config.ts --project "${{ matrix.browser }}"
       - name: Record exact source provenance
         if: always()
         shell: bash
@@ -73,7 +79,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ui-foundations-${{ github.event.pull_request.head.sha || github.sha }}
+          name: ui-foundations-${{ matrix.browser }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: test-results/ui-foundations/
           if-no-files-found: error
           retention-days: 7

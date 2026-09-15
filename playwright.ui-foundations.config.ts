@@ -10,9 +10,13 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   outputDir: "test-results/ui-foundations/results",
   reporter: [["list"], ["json", { outputFile: "test-results/ui-foundations/results.json" }]],
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "firefox", use: { browserName: "firefox" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
   use: {
     baseURL: "http://127.0.0.1:4175",
-    browserName: "chromium",
     reducedMotion: "reduce",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
