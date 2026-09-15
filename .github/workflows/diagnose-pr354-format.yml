@@ -40,3 +40,5 @@ jobs:
           git --no-pager diff -- \
             scripts/release/migration-schema-proof-plan.mjs \
             tests/unit/migration-schema-proof-plan.test.mjs
+
+# Diagnostic child-PR trigger only; remove after capturing the exact formatter diff.
