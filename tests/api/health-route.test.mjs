@@ -25,7 +25,6 @@ test("diagnostics records configuration presence without secret values", () => {
   assert.match(diagnostics, /missing: string\[\]/);
   assert.match(diagnostics, /OPENAI_API_KEY/);
   assert.match(diagnostics, /FIRECRAWL_API_KEY/);
-  assert.match(diagnostics, /deepResearchRuns: "declared"/);
   assert.match(diagnostics, /bootRequirements/);
   assert.match(diagnostics, /publicSite: \{ configured: true, missing: \[\] \}/);
   assert.match(diagnostics, /VITE_SUPABASE_ANON_KEY/);

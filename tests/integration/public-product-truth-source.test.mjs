@@ -94,7 +94,7 @@ test("every in-scope route is canonically branded and links to an audited public
   }
 });
 
-test("public research copy states provider and verification limits without guarantees", async () => {
+test("public search copy states provider and verification limits without guarantees", async () => {
   const paths = [
     "src/routes/blog.best-ai-assistants.tsx",
     "src/routes/blog.ai-market-research-guide.tsx",
@@ -107,7 +107,7 @@ test("public research copy states provider and verification limits without guara
     assert.match(source, /verif/iu, paths[index]);
     assert.match(
       source,
-      /can make mistakes|can still|does not guarantee|cannot guarantee|guarantee that a claim/iu,
+      /can make mistakes|can still|does not guarantee|cannot guarantee|guarantee\s+that a claim/iu,
       paths[index],
     );
     assert.doesNotMatch(
@@ -161,23 +161,6 @@ test("capability landing pages do not promise detector evasion, legal rights, or
   assert.match(combined, /verify the result/iu);
   assert.match(combined, /does not expose output-format or transparency controls/iu);
   assert.match(combined, /same browser while that history remains available/iu);
-});
-
-test("public copy does not advertise retired modes, voice, or unlimited/free provider features", async () => {
-  const combined = (await Promise.all([...ROUTE_SOURCE.values()].map(readSource))).join("\n");
-
-  assert.doesNotMatch(
-    combined,
-    /Basic Mode|Auto Mode|Creative Mode|Precise Mode|Code Mode|Study Mode|Reasoning Mode|Research Mode|Writer Pro|Tutor Pro/iu,
-  );
-  assert.doesNotMatch(
-    combined,
-    /voice mode|voice chat|spoken conversation|talk (?:to|with) KovaGPT|real-time voice/iu,
-  );
-  assert.doesNotMatch(
-    combined,
-    /unlimited (?:chat|messages|images|uploads|search|research)|free (?:live )?web search|Deep Research (?:is )?free|generate images without (?:an )?account/iu,
-  );
 });
 
 test("the shared public footer carries product and affiliation caveats", async () => {

@@ -38,13 +38,6 @@ export type BrainTask = {
   href: string;
 };
 
-export type BrainResearch = {
-  id: string;
-  title: string;
-  status: string;
-  updatedAt: string;
-};
-
 export type BrainSuggestion = {
   id: string;
   title: string;
@@ -59,7 +52,7 @@ export type BrainBriefingItem = {
   title: string;
   detail: string;
   href: string;
-  category: "goal" | "task" | "research" | "context";
+  category: "goal" | "task" | "context";
   urgency: "normal" | "attention";
 };
 
@@ -68,14 +61,12 @@ export type KovaBrainSnapshot = {
   counts: {
     activeGoals: number;
     openTasks: number;
-    activeResearch: number;
     memories: number;
     contextPacks: number;
     libraryItems: number;
   };
   goals: BrainGoal[];
   tasks: BrainTask[];
-  research: BrainResearch[];
   briefing: BrainBriefingItem[];
   suggestions: BrainSuggestion[];
 };
@@ -101,7 +92,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
       goalsResult,
       scheduledResult,
       membershipResult,
-      researchResult,
       memoryResult,
       packsResult,
       libraryResult,
@@ -123,13 +113,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
 
       context.supabase.from("project_members").select("project_id").eq("user_id", context.userId),
 
-      brainTable(context.supabase, "deep_research_runs")
-        .select("id,query,status,updated_at")
-        .eq("user_id", context.userId)
-        .in("status", ["queued", "running", "paused"])
-        .order("updated_at", { ascending: false })
-        .limit(12),
-
       context.supabase.from("project_memory").select("id", { count: "exact", head: true }),
 
       brainTable(context.supabase, "context_packs")
@@ -147,7 +130,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
       goalsResult,
       scheduledResult,
       membershipResult,
-      researchResult,
       packsResult,
       libraryResult,
     ].find((result) => result.error);
@@ -247,22 +229,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
       return Date.parse(a.dueAt) - Date.parse(b.dueAt);
     });
 
-    const researchRows = (researchResult.data ?? []) as Array<{
-      id: string;
-      query: string;
-      status: string;
-      updated_at: string;
-    }>;
-
-    const research: BrainResearch[] = researchRows.map(
-      (run: { id: string; query: string; status: string; updated_at: string }) => ({
-        id: run.id,
-        title: run.query,
-        status: run.status,
-        updatedAt: run.updated_at,
-      }),
-    );
-
     const briefing: BrainBriefingItem[] = [];
     const suggestions: BrainSuggestion[] = [];
 
@@ -306,17 +272,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
         href: "/goals",
         category: "goal",
         urgency: goal.progress < 75 ? "attention" : "normal",
-      });
-    }
-
-    for (const run of research.slice(0, 2)) {
-      briefing.push({
-        id: `research:${run.id}`,
-        title: run.title,
-        detail: `Research status: ${run.status}.`,
-        href: "/research-planner",
-        category: "research",
-        urgency: "normal",
       });
     }
 
@@ -381,21 +336,6 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
       });
     }
 
-    if (!research.length && goals.some((goal) => goal.priority === "high")) {
-      suggestions.push({
-        id: "research-high-priority-goal",
-        title: "Research a high-priority goal",
-        reason:
-          "At least one active goal is marked high priority and there is no active research run.",
-        href: "/research-planner",
-        evidence: goals
-          .filter((goal) => goal.priority === "high")
-          .slice(0, 3)
-          .map((goal) => goal.title),
-        priority: "low",
-      });
-    }
-
     const memories = memoryResult.count ?? 0;
     const contextPacks = packsResult.count ?? 0;
     const libraryItems = libraryResult.count ?? 0;
@@ -405,7 +345,7 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
         id: "workspace-steady",
         title: "No urgent workspace items detected",
         detail:
-          "Kova Brain found no overdue tasks, approaching goal targets, or active research requiring attention.",
+          "Kova Brain found no overdue tasks or approaching goal targets requiring attention.",
         href: "/summary",
         category: "context",
         urgency: "normal",
@@ -417,14 +357,12 @@ export const getKovaBrainSnapshot = createServerFn({ method: "GET" })
       counts: {
         activeGoals: goals.length,
         openTasks: tasks.length,
-        activeResearch: research.length,
         memories,
         contextPacks,
         libraryItems,
       },
       goals,
       tasks: tasks.slice(0, 12),
-      research,
       briefing: briefing.slice(0, 8),
       suggestions: suggestions.slice(0, 6),
     };

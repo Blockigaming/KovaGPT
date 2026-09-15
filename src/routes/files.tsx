@@ -10,7 +10,7 @@ import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
 import {
   addManyToContextPack,
   addToContextPack,
-  continueInResearch,
+  continueInChat,
   openInWork,
 } from "@/lib/workspace-handoffs";
 export const Route = createFileRoute("/files")({
@@ -302,7 +302,7 @@ function FilesPage() {
                       </button>
                       <button
                         onClick={() =>
-                          continueInResearch(
+                          continueInChat(
                             {
                               type: "file",
                               id: item.id,
@@ -314,7 +314,7 @@ function FilesPage() {
                         }
                         className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
                       >
-                        Research
+                        Ask Kova
                       </button>
                       <button
                         onClick={() =>

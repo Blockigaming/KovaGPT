@@ -76,7 +76,6 @@ const CATEGORIES = [
   "Getting started",
   "Chat basics",
   "Search",
-  "Deep Research",
   "Files",
   "Data analysis",
   "Canvas",
@@ -97,14 +96,14 @@ const FAQS: Faq[] = [
     id: "start-1",
     category: "Getting started",
     question: "What should I try first in KovaGPT?",
-    answer: `Start with Medium chat, create a Project for ongoing work, and explicitly save reusable items to Library. ${FEATURES.webSearch.summary} ${FEATURES.deepResearch.summary}`,
+    answer: `Start with Medium chat, create a Project for ongoing work, and explicitly save reusable items to Library. ${FEATURES.webSearch.summary}`,
     keywords: ["getting started", "first run", "onboarding"],
   },
   {
     id: "chat-1",
     category: "Chat basics",
     question: "How do I choose the right chat mode?",
-    answer: `Free includes ${FREE_MODES}. Plus includes ${PLUS_MODES}. Pro includes ${PRO_MODES}. Search, Deep Research, Images, and Temporary Chat are separate composer tools with their own availability rules.`,
+    answer: `Free includes ${FREE_MODES}. Plus includes ${PLUS_MODES}. Pro includes ${PRO_MODES}. Search, Images, and Temporary Chat are separate composer tools with their own availability rules.`,
     keywords: ["chat", "mode", "temporary"],
   },
   {
@@ -113,13 +112,6 @@ const FAQS: Faq[] = [
     question: "When should I enable Search?",
     answer: `${FEATURES.webSearch.summary} ${FEATURES.webSearch.limitation}`,
     keywords: ["web", "sources", "citations"],
-  },
-  {
-    id: "research-1",
-    category: "Deep Research",
-    question: "What does Deep Research do?",
-    answer: `${FEATURES.deepResearch.summary} ${FEATURES.deepResearch.limitation}`,
-    keywords: ["research", "report", "sources"],
   },
   {
     id: "files-1",

@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
-import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
+import { addToContextPack, continueInChat, openInWork } from "@/lib/workspace-handoffs";
 import { CollaborationStatus } from "@/components/CollaborationStatus";
 import { CanvasComments } from "@/components/CanvasComments";
 import { useCanvasCollaboration } from "@/lib/use-canvas-collaboration";
@@ -1016,7 +1016,7 @@ function ArtifactEditorSession({
           </button>
           <button
             onClick={() =>
-              continueInResearch(
+              continueInChat(
                 {
                   type: "artifact",
                   id: kind,
@@ -1028,7 +1028,7 @@ function ArtifactEditorSession({
             }
             className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
           >
-            Research
+            Ask Kova
           </button>
           <button
             onClick={() =>

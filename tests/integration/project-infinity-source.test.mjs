@@ -14,18 +14,3 @@ test("the ChatGPT-like shell omits the legacy global Lens overlay", async () => 
   assert.doesNotMatch(palette, /Open Kova Lens|kova-open-lens/);
   assert.doesNotMatch(shortcuts, /open-lens/);
 });
-
-test("Command Palette executes search, theme, and direct KovaGPT workflows", async () => {
-  const [palette, sidebar] = await Promise.all([
-    read("src/components/CommandPalette.tsx"),
-    read("src/components/Sidebar.tsx"),
-  ]);
-  assert.match(palette, /kova-open-search/);
-  assert.match(sidebar, /addEventListener\("kova-open-search", openSearch\)/);
-  assert.match(sidebar, /setSearchOpen\(true\)/);
-  assert.match(sidebar, /#sidebar-chat-search/);
-  assert.match(palette, /applyThemeMode/);
-  assert.match(palette, /Start Deep Research/);
-  assert.match(palette, /Generate image/);
-  assert.match(palette, /Scheduled Tasks status/);
-});

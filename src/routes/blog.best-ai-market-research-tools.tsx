@@ -156,9 +156,9 @@ function BestAiMarketResearchToolsPage() {
             search provider.
           </p>
           <p>
-            Deep Research is available to eligible signed-in Plus and Pro accounts and depends on
-            available search and AI providers. It can plan a longer research pass and produce a
-            cited draft. Neither plan access nor the citations guarantee that a claim is correct.
+            Source-backed Search depends on available search and AI providers. It can plan a longer
+            research pass and produce a cited draft. Neither plan access nor the citations guarantee
+            that a claim is correct.
           </p>
 
           <h2 className="mt-10 text-2xl font-semibold">A practical selection scorecard</h2>

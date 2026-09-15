@@ -36,13 +36,17 @@ export function openInWork(item: WorkspaceHandoff, userKey: string | null) {
   return true;
 }
 
-export function continueInResearch(item: WorkspaceHandoff, userKey: string | null) {
-  const written = writeHandoff("kova-research-draft", userKey, {
-    question: `Research and verify the key claims related to ${item.title}`,
-    context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 20_000),
-  });
+export function continueInChat(item: WorkspaceHandoff, userKey: string | null) {
+  const written = writeHandoff(
+    "kova-app-chat-context",
+    userKey,
+    `Review and verify the key claims related to ${item.title}.\n\n${item.type}: ${item.title}\n\n${item.content}`.slice(
+      0,
+      24_000,
+    ),
+  );
   if (!written) return false;
-  window.location.href = "/research-planner";
+  window.location.href = "/";
   return true;
 }
 

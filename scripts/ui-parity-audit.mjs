@@ -45,7 +45,6 @@ const defaultScenarios = [
   { id: "images", path: "/images" },
   { id: "library", path: "/library" },
   { id: "apps", path: "/apps" },
-  { id: "deep-research", path: "/research-planner" },
   { id: "maps", path: "/maps" },
 ];
 const styleProperties = [

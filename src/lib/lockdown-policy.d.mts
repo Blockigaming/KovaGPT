@@ -1,6 +1,5 @@
 export type LockdownCapability =
   | "live_web"
-  | "deep_research"
   | "agent"
   | "connector_read"
   | "connector_write"

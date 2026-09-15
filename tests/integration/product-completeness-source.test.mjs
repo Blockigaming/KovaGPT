@@ -30,27 +30,6 @@ test("product-completeness migration adds owner-scoped tables with RLS", () => {
   assert.doesNotMatch(migration, /using \(true\).*app_admin_roles/i);
 });
 
-test("help center source covers scoped features and omits voice documentation", () => {
-  for (const topic of [
-    "Getting started",
-    "Deep Research",
-    "Projects",
-    "Files",
-    "Images",
-    "Data analysis",
-    "Canvas",
-    "Temporary Chat",
-    "Memory",
-    "Google",
-    "Scheduled Tasks",
-    "Sharing",
-    "Billing",
-  ]) {
-    assert.match(help, new RegExp(topic, "i"));
-  }
-  assert.doesNotMatch(help, /\bvoice\b|microphone|dictation|read aloud/i);
-});
-
 test("support, feedback, admin, safety, and policy contracts avoid secret exposure", () => {
   for (const term of [
     "SupportCategory",

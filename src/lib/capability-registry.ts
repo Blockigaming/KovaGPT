@@ -15,7 +15,6 @@ export type CapabilityAvailability =
 
 export type CapabilityId =
   | "webSearch"
-  | "deepResearch"
   | "attachments"
   | "dataAnalysis"
   | "canvas"
@@ -140,9 +139,8 @@ function planFeatures(tier: Tier): readonly string[] {
     allowance.storage,
     "Search and image generation when their configured providers are available",
   ];
-  if (tier === "plus" || tier === "pro") {
-    features.push("Deep Research and Adaptive Memory when enabled and available");
-  }
+  if (tier === "plus" || tier === "pro")
+    features.push("Adaptive Memory when enabled and available");
   return features;
 }
 
@@ -158,14 +156,6 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       summary:
         "Search can retrieve current web sources when the configured search and AI providers are available.",
       limitation: "Open cited links and verify that each source supports the answer.",
-    },
-    deepResearch: {
-      label: "Deep Research",
-      availability: "provider-dependent",
-      minimumTier: "plus",
-      summary:
-        "Deep Research creates a longer source-backed report for signed-in Plus and Pro users when its providers are available.",
-      limitation: "Reports and citations still need review.",
     },
     attachments: {
       label: "Files",
@@ -275,7 +265,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 16,
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
-      description: "Higher published allowances, High mode, Deep Research, and Adaptive Memory.",
+      description: "Higher published allowances, High mode, and Adaptive Memory.",
       features: planFeatures("plus"),
     },
     pro: {

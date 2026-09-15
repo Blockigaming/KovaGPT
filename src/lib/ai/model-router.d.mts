@@ -1,7 +1,6 @@
 import type { ModelRole } from "./model-config.d.mts";
 
-export type RouterTask =
-  "chat" | "utility" | "deep_research" | "image_generation" | "image_analysis" | "embedding";
+export type RouterTask = "chat" | "utility" | "image_generation" | "image_analysis" | "embedding";
 
 export type UtilityTask =
   | "chat_title"

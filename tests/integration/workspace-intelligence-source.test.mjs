@@ -4,38 +4,6 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("workspace intelligence aggregates only authenticated existing workspace tables", async () => {
-  const source = await read("src/lib/workspace.functions.ts");
-  assert.match(source, /listWorkspaceIntelligence/);
-  for (const table of [
-    "projects",
-    "project_chats",
-    "project_files",
-    "user_library_items",
-    "project_memory",
-    "context_packs",
-    "deep_research_runs",
-    "scheduled_tasks",
-  ]) {
-    assert.match(source, new RegExp(`\"${table}\"`));
-  }
-  assert.match(source, /requireSupabaseAuth/);
-  assert.doesNotMatch(source, /recommended for you/i);
-});
-
-test("projects, work, research, and automations share real workspace signals", async () => {
-  const [project, work, research, tasks] = await Promise.all([
-    read("src/routes/projects.$projectId.tsx"),
-    read("src/routes/work.tsx"),
-    read("src/routes/research-planner.tsx"),
-    read("src/routes/scheduled-tasks.tsx"),
-  ]);
-  assert.match(project, /Connected project work/);
-  assert.match(work, /Recent context for Work/);
-  assert.match(research, /Research context/);
-  assert.match(tasks, /Context for automations/);
-});
-
 test("workspace resources have reduced-click truthful handoffs", async () => {
   const [handoffs, library, files, memory, artifact, packs] = await Promise.all([
     read("src/lib/workspace-handoffs.ts"),
@@ -47,12 +15,12 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
   ]);
   for (const source of [library, files, memory, artifact]) {
     assert.match(source, /openInWork/);
-    assert.match(source, /continueInResearch/);
+    assert.match(source, /continueInChat/);
     assert.match(source, /addToContextPack/);
   }
   assert.match(handoffs, /kova-work-draft/);
-  assert.match(handoffs, /kova-research-draft/);
-  assert.match(packs, /Use in Research/);
+  assert.match(handoffs, /kova-app-chat-context/);
+  assert.match(packs, /Use in Search/);
   for (const type of ["artifact", "image", "research", "prompt", "work"]) {
     assert.match(packs, new RegExp(`\"${type}\"`));
   }

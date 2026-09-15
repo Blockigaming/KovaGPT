@@ -75,11 +75,6 @@ const MessageVersionHistoryDialog = lazy(() =>
     default: MessageVersionHistoryDialog,
   })),
 );
-const ResearchProgressCard = lazy(() =>
-  import("./ResearchProgressCard").then(({ ResearchProgressCard }) => ({
-    default: ResearchProgressCard,
-  })),
-);
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -269,9 +264,7 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
-  const researchOwnsRetry = Boolean(
-    message.researchProgress && message.researchProgress.status !== "complete",
-  );
+  const researchOwnsRetry = Boolean(false);
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const feedbackBaseKey = principalResolved
@@ -293,9 +286,7 @@ function ChatMessageInner({
     localStreamingStartedAtRef.current = Date.now();
   const resolvedStreamingStartedAt =
     streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
-  const waitingForFirstToken = Boolean(
-    streaming && !message.content && !message.pendingImage && !message.researchProgress,
-  );
+  const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
   const visibleActivities = waitingForFirstToken
     ? message.activities?.filter((activity) => activity.status !== "running")
     : message.activities;
@@ -764,11 +755,6 @@ function ChatMessageInner({
               }
             }}
           >
-            {message.researchProgress && (
-              <Suspense fallback={null}>
-                <ResearchProgressCard progress={message.researchProgress} onRetry={onRetry} />
-              </Suspense>
-            )}
             {visibleActivities && visibleActivities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {visibleActivities.map((activity, index) => (

@@ -432,11 +432,11 @@ function ContextPacksPage() {
                               );
                               return;
                             }
-                            navigate({ to: "/research-planner" });
+                            navigate({ to: "/discovery" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
                         >
-                          Use in Research
+                          Use in Search
                         </button>
                         <button
                           aria-label={`Delete ${pack.name}`}

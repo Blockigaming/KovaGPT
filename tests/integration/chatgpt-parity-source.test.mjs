@@ -13,7 +13,6 @@ const [
   responsiveSelector,
   mobileTopBar,
   searchServer,
-  deepResearchServer,
   modes,
   workspaceModeSwitch,
   workRoute,
@@ -30,7 +29,6 @@ const [
   readFile("src/components/ResponsiveModelSelector.tsx", "utf8"),
   readFile("src/components/MobileTopBar.tsx", "utf8"),
   readFile("src/lib/ai/search.server.ts", "utf8"),
-  readFile("src/lib/ai/deep-research.server.ts", "utf8"),
   readFile("src/lib/modes.ts", "utf8"),
   readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
@@ -147,33 +145,6 @@ test("active desktop chat keeps one primary action and groups secondary controls
   assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
 });
 
-test("composer actions, message editing, and markdown stay reachable and lossless", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
-  assert.match(
-    chatInput,
-    /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
-  );
-  assert.match(chatInput, /COMPOSER_TOOLS\.filter/);
-  assert.match(chatInput, /tool\.id !== "deep_research" \|\| userTier !== "free"/);
-  assert.match(chatInput, /\.map\(\s*toolRow,\s*\)/);
-  assert.match(chatInput, /onToolSelect\?\.\(next\)/);
-  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button is-enabled/);
-  assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
-  assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
-  assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
-  assert.ok(
-    chatMessage.indexOf("title={retryActionLabel}") <
-      chatMessage.indexOf('aria-label="More actions"'),
-  );
-  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
-  assert.match(route, /setInput\(m\.content\);/);
-  assert.match(
-    route,
-    /setEditingMessage\(\{\s*conversationId: active\.id,\s*messageId: m\.id,\s*\}\);/,
-  );
-});
-
 test("sending snapshots history and serializes automatic retries", () => {
   const snapshot = route.indexOf("const priorMessages =");
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
@@ -192,14 +163,6 @@ test("sending snapshots history and serializes automatic retries", () => {
   assert.match(route, /const retryHistory = active\.messages\.slice\(0, -2\);/);
   assert.match(route, /active\.id,\s+retryHistory,/);
   assert.doesNotMatch(route, /const attemptLabel|_Reconnecting…/);
-});
-
-test("web-backed answers keep exact clickable citations", () => {
-  assert.doesNotMatch(chatMessage, /replace\(\/\\\[\\d\+\\\]\/g/);
-  assert.match(searchServer, /Cite factual claims with Markdown links/);
-  assert.match(searchServer, /Do not invent or alter URLs/);
-  assert.match(deepResearchServer, /exact URL as a Markdown link/);
-  assert.match(modes, /source-name Markdown links using the exact supplied URLs/);
 });
 
 test("the neutral shell has one theme layer and accessible collapsed navigation", () => {

@@ -40,14 +40,7 @@ const MODE_IDS = new Set([
   "kova_5_4",
   "kova_o3",
 ]);
-const CLIENT_TOOLS = new Set([
-  "web_search",
-  "deep_research",
-  "image",
-  "study",
-  "data_analysis",
-  "file_analysis",
-]);
+const CLIENT_TOOLS = new Set(["web_search", "image", "study", "data_analysis", "file_analysis"]);
 const RESPONSE_LENGTHS = new Set(["short", "medium", "long"]);
 const TEMPORARY_CONTEXTS = new Set(["clean", "personalized"]);
 

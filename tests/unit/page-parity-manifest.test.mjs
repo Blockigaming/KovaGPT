@@ -87,12 +87,17 @@ test("route manifest includes reusable public, publishing, developer, assistant 
   assert.equal(routes.reviewedPublicRouteCount, 87);
 });
 
-test("Local discovery is noindex, requests no device location, and preserves an accessible main", () => {
+test("Maps is noindex and renders the dedicated provider-backed experience", () => {
   const maps = read("src/routes/maps.tsx");
+  const experience = read("src/components/KovaMaps.tsx");
   assert.match(maps, /name: "robots", content: "noindex"/);
-  assert.match(maps, /No location permission has been requested/);
-  assert.match(maps, /id="main-content"/);
-  assert.doesNotMatch(maps, /getCurrentPosition|watchPosition|mapbox|google\.maps/i);
+  assert.match(maps, /<KovaMaps \/>/);
+  assert.match(experience, /id="main-content"/);
+  assert.match(experience, /placeholder="Ask Kova about Maps"/);
+  assert.match(experience, /tiles\.openfreemap\.org/);
+  assert.match(experience, /kova-3d-buildings/);
+  assert.match(experience, /setTerrain/);
+  assert.match(experience, /getCurrentPosition/);
 });
 
 test("public page system contains original truthfulness and review gates", () => {

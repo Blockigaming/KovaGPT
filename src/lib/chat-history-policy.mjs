@@ -22,10 +22,8 @@ const object = (v) => v && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) => typeof v === "string" && v.length <= max;
 const time = (v) => Number.isSafeInteger(v) && v >= 0 && v <= 8_640_000_000_000_000;
 const TERMINAL_ACTIVITY_STATUSES = new Set(["done", "failed", "canceled"]);
-const TERMINAL_RESEARCH_STATUSES = new Set(["complete", "failed", "canceled"]);
 const COMPOSER_TOOL_IDS = new Set([
   "web_search",
-  "deep_research",
   "image",
   "study",
   "data_analysis",
@@ -188,9 +186,6 @@ export function normalizeChatHistory(value, ownerId) {
         item.requestedTool = message.requestedTool;
       }
       // Running request state is never durable completion evidence. Terminal activity and
-      // research state must survive refresh so completed work stays attributable and an
-      // interrupted research response can render an honest, retryable failure instead of
-      // becoming a blank assistant message.
       if (Array.isArray(message.activities))
         item.activities = message.activities
           .filter(
@@ -202,27 +197,6 @@ export function normalizeChatHistory(value, ownerId) {
           )
           .slice(0, 30)
           .map(({ tool, label, status }) => ({ tool, label, status }));
-      if (
-        object(message.researchProgress) &&
-        TERMINAL_RESEARCH_STATUSES.has(message.researchProgress.status) &&
-        text(message.researchProgress.stage, 80) &&
-        text(message.researchProgress.label, 160) &&
-        Number.isFinite(message.researchProgress.progress)
-      ) {
-        const progress = message.researchProgress;
-        item.researchProgress = {
-          stage: progress.stage,
-          label: progress.label,
-          status: progress.status,
-          progress: Math.min(1, Math.max(0, progress.progress)),
-          ...(text(progress.detail, 240) ? { detail: progress.detail } : {}),
-          ...(Array.isArray(progress.warnings)
-            ? {
-                warnings: progress.warnings.filter((warning) => text(warning, 320)).slice(-3),
-              }
-            : {}),
-        };
-      }
       if (Array.isArray(message.pendingConfirms))
         item.pendingConfirms = message.pendingConfirms
           .filter(

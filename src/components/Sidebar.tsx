@@ -11,6 +11,7 @@ import {
   HelpCircle,
   ImageIcon,
   LifeBuoy,
+  Map,
   Blocks,
   BriefcaseBusiness,
   MoreHorizontal,
@@ -21,7 +22,6 @@ import {
   Settings as SettingsIcon,
   Share2,
   Sparkles,
-  Telescope,
   SquarePen,
   Trash2,
   X,
@@ -530,7 +530,7 @@ export function Sidebar({
                 {renderNavLink("/library", "Library", FolderOpen)}
                 <div className="my-1 border-t border-border/50" aria-hidden="true" />
                 {renderNavLink("/images", "Images", ImageIcon)}
-                {renderNavLink("/research-planner", "Deep research", Telescope)}
+                {renderNavLink("/maps", "Maps", Map)}
                 <button
                   type="button"
                   onClick={() => setMoreOpen((current) => !current)}
@@ -571,7 +571,7 @@ export function Sidebar({
               <>
                 {renderNavLink("/images", "Images", ImageIcon)}
                 {renderNavLink("/apps", "Plugins", Blocks)}
-                {renderNavLink("/research-planner", "Deep research", Telescope)}
+                {renderNavLink("/maps", "Maps", Map)}
                 {renderNavLink("/discovery", "Discover", Globe, isOn("/discovery"))}
               </>
             )}

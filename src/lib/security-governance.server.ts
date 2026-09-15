@@ -58,7 +58,6 @@ export type ProjectMember = {
 };
 export type EntitlementKey =
   | "messages"
-  | "deepResearch"
   | "images"
   | "uploads"
   | "fileSizeMb"
@@ -96,7 +95,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 export const PLAN_LIMITS: Record<"free" | "plus" | "pro", Record<EntitlementKey, number>> = {
   free: {
     messages: 25,
-    deepResearch: 0,
     images: 0,
     uploads: 5,
     fileSizeMb: 10,
@@ -109,7 +107,6 @@ export const PLAN_LIMITS: Record<"free" | "plus" | "pro", Record<EntitlementKey,
   },
   plus: {
     messages: 300,
-    deepResearch: 10,
     images: 50,
     uploads: 50,
     fileSizeMb: 50,
@@ -122,7 +119,6 @@ export const PLAN_LIMITS: Record<"free" | "plus" | "pro", Record<EntitlementKey,
   },
   pro: {
     messages: 1000,
-    deepResearch: 50,
     images: 200,
     uploads: 200,
     fileSizeMb: 200,
