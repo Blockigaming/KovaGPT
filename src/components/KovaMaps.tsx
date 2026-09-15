@@ -96,6 +96,7 @@ export function KovaMaps() {
   const activeOwnerRef = useRef<string | null | undefined>(undefined);
   const networkAllowedRef = useRef(false);
   const searchControllerRef = useRef<AbortController | null>(null);
+  const searchAttemptedRef = useRef(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
@@ -140,6 +141,7 @@ export function KovaMaps() {
     setThreeD(true);
     setNetworkAccess(null);
     setLoading(true);
+    searchAttemptedRef.current = false;
     if (!isLoaded) {
       setError(null);
       return;
@@ -255,7 +257,9 @@ export function KovaMaps() {
         loadTimeout = window.setTimeout(() => {
           if (!isCurrentMap()) return;
           setLoading(false);
-          setError("Map data is taking too long to load. Check your connection and try again.");
+          if (!searchAttemptedRef.current) {
+            setError("Map data is taking too long to load. Check your connection and try again.");
+          }
         }, 12_000);
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
@@ -286,7 +290,9 @@ export function KovaMaps() {
         map.on("error", (event) => {
           if (!isCurrentMap()) return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
-          setError("Some map data could not load. Check your connection and try again.");
+          if (!searchAttemptedRef.current) {
+            setError("Some map data could not load. Check your connection and try again.");
+          }
           setLoading(false);
         });
       })
@@ -298,7 +304,9 @@ export function KovaMaps() {
           activeOwnerRef.current !== ownerId
         )
           return;
-        setError("Maps could not start in this browser. Refresh the page or try another browser.");
+        if (!searchAttemptedRef.current) {
+          setError("Maps could not start in this browser. Refresh the page or try another browser.");
+        }
         setLoading(false);
       });
     return () => {
@@ -360,6 +368,7 @@ export function KovaMaps() {
       setError("Enter a location, address, or place to search.");
       return;
     }
+    searchAttemptedRef.current = true;
     setSearching(true);
     setError(null);
     searchControllerRef.current?.abort();
@@ -558,7 +567,7 @@ export function KovaMaps() {
               <ArrowUp className="h-5 w-5" />
             </button>
           </form>
-          {error && mapRef.current ? (
+          {error ? (
             <p role="alert" className="px-3 pb-1 pt-2 text-sm text-destructive">
               {error}
             </p>
