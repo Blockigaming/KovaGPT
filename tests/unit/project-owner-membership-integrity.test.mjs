@@ -40,9 +40,10 @@ test("project owner membership cannot be removed, demoted, or impersonated", asy
   try {
     const owner = "11111111-1111-4111-8111-111111111111";
     const member = "22222222-2222-4222-8222-222222222222";
+    const replacement = "55555555-5555-4555-8555-555555555555";
     const project = "33333333-3333-4333-8333-333333333333";
     await db.exec(`
-      INSERT INTO auth.users(id) VALUES ('${owner}'), ('${member}');
+      INSERT INTO auth.users(id) VALUES ('${owner}'), ('${member}'), ('${replacement}');
       INSERT INTO public.projects(id, owner_id) VALUES ('${project}', '${owner}');
       INSERT INTO public.project_members(project_id, user_id, role)
       VALUES ('${project}', '${owner}', 'owner'), ('${project}', '${member}', 'editor');
@@ -59,6 +60,12 @@ test("project owner membership cannot be removed, demoted, or impersonated", asy
         `UPDATE public.project_members SET role = 'viewer' WHERE project_id = '${project}' AND user_id = '${owner}'`,
       ),
       /project_owner_role_required/u,
+    );
+    await assert.rejects(
+      db.exec(
+        `UPDATE public.project_members SET user_id = '${replacement}', role = 'editor' WHERE project_id = '${project}' AND user_id = '${owner}'`,
+      ),
+      /project_owner_membership_required/u,
     );
     await assert.rejects(
       db.exec(
