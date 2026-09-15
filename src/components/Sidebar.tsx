@@ -384,6 +384,9 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
+          <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+            <Map />
+          </Link>
           <button
             type="button"
             className="kova-rail-button"
@@ -588,8 +591,13 @@ export function Sidebar({
               </>
             ) : isLoaded ? (
               <div className="w-full">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">Get responses tailored to you</p>
+                <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
+                <div className="flex items-center gap-2">
+                  <SignInButton mode="modal">
+                    <button type="button" className="kova-sign-in min-w-0 flex-1">
+                      Log in to KovaGPT
+                    </button>
+                  </SignInButton>
                   <button
                     type="button"
                     className="kova-account-action"
@@ -600,11 +608,6 @@ export function Sidebar({
                     <SettingsIcon aria-hidden="true" />
                   </button>
                 </div>
-                <SignInButton mode="modal">
-                  <button type="button" className="kova-sign-in">
-                    Log in to KovaGPT
-                  </button>
-                </SignInButton>
               </div>
             ) : null}
           </footer>
