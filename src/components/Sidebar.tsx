@@ -17,6 +17,7 @@ import {
   PinOff,
   PlugZap,
   Search,
+  Settings as SettingsIcon,
   Share2,
   ShoppingBag,
   SquarePen,
@@ -395,7 +396,7 @@ export function Sidebar({
             type="button"
             className="kova-rail-account"
             onClick={() => onOpenSettings("general")}
-            aria-label={`${displayName}, ${planLabel} plan`}
+            aria-label="Settings"
             title={`${displayName} · ${planLabel}`}
           >
             {avatarUrl ? (
@@ -441,7 +442,14 @@ export function Sidebar({
             <button
               type="button"
               className="kova-header-button hidden lg:flex"
-              onClick={onToggle}
+              onClick={() => {
+                onToggle();
+                requestAnimationFrame(() =>
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
+                    ?.focus(),
+                );
+              }}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -552,6 +560,7 @@ export function Sidebar({
                   type="button"
                   className="kova-account-main"
                   onClick={() => onOpenSettings("general")}
+                  aria-label="Settings"
                 >
                   <span className="kova-account-avatar">
                     {avatarUrl ? (
@@ -576,7 +585,18 @@ export function Sidebar({
               </>
             ) : isLoaded ? (
               <div className="w-full">
-                <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">Get responses tailored to you</p>
+                  <button
+                    type="button"
+                    className="kova-account-action"
+                    onClick={() => onOpenSettings("general")}
+                    aria-label="Settings"
+                    title="Settings"
+                  >
+                    <SettingsIcon aria-hidden="true" />
+                  </button>
+                </div>
                 <SignInButton mode="modal">
                   <button type="button" className="kova-sign-in">
                     Log in to KovaGPT
