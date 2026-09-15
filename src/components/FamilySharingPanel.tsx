@@ -143,7 +143,12 @@ function AccountFamilySharingPanel() {
           {loadError}
         </p>
         {inviteLinkFallback}
-        <Button type="button" variant="outline" onClick={() => void refresh()}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto min-h-11 min-w-0 max-w-full whitespace-normal text-center"
+          onClick={() => void refresh()}
+        >
           Try again
         </Button>
       </div>
@@ -182,6 +187,7 @@ function AccountFamilySharingPanel() {
         ) : !group ? (
           <Button
             type="button"
+            className="h-auto min-h-11 min-w-0 max-w-full whitespace-normal text-center"
             disabled={busy}
             onClick={() =>
               void runAction(async () => {

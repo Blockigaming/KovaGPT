@@ -282,6 +282,28 @@ test("family failures have a retry state instead of an empty-family upsell", asy
   assert.equal(elements(tree, (node) => node.props.role === "alert").length, 0);
 });
 
+test("empty and error family actions wrap enlarged text and retain usable touch targets", async () => {
+  const empty = panel({ state: { group: null, role: null, members: [], invites: [] } });
+  const failed = panel({
+    api: {
+      getMyFamily: async () => {
+        throw Error("network");
+      },
+    },
+  });
+  for (const [fixture, label] of [
+    [empty, "Create family group"],
+    [failed, "Try again"],
+  ]) {
+    const action = button(await ready(fixture), label);
+    assert.ok(action, `${label} must remain available`);
+    const classes = action.props.className.split(" ");
+    for (const required of ["h-auto", "min-h-11", "min-w-0", "max-w-full", "whitespace-normal"]) {
+      assert.ok(classes.includes(required), `${label} must retain ${required}`);
+    }
+  }
+});
+
 test("a loading subscription does not flash the free-plan upsell", async () => {
   const fixture = panel({
     state: { group: null, role: null, members: [], invites: [] },
