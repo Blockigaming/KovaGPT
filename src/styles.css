@@ -3419,7 +3419,8 @@ body {
 }
 
 @media (max-width: 767px) {
-  .kova-settings-dialog {
+  .kova-settings-dialog,
+  .kova-settings-dialog.is-authenticated {
     background: var(--surface-modal);
     inset: 0 !important;
     width: 100vw !important;
@@ -3430,7 +3431,8 @@ body {
     border: 0 !important;
     border-radius: 0 !important;
   }
-  .kova-settings-dialog > [data-kova-dialog-close] {
+  .kova-settings-dialog > [data-kova-dialog-close],
+  .kova-settings-dialog.is-authenticated > [data-kova-dialog-close] {
     left: auto;
     right: max(14px, var(--safe-right));
     top: max(14px, var(--safe-top));
@@ -3438,7 +3440,8 @@ body {
     height: 48px;
     border-radius: 14px;
   }
-  .kova-settings-dialog > [data-kova-dialog-close] svg {
+  .kova-settings-dialog > [data-kova-dialog-close] svg,
+  .kova-settings-dialog.is-authenticated > [data-kova-dialog-close] svg {
     width: 23px;
     height: 23px;
   }
