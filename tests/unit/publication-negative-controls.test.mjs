@@ -24,8 +24,8 @@ test("an explicitly supplied landing action cannot bypass destination validation
   );
   for (const to of ["javascript:alert(1)", "/missing", "//example.invalid"]) {
     assert.ok(
-      validateRecord({ ...record, primaryAction: { label: "Open", to } }, options).some(
-        (error) => error.startsWith("primary-action:"),
+      validateRecord({ ...record, primaryAction: { label: "Open", to } }, options).some((error) =>
+        error.startsWith("primary-action:"),
       ),
       to,
     );
