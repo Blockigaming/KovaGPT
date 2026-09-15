@@ -1,6 +1,21 @@
 export const SUPPORTED_LOCALES = ["en", "es", "fr", "de", "pt-BR", "ja", "ko", "ar"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export const RTL_LOCALES = new Set<SupportedLocale>(["ar"]);
+export const SOURCE_LOCALE_PATHS = [
+  { path: "ar", locale: "ar" },
+  { path: "de-DE", locale: "de" },
+  { path: "es-419", locale: "es" },
+  { path: "es-ES", locale: "es" },
+  { path: "fr-CA", locale: "fr" },
+  { path: "fr-FR", locale: "fr" },
+  { path: "ja-JP", locale: "ja" },
+  { path: "ko-KR", locale: "ko" },
+  { path: "pt-BR", locale: "pt-BR" },
+  { path: "pt-PT", locale: "pt-BR" },
+] as const satisfies readonly { path: string; locale: SupportedLocale }[];
+const SOURCE_LOCALE_BY_PATH = new Map<string, SupportedLocale>(
+  SOURCE_LOCALE_PATHS.map(({ path, locale }) => [path, locale]),
+);
 export const translations: Record<
   SupportedLocale,
   { product: string; title: string; description: string; open: string; complete: boolean }
@@ -66,4 +81,8 @@ export function resolveLocale(value: string): SupportedLocale | null {
   return (SUPPORTED_LOCALES as readonly string[]).includes(value)
     ? (value as SupportedLocale)
     : null;
+}
+
+export function resolveSourceLocale(value: string): SupportedLocale | null {
+  return SOURCE_LOCALE_BY_PATH.get(value) ?? null;
 }

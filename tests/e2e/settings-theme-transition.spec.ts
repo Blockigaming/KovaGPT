@@ -165,7 +165,7 @@ test("guest Settings changes themes without a split two-tone dialog", async ({ p
   expectAtomicSurfaceChange(await sampleSettingsSurfaces(page));
 });
 
-test("signed-in mobile section picker keeps every option at least 44px tall", async ({
+test("signed-in mobile settings list keeps every option at least 44px tall", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "phone-390x844");
@@ -206,19 +206,14 @@ test("signed-in mobile section picker keeps every option at least 44px tall", as
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.locator(".kova-settings-dialog")).toBeVisible();
-  const sectionPicker = page.getByRole("combobox", { name: "Settings section" });
-  await expect(sectionPicker).toBeVisible();
-  await sectionPicker.click();
-
-  const options = page.locator(".kova-settings-mobile-section-option");
-  await expect(options).toHaveCount(19);
+  const options = page.locator(".kova-settings-nav-item");
+  await expect(options).toHaveCount(20);
   for (let index = 0; index < (await options.count()); index += 1) {
     const height = await options
       .nth(index)
       .evaluate((element: HTMLElement) => element.offsetHeight);
-    expect(
-      height,
-      `section option ${index + 1} should meet the 44px target`,
-    ).toBeGreaterThanOrEqual(44);
+    expect(height, `settings row ${index + 1} should meet the 44px target`).toBeGreaterThanOrEqual(
+      44,
+    );
   }
 });

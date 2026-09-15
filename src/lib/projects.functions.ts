@@ -459,6 +459,34 @@ export const removeMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Leave a shared project without touching any of its content. Owners must keep
+ * their ownership membership; ownership transfer is intentionally unsupported. */
+export const leaveProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const { data: project, error: projectError } = await context.supabase
+      .from("projects")
+      .select("owner_id")
+      .eq("id", data.project_id)
+      .maybeSingle();
+    if (projectError || !project) throw new Error("This project is no longer available.");
+    if (project.owner_id === context.userId) {
+      throw new Error("Project owners can't leave their project.");
+    }
+
+    const { error } = await context.supabase
+      .from("project_members")
+      .delete()
+      .eq("project_id", data.project_id)
+      .eq("user_id", context.userId);
+    if (error) {
+      console.error("[leaveProject]", error.message);
+      throw new Error("You couldn't leave the project. Try again.");
+    }
+    return { ok: true };
+  });
+
 export const updateMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>

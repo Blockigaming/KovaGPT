@@ -9,8 +9,13 @@ const styles = await readFile("src/styles.css", "utf8");
 
 test("desktop sidebar fully collapses and has one contained close trigger", () => {
   assert.match(sidebar, /EXPANDED_WIDTH = 272/);
+
   assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
   assert.match(sidebar, /collapsed \? "lg:!w-0"/);
+
+  assert.match(sidebar, /className="kova-sidebar-rail/);
+  assert.match(sidebar, /lg:!w-0/);
+
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
   assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
