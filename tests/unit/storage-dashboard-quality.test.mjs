@@ -97,6 +97,23 @@ test("guest storage remains separate and invalid byte counts are unavailable", (
   assert.equal(display.formatStorageBytes(1024), "1.0 KB");
 });
 
+test("guest browser estimates include the local chat workspace without reading account data", () => {
+  const guest = principal.listPrincipalBrowserStorageKeys(null, { purgeUnscopedPrivate: false });
+  const own = principal.listPrincipalBrowserStorageKeys("owner", { purgeUnscopedPrivate: false });
+  const guestWorkspaceKey = "kova-local-chat-workspace";
+  const guestWorkspaceValue = '{"documents":[{"text":"Guest draft"}]}';
+  assert.ok(guest.localExact.includes(guestWorkspaceKey));
+  const area = storage([
+    [guestWorkspaceKey, guestWorkspaceValue],
+    [own.localExact[0], "private"],
+  ]);
+  assert.equal(
+    display.estimateAccountBrowserBytes(null, area),
+    (guestWorkspaceKey.length + guestWorkspaceValue.length) * 2,
+  );
+  assert.deepEqual(area.reads, [guestWorkspaceKey]);
+});
+
 function storageServer({
   bytes = { data: { bytes_used: 128 }, error: null },
   library = { count: 2, error: null },
