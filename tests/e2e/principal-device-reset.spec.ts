@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { waitForKovaHydration } from "./hydration";
 
 const owner = "22222222-2222-4222-8222-222222222222";
 const otherOwner = "33333333-3333-4333-8333-333333333333";
@@ -66,7 +67,9 @@ for (const path of ["/", "/apps"]) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto(path);
-    await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+    await waitForKovaHydration(page);
+    await page.locator(".kova-sidebar-footer .kova-account-main").click();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     await seedImageHistory(page);
     await page.getByRole("tab", { name: "Storage", exact: true }).click();
     await page
@@ -96,7 +99,9 @@ test("successful account deletion also removes IndexedDB image history from Chat
     await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await waitForKovaHydration(page);
+  await page.locator(".kova-sidebar-footer .kova-account-main").click();
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await seedImageHistory(page);
   await page.getByRole("tab", { name: "Data control", exact: true }).click();
   await page.getByRole("button", { name: "Delete account", exact: true }).click();
