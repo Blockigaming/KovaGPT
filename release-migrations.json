@@ -3257,7 +3257,7 @@
       "order": 151,
       "filename": "20260914120000_project_owner_membership_integrity.sql",
       "timestamp": "20260914120000",
-      "sha256": "6af86d4c6fd1edb0ea2a9b5b969e9bf93a667e2d8cdf293c1b6aaa4e9480709b",
+      "sha256": "73fed61d69c0f51935ff26757782052e5aae4c386372239abd50286c199ad648",
       "tables": [],
       "functions": ["enforce_project_owner_membership"],
       "destructive": false,

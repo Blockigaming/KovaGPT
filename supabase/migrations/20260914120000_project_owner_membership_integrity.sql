@@ -10,10 +10,24 @@ set search_path = pg_catalog
 as $$
 declare
   canonical_owner uuid;
+  previous_canonical_owner uuid;
   candidate_user uuid := coalesce(new.user_id, old.user_id);
   candidate_role public.project_role := coalesce(new.role, old.role);
   candidate_project uuid := coalesce(new.project_id, old.project_id);
 begin
+  if tg_op = 'UPDATE' then
+    select p.owner_id
+      into previous_canonical_owner
+    from public.projects p
+    where p.id = old.project_id;
+
+    if old.user_id = previous_canonical_owner
+      and (new.project_id is distinct from old.project_id
+        or new.user_id is distinct from old.user_id) then
+      raise exception 'project_owner_membership_required' using errcode = '23514';
+    end if;
+  end if;
+
   select p.owner_id
     into canonical_owner
   from public.projects p

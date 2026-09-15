@@ -62,6 +62,12 @@ test("project owner membership cannot be removed, demoted, or impersonated", asy
     );
     await assert.rejects(
       db.exec(
+        `UPDATE public.project_members SET user_id = '${member}', role = 'editor' WHERE project_id = '${project}' AND user_id = '${owner}'`,
+      ),
+      /project_owner_membership_required/u,
+    );
+    await assert.rejects(
+      db.exec(
         `UPDATE public.project_members SET role = 'owner' WHERE project_id = '${project}' AND user_id = '${member}'`,
       ),
       /project_owner_role_reserved/u,
