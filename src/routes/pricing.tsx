@@ -224,7 +224,7 @@ function PricingPage() {
             price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
             period="/ month"
             taxNotice
-            description={`Eligible first-time subscribers may receive a ${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial. Checkout confirms eligibility and price before purchase.`}
+            description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
             note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}

@@ -48,8 +48,6 @@ test("signed-in users can move clearly between Chat and Work", () => {
     /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
   );
 });
-
-
 test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
   assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
@@ -60,18 +58,6 @@ test("signed-in sidebar keeps core destinations visible and groups coming-soon i
   assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
   assert.match(sidebar, /title="Health is coming soon"/);
   assert.match(sidebar, /title="Finances is coming soon"/);
-
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
-  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
-  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
-
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {

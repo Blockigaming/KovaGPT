@@ -12,18 +12,10 @@ const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const feedback = await readFile("src/lib/feedback.functions.ts", "utf8");
 const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
-
-
-test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap", () => {
+test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
   assert.match(sidebar, /const EXPANDED_WIDTH = 272/);
   assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
   assert.match(sidebar, /collapsed \? "lg:!w-0"/);
-
-test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
-  assert.match(sidebar, /const EXPANDED_WIDTH = 272/);
-  assert.match(sidebar, /className="kova-sidebar-rail/);
-  assert.match(sidebar, /lg:!w-0/);
-
   assert.match(sidebar, /min\(88vw,320px\)/);
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
@@ -34,20 +26,13 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
-
-    "<span>New chat</span>",
-
     'aria-label="New chat"',
     'navLink("/work"',
-
     'navLink("/images"',
     'navLink("/library"',
     'navLink("/projects"',
     'navLink("/scheduled-tasks"',
     'navLink("/apps"',
-
-    '<span className="kova-sidebar-label">More</span>',
-
     'aria-controls="sidebar-more-items"',
   ];
   let cursor = -1;
@@ -58,9 +43,6 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   }
 
   assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
-
-  assert.match(sidebar, /navLink\("\/apps"/);
-
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
