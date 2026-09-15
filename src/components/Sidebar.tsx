@@ -83,6 +83,7 @@ export function Sidebar({
   const { tier } = useTier();
   const checkScheduled = useServerFn(isScheduledTasksEligible);
   const drawerRef = useRef<HTMLElement | null>(null);
+  const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [scheduledVisible, setScheduledVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -338,6 +339,7 @@ export function Sidebar({
           aria-label="Collapsed navigation"
         >
           <button
+            ref={expandButtonRef}
             type="button"
             onClick={onToggle}
             className="kova-rail-button"
@@ -444,9 +446,7 @@ export function Sidebar({
               className="kova-header-button hidden lg:flex"
               onClick={() => {
                 onToggle();
-                requestAnimationFrame(() =>
-                  document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus(),
-                );
+                requestAnimationFrame(() => expandButtonRef.current?.focus());
               }}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
