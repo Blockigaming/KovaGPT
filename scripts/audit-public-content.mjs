@@ -22,7 +22,14 @@ for (const path of auditPaths) {
   const descriptionTag = html.match(/<meta\b[^>]*name=["']description["'][^>]*>/iu)?.[0];
   const robotsTag = html.match(/<meta\b[^>]*name=["']robots["'][^>]*>/iu)?.[0];
   const canonicalTag = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*>/iu)?.[0];
-  const ctaTag = main.match(/<a\b[^>]*href=["'][^"']+["'][^>]*>[\s\S]*?<\/a>/iu)?.[0];
+  const markedCtaTag = [...main.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)]
+    .map((match) => match[0])
+    .find((tag) => /\bdata-public-primary(?:\s|=|>)/iu.test(tag));
+  const mainWithoutNavigation = main.replace(/<nav\b[^>]*>[\s\S]*?<\/nav>/giu, " ");
+  const legacyCtaTag = [...mainWithoutNavigation.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/giu)].map(
+    (match) => match[0],
+  )[0];
+  const ctaTag = markedCtaTag ?? legacyCtaTag;
   const internalLinks = [...html.matchAll(/<a\b[^>]*href=["'](\/[^"]*?)["']/giu)]
     .map((match) => match[1].split(/[?#]/u, 1)[0])
     .filter((href) => href && !href.startsWith("//"));
@@ -84,14 +91,14 @@ const records = raw.map((item) => {
     structuredDataType: item.structuredDataType,
     legalReview: legal ? "required" : "not_required",
     administratorContent: admin ? "required" : "not_required",
-    mobileResult: "baseline_pass_2026-08-11",
-    darkModeResult: "baseline_pass_2026-08-11",
+    mobileResult: "not_verified",
+    darkModeResult: "not_verified",
     keyboardResult: item.skipLinkPresent ? "skip_link_present" : "fail",
     runtimeStatus: item.status,
     decision,
     reason:
       decision === "keep_indexable"
-        ? "Runtime, metadata, responsive, and minimum-content checks passed."
+        ? "Runtime, metadata, and minimum-content checks passed. Responsive behavior requires separate browser evidence."
         : decision === "improve_then_index"
           ? "The page renders but needs more substantive content before final index review."
           : legal || admin
@@ -104,7 +111,13 @@ await writeFile(
   `${JSON.stringify({ generatedAt: new Date().toISOString(), baseUrl, reviewedRouteCount: records.length, records }, null, 2)}\n`,
 );
 const failures = records.filter(
-  (record) => record.runtimeStatus !== 200 || record.keyboardResult === "fail",
+  (record) =>
+    record.runtimeStatus !== 200 ||
+    record.keyboardResult === "fail" ||
+    !record.h1 ||
+    !record.uniqueTitle ||
+    !record.uniqueDescription ||
+    !record.canonical,
 );
 const brokenInternalLinks = [];
 for (const path of new Set(raw.flatMap(({ internalLinks }) => internalLinks))) {
@@ -118,6 +131,14 @@ const duplicateTitles = indexedRecords
       indexedRecords.findIndex(({ uniqueTitle }) => uniqueTitle === record.uniqueTitle) !== index,
   )
   .map(({ route, uniqueTitle }) => ({ route, title: uniqueTitle }));
+const duplicateDescriptions = indexedRecords
+  .filter(
+    (record, index) =>
+      indexedRecords.findIndex(
+        ({ uniqueDescription }) => uniqueDescription === record.uniqueDescription,
+      ) !== index,
+  )
+  .map(({ route, uniqueDescription }) => ({ route, description: uniqueDescription }));
 const duplicateCanonicals = indexedRecords
   .filter(
     (record, index) =>
@@ -132,6 +153,7 @@ console.log(
       failures: failures.map((record) => record.route),
       brokenInternalLinks,
       duplicateTitles,
+      duplicateDescriptions,
       duplicateCanonicals,
     },
     null,
@@ -142,6 +164,7 @@ if (
   failures.length ||
   brokenInternalLinks.length ||
   duplicateTitles.length ||
+  duplicateDescriptions.length ||
   duplicateCanonicals.length
 )
   process.exitCode = 1;

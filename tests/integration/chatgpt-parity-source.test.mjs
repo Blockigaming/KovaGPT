@@ -44,7 +44,7 @@ test("signed-in users can move clearly between Chat and Work", () => {
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
   assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /renderNavLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
   assert.match(
     sidebar,
     /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
@@ -52,19 +52,15 @@ test("signed-in users can move clearly between Chat and Work", () => {
 });
 
 test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-destinations"/);
+  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-label="More destinations"/);
-  assert.match(sidebar, /if \(moreRouteActive\) setMoreOpen\(true\)/);
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/work", "Work"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/library", "Library"') < sidebar.indexOf("More destinations"),
-  );
-  assert.ok(
-    sidebar.indexOf('renderNavLink("/apps", "Plugins"') > sidebar.indexOf("More destinations"),
-  );
+  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
+  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
+  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
+  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
+  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {

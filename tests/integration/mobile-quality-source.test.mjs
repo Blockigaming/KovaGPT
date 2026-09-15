@@ -11,7 +11,7 @@ const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
 test("phone chrome uses safe areas, practical touch targets, and a dedicated close action", () => {
   assert.match(topbar, /kova-topbar-inner/);
   assert.match(styles, /padding-right: max\(0\.35rem, var\(--safe-right\)\)/);
-  assert.match(sidebar, /aria-label="Close navigation"/);
+  assert.match(sidebar, /aria-label="Close sidebar"/);
   assert.match(styles, /\.kova-message-actions button[\s\S]*min-width: 44px/);
 });
 

@@ -74,7 +74,7 @@ test("settings navigation is centralized and routes every rendered category", ()
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
   assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
-  assert.match(settingsSource, /onClick=\{\(\) => selectTab\(v\)\}/);
+  assert.match(settingsSource, /onValueChange=\{selectTab\}/);
 });
 
 test("mobile settings drill-in moves focus with the visible panel", () => {

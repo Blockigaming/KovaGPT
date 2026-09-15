@@ -39,13 +39,15 @@ test("external assistant and developer surfaces do not publish unfinished integr
   assert.match(developers, /noindex, nofollow/);
   assert.match(developerDoc, /throw notFound\(\)/);
   assert.match(developerDoc, /DEVELOPER_DOC_BY_SLUG/);
+  assert.match(developerDoc, /noindex, follow/);
+  assert.doesNotMatch(developerDoc, /noindex, nofollow/);
   assert.match(developerDoc, /Browser OAuth discovery\s+is available only when/);
 });
 
 test("draft review pages cannot be returned through the generic public route", () => {
   const route = read("src/routes/$slug.tsx");
   const reviewGuard = route.indexOf("if (item?.review) throw notFound()");
-  const publicReturn = route.indexOf('if (item) return { kind: "page" as const, item }');
+  const publicReturn = route.indexOf('if (item) return { kind: "page" as const, item,');
 
   assert.ok(reviewGuard >= 0, "review content must have an explicit not-found guard");
   assert.ok(
@@ -71,7 +73,7 @@ test("public capability copy excludes retired or unsupported claims", () => {
 test("install metadata is complete and support identity is consistent", () => {
   const rootRoute = read("src/routes/__root.tsx");
   const manifest = JSON.parse(read("public/manifest.webmanifest"));
-  const help = read("src/routes/help.tsx");
+  const help = [read("src/routes/help.tsx"), read("src/lib/help-center-data.ts")].join("\n");
   const unsubscribe = read("src/routes/unsubscribe.tsx");
   const helpNotification = read("src/lib/email-templates/help-contact-notification.tsx");
 

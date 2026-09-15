@@ -56,10 +56,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   const pricing = read("src/routes/pricing.tsx");
 
   assert.match(settings, /v: "billing",\s*label: "Billing"/);
-  assert.doesNotMatch(
-    settings,
-    /hideSubscription|tabs\.filter\(\(t\) => t\.v !== "subscription"\)/,
-  );
+  assert.doesNotMatch(settings, /hideBilling|tabs\.filter\(\(t\) => t\.v !== "billing"\)/);
   assert.match(settings, /onClick=\{handleRestore\}/);
   assert.match(settings, /Refresh billing status/);
   assert.match(settings, /Select Refresh billing status to retry/);
