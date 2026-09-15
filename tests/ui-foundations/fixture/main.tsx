@@ -1,5 +1,14 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { PublicFixture } from "./public-pages";
+import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import {
@@ -67,6 +76,16 @@ function Fixture() {
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
+  if (surface.startsWith("public-")) return <PublicFixture surface={surface} />;
+  if (surface === "enterprise")
+    return (
+      <main className="fixture-page">
+        <Button data-testid="trigger" onClick={() => setMobileOpen(true)}>
+          Contact sales
+        </Button>
+        <EnterpriseContactDialog open={mobileOpen} onOpenChange={setMobileOpen} />
+      </main>
+    );
   return (
     <main className="fixture-page">
       <h1 className="mb-4 text-lg font-semibold">Shared interface verification</h1>
@@ -206,8 +225,15 @@ function Fixture() {
   );
 }
 
+const rootRoute = createRootRoute();
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: Fixture });
+const router = createRouter({
+  routeTree: rootRoute.addChildren([indexRoute]),
+  history: createMemoryHistory({ initialEntries: ["/"] }),
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Fixture />
+    <RouterProvider router={router} />
   </StrictMode>,
 );

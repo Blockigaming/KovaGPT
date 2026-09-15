@@ -9,6 +9,12 @@ on:
       - tests/ui-foundations/**
       - src/components/ui/**
       - src/components/MobileBottomSheet.tsx
+      - src/components/LegalArticle.tsx
+      - src/components/SeoLanding.tsx
+      - src/components/EnterpriseContactDialog.tsx
+      - src/components/public/**
+      - src/components/PublicFooter.tsx
+      - src/lib/public-*-content.ts
       - src/components/ConfirmActionDialog.tsx
       - src/lib/utils.ts
       - src/styles.css
