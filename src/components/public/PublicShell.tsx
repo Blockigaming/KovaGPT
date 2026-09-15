@@ -128,6 +128,7 @@ export function PublicHeader() {
       {open ? (
         <nav
           id="public-mobile-navigation"
+          tabIndex={-1}
           className="min-h-0 overflow-y-auto overscroll-contain border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
           aria-label="Mobile public navigation"
         >

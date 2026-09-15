@@ -353,32 +353,56 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Download blob reports
+      # Retry transport in a fresh directory: failed extraction may leave a
+      # truncated ZIP. Never merge a partial set or treat missing reports as green.
+      - name: Download complete blob reports (attempt 1)
+        id: download_1
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: e2e-blob-*
-          path: blob-reports
-          merge-multiple: true
-      - name: Detect blob reports
-        id: reports
+          path: blob-download-1
+          merge-multiple: false
+      - name: Download complete blob reports (attempt 2)
+        id: download_2
+        if: steps.download_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: e2e-blob-*
+          path: blob-download-2
+          merge-multiple: false
+      - name: Download complete blob reports (attempt 3)
+        id: download_3
+        if: steps.download_2.outcome == 'failure'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: e2e-blob-*
+          path: blob-download-3
+          merge-multiple: false
+      - name: Validate complete reports before merge
+        env:
+          DOWNLOAD_1: ${{ steps.download_1.outcome }}
+          DOWNLOAD_2: ${{ steps.download_2.outcome }}
+          DOWNLOAD_3: ${{ steps.download_3.outcome }}
         shell: bash
         run: |
-          if find blob-reports -type f -name '*.zip' -print -quit 2>/dev/null | grep -q .; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "No Playwright blob reports were produced; skipping report merge."
-          fi
+          set -euo pipefail
+          directory=""
+          for attempt in 1 2 3; do
+            variable="DOWNLOAD_${attempt}"
+            if [[ "${!variable}" == success ]]; then directory="blob-download-${attempt}"; break; fi
+          done
+          test -n "$directory"
+          python3 scripts/release/validate-playwright-reports.py "$directory" blob-reports
       - name: Merge Playwright reports
-        if: steps.reports.outputs.available == 'true'
         run: npx playwright merge-reports --reporter=html ./blob-reports
       - name: Upload merged Playwright report
-        if: steps.reports.outputs.available == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: merged-playwright-report
           path: playwright-report
+          if-no-files-found: error
 
   isolated-database:
     needs: verify

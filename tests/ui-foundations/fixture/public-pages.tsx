@@ -69,9 +69,11 @@ export function PublicFixture({ surface }: { surface: string }) {
     );
   }
   if (surface === "public-detail") {
-    return (
-      <PublicDetailPageView item={{ ...catalog[0], faq: [{ q: faqQuestion, a: longWord }] }} />
+    const detail = catalog.find(
+      (item) => item.section === "features" && item.slug === "study-mode",
     );
+    if (!detail) throw new Error("The representative study-mode detail is missing");
+    return <PublicDetailPageView item={{ ...detail, faq: [{ q: faqQuestion, a: longWord }] }} />;
   }
   if (surface.startsWith("public-state-")) {
     const kind = surface.slice("public-state-".length) as

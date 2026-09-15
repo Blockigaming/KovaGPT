@@ -64,3 +64,9 @@ test("public-only CSS handles reading width, native marker, forced colors and re
   assert.match(shell, /removeEventListener\("resize", update\)/);
   assert.doesNotMatch(shell, /text-\[15px\]/);
 });
+
+test("mobile navigation keeps its scroll container out of the sequential link order", () => {
+  const shell = read("src/components/public/PublicShell.tsx");
+  assert.match(shell, /id="public-mobile-navigation"\s+tabIndex=\{-1\}/);
+  assert.match(shell, /aria-label="Mobile public navigation"/);
+});
