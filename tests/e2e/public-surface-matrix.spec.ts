@@ -92,7 +92,7 @@ async function verifyRoute(
     await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
   } else {
     await expect(
-      page.getByRole("button", { name: "Log in", exact: true }).first(),
+      page.getByRole("button", { name: /^Log in(?: to KovaGPT)?$/u }).first(),
       `${route} ${colorScheme} application-shell login entry`,
     ).toBeVisible();
   }
