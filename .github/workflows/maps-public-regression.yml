@@ -1,0 +1,93 @@
+name: Maps Public Regression
+
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/maps-public-regression.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KOVA_BROWSER_PREVIEW: node
+      PLAYWRIGHT_PREBUILT: "1"
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 464365a4dfa3f621eef4c7f2a73bc8f4049c366b
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Record provenance and validate source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          test "$(git rev-parse HEAD)" = 464365a4dfa3f621eef4c7f2a73bc8f4049c366b
+          git rev-parse HEAD > validation/commit.txt
+          git rev-parse HEAD^{tree} > validation/tree.txt
+          sha256sum package-lock.json > validation/lock.sha256
+          node --version > validation/versions.txt
+          npm --version >> validation/versions.txt
+          npm run format:check 2>&1 | tee validation/format.log
+          npm run lint 2>&1 | tee validation/lint.log
+          npm run typecheck 2>&1 | tee validation/typecheck.log
+          node --test tests/unit/playwright-config-isolation.test.mjs tests/unit/public-browser-sharding.test.mjs tests/unit/github-actions-budget.test.mjs tests/unit/ci-browser-matrix.test.mjs tests/integration/browser-preview-config-source.test.mjs tests/unit/maps-component-runtime.test.mjs tests/unit/maps-experience.test.mjs tests/unit/maps-search-route-runtime.test.mjs tests/unit/maps-release-gate-source.test.mjs tests/unit/public-detail-pages.test.mjs 2>&1 | tee validation/focused.log
+      - name: Verify actual suite collection
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in all core public; do
+            KOVA_BROWSER_SUITE="$suite" npx --no-install playwright test --list --reporter=json > "validation/list-$suite.json"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          def collect(suites, parents=()):
+              found = set()
+              for suite in suites:
+                  titles = parents + (suite.get('title', ''),)
+                  for spec in suite.get('specs', []):
+                      for test in spec.get('tests', []):
+                          found.add((test['projectName'], spec['file'], titles + (spec['title'],)))
+                  found |= collect(suite.get('suites', []), titles)
+              return found
+          sets = {name: collect(json.loads(Path(f'validation/list-{name}.json').read_text())['suites']) for name in ['all', 'core', 'public']}
+          assert all(sets.values())
+          assert not (sets['core'] & sets['public'])
+          assert sets['core'] | sets['public'] == sets['all']
+          Path('validation/collection-proof.json').write_text(json.dumps({'counts': {name: len(values) for name, values in sets.items()}, 'disjoint': True, 'complete': True}, indent=2))
+          PY
+      - name: Build isolated browser preview
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee validation/build.log
+      - run: npx --no-install playwright install --with-deps chromium
+      - name: Exercise pricing, Academy and the actual Apps route group
+        shell: bash
+        env:
+          KOVA_BROWSER_SUITE: all
+          PLAYWRIGHT_JSON_OUTPUT_FILE: validation/browser.json
+        run: |
+          set -euo pipefail
+          group="$(node --input-type=module -e 'import {PUBLIC_REVIEW_PATHS as paths} from "./src/lib/seo-policy.mjs"; const index=paths.indexOf("/apps"); if(index<0) throw new Error("Apps route missing"); console.log(index%Math.ceil(paths.length/12)+1)')"
+          printf '%s\n' "$group" > validation/apps-group.txt
+          npm run test:e2e -- tests/e2e/pricing-layout.spec.ts tests/e2e/public-detail-pages.spec.ts tests/e2e/public-surface-matrix.spec.ts --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900 --grep "pricing is responsive|Academy and research landings|route group ${group} passes" --workers=2 --reporter=list,json 2>&1 | tee validation/browser.log
+      - name: Preserve exact-source results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: maps-public-regression-464365a4
+          path: |
+            validation/
+            test-results/
+          if-no-files-found: error
+          retention-days: 7
