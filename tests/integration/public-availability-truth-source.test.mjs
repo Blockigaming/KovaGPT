@@ -73,7 +73,7 @@ test("public capability copy excludes retired or unsupported claims", () => {
 test("install metadata is complete and support identity is consistent", () => {
   const rootRoute = read("src/routes/__root.tsx");
   const manifest = JSON.parse(read("public/manifest.webmanifest"));
-  const help = read("src/routes/help.tsx");
+  const help = [read("src/routes/help.tsx"), read("src/lib/help-center-data.ts")].join("\n");
   const unsubscribe = read("src/routes/unsubscribe.tsx");
   const helpNotification = read("src/lib/email-templates/help-contact-notification.tsx");
 
