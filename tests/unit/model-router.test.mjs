@@ -68,6 +68,16 @@ test("default request budget can admit the full Ultra output reservation", () =>
   assert.ok(outputReservation <= 1);
 });
 
+test("mode output ceilings remain monotonic through Max and Ultra", () => {
+  const modes = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
+  for (let index = 1; index < modes.length; index += 1) {
+    assert.ok(
+      MODE_MAX_OUTPUT_TOKENS[modes[index]] > MODE_MAX_OUTPUT_TOKENS[modes[index - 1]],
+      `${modes[index]} must exceed ${modes[index - 1]}`,
+    );
+  }
+});
+
 test("free users can never reach the premium model", () => {
   const decision = routeModel({
     task: "chat",

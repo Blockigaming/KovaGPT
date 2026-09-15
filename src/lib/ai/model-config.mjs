@@ -58,12 +58,12 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
 // Cost controls. Output caps are the dominant lever on spend.
 export const MODE_MAX_OUTPUT_TOKENS = Object.freeze({
   instant: 700,
-  medium: 1600,
-  thinking: 3000,
-  high: 4000,
-  extra_high: 6000,
-  max: 1800,
-  ultra: 2200,
+  medium: 1200,
+  thinking: 2200,
+  high: 2300,
+  extra_high: 2400,
+  max: 2500,
+  ultra: 2700,
   kova_5_5: 1600,
   kova_5_4: 1200,
   kova_o3: 1200,
