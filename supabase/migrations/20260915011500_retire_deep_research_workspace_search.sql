@@ -11,6 +11,13 @@ where status in (
   'analyzing', 'writing_report', 'running'
 );
 
+-- Retain read/delete access for historical export and erasure, but disable all
+-- authenticated writes now that no executor exists to complete new work.
+drop policy if exists "deep_research_runs_insert_own" on public.deep_research_runs;
+drop policy if exists "deep_research_runs_update_own" on public.deep_research_runs;
+drop policy if exists "deep_research_evidence_insert_own" on public.deep_research_evidence;
+drop policy if exists "deep_research_evidence_update_own" on public.deep_research_evidence;
+
 drop trigger if exists workspace_search_invalidation on public.deep_research_runs;
 
 delete from public.workspace_search_index where source_table = 'deep_research_runs';
