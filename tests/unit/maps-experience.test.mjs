@@ -78,4 +78,10 @@ test("dedicated research product surfaces and route are absent", () => {
   }
   assert.throws(() => read(`src/routes/${"research" + "-planner"}.tsx`), /ENOENT/);
   assert.match(read("src/lib/chat-history-policy.mjs"), /RETIRED_COMPOSER_TOOL_IDS/);
+  const retirement = read(
+    "supabase/migrations/20260915005500_retire_deep_research_workspace_search.sql",
+  );
+  assert.match(retirement, /set status = 'canceled'/);
+  assert.match(retirement, /completed_at = coalesce\(completed_at, now\(\)\)/);
+  assert.match(retirement, /'writing_report', 'running'/);
 });

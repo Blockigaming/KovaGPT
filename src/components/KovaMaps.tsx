@@ -131,7 +131,7 @@ export function KovaMaps() {
     setSatellite(false);
     setThreeD(true);
     setNetworkPolicy(null);
-    if (!user) {
+    if (!user?.id) {
       setNetworkPolicy({ principal, allowed: true, message: null });
       return;
     }
