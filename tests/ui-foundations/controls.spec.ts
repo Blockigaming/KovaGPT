@@ -24,17 +24,26 @@ async function dispatchSheetTouch(
         target: element,
       }));
       const options = { bubbles: true, cancelable: true };
+      let event: Event | undefined;
       if (typeof Touch === "function" && typeof TouchEvent === "function") {
-        element.dispatchEvent(
-          new TouchEvent(type, { ...options, touches: touches.map((point) => new Touch(point)) }),
-        );
-      } else {
-        // Desktop Firefox has no Touch constructor. Exercise the same React
-        // handlers with their consumed fields, without patching browser globals.
-        const event = new Event(type, options);
-        Object.defineProperty(event, "touches", { value: touches });
-        element.dispatchEvent(event);
+        try {
+          event = new TouchEvent(type, {
+            ...options,
+            touches: touches.map((point) => new Touch(point)),
+          });
+        } catch (error) {
+          // Some WebKit versions expose these functions but forbid construction.
+          // Only construction is guarded; dispatch and handler failures remain visible.
+          if (!(error instanceof TypeError)) throw error;
+        }
       }
+      if (!event) {
+        // Desktop Firefox lacks Touch. Both fallbacks exercise the same React
+        // handlers with their consumed fields, without patching browser globals.
+        event = new Event(type, options);
+        Object.defineProperty(event, "touches", { value: touches });
+      }
+      element.dispatchEvent(event);
     },
     { type, positions },
   );
