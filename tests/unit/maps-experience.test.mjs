@@ -28,48 +28,21 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /setLayoutProperty\("kova-3d-buildings", "visibility"/);
   assert.match(source, /if \(enabled && !map\.getSource\("terrain"\)\)/);
   assert.match(source, /disabled=\{!networkAllowed\}/);
-  assert.match(
-    source,
-    /setInterval\(\(\) => void verifyNetworkAccess\(\), 15_000\)/,
-  );
-  assert.match(
-    source,
-    /addEventListener\("visibilitychange", recheckVisiblePolicy\)/,
-  );
-  assert.match(
-    source,
-    /removeEventListener\("visibilitychange", recheckVisiblePolicy\)/,
-  );
-  assert.match(
-    source,
-    /AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
-  );
-  assert.match(
-    source,
-    /blockNetwork[\s\S]*?searchControllerRef\.current\?\.abort\(\)/,
-  );
-  assert.match(
-    source,
-    /blockNetwork[\s\S]*?networkAllowedRef\.current = false/,
-  );
-  assert.match(
-    source,
-    /disposed \|\|[\s\S]*?generation !== principalGenerationRef\.current/,
-  );
+  assert.match(source, /setInterval\(\(\) => void verifyNetworkAccess\(\), 15_000\)/);
+  assert.match(source, /addEventListener\("visibilitychange", recheckVisiblePolicy\)/);
+  assert.match(source, /removeEventListener\("visibilitychange", recheckVisiblePolicy\)/);
+  assert.match(source, /AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/);
+  assert.match(source, /blockNetwork[\s\S]*?searchControllerRef\.current\?\.abort\(\)/);
+  assert.match(source, /blockNetwork[\s\S]*?networkAllowedRef\.current = false/);
+  assert.match(source, /disposed \|\|[\s\S]*?generation !== principalGenerationRef\.current/);
   assert.match(source, /mapRef\.current !== map/);
-  assert.match(
-    source,
-    /if \(loadTimeout !== null\) window\.clearTimeout\(loadTimeout\)/,
-  );
+  assert.match(source, /if \(loadTimeout !== null\) window\.clearTimeout\(loadTimeout\)/);
   assert.match(
     source,
     /authFetch\(\`\/api\/maps\/search[\s\S]*?AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
   );
   assert.match(source, /Map context \(untrusted provider data;/);
-  assert.doesNotMatch(
-    source,
-    /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/,
-  );
+  assert.doesNotMatch(source, /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
 
@@ -83,26 +56,14 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /status < 400 \? "private, max-age=60" : "no-store"/);
   assert.match(route, /resolveAnonymousClientKey\(request\.headers\)/);
   assert.match(route, /admit_maps_provider_request/);
-  assert.match(
-    route,
-    /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/,
-  );
-  assert.match(
-    read("src/components/KovaMaps.tsx"),
-    /authFetch\("\/api\/security\/lockdown"/,
-  );
-  assert.match(
-    read("src/components/KovaMaps.tsx"),
-    /authFetch\(`\/api\/maps\/search/,
-  );
+  assert.match(route, /assertLockdownAllows\(auth\.supabaseAdmin, auth\.userId, "live_web"\)/);
+  assert.match(read("src/components/KovaMaps.tsx"), /authFetch\("\/api\/security\/lockdown"/);
+  assert.match(read("src/components/KovaMaps.tsx"), /authFetch\(`\/api\/maps\/search/);
   assert.match(route, /maps_geocoder_cache/);
   assert.match(route, /CACHE_TTL_MS = 24 \* 60 \* 60 \* 1_000/);
   assert.match(route, /MAX_PROVIDER_RESPONSE_BYTES = 256 \* 1024/);
   assert.match(route, /readBoundedUtf8\([\s\S]*?MAX_PROVIDER_RESPONSE_BYTES/);
-  assert.match(
-    route,
-    /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
-  );
+  assert.match(route, /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(8_000\)\]\)/);
   assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
 });
 
@@ -153,12 +114,8 @@ test("Maps validates cached payloads and treats cache read and write failures as
 
 test("Maps provider admission and chat handoffs use rolling byte bounds", () => {
   const contextPacks = read("src/routes/context-packs.tsx");
-  const migration = read(
-    "supabase/migrations/20260915012500_maps_provider_throttle.sql",
-  );
-  const cacheMigration = read(
-    "supabase/migrations/20260915120000_maps_geocoder_cache.sql",
-  );
+  const migration = read("supabase/migrations/20260915012500_maps_provider_throttle.sql");
+  const cacheMigration = read("supabase/migrations/20260915120000_maps_geocoder_cache.sql");
   assert.match(contextPacks, /MAX_SEARCH_HANDOFF_BYTES = 30 \* 1024/);
   assert.match(contextPacks, /TextEncoder/);
   assert.match(contextPacks, /tool: "web_search"/);
@@ -170,10 +127,7 @@ test("Maps provider admission and chat handoffs use rolling byte bounds", () => 
     migration,
     /claim_maps_geocoder_provider_slot|release_maps_geocoder_provider_slot/,
   );
-  assert.match(
-    cacheMigration,
-    /create table if not exists public\.maps_geocoder_cache/,
-  );
+  assert.match(cacheMigration, /create table if not exists public\.maps_geocoder_cache/);
   assert.match(cacheMigration, /cache_key ~ '\^v1:\[0-9a-f\]\{64\}\$'/);
   assert.match(cacheMigration, /expires_at timestamptz not null/);
   assert.match(
@@ -211,10 +165,7 @@ test("Maps waits for the authenticated account policy before loading remote tile
     source,
     /if \(!networkAllowed \|\| !containerRef\.current \|\| mapRef\.current\) return/,
   );
-  assert.ok(
-    source.indexOf("if (!networkAllowed") <
-      source.indexOf('import("maplibre-gl")'),
-  );
+  assert.ok(source.indexOf("if (!networkAllowed") < source.indexOf('import("maplibre-gl")'));
 });
 
 test("dedicated research product surfaces and route are absent", () => {
@@ -224,28 +175,10 @@ test("dedicated research product surfaces and route are absent", () => {
   const pricing = read("src/lib/capability-registry.ts");
   const packageManifest = read("package.json");
   const localFinalizer = read("scripts/release/finalize-local-candidate.sh");
-  const retiredLabels = [
-    "Deep" + " Research",
-    "deep" + "_research",
-    "deep" + "-research",
-  ];
-  for (const source of [
-    sidebar,
-    composer,
-    palette,
-    pricing,
-    packageManifest,
-    localFinalizer,
-  ]) {
-    for (const label of retiredLabels)
-      assert.equal(source.includes(label), false);
+  const retiredLabels = ["Deep" + " Research", "deep" + "_research", "deep" + "-research"];
+  for (const source of [sidebar, composer, palette, pricing, packageManifest, localFinalizer]) {
+    for (const label of retiredLabels) assert.equal(source.includes(label), false);
   }
-  assert.throws(
-    () => read(`src/routes/${"research" + "-planner"}.tsx`),
-    /ENOENT/,
-  );
-  assert.match(
-    read("src/lib/chat-history-policy.mjs"),
-    /RETIRED_COMPOSER_TOOL_IDS/,
-  );
+  assert.throws(() => read(`src/routes/${"research" + "-planner"}.tsx`), /ENOENT/);
+  assert.match(read("src/lib/chat-history-policy.mjs"), /RETIRED_COMPOSER_TOOL_IDS/);
 });
