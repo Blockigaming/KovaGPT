@@ -1,0 +1,72 @@
+name: Hybrid Four Activity Diagnostic
+on:
+  push:
+    branches: [fix/maps-validation-20260915]
+    paths: [.github/workflows/hybrid-four-activity-diagnostic.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 3b0b33247be242b7784337525a9c570de11a4504
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with: {node-version: 24, cache: npm}
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Diagnose complete unit suite
+        id: unit
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p validation
+          git rev-parse HEAD > validation/source.txt
+          npm run test:unit > validation/unit.log 2>&1
+      - name: Summarize unit failures without truncating evidence
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          lines = Path('validation/unit.log').read_text().splitlines()
+          indexes = [i for i, line in enumerate(lines) if 'not ok ' in line or line.startswith('# fail') or line.startswith('# pass')]
+          Path('validation/unit-failures.txt').write_text('\n'.join('\n'.join(lines[max(0,i-3):i+75]) for i in indexes))
+          PY
+      - name: Download existing successful browser shards for report diagnosis
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          github-token: ${{ github.token }}
+          repository: Blockigaming/KovaGPT
+          run-id: 34979830596
+          pattern: e2e-blob-*
+          path: blob-reports
+          merge-multiple: true
+      - name: Reproduce report assembly
+        id: report
+        if: steps.download.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          npx --no-install playwright merge-reports --reporter=html ./blob-reports > validation/report-merge.log 2>&1
+      - name: Preserve diagnosis
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hybrid-four-activity-diagnosis
+          path: validation/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Reflect diagnostic failures
+        if: always()
+        env:
+          UNIT: ${{ steps.unit.outcome }}
+          REPORT: ${{ steps.report.outcome }}
+        run: |
+          test "$UNIT" = success
+          test "$REPORT" = success
