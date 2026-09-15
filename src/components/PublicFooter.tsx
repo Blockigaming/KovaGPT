@@ -45,9 +45,9 @@ export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <footer className="border-t border-border bg-muted/20">
-      <div className="mx-auto grid max-w-7xl gap-10 py-12 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:grid-cols-[minmax(16rem,1.3fr)_2fr]">
-        <div>
+    <footer className="min-w-0 border-t border-border bg-muted/20 [overflow-wrap:anywhere]">
+      <div className="mx-auto grid max-w-7xl gap-10 py-12 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold tracking-[-0.01em]">
             <NovaLogo decorative mark className="h-6 w-6" />
             <span>KovaGPT</span>
@@ -64,11 +64,11 @@ export function PublicFooter() {
         </div>
 
         <nav
-          className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4"
+          className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,7rem),1fr))] gap-8 text-sm"
           aria-label="Footer navigation"
         >
           {footerGroups.map((group) => (
-            <div key={group.label}>
+            <div key={group.label} className="min-w-0">
               <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
                 {group.label}
               </h2>
@@ -80,7 +80,7 @@ export function PublicFooter() {
                       <Link
                         to={item.to as never}
                         aria-current={currentPage ? "page" : undefined}
-                        className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        className="inline-flex min-h-11 min-w-0 max-w-full items-center rounded-sm py-2.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {item.label}
                       </Link>

@@ -30,11 +30,11 @@ test("navigation opens, contains its controls, and dismisses predictably", async
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close navigation", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close sidebar", exact: true })).toBeVisible();
   const box = await navigation.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThan(page.viewportSize()!.width);
-  await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+  await page.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(navigation).toBeHidden();
   await expectNoPageOverflow(page);
 });

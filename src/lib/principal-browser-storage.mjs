@@ -16,6 +16,7 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-memory-write-block-v1",
   "kova-write-draft",
   "kova-write-title",
+  "kova.write.versions.v1",
   "kova-prompt-studio-draft",
   "kova-library-favorites",
   "kovagpt-saved-message-ids",
@@ -116,6 +117,7 @@ const GUEST_LEGACY_LOCAL_EXACT_KEYS = Object.freeze([
   "kova-work-templates-v1",
   "kova-agent-workspace-v1",
   "kova-guest-library",
+  "kova-local-chat-workspace",
 ]);
 
 const GUEST_LEGACY_LOCAL_PREFIXES = Object.freeze(["kova-draft:"]);

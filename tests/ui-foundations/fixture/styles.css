@@ -1,0 +1,11 @@
+@import "../../../src/styles.css";
+@source "./";
+
+html[data-large-text="true"] {
+  font-size: 32px !important;
+}
+
+.fixture-page {
+  width: min(calc(100% - 32px), 720px);
+  margin: 16px auto;
+}

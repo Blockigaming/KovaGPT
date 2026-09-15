@@ -29,16 +29,11 @@ export async function installAuthenticatedFixture(
   const welcomeDialog = page
     .locator('[role="dialog"][data-state="open"]')
     .filter({ hasText: "Welcome to KovaGPT" });
-  await page.addLocatorHandler(
-    welcomeDialog,
-    async () => {
-      await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
-      // The handler targets only an open overlay. Radix keeps the closed node
-      // mounted during its exit animation, so waiting for removal here can
-      // turn a successful dismissal into a false test failure.
-    },
-    { noWaitAfter: true },
-  );
+  await page.addLocatorHandler(welcomeDialog, async () => {
+    await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
+    // The locator targets only the open Radix state. Let Playwright wait for
+    // that state to clear before retrying the intercepted test action.
+  });
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
       localStorage.clear();

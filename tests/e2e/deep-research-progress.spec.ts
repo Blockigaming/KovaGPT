@@ -122,7 +122,9 @@ async function closeOnboardingAndWaitForAccount(page: Page) {
   if (await onboarding.isVisible().catch(() => false)) {
     await onboarding.getByRole("button", { name: "Close" }).click();
   }
-  await expect(page.locator('button[aria-label="Account menu"]:visible').first()).toBeVisible({
+  await expect(
+    page.locator('button[aria-label="Start temporary chat"]:visible').first(),
+  ).toBeVisible({
     timeout: 15_000,
   });
 }

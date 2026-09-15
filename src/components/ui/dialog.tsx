@@ -47,7 +47,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "fixed z-50 flex flex-col gap-4 border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
+        "fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
@@ -85,7 +85,7 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5",
+        "flex min-w-0 flex-col space-y-1.5",
         centered ? "px-6 text-center" : "pr-10 text-left",
         className,
       )}
@@ -97,7 +97,10 @@ DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+    className={cn(
+      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
+      className,
+    )}
     {...props}
   />
 );

@@ -31,7 +31,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 border-border/80 bg-background/96 p-6 shadow-[var(--shadow-floating)] backdrop-blur-xl transition ease-[var(--ease-spring)] data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
+  "fixed z-50 min-w-0 max-w-full max-h-screen overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh gap-4 border-border/80 bg-background/96 p-6 shadow-[var(--shadow-floating)] backdrop-blur-xl transition ease-[var(--ease-spring)] data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
@@ -72,13 +72,22 @@ const SheetContent = React.forwardRef<
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-2 text-center sm:text-left", className)} {...props} />
+  <div
+    className={cn(
+      "flex min-w-0 flex-col space-y-2 px-10 text-center sm:pl-0 sm:pr-10 sm:text-left",
+      className,
+    )}
+    {...props}
+  />
 );
 SheetHeader.displayName = "SheetHeader";
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
+    className={cn(
+      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
+      className,
+    )}
     {...props}
   />
 );

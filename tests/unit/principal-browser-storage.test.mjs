@@ -177,6 +177,7 @@ test("confirmed guest cleanup removes guest scoped and guest legacy data", () =>
     ["kova-draft-v2:guest:__new__", "guest-draft"],
     ["kova-draft-v2:user:A:__new__", "a-draft"],
     ["kova-guest-library", "guest-library"],
+    ["kova-local-chat-workspace", "guest-workspace"],
     ["kova-sidebar-open", "1"],
   ]);
   const session = new MemoryStorage([
@@ -195,6 +196,7 @@ test("confirmed guest cleanup removes guest scoped and guest legacy data", () =>
   assert.equal(local.has("kova-draft:__new__"), false);
   assert.equal(local.has("kova-draft-v2:guest:__new__"), false);
   assert.equal(local.has("kova-guest-library"), false);
+  assert.equal(local.has("kova-local-chat-workspace"), false);
   assert.equal(local.has("nova-gpt-conversations-v3:user:A"), true);
   assert.equal(local.has("kova-draft-v2:user:A:__new__"), true);
   assert.equal(local.has("kova-sidebar-open"), true);

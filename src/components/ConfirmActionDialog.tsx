@@ -34,7 +34,9 @@ export function ConfirmActionDialog({
       <AlertDialogContent className="max-w-md bg-popover text-popover-foreground">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            {destructive ? <AlertTriangle className="h-5 w-5 text-destructive" /> : null}
+            {destructive ? (
+              <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+            ) : null}
             {title}
           </AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

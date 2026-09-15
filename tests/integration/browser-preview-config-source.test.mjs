@@ -9,7 +9,10 @@ test("browser CI uses the Node preview without changing the production preset", 
     read("vite.config.ts"),
     read(".github/workflows/ci.yml"),
   ]);
-  const verifyJob = workflow.slice(workflow.indexOf("  verify:"), workflow.indexOf("\n  browser:"));
+  const verifyJob = workflow.slice(
+    workflow.indexOf("  verify:"),
+    workflow.indexOf("\n  public-surface:"),
+  );
   const browserJob = workflow.slice(
     workflow.indexOf("\n  browser:"),
     workflow.indexOf("\n  release-e2e:"),
@@ -42,7 +45,7 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(
     browserJob,
-    /if: needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
+    /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
   );
   assert.match(browserJob, /- name: Browser preview build(?:\s+if:[^\n]+)?\s+run: npm run build/);
   assert.match(
@@ -52,7 +55,7 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(releaseE2eJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(
     releaseE2eJob,
-    /if: needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
+    /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
   );
   assert.match(
     releaseE2eJob,
