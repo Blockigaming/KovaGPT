@@ -102,6 +102,7 @@ export function KovaMaps() {
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
   const [view, setView] = useState<ViewContext | null>(null);
+  const [viewSettling, setViewSettling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,6 +143,7 @@ export function KovaMaps() {
     setResults([]);
     setSelected(null);
     setView(null);
+    setViewSettling(false);
     setSearching(false);
     setSatellite(false);
     setThreeD(true);
@@ -178,6 +180,7 @@ export function KovaMaps() {
       setResults([]);
       setSelected(null);
       setView(null);
+      setViewSettling(false);
       setSearching(false);
       setError(message);
       setNetworkAccess({ ownerId, allowed: false });
@@ -290,6 +293,7 @@ export function KovaMaps() {
             },
             zoom: map.getZoom(),
           });
+          setViewSettling(false);
         };
         map.on("load", () => {
           if (!isCurrentMap()) return;
@@ -346,6 +350,7 @@ export function KovaMaps() {
       mapRef.current !== map
     )
       return;
+    setViewSettling(true);
     markerRef.current?.remove();
     markerRef.current = new maplibregl.Marker({ color: "#1685fb" })
       .setLngLat([place.longitude, place.latitude])
@@ -447,7 +452,8 @@ export function KovaMaps() {
   };
 
   const askKova = () => {
-    if (!networkAllowed || !isLoaded || !isSignedIn || !user?.id) return;
+    if (!networkAllowed || viewSettling || !view || !isLoaded || !isSignedIn || !user?.id)
+      return;
     const context = {
       searchedLocation: query.trim() || null,
       selectedLocation: selected
@@ -671,7 +677,7 @@ export function KovaMaps() {
                 <button
                   type="button"
                   onClick={askKova}
-                  disabled={!networkAllowed}
+                  disabled={!networkAllowed || viewSettling || !view}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
