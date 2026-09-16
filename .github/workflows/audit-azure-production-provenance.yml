@@ -1,0 +1,126 @@
+name: Audit Azure production provenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type AUDIT to run the read-only production provenance audit
+        required: true
+        type: string
+      resource_group:
+        description: Positively identified Azure production resource group
+        required: true
+        type: string
+      container_app_name:
+        description: Positively identified Azure production Container App name
+        required: true
+        type: string
+      expected_image:
+        description: Optional approved immutable ACR image reference to require
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kovagpt-azure-production-provenance-audit
+  cancel-in-progress: false
+
+jobs:
+  audit-read-only:
+    if: inputs.confirmation == 'AUDIT' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out selected main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Validate explicit resource inputs
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          CONTAINER_APP_NAME: ${{ inputs.container_app_name }}
+          EXPECTED_IMAGE: ${{ inputs.expected_image }}
+        run: |
+          set -euo pipefail
+          [[ "$RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ ]] || {
+            echo "::error::Invalid resource-group input."
+            exit 1
+          }
+          [[ "$CONTAINER_APP_NAME" =~ ^[a-z0-9][a-z0-9-]{1,31}$ ]] || {
+            echo "::error::Invalid Container App name input."
+            exit 1
+          }
+          if [[ -n "$EXPECTED_IMAGE" && ! "$EXPECTED_IMAGE" =~ ^[a-z0-9][a-z0-9.-]*\.azurecr\.io/[a-z0-9]+([._/-][a-z0-9]+)*@sha256:[a-f0-9]{64}$ ]]; then
+            echo "::error::expected_image must be an immutable ACR digest reference when supplied."
+            exit 1
+          fi
+
+      - name: Sign in to Azure with protected-environment OIDC
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Capture sanitized Container App and revision evidence
+        id: capture
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          CONTAINER_APP_NAME: ${{ inputs.container_app_name }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/azure-production-provenance"
+          mkdir -p "$evidence"
+
+          az containerapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --query '{id:id,mode:properties.configuration.activeRevisionsMode,fqdn:properties.configuration.ingress.fqdn,image:properties.template.containers[0].image,latestRevision:properties.latestRevisionName,latestReadyRevision:properties.latestReadyRevisionName,runningStatus:properties.runningStatus}' \
+            --output json > "$evidence/app.json"
+
+          az containerapp revision list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --query '[].{name:name,active:properties.active,created:properties.createdTime,traffic:properties.trafficWeight,image:properties.template.containers[0].image}' \
+            --output json > "$evidence/revisions.json"
+
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/audit-source-sha.txt"
+          printf '%s\n' "$(git rev-parse 'HEAD^{tree}')" > "$evidence/audit-source-tree.txt"
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > "$evidence/observed-at-utc.txt"
+
+      - name: Validate immutable serving-image and traffic evidence
+        shell: bash
+        env:
+          KOVA_AZURE_PRODUCTION_APP_EVIDENCE: ${{ runner.temp }}/azure-production-provenance/app.json
+          KOVA_AZURE_PRODUCTION_REVISION_EVIDENCE: ${{ runner.temp }}/azure-production-provenance/revisions.json
+          KOVA_EXPECTED_PRODUCTION_IMAGE: ${{ inputs.expected_image }}
+        run: |
+          set -euo pipefail
+          node scripts/azure/production-provenance-audit.mjs \
+            > "$RUNNER_TEMP/azure-production-provenance/report.json"
+
+      - name: Upload sanitized read-only provenance evidence
+        if: always() && steps.capture.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: azure-production-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/azure-production-provenance/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Record read-only boundary
+        run: echo "Audit complete. This workflow contains no Azure create, update, deploy, traffic-shift, or secret-read operation."
