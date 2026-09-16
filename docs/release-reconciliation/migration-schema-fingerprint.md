@@ -11,7 +11,7 @@ The utility does not connect to a database, decide which objects belong in a pro
 
 ## Snapshot shape
 
-The input has `schemaVersion: 1`, a non-empty `scope` object, and four row arrays under `categories`: `schema`, `acl`, `rls`, and `function`. The capture layer must resolve unstable database identifiers such as OIDs to stable names before hashing. Function bodies should be hashed at capture time and represented by their digest plus the non-secret identity/security metadata needed to interpret that digest.
+The input has `schemaVersion: 1`, a `scope` object containing a stable `proofId` and a non-empty, duplicate-free `objects` array of trimmed object identities, and four row arrays under `categories`: `schema`, `acl`, `rls`, and `function`. The capture layer must resolve unstable database identifiers such as OIDs to stable names before hashing. Function bodies should be hashed at capture time and represented by their digest plus the non-secret identity/security metadata needed to interpret that digest.
 
 Top-level category rows and object keys are canonicalized before hashing. Nested arrays are deliberately **not sorted** because some arrays represent semantic sequences such as function argument order. Capture code must sort set-valued arrays such as unordered role sets while preserving sequence-valued arrays.
 
@@ -25,3 +25,5 @@ KOVA_MIGRATION_SCHEMA_SNAPSHOT_FILE=/path/to/snapshot.json \
 ```
 
 A matching source/rehearsal and remote fingerprint is necessary but not sufficient to promote a lineage entry. The proof scope, capture queries, source checkpoint, remote target, ledger count, subsequent writers, synthetic compatibility tests, backup/restore evidence, and independent review still need to satisfy the reconciliation contract before `requires_schema_proof` may become `schema_proven`.
+
+Rows must be non-empty plain JSON objects. Non-finite numbers (including JSON numeric overflow), undefined values, sparse arrays, cycles, accessors, and non-JSON objects are rejected instead of silently becoming null, disappearing, or hashing as empty objects. Explicit null values and explicitly empty category arrays remain valid; an empty array is not proof of absence without a separately reviewed successful capture. Duplicate rows are retained, and policy strings and nested sequence order remain unchanged. Scope objects and category rows still require completeness/provenance review: this utility validates the data shape, not whether the collector selected every required object.
