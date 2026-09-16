@@ -2,12 +2,19 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const SHA = /^[a-f0-9]{40}$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
+const TEMPLATE_MARKER = /REPLACE_WITH/iu;
 
 export function validateRollbackEvidence(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return ["evidenceObject"];
+  }
   const errors = [];
-  if (!SHA.test(value?.releaseSha ?? "")) errors.push("releaseSha");
-  if (!DIGEST.test(value?.candidateImageDigest ?? "")) errors.push("candidateImageDigest");
-  if (!DIGEST.test(value?.previousImageDigest ?? "")) errors.push("previousImageDigest");
+  if (typeof value.releaseSha !== "string" || !SHA.test(value.releaseSha)) {
+    errors.push("releaseSha");
+  }
+  for (const name of ["candidateImageDigest", "previousImageDigest"]) {
+    if (typeof value[name] !== "string" || !DIGEST.test(value[name])) errors.push(name);
+  }
   for (const name of [
     "candidateRevision",
     "previousRevision",
@@ -18,7 +25,13 @@ export function validateRollbackEvidence(value) {
     "restoreCommand",
     "verificationCommand",
   ]) {
-    if (typeof value?.[name] !== "string" || !value[name].trim()) errors.push(name);
+    if (
+      typeof value[name] !== "string" ||
+      !value[name].trim() ||
+      TEMPLATE_MARKER.test(value[name])
+    ) {
+      errors.push(name);
+    }
   }
   if (value?.candidateImageDigest === value?.previousImageDigest)
     errors.push("distinctImageDigests");
