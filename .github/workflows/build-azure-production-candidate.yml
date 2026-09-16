@@ -86,7 +86,6 @@ jobs:
       KOVA_PRODUCTION_IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
       KOVA_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
       KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: ${{ vars.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY }}
-      KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: ${{ runner.temp }}/production-candidate
     steps:
       - name: Check out exact approved source without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -109,6 +108,7 @@ jobs:
           subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
       - name: Build exact Git commit in ACR and verify the immutable pulled candidate
         env:
+          KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: ${{ runner.temp }}/production-candidate
           KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
         run: node scripts/azure/build-production-candidate.mjs --execute
       - name: Preserve verified key-free candidate evidence
@@ -126,7 +126,7 @@ jobs:
             echo "## Production candidate built, not deployed"
             echo "Source SHA: $GITHUB_SHA"
             echo 'Immutable image for a separately approved PLAN run:'
-            cat "$KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR/image-reference.txt"
+            cat "$RUNNER_TEMP/production-candidate/image-reference.txt"
             echo 'No Container App update, database change, traffic shift, or cutover was performed.'
             echo 'PLAN must select this same main SHA. If main advances, rebuild; never relabel an image.'
           } >> "$GITHUB_STEP_SUMMARY"
