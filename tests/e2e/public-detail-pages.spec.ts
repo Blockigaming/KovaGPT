@@ -11,7 +11,6 @@ import {
 import { waitForKovaHydration } from "./hydration";
 
 const allDetailRoutes = [
-  "/features/deep-research",
   "/features/plugins",
   "/features/study-mode",
   "/features/chat-with-pdfs",
@@ -70,7 +69,7 @@ const allDetailRoutes = [
 ];
 
 const responsiveRoutes = [
-  "/features/deep-research",
+  "/features/plugins",
   "/plans/pro",
   "/use-cases/chat-with-spreadsheets",
   "/business/ai-for-engineering",
@@ -164,7 +163,18 @@ test("Academy and research landings expose populated destinations", async ({ pag
     "href",
     "/academy/ai-fundamentals",
   );
-  await expect(page.locator('main a[href^="/academy/"]')).toHaveCount(39);
+  const academyPaths = PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path).filter((path) =>
+    path.startsWith("/academy/"),
+  );
+  // Require every active guide plus the separately verified hero link. Compare
+  // destinations, not an obsolete count that includes a retired product guide.
+  await expect
+    .poll(() =>
+      page
+        .locator('main a[href^="/academy/"]')
+        .evaluateAll((links) => links.map((link) => link.getAttribute("href")).sort()),
+    )
+    .toEqual([...academyPaths, "/academy/ai-fundamentals"].sort());
 
   await page.goto("/economic-research-exchange", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);

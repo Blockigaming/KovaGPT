@@ -50,7 +50,6 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PromptStudioRouteImport } from './routes/prompt-studio'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
-import { Route as ResearchPlannerRouteImport } from './routes/research-planner'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ShareInboxRouteImport } from './routes/share-inbox'
@@ -156,6 +155,7 @@ import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bul
 import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiLibraryItemsRouteImport } from './routes/api/library/items'
+import { Route as ApiMapsSearchRouteImport } from './routes/api/maps/search'
 import { Route as ApiOrganizationsScimRouteImport } from './routes/api/organizations/scim'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
@@ -386,11 +386,6 @@ const RefundRoute = RefundRouteImport.update({
 const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
   id: '/research-assistant',
   path: '/research-assistant',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResearchPlannerRoute = ResearchPlannerRouteImport.update({
-  id: '/research-planner',
-  path: '/research-planner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -937,6 +932,11 @@ const ApiLibraryItemsRoute = ApiLibraryItemsRouteImport.update({
   path: '/api/library/items',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMapsSearchRoute = ApiMapsSearchRouteImport.update({
+  id: '/api/maps/search',
+  path: '/api/maps/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrganizationsScimRoute = ApiOrganizationsScimRouteImport.update({
   id: '/scim',
   path: '/scim',
@@ -1118,7 +1118,6 @@ export interface FileRoutesByFullPath {
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
-  '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
@@ -1224,6 +1223,7 @@ export interface FileRoutesByFullPath {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1293,7 +1293,6 @@ export interface FileRoutesByTo {
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
-  '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
@@ -1399,6 +1398,7 @@ export interface FileRoutesByTo {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1469,7 +1469,6 @@ export interface FileRoutesById {
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
-  '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
@@ -1575,6 +1574,7 @@ export interface FileRoutesById {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
+  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1646,7 +1646,6 @@ export interface FileRouteTypes {
     | '/prompt-studio'
     | '/refund'
     | '/research-assistant'
-    | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
@@ -1752,6 +1751,7 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
+    | '/api/maps/search'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -1821,7 +1821,6 @@ export interface FileRouteTypes {
     | '/prompt-studio'
     | '/refund'
     | '/research-assistant'
-    | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
@@ -1927,6 +1926,7 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
+    | '/api/maps/search'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -1996,7 +1996,6 @@ export interface FileRouteTypes {
     | '/prompt-studio'
     | '/refund'
     | '/research-assistant'
-    | '/research-planner'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
@@ -2102,6 +2101,7 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
+    | '/api/maps/search'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2172,7 +2172,6 @@ export interface RootRouteChildren {
   PromptStudioRoute: typeof PromptStudioRoute
   RefundRoute: typeof RefundRoute
   ResearchAssistantRoute: typeof ResearchAssistantRoute
-  ResearchPlannerRoute: typeof ResearchPlannerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
   ShareInboxRoute: typeof ShareInboxRoute
@@ -2272,6 +2271,7 @@ export interface RootRouteChildren {
   ApiLibraryFilesRoute: typeof ApiLibraryFilesRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiLibraryItemsRoute: typeof ApiLibraryItemsRoute
+  ApiMapsSearchRoute: typeof ApiMapsSearchRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
@@ -2584,13 +2584,6 @@ declare module '@tanstack/react-router' {
       path: '/research-assistant'
       fullPath: '/research-assistant'
       preLoaderRoute: typeof ResearchAssistantRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/research-planner': {
-      id: '/research-planner'
-      path: '/research-planner'
-      fullPath: '/research-planner'
-      preLoaderRoute: typeof ResearchPlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -3328,6 +3321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLibraryItemsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maps/search': {
+      id: '/api/maps/search'
+      path: '/api/maps/search'
+      fullPath: '/api/maps/search'
+      preLoaderRoute: typeof ApiMapsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/organizations/scim': {
       id: '/api/organizations/scim'
       path: '/scim'
@@ -3649,7 +3649,6 @@ const rootRouteChildren: RootRouteChildren = {
   PromptStudioRoute: PromptStudioRoute,
   RefundRoute: RefundRoute,
   ResearchAssistantRoute: ResearchAssistantRoute,
-  ResearchPlannerRoute: ResearchPlannerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
   ShareInboxRoute: ShareInboxRoute,
@@ -3752,6 +3751,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLibraryFilesRoute: ApiLibraryFilesRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiLibraryItemsRoute: ApiLibraryItemsRoute,
+  ApiMapsSearchRoute: ApiMapsSearchRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,

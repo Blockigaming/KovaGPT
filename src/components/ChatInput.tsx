@@ -1,7 +1,6 @@
 import {
   ArrowUp,
   Paperclip,
-  Telescope,
   Square,
   Plus,
   X,
@@ -69,7 +68,6 @@ type ComposerAction = {
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
-  { id: "deep_research", label: "Deep research", icon: Telescope },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
@@ -293,14 +291,6 @@ export function ChatInput({
     if (blockedAttachmentMessage) {
       setUploadAnnouncement(blockedAttachmentMessage);
       toast.error(blockedAttachmentMessage);
-      return;
-    }
-    if (selectedToolRef.current === "deep_research" && attachments.length > 0) {
-      const message = "Deep Research doesn't support attachments yet";
-      setUploadAnnouncement(message);
-      toast.error(message, {
-        description: "Remove the attached files or choose another tool before sending.",
-      });
       return;
     }
     submittingRef.current = true;
@@ -744,11 +734,6 @@ export function ChatInput({
   const ActiveToolIcon = selectedToolOption?.icon;
 
   const chooseTool = (tool: ComposerAction) => {
-    if (tool.id === "deep_research" && !user) {
-      toast.message("Log in to use Deep research");
-      setPlusOpen(false);
-      return;
-    }
     const next = selectedTool === tool.id ? null : tool.id;
     selectedToolRef.current = next;
     onToolSelect?.(next);
@@ -773,7 +758,6 @@ export function ChatInput({
       : "h-4 w-4 shrink-0 text-muted-foreground";
     const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
-    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
 
     const photosRow = (
       <button
@@ -859,7 +843,6 @@ export function ChatInput({
           <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
-          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
           {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
           <button
             type="button"
@@ -880,9 +863,7 @@ export function ChatInput({
         {photosRow}
         {filesRow}
         {cameraRow}
-        {COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(
-          toolRow,
-        )}
+        {COMPOSER_TOOLS.map(toolRow)}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
           <Sparkles className={iconClass} />
           <span>Apps and connectors</span>

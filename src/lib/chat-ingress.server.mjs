@@ -34,14 +34,7 @@ const MODE_ALIASES = Object.freeze({
   kova_o3: "medium",
 });
 const MODE_IDS = new Set(["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]);
-const CLIENT_TOOLS = new Set([
-  "web_search",
-  "deep_research",
-  "image",
-  "study",
-  "data_analysis",
-  "file_analysis",
-]);
+const CLIENT_TOOLS = new Set(["web_search", "image", "study", "data_analysis", "file_analysis"]);
 const RESPONSE_LENGTHS = new Set(["short", "medium", "long"]);
 const TEMPORARY_CONTEXTS = new Set(["clean", "personalized"]);
 

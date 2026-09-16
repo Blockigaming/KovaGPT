@@ -432,7 +432,6 @@ const PUBLIC_SITEMAP_ENTRIES = Object.freeze(
     ...[
       "/overview",
       "/features",
-      "/features/deep-research",
       "/features/plugins",
       "/features/study-mode",
       "/features/chat-with-pdfs",
@@ -567,7 +566,6 @@ const PUBLIC_SITEMAP_ENTRIES = Object.freeze(
       "/academy/research",
       "/academy/responsible-and-safe-use",
       "/academy/sales",
-      "/academy/search-and-deep-research",
       "/academy/skills",
       "/academy/using-chatgpt",
       "/academy/what-is-ai",

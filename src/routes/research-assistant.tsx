@@ -9,7 +9,7 @@ const faq = [
   },
   {
     q: "Does it cite sources?",
-    a: "Search and Deep Research can return source links when their providers are available. A citation can be missing, wrong, or unrelated to the claim. Open the source and verify important facts against primary material.",
+    a: "Search can return source links when their providers are available. A citation can be missing, wrong, or unrelated to the claim. Open the source and verify important facts against primary material.",
   },
   {
     q: "Can it compare multiple options for me?",

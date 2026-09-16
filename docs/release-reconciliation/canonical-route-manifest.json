@@ -3,15 +3,15 @@
   "generatedAt": "2026-09-15",
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
   "routeFileCount": 174,
-  "sitemapCount": 167,
-  "reviewedPublicRouteCount": 610,
+  "sitemapCount": 165,
+  "reviewedPublicRouteCount": 608,
   "classificationCounts": {
     "dynamic": 6,
     "dynamic_public": 3,
-    "reserved_service": 96,
+    "reserved_service": 97,
     "root_shell": 1,
     "public": 28,
-    "application_or_authenticated": 33,
+    "application_or_authenticated": 32,
     "reserved_auth_or_callback": 7
   },
   "records": [
@@ -67,7 +67,6 @@
         "/academy/research",
         "/academy/responsible-and-safe-use",
         "/academy/sales",
-        "/academy/search-and-deep-research",
         "/academy/skills",
         "/academy/using-chatgpt",
         "/academy/what-is-ai",
@@ -91,7 +90,6 @@
         "/codex/enterprise",
         "/codex/pricing",
         "/features/chat-with-pdfs",
-        "/features/deep-research",
         "/features/plugins",
         "/features/study-mode",
         "/features/voice",
@@ -519,20 +517,6 @@
           ]
         },
         {
-          "canonicalPath": "/academy/search-and-deep-research",
-          "canonicalUrl": "https://kovagpt.com/academy/search-and-deep-research",
-          "contentCompleteness": "keep_indexable",
-          "legalReviewRequired": false,
-          "administratorContentRequired": false,
-          "runtimeResult": "http_200",
-          "metadataResult": "reviewed",
-          "finalDecision": "retain_in_sitemap",
-          "evidence": [
-            "src/routes/$section.$articleSlug.tsx",
-            "docs/page-parity/indexable-content-review.json"
-          ]
-        },
-        {
           "canonicalPath": "/academy/skills",
           "canonicalUrl": "https://kovagpt.com/academy/skills",
           "contentCompleteness": "keep_indexable",
@@ -843,20 +827,6 @@
         {
           "canonicalPath": "/features/chat-with-pdfs",
           "canonicalUrl": "https://kovagpt.com/features/chat-with-pdfs",
-          "contentCompleteness": "keep_indexable",
-          "legalReviewRequired": false,
-          "administratorContentRequired": false,
-          "runtimeResult": "http_200",
-          "metadataResult": "reviewed",
-          "finalDecision": "retain_in_sitemap",
-          "evidence": [
-            "src/routes/$section.$articleSlug.tsx",
-            "docs/page-parity/indexable-content-review.json"
-          ]
-        },
-        {
-          "canonicalPath": "/features/deep-research",
-          "canonicalUrl": "https://kovagpt.com/features/deep-research",
           "contentCompleteness": "keep_indexable",
           "legalReviewRequired": false,
           "administratorContentRequired": false,
@@ -3613,6 +3583,27 @@
       "evidence": ["src/routes/api/livez.ts", "npm run build"]
     },
     {
+      "canonicalPath": "/api/maps/search",
+      "resolvedCanonicalPaths": [],
+      "resolvedPathEvidence": [],
+      "routeFile": "src/routes/api/maps/search.ts",
+      "template": false,
+      "classification": "reserved_service",
+      "indexingDecision": "noindex_or_not_public",
+      "sitemapIncluded": false,
+      "canonicalUrl": null,
+      "contentOwner": "route subsystem owner",
+      "contentSource": "api/maps/search.ts",
+      "contentCompleteness": "fixture_or_contract_dependent",
+      "legalReviewRequired": false,
+      "administratorContentRequired": false,
+      "runtimeResult": "not_crawled_requires_fixture",
+      "metadataResult": "not_applicable_or_fixture_required",
+      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
+      "finalDecision": "retain_route_outside_public_sitemap",
+      "evidence": ["src/routes/api/maps/search.ts", "npm run build"]
+    },
+    {
       "canonicalPath": "/api/memory",
       "resolvedCanonicalPaths": [],
       "resolvedPathEvidence": [],
@@ -5381,27 +5372,6 @@
         "src/routes/research-assistant.tsx",
         "docs/page-parity/indexable-content-review.json"
       ]
-    },
-    {
-      "canonicalPath": "/research-planner",
-      "resolvedCanonicalPaths": [],
-      "resolvedPathEvidence": [],
-      "routeFile": "src/routes/research-planner.tsx",
-      "template": false,
-      "classification": "application_or_authenticated",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "research-planner.tsx",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "application route; authentication and ownership remain route-specific",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/research-planner.tsx", "npm run build"]
     },
     {
       "canonicalPath": "/reset-password",

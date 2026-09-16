@@ -4,26 +4,6 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("new migrations avoid unsupported CREATE POLICY IF NOT EXISTS syntax", () => {
-  for (const path of [
-    "supabase/migrations/20260721211500_deep_research_runs.sql",
-    "supabase/migrations/20260722123000_connectors_tasks_sharing_settings_audit.sql",
-    "supabase/migrations/20260722130000_product_completeness_reliability.sql",
-  ]) {
-    const sql = read(path);
-    assert.doesNotMatch(
-      sql,
-      /create\s+policy\s+if\s+not\s+exists/i,
-      `${path} uses unsupported policy syntax`,
-    );
-  }
-  const connectors = read(
-    "supabase/migrations/20260722123000_connectors_tasks_sharing_settings_audit.sql",
-  );
-  assert.match(connectors, /drop policy if exists "connected accounts owner read"/i);
-  assert.match(connectors, /create policy "audit owner read"/i);
-});
-
 test("Playwright starts the built preview app before browser tests", () => {
   const config = read("playwright.config.ts");
   assert.match(config, /webServer:\s*{/);

@@ -8,7 +8,7 @@ test("workspace sources remain authorized while chat history stays searchable in
     home = read("src/routes/index.tsx"),
     sidebar = read("src/components/Sidebar.tsx"),
     palette = read("src/components/CommandPalette.tsx");
-  for (const table of ["projects", "user_library_items", "scheduled_tasks", "deep_research_runs"])
+  for (const table of ["projects", "user_library_items", "scheduled_tasks"])
     assert.match(fn, new RegExp(`\\"${table}\\"`));
   assert.match(home, /loadConversations/);
   assert.match(sidebar, /searchConversations/);

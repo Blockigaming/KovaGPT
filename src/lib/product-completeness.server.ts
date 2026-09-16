@@ -30,7 +30,6 @@ export const ONBOARDING_STEPS: Array<{ id: OnboardingStepId; title: string; acti
   },
   { id: "projects", title: "Organize work with Projects", action: "/projects" },
   { id: "library_files", title: "Reuse files from Library", action: "/library" },
-  { id: "search_research", title: "Search and Deep Research", action: "new-chat:deep-research" },
   { id: "temporary_chat", title: "Use Temporary Chat", action: "new-chat:temporary" },
   { id: "connected_apps", title: "Connect apps when needed", action: "/apps" },
   { id: "scheduled_tasks", title: "Review Scheduled Tasks status", action: "/scheduled-tasks" },
@@ -70,7 +69,6 @@ export type EmptyStateRoute =
   | "apps"
   | "scheduled_tasks"
   | "canvas"
-  | "research_history"
   | "notifications"
   | "settings"
   | "shared_chats"
@@ -134,12 +132,6 @@ export const EMPTY_STATES: Record<EmptyStateRoute, GuidedEmptyState> = {
     title: "No Canvas documents",
     description: "Create a long-form document from chat or start a draft.",
     primaryAction: { label: "Start writing", href: "/write" },
-  },
-  research_history: {
-    route: "research_history",
-    title: "No research reports",
-    description: "Start Deep Research to build a cited report.",
-    primaryAction: { label: "Start Deep Research", action: "new-chat:deep-research" },
   },
   notifications: {
     route: "notifications",
@@ -218,7 +210,6 @@ export type CommandId =
   | "new_project"
   | "open_library"
   | "generate_image"
-  | "deep_research"
   | "temporary_chat"
   | "create_task"
   | "open_apps"
@@ -239,12 +230,6 @@ export const COMMANDS: CommandDefinition[] = [
   { id: "new_project", label: "New project", href: "/projects" },
   { id: "open_library", label: "Open Library", href: "/library" },
   { id: "generate_image", label: "Generate image", href: "/images" },
-  {
-    id: "deep_research",
-    label: "Start Deep Research",
-    action: "new-chat:deep-research",
-    planGate: "plus",
-  },
   { id: "temporary_chat", label: "Temporary Chat", action: "new-chat:temporary" },
   {
     id: "create_task",
@@ -267,7 +252,6 @@ export type NotificationType =
   | "project_role_change"
   | "billing_issue"
   | "usage_threshold"
-  | "deep_research_complete"
   | "file_processing"
   | "security_alert";
 export type AppNotification = {

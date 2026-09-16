@@ -10,8 +10,7 @@ export type ProviderCapability =
   | "vision"
   | "image_generation"
   | "embeddings"
-  | "search"
-  | "deep_research";
+  | "search";
 
 export type ProviderErrorCode =
   | "PROVIDER_NOT_CONFIGURED"
@@ -28,7 +27,7 @@ export type ProviderId = "openai_compatible" | "firecrawl" | "kova_orchestrator"
 export type SpeedClass = "fast" | "balanced" | "deep";
 export type CostClass = "low" | "standard" | "high";
 export type ModelUse =
-  "normal_chat" | "advanced_chat" | "deep_research" | "image_generation" | "embedding" | "utility";
+  "normal_chat" | "advanced_chat" | "image_generation" | "embedding" | "utility";
 
 export type ProviderModelDefinition = {
   providerId: ProviderId;
@@ -101,7 +100,6 @@ export function normalizeCapability(value: string): ProviderCapability | null {
     "image_generation",
     "embeddings",
     "search",
-    "deep_research",
   ];
   return all.includes(normalized as ProviderCapability) ? (normalized as ProviderCapability) : null;
 }
@@ -112,7 +110,7 @@ export function configuredProviderCapabilities(): ProviderCapability[] {
     .map((capability) => normalizeCapability(capability))
     .filter(Boolean) as ProviderCapability[];
   const optional: ProviderCapability[] = [];
-  if (process.env.FIRECRAWL_API_KEY) optional.push("search", "deep_research");
+  if (process.env.FIRECRAWL_API_KEY) optional.push("search");
   return Array.from(new Set([...aiCapabilities, ...optional]));
 }
 
@@ -168,8 +166,8 @@ export function getProviderRegistry(): ProviderModelDefinition[] {
       providerId: "openai_compatible",
       modelId: cfg.deepModel,
       displayName: "Kova Thinking",
-      capabilities: ["chat", "stream", "tools", "structured_output", "vision", "deep_research"],
-      intendedUse: ["advanced_chat", "deep_research"],
+      capabilities: ["chat", "stream", "tools", "structured_output", "vision"],
+      intendedUse: ["advanced_chat"],
       speedClass: "deep",
       costClass: "high",
       contextWindowTokens: 128_000,
@@ -261,17 +259,11 @@ export function selectModelForCapabilities(
 }
 
 export function selectModelForMode(
-  mode: ModeId | "deep_research" | "image",
+  mode: ModeId | "image",
   options: { hasImages?: boolean; needsTools?: boolean; needsSearch?: boolean } = {},
 ): ProviderSelection {
   if (mode === "image")
     return selectModelForCapabilities(undefined, ["image_generation"], "image_generation");
-  if (mode === "deep_research")
-    return selectModelForCapabilities(
-      undefined,
-      ["chat", "stream", "deep_research"],
-      "deep_research",
-    );
   const required: ProviderCapability[] = ["chat", "stream"];
   if (options.needsTools) required.push("tools");
   if (options.hasImages) required.push("vision");

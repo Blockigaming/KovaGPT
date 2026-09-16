@@ -63,7 +63,8 @@
         "20260823220701",
         "20260823220805",
         "20260824090000",
-        "20260824094500"
+        "20260824094500",
+        "20260904230332"
       ],
       "reason": "The source contract is a later reconciliation of multiple production changes."
     },
@@ -71,7 +72,7 @@
       "remoteVersion": "20260823151927",
       "remoteName": "day15_chat_feature_hardening",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source contract is a later reconciliation of multiple production changes."
     },
     {
@@ -82,7 +83,8 @@
         "20260823220701",
         "20260823220805",
         "20260824090000",
-        "20260903145843"
+        "20260903145843",
+        "20260904230332"
       ],
       "reason": "Security semantics must be compared from normalized schema and ACL fingerprints."
     },
@@ -90,42 +92,42 @@
       "remoteVersion": "20260823215044",
       "remoteName": "revoke_client_ddl_table_privileges",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903"],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "The source file consolidates several separately recorded production hardenings."
     },
     {
       "remoteVersion": "20260823215132",
       "remoteName": "harden_user_scoped_security_definer_helpers",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903", "20260903145843"],
+      "candidateSourceVersions": ["20260823220903", "20260903145843", "20260904230329"],
       "reason": "Function ownership, grants, and definitions need a schema fingerprint comparison."
     },
     {
       "remoteVersion": "20260823215222",
       "remoteName": "lock_down_trigger_only_functions",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903"],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "The source file consolidates several separately recorded production hardenings."
     },
     {
       "remoteVersion": "20260823215259",
       "remoteName": "explicitly_lock_server_only_tables",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903"],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "Table ACL and RLS equivalence is not proven by migration names."
     },
     {
       "remoteVersion": "20260823215454",
       "remoteName": "lock_down_postgres_client_defaults",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903"],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "Default-privilege equivalence requires an isolated database comparison."
     },
     {
       "remoteVersion": "20260823215619",
       "remoteName": "least_privilege_connector_table_grants",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220903", "20260903145843"],
+      "candidateSourceVersions": ["20260823220903", "20260903145843", "20260904230329"],
       "reason": "Table and function grants must be compared from normalized ACL fingerprints."
     },
     {
@@ -139,35 +141,40 @@
       "remoteVersion": "20260824081357",
       "remoteName": "day15_atomic_chat_workspace_rpcs",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220805", "20260824090000", "20260824094500"],
+      "candidateSourceVersions": [
+        "20260823220805",
+        "20260824090000",
+        "20260824094500",
+        "20260904230332"
+      ],
       "reason": "The source reconciliation changes RPC signatures and must be proven against the deployed catalog."
     },
     {
       "remoteVersion": "20260824081812",
       "remoteName": "day15_message_version_branch_integrity",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824081926",
       "remoteName": "day15_workspace_read_model_and_context_bounds",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824082127",
       "remoteName": "day15_selected_range_version_metadata",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824084005",
       "remoteName": "day15_utf16_selection_offsets",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220701", "20260824090000"],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
@@ -181,7 +188,12 @@
       "remoteVersion": "20260824085444",
       "remoteName": "day15_chat_workspace_branch_rpcs",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260823220805", "20260824090000", "20260824094500"],
+      "candidateSourceVersions": [
+        "20260823220805",
+        "20260824090000",
+        "20260824094500",
+        "20260904230332"
+      ],
       "reason": "The source reconciliation changes RPC signatures and must be proven against the deployed catalog."
     },
     {

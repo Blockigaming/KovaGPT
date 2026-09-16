@@ -55,12 +55,6 @@ const fixedActions: PaletteAction[] = [
   { label: "Open Library", href: "/library", icon: FolderOpen },
   { label: "Generate image", href: "/images", icon: ImageIcon },
   {
-    label: "Start Deep Research",
-    action: "deep-research",
-    icon: FileSearch,
-    disabledReason: "Available from the Deep Research mode in chat.",
-  },
-  {
     label: "Temporary Chat",
     action: "temporary-chat",
     icon: ShieldCheck,

@@ -327,37 +327,6 @@ const planPages = (["free", "plus", "pro"] as const).map((tier) => {
 export const PUBLIC_DETAIL_PAGES: readonly PublicDetailPage[] = [
   detail(
     "features",
-    "deep-research",
-    "Feature",
-    "Deep Research",
-    "Create a longer, source-backed report with KovaGPT when Deep Research is available.",
-    CAPABILITY_REGISTRY.features.deepResearch.summary,
-    { label: "Plan research", to: "/research-planner" },
-    ["Multi-stage workflow", "Source-backed report", "Plus and Pro when available"],
-    [
-      {
-        title: "From question to report",
-        body: "Start with a focused research question and constraints. KovaGPT plans the work, gathers permitted sources, compares evidence, and assembles a structured report.",
-        points: [
-          "Define scope and date range",
-          "Inspect cited evidence",
-          "Revise the plan as needed",
-        ],
-      },
-      {
-        title: "Evidence still needs review",
-        body:
-          CAPABILITY_REGISTRY.features.deepResearch.limitation ?? "Review every important claim.",
-        points: [
-          "A citation can be relevant without proving a claim",
-          "Current information can change",
-          "High-impact conclusions need qualified review",
-        ],
-      },
-    ],
-  ),
-  detail(
-    "features",
     "plugins",
     "Feature",
     "Apps and integrations",

@@ -5,6 +5,7 @@ import {
   chatHistorySnapshot,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
+import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
@@ -85,7 +86,6 @@ const TemporaryChatBanner = lazy(() =>
   })),
 );
 const COMPLETE = "complete" as const;
-const RESEARCH_CANCELED = "canceled" as const;
 
 function clearRetryTimer(timer: { current: number | null }) {
   if (timer.current === null) return;
@@ -150,6 +150,7 @@ import {
 } from "@/lib/principal-browser-storage.mjs";
 
 const USER_STOP_REASON = "kova_user_stopped_generation";
+type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -639,9 +640,14 @@ function KovaGPT() {
         );
     });
 
-    consume<string>("kova-app-chat-context", (appContext) => {
-      if (typeof appContext !== "string") throw new Error("invalid_app_handoff");
-      return () => setInput(appContext);
+    consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
+      if (typeof appContext === "string") return () => setInput(appContext);
+      if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
+        throw new Error("invalid_app_handoff");
+      return () => {
+        setInput(appContext.prompt);
+        setSelectedTool("web_search");
+      };
     });
 
     consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {
@@ -672,14 +678,6 @@ function KovaGPT() {
         ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
         : "";
       return () => setInput(`${launch.prompt}${context}`);
-    });
-
-    consume<string>("kova-research-launch", (research) => {
-      if (typeof research !== "string") throw new Error("invalid_research_handoff");
-      return () => {
-        setInput(research);
-        setSelectedTool("deep_research");
-      };
     });
 
     const newest = candidates.sort((left, right) => right.createdAt - left.createdAt)[0];
@@ -1132,16 +1130,6 @@ function KovaGPT() {
         role: "assistant",
         content: "",
         ...(retryTool ? { requestedTool: retryTool } : {}),
-        ...(retryTool === "deep_research"
-          ? {
-              researchProgress: {
-                stage: "created",
-                label: "Starting research",
-                status: "created" as const,
-                progress: 0,
-              },
-            }
-          : {}),
       };
 
       const editIndex =
@@ -1257,8 +1245,6 @@ function KovaGPT() {
 
       try {
         const activeTool = retryTool;
-        const researchUpdates =
-          activeTool === "deep_research" ? await import("@/lib/deep-research-client") : null;
         controller.signal.throwIfAborted();
         const { createChatHistoryPayload, fetchForPrincipal, chatRequestProfile } =
           await import("@/lib/chat-summary-snapshot.mjs");
@@ -1291,12 +1277,9 @@ function KovaGPT() {
                   versionId: selectedWorkflowSkill.versionId,
                 }
               : undefined,
-            mode: activeTool === "deep_research" ? "thinking" : mode,
+            mode,
             clientTool: activeTool,
-            // Main-chat ids are device-local until a user-owned memory row
-            // exists. Do not submit an unclaimable relationship for a
-            // service-role Deep Research write.
-            chatId: retryTool === "deep_research" ? undefined : nextConvId,
+            chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
             user:
@@ -1352,20 +1335,14 @@ function KovaGPT() {
             if (delta?.kind === "image_pending") {
               markPendingImage();
             }
-            if (
-              researchUpdates &&
-              (delta?.kind === "research_progress" || delta?.kind === "research_warning")
-            )
-              updateAssistantMessage((message) =>
-                researchUpdates.applyResearchDelta(message, delta),
-              );
+
             if (delta?.kind === "activity" && delta?.label) {
               updateAssistantMessage((message) => {
                 const activity: Activity = {
                   tool: String(delta.tool ?? ""),
                   label: String(delta.label),
                   status:
-                    delta.status === "failed" || delta.status === RESEARCH_CANCELED
+                    delta.status === "failed" || delta.status === "canceled"
                       ? delta.status
                       : delta.status === "running" || delta.status === "pending"
                         ? ("running" as const)
@@ -1442,9 +1419,7 @@ function KovaGPT() {
                   ? {
                       ...conversation,
                       messages: conversation.messages.filter(
-                        (message) =>
-                          message.id !== assistantMsg.id ||
-                          message.researchProgress?.status === RESEARCH_CANCELED,
+                        (message) => message.id !== assistantMsg.id,
                       ),
                     }
                   : conversation,
@@ -1529,21 +1504,7 @@ function KovaGPT() {
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
-          if (retryTool === "deep_research") {
-            updateAssistantMessage((message) =>
-              message.researchProgress
-                ? {
-                    ...message,
-                    researchProgress: {
-                      ...message.researchProgress,
-                      label: "Research failed",
-                      status: "failed",
-                      detail: friendly,
-                    },
-                  }
-                : message,
-            );
-          }
+
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           updateAssistantMessage((message) => ({ ...message, generationStatus: "failed" }));
           toast.error(friendly, {
@@ -1700,6 +1661,7 @@ function KovaGPT() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
+        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
           if (!isSignedIn) {
             toast.message("Sign in to share chats");
@@ -2212,7 +2174,7 @@ function KovaGPT() {
                                         status: COMPLETE,
                                       },
                               ),
-                              m.requestedTool ?? (m.researchProgress ? "deep_research" : null),
+                              m.requestedTool ?? null,
                               0,
                               active.id,
                               retryHistory,

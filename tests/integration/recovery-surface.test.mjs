@@ -5,10 +5,8 @@ import assert from "node:assert/strict";
 const requiredFiles = [
   "src/lib/ai/provider.server.ts",
   "src/lib/ai/search.server.ts",
-  "src/lib/ai/deep-research.server.ts",
   "src/routes/api/chat.ts",
   "src/routes/api/health.ts",
-  "supabase/migrations/20260721211500_deep_research_runs.sql",
 ];
 
 test("recovery-critical provider, chat, health, and migration files are present", async () => {

@@ -22,10 +22,6 @@ export type SafeDiagnostics = {
     stripe: FeatureStatus;
     emailPreview: FeatureStatus;
   };
-  migrations: {
-    deepResearchRuns: "declared";
-    deepResearchEvidence: "declared";
-  };
 };
 
 function hasEnv(name: string): boolean {
@@ -118,10 +114,6 @@ export function safeDiagnostics(): SafeDiagnostics {
       ]),
       stripe: feature(["STRIPE_SANDBOX_API_KEY", "STRIPE_LIVE_API_KEY"]),
       emailPreview: feature(["EMAIL_PREVIEW_TOKEN"]),
-    },
-    migrations: {
-      deepResearchRuns: "declared",
-      deepResearchEvidence: "declared",
     },
   };
 }

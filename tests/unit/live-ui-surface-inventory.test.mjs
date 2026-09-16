@@ -41,15 +41,15 @@ test("Kova inventory separates interface templates from service handlers", () =>
     kovagpt.routeTemplateCount,
   );
   assert.equal(kovagpt.routeTemplateCount, 174);
-  assert.equal(kovagpt.uiRouteTemplateCount, 75);
-  assert.equal(kovagpt.serviceRouteTemplateCount, 99);
+  assert.equal(kovagpt.uiRouteTemplateCount, 74);
+  assert.equal(kovagpt.serviceRouteTemplateCount, 100);
   assert.ok(kovagpt.routeTemplates.some(({ route }) => route === "<root-shell>"));
   assert.equal(kovagpt.publicIndexContentSlugCount, 66);
-  assert.equal(kovagpt.publicDetailPathCount, 480);
-  assert.equal(kovagpt.publicRegistryPageCount, 546);
-  assert.equal(kovagpt.reviewedPublicPathCount, 610);
-  assert.equal(kovagpt.sitemapPathCount, 167);
-  assert.ok(kovagpt.publicDetailPaths.includes("features/deep-research"));
+  assert.equal(kovagpt.publicDetailPathCount, 478);
+  assert.equal(kovagpt.publicRegistryPageCount, 544);
+  assert.equal(kovagpt.reviewedPublicPathCount, 608);
+  assert.equal(kovagpt.sitemapPathCount, 165);
+  assert.equal(kovagpt.publicDetailPaths.includes("features/deep-research"), false);
   assert.ok(kovagpt.publicDetailPaths.includes("plans/pro"));
   assert.ok(kovagpt.publicDetailPaths.includes("apps/github"));
   assert.ok(kovagpt.publicDetailPaths.includes("features/voice"));
@@ -107,9 +107,9 @@ test("strict UI progress gives every discovered page equal weight", () => {
   assert.equal(measurement.sourcePageCount, inventory.openai.uniqueUrlCount + chatgptPaths.size);
   assert.equal(records.length, measurement.sourcePageCount);
   assert.equal(records.filter(({ completed }) => completed).length, measurement.completedPageCount);
-  assert.equal(measurement.completedPageCount, 534);
-  assert.equal(measurement.remainingPageCount, 1318);
-  assert.equal(measurement.completionPercent, 28.83);
+  assert.equal(measurement.completedPageCount, 532);
+  assert.equal(measurement.remainingPageCount, 1320);
+  assert.equal(measurement.completionPercent, 28.73);
   assert.equal(
     measurement.remainingPageCount,
     measurement.sourcePageCount - measurement.completedPageCount,

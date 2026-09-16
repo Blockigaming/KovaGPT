@@ -14,16 +14,18 @@ function before(text, guard, operation, label) {
   assert.ok(guardIndex < operationIndex, `${label}: policy must run before network operation`);
 }
 
-test("chat blocks explicit and implicit network tools before provider work", async () => {
+test("chat blocks explicit and implicit web searches before provider work", async () => {
   const chat = await source("src/routes/api/chat.ts");
-  before(chat, "readLockdownMode(", "handleDeepResearchRequest(lastText", "deep research");
   before(chat, "readLockdownMode(", "searchWeb(", "web search");
   assert.match(
     chat,
     /!lockdownBlocksNetwork\s*&&\s*\(!customKova \|\| customKova\.allows\("web"\)\)\s*&&\s*lastText/u,
   );
-  assert.match(chat, /clientTool === "deep_research"\s*\? "deep_research"/u);
-  assert.match(chat, /clientTool === "web_search"\s*\? "live_web"/u);
+  assert.match(
+    chat,
+    /const explicitLockdownCapability = clientTool === "web_search" \? "live_web" : null/u,
+  );
+  assert.doesNotMatch(chat, /clientTool === "deep_research"/u);
 });
 
 test("local weather is authenticated, bounded, rate-limited, and blocked as live web", async () => {

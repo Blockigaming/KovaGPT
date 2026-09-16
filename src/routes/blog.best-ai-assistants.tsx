@@ -18,8 +18,8 @@ const FAQ = [
     a: "No. Search is conditional, can be explicitly disabled, and depends on a configured and available search provider. Use the Search tool when current sources matter.",
   },
   {
-    q: "Who can use KovaGPT Deep Research?",
-    a: "Deep Research is available to eligible signed-in Plus and Pro accounts and still depends on available search and AI providers.",
+    q: "When can KovaGPT use web search?",
+    a: "Web search is available when the configured search and AI providers are operating.",
   },
   {
     q: "Can an AI assistant guarantee accurate answers or citations?",
@@ -183,8 +183,7 @@ function BestAiAssistantsPage() {
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
             Image generation requires a signed-in, verified account and an available image provider.
-            Search is conditional and provider-dependent. Deep Research requires a signed-in Plus or
-            Pro account and available search and AI providers.
+            Search is conditional and provider-dependent.
           </p>
 
           <h2 className="mt-12 text-2xl font-semibold">

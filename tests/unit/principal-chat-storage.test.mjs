@@ -69,6 +69,72 @@ function conversation(id, title = id) {
 
 beforeEach(() => storage.clear());
 
+test("legacy research progress loads as terminal history", () => {
+  storage.setItem(
+    conversationStorageKey("account-a"),
+    JSON.stringify([
+      {
+        ...conversation("legacy-research"),
+        messages: [
+          {
+            id: "assistant",
+            role: "assistant",
+            content: "Interrupted research",
+            researchProgress: { phase: "searching" },
+            activities: [{ tool: "research", label: "Searching", status: "running" }],
+          },
+        ],
+      },
+    ]),
+  );
+
+  const [loaded] = loadConversations("account-a");
+  assert.equal("researchProgress" in loaded.messages[0], false);
+  assert.equal(loaded.messages[0].activities[0].status, "failed");
+});
+
+test("malformed stored activities cannot hide valid history", () => {
+  const validActivity = { tool: "search", label: "Source ready", status: "done" };
+  const active = {
+    ...conversation("active"),
+    messages: [
+      {
+        id: "invalid-container",
+        role: "assistant",
+        content: "Keep this message",
+        activities: { broken: true },
+      },
+      {
+        id: "mixed-entries",
+        role: "assistant",
+        content: "Keep valid activity",
+        activities: [null, { tool: "search", label: "Bad", status: "unknown" }, validActivity],
+      },
+    ],
+  };
+  const archived = {
+    ...conversation("archived"),
+    messages: [
+      {
+        id: "archived-invalid-container",
+        role: "assistant",
+        content: "Keep archived message",
+        activities: "legacy",
+      },
+    ],
+  };
+  storage.setItem(conversationStorageKey("account-a"), JSON.stringify([active]));
+  storage.setItem(archivedConversationStorageKey("account-a"), JSON.stringify([archived]));
+
+  const [loadedActive] = loadConversations("account-a");
+  const [loadedArchived] = loadArchivedConversations("account-a");
+  assert.equal(loadedActive.id, "active");
+  assert.equal("activities" in loadedActive.messages[0], false);
+  assert.deepEqual(loadedActive.messages[1].activities, [validActivity]);
+  assert.equal(loadedArchived.id, "archived");
+  assert.equal("activities" in loadedArchived.messages[0], false);
+});
+
 test("stopping preserves the latest assistant turn and closes only its active work", () => {
   const messages = [
     { id: "user", role: "user", content: "Explain this" },
@@ -80,12 +146,6 @@ test("stopping preserves the latest assistant turn and closes only its active wo
         { tool: "search", label: "Searching", status: "running" },
         { tool: "read", label: "Source ready", status: "done" },
       ],
-      researchProgress: {
-        stage: "searching",
-        label: "Searching sources",
-        status: "running",
-        progress: 0.4,
-      },
     },
   ];
 
@@ -98,12 +158,6 @@ test("stopping preserves the latest assistant turn and closes only its active wo
     stopped[1].activities.map(({ status }) => status),
     ["canceled", "done"],
   );
-  assert.deepEqual(stopped[1].researchProgress, {
-    stage: "searching",
-    label: "Research canceled",
-    status: "canceled",
-    progress: 0.4,
-  });
 });
 
 test("a response stopped before its first token remains durable and retryable", () => {
@@ -132,6 +186,26 @@ test("a response stopped before its first token remains durable and retryable", 
     generationStatus: "stopped",
     requestedTool: "image",
   });
+});
+
+test("legacy interrupted research is terminalized when local history loads", () => {
+  const legacy = {
+    ...conversation("legacy-research"),
+    messages: [
+      {
+        id: "assistant",
+        role: "assistant",
+        content: "Partial result",
+        researchProgress: { status: "running", progress: 0.4 },
+        activities: [{ tool: "search", label: "Searching", status: "running" }],
+      },
+    ],
+  };
+  storage.setItem(conversationStorageKey("account-a"), JSON.stringify([legacy]));
+
+  const message = loadConversations("account-a")[0].messages[0];
+  assert.equal("researchProgress" in message, false);
+  assert.equal(message.activities[0].status, "failed");
 });
 
 test("stopping targets the in-flight assistant and clears image progress", () => {

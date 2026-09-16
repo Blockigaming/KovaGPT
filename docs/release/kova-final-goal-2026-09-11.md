@@ -39,7 +39,7 @@ KovaGPT is not a visual clone. It must preserve its own identity, interaction de
 **2. Search, browsing, and research**
 
 - Current web search with source links, inline citations, source inspection, date awareness, query refinement, and clear separation of sourced facts from inference.
-- Deep Research that plans, searches, reads, synthesizes, cites, reports progress, can be steered, and produces durable reports and supporting artifacts.
+- Ordinary web research that searches current sources, synthesizes with citations, and clearly distinguishes evidence from inference; the dedicated Deep Research product is retired.
 - Browser/computer-use workflows, including approved signed-in-site actions, with previews, confirmations for consequential actions, bounded execution, audit trails, and safe recovery.
 - Research and search across connected apps, files, projects, organizational knowledge, and the public web subject to permissions.
 

@@ -111,12 +111,11 @@ function AiMarketResearchGuide() {
             point to a weak, outdated, or misread page.
           </p>
 
-          <h2 className="mt-10 text-2xl font-semibold">4. Use Deep Research only when eligible</h2>
+          <h2 className="mt-10 text-2xl font-semibold">4. Use source-backed search when needed</h2>
           <p>
-            KovaGPT Deep Research is available to eligible signed-in Plus and Pro accounts. It also
-            depends on working search and AI providers. It can plan a research pass and assemble a
-            cited report, but the output remains AI-generated and must be checked against the
-            underlying sources.
+            KovaGPT Search is available when its providers are configured. It depends on working
+            search and AI providers. It can plan a research pass and assemble a cited report, but
+            the output remains AI-generated and must be checked against the underlying sources.
           </p>
 
           <h2 className="mt-10 text-2xl font-semibold">5. Triangulate important claims</h2>
@@ -168,9 +167,9 @@ State when a source cannot be opened or when evidence is missing. Do not invent 
 
           <h2 className="mt-12 text-2xl font-semibold">Availability and verification</h2>
           <p>
-            KovaGPT can make mistakes, including with retrieved material. Search and Deep Research
-            are provider-dependent. The <Link to="/pricing">Pricing page</Link> and in-product
-            controls show current account eligibility; neither plan access nor a citation guarantees
+            KovaGPT can make mistakes, including with retrieved material. Search are
+            provider-dependent. The <Link to="/pricing">Pricing page</Link> and in-product controls
+            show current account eligibility; neither plan access nor a citation guarantees
             correctness.
           </p>
 

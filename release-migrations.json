@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 154,
-  "latest": "20260915004500_expand_custom_kova_mode_allowlist.sql",
+  "count": 157,
+  "latest": "20260915120000_maps_geocoder_cache.sql",
   "migrations": [
     {
       "order": 1,
@@ -3308,6 +3308,48 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 155,
+      "filename": "20260915011500_retire_deep_research_workspace_search.sql",
+      "timestamp": "20260915011500",
+      "sha256": "6bf654eb93216579e9da7ab6334b2048bc0131361b6f55fd99285dc3c7ef1a95",
+      "tables": [],
+      "functions": [],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 156,
+      "filename": "20260915012500_maps_provider_throttle.sql",
+      "timestamp": "20260915012500",
+      "sha256": "2f81af7291fbf9dda5aa8f4a81afbc7691aa6d7087bf6dff167c5d3e74062a44",
+      "tables": ["maps_provider_throttle"],
+      "functions": ["admit_maps_provider_request"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["maps_provider_throttle"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 157,
+      "filename": "20260915120000_maps_geocoder_cache.sql",
+      "timestamp": "20260915120000",
+      "sha256": "3f0c0473b56071db4d1eacd9a048810cfe44f174f7e89159caba2660c14434ca",
+      "tables": ["maps_geocoder_cache"],
+      "functions": ["prune_maps_geocoder_cache_expired"],
+      "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["maps_geocoder_cache"],
+      "policies": [],
+      "indexes": ["maps_geocoder_cache_expires_idx"]
     }
   ]
 }

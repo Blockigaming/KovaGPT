@@ -64,11 +64,6 @@ const RELATED_PAGES = new Map<string, readonly { title: string; summary: string;
     "features",
     [
       {
-        title: "Deep Research",
-        summary: "Plan and produce source-backed reports.",
-        to: "/features/deep-research",
-      },
-      {
         title: "Apps",
         summary: "Connect supported services with explicit permissions.",
         to: "/features/plugins",

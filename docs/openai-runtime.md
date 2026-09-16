@@ -6,16 +6,15 @@
 
 The only active text-generation flow is browser chat -> `POST /api/chat` -> bounded validation -> trusted-IP/authentication -> server billing entitlement -> catalog routing -> conservative token/cost preflight -> atomic Supabase reservation/concurrency lease -> `provider.server.ts` -> OpenAI `POST /v1/responses` -> server Responses-to-Kova SSE adapter -> existing streaming UI -> atomic usage reconciliation. Stop or disconnect cancels the provider reader and finalizes the lease. No browser module receives a provider credential, model override, provider URL, or output limit.
 
-| Cost path                       | Caller                    | Server receiver                      | Direct provider              | Policy/accounting                                    |
-| ------------------------------- | ------------------------- | ------------------------------------ | ---------------------------- | ---------------------------------------------------- |
-| Main and project chat           | `index.tsx`, project chat | `/api/chat`                          | OpenAI Responses             | guest/user quotas, leases, idempotency, actual usage |
-| Google tool follow-ups          | `/api/chat` loop          | `/api/chat`                          | OpenAI Responses             | same reserved request; 8 hops/16 calls               |
-| Titles                          | chat client               | `/api/title`                         | OpenAI Responses             | utility model, bounded title ingress/rate limit      |
-| Memory extraction/compaction    | memory client             | `/api/memory`                        | OpenAI Responses             | utility model, consent/auth/input bounds             |
-| Writing and project suggestions | workspace clients         | `/api/write`, `/api/project-suggest` | OpenAI Responses             | verified user, quota, bounded ingress                |
-| Deep research synthesis         | chat                      | `/api/chat` + research module        | Firecrawl + OpenAI Responses | paid entitlement before provider                     |
-| Images                          | chat/images UI            | `/api/chat`, `/api/generate-image`   | OpenAI Images                | verified user, daily image quota                     |
-| Project RAG                     | project ingestion/query   | `project-rag.server.ts`              | OpenAI Embeddings            | authenticated project boundary                       |
+| Cost path                       | Caller                    | Server receiver                      | Direct provider   | Policy/accounting                                    |
+| ------------------------------- | ------------------------- | ------------------------------------ | ----------------- | ---------------------------------------------------- |
+| Main and project chat           | `index.tsx`, project chat | `/api/chat`                          | OpenAI Responses  | guest/user quotas, leases, idempotency, actual usage |
+| Google tool follow-ups          | `/api/chat` loop          | `/api/chat`                          | OpenAI Responses  | same reserved request; 8 hops/16 calls               |
+| Titles                          | chat client               | `/api/title`                         | OpenAI Responses  | utility model, bounded title ingress/rate limit      |
+| Memory extraction/compaction    | memory client             | `/api/memory`                        | OpenAI Responses  | utility model, consent/auth/input bounds             |
+| Writing and project suggestions | workspace clients         | `/api/write`, `/api/project-suggest` | OpenAI Responses  | verified user, quota, bounded ingress                |
+| Images                          | chat/images UI            | `/api/chat`, `/api/generate-image`   | OpenAI Images     | verified user, daily image quota                     |
+| Project RAG                     | project ingestion/query   | `project-rag.server.ts`              | OpenAI Embeddings | authenticated project boundary                       |
 
 Search itself uses Firecrawl, not an AI fallback. No scheduled/model moderation/audio generation route was found. The former Lovable-named compatibility surfaces were removed by merged PR #227. Lovable AI is neither active nor a fallback.
 

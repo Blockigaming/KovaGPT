@@ -50,17 +50,6 @@ export const CAPABILITIES = Object.freeze([
     keywords: ["agent", "tasks", "plans"],
   }),
   define({
-    id: "research",
-    label: "Research planner",
-    route: "/research-planner",
-    permission: "authenticated",
-    requiredPlan: "plus",
-    providers: ["search"],
-    flags: ["research_planner"],
-    dependencies: ["library"],
-    keywords: ["deep research", "sources"],
-  }),
-  define({
     id: "library",
     label: "Library",
     route: "/library",

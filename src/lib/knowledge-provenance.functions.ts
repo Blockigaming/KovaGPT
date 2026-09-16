@@ -1,11 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-const Type = z.enum(["project", "research", "writing_document", "agent_definition"]),
+const Type = z.enum(["project", "writing_document", "agent_definition"]),
   Id = z.string().uuid();
 const tables = {
   project: ["projects", "owner_id"],
-  research: ["deep_research_runs", "user_id"],
   writing_document: ["writing_documents", "owner_id"],
   agent_definition: ["agent_definitions", "owner_id"],
 } as const;

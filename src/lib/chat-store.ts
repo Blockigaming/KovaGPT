@@ -39,11 +39,9 @@ export function isConversationWorkflowSkill(value: unknown): value is Conversati
     candidate.name.length <= 120
   );
 }
-export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+export type ComposerToolId = "web_search" | "image" | "study" | "data_analysis" | "file_analysis";
 const COMPOSER_TOOL_IDS = new Set<ComposerToolId>([
   "web_search",
-  "deep_research",
   "image",
   "study",
   "data_analysis",
@@ -74,14 +72,17 @@ export type Activity = {
   label: string;
   status: "done" | "running" | "failed" | "canceled";
 };
-export type ResearchProgress = {
-  stage: string;
-  label: string;
-  status: "created" | "pending" | "running" | "complete" | "failed" | "canceled";
-  detail?: string;
-  progress: number;
-  warnings?: string[];
-};
+const ACTIVITY_STATUSES = new Set<Activity["status"]>(["done", "running", "failed", "canceled"]);
+function isActivity(value: unknown): value is Activity {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<Activity>;
+  return (
+    typeof candidate.tool === "string" &&
+    typeof candidate.label === "string" &&
+    typeof candidate.status === "string" &&
+    ACTIVITY_STATUSES.has(candidate.status as Activity["status"])
+  );
+}
 export type PendingConfirm = {
   actionId: string;
   tool: string;
@@ -101,7 +102,6 @@ export type Message = {
   activities?: Activity[];
   /** Safe, provider-normalized web sources used to produce this response. */
   sources?: ResponseSource[];
-  researchProgress?: ResearchProgress;
   pendingConfirms?: PendingConfirm[];
   /** A stopped or failed response remains retryable instead of reading as a completed answer. */
   generationStatus?: "stopped" | "failed";
@@ -118,24 +118,12 @@ export function markAssistantStopped(messages: Message[], assistantMessageId: st
   return messages.map((message, index) => {
     if (index !== assistantIndex) return message;
     const { pendingImage: _pendingImage, ...terminalMessage } = message;
-    const researchRunning =
-      message.researchProgress &&
-      !["complete", "failed", "canceled"].includes(message.researchProgress.status);
     return {
       ...terminalMessage,
       generationStatus: "stopped" as const,
       activities: message.activities?.map((activity) =>
         activity.status === "running" ? { ...activity, status: "canceled" as const } : activity,
       ),
-      ...(researchRunning && message.researchProgress
-        ? {
-            researchProgress: {
-              ...message.researchProgress,
-              label: "Research canceled",
-              status: "canceled" as const,
-            },
-          }
-        : {}),
     };
   });
 }
@@ -215,60 +203,7 @@ function isConversation(value: unknown): value is Conversation {
   );
 }
 
-const researchStatuses = new Set<ResearchProgress["status"]>([
-  "created",
-  "pending",
-  "running",
-  "complete",
-  "failed",
-  "canceled",
-]);
-
-export function normalizeResearchProgress(
-  value: unknown,
-  interruptNonterminal = false,
-): ResearchProgress | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const candidate = value as Partial<ResearchProgress>;
-  if (
-    typeof candidate.stage !== "string" ||
-    typeof candidate.label !== "string" ||
-    !researchStatuses.has(candidate.status as ResearchProgress["status"]) ||
-    typeof candidate.progress !== "number" ||
-    !Number.isFinite(candidate.progress)
-  )
-    return undefined;
-  const interrupted =
-    interruptNonterminal &&
-    candidate.status !== "complete" &&
-    candidate.status !== "failed" &&
-    candidate.status !== "canceled";
-  const warnings = Array.isArray(candidate.warnings)
-    ? candidate.warnings
-        .filter((warning): warning is string => typeof warning === "string")
-        .map((warning) => warning.trim().slice(0, 320))
-        .filter(Boolean)
-        .slice(-3)
-    : [];
-  return {
-    stage: candidate.stage.slice(0, 80),
-    label: interrupted ? "Research interrupted" : candidate.label.slice(0, 160),
-    status: interrupted ? "failed" : (candidate.status as ResearchProgress["status"]),
-    ...(interrupted
-      ? { detail: "This research stopped when the page reloaded. Retry to continue." }
-      : typeof candidate.detail === "string" && candidate.detail
-        ? { detail: candidate.detail.slice(0, 240) }
-        : {}),
-    progress: Math.min(1, Math.max(0, candidate.progress)),
-    ...(warnings.length ? { warnings } : {}),
-  };
-}
-
-function boundConversations(
-  value: unknown[],
-  userKey: ChatStorageUserKey,
-  interruptResearch = false,
-): Conversation[] {
+function boundConversations(value: unknown[], userKey: ChatStorageUserKey): Conversation[] {
   const seen = new Set<string>();
   return value
     .filter(isConversation)
@@ -285,28 +220,7 @@ function boundConversations(
         messages.slice(-MAX_MESSAGES_PER_CONVERSATION),
         userKey,
         conversation.temporary,
-      ).map((message) => {
-        const { researchProgress: storedResearchProgress, ...messageWithoutResearchProgress } =
-          message;
-        const researchProgress = normalizeResearchProgress(
-          storedResearchProgress,
-          interruptResearch,
-        );
-        return {
-          ...messageWithoutResearchProgress,
-          ...(researchProgress ? { researchProgress } : {}),
-          ...(researchProgress?.label === "Research interrupted" &&
-          Array.isArray(messageWithoutResearchProgress.activities)
-            ? {
-                activities: messageWithoutResearchProgress.activities.map((activity) =>
-                  activity.status === "running"
-                    ? { ...activity, status: "failed" as const }
-                    : activity,
-                ),
-              }
-            : {}),
-        };
-      });
+      ).map((message) => message);
       return {
         ...conversation,
         messages: boundedMessages,
@@ -328,21 +242,34 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
+    const legacyMessage = message as Message & { researchProgress?: unknown };
     const {
       memorySources: rawSources,
       sources: rawResponseSources,
       generationStatus,
       requestedTool,
+      activities: rawActivities,
+      researchProgress: retiredResearchProgress,
       ...rest
-    } = message;
+    } = legacyMessage;
     const memorySources =
       message.role === "assistant"
         ? normalizeMemorySources(rawSources, userKey, temporary)
         : undefined;
     const responseSources =
       message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
+    const activities = Array.isArray(rawActivities)
+      ? rawActivities
+          .filter(isActivity)
+          .map((activity) =>
+            retiredResearchProgress !== undefined && activity.status === "running"
+              ? { ...activity, status: "failed" as const }
+              : activity,
+          )
+      : undefined;
     return {
       ...rest,
+      ...(activities?.length ? { activities } : {}),
       ...(memorySources ? { memorySources } : {}),
       ...(responseSources ? { sources: responseSources } : {}),
       ...(message.role === "assistant" &&
@@ -481,7 +408,7 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
     );
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? boundConversations(parsed, userKey, true) : [];
+    return Array.isArray(parsed) ? boundConversations(parsed, userKey) : [];
   } catch {
     return [];
   }
@@ -734,12 +661,6 @@ export function branchConversation(source: Conversation, throughMessageId: strin
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
       sources: message.sources?.map((source) => ({ ...source })),
-      researchProgress: message.researchProgress
-        ? {
-            ...message.researchProgress,
-            warnings: message.researchProgress.warnings?.slice(),
-          }
-        : undefined,
       pendingConfirms: message.pendingConfirms?.map((confirmation) => ({ ...confirmation })),
     })),
     createdAt: timestamp,

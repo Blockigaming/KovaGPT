@@ -67,11 +67,11 @@ function PrivacyPage() {
 
         <h2>AI, Search, and Image Providers</h2>
         <p>
-          When you ask for an AI response, web search, Deep Research report, or generated image,
-          KovaGPT may send the prompt and relevant conversation or attachment content to configured
-          third-party providers. Search queries and retrieved pages can also be processed by the
-          search provider. These features can fail or be unavailable when a provider is not
-          configured or is experiencing an outage.
+          When you ask for an AI response, web search or generated image, KovaGPT may send the
+          prompt and relevant conversation or attachment content to configured third-party
+          providers. Search queries and retrieved pages can also be processed by the search
+          provider. These features can fail or be unavailable when a provider is not configured or
+          is experiencing an outage.
         </p>
         <p>
           The KovaGPT application does not include a Kova-owned model-training workflow. Third-party

@@ -21,7 +21,6 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   const tokenBoundary = read(
     "supabase/migrations/20260802003000_google_oauth_tokens_server_only.sql",
   );
-  const deepResearch = read("src/lib/ai/deep-research-access.mjs");
   const paymentWebhook = read("src/routes/api/public/payments/webhook.ts");
 
   assert.match(edgeValidation, /^on:\n  workflow_dispatch:/m);
@@ -99,8 +98,6 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
     /DELETE\s+FROM|TRUNCATE|DROP\s+TABLE|UPDATE\s+public\.google_oauth_tokens/i,
   );
 
-  assert.match(deepResearch, /if \(!authenticated\)/);
-  assert.match(deepResearch, /if \(!owner && tier === "free"\)/);
   assert.match(paymentWebhook, /verifyWebhook/);
   assert.match(paymentWebhook, /resolveBillingPlan/);
   assert.match(paymentWebhook, /received: true,[\s\S]*duplicate: result\.duplicate/);

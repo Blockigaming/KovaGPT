@@ -103,7 +103,7 @@ import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   addManyToContextPack,
   addToContextPack,
-  continueInResearch,
+  continueInChat,
   openInWork,
   type WorkspaceHandoff,
 } from "@/lib/workspace-handoffs";
@@ -987,11 +987,9 @@ function LibraryPage() {
           Open in Work
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() =>
-            void withItem(item, (value) => continueInResearch(toHandoff(value), userKey))
-          }
+          onClick={() => void withItem(item, (value) => continueInChat(toHandoff(value), userKey))}
         >
-          Continue Research
+          Ask Kova
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() =>

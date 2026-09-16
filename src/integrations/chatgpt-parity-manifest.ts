@@ -7,7 +7,7 @@ export type ChatGptParityApp = {
   regions: string[];
   connectionType: "oauth" | "admin_oauth" | "app";
   oauth: { required: boolean; scopes: string[] };
-  capabilities: { search: boolean; sync: boolean; deepResearch: boolean; write: boolean };
+  capabilities: { search: boolean; sync: boolean; write: boolean };
   workspaceAdminSetup: boolean;
   kovaSupported: boolean;
   implementationStatus: "operational" | "credential_ready" | "blocked_provider";

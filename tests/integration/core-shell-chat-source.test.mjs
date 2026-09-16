@@ -82,7 +82,7 @@ test("chat storage rejects malformed records and stays bounded", () => {
   assert.match(chatStore, /MAX_MESSAGES_PER_CONVERSATION = 1_000/);
   assert.match(
     chatStore,
-    /Array\.isArray\(parsed\) \? boundConversations\(parsed, userKey, true\) : \[\]/,
+    /Array\.isArray\(parsed\) \? boundConversations\(parsed, userKey\) : \[\]/,
   );
   assert.match(chatStore, /Storage can be unavailable or full/);
   assert.match(chatStore, /subscribeToConversationChanges/);

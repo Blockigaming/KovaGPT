@@ -1,5 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
+const browserSuite = process.env.KOVA_BROWSER_SUITE ?? "all";
+if (!["all", "core", "public"].includes(browserSuite)) {
+  throw new Error(`Unknown KOVA_BROWSER_SUITE: ${browserSuite}`);
+}
+const publicSuitePatterns = ["**/public-surface-matrix.spec.ts", "**/public-detail-pages.spec.ts"];
+
 const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
 
 /**
@@ -8,7 +14,12 @@ const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: ["**/auth-visual-regression.spec.ts", "**/deployed-baseline-audit.spec.ts"],
+  testIgnore: [
+    "**/auth-visual-regression.spec.ts",
+    "**/deployed-baseline-audit.spec.ts",
+    ...(browserSuite === "core" ? publicSuitePatterns : []),
+  ],
+  ...(browserSuite === "public" ? { testMatch: publicSuitePatterns } : {}),
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,
