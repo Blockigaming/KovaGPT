@@ -24,12 +24,7 @@ const privileges = [
   "20260823215454",
   "20260823215619",
 ];
-const unchanged = [
-  "20260823092107",
-  "20260823092450",
-  "20260823215848",
-  "20260824085042",
-];
+const unchanged = ["20260823092107", "20260823092450", "20260823215848", "20260824085042"];
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -83,7 +78,9 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
   // Pin the semantic content of main's 3f155680... lineage blob. This preserves
   // the historical 93-source snapshot, all five equivalences, hashes, reasons,
   // safety notes, and every pre-existing candidate without relying on formatting.
-  const digest = createHash("sha256").update(JSON.stringify(canonical(restored))).digest("hex");
+  const digest = createHash("sha256")
+    .update(JSON.stringify(canonical(restored)))
+    .digest("hex");
   assert.equal(digest, "a8aadcc911f244b39d49c6b6028fdbde52a41398cc14d2e6103ae2f65a76818e");
 });
 
