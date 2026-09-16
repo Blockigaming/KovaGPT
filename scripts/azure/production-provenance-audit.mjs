@@ -12,28 +12,58 @@ export function validateProductionProvenanceEvidence(app, revisions, expectedIma
     throw new Error("production_provenance_revisions_invalid");
   }
 
-  const image = String(app.image ?? "");
-  if (!DIGEST_IMAGE.test(image)) throw new Error("production_provenance_image_not_immutable");
+  const image = app.image;
+  if (typeof image !== "string" || !DIGEST_IMAGE.test(image)) {
+    throw new Error("production_provenance_image_not_immutable");
+  }
+  if (typeof expectedImage !== "string" || (expectedImage && !DIGEST_IMAGE.test(expectedImage))) {
+    throw new Error("production_provenance_expected_image_invalid");
+  }
   if (expectedImage && image !== expectedImage) {
     throw new Error("production_provenance_image_mismatch");
   }
 
-  const latestRevision = String(app.latestRevision ?? app.latestReadyRevision ?? "");
-  if (!latestRevision) throw new Error("production_provenance_latest_revision_missing");
+  const latestRevision = app.latestRevision ?? app.latestReadyRevision;
+  if (
+    typeof latestRevision !== "string" ||
+    !latestRevision.trim() ||
+    latestRevision !== latestRevision.trim()
+  ) {
+    throw new Error("production_provenance_latest_revision_missing");
+  }
 
-  const active = revisions.filter((revision) => revision?.active === true);
+  const names = new Set();
+  for (const revision of revisions) {
+    if (
+      !revision ||
+      typeof revision !== "object" ||
+      Array.isArray(revision) ||
+      typeof revision.name !== "string" ||
+      !revision.name.trim() ||
+      revision.name !== revision.name.trim() ||
+      typeof revision.active !== "boolean"
+    ) {
+      throw new Error("production_provenance_revision_invalid");
+    }
+    if (names.has(revision.name)) {
+      throw new Error("production_provenance_revision_duplicate");
+    }
+    names.add(revision.name);
+    if (!Number.isInteger(revision.traffic) || revision.traffic < 0 || revision.traffic > 100) {
+      throw new Error("production_provenance_traffic_invalid");
+    }
+    if (revision.traffic > 0 && !revision.active) {
+      throw new Error("production_provenance_serving_revision_inactive");
+    }
+  }
+
+  const active = revisions.filter((revision) => revision.active);
   if (!active.length) throw new Error("production_provenance_no_active_revision");
 
-  const traffic = revisions
-    .map((revision) => Number(revision?.traffic ?? 0))
-    .filter((value) => Number.isFinite(value));
-  if (traffic.some((value) => value < 0 || value > 100)) {
-    throw new Error("production_provenance_traffic_invalid");
-  }
-  const trafficTotal = traffic.reduce((sum, value) => sum + value, 0);
+  const trafficTotal = revisions.reduce((sum, revision) => sum + revision.traffic, 0);
   if (trafficTotal !== 100) throw new Error("production_provenance_traffic_total_invalid");
 
-  const serving = revisions.filter((revision) => Number(revision?.traffic ?? 0) > 0);
+  const serving = revisions.filter((revision) => revision.traffic > 0);
   if (serving.some((revision) => revision.image !== image)) {
     throw new Error("production_provenance_serving_image_mismatch");
   }

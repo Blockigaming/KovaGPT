@@ -76,6 +76,7 @@ jobs:
           subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
 
       - name: Capture sanitized Container App and revision evidence
+        id: capture
         shell: bash
         env:
           RESOURCE_GROUP: ${{ inputs.resource_group }}
@@ -97,8 +98,8 @@ jobs:
             --query '[].{name:name,active:properties.active,created:properties.createdTime,traffic:properties.trafficWeight,image:properties.template.containers[0].image}' \
             --output json > "$evidence/revisions.json"
 
-          printf '%s\n' "$GITHUB_SHA" > "$evidence/source-sha.txt"
-          printf '%s\n' "$(git rev-parse 'HEAD^{tree}')" > "$evidence/source-tree.txt"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/audit-source-sha.txt"
+          printf '%s\n' "$(git rev-parse 'HEAD^{tree}')" > "$evidence/audit-source-tree.txt"
           date -u +'%Y-%m-%dT%H:%M:%SZ' > "$evidence/observed-at-utc.txt"
 
       - name: Validate immutable serving-image and traffic evidence
@@ -113,6 +114,7 @@ jobs:
             > "$RUNNER_TEMP/azure-production-provenance/report.json"
 
       - name: Upload sanitized read-only provenance evidence
+        if: always() && steps.capture.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: azure-production-provenance-${{ github.run_id }}-${{ github.run_attempt }}
