@@ -1,0 +1,50 @@
+name: Model source diagnostics only
+
+on:
+  push:
+    branches:
+      - diag/model-source-format-20260916
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/diag/model-source-format-20260916'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Capture exact source and formatter evidence without modifying source
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=2be2c3165146652c47ba63b5654dcc8d51db7ed7
+          test "$(git rev-parse HEAD^)" = "$source_sha"
+          evidence="$RUNNER_TEMP/model-source-evidence"
+          mkdir -p "$evidence"
+          printf '%s\n' "$source_sha" > "$evidence/SOURCE_COMMIT.txt"
+          git rev-parse "$source_sha^{tree}" > "$evidence/SOURCE_TREE.txt"
+          git archive --format=tar "$source_sha" | gzip -n > "$evidence/app-source.tar.gz"
+          node node_modules/prettier/bin/prettier.cjs --version > "$evidence/prettier-version.txt"
+          test "$(cat "$evidence/prettier-version.txt")" = 3.9.6
+          node node_modules/prettier/bin/prettier.cjs tests/unit/production-migration-reconciliation-review.test.mjs > "$evidence/formatted-migration-review.test.mjs"
+          node --test tests/unit/mode-identity-disclosure.test.mjs tests/unit/production-migration-reconciliation-review.test.mjs > "$evidence/focused-tests.log" 2>&1
+          tar -czf "$evidence/prettier-runtime.tar.gz" -C node_modules prettier
+          git diff --exit-code
+          cd "$evidence"
+          sha256sum app-source.tar.gz formatted-migration-review.test.mjs prettier-runtime.tar.gz focused-tests.log > SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: model-source-format-evidence
+          path: ${{ runner.temp }}/model-source-evidence/
+          if-no-files-found: error
+          retention-days: 1
