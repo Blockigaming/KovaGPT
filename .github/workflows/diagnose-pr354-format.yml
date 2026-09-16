@@ -1,44 +1,61 @@
-name: Diagnose PR 354 formatting
+name: Diagnose migration source validation
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize]
     paths:
-      - scripts/release/migration-schema-proof-plan.mjs
-      - tests/unit/migration-schema-proof-plan.test.mjs
       - .github/workflows/diagnose-pr354-format.yml
 
 permissions:
   contents: read
 
 jobs:
-  prettier-diff:
+  offline-validation-inputs:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      - name: Checkout repository source without persistent credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Node
+      - name: Set up supported Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
+      - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Print exact Prettier diff
+      - name: Preserve bounded offline validation inputs
         shell: bash
         run: |
           set -euo pipefail
-          npx prettier --write \
-            scripts/release/migration-schema-proof-plan.mjs \
-            tests/unit/migration-schema-proof-plan.test.mjs
-          git --no-pager diff -- \
-            scripts/release/migration-schema-proof-plan.mjs \
-            tests/unit/migration-schema-proof-plan.test.mjs
+          evidence="$RUNNER_TEMP/migration-offline-validation"
+          mkdir -p "$evidence"
+          for sha in b964d1bc9fcd81fcfc70e97a22cbf4a516605c94 eddaa93caa49ad5d01f8d1659060c2be5647ff05 2b4679ddd890b9bad5656f3e66bbc77a6f628a99 64bfe243bd58c45b7ddb4cb6c6db134c05ec69d2; do
+            git cat-file -e "${sha}^{commit}"
+            git update-ref "refs/heads/offline-evidence-${sha}" "$sha"
+            printf '%s %s\n' "$sha" "$(git rev-parse "${sha}^{tree}")" >> "$evidence/source-trees.txt"
+          done
+          git bundle create "$evidence/source.bundle" --all
+          git bundle verify "$evidence/source.bundle"
+          tar -czf "$evidence/prettier.tgz" -C node_modules prettier
+          cp "$(command -v node)" "$evidence/node"
+          cp package-lock.json .prettierrc "$evidence/"
+          node --version > "$evidence/node-version.txt"
+          node node_modules/prettier/bin/prettier.cjs --version > "$evidence/prettier-version.txt"
+          cd "$evidence"
+          sha256sum source.bundle prettier.tgz node package-lock.json .prettierrc source-trees.txt > SHA256SUMS
 
-# Diagnostic child-PR trigger only; remove after capturing the exact formatter diff.
+      - name: Upload source and validation binaries only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: migration-offline-validation-${{ github.run_id }}
+          path: ${{ runner.temp }}/migration-offline-validation/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
