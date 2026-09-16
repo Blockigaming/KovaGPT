@@ -347,6 +347,10 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     }
   }
 
+  if (requireBuild && existsSync(join(root, bundleRoot)) && bundleFiles === 0) {
+    errors.push(`${bundleRoot}: built output contains no files`);
+  }
+
   return {
     errors: [...new Set(errors)].sort(),
     warnings: [...new Set(warnings)].sort(),
