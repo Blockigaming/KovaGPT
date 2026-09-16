@@ -59,12 +59,12 @@ current main SHA, not the implementation baseline above.
 
 Verify these existing `production` environment settings privately:
 
-| Variable | Required value |
-| --- | --- |
-| `KOVA_PRODUCTION_ACR_NAME` | `kovagptacr` |
-| `KOVA_PRODUCTION_ACR_LOGIN_SERVER` | `kovagptacr-dte9hugbhjghcyb8.azurecr.io` |
-| `KOVA_PRODUCTION_IMAGE_REPOSITORY` | `kovagpt-web` |
-| `KOVA_PRODUCTION_SUPABASE_PROJECT_REF` | `mfbycmbjygcfkrsuepxf` |
+| Variable                                 | Required value                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `KOVA_PRODUCTION_ACR_NAME`               | `kovagptacr`                                                                  |
+| `KOVA_PRODUCTION_ACR_LOGIN_SERVER`       | `kovagptacr-dte9hugbhjghcyb8.azurecr.io`                                      |
+| `KOVA_PRODUCTION_IMAGE_REPOSITORY`       | `kovagpt-web`                                                                 |
+| `KOVA_PRODUCTION_SUPABASE_PROJECT_REF`   | `mfbycmbjygcfkrsuepxf`                                                        |
 | `KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY` | The existing approved live publishable key, or intentionally empty as in PLAN |
 
 `KOVA_PRODUCTION_BICEP_PARAMETERS_JSON` must contain `parameters.acrName.value`
