@@ -1,0 +1,72 @@
+name: Model Phase A test dependencies only
+
+on:
+  push:
+    branches:
+      - diag/model-phase-a-dependencies-20260916
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/diag/model-phase-a-dependencies-20260916'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Capture public source and isolated test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=698a238b497f738f5bf2710094b8279ec5386016
+          test "$(git rev-parse HEAD^)" = "$source_sha"
+          evidence="$RUNNER_TEMP/model-phase-a-dependencies"
+          mkdir -p "$evidence/pg-runtime/bin" "$evidence/pg-runtime/lib" "$evidence/pg-runtime/lib-deps" "$evidence/pg-runtime/share"
+          printf '%s\n' "$source_sha" > "$evidence/SOURCE_COMMIT.txt"
+          git rev-parse "$source_sha^{tree}" > "$evidence/SOURCE_TREE.txt"
+          git archive --format=tar "$source_sha" | gzip -n > "$evidence/app-source.tar.gz"
+          node --version > "$evidence/node-version.txt"
+          tar --exclude='*.ttf' --exclude='*.otf' --exclude='*.woff' --exclude='*.woff2' --exclude='*.eot' -czf "$evidence/node-dependencies.tar.gz" node_modules
+          postgres="$(find /usr/lib/postgresql -mindepth 3 -maxdepth 3 -type f -name postgres | sort -V | tail -n 1)"
+          test -n "$postgres"
+          pgroot="$(dirname "$(dirname "$postgres")")"
+          pgversion="$(basename "$pgroot")"
+          "$postgres" --version > "$evidence/postgres-version.txt"
+          cp -a "$pgroot/bin/." "$evidence/pg-runtime/bin/"
+          cp -a "$pgroot/lib/." "$evidence/pg-runtime/lib/"
+          cp -a "/usr/share/postgresql/$pgversion/." "$evidence/pg-runtime/share/"
+          PGROOT="$pgroot" DEST="$evidence/pg-runtime/lib-deps" python3 - <<'PY'
+          import os, pathlib, re, shutil, subprocess
+          root, destination = pathlib.Path(os.environ['PGROOT']), pathlib.Path(os.environ['DEST'])
+          libraries = set()
+          for source in list((root / 'bin').iterdir()) + list((root / 'lib').glob('*.so')):
+              if not source.is_file():
+                  continue
+              result = subprocess.run(['ldd', str(source)], text=True, capture_output=True, check=False)
+              libraries.update(re.findall(r'=> (/[^\s]+)', result.stdout))
+          for value in sorted(libraries):
+              path = pathlib.Path(value)
+              if path.name.startswith(('libc.so.', 'libm.so.', 'libpthread.so.', 'libdl.so.', 'librt.so.', 'ld-linux')):
+                  continue
+              shutil.copy2(path.resolve(), destination / path.name)
+          PY
+          tar -czf "$evidence/postgres-test-runtime.tar.gz" -C "$evidence" pg-runtime
+          rm -rf "$evidence/pg-runtime"
+          git diff --exit-code
+          cd "$evidence"
+          sha256sum app-source.tar.gz node-dependencies.tar.gz postgres-test-runtime.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: model-phase-a-test-dependencies
+          path: ${{ runner.temp }}/model-phase-a-dependencies/
+          if-no-files-found: error
+          retention-days: 1
