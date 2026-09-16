@@ -1,0 +1,132 @@
+name: Build Azure production candidate only
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/build-azure-production-candidate.yml
+      - scripts/azure/build-production-candidate.mjs
+      - scripts/azure/verify-browser-config.mjs
+      - tests/unit/azure-production-candidate-build.test.mjs
+      - Dockerfile
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type BUILD_ONLY to approve ACR build/push costs, not deployment
+        required: true
+        type: string
+      source_sha:
+        description: Reviewed current main SHA; must equal the selected workflow revision
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test candidate build contract without cloud credentials or execution
+        run: node --test tests/unit/azure-production-candidate-build.test.mjs
+      - name: Install locked formatter without package lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check exact formatting and print any required source-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            .github/workflows/build-azure-production-candidate.yml
+            scripts/azure/build-production-candidate.mjs
+            tests/unit/azure-production-candidate-build.test.mjs
+            docs/azure/production-candidate-build-only.md
+          )
+          npx --no-install prettier --write "${files[@]}"
+          git --no-pager diff --exit-code -- "${files[@]}"
+      - name: Preserve exact formatted source for a failed format check
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-format-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .github/workflows/build-azure-production-candidate.yml
+            scripts/azure/build-production-candidate.mjs
+            tests/unit/azure-production-candidate-build.test.mjs
+            docs/azure/production-candidate-build-only.md
+          include-hidden-files: true
+          retention-days: 1
+
+  build-only:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'BUILD_ONLY' && inputs.source_sha == github.sha
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      KOVA_BUILD_CONFIRMATION: ${{ inputs.confirmation }}
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+      KOVA_PRODUCTION_ACR_NAME: ${{ vars.KOVA_PRODUCTION_ACR_NAME }}
+      KOVA_PRODUCTION_ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
+      KOVA_PRODUCTION_IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
+      KOVA_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
+      KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: ${{ vars.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Check out exact approved source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Validate protected PLAN-compatible browser inputs before Azure login
+        env:
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
+        run: node scripts/azure/build-production-candidate.mjs --check
+      - name: Sign in using the protected production OIDC identity
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Build exact Git commit in ACR and verify the immutable pulled candidate
+        env:
+          KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: ${{ runner.temp }}/production-candidate
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON }}
+        run: node scripts/azure/build-production-candidate.mjs --execute
+      - name: Preserve verified key-free candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: production-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-candidate/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record the build-only handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Production candidate built, not deployed"
+            echo "Source SHA: $GITHUB_SHA"
+            echo 'Immutable image for a separately approved PLAN run:'
+            cat "$RUNNER_TEMP/production-candidate/image-reference.txt"
+            echo 'No Container App update, database change, traffic shift, or cutover was performed.'
+            echo 'PLAN must select this same main SHA. If main advances, rebuild; never relabel an image.'
+          } >> "$GITHUB_STEP_SUMMARY"
