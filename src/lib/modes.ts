@@ -1,4 +1,8 @@
-import { MODE_IDS_BY_TIER, isModeAllowedForTier, studyModeForTier } from "@/lib/mode-entitlements.mjs";
+import {
+  MODE_IDS_BY_TIER,
+  isModeAllowedForTier,
+  studyModeForTier,
+} from "@/lib/mode-entitlements.mjs";
 
 export type ModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "max" | "ultra";
 
