@@ -72,7 +72,8 @@ export function productionCandidateConfig(env) {
     "supabase_url_mismatch",
   );
   requireCondition(
-    typeof publishableKey === "string" && /^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey),
+    typeof publishableKey === "string" &&
+      /^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey),
     "browser_key_invalid",
   );
   const stripeKey = env.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY ?? "";
@@ -97,25 +98,47 @@ export function productionCandidateBuildArgs(config, sourceTree, abac) {
     VITE_PAYMENTS_CLIENT_TOKEN: config.stripeKey,
   };
   return [
-    "acr", "build", "--registry", config.acrName,
-    "--image", `${config.imageRepository}:${config.tag}`,
-    "--file", "Dockerfile", "--platform", "linux/amd64", "--timeout", "1800", "--no-logs",
+    "acr",
+    "build",
+    "--registry",
+    config.acrName,
+    "--image",
+    `${config.imageRepository}:${config.tag}`,
+    "--file",
+    "Dockerfile",
+    "--platform",
+    "linux/amd64",
+    "--timeout",
+    "1800",
+    "--no-logs",
     ...(abac ? ["--source-acr-auth-id", "[caller]"] : []),
     ...Object.entries(values).flatMap(([name, value]) => ["--build-arg", `${name}=${value}`]),
-    "--query", "{runId:runId,status:status,outputImages:outputImages}",
-    "--output", "json", "--only-show-errors", `${GIT_URL}#${config.sourceSha}`,
+    "--query",
+    "{runId:runId,status:status,outputImages:outputImages}",
+    "--output",
+    "json",
+    "--only-show-errors",
+    `${GIT_URL}#${config.sourceSha}`,
   ];
 }
 
 // The digest comes from this successful build's output, never from a tag lookup.
 export function productionCandidateDigest(run, config) {
   requireCondition(run?.status === "Succeeded", "acr_build_not_succeeded");
-  requireCondition(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u.test(run.runId ?? ""), "acr_run_id_invalid");
-  requireCondition(Array.isArray(run.outputImages) && run.outputImages.length === 1, "output_invalid");
+  requireCondition(
+    /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u.test(run.runId ?? ""),
+    "acr_run_id_invalid",
+  );
+  requireCondition(
+    Array.isArray(run.outputImages) && run.outputImages.length === 1,
+    "output_invalid",
+  );
   const image = run.outputImages[0];
   requireCondition(
-    image?.registry === config.loginServer && image.repository === config.imageRepository &&
-      image.tag === config.tag && DIGEST.test(image.digest ?? ""),
+    image?.registry === config.loginServer &&
+      image.repository === config.imageRepository &&
+      image.tag === config.tag &&
+      DIGEST.test(image.digest ?? ""),
     "output_image_mismatch",
   );
   return image.digest;
@@ -124,11 +147,17 @@ export function productionCandidateDigest(run, config) {
 function command(program, args) {
   const env = { ...process.env };
   for (const name of [
-    "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON", "GITHUB_TOKEN", "GH_TOKEN",
+    "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
+    "GITHUB_TOKEN",
+    "GH_TOKEN",
     "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
-  ]) delete env[name];
+  ])
+    delete env[name];
   const result = spawnSync(program, args, {
-    env, encoding: "utf8", timeout: 35 * 60 * 1000, maxBuffer: 16 * 1024 * 1024,
+    env,
+    encoding: "utf8",
+    timeout: 35 * 60 * 1000,
+    maxBuffer: 16 * 1024 * 1024,
   });
   // Child errors may contain arguments or provider output. Do not echo them.
   requireCondition(result.status === 0, `command_failed:${program}`);
@@ -142,7 +171,10 @@ function writeJson(path, value) {
 export function buildProductionCandidate(env, run = command) {
   const config = productionCandidateConfig(env);
   requireCondition(run("git", ["rev-parse", "HEAD"]) === config.sourceSha, "checkout_mismatch");
-  requireCondition(run("git", ["status", "--porcelain=v1", "--untracked-files=all"]) === "", "dirty_source");
+  requireCondition(
+    run("git", ["status", "--porcelain=v1", "--untracked-files=all"]) === "",
+    "dirty_source",
+  );
   const sourceTree = run("git", ["rev-parse", "HEAD^{tree}"]);
   requireCondition(SHA.test(sourceTree), "source_tree_invalid");
   const currentMain = run("git", ["ls-remote", GIT_URL, "refs/heads/main"]);
@@ -150,41 +182,85 @@ export function buildProductionCandidate(env, run = command) {
   const root = run("git", ["rev-parse", "--show-toplevel"]);
   const output = resolve(env.KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR ?? ".");
   const outputRelative = relative(root, output);
-  requireCondition(outputRelative.startsWith("../") || isAbsolute(outputRelative), "output_must_be_external");
+  requireCondition(
+    outputRelative.startsWith("../") || isAbsolute(outputRelative),
+    "output_must_be_external",
+  );
 
-  const registry = parseJson(run("az", [
-    "acr", "show", "--name", config.acrName, "--query",
-    "{loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}", "--output", "json",
-  ]));
+  const registry = parseJson(
+    run("az", [
+      "acr",
+      "show",
+      "--name",
+      config.acrName,
+      "--query",
+      "{loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}",
+      "--output",
+      "json",
+    ]),
+  );
   requireCondition(registry.loginServer === config.loginServer, "live_registry_mismatch");
   requireCondition(
-    ["LegacyRegistryPermissions", "AbacRepositoryPermissions"].includes(registry.roleAssignmentMode),
+    ["LegacyRegistryPermissions", "AbacRepositoryPermissions"].includes(
+      registry.roleAssignmentMode,
+    ),
     "registry_permission_mode_unknown",
   );
-  const existing = parseJson(run("az", [
-    "acr", "repository", "show-tags", "--name", config.acrName,
-    "--repository", config.imageRepository, "--query", `[?@=='${config.tag}']`, "--output", "json",
-  ]));
+  const existing = parseJson(
+    run("az", [
+      "acr",
+      "repository",
+      "show-tags",
+      "--name",
+      config.acrName,
+      "--repository",
+      config.imageRepository,
+      "--query",
+      `[?@=='${config.tag}']`,
+      "--output",
+      "json",
+    ]),
+  );
   requireCondition(Array.isArray(existing) && existing.length === 0, "tag_already_exists");
   // Do not overwrite earlier evidence or start paid work after a local path error.
   mkdirSync(output, { mode: 0o700 });
-  const build = parseJson(run("az", productionCandidateBuildArgs(
-    config, sourceTree, registry.roleAssignmentMode === "AbacRepositoryPermissions",
-  )));
+  const build = parseJson(
+    run(
+      "az",
+      productionCandidateBuildArgs(
+        config,
+        sourceTree,
+        registry.roleAssignmentMode === "AbacRepositoryPermissions",
+      ),
+    ),
+  );
   const digest = productionCandidateDigest(build, config);
   const imageReference = `${config.loginServer}/${config.imageRepository}@${digest}`;
   const registryDigest = run("az", [
-    "acr", "repository", "show", "--name", config.acrName,
-    "--image", `${config.imageRepository}:${config.tag}`, "--query", "digest", "--output", "tsv",
+    "acr",
+    "repository",
+    "show",
+    "--name",
+    config.acrName,
+    "--image",
+    `${config.imageRepository}:${config.tag}`,
+    "--query",
+    "digest",
+    "--output",
+    "tsv",
   ]);
   requireCondition(registryDigest === digest, "registry_digest_mismatch");
   run("az", ["acr", "login", "--name", config.acrName, "--only-show-errors"]);
   run("docker", ["pull", "--platform", "linux/amd64", imageReference]);
-  const image = parseJson(run("docker", [
-    "image", "inspect", "--format",
-    '{"Os":{{json .Os}},"Architecture":{{json .Architecture}},"Labels":{{json .Config.Labels}}}',
-    imageReference,
-  ]));
+  const image = parseJson(
+    run("docker", [
+      "image",
+      "inspect",
+      "--format",
+      '{"Os":{{json .Os}},"Architecture":{{json .Architecture}},"Labels":{{json .Config.Labels}}}',
+      imageReference,
+    ]),
+  );
   requireCondition(image?.Os === "linux" && image.Architecture === "amd64", "platform_mismatch");
   const expectedLabels = {
     "org.opencontainers.image.revision": config.sourceSha,
@@ -202,33 +278,58 @@ export function buildProductionCandidate(env, run = command) {
   try {
     containerId = run("docker", ["create", imageReference]);
     requireCondition(/^[a-f0-9]{12,64}$/u.test(containerId), "container_id_invalid");
-    run("docker", ["cp", `${containerId}:/app/dist/browser-config-provenance.json`, `${temporary}/built.json`]);
+    run("docker", [
+      "cp",
+      `${containerId}:/app/dist/browser-config-provenance.json`,
+      `${temporary}/built.json`,
+    ]);
     run("docker", ["cp", `${containerId}:/app/dist/client`, `${temporary}/client`]);
     const built = parseJson(readFileSync(`${temporary}/built.json`, "utf8"));
     writeJson(`${temporary}/source.json`, {
-      schemaVersion: 1, context: "acr-git", sourceSha: config.sourceSha, sourceTree,
+      schemaVersion: 1,
+      context: "acr-git",
+      sourceSha: config.sourceSha,
+      sourceTree,
     });
     const { provenance } = verifyBrowserConfig({
-      bundleDir: `${temporary}/client`, supabaseUrl: config.supabaseUrl,
-      publishableKey: config.publishableKey, stripePublishableKey: config.stripeKey,
-      sourceSha: config.sourceSha, sourceTree, expectedProjectRef: config.projectRef,
-      sourceAttestationPath: `${temporary}/source.json`, provenancePath: `${temporary}/verified.json`,
+      bundleDir: `${temporary}/client`,
+      supabaseUrl: config.supabaseUrl,
+      publishableKey: config.publishableKey,
+      stripePublishableKey: config.stripeKey,
+      sourceSha: config.sourceSha,
+      sourceTree,
+      expectedProjectRef: config.projectRef,
+      sourceAttestationPath: `${temporary}/source.json`,
+      provenancePath: `${temporary}/verified.json`,
       writeProvenance: false,
     });
     requireCondition(
       Object.keys(built).length === Object.keys(provenance).length &&
-        Object.entries(provenance).every(([key, value]) => JSON.stringify(built[key]) === JSON.stringify(value)),
+        Object.entries(provenance).every(
+          ([key, value]) => JSON.stringify(built[key]) === JSON.stringify(value),
+        ),
       "browser_provenance_mismatch",
     );
     const report = {
-      schemaVersion: 1, operation: "production-candidate-build-only",
-      sourceSha: config.sourceSha, sourceTree, sourceContext: "acr-git",
-      imageReference, digest, acrRunId: build.runId, candidateTag: config.tag,
-      observedAt: new Date().toISOString(), labels: expectedLabels,
-      githubRunId: env.GITHUB_RUN_ID, githubRunAttempt: env.GITHUB_RUN_ATTEMPT,
+      schemaVersion: 1,
+      operation: "production-candidate-build-only",
+      sourceSha: config.sourceSha,
+      sourceTree,
+      sourceContext: "acr-git",
+      imageReference,
+      digest,
+      acrRunId: build.runId,
+      candidateTag: config.tag,
+      observedAt: new Date().toISOString(),
+      labels: expectedLabels,
+      githubRunId: env.GITHUB_RUN_ID,
+      githubRunAttempt: env.GITHUB_RUN_ATTEMPT,
       browserBundleSha256: provenance.browserBundleSha256,
       browserProvenanceSha256: sha256(`${JSON.stringify(provenance, null, 2)}\n`),
-      containerAppUpdated: false, databaseMutated: false, trafficShifted: false, deployed: false,
+      containerAppUpdated: false,
+      databaseMutated: false,
+      trafficShifted: false,
+      deployed: false,
     };
     // Only regenerated, key-free, checked evidence is eligible for artifact upload.
     writeJson(`${output}/browser-config-provenance.json`, provenance);
@@ -246,7 +347,10 @@ export function buildProductionCandidate(env, run = command) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    requireCondition(process.argv.length === 3 && ["--check", "--execute"].includes(process.argv[2]), "mode_required");
+    requireCondition(
+      process.argv.length === 3 && ["--check", "--execute"].includes(process.argv[2]),
+      "mode_required",
+    );
     if (process.argv[2] === "--check") {
       productionCandidateConfig(process.env);
       console.log("PRODUCTION_CANDIDATE_INPUTS=PASS; no build or Azure call performed");
@@ -256,7 +360,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       console.log("BUILD_ONLY_COMPLETE; no deployment performed");
     }
   } catch (error) {
-    console.error(error instanceof Error && error.message.startsWith("production_candidate_") ? error.message : "production_candidate_failed");
+    console.error(
+      error instanceof Error && error.message.startsWith("production_candidate_")
+        ? error.message
+        : "production_candidate_failed",
+    );
     process.exitCode = 1;
   }
 }

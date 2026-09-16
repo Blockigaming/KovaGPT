@@ -58,16 +58,26 @@ test("only the explicit production browser argument allowlist reaches a commit-p
   const args = productionCandidateBuildArgs(config, sourceTree, false);
   assert.equal(args.at(-1), `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`);
   assert.match(config.tag, /^production-candidate-[a-f0-9]{40}-12345-1$/u);
-  assert.deepEqual(args.filter((_, index) => args[index - 1] === "--build-arg").map((arg) => arg.split("=")[0]), [
-    "KOVA_SOURCE_SHA", "KOVA_SOURCE_TREE", "KOVA_EXPECTED_SUPABASE_PROJECT_REF",
-    "KOVA_VERIFY_BROWSER_CONFIG", "VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY",
-    "VITE_PAYMENTS_CLIENT_TOKEN",
-  ]);
+  assert.deepEqual(
+    args.filter((_, index) => args[index - 1] === "--build-arg").map((arg) => arg.split("=")[0]),
+    [
+      "KOVA_SOURCE_SHA",
+      "KOVA_SOURCE_TREE",
+      "KOVA_EXPECTED_SUPABASE_PROJECT_REF",
+      "KOVA_VERIFY_BROWSER_CONFIG",
+      "VITE_SUPABASE_URL",
+      "VITE_SUPABASE_PUBLISHABLE_KEY",
+      "VITE_PAYMENTS_CLIENT_TOKEN",
+    ],
+  );
   assert.ok(args.includes("KOVA_VERIFY_BROWSER_CONFIG=true"));
   assert.ok(args.includes("linux/amd64"));
   assert.ok(args.includes("--no-logs"));
   assert.ok(args.includes("1800"));
-  assert.doesNotMatch(args.join(" "), /SERVER_REFERENCE|BICEP_PARAMETERS|:latest|containerapp|--no-wait/u);
+  assert.doesNotMatch(
+    args.join(" "),
+    /SERVER_REFERENCE|BICEP_PARAMETERS|:latest|containerapp|--no-wait/u,
+  );
   const abac = productionCandidateBuildArgs(config, sourceTree, true);
   assert.equal(abac[abac.indexOf("--source-acr-auth-id") + 1], "[caller]");
 });
@@ -88,37 +98,62 @@ for (const [name, overrides] of [
   ["missing protected parameters", { KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: "" }],
 ]) {
   test(`refuses ${name} before any cloud build`, () => {
-    assert.throws(() => productionCandidateConfig(environment(overrides)), /production_candidate_/u);
+    assert.throws(
+      () => productionCandidateConfig(environment(overrides)),
+      /production_candidate_/u,
+    );
   });
 }
 for (const [name, change] of [
   ["wrong browser URL", { supabaseUrl: { value: `https://${"z".repeat(20)}.supabase.co` } }],
-  ["server secret instead of browser key", { supabasePublishableKey: { value: `sb_secret_${"z".repeat(20)}` } }],
+  [
+    "server secret instead of browser key",
+    { supabasePublishableKey: { value: `sb_secret_${"z".repeat(20)}` } },
+  ],
   ["mismatched PLAN registry", { acrName: { value: "wrongregistry" } }],
 ]) {
   test(`rejects protected parameters with ${name}`, () => {
-    const env = environment({ KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: JSON.stringify({ parameters: { ...params, ...change } }) });
+    const env = environment({
+      KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: JSON.stringify({
+        parameters: { ...params, ...change },
+      }),
+    });
     assert.throws(() => productionCandidateConfig(env), /production_candidate_/u);
   });
 }
 test("an explicitly empty Stripe browser key remains supported without enabling billing", () => {
-  assert.equal(productionCandidateConfig(environment({ KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: "" })).stripeKey, "");
+  assert.equal(
+    productionCandidateConfig(environment({ KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: "" }))
+      .stripeKey,
+    "",
+  );
 });
 test("uses only one successful build output digest; rejects output confusion", () => {
   const config = productionCandidateConfig(environment());
   assert.equal(productionCandidateDigest(buildRun(config), config), digest);
-  assert.equal(productionCandidateDigest({ ...buildRun(config), runId: "0accec26-d6de-4757-8e74-d080f38eaaab" }, config), digest);
+  assert.equal(
+    productionCandidateDigest(
+      { ...buildRun(config), runId: "0accec26-d6de-4757-8e74-d080f38eaaab" },
+      config,
+    ),
+    digest,
+  );
   for (const run of [
     { ...buildRun(config), status: "Running" },
     { ...buildRun(config), runId: "" },
     { ...buildRun(config), runId: "abc\ncommand" },
     { ...buildRun(config), outputImages: [null] },
     { ...buildRun(config), outputImages: [] },
-    { ...buildRun(config), outputImages: [buildRun(config).outputImages[0], buildRun(config).outputImages[0]] },
+    {
+      ...buildRun(config),
+      outputImages: [buildRun(config).outputImages[0], buildRun(config).outputImages[0]],
+    },
     ...["registry", "repository", "tag", "digest"].map((field) => ({
-      ...buildRun(config), outputImages: [{ ...buildRun(config).outputImages[0], [field]: "wrong" }],
+      ...buildRun(config),
+      outputImages: [{ ...buildRun(config).outputImages[0], [field]: "wrong" }],
     })),
-  ]) assert.throws(() => productionCandidateDigest(run, config), /production_candidate_/u);
+  ])
+    assert.throws(() => productionCandidateDigest(run, config), /production_candidate_/u);
 });
 
 function harness(t, options = {}) {
@@ -135,52 +170,78 @@ function harness(t, options = {}) {
     const command = args.slice(0, 3).join(" ");
     if (program === "git") {
       if (args[0] === "status") return options.dirty ? " M Dockerfile" : "";
-      if (args[0] === "ls-remote") return `${options.mainMoved ? "d".repeat(40) : sourceSha}\trefs/heads/main`;
+      if (args[0] === "ls-remote")
+        return `${options.mainMoved ? "d".repeat(40) : sourceSha}\trefs/heads/main`;
       return { HEAD: sourceSha, "HEAD^{tree}": sourceTree, "--show-toplevel": root }[args[1]];
     }
     if (program === "az") {
-      if (command === "acr show --name") return JSON.stringify({ loginServer: options.wrongRegistry ? "wrong.azurecr.io" : loginServer, roleAssignmentMode: "LegacyRegistryPermissions" });
+      if (command === "acr show --name")
+        return JSON.stringify({
+          loginServer: options.wrongRegistry ? "wrong.azurecr.io" : loginServer,
+          roleAssignmentMode: "LegacyRegistryPermissions",
+        });
       if (command === "acr repository show-tags") {
         if (options.tagLookupFailed) throw new Error("simulated_authorization_failure");
         return options.tagExists ? JSON.stringify([config.tag]) : "[]";
       }
       if (args[1] === "build") return JSON.stringify(buildRun(config));
-      if (command === "acr repository show") return options.digestMismatch ? `sha256:${"d".repeat(64)}` : digest;
+      if (command === "acr repository show")
+        return options.digestMismatch ? `sha256:${"d".repeat(64)}` : digest;
       if (args[1] === "login") return "";
     }
     if (program === "docker") {
       if (args[0] === "pull" || args[0] === "rm") return "";
       if (args[0] === "create") return "f".repeat(64);
-      if (args[0] === "image") return JSON.stringify({
-        Os: "linux", Architecture: "amd64", Labels: {
-          "org.opencontainers.image.revision": options.wrongLabel ? "d".repeat(40) : sourceSha,
-          "com.kovagpt.source.tree": sourceTree,
-          "com.kovagpt.browser.supabase-project-ref": projectRef,
-          "com.kovagpt.browser.config-verified": "true",
-          "com.kovagpt.browser.config-provenance": "/app/dist/browser-config-provenance.json",
-        },
-      });
+      if (args[0] === "image")
+        return JSON.stringify({
+          Os: "linux",
+          Architecture: "amd64",
+          Labels: {
+            "org.opencontainers.image.revision": options.wrongLabel ? "d".repeat(40) : sourceSha,
+            "com.kovagpt.source.tree": sourceTree,
+            "com.kovagpt.browser.supabase-project-ref": projectRef,
+            "com.kovagpt.browser.config-verified": "true",
+            "com.kovagpt.browser.config-provenance": "/app/dist/browser-config-provenance.json",
+          },
+        });
       if (args[0] === "cp") {
         const target = args[2];
         if (target.endsWith("/built.json")) {
           const parent = resolve(target, "..");
           const bundle = `${parent}/expected-client`;
           mkdirSync(bundle);
-          writeFileSync(`${bundle}/index.js`, `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];`);
-          writeFileSync(`${parent}/expected-source.json`, JSON.stringify({ schemaVersion: 1, context: "acr-git", sourceSha, sourceTree }));
+          writeFileSync(
+            `${bundle}/index.js`,
+            `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];`,
+          );
+          writeFileSync(
+            `${parent}/expected-source.json`,
+            JSON.stringify({ schemaVersion: 1, context: "acr-git", sourceSha, sourceTree }),
+          );
           const { provenance } = verifyBrowserConfig({
-            bundleDir: bundle, supabaseUrl: params.supabaseUrl.value,
-            publishableKey: browserKey, stripePublishableKey: stripeKey,
-            sourceSha, sourceTree, expectedProjectRef: projectRef,
+            bundleDir: bundle,
+            supabaseUrl: params.supabaseUrl.value,
+            publishableKey: browserKey,
+            stripePublishableKey: stripeKey,
+            sourceSha,
+            sourceTree,
+            expectedProjectRef: projectRef,
             sourceAttestationPath: `${parent}/expected-source.json`,
-            provenancePath: `${parent}/verified.json`, writeProvenance: false,
+            provenancePath: `${parent}/verified.json`,
+            writeProvenance: false,
           });
           if (options.wrongProvenance) provenance.sourceContext = "git-archive";
           writeFileSync(target, JSON.stringify(provenance));
         } else {
           mkdirSync(target);
-          const original = readFileSync(`${resolve(target, "..")}/expected-client/index.js`, "utf8");
-          writeFileSync(`${target}/index.js`, `${original}${options.contaminatedBundle ? `\n"https://${"z".repeat(20)}.supabase.co"` : ""}`);
+          const original = readFileSync(
+            `${resolve(target, "..")}/expected-client/index.js`,
+            "utf8",
+          );
+          writeFileSync(
+            `${target}/index.js`,
+            `${original}${options.contaminatedBundle ? `\n"https://${"z".repeat(20)}.supabase.co"` : ""}`,
+          );
         }
         return "";
       }
@@ -201,13 +262,18 @@ test("build-only orchestration verifies pulled bytes and emits key-free PLAN evi
   assert.equal(report.databaseMutated, false);
   assert.equal(report.containerAppUpdated, false);
   assert.equal(report.trafficShifted, false);
-  const artifact = readFileSync(`${output}/candidate.json`, "utf8") + readFileSync(`${output}/browser-config-provenance.json`, "utf8");
+  const artifact =
+    readFileSync(`${output}/candidate.json`, "utf8") +
+    readFileSync(`${output}/browser-config-provenance.json`, "utf8");
   assert.doesNotMatch(artifact, /sb_publishable_|pk_live_|SERVER_REFERENCE/u);
   assert.equal(readFileSync(`${output}/image-reference.txt`, "utf8"), `${imageReference}\n`);
   assert.equal(calls.filter(([program, , sub]) => program === "az" && sub === "build").length, 1);
   assert.ok(calls.some(([program, sub]) => program === "docker" && sub === "rm"));
   for (const call of calls) {
-    assert.doesNotMatch(call.join(" "), /containerapp|deployment|traffic|supabase db|keyvault|role assignment|docker (?:run|start)/u);
+    assert.doesNotMatch(
+      call.join(" "),
+      /containerapp|deployment|traffic|supabase db|keyvault|role assignment|docker (?:run|start)/u,
+    );
   }
 });
 for (const [name, options, code] of [
@@ -239,29 +305,59 @@ for (const [name, options, code] of [
 }
 
 test("production writes are isolated from PR validation and never dispatch PLAN or deployment", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url), "utf8");
-  const tests = workflow.slice(workflow.indexOf("  source-tests:"), workflow.indexOf("  build-only:"));
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url),
+    "utf8",
+  );
+  const tests = workflow.slice(
+    workflow.indexOf("  source-tests:"),
+    workflow.indexOf("  build-only:"),
+  );
   assert.doesNotMatch(tests, /id-token|environment:|secrets\.|--execute|azure\/login/u);
-  assert.match(workflow, /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/u);
-  assert.match(workflow, /inputs\.confirmation == 'BUILD_ONLY' && inputs\.source_sha == github\.sha/u);
+  assert.match(
+    workflow,
+    /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/u,
+  );
+  assert.match(
+    workflow,
+    /inputs\.confirmation == 'BUILD_ONLY' && inputs\.source_sha == github\.sha/u,
+  );
   assert.match(workflow, /needs: source-tests/u);
-  assert.doesNotMatch(workflow, /az containerapp|az deployment|wrangler|workflow_run:|KOVA_DEV_|gh workflow run/u);
+  assert.doesNotMatch(
+    workflow,
+    /az containerapp|az deployment|wrangler|workflow_run:|KOVA_DEV_|gh workflow run/u,
+  );
   assert.equal((workflow.match(/--execute/g) ?? []).length, 1);
   assert.equal((workflow.match(/id-token: write/g) ?? []).length, 1);
   assert.match(workflow, /name: production\n/u);
 });
 
 test("existing PLAN and Dockerfile require the same provenance context and labels", () => {
-  const plan = readFileSync(new URL("../../.github/workflows/validate-azure-production.yml", import.meta.url), "utf8");
+  const plan = readFileSync(
+    new URL("../../.github/workflows/validate-azure-production.yml", import.meta.url),
+    "utf8",
+  );
   const dockerfile = readFileSync(new URL("../../Dockerfile", import.meta.url), "utf8");
   assert.match(plan, /value\.schemaVersion !== 3/u);
   assert.match(plan, /value\.sourceContext !== "acr-git"/u);
   assert.match(dockerfile, /context:'acr-git'/u);
-  for (const label of ["org.opencontainers.image.revision", "com.kovagpt.source.tree", "com.kovagpt.browser.supabase-project-ref", "com.kovagpt.browser.config-verified"]) {
+  for (const label of [
+    "org.opencontainers.image.revision",
+    "com.kovagpt.source.tree",
+    "com.kovagpt.browser.supabase-project-ref",
+    "com.kovagpt.browser.config-verified",
+  ]) {
     assert.ok(plan.includes(label));
     assert.ok(dockerfile.includes(label));
   }
-  for (const setting of ["KOVA_PRODUCTION_ACR_NAME", "KOVA_PRODUCTION_ACR_LOGIN_SERVER", "KOVA_PRODUCTION_IMAGE_REPOSITORY", "KOVA_PRODUCTION_SUPABASE_PROJECT_REF", "KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY", "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON"]) {
+  for (const setting of [
+    "KOVA_PRODUCTION_ACR_NAME",
+    "KOVA_PRODUCTION_ACR_LOGIN_SERVER",
+    "KOVA_PRODUCTION_IMAGE_REPOSITORY",
+    "KOVA_PRODUCTION_SUPABASE_PROJECT_REF",
+    "KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY",
+    "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
+  ]) {
     assert.ok(plan.includes(setting));
   }
 });
