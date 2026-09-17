@@ -1,0 +1,231 @@
+name: Backup Supabase production only
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/backup-supabase-production.yml
+      - tests/unit/supabase-production-backup-workflow.test.mjs
+      - docs/release-reconciliation/production-backup-export.md
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type BACKUP_ONLY to approve a read-only production export
+        required: true
+        type: string
+      source_sha:
+        description: Current reviewed main SHA; must equal the selected workflow revision
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kova-production-backup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Verify backup workflow safety contract
+        run: node --test tests/unit/supabase-production-backup-workflow.test.mjs
+
+  backup-only:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'BACKUP_ONLY' && inputs.source_sha == github.sha
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KOVA_PRODUCTION_PROJECT_REF: mfbycmbjygcfkrsuepxf
+      KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+      KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install checksum-pinned Supabase CLI 2.111.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="2.111.0"
+          expected_sha256="31ee8a152e9c8c8eddae072c6bc7c9119748a96c8cdaf21a6d31c9ce7e62cc18"
+          archive="$RUNNER_TEMP/supabase_${version}_linux_amd64.tar.gz"
+          bin_dir="$RUNNER_TEMP/supabase-cli-bin"
+          url="https://github.com/supabase/cli/releases/download/v${version}/supabase_${version}_linux_amd64.tar.gz"
+
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --retry 3 --retry-all-errors \
+            --output "$archive" "$url"
+          printf '%s  %s\n' "$expected_sha256" "$archive" | sha256sum --check --strict
+          [[ "$(tar -tzf "$archive")" == "supabase" ]] || {
+            echo "::error::Unexpected Supabase CLI archive layout."
+            exit 1
+          }
+          mkdir -p "$bin_dir"
+          tar -xzf "$archive" -C "$bin_dir" supabase
+          chmod 0755 "$bin_dir/supabase"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+
+      - name: Validate target and protect credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${KOVA_PRODUCTION_DATABASE_URL:-}" || -z "${KOVA_PRODUCTION_BACKUP_PASSPHRASE:-}" ]]; then
+            echo "::error::Required protected production backup secrets are missing."
+            exit 1
+          fi
+          echo "::add-mask::$KOVA_PRODUCTION_DATABASE_URL"
+          echo "::add-mask::$KOVA_PRODUCTION_BACKUP_PASSPHRASE"
+          if (( ${#KOVA_PRODUCTION_BACKUP_PASSPHRASE} < 32 )); then
+            echo "::error::Backup encryption passphrase must contain at least 32 characters."
+            exit 1
+          fi
+          DATABASE_URL="$KOVA_PRODUCTION_DATABASE_URL" PROJECT_REF="$KOVA_PRODUCTION_PROJECT_REF" node --input-type=module <<'NODE'
+          const raw = process.env.DATABASE_URL ?? "";
+          const ref = process.env.PROJECT_REF ?? "";
+          let url;
+          try {
+            url = new URL(raw);
+          } catch {
+            throw new Error("invalid_database_url");
+          }
+          if (!/^postgres(?:ql)?:$/u.test(url.protocol)) throw new Error("invalid_database_protocol");
+          if (url.pathname !== "/postgres") throw new Error("unexpected_database_name");
+          const direct = url.hostname === `db.${ref}.supabase.co` && url.username === "postgres";
+          const pooler = /\.pooler\.supabase\.com$/u.test(url.hostname) && url.username === `postgres.${ref}`;
+          if (!direct && !pooler) throw new Error("production_project_identity_mismatch");
+          NODE
+          if ! docker info >/dev/null 2>&1; then
+            echo "::error::GitHub runner Docker daemon is unavailable; Supabase CLI dump must not continue."
+            exit 1
+          fi
+          cli_version="$(supabase --version)"
+          [[ "$cli_version" == "2.111.0" ]] || {
+            echo "::error::Unexpected Supabase CLI version."
+            exit 1
+          }
+
+      - name: Export filtered logical backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$RUNNER_TEMP/kova-production-backup"
+          rm -rf "$work"
+          mkdir -p "$work/plain"
+
+          supabase db dump --db-url "$KOVA_PRODUCTION_DATABASE_URL" -f "$work/plain/roles.sql" --role-only
+          supabase db dump --db-url "$KOVA_PRODUCTION_DATABASE_URL" -f "$work/plain/schema.sql"
+          supabase db dump --db-url "$KOVA_PRODUCTION_DATABASE_URL" -f "$work/plain/data.sql" --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          supabase db dump --db-url "$KOVA_PRODUCTION_DATABASE_URL" -f "$work/plain/history_schema.sql" --schema supabase_migrations
+          supabase db dump --db-url "$KOVA_PRODUCTION_DATABASE_URL" -f "$work/plain/history_data.sql" --use-copy --data-only --schema supabase_migrations
+
+          for file in roles.sql schema.sql data.sql history_schema.sql history_data.sql; do
+            [[ -s "$work/plain/$file" ]] || {
+              echo "::error::Expected backup file $file is missing or empty."
+              exit 1
+            }
+          done
+
+          BACKUP_DIR="$work/plain" SOURCE_SHA="$GITHUB_SHA" PROJECT_REF="$KOVA_PRODUCTION_PROJECT_REF" node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFileSync, statSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+          const dir = process.env.BACKUP_DIR;
+          const names = ["roles.sql", "schema.sql", "data.sql", "history_schema.sql", "history_data.sql"];
+          const files = names.map((name) => {
+            const bytes = readFileSync(join(dir, name));
+            return {
+              name,
+              bytes: statSync(join(dir, name)).size,
+              sha256: createHash("sha256").update(bytes).digest("hex"),
+            };
+          });
+          const manifest = {
+            schemaVersion: 1,
+            operation: "supabase-production-logical-backup",
+            projectRef: process.env.PROJECT_REF,
+            sourceSha: process.env.SOURCE_SHA,
+            capturedAt: new Date().toISOString(),
+            supabaseCliVersion: "2.111.0",
+            files,
+            includesStorageObjectBytes: false,
+            includesAuthStorageManagedSchemaCustomizations: false,
+            restoreExercised: false,
+          };
+          writeFileSync(join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
+          NODE
+
+          tar -C "$work/plain" -cf "$work/kova-production-backup.tar" \
+            roles.sql schema.sql data.sql history_schema.sql history_data.sql manifest.json
+          printf '%s' "$KOVA_PRODUCTION_BACKUP_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --symmetric --cipher-algo AES256 \
+              --output "$work/kova-production-backup.tar.gpg" \
+              "$work/kova-production-backup.tar"
+
+          encrypted_sha="$(sha256sum "$work/kova-production-backup.tar.gpg" | awk '{print $1}')"
+          encrypted_bytes="$(stat -c '%s' "$work/kova-production-backup.tar.gpg")"
+          ENCRYPTED_SHA="$encrypted_sha" ENCRYPTED_BYTES="$encrypted_bytes" PROJECT_REF="$KOVA_PRODUCTION_PROJECT_REF" SOURCE_SHA="$GITHUB_SHA" node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          const value = {
+            schemaVersion: 1,
+            operation: "supabase-production-logical-backup-evidence",
+            projectRef: process.env.PROJECT_REF,
+            sourceSha: process.env.SOURCE_SHA,
+            encryptedArchiveSha256: process.env.ENCRYPTED_SHA,
+            encryptedArchiveBytes: Number(process.env.ENCRYPTED_BYTES),
+            encryption: "GPG symmetric AES256",
+            plaintextUploaded: false,
+            databaseMutated: false,
+            restoreExercised: false,
+            storageObjectBytesBackedUp: false,
+            authStorageManagedSchemaCustomizationBackupComplete: false,
+            createdAt: new Date().toISOString(),
+          };
+          writeFileSync(`${process.env.RUNNER_TEMP}/kova-production-backup/backup-evidence.json`, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+          NODE
+
+          rm -rf "$work/plain" "$work/kova-production-backup.tar"
+          [[ ! -e "$work/plain" && ! -e "$work/kova-production-backup.tar" ]]
+
+      - name: Upload encrypted backup evidence only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: encrypted-production-backup-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/kova-production-backup/kova-production-backup.tar.gpg
+            ${{ runner.temp }}/kova-production-backup/backup-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Record backup-only boundary
+        shell: bash
+        run: |
+          {
+            echo "## Encrypted production logical backup created"
+            echo "Project: $KOVA_PRODUCTION_PROJECT_REF"
+            echo "Source SHA: $GITHUB_SHA"
+            echo "The uploaded SQL payload is encrypted; no plaintext SQL artifact was uploaded."
+            echo "This run did not restore, deploy, mutate the database, change DNS, or shift traffic."
+            echo "Storage object bytes and custom Auth/Storage managed-schema changes remain separate backup gates."
+          } >> "$GITHUB_STEP_SUMMARY"
