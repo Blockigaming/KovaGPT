@@ -24,6 +24,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Link } from "@tanstack/react-router";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
@@ -1099,6 +1100,17 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
+              {userTier === "free" && !isStreaming ? (
+                <Link
+                  to="/pricing"
+                  aria-label="Upgrade to Plus for Thinking"
+                  data-testid="thinking-upgrade-button"
+                  className="kova-composer-button inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Brain className="h-4 w-4" aria-hidden="true" />
+                  <span>Thinking</span>
+                </Link>
+              ) : null}
               {isStreaming ? (
                 <button
                   type="button"
