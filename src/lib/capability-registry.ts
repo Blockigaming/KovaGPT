@@ -93,7 +93,10 @@ const modes: readonly PublishedMode[] = MODES.map((mode) => ({
 }));
 
 function publishedModesForTier(tier: Tier): readonly PublishedMode[] {
-  return modesForTier(tier).map((mode) => modes.find((entry) => entry.id === mode.id)!);
+  return modesForTier(tier).map((mode) => {
+    const published = modes.find((entry) => entry.id === mode.id)!;
+    return { ...published, label: mode.label };
+  });
 }
 
 const modesByTier: Record<Tier, readonly PublishedMode[]> = {
@@ -117,13 +120,13 @@ function planFeatures(tier: Tier): readonly string[] {
       storage: "Small published storage allowance",
     },
     plus: {
-      chat: "Higher message allowance",
+      chat: "Unlimited included Chat, subject to per-request and safety controls",
       image: "Higher image generation allowance",
       upload: "Higher file and image upload allowance",
       storage: "Higher published storage allowance",
     },
     pro: {
-      chat: "Highest message allowance",
+      chat: "Unlimited included Chat, subject to per-request and safety controls",
       image: "Highest image generation allowance",
       upload: "Highest file and image upload allowance",
       storage: "Highest published storage allowance",
@@ -266,7 +269,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 16,
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
-      description: "Higher published allowances, High mode, and Adaptive Memory.",
+      description: "Unlimited included Chat with Instant, Medium, Thinking, and Adaptive Memory.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -275,7 +278,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 80,
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
-      description: "The highest published allowances and Pro-only reasoning modes.",
+      description: "Unlimited included Chat with High, Extra High, Max, and Ultra access.",
       features: planFeatures("pro"),
     },
   },
