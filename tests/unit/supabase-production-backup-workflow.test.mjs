@@ -32,6 +32,12 @@ test("backup pins the production project and checksum-pinned Supabase CLI bytes"
     /expected_sha256="31ee8a152e9c8c8eddae072c6bc7c9119748a96c8cdaf21a6d31c9ce7e62cc18"/u,
   );
   assert.match(workflow, /sha256sum --check --strict/u);
+  assert.match(workflow, /mapfile -t archive_entries/u);
+  assert.match(workflow, /Supabase CLI archive contains an unsafe path/u);
+  assert.match(workflow, /exactly one root supabase binary/u);
+  assert.match(workflow, /tar -xOf "\\$archive" supabase > "\\$bin_dir\\/supabase"/u);
+  assert.match(workflow, /7f454c46/u);
+  assert.doesNotMatch(workflow, /Unexpected Supabase CLI archive layout/u);
   assert.doesNotMatch(workflow, /uses:\s+supabase\/setup-cli/u);
   assert.match(workflow, /production_project_identity_mismatch/u);
 });
