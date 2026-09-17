@@ -27,8 +27,8 @@ export function ResponsiveModelSelector({
 }) {
   const { isDesktop, interaction } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
-  // Hidden until auth confirms a session: guests must never see the picker.
-  const locked = !isSignedIn;
+  // Signed-out and Free users never receive a switchable model picker.
+  const locked = !isSignedIn || userTier === "free";
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,12 +48,13 @@ export function ResponsiveModelSelector({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [open, useSheet]);
 
-  // Signed-out visitors are pinned to the cheapest mode and never see the picker.
+  // Signed-out and Free visitors are pinned to Instant even if stale local state
+  // previously contained a paid/legacy mode.
   useEffect(() => {
-    if (!isLoaded || isSignedIn) return;
+    if (!isLoaded || (isSignedIn && userTier !== "free")) return;
     setOpen(false);
     if (mode !== "instant") onChange("instant");
-  }, [isLoaded, isSignedIn, mode, onChange]);
+  }, [isLoaded, isSignedIn, mode, onChange, userTier]);
 
   const closeAndRestoreFocus = () => {
     setOpen(false);
@@ -115,7 +116,7 @@ export function ResponsiveModelSelector({
     </div>
   ));
 
-  // Guests see the brand label in the same position, but no switchable menu.
+  // Guests and Free users see the brand label in the same position, but no switchable menu.
   if (locked)
     return (
       <span className="kova-model-static inline-flex h-10 select-none items-center px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
