@@ -166,7 +166,10 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
 
 /** Exact model menus promised by each plan. Pro intentionally replaces Thinking with deeper tiers. */
 export function modesForTier(tier: Tier): Mode[] {
-  return MODE_IDS_BY_TIER[tier].map((id) => MODES.find((mode) => mode.id === id)!);
+  return MODE_IDS_BY_TIER[tier].map((id) => {
+    const mode = MODES.find((candidate) => candidate.id === id)!;
+    return tier === "plus" && id === "high" ? { ...mode, label: "Thinking" } : mode;
+  });
 }
 
 export { isModeAllowedForTier, studyModeForTier };
