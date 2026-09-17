@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 
 const ALL_MODES = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
 const EXPECTED = {
-  free: ["instant", "thinking"],
+  free: ["instant"],
   plus: ["instant", "medium", "high"],
   pro: ["instant", "medium", "high", "extra_high", "max", "ultra"],
 };
@@ -30,8 +30,8 @@ test("unknown plans and obsolete modes fail closed", () => {
   assert.equal(isModeAllowedForTier("free", "kova_5_5"), false);
 });
 
-test("Study selects a capable mode within every plan's exact entitlements", () => {
-  assert.equal(studyModeForTier("free"), "thinking");
+test("Study selects a mode within every plan's exact entitlements", () => {
+  assert.equal(studyModeForTier("free"), "instant");
   assert.equal(studyModeForTier("plus"), "high");
   assert.equal(studyModeForTier("pro"), "high");
   for (const tier of Object.keys(EXPECTED)) {
@@ -40,8 +40,9 @@ test("Study selects a capable mode within every plan's exact entitlements", () =
   assert.equal(studyModeForTier("enterprise"), "instant");
 });
 
-test("Free Study generation requests an entitled structured-output mode", () => {
+test("Free Study uses Instant while the server may elevate paid Study by tier", () => {
   const study = readFileSync("src/components/StudyPanel.tsx", "utf8");
-  assert.match(study, /mode: "thinking",\s*clientTool: "study"/);
-  assert.equal(isModeAllowedForTier("free", "thinking"), true);
+  assert.match(study, /mode: "instant",\s*clientTool: "study"/);
+  assert.equal(isModeAllowedForTier("free", "thinking"), false);
+  assert.equal(isModeAllowedForTier("free", "instant"), true);
 });
