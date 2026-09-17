@@ -21,7 +21,7 @@ const e2eUser = {
 
 export async function installAuthenticatedFixture(
   page: Page,
-  options: { authUserDelayMs?: number } = {},
+  options: { authUserDelayMs?: number; tier?: "free" | "plus" | "pro" } = {},
 ) {
   // This fixture exercises the returning-user shell. Server-function onboarding
   // can arrive after hydration; dismiss that separate flow through its real UI
@@ -86,6 +86,17 @@ export async function installAuthenticatedFixture(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(e2eUser),
+      });
+      return;
+    }
+    if (url.pathname === "/rest/v1/rpc/current_subscription_summary") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          effectiveTier: options.tier ?? "free",
+          source: "e2e-fixture",
+        }),
       });
       return;
     }
