@@ -131,7 +131,7 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
         signal,
         body: JSON.stringify({
           messages: [{ role: "user", content: prompt }],
-          mode: "thinking",
+          mode: "instant",
           clientTool: "study",
           temporary: true,
           temporaryContext: "clean",
