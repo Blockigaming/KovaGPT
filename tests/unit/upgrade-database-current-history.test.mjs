@@ -428,7 +428,10 @@ test("current snapshot core: equivalence never removes unrelated pending SQL", (
       return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
     },
   });
-  assert.deepEqual(result.forwardMigrations.map((row) => row.version), ["20260907120000"]);
+  assert.deepEqual(
+    result.forwardMigrations.map((row) => row.version),
+    ["20260907120000"],
+  );
   assert.match(sql.at(-1), /20260907120000/u);
   assert.match(sql.at(-1), /20260906024459/u);
   assert.doesNotMatch(sql.at(-1), /20260903145843/u);
