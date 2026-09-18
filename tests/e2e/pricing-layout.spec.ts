@@ -25,15 +25,11 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   const plusPlan = page.locator('[data-pricing-plan="plus"]');
   const proPlan = page.locator('[data-pricing-plan="pro"]');
   await expect(freePlan.getByText("Lite mode", { exact: true })).toBeVisible();
-  await expect(
-    freePlan.getByText("Lite and Thinking modes", { exact: true }),
-  ).toHaveCount(0);
+  await expect(freePlan.getByText("Lite and Thinking modes", { exact: true })).toHaveCount(0);
   await expect(
     plusPlan.getByText("Lite, Medium, and Thinking modes", { exact: true }),
   ).toBeVisible();
-  await expect(plusPlan.getByText("Lite, Medium, and High modes", { exact: true })).toHaveCount(
-    0,
-  );
+  await expect(plusPlan.getByText("Lite, Medium, and High modes", { exact: true })).toHaveCount(0);
   // Preserve the currently implemented Pro routes. Models PR #25 tracks the
   // pending backend mapping for the requested final Pro Chat choice.
   await expect(
