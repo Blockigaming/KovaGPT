@@ -190,9 +190,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
           await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
         } else {
-          await expect(
-            page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
-          ).toBeVisible();
+          // Each matrix navigation must settle hydration and late onboarding
+          // before checking the authenticated desktop account control.
+          await expectAuthenticatedDesktopReady(page);
         }
       }
     }
