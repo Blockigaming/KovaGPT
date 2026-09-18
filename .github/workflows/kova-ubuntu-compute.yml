@@ -1,0 +1,31 @@
+name: Kova Ubuntu Compute
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Show runner hardware
+        run: |
+          echo "===== CPU ====="
+          nproc
+          lscpu
+
+          echo "===== RAM ====="
+          free -h
+
+          echo "===== DISK ====="
+          df -h
+
+          echo "===== SYSTEM ====="
+          uname -a
