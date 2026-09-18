@@ -11,7 +11,7 @@ import {
 } from "../../src/lib/kova-work-policy.mjs";
 
 const expectedEfforts = {
-  light: { label: "Instant", engine: "kova-core", passes: [0, 1, 0, 0], outputCeiling: 2048 },
+  light: { label: "Lite", engine: "kova-core", passes: [0, 1, 0, 0], outputCeiling: 2048 },
   medium: { label: "Medium", engine: "kova-core", passes: [1, 1, 0, 1], outputCeiling: 4096 },
   high: { label: "High", engine: "kova-core", passes: [1, 2, 1, 1], outputCeiling: 8192 },
   "extra-high": {
@@ -45,16 +45,21 @@ test("Kova Work catalog is exactly three families by six preserved efforts", () 
     );
 });
 
-test("Instant is only a display/input alias for existing Light compute", () => {
-  assert.deepEqual(parseKovaWorkSelection({ family: "orion", effort: "instant" }), {
-    family: "orion",
-    effort: "light",
-    routeId: "work:orion:light",
-  });
+test("Lite and legacy aliases preserve existing Light compute without adding a route", () => {
+  for (const effort of ["lite", "light", "instant"]) {
+    assert.deepEqual(parseKovaWorkSelection({ family: "orion", effort }), {
+      family: "orion",
+      effort: "light",
+      routeId: "work:orion:light",
+    });
+  }
   const light = KOVA_WORK_ROUTES.find((route) => route.routeId === "work:orion:light");
+  assert.equal(light.effortLabel, "Lite");
   assert.deepEqual(light.passes, [0, 1, 0, 0]);
   assert.equal(light.outputCeiling, 2048);
   assert.equal(light.engine, "kova-core");
+  assert.equal(KOVA_WORK_ROUTES.length, 18);
+  assert.ok(KOVA_WORK_ROUTES.every((route) => route.effortLabel !== "Instant"));
 });
 
 test("Free has zero Work entitlements while Plus and Pro expose all 18", () => {

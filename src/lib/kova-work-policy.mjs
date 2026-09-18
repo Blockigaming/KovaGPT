@@ -9,7 +9,7 @@ export const KOVA_WORK_FAMILIES = Object.freeze([
 export const KOVA_WORK_EFFORTS = Object.freeze([
   Object.freeze({
     id: "light",
-    label: "Instant",
+    label: "Lite",
     engine: "kova-core",
     passes: Object.freeze([0, 1, 0, 0]),
     outputCeiling: 2048,
@@ -53,6 +53,7 @@ export const KOVA_WORK_EFFORTS = Object.freeze([
 
 const FAMILY_IDS = new Set(KOVA_WORK_FAMILIES.map((family) => family.id));
 const EFFORT_ALIASES = new Map([
+  ["lite", "light"],
   ["instant", "light"],
   ["light", "light"],
   ["medium", "medium"],
