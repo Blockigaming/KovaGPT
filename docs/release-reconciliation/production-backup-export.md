@@ -15,7 +15,7 @@ Do not reset the database password merely to satisfy this workflow unless a sepa
 
 ## What the workflow exports
 
-The workflow follows Supabase's documented CLI logical-backup pattern with CLI version `2.111.0`. It downloads the exact Linux amd64 release archive over HTTPS, verifies the release asset against the pinned SHA-256 `31ee8a152e9c8c8eddae072c6bc7c9119748a96c8cdaf21a6d31c9ce7e62cc18`, verifies the archive contains only the expected `supabase` binary, and installs it only into the ephemeral runner.
+The workflow follows Supabase's documented CLI logical-backup pattern with CLI version `2.111.0`. It downloads the exact Linux amd64 release archive over HTTPS, verifies the release asset against the pinned SHA-256 `31ee8a152e9c8c8eddae072c6bc7c9119748a96c8cdaf21a6d31c9ce7e62cc18`, verifies every archive path is relative and traversal-free, requires exactly one root `supabase` entry, stream-extracts only that entry into a newly created regular file, verifies its ELF magic, and installs it only into the ephemeral runner. Additional checksum-covered upstream metadata files are ignored rather than extracted.
 
 It then exports:
 
