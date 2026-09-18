@@ -2,7 +2,7 @@
 
 > KovaGPT is an AI workspace for conversational drafting, coding help, web-assisted answers, research, and image generation.
 
-Free uses Lite; its Thinking control is an Upgrade to Plus action, not an executable Free mode. Plus Chat includes Lite, Medium, and Thinking (the existing High/Nova compute route). Pro Chat includes Lite, Medium, High, Extra High, Max, and Ultra. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
+Free uses Lite; its Thinking control is an Upgrade to Plus action, not an executable Free mode. Plus Chat includes Lite, Medium, and Thinking. Chat effort choices use the same underlying Chat model and vary the bounded working effort. Pro Chat includes Lite, Medium, High, Extra High, Max, and Ultra; Ultra adds bounded sub-agent orchestration over the same underlying Chat model. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
 
 ## Pages
 
