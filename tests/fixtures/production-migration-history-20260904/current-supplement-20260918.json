@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-18T16:22:53.396351+00:00",
+  "projectRef": "mfbycmbjygcfkrsuepxf",
+  "historicalVersionCount": 97,
+  "currentVersionCount": 98,
+  "historicalStatementCount": 1042,
+  "currentStatementCount": 1043,
+  "historicalManifestSha256": "5ccccc2a81c1c630cfffa7eb741c1aa046a4d4fa63b55bd8f9181381e5825baa",
+  "historicalLedgerSha256": "1bc63c3cf400997bfd5eb03c662390035cdbe8d2e4f21fb43bb0fd42a770bbfe",
+  "readOnly": true,
+  "statementTextReturned": false,
+  "customerRowsReturned": false,
+  "supplement": [
+    {
+      "remoteVersion": "20260906024459",
+      "name": "remediate_security_advisor_warnings",
+      "sourceVersion": "20260903145843",
+      "sourcePath": "supabase/migrations/20260903145843_remediate_security_advisor_warnings.sql",
+      "comparison": "exact-content-single-statement",
+      "statementCount": 1,
+      "statementBytes": 10537,
+      "capturedStatementsSha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d",
+      "capturedStatementsMd5": "bc86946a173a6c4b0ea4715c02e65b5c"
+    }
+  ]
+}
