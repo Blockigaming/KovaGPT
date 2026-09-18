@@ -277,7 +277,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Instant, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
+        "Lite, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
