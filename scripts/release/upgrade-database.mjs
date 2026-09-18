@@ -18,6 +18,14 @@ import {
   extendCurrentHistory,
 } from "./upgrade-database-current-history.mjs";
 
+import {
+  TEMP_EXPORT_CATALOG_SQL,
+  TEMP_EXPORT_PROOF_FILE,
+  TEMP_EXPORT_QUERY_SHA256,
+  buildTemporaryExportProof,
+  parseTemporaryExportCapture,
+} from "./upgrade-database-temp-export-proof.mjs";
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -85,6 +93,7 @@ export function rehearseUpgrade({
   root = ROOT,
   dryRun = false,
   currentHistory = false,
+  captureTemporaryExport = false,
   execute = spawnSync,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
@@ -92,11 +101,13 @@ export function rehearseUpgrade({
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
     mkdirSync(outputDir, { recursive: true });
-    for (const file of ["upgrade-database.json", "upgrade-failure.log"])
+    for (const file of ["upgrade-database.json", "upgrade-failure.log", TEMP_EXPORT_PROOF_FILE])
       rmSync(join(outputDir, file), { force: true });
   }
   let plan;
   try {
+    if (captureTemporaryExport && !currentHistory)
+      throw new Error("upgrade_temp_export_current_history_required");
     const historical = planUpgrade(root);
     plan = currentHistory
       ? extendCurrentHistory(historical, readFileSync(join(root, CURRENT_HISTORY_SNAPSHOT)))
@@ -113,6 +124,8 @@ export function rehearseUpgrade({
     throw error;
   }
   const executionForward = plan.executionForward ?? plan.forward;
+  const baselineVersions = plan.baseline.map((row) => row.version);
+  const finalVersions = [...plan.baseline, ...executionForward].map((row) => row.version);
   const currentHistoryEvidence = plan.currentHistory
     ? {
         currentHistory: plan.currentHistory,
@@ -125,6 +138,12 @@ export function rehearseUpgrade({
       pendingVersions: plan.pending.map((name) => name.slice(0, 14)),
       baselineSha256: plan.baselineSha256,
       executed: false,
+      ...(captureTemporaryExport
+        ? {
+            temporaryExportProofPlanned: true,
+            temporaryExportQuerySha256: TEMP_EXPORT_QUERY_SHA256,
+          }
+        : {}),
       ...currentHistoryEvidence,
     };
   const assertions = readFileSync(
@@ -196,7 +215,7 @@ export function rehearseUpgrade({
     return result.stdout ?? "";
   };
   const supabase = (args, options) => run(cli, [...args, "--workdir", project], options);
-  const sql = (text) =>
+  const sql = (text, tuplesOnly = false) =>
     run(
       "docker",
       [
@@ -213,11 +232,14 @@ export function rehearseUpgrade({
         "postgres",
         "-v",
         "ON_ERROR_STOP=1",
+        ...(tuplesOnly ? ["-A", "-t", "-q"] : []),
       ],
       { input: text },
     );
   let failure;
   let result;
+  let baselineCapture;
+  let proofBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -227,6 +249,11 @@ export function rehearseUpgrade({
         "baseline",
       ),
     );
+    if (captureTemporaryExport)
+      baselineCapture = parseTemporaryExportCapture(
+        sql(TEMP_EXPORT_CATALOG_SQL, true),
+        baselineVersions,
+      );
     sql(seed);
     for (const migration of executionForward)
       writeFileSync(join(migrationsDir, migration.name), migration.content);
@@ -238,7 +265,26 @@ export function rehearseUpgrade({
         "final",
       ),
     );
+    const upgradedCapture = captureTemporaryExport
+      ? parseTemporaryExportCapture(sql(TEMP_EXPORT_CATALOG_SQL, true), finalVersions)
+      : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
+    if (captureTemporaryExport) {
+      const sourceTree = run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim();
+      proofBytes =
+        JSON.stringify(
+          buildTemporaryExportProof({
+            baseline: baselineCapture,
+            upgraded: upgradedCapture,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
+          null,
+          2,
+        ) + "\n";
+    }
     result = {
       schemaVersion: 1,
       passed: true,
@@ -251,6 +297,15 @@ export function rehearseUpgrade({
       seedSha256: sha256(seed),
       assertionsSha256: sha256(assertions),
       completedAt: new Date().toISOString(),
+      ...(proofBytes
+        ? {
+            temporaryExportProof: {
+              file: TEMP_EXPORT_PROOF_FILE,
+              sha256: sha256(proofBytes),
+              querySha256: TEMP_EXPORT_QUERY_SHA256,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
     };
   } catch (error) {
@@ -269,6 +324,7 @@ export function rehearseUpgrade({
     }
   }
   if (failure) throw failure;
+  if (proofBytes) writeFileSync(join(outputDir, TEMP_EXPORT_PROOF_FILE), proofBytes);
   writeFileSync(join(outputDir, "upgrade-database.json"), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -288,6 +344,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         rehearseUpgrade({
           dryRun: process.argv.includes("--dry-run"),
           currentHistory: !process.argv.includes("--historical-baseline"),
+          captureTemporaryExport: !process.argv.includes("--historical-baseline"),
         }),
         null,
         2,

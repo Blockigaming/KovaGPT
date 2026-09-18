@@ -267,7 +267,12 @@ test("current snapshot core: mocked rehearsal confines alias to disposable proje
 
 test("current snapshot core: CLI defaults to 98 with explicit historical opt-out", (t) => {
   const root = fixture(t);
-  for (const name of ["upgrade-database.mjs", "upgrade-database-current-history.mjs"])
+  for (const name of [
+    "upgrade-database.mjs",
+    "upgrade-database-current-history.mjs",
+    "upgrade-database-temp-export-proof.mjs",
+    "migration-schema-fingerprint.mjs",
+  ])
     writeFileSync(
       join(root, "scripts/release", name),
       readFileSync(join(ROOT, "scripts/release", name)),
