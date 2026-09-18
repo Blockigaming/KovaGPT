@@ -28,13 +28,15 @@ export function ResponsiveModelSelector({
   const { isDesktop, interaction } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
   // Signed-out and Free users never receive a switchable model picker.
-  const locked = !isSignedIn || userTier === "free";
+  const locked = !isLoaded || !isSignedIn || userTier === "free";
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
-  const current = MODES.find((m) => m.id === mode) ?? MODES[0];
+  const groups = versionGroupsForTier(userTier);
+  const current =
+    groups.flatMap((group) => group.modes).find((item) => item.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
 
   useEffect(() => {
@@ -108,7 +110,6 @@ export function ResponsiveModelSelector({
     );
   };
 
-  const groups = versionGroupsForTier(userTier);
   const options = groups.map((group) => (
     <div key={group.id} className="pb-1">
       <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">{group.label}</div>

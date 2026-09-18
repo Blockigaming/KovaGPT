@@ -85,12 +85,19 @@ const MODE_PUBLIC_COPY: Record<ModeId, string> = {
   ultra: "The deepest response instructions for exhaustive, carefully verified answers.",
 };
 
-const modes: readonly PublishedMode[] = MODES.map((mode) => ({
-  id: mode.id,
-  label: mode.label,
-  description: MODE_PUBLIC_COPY[mode.id],
-  minimumTier: mode.tier,
-}));
+// Legacy mode IDs remain readable in history, but unavailable modes must not
+// become public product offerings merely because the compatibility catalog has them.
+const publishedModeIds = new Set(
+  (["free", "plus", "pro"] as const).flatMap((tier) => modesForTier(tier).map((mode) => mode.id)),
+);
+const modes: readonly PublishedMode[] = MODES.filter((mode) => publishedModeIds.has(mode.id)).map(
+  (mode) => ({
+    id: mode.id,
+    label: mode.label,
+    description: MODE_PUBLIC_COPY[mode.id],
+    minimumTier: mode.tier,
+  }),
+);
 
 function publishedModesForTier(tier: Tier): readonly PublishedMode[] {
   return modesForTier(tier).map((mode) => {
@@ -120,13 +127,13 @@ function planFeatures(tier: Tier): readonly string[] {
       storage: "Small published storage allowance",
     },
     plus: {
-      chat: "Unlimited included Chat, subject to per-request and safety controls",
+      chat: "No paid Chat message-count quota; token and premium-request limits still apply",
       image: "Higher image generation allowance",
       upload: "Higher file and image upload allowance",
       storage: "Higher published storage allowance",
     },
     pro: {
-      chat: "Unlimited included Chat, subject to per-request and safety controls",
+      chat: "No paid Chat message-count quota; token and premium-request limits still apply",
       image: "Highest image generation allowance",
       upload: "Highest file and image upload allowance",
       storage: "Highest published storage allowance",
@@ -269,7 +276,8 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 16,
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
-      description: "Unlimited included Chat with Instant, Medium, Thinking, and Adaptive Memory.",
+      description:
+        "Instant, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -278,7 +286,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 80,
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
-      description: "Unlimited included Chat with High, Extra High, Max, and Ultra access.",
+      description: "All six Chat modes. Operational token and premium-request limits still apply.",
       features: planFeatures("pro"),
     },
   },

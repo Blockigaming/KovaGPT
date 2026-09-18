@@ -14,10 +14,7 @@ test("current Chat packaging stays consistent across server, picker, composer an
   const publicCopy = read("public/llms.txt");
 
   assert.match(entitlements, /free:\s*Object\.freeze\(\["instant"\]\)/);
-  assert.match(
-    entitlements,
-    /plus:\s*Object\.freeze\(\["instant", "medium", "high"\]\)/,
-  );
+  assert.match(entitlements, /plus:\s*Object\.freeze\(\["instant", "medium", "high"\]\)/);
   assert.match(
     entitlements,
     /pro:\s*Object\.freeze\(\["instant", "medium", "high", "extra_high", "max", "ultra"\]\)/,
@@ -25,7 +22,7 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.match(entitlements, /if \(tier === "free"\) return "instant"/);
 
   assert.match(modes, /tier === "plus" && id === "high"[\s\S]*label: "Thinking"/);
-  assert.match(selector, /const locked = !isSignedIn \|\| userTier === "free"/);
+  assert.match(selector, /const locked = !isLoaded \|\| !isSignedIn \|\| userTier === "free"/);
   assert.match(selector, /isSignedIn && userTier !== "free"/);
 
   assert.match(composer, /data-testid="thinking-upgrade-button"/);
@@ -37,10 +34,7 @@ test("current Chat packaging stays consistent across server, picker, composer an
     chat,
     /if \(callerTier === "free"\) \{[\s\S]*enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\.free/,
   );
-  assert.doesNotMatch(
-    chat,
-    /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/,
-  );
+  assert.doesNotMatch(chat, /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/);
 
   assert.match(study, /mode: "instant",[\s\S]*clientTool: "study"/);
   assert.match(publicCopy, /Thinking control is an Upgrade to Plus action/);
