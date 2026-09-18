@@ -600,7 +600,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do usage limits work?",
-    "Every published plan has finite chat, image, upload, and storage allowances. The app reports applicable limits; paid plans have higher published allowances but are not unlimited.",
+    "Free Chat has a finite message allowance. Plus and Pro do not use a paid Chat message-count or weekly Work quota; technical per-request, security, concurrency, image, upload, and storage limits still apply where shown in the product.",
   ],
   [
     "Privacy & security",
