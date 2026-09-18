@@ -116,8 +116,10 @@ export function extendCurrentHistory(plan, snapshotBytes) {
   return {
     ...plan,
     baseline,
-    // Keep the canonical source in forward: copying an equivalent remote row is
-    // not permission to mark the unexecuted canonical timestamp as applied.
+    // Preserve the complete source-pending inventory, but do not execute the
+    // byte-identical supplement twice. Its remote version runs in the baseline;
+    // its canonical timestamp remains absent from history and release-blocking.
+    executionForward: plan.forward.filter((row) => row.version !== entry.sourceVersion),
     currentHistory: {
       capturedAt: snapshot.capturedAt,
       projectRef,
@@ -126,6 +128,16 @@ export function extendCurrentHistory(plan, snapshotBytes) {
       ledgerMetadataSha256: ledgerMetadataHash(baseline),
       baselineVersions: baseline.length,
       baselineStatementCount: currentStatementCount,
+      contentEquivalentBaselines: [
+        {
+          remoteVersion: entry.remoteVersion,
+          sourceVersion: entry.sourceVersion,
+          sourceSha256: source.sha256,
+          comparison: entry.comparison,
+        },
+      ],
+      requiresCanonicalHistoryReconciliation: true,
+      productionReleaseReady: false,
       productionRowsRestored: false,
       liveCatalogEquivalenceProven: false,
     },

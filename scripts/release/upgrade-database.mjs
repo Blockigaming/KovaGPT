@@ -87,22 +87,46 @@ export function rehearseUpgrade({
   currentHistory = false,
   execute = spawnSync,
 } = {}) {
-  const historical = planUpgrade(root);
-  const plan = currentHistory
-    ? extendCurrentHistory(historical, readFileSync(join(root, CURRENT_HISTORY_SNAPSHOT)))
-    : historical;
+  const outputDir = join(root, "artifacts/release");
+  // A failed full-run preflight must not leave an earlier success artifact.
+  // Dry runs remain observational, including when their input is invalid.
+  if (!dryRun) {
+    mkdirSync(outputDir, { recursive: true });
+    for (const file of ["upgrade-database.json", "upgrade-failure.log"])
+      rmSync(join(outputDir, file), { force: true });
+  }
+  let plan;
+  try {
+    const historical = planUpgrade(root);
+    plan = currentHistory
+      ? extendCurrentHistory(historical, readFileSync(join(root, CURRENT_HISTORY_SNAPSHOT)))
+      : historical;
+  } catch (error) {
+    if (!dryRun) {
+      // Parser and filesystem errors may contain input bytes or local paths.
+      // Persist only a bounded validation code, never arbitrary error text.
+      const code = /^upgrade_[a-z0-9_]{1,120}$/u.test(error?.message ?? "")
+        ? error.message
+        : "invalid_input";
+      writeFileSync(join(outputDir, "upgrade-failure.log"), `upgrade_preflight_failed:${code}\n`);
+    }
+    throw error;
+  }
+  const executionForward = plan.executionForward ?? plan.forward;
+  const currentHistoryEvidence = plan.currentHistory
+    ? {
+        currentHistory: plan.currentHistory,
+        replayPendingVersions: executionForward.map((row) => row.version),
+      }
+    : {};
   if (dryRun)
     return {
       baselineVersions: plan.baseline.length,
       pendingVersions: plan.pending.map((name) => name.slice(0, 14)),
       baselineSha256: plan.baselineSha256,
       executed: false,
-      ...(plan.currentHistory ? { currentHistory: plan.currentHistory } : {}),
+      ...currentHistoryEvidence,
     };
-  const outputDir = join(root, "artifacts/release");
-  mkdirSync(outputDir, { recursive: true });
-  for (const file of ["upgrade-database.json", "upgrade-failure.log"])
-    rmSync(join(outputDir, file), { force: true });
   const assertions = readFileSync(
     join(root, "scripts/release/upgrade-database-assertions.sql"),
     "utf8",
@@ -204,13 +228,13 @@ export function rehearseUpgrade({
       ),
     );
     sql(seed);
-    for (const migration of plan.forward)
+    for (const migration of executionForward)
       writeFileSync(join(migrationsDir, migration.name), migration.content);
     supabase(["migration", "up", "--local", "--include-all"]);
     sql(assertions);
     sql(
       historyAssertion(
-        [...plan.baseline, ...plan.forward].map((row) => row.version),
+        [...plan.baseline, ...executionForward].map((row) => row.version),
         "final",
       ),
     );
@@ -223,11 +247,11 @@ export function rehearseUpgrade({
       baselineSha256: plan.baselineSha256,
       baselineVersions: plan.baseline.length,
       pendingVersions: plan.pending.map((name) => name.slice(0, 14)),
-      forwardMigrations: plan.forward.map(({ version, sha256 }) => ({ version, sha256 })),
+      forwardMigrations: executionForward.map(({ version, sha256 }) => ({ version, sha256 })),
       seedSha256: sha256(seed),
       assertionsSha256: sha256(assertions),
       completedAt: new Date().toISOString(),
-      ...(plan.currentHistory ? { currentHistory: plan.currentHistory } : {}),
+      ...currentHistoryEvidence,
     };
   } catch (error) {
     failure = error;

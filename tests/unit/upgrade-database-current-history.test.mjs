@@ -98,7 +98,7 @@ function fixture(t) {
   return root;
 }
 
-test("current snapshot core: adds the remote alias and preserves canonical forward replay", () => {
+test("current snapshot core: executes equivalent SQL once without fabricated history", () => {
   const { plan, snapshot } = syntheticPlan();
   const result = extend(plan, snapshot);
   assert.equal(plan.baseline.length, 97);
@@ -107,6 +107,10 @@ test("current snapshot core: adds the remote alias and preserves canonical forwa
   assert.equal(result.baseline.at(-1).content, plan.forward[0].content);
   assert.equal(result.forward, plan.forward);
   assert.equal(result.pending, plan.pending);
+  assert.equal(result.executionForward.length, 0);
+  assert.equal(result.currentHistory.requiresCanonicalHistoryReconciliation, true);
+  assert.equal(result.currentHistory.productionReleaseReady, false);
+  assert.equal(result.currentHistory.contentEquivalentBaselines[0].sourceVersion, "20260903145843");
   assert.equal(result.currentHistory.baselineStatementCount, 1043);
   assert.equal(result.currentHistory.productionRowsRestored, false);
   assert.equal(result.currentHistory.liveCatalogEquivalenceProven, false);
@@ -190,6 +194,8 @@ test("current snapshot core: dry-run selects 98 without executing anything", (t)
   assert.equal(result.baselineVersions, 98);
   assert.equal(result.executed, false);
   assert.deepEqual(result.pendingVersions, ["20260903145843"]);
+  assert.deepEqual(result.replayPendingVersions, []);
+  assert.equal(result.currentHistory.requiresCanonicalHistoryReconciliation, true);
   assert.equal(rehearseUpgrade({ root, dryRun: true }).baselineVersions, 97);
 });
 
@@ -238,8 +244,9 @@ test("current snapshot core: mocked rehearsal confines alias to disposable proje
         assert.ok(!existsSync(join(dir, sourceName)));
       }
       if (args[0] === "migration") {
-        assert.equal(readdirSync(dir).length, 99);
-        assert.ok(existsSync(join(dir, sourceName)));
+        assert.equal(readdirSync(dir).length, 98);
+        assert.ok(!existsSync(join(dir, sourceName)));
+        assert.ok(existsSync(join(dir, remoteName)));
       }
       if (command === "docker") sql.push(options.input);
       return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
@@ -249,7 +256,10 @@ test("current snapshot core: mocked rehearsal confines alias to disposable proje
   assert.match(sql[0], /20260906024459/u);
   assert.doesNotMatch(sql[0], /20260903145843/u);
   assert.match(sql.at(-1), /20260906024459/u);
-  assert.match(sql.at(-1), /20260903145843/u);
+  assert.doesNotMatch(sql.at(-1), /20260903145843/u);
+  assert.deepEqual(result.forwardMigrations, []);
+  assert.deepEqual(result.pendingVersions, ["20260903145843"]);
+  assert.equal(result.currentHistory.productionReleaseReady, false);
   assert.ok(!existsSync(join(root, "supabase/migrations", remoteName)));
   assert.ok(!existsSync(project));
   assert.equal(result.currentHistory.productionRowsRestored, false);
@@ -283,4 +293,144 @@ test("current snapshot source: validates the actual captured baseline and source
   assert.equal(plan.currentHistory.baselineStatementCount, 1043);
   assert.equal(plan.baseline.at(-1).version, "20260906024459");
   assert.ok(plan.forward.some((row) => row.version === "20260903145843"));
+  assert.ok(!plan.executionForward.some((row) => row.version === "20260903145843"));
+  assert.equal(plan.executionForward.length, plan.forward.length - 1);
+});
+
+function staleEvidence(root) {
+  const directory = join(root, "artifacts/release");
+  mkdirSync(directory, { recursive: true });
+  const success = join(directory, "upgrade-database.json");
+  const failure = join(directory, "upgrade-failure.log");
+  writeFileSync(success, '{"passed":true,"baselineVersions":97}');
+  writeFileSync(failure, "previous failure");
+  return { success, failure };
+}
+
+for (const [name, change, expected] of [
+  [
+    "invalid supplemented count",
+    (root) => {
+      const path = join(root, CURRENT_HISTORY_SNAPSHOT);
+      const value = JSON.parse(readFileSync(path));
+      value.currentVersionCount = 99;
+      writeFileSync(path, JSON.stringify(value));
+    },
+    /upgrade_current_history_snapshot_invalid/u,
+  ],
+  [
+    "invalid historical manifest",
+    (root) => writeFileSync(join(root, MANIFEST), '{"schemaVersion":0}'),
+    /upgrade_baseline_manifest_invalid/u,
+  ],
+  [
+    "malformed receipt JSON",
+    (root) => writeFileSync(join(root, CURRENT_HISTORY_SNAPSHOT), "do-not-log-this-sentinel"),
+    SyntaxError,
+  ],
+  ["missing receipt", (root) => rmSync(join(root, CURRENT_HISTORY_SNAPSHOT)), /ENOENT/u],
+]) {
+  test(`current snapshot core: clears stale success before ${name} preflight failure`, (t) => {
+    const root = fixture(t);
+    const { success, failure } = staleEvidence(root);
+    change(root);
+    assert.throws(
+      () =>
+        rehearseUpgrade({
+          root,
+          currentHistory: true,
+          execute: () => assert.fail("failed preflight must not execute"),
+        }),
+      expected,
+    );
+    assert.equal(existsSync(success), false);
+    assert.match(readFileSync(failure, "utf8"), /^upgrade_preflight_failed:/u);
+    assert.doesNotMatch(readFileSync(failure, "utf8"), /previous failure|sentinel|ENOENT/u);
+    assert.ok(!readFileSync(failure, "utf8").includes(root));
+  });
+}
+
+for (const invalid of [false, true]) {
+  test(`current snapshot core: ${invalid ? "failed" : "valid"} dry-run keeps artifacts`, (t) => {
+    const root = fixture(t);
+    const paths = staleEvidence(root);
+    const before = Object.values(paths).map((path) => readFileSync(path, "utf8"));
+    if (invalid) writeFileSync(join(root, CURRENT_HISTORY_SNAPSHOT), "invalid");
+    const run = () =>
+      rehearseUpgrade({
+        root,
+        currentHistory: true,
+        dryRun: true,
+        execute: () => assert.fail("dry-run must not execute"),
+      });
+    if (invalid) assert.throws(run, SyntaxError);
+    else assert.equal(run().executed, false);
+    assert.deepEqual(
+      Object.values(paths).map((path) => readFileSync(path, "utf8")),
+      before,
+    );
+  });
+}
+
+test("current snapshot core: SQLSTATE 42723 stays failed without retry or repair", (t) => {
+  const root = fixture(t);
+  const { success, failure } = staleEvidence(root);
+  const calls = [];
+  let project;
+  assert.throws(
+    () =>
+      rehearseUpgrade({
+        root,
+        currentHistory: true,
+        execute(command, args, options) {
+          project = options.cwd;
+          calls.push({ command, args });
+          assert.equal(options.env.DOCKER_HOST, "unix:///var/run/docker.sock");
+          if (args[0] === "migration")
+            return {
+              status: 1,
+              stdout: "Connecting to local database...",
+              stderr:
+                'ERROR: function accept_project_invite(uuid) already exists in schema "kova_private" (SQLSTATE 42723)',
+            };
+          return { status: 0, stdout: "", stderr: "" };
+        },
+      }),
+    /upgrade_local_command_failed:supabase:migration:1/u,
+  );
+  assert.equal(calls.filter((call) => call.args[0] === "migration").length, 1);
+  assert.ok(calls.every((call) => !call.args.includes("repair")));
+  assert.equal(calls.at(-1).args[0], "stop");
+  assert.equal(existsSync(success), false);
+  assert.match(readFileSync(failure, "utf8"), /SQLSTATE 42723/u);
+  assert.equal(existsSync(project), false);
+});
+
+test("current snapshot core: equivalence never removes unrelated pending SQL", (t) => {
+  const root = fixture(t);
+  const nextName = "20260907120000_synthetic_forward.sql";
+  writeFileSync(join(root, "supabase/migrations", nextName), "select 2;\n");
+  const plan = rehearseUpgrade({ root, dryRun: true, currentHistory: true });
+  assert.deepEqual(plan.pendingVersions, ["20260903145843", "20260907120000"]);
+  assert.deepEqual(plan.replayPendingVersions, ["20260907120000"]);
+  const sql = [];
+  const result = rehearseUpgrade({
+    root,
+    currentHistory: true,
+    execute(command, args, options) {
+      const dir = join(options.cwd, "supabase/migrations");
+      if (args[0] === "migration") {
+        assert.ok(!existsSync(join(dir, sourceName)));
+        assert.ok(existsSync(join(dir, remoteName)));
+        assert.equal(readFileSync(join(dir, nextName), "utf8"), "select 2;\n");
+      }
+      if (command === "docker") sql.push(options.input);
+      return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
+    },
+  });
+  assert.deepEqual(result.forwardMigrations.map((row) => row.version), ["20260907120000"]);
+  assert.match(sql.at(-1), /20260907120000/u);
+  assert.match(sql.at(-1), /20260906024459/u);
+  assert.doesNotMatch(sql.at(-1), /20260903145843/u);
+  assert.equal(result.currentHistory.requiresCanonicalHistoryReconciliation, true);
 });

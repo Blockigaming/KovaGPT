@@ -8,7 +8,7 @@ The read-only capture contained **97 migration versions and 1,042 SQL statements
 
 The fixture manifest pins every replay file by SHA-256. It also records the original statement count, SHA-256, and MD5 of statement strings joined by LF. All 97 LF-joined MD5 values were checked against the separately captured migration ledger. The fixtures contain schema/function/policy history, not production application rows, credentials, or a database dump. They remain outside `supabase/migrations` so normal release commands cannot mistake them for pending production migrations.
 
-The baseline deliberately retains production-only versions. The rehearsal neither deletes their history nor marks an unexecuted source migration as applied. It applies every source version absent from the captured history, including earlier timestamps, using `migration up --local --include-all` in the disposable project.
+The baseline deliberately retains production-only versions. The rehearsal neither deletes their history nor marks an unexecuted source migration as applied. The historical mode applies every source version absent from the captured history, including earlier timestamps, using `migration up --local --include-all` in the disposable project. Current-history mode accounts separately for the one byte-identical security migration already executed while building the baseline; its canonical timestamp remains unresolved rather than being fabricated.
 
 ## Commands and evidence
 
@@ -25,12 +25,12 @@ The sequence is:
 
 1. Start and reset the disposable stack with the 97 historical baseline files and, in current-history mode, the one verified supplement.
 2. Assert the exact baseline version set, then insert synthetic two-user history.
-3. Copy the pending source files and apply that range locally.
+3. Copy and apply the execution range locally. Current-history mode excludes only the verified, byte-identical security body already executed under its remote baseline timestamp.
 4. Check the final version set and catalog/data assertions.
 5. Stop the generated project without a backup and remove its temporary files.
 6. Write `artifacts/release/upgrade-database.json` only after every step succeeds, including cleanup.
 
-Evidence includes the source commit, baseline manifest hash, every pending migration hash, seed/assertion hashes, and completion time. Failed runs remove any stale success artifact, retain a local failure log, and return a failing exit status. The existing isolated database CI job uploads the evidence artifact on either outcome.
+Evidence includes the source commit, baseline manifest hash, the raw source-pending inventory, each forward-execution migration hash, seed/assertion hashes, and completion time. Full runs remove stale success evidence before validating either baseline or supplement. A preflight failure writes only a bounded validation code to the failure artifact, not parser input or filesystem paths. Successful and failing dry runs leave existing artifacts untouched. Database failures remain failures, with cleanup and their diagnostic log preserved. The existing isolated database CI job uploads the evidence artifact on either outcome.
 
 ## Assertions and discovered repair
 
@@ -58,7 +58,9 @@ The successful artifact from main CI run `35299123802` reports `baselineVersions
 
 The historical metadata digest is SHA-256 of rows joined by LF, with no trailing LF. Each row is `version|statementCount|capturedStatementsSha256|capturedStatementsMd5`, in ascending version order. Only metadata and hashes were read from the live ledger; no statement text or customer rows were exported for this supplement.
 
-The byte-equivalent source is copied under its **remote** filename only inside the generated disposable project's baseline. Its canonical source timestamp remains in the forward migration set and is actually replayed there; no unexecuted source version is marked applied. Baseline and final history assertions continue to check exact version sets. The original fixture manifest, captured SQL, production migration files, assertions, and seed are unchanged.
+The byte-equivalent source is copied under its **remote** filename only inside the generated disposable project's baseline. Its canonical source timestamp stays in the raw `pendingVersions` inventory. Once its bytes, size, SHA-256, MD5, exact mapping and historical receipt are validated, that same body is not copied a second time into the forward execution range. This exception is restricted to the single pinned security mapping; unrelated pending migrations remain in the execution range. No canonical history row is inserted, and no history repair command runs.
+
+Baseline and final assertions check the exact versions actually executed: the 98 baseline versions plus the forward execution range. For the reviewed 157-file source set, there are 83 raw source-pending versions, 82 forward executions and 180 expected final history rows. The absent canonical security timestamp is explicitly retained as an unresolved history requirement. The original fixture manifest, captured SQL, production migration files, assertions, seed and production release preflight are unchanged.
 
 The CLI defaults to the supplemented snapshot, so the unchanged npm commands and CI now exercise 98 versions. The programmatic `rehearseUpgrade` API preserves its historical default; callers select `currentHistory: true` explicitly. The historical 97-version CLI check remains available:
 
@@ -66,6 +68,16 @@ The CLI defaults to the supplemented snapshot, so the unchanged npm commands and
 node scripts/release/upgrade-database.mjs --historical-baseline --dry-run
 ```
 
-Successful current-history evidence must report 98 baseline versions, 1,043 baseline statements, and the supplement and ledger-metadata hashes. `baselineSha256` continues to identify the unchanged historical manifest; `currentHistory` identifies the supplemental capture separately. A failed preflight or local run must not be treated as successful current-history evidence.
+Successful current-history evidence must report 98 baseline versions, 1,043 baseline statements, and the supplement and ledger-metadata hashes. `baselineSha256` identifies the unchanged historical manifest. `pendingVersions` preserves the raw timestamp gap; `replayPendingVersions` and `forwardMigrations` identify only the executable forward range. `currentHistory.contentEquivalentBaselines` identifies the exact body satisfied by baseline execution. The evidence always retains `requiresCanonicalHistoryReconciliation: true`, `productionReleaseReady: false`, `productionRowsRestored: false` and `liveCatalogEquivalenceProven: false`.
+
+The production preflight still rejects unreconciled canonical history and all outstanding schema-proof entries. A successful synthetic rehearsal does not override those checks. A failed preflight or local run must not be treated as successful current-history evidence.
+
+## Failure found in the first 98-version attempt
+
+CI run `35370841729`, job `105688213807`, on head `105d157d8ba610c6a18a72a08fd8d2c6c48ba33f` passed fresh source installation but failed the current-history forward replay. Artifact `10557989095` is 680 bytes with SHA-256 `b96618ab4795b823af95aa4f2976f2faf6be6a430eda30987a7e81a15f13d97f`; it contains a failure log, not success evidence.
+
+Reapplying canonical `20260903145843` after the identical remote `20260906024459` body failed at `alter function public.accept_project_invite(uuid) set schema kova_private` with SQLSTATE `42723`. The private implementation already existed. This was a deterministic double application, not the earlier transient container-image rate-limit warnings.
+
+The corrected execution plan therefore runs this verified body once under the captured remote timestamp, instead of forcing a second application or pretending that the canonical history row exists. It does not catch-and-ignore SQLSTATE `42723`, drop the existing function, rewrite the recorded migration, suppress assertions, or repair a ledger. Other database errors still fail the run. Current-head hosted verification must validate the revised plan; the failed predecessor must never be relabeled successful.
 
 This is a structural replay with synthetic data, **not a restore of production backup `35346103522`**. It neither authorizes a remote operation nor promotes any of the 19 outstanding `requires_schema_proof` entries. Unrecorded live catalog drift, actual backup data, Storage bytes, provider configuration, passphrase recovery, and isolated real-backup restore/rollback remain separate gates.
