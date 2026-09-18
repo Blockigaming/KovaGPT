@@ -23,7 +23,7 @@ test("Free chat has no model picker and Thinking is an upgrade action", async ({
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Instant Medium and Thinking using the High route", async ({
+test("Plus model selector exposes Lite Medium and Thinking using the High route", async ({
   page,
 }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
