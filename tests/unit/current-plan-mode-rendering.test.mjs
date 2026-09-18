@@ -116,11 +116,11 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   }
   assert.deepEqual(
     Array.from(registry.modesByTier.free, (mode) => mode.label),
-    ["Instant"],
+    ["Lite"],
   );
   assert.deepEqual(
     Array.from(registry.modesByTier.plus, (mode) => mode.label),
-    ["Instant", "Medium", "Thinking"],
+    ["Lite", "Medium", "Thinking"],
   );
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
@@ -137,8 +137,8 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
 
 test("pricing features use the exact tier labels and singular Free mode", () => {
   const { registry } = fixture();
-  assert.equal(registry.plans.free.features[0], "Instant mode");
-  assert.equal(registry.plans.plus.features[0], "Instant, Medium, and Thinking modes");
+  assert.equal(registry.plans.free.features[0], "Lite mode");
+  assert.equal(registry.plans.plus.features[0], "Lite, Medium, and Thinking modes");
   assert.doesNotMatch(registry.plans.free.features[0], /Thinking/);
   assert.doesNotMatch(registry.plans.plus.features[0], /High/);
 });
