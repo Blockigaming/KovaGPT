@@ -134,3 +134,11 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
     assert.doesNotMatch(copy, /unlimited/i);
   }
 });
+
+test("pricing features use the exact tier labels and singular Free mode", () => {
+  const { registry } = fixture();
+  assert.equal(registry.plans.free.features[0], "Instant mode");
+  assert.equal(registry.plans.plus.features[0], "Instant, Medium, and Thinking modes");
+  assert.doesNotMatch(registry.plans.free.features[0], /Thinking/);
+  assert.doesNotMatch(registry.plans.plus.features[0], /High/);
+});

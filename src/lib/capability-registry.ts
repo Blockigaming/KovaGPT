@@ -143,7 +143,7 @@ function planFeatures(tier: Tier): readonly string[] {
     `${modesByTier[tier]
       .map((mode) => mode.label)
       .join(modesByTier[tier].length === 2 ? " and " : ", ")
-      .replace(/, ([^,]+)$/, ", and $1")} modes`,
+      .replace(/, ([^,]+)$/, ", and $1")} ${modesByTier[tier].length === 1 ? "mode" : "modes"}`,
     allowance.chat,
     allowance.image,
     allowance.upload,
