@@ -52,7 +52,6 @@ export const KOVA_WORK_EFFORTS = Object.freeze([
 ]);
 
 const FAMILY_IDS = new Set(KOVA_WORK_FAMILIES.map((family) => family.id));
-const EFFORT_BY_ID = new Map(KOVA_WORK_EFFORTS.map((effort) => [effort.id, effort]));
 const EFFORT_ALIASES = new Map([
   ["instant", "light"],
   ["light", "light"],
@@ -130,15 +129,16 @@ export function kovaWorkOptionsForTier(tier) {
   );
 }
 
+/** Selection only: context must be built by authenticated server code.
+ * Route eligibility is not a job reservation, budget approval or dispatch capability.
+ */
 export function authorizeKovaWorkSelection(value, context) {
   const selection = parseKovaWorkSelection(value);
   if (
     !context ||
     typeof context !== "object" ||
     Array.isArray(context) ||
-    Object.keys(context).some(
-      (key) => !["tier", "allowedRoutes", "runtimeRoutes"].includes(key),
-    ) ||
+    Object.keys(context).some((key) => !["tier", "allowedRoutes", "runtimeRoutes"].includes(key)) ||
     !PAID_TIERS.has(context.tier) ||
     !(context.allowedRoutes instanceof Set) ||
     !(context.runtimeRoutes instanceof Set) ||

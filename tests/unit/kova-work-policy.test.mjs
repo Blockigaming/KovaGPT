@@ -62,8 +62,7 @@ test("Free has zero Work entitlements while Plus and Pro expose all 18", () => {
   assert.equal(kovaWorkOptionsForTier("plus").filter((route) => route.entitled).length, 18);
   assert.equal(kovaWorkOptionsForTier("pro").filter((route) => route.entitled).length, 18);
   assert.ok(
-    kovaWorkOptionsForTier("plus").find((route) => route.routeId === "work:nova:ultra")
-      .entitled,
+    kovaWorkOptionsForTier("plus").find((route) => route.routeId === "work:nova:ultra").entitled,
   );
 });
 
@@ -72,7 +71,7 @@ test("catalog eligibility never claims application runtime integration", () => {
     assert.ok(kovaWorkOptionsForTier(tier).every((route) => route.runtimeVerified === false));
 });
 
-test("execution authorization requires exact paid tier, grant and verified runtime route", () => {
+test("selection authorization requires exact paid tier, grant and verified runtime route", () => {
   const selection = { family: "nova", effort: "ultra" };
   const routeId = "work:nova:ultra";
   const context = {
@@ -103,4 +102,85 @@ test("client input cannot alter compute, model, budget or authorization fields",
     { family: "unknown", effort: "light" },
   ])
     assert.throws(() => parseKovaWorkSelection(value), /invalid/);
+});
+
+for (const tier of ["free", "plus", "pro"]) {
+  for (const route of KOVA_WORK_ROUTES) {
+    test(`${tier} selection grant is exact for ${route.routeId}`, () => {
+      const input = { family: route.familyId, effort: route.effortId };
+      const context = {
+        tier,
+        allowedRoutes: new Set([route.routeId]),
+        runtimeRoutes: new Set([route.routeId]),
+      };
+      if (tier === "free") {
+        assert.throws(() => authorizeKovaWorkSelection(input, context), /unavailable/);
+      } else {
+        assert.equal(authorizeKovaWorkSelection(input, context), route);
+        assert.throws(
+          () => authorizeKovaWorkSelection(input, { ...context, allowedRoutes: new Set() }),
+          /unavailable/,
+        );
+        assert.throws(
+          () => authorizeKovaWorkSelection(input, { ...context, runtimeRoutes: new Set() }),
+          /unavailable/,
+        );
+      }
+    });
+  }
+}
+
+test("unknown tiers and JSON-shaped fake runtime grants are not permissions", () => {
+  for (const tier of [null, undefined, "", "enterprise", "PLUS", 1]) {
+    assert.throws(() => kovaWorkOptionsForTier(tier), /invalid/);
+  }
+  const input = { family: "cosmo", effort: "light" };
+  const route = "work:cosmo:light";
+  for (const context of [
+    { tier: "plus", allowedRoutes: [route], runtimeRoutes: [route] },
+    { tier: "pro", allowedRoutes: new Set(["work:*"]), runtimeRoutes: new Set([route]) },
+    { tier: "plus", allowedRoutes: new Set([route]), runtimeRoutes: new Set(["work:cosmo:*"]) },
+    {
+      tier: "plus",
+      allowedRoutes: new Set([route]),
+      runtimeRoutes: new Set([route]),
+      model: "override",
+    },
+  ]) {
+    assert.throws(() => authorizeKovaWorkSelection(input, context), /unavailable/);
+  }
+});
+
+test("caller edits cannot mutate the shared catalog or later plan options", () => {
+  assert.ok(Object.isFrozen(KOVA_WORK_ROUTES));
+  for (const route of KOVA_WORK_ROUTES) {
+    assert.ok(Object.isFrozen(route));
+    if (route.passes) {
+      assert.ok(Object.isFrozen(route.passes));
+      assert.throws(() => {
+        route.passes[0] = 99;
+      }, TypeError);
+    }
+    assert.throws(() => {
+      route.outputCeiling = 1;
+    }, TypeError);
+  }
+  const options = kovaWorkOptionsForTier("plus");
+  options.pop();
+  assert.equal(kovaWorkOptionsForTier("plus").length, 18);
+  assert.ok(kovaWorkOptionsForTier("plus").every((option) => option.runtimeVerified === false));
+});
+
+test("all public effort spellings normalize without adding compute routes", () => {
+  for (const family of KOVA_WORK_FAMILIES) {
+    for (const route of KOVA_WORK_ROUTES.filter((item) => item.familyId === family.id)) {
+      const input = JSON.parse(JSON.stringify({ family: family.id, effort: route.effortId }));
+      assert.equal(parseKovaWorkSelection(input).routeId, route.routeId);
+    }
+    assert.equal(parseKovaWorkSelection({ family: family.id, effort: "instant" }).effort, "light");
+    assert.equal(
+      parseKovaWorkSelection({ family: family.id, effort: "extra_high" }).effort,
+      "extra-high",
+    );
+  }
 });
