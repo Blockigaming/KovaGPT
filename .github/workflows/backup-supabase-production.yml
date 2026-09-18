@@ -76,12 +76,36 @@ jobs:
             --retry 3 --retry-all-errors \
             --output "$archive" "$url"
           printf '%s  %s\n' "$expected_sha256" "$archive" | sha256sum --check --strict
-          [[ "$(tar -tzf "$archive")" == "supabase" ]] || {
-            echo "::error::Unexpected Supabase CLI archive layout."
+          mapfile -t archive_entries < <(tar -tzf "$archive")
+          [[ "${#archive_entries[@]}" -gt 0 ]] || {
+            echo "::error::Supabase CLI archive is empty."
+            exit 1
+          }
+          supabase_entries=0
+          for entry in "${archive_entries[@]}"; do
+            if [[ "$entry" == /* || "$entry" == ".." || "$entry" == ../* || "$entry" == */../* || "$entry" == */.. ]]; then
+              echo "::error::Supabase CLI archive contains an unsafe path."
+              exit 1
+            fi
+            if [[ "$entry" == "supabase" ]]; then
+              supabase_entries=$((supabase_entries + 1))
+            fi
+          done
+          [[ "$supabase_entries" -eq 1 ]] || {
+            echo "::error::Supabase CLI archive must contain exactly one root supabase binary."
             exit 1
           }
           mkdir -p "$bin_dir"
-          tar -xzf "$archive" -C "$bin_dir" supabase
+          tar -xOf "$archive" supabase > "$bin_dir/supabase"
+          [[ -s "$bin_dir/supabase" ]] || {
+            echo "::error::Supabase CLI binary is empty."
+            exit 1
+          }
+          magic="$(od -An -tx1 -N4 "$bin_dir/supabase" | tr -d ' \n')"
+          [[ "$magic" == "7f454c46" ]] || {
+            echo "::error::Supabase CLI binary is not an ELF executable."
+            exit 1
+          }
           chmod 0755 "$bin_dir/supabase"
           echo "$bin_dir" >> "$GITHUB_PATH"
 
