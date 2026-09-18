@@ -21,6 +21,7 @@ test("current Chat packaging stays consistent across server, picker, composer an
   );
   assert.match(entitlements, /if \(tier === "free"\) return "instant"/);
 
+  assert.match(modes, /id: "instant",[\s\S]*label: "Lite"/);
   assert.match(modes, /tier === "plus" && id === "high"[\s\S]*label: "Thinking"/);
   assert.match(selector, /const locked = !isLoaded \|\| !isSignedIn \|\| userTier === "free"/);
   assert.match(selector, /isSignedIn && userTier !== "free"/);
