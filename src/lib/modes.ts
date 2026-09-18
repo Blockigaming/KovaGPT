@@ -69,12 +69,12 @@ Location:
 export const MODES: Mode[] = [
   {
     id: "instant",
-    label: "Instant",
+    label: "Lite",
     description: "Fastest replies. Snappy, concise answers.",
     tier: "free",
     systemPrompt: `${BASE_SYSTEM}
 
-Mode: Instant. Optimize aggressively for speed and brevity.
+Mode: Lite. Optimize aggressively for speed and brevity.
 - Reply in 1-3 sentences or a tight bullet list.
 - Skip preambles, disclaimers, and filler.
 - Only expand when the user explicitly asks for more.`,
