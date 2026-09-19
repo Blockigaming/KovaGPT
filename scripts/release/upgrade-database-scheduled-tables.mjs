@@ -13,6 +13,7 @@ with target as (
  select c.* from pg_class c join pg_namespace n on n.oid=c.relnamespace
  where n.nspname='public' and c.relname in ('scheduled_task_runs','scheduled_tasks')
  and not exists (select 1 from pg_inherits h where h.inhparent=c.oid)
+ and not exists (select 1 from pg_rewrite r where r.ev_class=c.oid)
 ), rows as (
  select c.relname::text as name,jsonb_build_object(
  'schema','public','name',c.relname::text,'kind',c.relkind::text,
@@ -23,6 +24,7 @@ with target as (
  'columns',coalesce((select jsonb_agg(jsonb_build_object(
    'ordinal',a.attnum,'name',a.attname::text,'type',format_type(a.atttypid,a.atttypmod),
    'notNull',a.attnotnull,'identity',a.attidentity::text,'generated',a.attgenerated::text,
+   'aclIsNull',a.attacl is null,
    'defaultSha256',case when d.oid is not null then encode(sha256(convert_to(pg_get_expr(d.adbin,d.adrelid),'UTF8')),'hex') else null end,
    'collation',case when a.attcollation<>0 then (select format('%I.%I',n.nspname,k.collname) from pg_collation k join pg_namespace n on n.oid=k.collnamespace where k.oid=a.attcollation) else null end
  ) order by a.attnum) from pg_attribute a left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
@@ -34,7 +36,8 @@ with target as (
  ) order by q.conname::text collate "C") from pg_constraint q where q.conrelid=c.oid),'[]'::jsonb),
  'indexes',coalesce((select jsonb_agg(jsonb_build_object(
    'name',i.relname::text,'primary',x.indisprimary,'unique',x.indisunique,'valid',x.indisvalid,
-   'ready',x.indisready,'replicaIdentity',x.indisreplident,'nullsNotDistinct',x.indnullsnotdistinct,
+   'ready',x.indisready,'replicaIdentity',x.indisreplident,'clustered',x.indisclustered,
+   'nullsNotDistinct',x.indnullsnotdistinct,
    'definitionSha256',encode(sha256(convert_to(pg_get_indexdef(x.indexrelid),'UTF8')),'hex')
  ) order by i.relname::text collate "C") from pg_index x join pg_class i on i.oid=x.indexrelid where x.indrelid=c.oid),'[]'::jsonb),
  'aclIsNull',c.relacl is null,
@@ -64,6 +67,7 @@ with target as (
  'triggers',coalesce((select jsonb_agg(jsonb_build_object(
    'name',t.tgname::text,'enabled',t.tgenabled::text,
    'function',format('%I.%I(%s)',n.nspname,p.proname,pg_get_function_identity_arguments(p.oid)),
+   'functionOwner',pg_get_userbyid(p.proowner),
    'definitionSha256',encode(sha256(convert_to(pg_get_triggerdef(t.oid),'UTF8')),'hex'),
    'functionDefinitionSha256',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex')
  ) order by t.tgname::text collate "C") from pg_trigger t join pg_proc p on p.oid=t.tgfoid join pg_namespace n on n.oid=p.pronamespace where t.tgrelid=c.oid and not t.tgisinternal),'[]'::jsonb)
@@ -165,6 +169,7 @@ const column = object({
   notNull: bool,
   identity: literal("", "a", "d"),
   generated: literal("", "s"),
+  aclIsNull: bool,
   defaultSha256: nullable(hash),
   collation: nullable(text),
 });
@@ -183,6 +188,7 @@ const index = object({
   valid: bool,
   ready: bool,
   replicaIdentity: bool,
+  clustered: bool,
   nullsNotDistinct: bool,
   definitionSha256: hash,
 });
@@ -198,6 +204,7 @@ const trigger = object({
   name: text,
   enabled: literal("O", "D", "R", "A"),
   function: text,
+  functionOwner: text,
   definitionSha256: hash,
   functionDefinitionSha256: hash,
 });
@@ -315,7 +322,19 @@ function fingerprint(capture) {
           capture.tables.map((t) => ({
             schema: t.schema,
             name: t.name,
-            ...Object.fromEntries(keys.map((k) => [k, t[k]])),
+            ...Object.fromEntries(
+              keys.map((k) => [
+                k,
+                category === "schema" && k === "columns"
+                  ? t.columns.map(({ aclIsNull: _aclIsNull, ...column }) => column)
+                  : t[k],
+              ]),
+            ),
+            ...(category === "acl"
+              ? {
+                  columnAclState: t.columns.map(({ name, aclIsNull }) => ({ name, aclIsNull })),
+                }
+              : {}),
           })),
         ),
       ),
@@ -366,7 +385,7 @@ export function buildScheduledTableEvidence({
     productionReleaseReady: false,
     productionRowsRestored: false,
     limitations: [
-      "Only the two named ordinary public tables; partitioned/inherited relations fail closed.",
+      "Only the two named ordinary public tables; partitioned/inherited relations and rewrite rules fail closed.",
       "No table rows, sequences, external foreign-key targets, dependency closure, role-membership graph or executable RLS behavior is proven.",
       "Definition hashes compare fixed-search-path PostgreSQL deparser output; equality is not independent semantic equivalence proof.",
       "Later-writer changes remain visible. Fresh-source/live comparison, original effects, recovery and independent review remain separate gates.",

@@ -84,3 +84,24 @@ References: [PostgreSQL 17 relation catalog](https://www.postgresql.org/docs/17/
 [privilege information functions](https://www.postgresql.org/docs/17/functions-info.html).
 The Supabase changelog was checked before implementation; no client/dependency or
 CLI upgrade is part of this change.
+
+## Complete grant storage, index selection and trigger authority
+
+Each live column now records required boolean `aclIsNull` from `pg_attribute.attacl`.
+The ACL fingerprint includes those per-column states independently of the exploded
+column grants. Null and explicitly empty column ACLs therefore remain distinguishable
+when neither produces a grant row. Column ACL storage is excluded from the schema
+hash, so this permission-only change affects the ACL category, not structural schema.
+
+Each index also records required boolean `clustered` from `pg_index.indisclustered`.
+The schema fingerprint detects a changed clustering-index selection even when both
+index definitions are unchanged. Trigger records include the resolved `functionOwner`
+from `pg_proc.proowner`, independently of the function-definition hash, to preserve
+the execution authority of security-definer trigger functions.
+
+Any rewrite rule attached to either target table is unsupported and fails closed:
+the target query excludes relations with `pg_rewrite.ev_class` entries, then the
+existing exact-two-table validator rejects the incomplete observation. No rules
+are ignored or inferred from the user-trigger list. Missing or malformed new fields
+are rejected; predecessor query receipts are not upgraded with guessed values.
+These additions are catalog observations only and grant no production authority.

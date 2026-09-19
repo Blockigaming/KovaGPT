@@ -61,6 +61,7 @@ function table(name) {
         notNull: true,
         identity: "",
         generated: "",
+        aclIsNull: true,
         defaultSha256: sha,
         collation: null,
       },
@@ -83,6 +84,7 @@ function table(name) {
         valid: true,
         ready: true,
         replicaIdentity: false,
+        clustered: false,
         nullsNotDistinct: false,
         definitionSha256: sha,
       },
@@ -110,6 +112,7 @@ function table(name) {
         name: "touch",
         enabled: "O",
         function: "public.touch_updated_at()",
+        functionOwner: "postgres",
         definitionSha256: sha,
         functionDefinitionSha256: sha,
       },
@@ -657,4 +660,105 @@ test("scheduled tables: old captures without storage and replica flags fail inst
 test("scheduled tables: SQL observes raw ACL nullness and the actual replica-identity flag", () => {
   assert.match(SCHEDULED_TABLE_SQL, /'aclIsNull',c\.relacl is null/u);
   assert.match(SCHEDULED_TABLE_SQL, /'replicaIdentity',x\.indisreplident/u);
+});
+
+test("scheduled tables: null and explicitly empty column ACLs have different ACL hashes", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  after.tables[0].columns[0].aclIsNull = false;
+  assert.deepEqual(before.tables[0].columnAcl, after.tables[0].columnAcl);
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.notEqual(result.baseline.fingerprint.acl, result.upgraded.fingerprint.acl);
+  for (const category of ["schema", "rls", "trigger"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+  assert.deepEqual(result.changes, [{ table: "public.scheduled_task_runs", fields: ["columns"] }]);
+});
+
+test("scheduled tables: clustering-index selection changes schema with unchanged definitions", () => {
+  const before = capture();
+  before.tables[0].indexes[0].clustered = true;
+  before.tables[0].indexes.push({
+    ...before.tables[0].indexes[0],
+    name: "scheduled_task_runs_secondary",
+    primary: false,
+    clustered: false,
+    definitionSha256: "d".repeat(64),
+  });
+  const after = structuredClone(before);
+  after.ledgerVersions = [...FINAL];
+  after.ledgerVersionCount = FINAL.length;
+  after.tables[0].indexes[0].clustered = false;
+  after.tables[0].indexes[1].clustered = true;
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
+  for (const category of ["acl", "rls", "trigger"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+  assert.deepEqual(
+    before.tables[0].indexes.map(({ clustered: _clustered, ...index }) => index),
+    after.tables[0].indexes.map(({ clustered: _clustered, ...index }) => index),
+  );
+});
+
+test("scheduled tables: trigger-function ownership changes authority despite identical definitions", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  after.tables[0].triggers[0].functionOwner = "restricted_trigger_owner";
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.notEqual(result.baseline.fingerprint.trigger, result.upgraded.fingerprint.trigger);
+  for (const category of ["schema", "acl", "rls"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+  assert.deepEqual(
+    before.tables[0].triggers.map(({ functionOwner: _owner, ...trigger }) => trigger),
+    after.tables[0].triggers.map(({ functionOwner: _owner, ...trigger }) => trigger),
+  );
+});
+
+for (const [path, invalid] of [
+  ["columns.0.aclIsNull", "true"],
+  ["indexes.0.clustered", "false"],
+  ["triggers.0.functionOwner", ""],
+])
+  test(`scheduled tables: ${path} is mandatory and strictly typed`, () => {
+    for (const value of [undefined, null, invalid]) {
+      const observed = capture();
+      const keys = path.split(".");
+      const key = keys.pop();
+      const object = keys.reduce((current, name) => current[name], observed.tables[0]);
+      if (value === undefined) delete object[key];
+      else object[key] = value;
+      assert.throws(() => validateScheduledTableCapture(observed, BASE), /invalid/u);
+    }
+  });
+
+for (const [name, projection] of [
+  ["column ACL storage", /'aclIsNull',a\.attacl is null/u],
+  ["clustering index", /'clustered',x\.indisclustered/u],
+  ["trigger function owner", /'functionOwner',pg_get_userbyid\(p\.proowner\)/u],
+  [
+    "rewrite-rule exclusion",
+    /and not exists \(select 1 from pg_rewrite r where r\.ev_class=c\.oid\)/u,
+  ],
+])
+  test(`scheduled tables: query observes ${name}`, () => {
+    assert.match(SCHEDULED_TABLE_SQL, projection);
+  });
+
+for (const omitted of SCHEDULED_TABLE_NAMES)
+  test(`scheduled tables: rule-bearing ${omitted} cannot produce success at either checkpoint`, () => {
+    const incomplete = capture();
+    incomplete.tables = incomplete.tables.filter(({ name }) => name !== omitted);
+    incomplete.tableCount = incomplete.tables.length;
+    assert.throws(() => build(incomplete, capture(FINAL)), /invalid/u);
+    incomplete.ledgerVersions = [...FINAL];
+    incomplete.ledgerVersionCount = FINAL.length;
+    assert.throws(() => build(capture(), incomplete), /invalid/u);
+  });
+
+test("scheduled tables: rules on both targets cannot become empty-equals-empty evidence", () => {
+  const before = { ...capture(), tables: [], tableCount: 0 };
+  const after = { ...capture(FINAL), tables: [], tableCount: 0 };
+  assert.throws(() => build(before, after), /invalid/u);
 });

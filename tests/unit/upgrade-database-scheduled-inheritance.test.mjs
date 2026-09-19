@@ -41,6 +41,7 @@ function capture() {
           notNull: true,
           identity: "",
           generated: "",
+          aclIsNull: true,
           defaultSha256: null,
           collation: null,
         },
