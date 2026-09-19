@@ -17,7 +17,7 @@
   "authenticated_functional_checks": "Source empty chat inspected; no Kova authenticated flow or model generation tested",
   "visual_accepted_pages": 0,
   "production_operations": "none",
-  "new_benchmark_browser_cases": "8 cases across 3 engines authored; new-head hosted results pending",
+  "new_benchmark_browser_cases": "12 cases per engine (4 offline-navigation and 8 overview/comparison); 36 total executions; new-head hosted results pending",
   "prior_head_hosted_checks": {
     "head": "091e2fe0bc3f9c76e60d335d171232a8b2f16d23",
     "Candidate Source Evidence": "success",
