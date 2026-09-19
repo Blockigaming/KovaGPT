@@ -4,7 +4,11 @@ const browserSuite = process.env.KOVA_BROWSER_SUITE ?? "all";
 if (!["all", "core", "public"].includes(browserSuite)) {
   throw new Error(`Unknown KOVA_BROWSER_SUITE: ${browserSuite}`);
 }
-const publicSuitePatterns = ["**/public-surface-matrix.spec.ts", "**/public-detail-pages.spec.ts"];
+const publicSuitePatterns = [
+  "**/public-surface-matrix.spec.ts",
+  "**/public-detail-pages.spec.ts",
+  "**/writing-tools.spec.ts",
+];
 
 const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
 

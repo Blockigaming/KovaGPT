@@ -104,6 +104,8 @@ import { Route as DevelopersPricingRouteImport } from './routes/developers.prici
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as WritingIndexRouteImport } from './routes/writing.index'
+import { Route as WritingToolSlugRouteImport } from './routes/writing.$toolSlug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -663,6 +665,16 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const WritingIndexRoute = WritingIndexRouteImport.update({
+  id: '/writing/',
+  path: '/writing/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WritingToolSlugRoute = WritingToolSlugRouteImport.update({
+  id: '/writing/$toolSlug',
+  path: '/writing/$toolSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   id: '/~oauth/callback',
   path: '/~oauth/callback',
@@ -1171,8 +1183,10 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
@@ -1346,8 +1360,10 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
+  '/writing': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
@@ -1522,8 +1538,10 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/export': typeof ApiAccountExportRoute
@@ -1699,8 +1717,10 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
@@ -1874,8 +1894,10 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers'
+    | '/writing'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
@@ -2049,8 +2071,10 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/export'
@@ -2223,8 +2247,10 @@ export interface RootRouteChildren {
   DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
+  WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
+  WritingIndexRoute: typeof WritingIndexRoute
   SectionCategoryArticleSlugRoute: typeof SectionCategoryArticleSlugRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
@@ -2964,6 +2990,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/writing/': {
+      id: '/writing/'
+      path: '/writing'
+      fullPath: '/writing/'
+      preLoaderRoute: typeof WritingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/writing/$toolSlug': {
+      id: '/writing/$toolSlug'
+      path: '/writing/$toolSlug'
+      fullPath: '/writing/$toolSlug'
+      preLoaderRoute: typeof WritingToolSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/~oauth/callback': {
       id: '/~oauth/callback'
       path: '/~oauth/callback'
@@ -3702,8 +3742,10 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
+  WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
+  WritingIndexRoute: WritingIndexRoute,
   SectionCategoryArticleSlugRoute: SectionCategoryArticleSlugRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
