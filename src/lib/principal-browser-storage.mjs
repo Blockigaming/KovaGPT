@@ -117,6 +117,7 @@ const GUEST_LEGACY_LOCAL_EXACT_KEYS = Object.freeze([
   "kova-work-templates-v1",
   "kova-agent-workspace-v1",
   "kova-guest-library",
+  "kova-local-chat-workspace",
 ]);
 
 const GUEST_LEGACY_LOCAL_PREFIXES = Object.freeze(["kova-draft:"]);
