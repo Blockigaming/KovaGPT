@@ -65,6 +65,22 @@ test("browser estimate reads only the resolved principal and explicit device pre
   );
 });
 
+test("browser estimate includes the resolved principal's saved writing versions", () => {
+  const ownVersions = principal.principalScopedStorageKey("kova.write.versions.v1", "account-a");
+  const otherVersions = principal.principalScopedStorageKey("kova.write.versions.v1", "account-b");
+  const value = JSON.stringify([{ title: "Saved version", text: "A substantial draft" }]);
+  const area = storage([
+    [ownVersions, value],
+    [otherVersions, "private"],
+  ]);
+
+  assert.equal(
+    display.estimateAccountBrowserBytes("account-a", area),
+    (ownVersions.length + value.length) * 2,
+  );
+  assert.deepEqual(area.reads, [ownVersions]);
+});
+
 test("unresolved, inaccessible, or incomplete browser measurements are not zero usage", () => {
   const area = storage([["sb-auth-token", "secret"]]);
   assert.equal(display.estimateAccountBrowserBytes(undefined, area), null);
