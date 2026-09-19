@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ProductOverview } from "@/components/public/ProductOverview";
+import { PlanComparison } from "@/components/public/PlanComparison";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { PublicState } from "@/components/public/PublicState";
 import { PublicShell } from "@/components/public/PublicShell";
@@ -47,6 +49,20 @@ export function PublicFixture({ surface }: { surface: string }) {
     return () => window.removeEventListener("kova-fixture-page", select);
   }, []);
 
+  if (surface === "public-overview") return <ProductOverview />;
+  if (surface === "public-comparison")
+    return (
+      <PublicShell>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full min-w-0 max-w-6xl px-4 py-12"
+        >
+          <h1 className="text-3xl">Pricing comparison fixture</h1>
+          <PlanComparison />
+        </main>
+      </PublicShell>
+    );
   if (surface === "public-landing") {
     return (
       <PublicPageView

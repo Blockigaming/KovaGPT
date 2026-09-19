@@ -45,7 +45,7 @@ export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <footer className="min-w-0 border-t border-border bg-muted/20 [overflow-wrap:anywhere]">
+    <footer className="min-w-0 border-t border-border bg-background [overflow-wrap:anywhere]">
       <div className="mx-auto grid max-w-7xl gap-10 py-12 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold tracking-[-0.01em]">
@@ -69,9 +69,7 @@ export function PublicFooter() {
         >
           {footerGroups.map((group) => (
             <div key={group.label} className="min-w-0">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
-                {group.label}
-              </h2>
+              <h2 className="text-xs font-normal text-muted-foreground">{group.label}</h2>
               <ul className="mt-3">
                 {group.links.map((item) => {
                   const currentPage = pathname === item.to;

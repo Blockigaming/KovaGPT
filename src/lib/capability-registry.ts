@@ -118,27 +118,29 @@ function formatStorage(bytes: number): string {
   return `${Math.round(bytes / 1024 ** 2)} MB`;
 }
 
+export const PLAN_ALLOWANCE_COPY = {
+  free: {
+    chat: "Small message allowance",
+    image: "Small image generation allowance",
+    upload: "Small file and image upload allowance",
+    storage: "Small published storage allowance",
+  },
+  plus: {
+    chat: "No paid Chat message-count quota; token and premium-request limits still apply",
+    image: "Higher image generation allowance",
+    upload: "Higher file and image upload allowance",
+    storage: "Higher published storage allowance",
+  },
+  pro: {
+    chat: "No paid Chat message-count quota; token and premium-request limits still apply",
+    image: "Highest image generation allowance",
+    upload: "Highest file and image upload allowance",
+    storage: "Highest published storage allowance",
+  },
+} as const;
+
 function planFeatures(tier: Tier): readonly string[] {
-  const allowance = {
-    free: {
-      chat: "Small message allowance",
-      image: "Small image generation allowance",
-      upload: "Small file and image upload allowance",
-      storage: "Small published storage allowance",
-    },
-    plus: {
-      chat: "No paid Chat message-count quota; token and premium-request limits still apply",
-      image: "Higher image generation allowance",
-      upload: "Higher file and image upload allowance",
-      storage: "Higher published storage allowance",
-    },
-    pro: {
-      chat: "No paid Chat message-count quota; token and premium-request limits still apply",
-      image: "Highest image generation allowance",
-      upload: "Highest file and image upload allowance",
-      storage: "Highest published storage allowance",
-    },
-  }[tier];
+  const allowance = PLAN_ALLOWANCE_COPY[tier];
   const features = [
     `${modesByTier[tier]
       .map((mode) => mode.label)

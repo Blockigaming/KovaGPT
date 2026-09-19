@@ -5,6 +5,7 @@ import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { PublicShell } from "@/components/public/PublicShell";
+import { PlanComparison } from "@/components/public/PlanComparison";
 import {
   Dialog,
   DialogContent,
@@ -270,6 +271,8 @@ function PricingPage() {
           Published daily allowances are listed above. Provider outages, maintenance, and account
           eligibility can still limit a feature.
         </p>
+
+        <PlanComparison />
 
         <section aria-labelledby="pricing-faq-title" className="mt-20 border-t border-border pt-12">
           <h2 id="pricing-faq-title" className="text-2xl font-semibold tracking-[-0.02em]">
