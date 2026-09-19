@@ -48,7 +48,7 @@ The final command outcomes are recorded in `verification.json`. Source/component
 ## Next work
 
 1. Capture the chat, pricing and overview references and candidate pages at 1440×900 and 390×844, including full-page scrolling and meaningful safe states.
-2. Resolve the 237 candidates, 66 app definitions and three wider filter-review groups before freezing the page total. Preserve the existing 205 curated references and exclusion history.
+2. Resolve the 226 public candidates and 59 app definitions before freezing the page total. Preserve the current 204 curated destinations, explicit merges and exclusion history.
 3. Refine the benchmark drafts against source measurements. Keep intentional Kova branding and truthful Kova product data.
 4. Implement subsequent layout-family batches, recording per-page feature, link, responsive and interaction checks.
 5. Verify authenticated streaming, uploads, settings, billing and provider connection lifecycles in an appropriate test environment. No live transactions or account connection changes were performed here.
