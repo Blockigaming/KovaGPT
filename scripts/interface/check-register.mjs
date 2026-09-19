@@ -27,7 +27,8 @@ for (const page of register.pages) {
   }
 }
 const activePages = register.pages.filter(
-  (page) => !["MERGED_REFERENCE", "EXCLUDED_PROVIDER"].includes(page.completion_status),
+  (page) =>
+    !["MERGED_REFERENCE", "EXCLUDED_PROVIDER", "EXCLUDED_CODEX"].includes(page.completion_status),
 );
 assert.equal(register.trackedRecords, register.pages.length);
 assert.equal(register.plannedTargets, activePages.length);

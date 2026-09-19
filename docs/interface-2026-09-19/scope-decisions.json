@@ -1,9 +1,9 @@
 {
   "date": "2026-09-19",
   "previous_planned_targets": 634,
-  "active_planned_targets": 631,
+  "active_planned_targets": 630,
   "tracked_records": 634,
-  "remaining_public_candidates": 238,
+  "remaining_public_candidates": 237,
   "decisions": [
     {
       "id": "KOVA-0466",
@@ -26,6 +26,44 @@
       "decision": "EXCLUDED_PROVIDER",
       "source": "https://openai.com/form/sponsored-agents-hubspot/",
       "evidence": "Official form reviewed: HubSpot-specific sponsored-agent beta, company details and advertising eligibility. Outside verified provider scope."
+    },
+    {
+      "id": "KOVA-0492",
+      "decision": "EXCLUDED_CODEX",
+      "source": "https://openai.com/form/aardvark-beta-signup/",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security."
     }
-  ]
+  ],
+  "app_review_decisions": [
+    {
+      "review_id": "REVIEW-016",
+      "source_route": "/aardvark/findings/:id",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-023",
+      "source_route": "/aardvark/malware",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-027",
+      "source_route": "/aardvark",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-031",
+      "source_route": "/aardvark/scans",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    }
+  ],
+  "remaining_app_reviews": 66
 }

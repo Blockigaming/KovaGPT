@@ -34,9 +34,10 @@ for (const width of [320, 390, 768, 1440]) {
       await page.keyboard.press("Enter");
       await expect(faq.locator("..")).not.toHaveAttribute("open", "");
       if (width < 1024) {
-        const menu = page.getByRole("button", { name: "Open navigation" });
+        const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
         await menu.click();
         await expect(menu).toHaveAttribute("aria-expanded", "true");
+        await expect(menu).toHaveAccessibleName("Close navigation");
         await page.keyboard.press("Escape");
         await expect(menu).toBeFocused();
         await expect(menu).toHaveAttribute("aria-expanded", "false");

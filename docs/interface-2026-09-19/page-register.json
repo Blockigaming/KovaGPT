@@ -3,8 +3,8 @@
   "date": "2026-09-19",
   "scopeStatus": "provisional",
   "scopeCompletelyResolved": false,
-  "plannedTargets": 631,
-  "unresolvedAppDefinitions": 70,
+  "plannedTargets": 630,
+  "unresolvedAppDefinitions": 66,
   "commonAcceptance": [
     "1440x900 desktop and 390x844 mobile; full vertical and nested-scroll coverage",
     "Keyboard navigation, focus restoration and accessible names",
@@ -783,9 +783,9 @@
       "source_reference_kind": "Source page or representative content reference",
       "required_features": "Source purpose (must confirm during inspection): Public ChatGPT conversation entry page. | Shared sidebar and responsive navigation | Composer/model selection and attachments where applicable | Streaming/stop/retry/history or surface-specific task flow",
       "requirement_evidence": "Planning baseline; source-derived full control inventory pending",
-      "source_screenshot_ids": "",
+      "source_screenshot_ids": "LIVE-CHAT-20260919",
       "legacy_reference_ids": "",
-      "source_screenshot_status": "MISSING",
+      "source_screenshot_status": "DESKTOP_EMPTY_CHAT_VIEWPORT_REVIEWED; screenshot retained privately with user artifact; mobile and conversation states pending",
       "candidate_screenshot_status": "MISSING",
       "full_page_and_controls_reviewed": "False",
       "completion_status": "DRAFT_CODE_UNVERIFIED",
@@ -15251,8 +15251,8 @@
       "repo_evidence": "no exact declaration/manifest match; not proof route is absent",
       "repo_files": "",
       "foundation_files": "src/components/public/PublicShell.tsx; src/components/public/PublicSite.tsx; src/components/public/public-foundation.css; relevant content registry",
-      "status": "CANDIDATE_REVIEW",
-      "remaining_gate": "URL discovery only; verify rendered source and Kova relevance. Page-specific Kova content/capability needed; do not publish inferred company facts.",
+      "status": "EXCLUDED_CODEX",
+      "remaining_gate": "Excluded from build scope",
       "source_desktop_capture": "False",
       "source_mobile_capture": "False",
       "spec_complete": "False",
@@ -15267,8 +15267,8 @@
       "source_screenshot_status": "MISSING",
       "candidate_screenshot_status": "MISSING",
       "full_page_and_controls_reviewed": "False",
-      "completion_status": "CANDIDATE_REVIEW",
-      "implementation_note": "No implementation completed in this workstream"
+      "completion_status": "EXCLUDED_CODEX",
+      "implementation_note": "Official Codex Security launch identifies Aardvark as its former name. The Aardvark beta signup belongs to the excluded Codex product. https://openai.com/index/codex-security-now-in-research-preview/"
     },
     {
       "page_id": "KOVA-0493",
@@ -19674,5 +19674,5 @@
     }
   ],
   "trackedRecords": 634,
-  "unresolvedPublicCandidates": 238
+  "unresolvedPublicCandidates": 237
 }
