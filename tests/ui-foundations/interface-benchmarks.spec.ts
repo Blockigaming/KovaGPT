@@ -86,12 +86,18 @@ for (const width of [320, 390, 768, 1440]) {
         await expect(answer.getByRole("heading", { name: heading })).toBeVisible();
         await expect(choices.locator('[aria-pressed="true"]')).toHaveText(label);
       }
-      await page.getByRole("button", { name: "Try the learning example" }).click();
+      const learningExample = page.getByRole("button", { name: "Try the learning example" });
+      await learningExample.focus();
+      await expect(learningExample).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(
         answer.getByRole("heading", { name: "Make room for the next question." }),
       ).toBeVisible();
       await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Learn");
-      await page.getByRole("button", { name: "Try the writing example" }).click();
+      const writingExample = page.getByRole("button", { name: "Try the writing example" });
+      await writingExample.focus();
+      await expect(writingExample).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Write");
       const faq = page.locator("summary").filter({ hasText: "Can I trust every answer?" });
       await faq.focus();
