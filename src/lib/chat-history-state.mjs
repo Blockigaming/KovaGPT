@@ -70,8 +70,13 @@ export async function restoreChatHistoryState(stored, ownerId) {
       throw new Error("chat_history_device_unavailable");
     const local = row.local === null ? null : normalizeChatHistory(row.local, ownerId);
     if (local && local.id !== id) throw new Error("chat_history_device_unavailable");
-    const localHash = await chatHistoryHash(local, row.archived);
-    if (localHash !== row.localHash) throw new Error("chat_history_device_unavailable");
+    let localHash = await chatHistoryHash(local, row.archived);
+    let migratedLegacyPayload = false;
+    if (localHash !== row.localHash) {
+      const legacyHash = await chatHistoryHash(row.local, row.archived);
+      if (legacyHash !== row.localHash) throw new Error("chat_history_device_unavailable");
+      migratedLegacyPayload = true;
+    }
     let request = null,
       conflict = null;
     if (row.request) {
@@ -85,13 +90,20 @@ export async function restoreChatHistoryState(stored, ownerId) {
         typeof request.archived !== "boolean"
       )
         throw new Error("chat_history_device_unavailable");
+      const rawRequestPayload = request.payload;
       request.payload =
-        request.payload === null ? null : normalizeChatHistory(request.payload, ownerId);
-      if (
-        (request.payload && request.payload.id !== id) ||
-        request.hash !== (await chatHistoryHash(request.payload, request.archived))
-      )
+        rawRequestPayload === null ? null : normalizeChatHistory(rawRequestPayload, ownerId);
+      if (request.payload && request.payload.id !== id)
         throw new Error("chat_history_device_unavailable");
+      const normalizedRequestHash = await chatHistoryHash(request.payload, request.archived);
+      if (request.hash !== normalizedRequestHash) {
+        const legacyRequestHash = await chatHistoryHash(rawRequestPayload, request.archived);
+        if (request.hash !== legacyRequestHash) throw new Error("chat_history_device_unavailable");
+        // A valid pre-retirement request cannot be retried with a hash for bytes we no longer
+        // persist. Drop only the captured request; the migrated local row is queued afresh.
+        request = null;
+        migratedLegacyPayload = true;
+      }
     }
     if (row.conflict) {
       conflict = {
@@ -106,7 +118,14 @@ export async function restoreChatHistoryState(stored, ownerId) {
       )
         throw new Error("chat_history_device_unavailable");
     }
-    records[id] = { ...row, local, request, conflict };
+    records[id] = {
+      ...row,
+      local,
+      localHash,
+      dirty: row.dirty || migratedLegacyPayload,
+      request,
+      conflict,
+    };
   }
   return { ...stored, complete: false, records };
 }
