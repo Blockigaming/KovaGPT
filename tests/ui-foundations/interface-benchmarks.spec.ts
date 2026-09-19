@@ -37,7 +37,10 @@ for (const width of [390, 1440]) {
       }
       await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
       await expect(page.locator("#main-content")).toBeFocused();
-      await page.getByRole("link", { name: "Overview", exact: true }).click();
+      const overview = page.getByRole("link", { name: "Overview", exact: true });
+      await overview.focus();
+      await expect(overview).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(hero).toBeVisible();
       await page.locator(".public-hero").getByRole("link", { name: "Open KovaGPT" }).click();
       await expect(dialog).toContainText(
