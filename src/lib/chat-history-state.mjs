@@ -73,8 +73,15 @@ export async function restoreChatHistoryState(stored, ownerId) {
     let localHash = await chatHistoryHash(local, row.archived);
     let migratedLegacyPayload = false;
     if (localHash !== row.localHash) {
+      const hasRetiredDeepResearchTool =
+        Array.isArray(row.local?.messages) &&
+        row.local.messages.some(
+          (message) =>
+            message?.role === "assistant" && message.requestedTool === "deep_research",
+        );
       const legacyHash = await chatHistoryHash(row.local, row.archived);
-      if (legacyHash !== row.localHash) throw new Error("chat_history_device_unavailable");
+      if (!hasRetiredDeepResearchTool || legacyHash !== row.localHash)
+        throw new Error("chat_history_device_unavailable");
       migratedLegacyPayload = true;
     }
     let request = null,
@@ -97,8 +104,15 @@ export async function restoreChatHistoryState(stored, ownerId) {
         throw new Error("chat_history_device_unavailable");
       const normalizedRequestHash = await chatHistoryHash(request.payload, request.archived);
       if (request.hash !== normalizedRequestHash) {
+        const hasRetiredDeepResearchTool =
+          Array.isArray(rawRequestPayload?.messages) &&
+          rawRequestPayload.messages.some(
+            (message) =>
+              message?.role === "assistant" && message.requestedTool === "deep_research",
+          );
         const legacyRequestHash = await chatHistoryHash(rawRequestPayload, request.archived);
-        if (request.hash !== legacyRequestHash) throw new Error("chat_history_device_unavailable");
+        if (!hasRetiredDeepResearchTool || request.hash !== legacyRequestHash)
+          throw new Error("chat_history_device_unavailable");
         // A valid pre-retirement request cannot be retried with a hash for bytes we no longer
         // persist. Drop only the captured request; the migrated local row is queued afresh.
         request = null;
