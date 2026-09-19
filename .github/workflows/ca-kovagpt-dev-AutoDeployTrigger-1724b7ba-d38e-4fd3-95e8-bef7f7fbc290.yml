@@ -161,6 +161,7 @@ jobs:
             --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS" \
             --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+            --build-arg VITE_KOVA_MAPS_PROVIDER_APPROVED="${{ vars.VITE_KOVA_MAPS_PROVIDER_APPROVED || 'false' }}" \
             --tag "$tagged_image" \
             --push \
             --metadata-file "$metadata" \

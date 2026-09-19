@@ -51,7 +51,7 @@ test("signed-in users can move clearly between Chat and Work", () => {
 test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
   assert.match(sidebar, /aria-controls="sidebar-more-items"/);
   assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.doesNotMatch(sidebar, /navLink\("\/maps"|to="\/maps"/);
+  assert.match(sidebar, /MAPS_PROVIDER_APPROVED \? navLink\("\/maps", "Maps", Map\) : null/);
   assert.ok(
     sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
   );

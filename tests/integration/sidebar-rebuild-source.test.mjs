@@ -27,7 +27,7 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
   assert.match(sidebar, /KovaGPT/);
   assert.match(sidebar, /Health is coming soon/);
   assert.match(sidebar, /Finances is coming soon/);
-  assert.doesNotMatch(sidebar, /to="\/maps"|navLink\("\/maps"/);
+  assert.match(sidebar, /MAPS_PROVIDER_APPROVED \? navLink\("\/maps", "Maps", Map\) : null/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });

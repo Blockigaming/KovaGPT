@@ -9,6 +9,7 @@ import {
   HeartPulse,
   Images,
   LibraryBig,
+  Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -38,6 +39,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTier } from "@/hooks/useTier";
+
+const MAPS_PROVIDER_APPROVED = import.meta.env.VITE_KOVA_MAPS_PROVIDER_APPROVED === "true";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
@@ -379,6 +382,11 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
+          {MAPS_PROVIDER_APPROVED ? (
+            <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
+              <Map />
+            </Link>
+          ) : null}
           <button
             type="button"
             className="kova-rail-button"
@@ -491,6 +499,7 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
+              {MAPS_PROVIDER_APPROVED ? navLink("/maps", "Maps", Map) : null}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"

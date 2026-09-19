@@ -32,6 +32,8 @@ const modes = CAPABILITY_REGISTRY.modesByTier;
 const plan = CAPABILITY_REGISTRY.plans;
 const features = CAPABILITY_REGISTRY.features;
 
+const mapsProviderApproved = import.meta.env.VITE_KOVA_MAPS_PROVIDER_APPROVED === "true";
+
 const rows: Row[] = [
   [
     "Getting started",
@@ -443,27 +445,37 @@ const rows: Row[] = [
   [
     "Local places",
     "What is Local places?",
-    "Local places is the planned Maps experience in KovaGPT. It remains unavailable until its map providers and privacy behavior receive release approval.",
+    mapsProviderApproved
+      ? "Local places is the Maps experience in KovaGPT. It finds sourced local results and displays approved map-provider data."
+      : "Local places is the planned Maps experience in KovaGPT. It remains unavailable until its map providers and privacy behavior receive release approval.",
   ],
   [
     "Local places",
     "Can it search real places?",
-    "Not in the current release. Maps will remain unavailable until an approved search and map provider configuration is enabled.",
+    mapsProviderApproved
+      ? "Yes. Check the result and linked source before traveling because place listings can change."
+      : "Not in the current release. Maps will remain unavailable until an approved search and map provider configuration is enabled.",
   ],
   [
     "Local places",
     "Can it provide directions?",
-    "Not from the unavailable Maps page. KovaGPT does not provide its own turn-by-turn navigation.",
+    mapsProviderApproved
+      ? "KovaGPT can open an external map handoff for directions. It does not provide its own turn-by-turn navigation."
+      : "Not from the unavailable Maps page. KovaGPT does not provide its own turn-by-turn navigation.",
   ],
   [
     "Local places",
     "Does KovaGPT use my device location?",
-    "The current unavailable Maps page does not request device coordinates. If Maps is approved in a future release, choosing Use my current location will ask for browser permission, use the coordinates only for the active map and principal-scoped chat handoff, and disclose the enabled map providers here before launch.",
+    mapsProviderApproved
+      ? "Only after you choose Use my current location and grant browser permission. Coordinates are used for the active map and principal-scoped chat handoff."
+      : "The current unavailable Maps page does not request device coordinates.",
   ],
   [
     "Local places",
     "Why is Local places unavailable?",
-    "Maps has not yet received the required provider, legal, privacy, capacity, and cost approval for this release. The page remains fail-closed and makes no geolocation, tile, or map-search provider requests.",
+    mapsProviderApproved
+      ? "If Maps cannot load, confirm that you are signed in, refresh the page, and check your connection before contacting support."
+      : "Maps has not yet received the required provider, legal, privacy, capacity, and cost approval for this release. The page remains fail-closed and makes no geolocation, tile, or map-search provider requests.",
   ],
   [
     "Settings & memory",

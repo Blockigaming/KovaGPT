@@ -1,29 +1,22 @@
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
-test("Maps navigation opens the responsive Maps workspace", async ({ page }) => {
+test("Maps stays unavailable and undiscoverable without approval", async ({ page }) => {
   await page.goto("/");
-  const maps = page.getByRole("link", { name: "Maps" }).first();
-  await expect(maps).toBeVisible();
-  await maps.click();
-  await expect(page).toHaveURL(/\/maps$/);
-  await expect(page.getByPlaceholder("Ask Kova about Maps")).toBeVisible();
-  await expect(page.getByTestId("map-container")).toBeVisible();
-  await expect(page.locator("main#main-content")).toHaveCSS("overflow", "hidden");
+  await expect(page.getByRole("link", { name: "Maps" })).toHaveCount(0);
+  await page.goto("/maps");
+  await expect(page.getByRole("heading", { name: "Maps unavailable" })).toBeVisible();
+  await expect(page.getByText("Maps is not enabled for this release.")).toBeVisible();
+  await expect(page.getByTestId("map-container")).toHaveCount(0);
 });
 
-test("Maps shows a useful message for a failed place search", async ({ page }) => {
+test("Maps unavailable page does not contact map services", async ({ page }) => {
+  const mapRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/maps\/search|openfreemap|nominatim/i.test(request.url())) mapRequests.push(request.url());
+  });
   await installAuthenticatedFixture(page);
-  await page.route("**/api/security/lockdown", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: '{"enabled":false}' }),
-  );
-  await page.route("**/api/maps/search?**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: '{"results":[]}' }),
-  );
   await page.goto("/maps");
-  await page.getByPlaceholder("Ask Kova about Maps").fill("Not a real place 987654321");
-  const search = page.getByRole("button", { name: "Search maps" });
-  await expect(search).toBeEnabled();
-  await search.click();
-  await expect(page.getByRole("alert")).toContainText("No matching places were found");
+  await expect(page.getByRole("heading", { name: "Maps unavailable" })).toBeVisible();
+  expect(mapRequests).toEqual([]);
 });

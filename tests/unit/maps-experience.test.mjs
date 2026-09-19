@@ -38,6 +38,7 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /mapRef\.current !== map/);
   assert.match(source, /if \(loadTimeout !== null\) window\.clearTimeout\(loadTimeout\)/);
   assert.match(source, /startupErrorRef\.current && !searchAttemptedRef\.current/);
+  assert.match(source, /map\.on\("error"[\s\S]*?startupErrorRef\.current = false;[\s\S]*?setError/);
   assert.match(
     source,
     /authFetch\(\`\/api\/maps\/search[\s\S]*?AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
@@ -180,7 +181,7 @@ test("Maps stays fail-closed until its manual provider approval is recorded", ()
   assert.match(route, /VITE_KOVA_MAPS_PROVIDER_APPROVED === "true"/);
   assert.match(route, /Maps is not enabled for this release/);
   assert.match(route, /will not request your location or\s+contact map providers/);
-  assert.doesNotMatch(sidebar, /to="\/maps"|navLink\("\/maps"/);
+  assert.match(sidebar, /MAPS_PROVIDER_APPROVED \? navLink\("\/maps", "Maps", Map\) : null/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {

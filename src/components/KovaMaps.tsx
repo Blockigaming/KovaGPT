@@ -298,6 +298,7 @@ export function KovaMaps() {
           if (!isCurrentMap()) return;
           console.error("[maps] map provider error", event.error?.message ?? "unknown");
           if (!searchAttemptedRef.current) {
+            startupErrorRef.current = false;
             setError("Some map data could not load. Check your connection and try again.");
           }
           setLoading(false);
