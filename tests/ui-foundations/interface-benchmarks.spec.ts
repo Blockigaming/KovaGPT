@@ -121,18 +121,35 @@ for (const width of [320, 390, 768, 1440]) {
         "Uploads",
         "Storage",
       ]);
+      const included = region.getByRole("columnheader", { name: "Included", exact: true });
+      await expect
+        .poll(async () => {
+          const [regionBox, includedBox] = await Promise.all([
+            region.boundingBox(),
+            included.boundingBox(),
+          ]);
+          if (!regionBox || !includedBox) return false;
+          return includedBox.x >= regionBox.x && includedBox.x + includedBox.width <= regionBox.x + regionBox.width;
+        })
+        .toBe(true);
+      expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
+      await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
+
       await region.focus();
       await expect(region).toBeFocused();
       if (width < 672) {
         await page.keyboard.press("ArrowRight");
         await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        await page.screenshot({
+          path: info.outputPath("comparison-scrolled.png"),
+          fullPage: true,
+        });
       }
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
         ),
       ).toBeLessThanOrEqual(1);
-      await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
       expect(errors).toEqual([]);
     });
   }
