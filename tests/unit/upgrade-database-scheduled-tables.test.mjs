@@ -82,10 +82,12 @@ function table(name) {
         unique: true,
         valid: true,
         ready: true,
+        replicaIdentity: false,
         nullsNotDistinct: false,
         definitionSha256: sha,
       },
     ],
+    aclIsNull: false,
     acl: [{ grantor: "postgres", grantee: "service_role", privilege: "SELECT", grantable: false }],
     columnAcl: [],
     effectivePrivileges: roles.map((role) => ({
@@ -196,6 +198,8 @@ for (const [path, value] of [
   ["tables.0.constraints.0.validated", "true"],
   ["tables.0.constraints.0.kind", "z"],
   ["tables.0.indexes.0.ready", null],
+  ["tables.0.indexes.0.replicaIdentity", "false"],
+  ["tables.0.aclIsNull", "true"],
   ["tables.0.indexes.0.definitionSha256", "0".repeat(63)],
   ["tables.0.acl.0.privilege", "EXECUTE"],
   ["tables.0.acl.0.grantable", "false"],
@@ -567,4 +571,90 @@ test("scheduled tables: expected plan ordering is immaterial but observed orderi
   const value = capture();
   value.ledgerVersions.reverse();
   assert.throws(() => validateScheduledTableCapture(value, BASE), /invalid/u);
+});
+
+test("scheduled tables: implicit and explicit default ACLs remain different evidence", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  before.tables[0].aclIsNull = true;
+  after.tables[0].aclIsNull = false;
+  // Both expanded ACL inventories are identical; only their catalog storage differs.
+  const defaults = [
+    "DELETE",
+    "INSERT",
+    "MAINTAIN",
+    "REFERENCES",
+    "SELECT",
+    "TRIGGER",
+    "TRUNCATE",
+    "UPDATE",
+  ].map((privilege) => ({ grantor: "postgres", grantee: "postgres", privilege, grantable: false }));
+  before.tables[0].acl = structuredClone(defaults);
+  after.tables[0].acl = structuredClone(defaults);
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.deepEqual(result.changes, [
+    { table: "public.scheduled_task_runs", fields: ["aclIsNull"] },
+  ]);
+  assert.notEqual(result.baseline.fingerprint.acl, result.upgraded.fingerprint.acl);
+  for (const category of ["schema", "rls", "trigger"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+  assert.equal(result.baseline.capture.tables[0].aclIsNull, true);
+  assert.equal(result.upgraded.capture.tables[0].aclIsNull, false);
+  assert.equal(result.schemaProofPromoted, false);
+});
+
+test("scheduled tables: changing the chosen existing replica index changes the schema hash", () => {
+  const before = capture();
+  before.tables[0].replicaIdentity = "i";
+  const original = before.tables[0].indexes[0];
+  before.tables[0].indexes.push(
+    {
+      ...original,
+      name: "scheduled_task_runs_replica_a",
+      primary: false,
+      replicaIdentity: true,
+      definitionSha256: "d".repeat(64),
+    },
+    {
+      ...original,
+      name: "scheduled_task_runs_replica_b",
+      primary: false,
+      replicaIdentity: false,
+      definitionSha256: "e".repeat(64),
+    },
+  );
+  const after = structuredClone(before);
+  after.ledgerVersions = [...FINAL];
+  after.ledgerVersionCount = FINAL.length;
+  after.tables[0].indexes[1].replicaIdentity = false;
+  after.tables[0].indexes[2].replicaIdentity = true;
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.deepEqual(result.changes, [{ table: "public.scheduled_task_runs", fields: ["indexes"] }]);
+  assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
+  for (const category of ["acl", "rls", "trigger"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+  assert.deepEqual(
+    result.baseline.capture.tables[0].indexes.map(({ replicaIdentity: _flag, ...index }) => index),
+    result.upgraded.capture.tables[0].indexes.map(({ replicaIdentity: _flag, ...index }) => index),
+  );
+  assert.equal(result.productionReleaseReady, false);
+});
+
+test("scheduled tables: old captures without storage and replica flags fail instead of guessing", () => {
+  for (const field of ["aclIsNull", "replicaIdentity"]) {
+    const c = capture();
+    if (field === "aclIsNull") delete c.tables[0].aclIsNull;
+    else delete c.tables[0].indexes[0].replicaIdentity;
+    assert.throws(
+      () => validateScheduledTableCapture(c, BASE),
+      /upgrade_scheduled_tables_invalid/u,
+    );
+  }
+});
+
+test("scheduled tables: SQL observes raw ACL nullness and the actual replica-identity flag", () => {
+  assert.match(SCHEDULED_TABLE_SQL, /'aclIsNull',c\.relacl is null/u);
+  assert.match(SCHEDULED_TABLE_SQL, /'replicaIdentity',x\.indisreplident/u);
 });

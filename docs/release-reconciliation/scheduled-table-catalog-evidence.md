@@ -18,7 +18,13 @@ The fixed search path and byte-order sorting make checkpoint comparisons stable.
 Each observation retains its timestamp, PostgreSQL version, exact migration-version
 set and source commit/tree. A missing table, malformed or extra field, incorrect
 history, duplicate name, invalid hash, or unsupported partition/inheritance layout
-fails validation. Explicit grants are not collapsed into effective privileges.
+fails validation. Explicit grants are not collapsed into effective privileges. `aclIsNull` records
+whether `pg_class.relacl` is null independently of the expanded ACL inventory,
+and participates in the ACL hash. An implicit default ACL and an explicitly
+stored identical ACL therefore remain distinguishable. Each index also records
+`pg_index.indisreplident` as `replicaIdentity`; switching the selected existing
+replica-identity index changes the schema hash even when both index definitions
+and the table's `relreplident` value are unchanged.
 A column ordinal gap is permitted because dropped columns may leave gaps; duplicate
 ordinals and duplicate live column names are rejected.
 
@@ -49,7 +55,10 @@ Tests use synthetic catalog observations and mocked database execution. They
 exercise all three collectors together, table-only mode, exact histories, invalid
 fields, duplicate inventories, genuine ACL/RLS differences, ordering, capture
 failure, cleanup failure, final source failure, and observational dry runs.
-These tests do not claim a real PostgreSQL table checkpoint; the new exact-head
+Missing or non-boolean ACL-storage/replica-identity flags fail validation; old
+captures must not be upgraded by guessing their values. The query hash changes
+with these catalog fields, so a new hosted capture is required. These tests do
+not claim a real PostgreSQL table checkpoint; the new exact-head
 hosted artifact is required for that result.
 
 Read-only live-side observations may be retained separately. Any query-byte
@@ -70,6 +79,7 @@ remain open. All proof/readiness/restore flags are explicitly false.
 References: [PostgreSQL 17 relation catalog](https://www.postgresql.org/docs/17/catalog-pg-class.html),
 [column catalog](https://www.postgresql.org/docs/17/catalog-pg-attribute.html),
 [policy catalog](https://www.postgresql.org/docs/17/catalog-pg-policy.html),
+[default ACL semantics](https://www.postgresql.org/docs/17/catalog-pg-default-acl.html),
 [index catalog](https://www.postgresql.org/docs/17/catalog-pg-index.html), and
 [privilege information functions](https://www.postgresql.org/docs/17/functions-info.html).
 The Supabase changelog was checked before implementation; no client/dependency or

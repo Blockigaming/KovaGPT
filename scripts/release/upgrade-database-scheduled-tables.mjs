@@ -33,9 +33,10 @@ with target as (
  ) order by q.conname::text collate "C") from pg_constraint q where q.conrelid=c.oid),'[]'::jsonb),
  'indexes',coalesce((select jsonb_agg(jsonb_build_object(
    'name',i.relname::text,'primary',x.indisprimary,'unique',x.indisunique,'valid',x.indisvalid,
-   'ready',x.indisready,'nullsNotDistinct',x.indnullsnotdistinct,
+   'ready',x.indisready,'replicaIdentity',x.indisreplident,'nullsNotDistinct',x.indnullsnotdistinct,
    'definitionSha256',encode(sha256(convert_to(pg_get_indexdef(x.indexrelid),'UTF8')),'hex')
  ) order by i.relname::text collate "C") from pg_index x join pg_class i on i.oid=x.indexrelid where x.indrelid=c.oid),'[]'::jsonb),
+ 'aclIsNull',c.relacl is null,
  'acl',coalesce((select jsonb_agg(jsonb_build_object(
    'grantor',pg_get_userbyid(x.grantor),'grantee',case when x.grantee=0 then 'PUBLIC' else pg_get_userbyid(x.grantee) end,
    'privilege',x.privilege_type,'grantable',x.is_grantable
@@ -180,6 +181,7 @@ const index = object({
   unique: bool,
   valid: bool,
   ready: bool,
+  replicaIdentity: bool,
   nullsNotDistinct: bool,
   definitionSha256: hash,
 });
@@ -212,6 +214,7 @@ const table = object({
   columns: array(column, (r) => [r.ordinal], 1, 1600),
   constraints: array(constraint, named),
   indexes: array(index, named),
+  aclIsNull: bool,
   acl: array(object(grant), grantKey),
   columnAcl: array(object({ column: text, ...grant }), (r) => [r.column, ...grantKey(r)]),
   effectivePrivileges: array(
@@ -299,7 +302,7 @@ function fingerprint(capture) {
       "constraints",
       "indexes",
     ],
-    acl: ["owner", "acl", "columnAcl", "effectivePrivileges"],
+    acl: ["owner", "aclIsNull", "acl", "columnAcl", "effectivePrivileges"],
     rls: ["rowSecurity", "forceRowSecurity", "policies"],
     trigger: ["triggers"],
   };
