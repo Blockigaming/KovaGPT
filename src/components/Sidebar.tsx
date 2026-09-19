@@ -7,6 +7,7 @@ import {
   Folder,
   Globe,
   HeartPulse,
+  CircleHelp,
   Images,
   LibraryBig,
   Map,
@@ -43,7 +44,7 @@ import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
 
-const EXPANDED_WIDTH = 272;
+const EXPANDED_WIDTH = 260;
 
 function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
@@ -63,6 +64,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
+  onOpenHelp,
   mapsReleaseApproved = true,
 }: {
   conversations: Conversation[];
@@ -435,15 +437,6 @@ export function Sidebar({
             <span className="kova-sidebar-brand">KovaGPT</span>
             <button
               type="button"
-              className="kova-header-button"
-              onClick={() => setSearchOpen((value) => !value)}
-              aria-label="Search chats"
-              title="Search chats"
-            >
-              <Search />
-            </button>
-            <button
-              type="button"
               className="kova-header-button lg:hidden"
               onClick={onToggle}
               aria-label="Close sidebar"
@@ -497,6 +490,16 @@ export function Sidebar({
                 {icon(SquarePen)}
                 <span>New chat</span>
               </button>
+              <button
+                type="button"
+                className={navRow(searchOpen)}
+                onClick={() => setSearchOpen((value) => !value)}
+                aria-expanded={searchOpen}
+                aria-controls={searchOpen ? "sidebar-chat-search" : undefined}
+              >
+                {icon(Search)}
+                <span className="kova-sidebar-label">Search chats</span>
+              </button>
               {navLink("/work", "Work", BriefcaseBusiness)}
               {navLink("/images", "Images", Images)}
               {navLink("/library", "Library", LibraryBig)}
@@ -525,7 +528,7 @@ export function Sidebar({
               >
                 <button
                   type="button"
-                  disabled={!moreOpen}
+                  disabled
                   className="kova-sidebar-subrow"
                   title="Health is coming soon"
                 >
@@ -535,7 +538,7 @@ export function Sidebar({
                 </button>
                 <button
                   type="button"
-                  disabled={!moreOpen}
+                  disabled
                   className="kova-sidebar-subrow"
                   title="Finances is coming soon"
                 >
@@ -548,12 +551,12 @@ export function Sidebar({
 
             {signedIn ? (
               <section className="kova-sidebar-history" aria-label="Chats">
-                <h2>Pinned</h2>
-                {pinned.length ? (
-                  pinned.map(chatRow)
-                ) : (
-                  <p className="kova-sidebar-empty">No pinned chats</p>
-                )}
+                {pinned.length > 0 ? (
+                  <>
+                    <h2>Pinned</h2>
+                    {pinned.map(chatRow)}
+                  </>
+                ) : null}
                 <h2 className="kova-recents-heading">Recents</h2>
                 {recents.length ? (
                   recents.map(chatRow)
@@ -564,6 +567,34 @@ export function Sidebar({
             ) : null}
           </div>
 
+          <nav className="kova-sidebar-utilities" aria-label="Workspace support">
+            <Link to="/pricing" className={navRow()} onClick={closeAfterMobileNavigation}>
+              {icon(ShoppingBag)}
+              <span className="kova-sidebar-label">Plans and pricing</span>
+            </Link>
+            <button
+              type="button"
+              className={navRow()}
+              onClick={() => {
+                closeAfterMobileNavigation();
+                onOpenSettings("general");
+              }}
+            >
+              {icon(SettingsIcon)}
+              <span className="kova-sidebar-label">Settings</span>
+            </button>
+            <button
+              type="button"
+              className={navRow()}
+              onClick={() => {
+                closeAfterMobileNavigation();
+                onOpenHelp();
+              }}
+            >
+              {icon(CircleHelp)}
+              <span className="kova-sidebar-label">Help</span>
+            </button>
+          </nav>
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
@@ -603,15 +634,6 @@ export function Sidebar({
                       Log in to KovaGPT
                     </button>
                   </SignInButton>
-                  <button
-                    type="button"
-                    className="kova-account-action"
-                    onClick={() => onOpenSettings("general")}
-                    aria-label="Settings"
-                    title="Settings"
-                  >
-                    <SettingsIcon aria-hidden="true" />
-                  </button>
                 </div>
               </div>
             ) : null}
