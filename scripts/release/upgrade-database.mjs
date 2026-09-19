@@ -34,12 +34,17 @@ import {
   parseScheduledCatalogCapture,
 } from "./upgrade-database-scheduled-catalog.mjs";
 
+import {
+  captureCleanUpgradeSource,
+  assertUpgradeSourceUnchanged,
+} from "./upgrade-source-provenance.mjs";
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
-export function planUpgrade(root = ROOT) {
-  const manifestBytes = readFileSync(join(root, MANIFEST));
+export function planUpgrade(root = ROOT, readSource = readFileSync, readDirectory = readdirSync) {
+  const manifestBytes = readSource(join(root, MANIFEST));
   const manifest = JSON.parse(manifestBytes);
   if (
     manifest.schemaVersion !== 1 ||
@@ -69,7 +74,7 @@ export function planUpgrade(root = ROOT) {
       (migration.origin === "matched_source") !== migration.path.startsWith("supabase/")
     )
       throw new Error(`upgrade_baseline_changed:${migration.version}`);
-    const content = readFileSync(join(root, migration.path));
+    const content = readSource(join(root, migration.path));
     if (sha256(content) !== migration.sha256)
       throw new Error(`upgrade_baseline_changed:${migration.version}`);
     seen.add(migration.version);
@@ -81,7 +86,7 @@ export function planUpgrade(root = ROOT) {
     throw new Error("upgrade_baseline_origins_invalid");
   if (baseline.reduce((sum, row) => sum + row.statementCount, 0) !== 1042)
     throw new Error("upgrade_baseline_statement_count_invalid");
-  const sourceNames = readdirSync(join(root, "supabase/migrations")).filter((name) =>
+  const sourceNames = readDirectory(join(root, "supabase/migrations")).filter((name) =>
     /^\d{14}_.+\.sql$/u.test(name),
   );
   if (new Set(sourceNames.map((name) => name.slice(0, 14))).size !== sourceNames.length)
@@ -91,7 +96,7 @@ export function planUpgrade(root = ROOT) {
     .sort();
   if (!pending.length) throw new Error("upgrade_forward_migrations_missing");
   const forward = pending.map((name) => {
-    const content = readFileSync(join(root, "supabase/migrations", name));
+    const content = readSource(join(root, "supabase/migrations", name));
     return { name, version: name.slice(0, 14), sha256: sha256(content), content };
   });
   return { manifest, baseline, forward, baselineSha256: sha256(manifestBytes), pending };
@@ -104,6 +109,7 @@ export function rehearseUpgrade({
   captureTemporaryExport = false,
   captureScheduledCatalog = false,
   execute = spawnSync,
+  inspectSource = captureCleanUpgradeSource,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
   // A failed full-run preflight must not leave an earlier success artifact.
@@ -119,14 +125,23 @@ export function rehearseUpgrade({
       rmSync(join(outputDir, file), { force: true });
   }
   let plan;
+  let sourceBefore;
+  let readSource = readFileSync;
+  let readDirectory = readdirSync;
   try {
     if (captureScheduledCatalog && !currentHistory)
       throw new Error("upgrade_scheduled_catalog_current_history_required");
     if (captureTemporaryExport && !currentHistory)
       throw new Error("upgrade_temp_export_current_history_required");
-    const historical = planUpgrade(root);
+    if (!dryRun) {
+      sourceBefore = inspectSource(root);
+      assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
+      readSource = sourceBefore.readFile;
+      readDirectory = sourceBefore.readDirectory;
+    }
+    const historical = planUpgrade(root, readSource, readDirectory);
     plan = currentHistory
-      ? extendCurrentHistory(historical, readFileSync(join(root, CURRENT_HISTORY_SNAPSHOT)))
+      ? extendCurrentHistory(historical, readSource(join(root, CURRENT_HISTORY_SNAPSHOT)))
       : historical;
   } catch (error) {
     if (!dryRun) {
@@ -168,11 +183,16 @@ export function rehearseUpgrade({
         : {}),
       ...currentHistoryEvidence,
     };
-  const assertions = readFileSync(
-    join(root, "scripts/release/upgrade-database-assertions.sql"),
-    "utf8",
-  );
-  const seed = readFileSync(join(root, "scripts/release/upgrade-database-seed.sql"), "utf8");
+  let assertions, seed;
+  try {
+    assertions = readSource(join(root, "scripts/release/upgrade-database-assertions.sql")).toString(
+      "utf8",
+    );
+    seed = readSource(join(root, "scripts/release/upgrade-database-seed.sql")).toString("utf8");
+  } catch (error) {
+    writeFileSync(join(outputDir, "upgrade-failure.log"), "upgrade_source_input_check_failed\n");
+    throw error;
+  }
   const project = mkdtempSync(join(tmpdir(), "kova-upgrade-"));
   const projectId = `kova_upgrade_${basename(project)
     .replace(/[^a-zA-Z0-9_]/gu, "_")
@@ -300,11 +320,17 @@ export function rehearseUpgrade({
     const scheduledUpgraded = captureScheduledCatalog
       ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
       : null;
+
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
       captureTemporaryExport || captureScheduledCatalog
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
+    if (
+      sourceCommit !== sourceBefore.commit ||
+      (sourceTree !== null && sourceTree !== sourceBefore.tree)
+    )
+      throw new Error("upgrade_source_changed_during_rehearsal");
     if (captureScheduledCatalog)
       scheduledBytes =
         JSON.stringify(
@@ -382,6 +408,12 @@ export function rehearseUpgrade({
     }
   }
   if (failure) throw failure;
+  try {
+    assertUpgradeSourceUnchanged(sourceBefore, inspectSource(root));
+  } catch (error) {
+    writeFileSync(join(outputDir, "upgrade-failure.log"), "upgrade_source_final_check_failed\n");
+    throw error;
+  }
   if (proofBytes) writeFileSync(join(outputDir, TEMP_EXPORT_PROOF_FILE), proofBytes);
   if (scheduledBytes) writeFileSync(join(outputDir, SCHEDULED_CATALOG_FILE), scheduledBytes);
   writeFileSync(join(outputDir, "upgrade-database.json"), JSON.stringify(result, null, 2) + "\n");

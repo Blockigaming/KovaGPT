@@ -107,3 +107,69 @@ collectors together, source binding, artifact hash linkage and failure cleanup.
 The real hosted PostgreSQL run and its downloadable new-head artifact remain the
 execution evidence. A separately retained live read-only receipt is not a
 substitute for that run or permission to change production.
+
+## Committed-source provenance for every evidence-producing run
+
+Every full rehearsal, including historical mode and the default programmatic API,
+requires a clean committed checkout before reading the manifest, migrations, seed,
+or assertions. This check is independent of the optional catalog collectors.
+Dry runs remain observational and return `executed: false`, including when planning
+uncommitted changes.
+
+`upgrade-source-provenance.mjs` binds the initial commit and tree, checks staged,
+unstaged and visible untracked changes, and verifies all tracked regular-file bytes
+and executable modes against their Git blob identities. It does not rely solely
+on `git status`: `assume-unchanged`, `skip-worktree`, disabled file-mode reporting,
+and ignored additional SQL must not hide a mismatch. Symlink and submodule source
+entries fail closed. The inspector removes inherited Git redirection/configuration
+variables and disables optional index updates, filesystem monitors and untracked
+caches; it performs no checkout, stash, reset, commit, repair or network operation.
+
+The source-bound reader also checks each buffer actually consumed by the planner
+or SQL execution against that initial tree. An input edited and then restored
+between the initial and final observations cannot silently pass through this
+reader. Ignored or otherwise untracked migration inputs are rejected. The existing
+receipt labels must match the initial identity, and another complete source check
+runs after database cleanup and before any success artifact is written. Source
+failure removes stale success evidence and reports bounded errors, not file contents.
+
+The `inspectSource` parameter is a programmatic test seam, analogous to the existing
+mockable database executor; there is no CLI flag or environment bypass. Existing
+orchestration tests declare synthetic source inspectors explicitly. Separate tests
+exercise actual temporary Git repositories and the real source reader, including
+historical/default runs, hidden edits, late commits and post-cleanup changes.
+Only database process calls are mocked in those integration tests.
+
+Use a dedicated checkout without concurrent editors. This is source-byte binding,
+not an immutable filesystem sandbox or attestation of Node, installed dependencies,
+external tools, or JavaScript loaded before inspection. The dependency lockfile and
+hosted runner evidence remain separate inputs. No production or lineage authorization
+is granted, and all formal proof/readiness flags remain unchanged.
+
+Git behavior references: [status](https://git-scm.com/docs/git-status),
+[index flags](https://git-scm.com/docs/git-update-index), and
+[tree entries](https://git-scm.com/docs/git-ls-tree).
+
+## Captured migration filename inventory
+
+The committed-source reader also binds directory membership to the initially
+captured tree. Checking only the contents of files that happen to be listed by
+the working directory leaves a gap: a committed migration can disappear during
+planning and return before final verification, without ever reaching the bound
+file reader. Both historical and current rehearsals must reject that omission.
+
+The inspector enumerates the immutable captured tree ID rather than a moving
+HEAD. It derives the expected immediate child names from that tree, validates
+the live directory against that inventory, and returns the captured names.
+Missing, added, renamed, ignored, or redirected directory entries cannot
+silently change the pending range. Planning uses this bound directory reader for
+every full run; standalone planning and dry runs remain observational. The
+returned list is independent, so caller mutation cannot change a later read.
+
+Regression tests remove a committed pending migration after initial inspection
+and restore it before final inspection. The predecessor published success with
+the migration omitted in both historical and current modes; the corrected
+runner fails before any database command. Other tests cover ignored additions,
+renames, missing directories, symlink replacement, and the complete current
+83-version raw pending / 82-version forward-execution range. No SQL, migration
+history, workflow, collector scope, or formal proof status is changed.

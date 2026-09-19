@@ -14,7 +14,11 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { planUpgrade, rehearseUpgrade, MANIFEST } from "../../scripts/release/upgrade-database.mjs";
+import {
+  planUpgrade,
+  rehearseUpgrade as actualRehearseUpgrade,
+  MANIFEST,
+} from "../../scripts/release/upgrade-database.mjs";
 import {
   CURRENT_HISTORY_SNAPSHOT,
   extendCurrentHistory,
@@ -28,6 +32,19 @@ import {
   temporaryExportSnapshot,
   validateTemporaryExportCapture,
 } from "../../scripts/release/upgrade-database-temp-export-proof.mjs";
+
+// Database orchestration is mocked here; real Git/source checks have their own suite.
+const rehearseUpgrade = (options = {}) =>
+  actualRehearseUpgrade({
+    inspectSource: () => ({
+      commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      tree: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      trackedFileCount: 1,
+      readFile: readFileSync,
+      readDirectory: readdirSync,
+    }),
+    ...options,
+  });
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BASE = ["20260824085042", "20260906024459"];
@@ -275,7 +292,13 @@ function executor(data, hook = () => null) {
         hook(call, 0) ?? {
           status: 0,
           stdout:
-            command === "git" ? (args.at(-1) === "HEAD^{tree}" ? sourceTree : sourceCommit) : "",
+            command === "git"
+              ? args.includes("status")
+                ? ""
+                : args.at(-1) === "HEAD^{tree}"
+                  ? sourceTree
+                  : sourceCommit
+              : "",
           stderr: "",
         }
       );
@@ -315,6 +338,27 @@ test("temporary export: real source plan captures both checkpoints and writes li
   assert.equal(inputs[5], TEMP_EXPORT_CATALOG_SQL);
   assert.equal(runner.calls.at(-1).args[0], "stop");
   assert.equal(existsSync(runner.calls[0].cwd), false);
+});
+
+test("temporary export: dirty source is rejected before any database operation", (t) => {
+  const data = fixture(t);
+  const runner = executor(data);
+  assert.throws(
+    () =>
+      rehearseUpgrade({
+        root: data.root,
+        currentHistory: true,
+        captureTemporaryExport: true,
+        inspectSource: () => {
+          throw new Error("upgrade_source_worktree_dirty");
+        },
+        execute: runner.execute,
+      }),
+    /source_worktree_dirty/u,
+  );
+  for (const name of ["upgrade-database.json", TEMP_EXPORT_PROOF_FILE])
+    assert.equal(existsSync(join(data.root, "artifacts/release", name)), false);
+  assert.equal(runner.calls.length, 0);
 });
 
 for (const failAt of [1, 2]) {

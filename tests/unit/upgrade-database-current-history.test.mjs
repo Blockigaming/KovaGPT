@@ -19,7 +19,24 @@ import {
   extendCurrentHistory,
   ledgerMetadataHash,
 } from "../../scripts/release/upgrade-database-current-history.mjs";
-import { MANIFEST, planUpgrade, rehearseUpgrade } from "../../scripts/release/upgrade-database.mjs";
+import {
+  MANIFEST,
+  planUpgrade,
+  rehearseUpgrade as actualRehearseUpgrade,
+} from "../../scripts/release/upgrade-database.mjs";
+
+// Database orchestration is mocked here; real Git/source checks have their own suite.
+const rehearseUpgrade = (options = {}) =>
+  actualRehearseUpgrade({
+    inspectSource: () => ({
+      commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      tree: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      trackedFileCount: 1,
+      readFile: readFileSync,
+      readDirectory: readdirSync,
+    }),
+    ...options,
+  });
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const hash = (name, value) => createHash(name).update(value).digest("hex");
@@ -210,7 +227,7 @@ test("current snapshot core: bad receipt fails before executing a local command"
       rehearseUpgrade({
         root,
         currentHistory: true,
-        execute: () => assert.fail("invalid receipt must not execute"),
+        execute: () => assert.fail("failed preflight must not execute"),
       }),
     /upgrade_current_history_snapshot_invalid/u,
   );
@@ -272,6 +289,7 @@ test("current snapshot core: CLI defaults to 98 with explicit historical opt-out
     "upgrade-database-current-history.mjs",
     "upgrade-database-temp-export-proof.mjs",
     "upgrade-database-scheduled-catalog.mjs",
+    "upgrade-source-provenance.mjs",
     "migration-schema-fingerprint.mjs",
   ])
     writeFileSync(
