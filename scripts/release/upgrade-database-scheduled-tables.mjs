@@ -5,6 +5,10 @@ export const SCHEDULED_TABLE_NAMES = Object.freeze(["scheduled_task_runs", "sche
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 // Read PostgreSQL catalogs, not task contents; no application routine is invoked.
+// Unsupported replication, maintenance, role-authority and storage layouts are
+// excluded here and rejected by the exact-two-table validator, never treated as
+// equivalent. The supported API-role baseline is non-superuser anon/authenticated
+// without BYPASSRLS, and non-superuser service_role with BYPASSRLS.
 export const SCHEDULED_TABLE_SQL = `begin transaction isolation level repeatable read read only;
 set local statement_timeout = '10s';
 set local lock_timeout = '1s';
@@ -14,6 +18,17 @@ with target as (
  where n.nspname='public' and c.relname in ('scheduled_task_runs','scheduled_tasks')
  and not exists (select 1 from pg_inherits h where h.inhparent=c.oid)
  and not exists (select 1 from pg_rewrite r where r.ev_class=c.oid)
+ and not exists (select 1 from pg_publication_tables p where p.schemaname=n.nspname and p.tablename=c.relname)
+ and c.reloptions is null
+ and not exists (select 1 from pg_class toast where toast.oid=c.reltoastrelid and toast.reloptions is not null)
+ and not exists (select 1 from pg_trigger internal where internal.tgisinternal
+   and (internal.tgrelid=c.oid or internal.tgconstrrelid=c.oid) and internal.tgenabled<>'O')
+ and not exists (select 1 from pg_roles api_role where api_role.rolname in ('anon','authenticated','service_role')
+   and (api_role.rolsuper or api_role.rolbypassrls<>(api_role.rolname='service_role')))
+ and c.reltablespace=0
+ and (select space.spcname='pg_default' from pg_database db join pg_tablespace space on space.oid=db.dattablespace
+   where db.datname=current_database())
+ and not exists (select 1 from pg_roles named_role where named_role.rolname='PUBLIC')
 ), rows as (
  select c.relname::text as name,jsonb_build_object(
  'schema','public','name',c.relname::text,'kind',c.relkind::text,
@@ -385,7 +400,7 @@ export function buildScheduledTableEvidence({
     productionReleaseReady: false,
     productionRowsRestored: false,
     limitations: [
-      "Only the two named ordinary public tables; partitioned/inherited relations and rewrite rules fail closed.",
+      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST options, non-origin internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed.",
       "No table rows, sequences, external foreign-key targets, dependency closure, role-membership graph or executable RLS behavior is proven.",
       "Definition hashes compare fixed-search-path PostgreSQL deparser output; equality is not independent semantic equivalence proof.",
       "Later-writer changes remain visible. Fresh-source/live comparison, original effects, recovery and independent review remain separate gates.",
