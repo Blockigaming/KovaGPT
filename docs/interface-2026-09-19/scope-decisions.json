@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-19",
+  "previous_planned_targets": 634,
+  "active_planned_targets": 631,
+  "tracked_records": 634,
+  "remaining_public_candidates": 238,
+  "decisions": [
+    {
+      "id": "KOVA-0466",
+      "decision": "MERGED_REFERENCE",
+      "target_id": "KOVA-0078",
+      "source": "https://openai.com/chatgpt/download/",
+      "observed_redirect": "https://chatgpt.com/download/",
+      "evidence": "Official URL opened via web lookup on 2026-09-19; redirect target returned"
+    },
+    {
+      "id": "KOVA-0467",
+      "decision": "MERGED_REFERENCE",
+      "target_id": "KOVA-0134",
+      "source": "https://openai.com/chatgpt/pricing/",
+      "observed_redirect": "https://chatgpt.com/pricing/",
+      "evidence": "Official URL opened via web lookup on 2026-09-19; redirect target returned"
+    },
+    {
+      "id": "KOVA-0519",
+      "decision": "EXCLUDED_PROVIDER",
+      "source": "https://openai.com/form/sponsored-agents-hubspot/",
+      "evidence": "Official form reviewed: HubSpot-specific sponsored-agent beta, company details and advertising eligibility. Outside verified provider scope."
+    }
+  ]
+}

@@ -38,7 +38,8 @@ export function ProductOverview() {
           title={
             <>
               Your ideas.
-              <br />A little further.
+              <br />
+              <span className="public-hero-accent">A little further.</span>
             </>
           }
           description="A place to ask questions, shape a first draft, and think through what comes next."
@@ -88,20 +89,85 @@ export function ProductOverview() {
           </p>
         </section>
 
-        <PublicSection
-          id="conversation"
-          eyebrow="Start with chat"
-          title="You don't need a perfect prompt."
-        >
-          <p>
-            Bring the question, the rough notes, or the part you’re stuck on. Ask for an
-            explanation, compare a few approaches, or work on a draft together.
-          </p>
-          <p>Keep asking, editing, and checking the result until it’s useful to you.</p>
-          <PublicAction to="/" secondary>
-            Start a conversation
-          </PublicAction>
-        </PublicSection>
+        <section className="public-use-cases" aria-labelledby="use-cases-title">
+          <div className="public-section-heading">
+            <p className="public-eyebrow">From the everyday to the ambitious</p>
+            <h2 id="use-cases-title">
+              Make something of
+              <br />
+              what’s on your mind.
+            </h2>
+            <p>Start with a thought. Leave with something you can use.</p>
+          </div>
+          <div className="public-use-case-grid">
+            <article className="public-use-case">
+              <h3>Find the right words.</h3>
+              <p>
+                Shape a first draft, try a different tone, or make a complicated idea easier to
+                follow.
+              </p>
+              <div
+                className="public-document-illustration"
+                aria-label="Illustrative writing outline"
+              >
+                <span className="public-illustration-label">Example · First draft</span>
+                <strong>
+                  A small idea.
+                  <br />A clear beginning.
+                </strong>
+                <span className="public-illustration-rule" />
+                <span className="public-illustration-rule" />
+                <span className="public-illustration-rule is-short" />
+                <span className="public-illustration-note">Make it sound like you.</span>
+              </div>
+            </article>
+            <article className="public-use-case">
+              <h3>Follow your curiosity.</h3>
+              <p>
+                Ask a follow-up, work through an example, and find a way of understanding that
+                clicks.
+              </p>
+              <div
+                className="public-learning-illustration"
+                aria-label="Illustrative learning conversation"
+              >
+                <span className="public-illustration-label">Example · Learn together</span>
+                <span className="public-learning-question">Can you explain it another way?</span>
+                <span className="public-learning-answer">Let’s start with something familiar.</span>
+                <span className="public-learning-question">Now give me a question to try.</span>
+              </div>
+            </article>
+            <article className="public-use-case">
+              <h3>See the next step.</h3>
+              <p>
+                Break a big task into smaller pieces and turn an open-ended idea into a useful plan.
+              </p>
+              <div className="public-plan-illustration" aria-label="Illustrative project plan">
+                <span className="public-illustration-label">Example · Project outline</span>
+                <ol>
+                  <li>
+                    <span>01</span>Define the outcome
+                  </li>
+                  <li>
+                    <span>02</span>Gather your ideas
+                  </li>
+                  <li>
+                    <span>03</span>Choose where to start
+                  </li>
+                </ol>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="public-plan-band" aria-labelledby="overview-plans-title">
+          <div>
+            <h2 id="overview-plans-title">A plan for the way you work.</h2>
+            <p>Compare Free, Plus, and Pro, with the modes and allowances included in each.</p>
+          </div>
+          <PublicAction to="/pricing">Explore plans</PublicAction>
+        </section>
+
         <PublicSection
           id="context"
           eyebrow="Keep your context"
@@ -120,15 +186,36 @@ export function ProductOverview() {
             </PublicAction>
           </div>
         </PublicSection>
-        <PublicSection id="control" eyebrow="Make it yours" title="Your pace. Your preferences.">
-          <p>
-            Compare the available plans, choose the tools that fit your task, and review your
-            account and data settings as you go.
-          </p>
-          <PublicAction to="/consumer-privacy" secondary>
-            Explore privacy controls
-          </PublicAction>
-        </PublicSection>
+
+        <section className="public-control-section" aria-labelledby="overview-control-title">
+          <div className="public-section-heading">
+            <p className="public-eyebrow">You stay in control</p>
+            <h2 id="overview-control-title">Your work. Your choices.</h2>
+            <p>Understand your settings and take a thoughtful approach to every answer.</p>
+          </div>
+          <div className="public-control-grid">
+            <article>
+              <h3>Know your privacy options.</h3>
+              <p>
+                Review how KovaGPT handles information and where to find your account and data
+                controls.
+              </p>
+              <PublicAction to="/consumer-privacy" secondary>
+                Explore privacy controls
+              </PublicAction>
+            </article>
+            <article>
+              <h3>Keep your judgment in the loop.</h3>
+              <p>
+                AI can make mistakes. Check sources, review important details, and decide what works
+                for you.
+              </p>
+              <PublicAction to="/" secondary>
+                Start a conversation
+              </PublicAction>
+            </article>
+          </div>
+        </section>
         <div className="public-overview-faq">
           <PublicFaq
             items={[

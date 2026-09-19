@@ -26,12 +26,26 @@ for (const page of register.pages) {
     assert.equal(page.full_page_and_controls_reviewed, "True");
   }
 }
-assert.equal(register.plannedTargets, register.pages.length);
+const activePages = register.pages.filter(
+  (page) => !["MERGED_REFERENCE", "EXCLUDED_PROVIDER"].includes(page.completion_status),
+);
+assert.equal(register.trackedRecords, register.pages.length);
+assert.equal(register.plannedTargets, activePages.length);
+assert.equal(
+  register.unresolvedPublicCandidates,
+  activePages.filter((page) => page.completion_status === "CANDIDATE_REVIEW").length,
+);
+for (const page of register.pages.filter((page) => page.completion_status === "MERGED_REFERENCE")) {
+  assert(
+    activePages.some((target) => target.page_id === page.merged_into),
+    `${page.page_id}: missing active merge target`,
+  );
+}
 assert.equal(
   register.scopeCompletelyResolved,
   false,
   "Reconcile remaining source review before declaring final scope",
 );
 console.log(
-  `${register.pages.length} unique records; sources, requirements and evidence status present. Scope remains provisional.`,
+  `${register.pages.length} tracked records / ${activePages.length} active targets; sources, requirements and evidence status present. Scope remains provisional.`,
 );
