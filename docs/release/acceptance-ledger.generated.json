@@ -63,7 +63,7 @@
         "acceptanceTest": "Run current-source web research and an approved signed-in browser task with citations, steering, confirmations, cancellation, durable recovery, and audit evidence.",
         "evidence": [
           "src/lib/ai/search.server.ts",
-          "src/lib/ai/deep-research.server.ts",
+          "tests/integration/ai-core-parity-source.test.mjs",
           "docs/work-browser-authority.md"
         ],
         "boundary": "Search and bounded research exist, but safe signed-in computer use and complete cross-source production acceptance remain unfinished.",
@@ -542,12 +542,12 @@
       "specified_unimplemented": 1,
       "not_verified": 1
     },
-    "evidencePaths": 167,
+    "evidencePaths": 162,
     "missingEvidencePaths": 0,
-    "retainedLegacyTests": 140,
+    "retainedLegacyTests": 135,
     "missingRetainedLegacyTests": 0,
-    "currentTestFiles": 500,
-    "currentTestInventorySha256": "34adc59bc6b54379b2fcd104dac9b491dd2e6082d7370a97828ab17f84bfb727",
+    "currentTestFiles": 495,
+    "currentTestInventorySha256": "5d7c1de8b9725055b4018cd43020caffe5b81c0f3e07d54b81887b4b86380e81",
     "statusCounts": {
       "partial": 23,
       "verified_for_implemented_scope": 27,
@@ -824,11 +824,7 @@
       "stage": "source",
       "status": "partial",
       "requirement": "Planning, multi-search, evidence, progress, warnings, cancel/retry, report, and persistence authorization are integrated.",
-      "evidence": [
-        "src/lib/ai/deep-research.server.ts",
-        "src/lib/research-persistence-authorization.server.mjs",
-        "src/routes/research-planner.tsx"
-      ],
+      "evidence": ["src/lib/ai/search.server.ts", "src/routes/api/chat.ts"],
       "boundary": "Complete steering, cross-source research, live provider runs, persistence/export, and production recovery proof remain.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]
     },
@@ -840,9 +836,8 @@
       "status": "verified_for_implemented_scope",
       "requirement": "Referenced automated coverage exists and is exercised by the release gate.",
       "evidence": [
-        "tests/unit/deep-research.test.mjs",
-        "tests/unit/deep-research-persistence.test.mjs",
-        "tests/unit/research-persistence-authorization.test.mjs"
+        "tests/unit/search-provider.test.mjs",
+        "tests/integration/ai-core-parity-source.test.mjs"
       ],
       "boundary": "Passing tests verify the implemented slice, not the missing source requirement.",
       "finalGoalRequirementIds": ["FG-02", "FG-X2", "FG-X3"]

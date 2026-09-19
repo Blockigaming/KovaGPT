@@ -51,7 +51,7 @@
       "acceptanceTest": "Run current-source web research and an approved signed-in browser task with citations, steering, confirmations, cancellation, durable recovery, and audit evidence.",
       "evidence": [
         "src/lib/ai/search.server.ts",
-        "src/lib/ai/deep-research.server.ts",
+        "tests/integration/ai-core-parity-source.test.mjs",
         "docs/work-browser-authority.md"
       ],
       "boundary": "Search and bounded research exist, but safe signed-in computer use and complete cross-source production acceptance remain unfinished.",

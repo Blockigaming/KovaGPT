@@ -29,7 +29,6 @@ const iconByKind = {
   image: Image,
   memory: Brain,
   context_pack: Boxes,
-  research: Sparkles,
   automation: ListTodo,
   prompt: FlaskConical,
   goal: Target,
@@ -89,7 +88,7 @@ function WorkspaceTimeline({ items }: { items: DashboardItem[] }) {
     windowItems.map((item) => ("projectId" in item ? item.projectId : undefined)).filter(Boolean),
   );
   const active = windowItems.filter(
-    (item) => item.kind === "work" || item.kind === "research" || item.kind === "automation",
+    (item) => item.kind === "work" || item.kind === "automation",
   ).length;
   const reusable = windowItems.filter((item) =>
     ["context_pack", "memory", "artifact", "file"].includes(item.kind),
@@ -290,8 +289,6 @@ export function WorkspaceIntelligence() {
     .filter(
       (item) =>
         item.kind === "work" ||
-        (item.kind === "research" &&
-          !["complete", "failed", "cancelled", "canceled"].includes(item.status ?? "")) ||
         (item.kind === "automation" &&
           ["scheduled", "running", "paused"].includes(item.status ?? "")),
     )
@@ -341,7 +338,7 @@ export function WorkspaceIntelligence() {
           <Sparkles className="mx-auto h-5 w-5 text-muted-foreground" />
           <p className="mt-2 text-sm font-medium">Your workspace is ready</p>
           <p className="text-xs text-muted-foreground">
-            Projects, research, files, tasks, and saved work will appear here.
+            Projects, files, tasks, and saved work will appear here.
           </p>
         </div>
       ) : (

@@ -108,7 +108,7 @@ test("durable history preserves only the exact workflow skill selection tuple", 
     /invalid/,
   );
 });
-test("durable history preserves only terminal research and activity state", () => {
+test("durable history preserves terminal activity and omits retired research state", () => {
   const normalized = normalizeChatHistory(
     {
       ...chat(),
@@ -137,8 +137,7 @@ test("durable history preserves only terminal research and activity state", () =
   assert.deepEqual(normalized.messages[0].activities, [
     { tool: "search_web", label: "Searching the web", status: "failed" },
   ]);
-  assert.equal(normalized.messages[0].researchProgress.label, "Research interrupted");
-  assert.equal(normalized.messages[0].researchProgress.status, "failed");
+  assert.equal(normalized.messages[0].researchProgress, undefined);
 
   const running = normalizeChatHistory(
     {
@@ -180,6 +179,17 @@ test("durable history validates and preserves assistant retry states", () => {
   );
   assert.equal(stopped.messages[1].generationStatus, "stopped");
   assert.equal(stopped.messages[1].requestedTool, "image");
+  const migrated = normalizeChatHistory(
+    {
+      ...chat(),
+      messages: [
+        { id: "prompt", role: "user", content: "Help" },
+        { id: "response", role: "assistant", content: "Legacy", requestedTool: "deep_research" },
+      ],
+    },
+    OWNER,
+  );
+  assert.equal(migrated.messages[1].requestedTool, undefined);
   const failed = normalizeChatHistory(
     {
       ...chat(),

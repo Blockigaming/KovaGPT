@@ -181,9 +181,14 @@ export function normalizeChatHistory(value, ownerId) {
         item.generationStatus = message.generationStatus;
       }
       if (message.requestedTool !== undefined) {
-        if (message.role !== "assistant" || !COMPOSER_TOOL_IDS.has(message.requestedTool))
+        if (
+          message.role !== "assistant" ||
+          (!COMPOSER_TOOL_IDS.has(message.requestedTool) &&
+            message.requestedTool !== "deep_research")
+        )
           throw new Error("chat_history_invalid");
-        item.requestedTool = message.requestedTool;
+        // Retired tool IDs remain valid migration input but are not persisted again.
+        if (message.requestedTool !== "deep_research") item.requestedTool = message.requestedTool;
       }
       // Running request state is never durable completion evidence. Terminal activity and
       if (Array.isArray(message.activities))

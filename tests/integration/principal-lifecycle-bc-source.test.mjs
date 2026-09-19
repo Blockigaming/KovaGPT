@@ -85,7 +85,6 @@ test("live handoff producers and consumers use the tested principal envelope hel
     contextPacks: read("src/routes/context-packs.tsx"),
     home: read("src/routes/index.tsx"),
     prompts: read("src/routes/prompt-studio.tsx"),
-    research: read("src/routes/research-planner.tsx"),
     scheduled: read("src/routes/scheduled-tasks.tsx"),
   };
 
@@ -93,11 +92,10 @@ test("live handoff producers and consumers use the tested principal envelope hel
     ["kova-active-context-pack", [sources.contextPacks]],
     ["kova-app-chat-context", [sources.apps]],
     ["kova-prompt-launch", [sources.prompts]],
-    ["kova-research-launch", [sources.research]],
     ["kova-work-context", [sources.agent]],
     ["kova-automation-draft", [sources.agent]],
     ["kova-research-draft", [sources.contextPacks]],
-    ["kova-work-draft", [sources.contextPacks, sources.research]],
+    ["kova-work-draft", [sources.contextPacks]],
   ]);
   for (const [key, producers] of producerKeys) {
     for (const source of producers) {
@@ -113,14 +111,12 @@ test("live handoff producers and consumers use the tested principal envelope hel
     "kova-active-context-pack",
     "kova-app-chat-context",
     "kova-prompt-launch",
-    "kova-research-launch",
     "kova-work-context",
   ]) {
     assert.match(sources.home, new RegExp(`consume<[\\s\\S]{0,320}>\\("${key}",`), key);
   }
   for (const [key, source] of [
     ["kova-automation-draft", sources.scheduled],
-    ["kova-research-draft", sources.research],
     ["kova-context-candidates", sources.contextPacks],
   ]) {
     assert.match(source, /consumePrincipalHandoff/);
@@ -155,7 +151,6 @@ test("live private feature stores are principal tagged and reset stale mounted s
     library: read("src/routes/library.tsx"),
     personality: read("src/components/PersonalitySliders.tsx"),
     prompts: read("src/routes/prompt-studio.tsx"),
-    research: read("src/routes/research-planner.tsx"),
     scheduled: read("src/routes/scheduled-tasks.tsx"),
     shortcuts: read("src/lib/shortcuts.ts"),
     summary: read("src/routes/summary.tsx"),
@@ -172,7 +167,7 @@ test("live private feature stores are principal tagged and reset stale mounted s
     );
   }
 
-  for (const source of [sources.prompts, sources.research, sources.scheduled]) {
+  for (const source of [sources.prompts, sources.scheduled]) {
     assert.match(source, /generationRef = useRef\(0\)/);
     assert.match(source, /dataPrincipal/);
     assert.match(source, /isPrincipalBrowserStorageClearedEvent\(event, userKey\)/);
