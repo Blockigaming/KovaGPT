@@ -300,6 +300,11 @@ export function rehearseUpgrade({
     const scheduledUpgraded = captureScheduledCatalog
       ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
       : null;
+    if (
+      (captureTemporaryExport || captureScheduledCatalog) &&
+      run("git", ["-C", root, "status", "--porcelain", "--untracked-files=normal"]).trim()
+    )
+      throw new Error("upgrade_source_worktree_dirty");
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
       captureTemporaryExport || captureScheduledCatalog
