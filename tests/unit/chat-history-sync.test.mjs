@@ -11,6 +11,7 @@ import {
   applyChatHistoryPage,
   resolveChatHistoryConflict,
   restoreChatHistoryState,
+  chatHistoryHash,
 } from "../../src/lib/chat-history-state.mjs";
 import { createChatHistoryController } from "../../src/lib/chat-history-controller.mjs";
 import { normalizeChatHistory } from "../../src/lib/chat-history-policy.mjs";
@@ -160,6 +161,43 @@ test("durable history preserves terminal activity and omits retired research sta
   );
   assert.equal(running.messages[0].researchProgress, undefined);
 });
+test("pre-retirement Deep Research cache hashes migrate without discarding the device cache", async () => {
+  const payload = {
+    ...chat("legacy"),
+    messages: [
+      {
+        id: "response",
+        role: "assistant",
+        content: "Legacy result",
+        requestedTool: "deep_research",
+      },
+    ],
+  };
+  const legacyHash = await chatHistoryHash(payload, false);
+  const state = createChatHistoryState(OWNER);
+  state.records.legacy = {
+    id: "legacy",
+    revision: 1,
+    serverHash: legacyHash,
+    local: payload,
+    archived: false,
+    localHash: legacyHash,
+    migration: false,
+    dirty: false,
+    request: null,
+    conflict: null,
+  };
+
+  const restored = await restoreChatHistoryState(structuredClone(state), OWNER);
+  assert.equal(restored.records.legacy.local.messages[0].requestedTool, undefined);
+  assert.equal(restored.records.legacy.dirty, true);
+  assert.notEqual(restored.records.legacy.localHash, legacyHash);
+  assert.equal(
+    restored.records.legacy.localHash,
+    await chatHistoryHash(restored.records.legacy.local, false),
+  );
+});
+
 test("durable history validates and preserves assistant retry states", () => {
   const stopped = normalizeChatHistory(
     {
