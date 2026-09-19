@@ -275,7 +275,13 @@ function executor(data, hook = () => null) {
         hook(call, 0) ?? {
           status: 0,
           stdout:
-            command === "git" ? (args.at(-1) === "HEAD^{tree}" ? sourceTree : sourceCommit) : "",
+            command === "git"
+              ? args.includes("status")
+                ? ""
+                : args.at(-1) === "HEAD^{tree}"
+                  ? sourceTree
+                  : sourceCommit
+              : "",
           stderr: "",
         }
       );
@@ -315,6 +321,28 @@ test("temporary export: real source plan captures both checkpoints and writes li
   assert.equal(inputs[5], TEMP_EXPORT_CATALOG_SQL);
   assert.equal(runner.calls.at(-1).args[0], "stop");
   assert.equal(existsSync(runner.calls[0].cwd), false);
+});
+
+test("temporary export: dirty source tree cannot publish evidence bound to HEAD", (t) => {
+  const data = fixture(t);
+  const runner = executor(data, (call) =>
+    call.command === "git" && call.args.includes("status")
+      ? { status: 0, stdout: " M supabase/migrations/example.sql\n", stderr: "" }
+      : null,
+  );
+  assert.throws(
+    () =>
+      rehearseUpgrade({
+        root: data.root,
+        currentHistory: true,
+        captureTemporaryExport: true,
+        execute: runner.execute,
+      }),
+    /source_worktree_dirty/u,
+  );
+  for (const name of ["upgrade-database.json", TEMP_EXPORT_PROOF_FILE])
+    assert.equal(existsSync(join(data.root, "artifacts/release", name)), false);
+  assert.equal(runner.calls.at(-1).args[0], "stop");
 });
 
 for (const failAt of [1, 2]) {
