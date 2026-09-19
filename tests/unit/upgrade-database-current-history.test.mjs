@@ -249,7 +249,11 @@ test("current snapshot core: mocked rehearsal confines alias to disposable proje
         assert.ok(existsSync(join(dir, remoteName)));
       }
       if (command === "docker") sql.push(options.input);
-      return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
+      return {
+        status: 0,
+        stdout: command === "git" && args.includes("rev-parse") ? "a".repeat(40) : "",
+        stderr: "",
+      };
     },
   });
   assert.equal(result.baselineVersions, 98);
@@ -431,7 +435,11 @@ test("current snapshot core: equivalence never removes unrelated pending SQL", (
         assert.equal(readFileSync(join(dir, nextName), "utf8"), "select 2;\n");
       }
       if (command === "docker") sql.push(options.input);
-      return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
+      return {
+        status: 0,
+        stdout: command === "git" && args.includes("rev-parse") ? "a".repeat(40) : "",
+        stderr: "",
+      };
     },
   });
   assert.deepEqual(
