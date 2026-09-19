@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { PublicFixture } from "./public-pages";
+import { BenchmarkReview } from "./benchmark-review";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -76,6 +77,8 @@ function Fixture() {
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
+  if (surface.startsWith("public-") && new URLSearchParams(location.search).get("review") === "1")
+    return <BenchmarkReview initialSurface={surface} />;
   if (surface.startsWith("public-")) return <PublicFixture surface={surface} />;
   if (surface === "enterprise")
     return (

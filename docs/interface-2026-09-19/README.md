@@ -66,3 +66,13 @@ The prior exact head `091e2fe0bc3f9c76e60d335d171232a8b2f16d23` passed Candidate
 Official [Codex Security announcement](https://openai.com/index/codex-security-now-in-research-preview/) confirms that Aardvark is its previous name. The Aardvark beta signup and four app definitions are therefore excluded under the existing Codex filter. Their IDs and evidence remain preserved in `scope-decisions.json`.
 
 The authenticated source chat empty state was inspected at 1363×936. The visible composer textbox measured approximately 509×42px inside its wider toolbar. No conversation was opened or prompt submitted. Its screenshot is kept only in the private downloadable review artifact, not in this public repository. This is source UI evidence, not a Kova authentication or streaming test.
+
+## Screenshot-led refinement
+
+The owner supplied six desktop overview screenshots on September 19. They establish that the earlier offline export rendered locally; they do not establish mobile readiness or owner acceptance. The review found an overly heavy hero, loose vertical spacing and a neutral primary token that made the intended blue accent black.
+
+This pass gives the public overview an explicit light/dark blue accent, a lighter and smaller hero, clearer section hierarchy, tighter section spacing and a white conversation canvas with an explicitly illustrative composer. Authenticated workspace styles and billing data are unchanged.
+
+The downloadable review now navigates between overview and pricing comparison internally. Other internal destinations open an explanatory dialog, preserving scroll and restoring focus on dismissal. This boundary exists only in the review fixture; it does not replace production routing or claim those destinations are implemented. The exported page selector stays synchronized with internal navigation. Browser cases cover supported navigation, unavailable destinations, keyboard return, focus, responsive overflow and the distinct accent in light/dark themes.
+
+No page has been marked visually accepted. Updated build and exact-commit browser results belong to the PR and packaged review notes.

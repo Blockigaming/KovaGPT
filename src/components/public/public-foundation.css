@@ -4,7 +4,9 @@
   --kova-public-reading-width: 68ch;
   --public-page-width: 72rem;
   --public-page-gutter: clamp(1rem, 4vw, 3rem);
-  --public-section-space: clamp(3.5rem, 8vw, 7rem);
+  --public-section-space: clamp(3rem, 5.5vw, 4.75rem);
+  --public-accent: #2458d3;
+  --public-accent-soft: color-mix(in srgb, var(--public-accent) 8%, var(--background));
 }
 
 [data-public-shell] .public-skip-link {
@@ -40,10 +42,10 @@
   text-align: center;
 }
 [data-public-shell] .public-hero h1 {
-  font-size: clamp(2.75rem, 7vw, 6.25rem);
-  font-weight: 500;
-  letter-spacing: -0.055em;
-  line-height: 1.04;
+  font-size: clamp(2.625rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
   text-wrap: balance;
 }
 [data-public-shell] .public-hero-description {
@@ -133,11 +135,11 @@
 [data-public-shell] .public-example-conversation {
   display: grid;
   align-content: start;
-  gap: 2rem;
-  min-height: 29rem;
+  gap: 1.5rem;
+  min-height: 25rem;
   max-width: 46rem;
   margin-inline: auto;
-  padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2.5rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem);
 }
 [data-public-shell] .public-example-prompt {
   justify-self: end;
@@ -178,7 +180,7 @@
   border-bottom: 1px solid var(--border);
 }
 [data-public-shell] :is(.public-editorial-section h2, .public-closing h2) {
-  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-size: clamp(1.875rem, 3.4vw, 2.75rem);
   font-weight: 500;
   line-height: 1.12;
   letter-spacing: -0.04em;
@@ -249,7 +251,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   [data-public-shell] .public-example-conversation {
-    min-height: 33rem;
+    min-height: 30rem;
   }
 }
 
@@ -294,15 +296,15 @@
 
 /* Overview compositions share the same spacing and color tokens as public pages. */
 [data-public-shell] .public-hero-accent {
-  color: var(--primary);
+  color: var(--public-accent);
 }
 [data-public-shell] .public-section-heading {
   max-width: 44rem;
-  margin: 0 auto 3rem;
+  margin: 0 auto 2.25rem;
   text-align: center;
 }
 [data-public-shell] .public-section-heading h2 {
-  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-size: clamp(1.875rem, 3.4vw, 2.75rem);
   font-weight: 500;
   line-height: 1.12;
   letter-spacing: -0.04em;
@@ -381,7 +383,7 @@
   align-self: start;
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: color-mix(in srgb, var(--primary) 10%, var(--background));
+  background: var(--public-accent-soft);
   color: var(--foreground);
   font-size: 0.75rem;
 }
@@ -472,4 +474,82 @@
     align-items: start;
     flex-direction: column;
   }
+}
+
+/* A restrained accent belongs to the public composition, not the global primary token. */
+.dark [data-public-shell] {
+  --public-accent: #90b4ff;
+}
+[data-public-shell] .public-overview .public-action:not(.is-secondary) {
+  background: #2458d3;
+  color: #fff;
+}
+[data-public-shell] .public-example-options button[aria-pressed="true"] {
+  background: var(--public-accent-soft);
+  color: var(--public-accent);
+  box-shadow: none;
+}
+[data-public-shell] .public-workflow-example {
+  background: var(--background);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 4%);
+}
+[data-public-shell] .public-example-toolbar {
+  background: var(--muted);
+}
+[data-public-shell] .public-example-prompt {
+  background: var(--public-accent-soft);
+}
+[data-public-shell] .public-example-answer > .public-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--public-accent);
+}
+[data-public-shell] .public-example-mark {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 0.625rem;
+  background: var(--public-accent-soft);
+  font-size: 1rem;
+}
+[data-public-shell] .public-example-composer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 auto 1.5rem;
+  width: calc(100% - 2rem);
+  max-width: 41rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 3%);
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .public-example-composer > span:nth-child(2) {
+  flex: 1;
+}
+[data-public-shell] .public-example-composer > span:last-child {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #2458d3;
+  color: #fff;
+}
+[data-public-shell] .public-plan-band {
+  padding: clamp(1.5rem, 3.5vw, 2.5rem);
+  background: var(--public-accent-soft);
+}
+[data-public-shell] .public-editorial-section {
+  gap: clamp(2rem, 5vw, 4rem);
+}
+[data-public-shell] .public-control-section {
+  padding-block: clamp(2.75rem, 5vw, 4rem);
+}
+[data-public-shell] .public-closing h2 {
+  max-width: 22ch;
 }

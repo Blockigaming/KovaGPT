@@ -1,5 +1,49 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [390, 1440]) {
+  for (const theme of ["light", "dark"]) {
+    test(`offline review navigation ${width}px ${theme}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/?surface=public-overview&review=1");
+      await page.evaluate(
+        (value) => document.documentElement.classList.toggle("dark", value === "dark"),
+        theme,
+      );
+      const hero = page.locator(".public-hero h1");
+      await expect(hero).toHaveCSS("font-weight", "400");
+      const accent = await page.locator(".public-hero-accent").evaluate((el) => {
+        const color = getComputedStyle(el).color;
+        return { color, heading: getComputedStyle(el.parentElement!).color };
+      });
+      expect(accent.color).not.toEqual(accent.heading);
+      const projects = page.getByRole("link", { name: "Explore Projects" });
+      await projects.focus();
+      await page.keyboard.press("Enter");
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toContainText("You selected /projects");
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+      await expect(projects).toBeFocused();
+      await page.locator(".public-hero").getByRole("link", { name: "Explore plans" }).click();
+      await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
+      await expect(page.locator("#main-content")).toBeFocused();
+      await page.getByRole("link", { name: "Overview", exact: true }).click();
+      await expect(hero).toBeVisible();
+      await page.locator(".public-hero").getByRole("link", { name: "Open KovaGPT" }).click();
+      await expect(dialog).toContainText(
+        "This download includes the overview and pricing comparison only",
+      );
+      await dialog.getByRole("button", { name: "Return to preview" }).click();
+      await expect(dialog).not.toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+    });
+  }
+}
+
 for (const width of [320, 390, 768, 1440]) {
   for (const theme of ["light", "dark"]) {
     test(`overview and comparison ${width}px ${theme}`, async ({ page }, info) => {

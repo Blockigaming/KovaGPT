@@ -74,7 +74,12 @@ export function ProductOverview() {
           >
             <p className="public-example-prompt">{example.prompt}</p>
             <div className="public-example-answer">
-              <p className="public-eyebrow">KovaGPT · Example response</p>
+              <p className="public-eyebrow">
+                <span className="public-example-mark" aria-hidden="true">
+                  ✧
+                </span>
+                KovaGPT · Example response
+              </p>
               <h3>{example.title}</h3>
               <p>{example.body}</p>
               <ol>
@@ -83,6 +88,11 @@ export function ProductOverview() {
                 ))}
               </ol>
             </div>
+          </div>
+          <div className="public-example-composer" aria-hidden="true">
+            <span>＋</span>
+            <span>Ask a follow-up…</span>
+            <span>↑</span>
           </div>
           <p className="public-example-caption">
             Illustrative conversation. Open KovaGPT to start your own.
