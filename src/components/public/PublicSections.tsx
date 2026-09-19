@@ -32,9 +32,9 @@ export function PublicHero({
 }) {
   return (
     <section className="public-hero" aria-labelledby="public-hero-title">
-      <p className="public-eyebrow">{eyebrow}</p>
+      {eyebrow ? <p className="public-eyebrow">{eyebrow}</p> : null}
       <h1 id="public-hero-title">{title}</h1>
-      <p className="public-hero-description">{description}</p>
+      {description ? <p className="public-hero-description">{description}</p> : null}
       <div className="public-actions">{children}</div>
     </section>
   );
@@ -54,7 +54,7 @@ export function PublicSection({
   return (
     <section className="public-editorial-section" aria-labelledby={`${id}-title`}>
       <div>
-        <p className="public-eyebrow">{eyebrow}</p>
+        {eyebrow ? <p className="public-eyebrow">{eyebrow}</p> : null}
         <h2 id={`${id}-title`}>{title}</h2>
       </div>
       <div className="public-editorial-body">{children}</div>

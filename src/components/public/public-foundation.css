@@ -1,12 +1,17 @@
 /* Public-only primitives. Do not alter the authenticated workspace cascade. */
 [data-public-shell] {
+  --background: #fff;
+  --foreground: #111;
+  --muted: #f7f7f7;
+  --muted-foreground: #5d5d5d;
+  --border: #e8e8e8;
   --kova-public-header-height: 6rem;
   --kova-public-reading-width: 68ch;
   --public-page-width: 72rem;
   --public-page-gutter: clamp(1rem, 4vw, 3rem);
   --public-section-space: clamp(3rem, 5.5vw, 4.75rem);
-  --public-accent: #2458d3;
-  --public-accent-soft: color-mix(in srgb, var(--public-accent) 8%, var(--background));
+  --public-accent: var(--foreground);
+  --public-accent-soft: var(--muted);
 }
 
 [data-public-shell] .public-skip-link {
@@ -42,10 +47,10 @@
   text-align: center;
 }
 [data-public-shell] .public-hero h1 {
-  font-size: clamp(2.625rem, 6.5vw, 5.5rem);
-  font-weight: 400;
+  font-size: clamp(2.625rem, 6.95vw, 5.9375rem);
+  font-weight: 600;
   letter-spacing: -0.045em;
-  line-height: 1.08;
+  line-height: 1;
   text-wrap: balance;
 }
 [data-public-shell] .public-hero-description {
@@ -476,57 +481,118 @@
   }
 }
 
-/* A restrained accent belongs to the public composition, not the global primary token. */
-.dark [data-public-shell] {
-  --public-accent: #90b4ff;
+/* Source-matched overview direction: ChatGPT overview capture, 2026-09-19.
+   Preserve the reference composition; Kova branding does not create a new theme. */
+[data-public-shell] .public-overview {
+  --public-page-width: 64rem;
+  --public-section-space: clamp(4rem, 8vw, 7rem);
 }
-[data-public-shell] .public-overview .public-action:not(.is-secondary) {
-  background: #2458d3;
-  color: #fff;
+[data-public-shell] .public-overview .public-hero {
+  padding-block: clamp(3rem, 6vw, 5rem) 2.75rem;
 }
-[data-public-shell] .public-example-options button[aria-pressed="true"] {
-  background: var(--public-accent-soft);
-  color: var(--public-accent);
-  box-shadow: none;
+[data-public-shell] .public-overview .public-hero h1 {
+  max-width: 11em;
+  margin-inline: auto;
+  letter-spacing: -0.055em;
+}
+[data-public-shell] .public-overview .public-hero .public-actions {
+  margin-top: 2rem;
+}
+[data-public-shell] .public-overview .public-action {
+  min-height: 2.75rem;
+  font-size: 0.8125rem;
+  padding: 0.625rem 1.125rem;
+}
+[data-public-shell] .public-overview .public-hero .public-action.is-secondary {
+  border-color: transparent;
 }
 [data-public-shell] .public-workflow-example {
+  display: grid;
+  grid-template-columns: 11.25rem minmax(0, 1fr);
+  max-width: 58rem;
+  margin: 0 auto;
+  border-radius: 0.75rem;
   background: var(--background);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 4%);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 10%);
 }
-[data-public-shell] .public-example-toolbar {
+[data-public-shell] .public-example-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.625rem;
   background: var(--muted);
+  border-right: 1px solid var(--border);
+  font-size: 0.6875rem;
 }
-[data-public-shell] .public-example-prompt {
-  background: var(--public-accent-soft);
-}
-[data-public-shell] .public-example-answer > .public-eyebrow {
+[data-public-shell] .public-example-sidebar > span {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  color: var(--public-accent);
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 0.375rem;
+}
+[data-public-shell] .public-example-sidebar .public-example-sidebar-brand {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+[data-public-shell] .public-example-sidebar small {
+  margin: 1.5rem 0.625rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+}
+[data-public-shell] .public-example-sidebar .is-current {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
+}
+[data-public-shell] .public-example-main {
+  min-width: 0;
+}
+[data-public-shell] .public-example-toolbar {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 0;
+}
+[data-public-shell] .public-example-toolbar h2 {
+  font-size: 0.8125rem;
+}
+[data-public-shell] .public-example-options button {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+[data-public-shell] .public-example-options button[aria-pressed="true"] {
+  background: var(--muted);
+  box-shadow: none;
+}
+[data-public-shell] .public-example-conversation {
+  min-height: 24rem;
+  padding: 1.5rem 2rem;
+  gap: 1.5rem;
+}
+[data-public-shell] .public-example-prompt {
+  background: var(--muted);
+  font-size: 0.8125rem;
+}
+[data-public-shell] .public-example-answer h3 {
+  font-size: 1.375rem;
+}
+[data-public-shell] .public-example-answer :is(p, li) {
+  font-size: 0.875rem;
+}
+[data-public-shell] .public-example-answer > .public-eyebrow {
+  font-size: 0.75rem;
 }
 [data-public-shell] .public-example-mark {
-  display: inline-grid;
-  width: 1.75rem;
-  height: 1.75rem;
-  place-items: center;
-  border-radius: 0.625rem;
-  background: var(--public-accent-soft);
-  font-size: 1rem;
+  margin-right: 0.375rem;
 }
 [data-public-shell] .public-example-composer {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin: 0 auto 1.5rem;
-  width: calc(100% - 2rem);
-  max-width: 41rem;
+  gap: 0.875rem;
+  margin: 0 1.5rem 1.25rem;
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 3%);
-  font-size: 0.8125rem;
+  border-radius: 1.5rem;
   color: var(--muted-foreground);
+  font-size: 0.8125rem;
 }
 [data-public-shell] .public-example-composer > span:nth-child(2) {
   flex: 1;
@@ -534,365 +600,118 @@
 [data-public-shell] .public-example-composer > span:last-child {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
-  background: #2458d3;
-  color: #fff;
+  background: var(--foreground);
+  color: var(--background);
 }
-[data-public-shell] .public-plan-band {
-  padding: clamp(1.5rem, 3.5vw, 2.5rem);
-  background: var(--public-accent-soft);
-}
-[data-public-shell] .public-editorial-section {
-  gap: clamp(2rem, 5vw, 4rem);
-}
-[data-public-shell] .public-control-section {
-  padding-block: clamp(2.75rem, 5vw, 4rem);
-}
-[data-public-shell] .public-closing h2 {
-  max-width: 22ch;
-}
-
-/* Product-led overview: the workspace is visible alongside the first message. */
-[data-public-shell] .public-overview {
-  --public-page-width: 76rem;
-  --public-section-space: clamp(3.5rem, 7vw, 6rem);
-}
-[data-public-shell] .public-overview-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  align-items: center;
-  gap: clamp(2rem, 4.5vw, 4.5rem);
-  padding-block: clamp(3rem, 6vw, 5.5rem);
-}
-[data-public-shell] .public-overview-intro .public-hero {
-  padding: 0;
-  text-align: start;
-}
-[data-public-shell] .public-overview-intro .public-eyebrow {
-  font-size: 0.75rem;
-  letter-spacing: 0;
-}
-[data-public-shell] .public-overview-intro h1 {
-  font-size: clamp(3.25rem, 5.2vw, 4.875rem);
-  line-height: 1.04;
-  letter-spacing: -0.055em;
-  font-weight: 400;
-}
-[data-public-shell] .public-overview-intro .public-hero-description {
-  max-width: 26rem;
-  margin: 1.5rem 0 1.75rem;
-  font-size: 1.0625rem;
-  line-height: 1.7;
-}
-[data-public-shell] .public-overview-intro .public-actions {
-  justify-content: flex-start;
-  gap: 0.625rem;
-}
-[data-public-shell] .public-overview-intro .public-workflow-example {
-  border-radius: 1rem;
-  border-color: color-mix(in srgb, var(--foreground) 12%, var(--background));
-  box-shadow:
-    0 2px 4px #12254a05,
-    0 20px 60px #12254a0d;
-}
-[data-public-shell] .public-demo-window {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: 0.625rem;
-}
-[data-public-shell] .public-demo-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-right: auto;
-  font-size: 1.375rem;
-  color: var(--public-accent);
-}
-[data-public-shell] .public-demo-brand span {
-  font-size: 0.8125rem;
-  font-weight: 550;
-  letter-spacing: -0.025em;
-  color: var(--foreground);
-}
-[data-public-shell] .public-demo-status {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 50%;
-  background: var(--public-accent);
-}
-[data-public-shell] .public-overview-intro .public-example-toolbar {
-  gap: 0.75rem;
-  padding: 0.875rem 1.25rem;
-  background: transparent;
-}
-[data-public-shell] .public-overview-intro .public-example-toolbar h2 {
-  max-width: 11rem;
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-[data-public-shell] .public-overview-intro .public-example-options {
-  gap: 0;
-}
-[data-public-shell] .public-overview-intro .public-example-options button {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
-}
-[data-public-shell] .public-overview-intro .public-example-conversation {
-  min-height: 20rem;
-  gap: 1.25rem;
-  padding: 1.5rem;
-}
-[data-public-shell] .public-overview-intro .public-example-prompt {
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  padding: 0.75rem 1rem;
-  border-radius: 1rem 1rem 0.25rem 1rem;
-  max-width: 92%;
-}
-[data-public-shell] .public-overview-intro .public-example-answer h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.625rem;
-}
-[data-public-shell] .public-overview-intro .public-example-answer :is(p, li) {
-  font-size: 0.8125rem;
-  line-height: 1.75;
-}
-[data-public-shell] .public-overview-intro .public-example-answer > .public-eyebrow {
-  margin-bottom: 0.875rem;
-  font-size: 0.6875rem;
-}
-[data-public-shell] .public-overview-intro .public-example-answer ol {
-  margin-top: 0.75rem;
-}
-[data-public-shell] .public-overview-intro .public-example-composer {
-  margin-bottom: 1rem;
-  border-radius: 0.875rem;
-  padding: 0.625rem 0.875rem;
-}
-[data-public-shell] .public-overview-intro .public-example-caption {
+[data-public-shell] .public-example-caption {
   font-size: 0.625rem;
   padding: 0.625rem;
-  background: var(--muted);
 }
-[data-public-shell] .public-capability-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem 2rem;
-  padding: 1.5rem 0;
-  border-block: 1px solid var(--border);
+[data-public-shell] .public-use-cases {
+  padding-top: clamp(5rem, 10vw, 8rem);
 }
-[data-public-shell] .public-capability-strip span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-}
-[data-public-shell] .public-use-cases .public-section-heading {
-  max-width: none;
-  text-align: start;
-  margin-bottom: 2rem;
-}
-[data-public-shell] .public-use-cases .public-section-heading h2 {
-  font-size: clamp(2rem, 3.4vw, 3rem);
+[data-public-shell] .public-section-heading h2 {
   font-weight: 400;
+  font-size: clamp(1.875rem, 3.44vw, 2.9375rem);
+  letter-spacing: -0.04em;
+}
+[data-public-shell] .public-section-heading {
+  margin-bottom: 3rem;
+}
+[data-public-shell] .public-use-case-grid {
+  gap: 1rem;
 }
 [data-public-shell] .public-use-case {
-  border-radius: 1rem;
-  padding: 1.75rem 1.5rem 0;
+  padding: 1.5rem 1.5rem 0;
+  border-radius: 0.5rem;
+  background: var(--muted);
 }
-[data-public-shell] .public-use-case-writing {
-  background: color-mix(in srgb, #cddded 35%, var(--background));
-}
-[data-public-shell] .public-use-case-learning {
-  background: color-mix(in srgb, #dfd8ef 35%, var(--background));
-}
-[data-public-shell] .public-use-case-planning {
-  background: color-mix(in srgb, #e9e4c9 35%, var(--background));
-}
-[data-public-shell] .public-feature-icon {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  border-radius: 0.75rem;
+[data-public-shell] .public-use-case h3 {
+  font-size: 1rem;
 }
 [data-public-shell] .public-use-case > p {
-  margin: 0.75rem 0 0.5rem;
-  font-size: 0.875rem;
-}
-[data-public-shell] .public-text-action {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: start;
-  cursor: pointer;
-}
-[data-public-shell] .public-text-action:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-[data-public-shell] .public-text-action:focus-visible {
-  outline: 2px solid var(--public-accent);
-  outline-offset: 4px;
-  border-radius: 0.25rem;
-}
-[data-public-shell] .public-document-excerpt {
   font-size: 0.8125rem;
-  line-height: 1.8;
-  color: var(--muted-foreground);
+  line-height: 1.6;
 }
-[data-public-shell] .public-document-illustration {
-  transform: rotate(-2deg) translateY(0.5rem);
-  transform-origin: center bottom;
-}
-[data-public-shell] .public-learning-illustration {
-  transform: translateY(0.5rem);
-}
-[data-public-shell] .public-plan-illustration {
-  transform: rotate(2deg) translateY(0.5rem);
-  transform-origin: center bottom;
+[data-public-shell]
+  .public-use-case
+  :is(.public-document-illustration, .public-learning-illustration, .public-plan-illustration) {
+  border-radius: 0.625rem 0.625rem 0 0;
 }
 [data-public-shell] .public-plan-band {
-  border-radius: 1rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
-  background: #152b51;
-  color: #fff;
+  border-radius: 0.5rem;
+  padding: clamp(2rem, 5vw, 4rem);
 }
-[data-public-shell] .public-plan-band :is(p, .public-eyebrow) {
-  color: #c1cde0;
+[data-public-shell] .public-plan-band h2 {
+  font-size: 1.5rem;
+  font-weight: 400;
 }
-[data-public-shell] .public-plan-band .public-eyebrow {
-  margin: 0 0 0.75rem;
-  font-size: 0.75rem;
+[data-public-shell] .public-plan-band p {
+  font-size: 0.875rem;
 }
-[data-public-shell] .public-plan-band .public-action {
-  background: #fff;
-  color: #152b51;
+[data-public-shell] .public-control-section {
+  padding-block: clamp(5rem, 10vw, 8rem);
 }
-[data-public-shell] .public-context-visual {
-  margin-top: 2rem;
-  padding: 0.5rem 1.125rem;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 0.875rem;
-  box-shadow: 0 10px 30px #12254a06;
-}
-[data-public-shell] .public-context-top {
-  display: flex;
-  justify-content: space-between;
+[data-public-shell] .public-control-grid {
   gap: 1rem;
-  padding: 0.875rem 0;
-  font-size: 0.6875rem;
-  color: var(--muted-foreground);
-}
-[data-public-shell] .public-context-top > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  color: var(--foreground);
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-[data-public-shell] .public-context-file {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 0.875rem 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.8125rem;
-}
-[data-public-shell] .public-context-file > svg {
-  color: var(--muted-foreground);
-  flex-shrink: 0;
-}
-[data-public-shell] .public-context-file > span {
-  flex: 1;
-}
-[data-public-shell] .public-context-file small {
-  display: block;
-  margin-top: 0.125rem;
-  color: var(--muted-foreground);
-  font-size: 0.6875rem;
-}
-[data-public-shell] .public-control-icon {
-  margin-bottom: 1.25rem;
-  color: var(--public-accent);
 }
 [data-public-shell] .public-control-grid article {
-  border-radius: 1rem;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+[data-public-shell] .public-control-grid article h3 {
+  font-size: 1.125rem;
+}
+[data-public-shell] .public-control-grid article > p {
+  font-size: 0.875rem;
+  margin-block: 0.75rem 1.5rem;
 }
 [data-public-shell] .public-closing {
-  margin-block: 2rem 4rem;
-  padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem;
-  border-radius: 1.25rem;
-  background: var(--public-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 4rem;
+  padding: clamp(2rem, 5vw, 3rem);
+  border-radius: 0.5rem;
+  background: var(--muted);
+  text-align: start;
 }
-@media (max-width: 1000px) {
-  [data-public-shell] .public-overview-intro {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2.5rem;
-  }
-  [data-public-shell] .public-overview-intro .public-hero {
-    text-align: center;
-  }
-  [data-public-shell] .public-overview-intro .public-hero-description {
-    margin-inline: auto;
-    max-width: 30rem;
-  }
-  [data-public-shell] .public-overview-intro .public-actions {
-    justify-content: center;
-  }
-  [data-public-shell] .public-overview-intro .public-workflow-example {
-    width: 100%;
-    max-width: 38rem;
-    margin-inline: auto;
-  }
+[data-public-shell] .public-closing h2 {
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.025em;
 }
 @media (max-width: 767px) {
-  [data-public-shell] .public-capability-strip {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+  [data-public-shell] .public-workflow-example {
+    grid-template-columns: minmax(0, 1fr);
   }
-  [data-public-shell] .public-capability-strip span {
-    font-size: 0.6875rem;
-    gap: 0.5rem;
+  [data-public-shell] .public-example-sidebar {
+    display: none;
   }
-  [data-public-shell] .public-use-case {
-    padding: 1.5rem 1.5rem 0;
-  }
-  [data-public-shell] .public-feature-icon {
-    margin-bottom: 1rem;
-  }
-  [data-public-shell]
-    .public-use-case
-    :is(.public-document-illustration, .public-learning-illustration, .public-plan-illustration) {
-    min-height: 14rem;
-  }
-  [data-public-shell] .public-overview-intro .public-example-toolbar {
-    padding-inline: 1rem;
-  }
-  [data-public-shell] .public-overview-intro .public-example-conversation {
+  [data-public-shell] .public-example-conversation {
     padding: 1.25rem;
-    min-height: 23rem;
+    min-height: 26rem;
   }
-  [data-public-shell] .public-overview-intro h1 {
-    font-size: clamp(2.75rem, 10vw, 4rem);
+  [data-public-shell] .public-example-toolbar {
+    padding: 0.875rem 1rem;
   }
+  [data-public-shell] .public-closing {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  [data-public-shell] .public-example-composer {
+    margin-inline: 1rem;
+  }
+}
+
+.dark [data-public-shell] {
+  --background: #171717;
+  --foreground: #f5f5f5;
+  --muted: #222;
+  --muted-foreground: #b4b4b4;
+  --border: #383838;
 }

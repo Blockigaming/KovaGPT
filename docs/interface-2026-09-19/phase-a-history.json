@@ -790,5 +790,104 @@
         ]
       }
     }
+  },
+  {
+    "step": 9,
+    "recorded_at": "2026-09-19T18:38:39.676Z",
+    "label": "Apply the owner-required OpenAI/ChatGPT reference style, remove the independent overview redesign, and retain per-page visual acceptance gates",
+    "historical_point_delta": 0,
+    "report": {
+      "historical": {
+        "scope_pages": 212,
+        "fraction": "65826560/2027091",
+        "percentage": 32.4734114058027,
+        "categories": [
+          {
+            "name": "Foundation/preparation",
+            "weight": 25,
+            "completed": 25,
+            "required": 25,
+            "earned_points": 25
+          },
+          {
+            "name": "Core state/permission",
+            "weight": 5,
+            "completed": 5,
+            "required": 5,
+            "earned_points": 5
+          },
+          {
+            "name": "Initial captures",
+            "weight": 20,
+            "completed": 44,
+            "required": 424,
+            "earned_points": 2.0754716981132075
+          },
+          {
+            "name": "Block evidence",
+            "weight": 10,
+            "completed": 11,
+            "required": 1159,
+            "earned_points": 0.09490940465918896
+          },
+          {
+            "name": "Supplemental controls",
+            "weight": 10,
+            "completed": 1,
+            "required": 33,
+            "earned_points": 0.30303030303030304
+          },
+          {
+            "name": "Fully prepared source pages",
+            "weight": 10,
+            "completed": 0,
+            "required": 212,
+            "earned_points": 0
+          },
+          {
+            "name": "Core visual/interaction",
+            "weight": 10,
+            "completed": 0,
+            "required": 10,
+            "earned_points": 0
+          },
+          {
+            "name": "Final Combine decisions",
+            "weight": 5,
+            "completed": 0,
+            "required": 5,
+            "earned_points": 0
+          },
+          {
+            "name": "Final handoff",
+            "weight": 5,
+            "completed": 0,
+            "required": 5,
+            "earned_points": 0
+          }
+        ],
+        "status": "historical_only_not_current_scope"
+      },
+      "current": {
+        "percentage": null,
+        "status": "unscorable_until_expanded_scope_denominators_and_credits_are_reconciled",
+        "scope_final": false,
+        "active_targets": 629,
+        "tracked_records": 634,
+        "unresolved_public_candidates": 226,
+        "unresolved_app_definitions": 59,
+        "newly_documented_source_pages": 36,
+        "text_review_is_not_visual_review": true,
+        "capture_records": 13,
+        "fully_prepared_pages": 0,
+        "blockers": [
+          "The expanded target register is provisional, with public candidates, app definitions and broader filter reviews unresolved.",
+          "The historical 44 captures, 11 blocks and one supplemental control must be mapped to active IDs and their acceptance evidence reconciled before reuse.",
+          "Expanded block and supplemental-control inventories have not been enumerated; their denominators are unknown.",
+          "Foundation/core-state credit was awarded for the earlier scope; coverage of the added targets has not been audited.",
+          "Desktop/mobile source coverage, complete interaction specifications, final Combine decisions and final handoff remain incomplete."
+        ]
+      }
+    }
   }
 ]

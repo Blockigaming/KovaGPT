@@ -1,5 +1,7 @@
 # KovaGPT interface: register and benchmark draft
 
+**Controlling visual direction:** match each corresponding OpenAI/ChatGPT source page with Kova branding. The independent Kova redesign described in earlier chronological notes is superseded. See [REFERENCE_STYLE_CONTRACT.md](REFERENCE_STYLE_CONTRACT.md).
+
 This branch starts the implementation requested on September 19. It does not certify visual parity, complete Phase A, or authorize release.
 
 ## Scope and count

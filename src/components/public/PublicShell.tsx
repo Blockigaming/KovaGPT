@@ -6,12 +6,12 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { PublicFooter } from "@/components/PublicFooter";
 
 const navigation = [
-  { label: "Product", to: "/features" },
-  { label: "Use cases", to: "/use-cases" },
+  { label: "About", to: "/overview" },
+  { label: "Features", to: "/features" },
+  { label: "Learn", to: "/use-cases" },
   { label: "Business", to: "/business" },
-  { label: "Developers", to: "/developers" },
-  { label: "Trust", to: "/trust" },
   { label: "Pricing", to: "/pricing" },
+  { label: "Download", to: "/download" },
 ] as const;
 
 function isCurrentPath(pathname: string, to: string) {

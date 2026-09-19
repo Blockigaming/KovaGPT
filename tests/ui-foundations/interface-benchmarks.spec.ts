@@ -10,17 +10,17 @@ for (const width of [390, 1440]) {
         theme,
       );
       const hero = page.locator(".public-hero h1");
-      await expect(hero).toHaveCSS("font-weight", "400");
-      const accent = await page.locator(".public-hero-accent").evaluate((el) => {
-        const color = getComputedStyle(el).color;
-        return { color, heading: getComputedStyle(el.parentElement!).color };
-      });
-      expect(accent.color).not.toEqual(accent.heading);
-      const projects = page.getByRole("link", { name: "Explore Projects" });
+      await expect(hero).toHaveCSS("font-weight", "600");
+      const headingColor = await hero.evaluate((el) => getComputedStyle(el).color);
+      await expect(page.locator(".public-hero .public-action").first()).toHaveCSS(
+        "background-color",
+        headingColor,
+      );
+      const projects = page.getByRole("link", { name: "Explore privacy controls" });
       await projects.focus();
       await page.keyboard.press("Enter");
       const dialog = page.getByRole("dialog");
-      await expect(dialog).toContainText("You selected /projects");
+      await expect(dialog).toContainText("You selected /consumer-privacy");
       await page.keyboard.press("Escape");
       await expect(dialog).not.toBeVisible();
       await expect(projects).toBeFocused();
@@ -33,7 +33,10 @@ for (const width of [390, 1440]) {
           .click();
         await expect(menu).toHaveAttribute("aria-expanded", "false");
       } else {
-        await page.locator(".public-hero").getByRole("link", { name: "Explore plans" }).click();
+        await page
+          .locator(".public-plan-band")
+          .getByRole("link", { name: "Explore plans" })
+          .click();
       }
       await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
       await expect(page.locator("#main-content")).toBeFocused();
@@ -72,7 +75,7 @@ for (const width of [320, 390, 768, 1440]) {
         theme,
       );
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-        "Your ideas.A little further.",
+        "Now you canchat, learn & createall in one place.",
       );
       const choices = page.getByRole("group", { name: "Choose an example" });
       const answer = page.locator("#workflow-example-content");
@@ -86,26 +89,6 @@ for (const width of [320, 390, 768, 1440]) {
         await expect(answer.getByRole("heading", { name: heading })).toBeVisible();
         await expect(choices.locator('[aria-pressed="true"]')).toHaveText(label);
       }
-      const learningExample = page.getByRole("button", { name: "Try the learning example" });
-      await learningExample.focus();
-      await expect(learningExample).toBeFocused();
-      await page.keyboard.press("Enter");
-      await expect(
-        answer.getByRole("heading", { name: "Make room for the next question." }),
-      ).toBeVisible();
-      await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Learn");
-      const writingExample = page.getByRole("button", { name: "Try the writing example" });
-      await writingExample.focus();
-      await expect(writingExample).toBeFocused();
-      await page.keyboard.press("Enter");
-      await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Write");
-      const faq = page.locator("summary").filter({ hasText: "Can I trust every answer?" });
-      await faq.focus();
-      await page.keyboard.press("Enter");
-      await expect(faq.locator("..")).toHaveAttribute("open", "");
-      await expect(faq.locator("..")).toContainText("AI can make mistakes");
-      await page.keyboard.press("Enter");
-      await expect(faq.locator("..")).not.toHaveAttribute("open", "");
       if (width < 1024) {
         const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
         await menu.click();

@@ -1,21 +1,7 @@
 import { useState } from "react";
-import {
-  ArrowRight,
-  ArrowUp,
-  BookOpen,
-  Check,
-  FileText,
-  Folder,
-  ListChecks,
-  MessageSquare,
-  PenLine,
-  Plus,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
-import { PublicAction, PublicHero, PublicSection } from "@/components/public/PublicSections";
-import { PublicFaq } from "@/components/public/PublicFaq";
+import { PublicAction, PublicHero } from "@/components/public/PublicSections";
+import { FileText, MessageSquare, Plus, Search } from "lucide-react";
 
 const examples = [
   {
@@ -44,44 +30,48 @@ const examples = [
 export function ProductOverview() {
   const [selected, setSelected] = useState(0);
   const example = examples[selected];
-  const showExample = (index: number) => {
-    setSelected(index);
-    document.getElementById("workflow-example-title")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "instant"
-        : "smooth",
-      block: "center",
-    });
-  };
   return (
     <PublicShell>
       <main id="main-content" tabIndex={-1} className="public-overview">
-        <div className="public-overview-intro">
-          <PublicHero
-            eyebrow="A little clarity. A lot of possibility."
-            title={
-              <>
-                Your ideas.
-                <br />
-                <span className="public-hero-accent">A little further.</span>
-              </>
-            }
-            description="Think it through. Find the words. Make your next move—with an AI workspace that starts with you."
-          >
-            <PublicAction to="/">Open KovaGPT</PublicAction>
-            <PublicAction to="/pricing" secondary>
-              Explore plans
-            </PublicAction>
-          </PublicHero>
+        <PublicHero
+          eyebrow=""
+          title={
+            <>
+              Now you can
+              <br />
+              chat, learn &amp; create
+              <br />
+              all in one place.
+            </>
+          }
+          description=""
+        >
+          <PublicAction to="/">Open KovaGPT</PublicAction>
+          <PublicAction to="/download" secondary>
+            Download the app
+          </PublicAction>
+        </PublicHero>
 
-          <section className="public-workflow-example" aria-labelledby="workflow-example-title">
-            <div className="public-demo-window" aria-hidden="true">
-              <span className="public-demo-brand">
-                ✧ <span>KovaGPT</span>
-              </span>
-              <span>Example workspace</span>
-              <span className="public-demo-status" />
-            </div>
+        <section className="public-workflow-example" aria-labelledby="workflow-example-title">
+          <aside className="public-example-sidebar" aria-hidden="true">
+            <span className="public-example-sidebar-brand">✧ KovaGPT</span>
+            <span>
+              <Plus size={15} /> New chat
+            </span>
+            <span>
+              <Search size={15} /> Search chats
+            </span>
+            <span>
+              <FileText size={15} /> Library
+            </span>
+            <small>Conversations</small>
+            <span className="is-current">
+              <MessageSquare size={15} /> A fresh perspective
+            </span>
+            <span>Making a plan</span>
+            <span>Working through an idea</span>
+          </aside>
+          <div className="public-example-main">
             <div className="public-example-toolbar">
               <h2 id="workflow-example-title">One conversation. Many possibilities.</h2>
               <div className="public-example-options" role="group" aria-label="Choose an example">
@@ -121,60 +111,31 @@ export function ProductOverview() {
               </div>
             </div>
             <div className="public-example-composer" aria-hidden="true">
-              <Plus size={16} />
+              <span>＋</span>
               <span>Ask a follow-up…</span>
-              <span>
-                <ArrowUp size={16} />
-              </span>
+              <span>↑</span>
             </div>
             <p className="public-example-caption">
               Illustrative conversation. Open KovaGPT to start your own.
             </p>
-          </section>
-        </div>
-
-        <div className="public-capability-strip" aria-label="Ways to work with KovaGPT">
-          <span>
-            <PenLine size={17} aria-hidden="true" />
-            Write with clarity
-          </span>
-          <span>
-            <BookOpen size={17} aria-hidden="true" />
-            Learn something new
-          </span>
-          <span>
-            <ListChecks size={17} aria-hidden="true" />
-            Make a plan
-          </span>
-          <span>
-            <MessageSquare size={17} aria-hidden="true" />
-            Think it through
-          </span>
-        </div>
+          </div>
+        </section>
 
         <section className="public-use-cases" aria-labelledby="use-cases-title">
           <div className="public-section-heading">
-            <p className="public-eyebrow">From the everyday to the ambitious</p>
             <h2 id="use-cases-title">
-              Make something of
+              For your work, your ideas,
               <br />
-              what’s on your mind.
+              and everything in between.
             </h2>
-            <p>Start with a thought. Leave with something you can use.</p>
           </div>
           <div className="public-use-case-grid">
-            <article className="public-use-case public-use-case-writing">
-              <span className="public-feature-icon">
-                <PenLine size={20} aria-hidden="true" />
-              </span>
+            <article className="public-use-case">
               <h3>Find the right words.</h3>
               <p>
                 Shape a first draft, try a different tone, or make a complicated idea easier to
                 follow.
               </p>
-              <button className="public-text-action" type="button" onClick={() => showExample(0)}>
-                Try the writing example <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <div
                 className="public-document-illustration"
                 aria-label="Illustrative writing outline"
@@ -184,48 +145,33 @@ export function ProductOverview() {
                   A small idea.
                   <br />A clear beginning.
                 </strong>
-                <p className="public-document-excerpt">
-                  Good ideas rarely arrive fully formed. Start with what you know. The right words
-                  will follow.
-                </p>
+                <span className="public-illustration-rule" />
+                <span className="public-illustration-rule" />
+                <span className="public-illustration-rule is-short" />
                 <span className="public-illustration-note">Make it sound like you.</span>
               </div>
             </article>
-            <article className="public-use-case public-use-case-learning">
-              <span className="public-feature-icon">
-                <BookOpen size={20} aria-hidden="true" />
-              </span>
+            <article className="public-use-case">
               <h3>Follow your curiosity.</h3>
               <p>
                 Ask a follow-up, work through an example, and find a way of understanding that
                 clicks.
               </p>
-              <button className="public-text-action" type="button" onClick={() => showExample(1)}>
-                Try the learning example <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <div
                 className="public-learning-illustration"
                 aria-label="Illustrative learning conversation"
               >
                 <span className="public-illustration-label">Example · Learn together</span>
                 <span className="public-learning-question">Can you explain it another way?</span>
-                <span className="public-learning-answer">
-                  Think of it like a conversation: each new idea builds on the one before.
-                </span>
+                <span className="public-learning-answer">Let’s start with something familiar.</span>
                 <span className="public-learning-question">Now give me a question to try.</span>
               </div>
             </article>
-            <article className="public-use-case public-use-case-planning">
-              <span className="public-feature-icon">
-                <ListChecks size={20} aria-hidden="true" />
-              </span>
+            <article className="public-use-case">
               <h3>See the next step.</h3>
               <p>
                 Break a big task into smaller pieces and turn an open-ended idea into a useful plan.
               </p>
-              <button className="public-text-action" type="button" onClick={() => showExample(2)}>
-                Try the planning example <ArrowRight size={16} aria-hidden="true" />
-              </button>
               <div className="public-plan-illustration" aria-label="Illustrative project plan">
                 <span className="public-illustration-label">Example · Project outline</span>
                 <ol>
@@ -246,74 +192,19 @@ export function ProductOverview() {
 
         <section className="public-plan-band" aria-labelledby="overview-plans-title">
           <div>
-            <p className="public-eyebrow">Find your fit</p>
             <h2 id="overview-plans-title">A plan for the way you work.</h2>
             <p>Compare Free, Plus, and Pro, with the modes and allowances included in each.</p>
           </div>
           <PublicAction to="/pricing">Explore plans</PublicAction>
         </section>
 
-        <PublicSection
-          id="context"
-          eyebrow="Keep your context"
-          title="A place for the work that keeps growing."
-        >
-          <p>
-            Use Projects to organize related work and Library to return to saved material. Bring the
-            relevant context into your next conversation.
-          </p>
-          <div className="public-actions">
-            <PublicAction to="/projects" secondary>
-              Explore Projects
-            </PublicAction>
-            <PublicAction to="/library" secondary>
-              Open Library
-            </PublicAction>
-          </div>
-          <div
-            className="public-context-visual"
-            role="img"
-            aria-label="Illustrative project with a brief, research notes and a conversation"
-          >
-            <div className="public-context-top">
-              <span>
-                <Folder size={18} /> My next project
-              </span>
-              <span>Example</span>
-            </div>
-            <div className="public-context-file">
-              <FileText size={18} />
-              <span>
-                Project brief<small>The idea, in one place</small>
-              </span>
-              <Check size={15} />
-            </div>
-            <div className="public-context-file">
-              <BookOpen size={18} />
-              <span>
-                Research notes<small>Make space for what you learn</small>
-              </span>
-              <Check size={15} />
-            </div>
-            <div className="public-context-file">
-              <MessageSquare size={18} />
-              <span>
-                The next step<small>Pick up the conversation</small>
-              </span>
-              <ArrowRight size={15} />
-            </div>
-          </div>
-        </PublicSection>
-
         <section className="public-control-section" aria-labelledby="overview-control-title">
           <div className="public-section-heading">
-            <p className="public-eyebrow">You stay in control</p>
             <h2 id="overview-control-title">Your work. Your choices.</h2>
             <p>Understand your settings and take a thoughtful approach to every answer.</p>
           </div>
           <div className="public-control-grid">
             <article>
-              <ShieldCheck className="public-control-icon" size={23} aria-hidden="true" />
               <h3>Know your privacy options.</h3>
               <p>
                 Review how KovaGPT handles information and where to find your account and data
@@ -324,7 +215,6 @@ export function ProductOverview() {
               </PublicAction>
             </article>
             <article>
-              <Search className="public-control-icon" size={23} aria-hidden="true" />
               <h3>Keep your judgment in the loop.</h3>
               <p>
                 AI can make mistakes. Check sources, review important details, and decide what works
@@ -336,26 +226,8 @@ export function ProductOverview() {
             </article>
           </div>
         </section>
-        <div className="public-overview-faq">
-          <PublicFaq
-            items={[
-              {
-                q: "Where should I start?",
-                a: "Open KovaGPT and describe what you want to work on. You can start with a question or a rough idea and refine it as you go.",
-              },
-              {
-                q: "Which plan should I choose?",
-                a: "The pricing page shows KovaGPT’s published plans, modes, and allowances. Compare those with the work you expect to do.",
-              },
-              {
-                q: "Can I trust every answer?",
-                a: "AI can make mistakes. Review important details, check sources, and use your own judgment before relying on a result.",
-              },
-            ]}
-          />
-        </div>
         <section className="public-closing" aria-labelledby="overview-closing-title">
-          <h2 id="overview-closing-title">What would you like to work on?</h2>
+          <h2 id="overview-closing-title">Start with KovaGPT.</h2>
           <PublicAction to="/">Open KovaGPT</PublicAction>
         </section>
       </main>
