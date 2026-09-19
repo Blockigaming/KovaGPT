@@ -104,6 +104,8 @@ import { Route as DevelopersPricingRouteImport } from './routes/developers.prici
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as TranslateIndexRouteImport } from './routes/translate.index'
+import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
 import { Route as WritingIndexRouteImport } from './routes/writing.index'
 import { Route as WritingToolSlugRouteImport } from './routes/writing.$toolSlug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
@@ -665,6 +667,16 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const TranslateIndexRoute = TranslateIndexRouteImport.update({
+  id: '/translate/',
+  path: '/translate/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TranslatePairSlugRoute = TranslatePairSlugRouteImport.update({
+  id: '/translate/$pairSlug',
+  path: '/translate/$pairSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WritingIndexRoute = WritingIndexRouteImport.update({
   id: '/writing/',
   path: '/writing/',
@@ -1183,9 +1195,11 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/translate/': typeof TranslateIndexRoute
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1360,9 +1374,11 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
+  '/translate': typeof TranslateIndexRoute
   '/writing': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1538,9 +1554,11 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/translate/': typeof TranslateIndexRoute
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1717,9 +1735,11 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/translate/'
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
@@ -1894,9 +1914,11 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers'
+    | '/translate'
     | '/writing'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
@@ -2071,9 +2093,11 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/translate/'
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
@@ -2247,9 +2271,11 @@ export interface RootRouteChildren {
   DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
+  TranslatePairSlugRoute: typeof TranslatePairSlugRoute
   WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
+  TranslateIndexRoute: typeof TranslateIndexRoute
   WritingIndexRoute: typeof WritingIndexRoute
   SectionCategoryArticleSlugRoute: typeof SectionCategoryArticleSlugRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2989,6 +3015,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/translate/': {
+      id: '/translate/'
+      path: '/translate'
+      fullPath: '/translate/'
+      preLoaderRoute: typeof TranslateIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/translate/$pairSlug': {
+      id: '/translate/$pairSlug'
+      path: '/translate/$pairSlug'
+      fullPath: '/translate/$pairSlug'
+      preLoaderRoute: typeof TranslatePairSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/writing/': {
       id: '/writing/'
@@ -3742,9 +3782,11 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
+  TranslatePairSlugRoute: TranslatePairSlugRoute,
   WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
+  TranslateIndexRoute: TranslateIndexRoute,
   WritingIndexRoute: WritingIndexRoute,
   SectionCategoryArticleSlugRoute: SectionCategoryArticleSlugRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

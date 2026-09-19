@@ -8,6 +8,7 @@ const publicSuitePatterns = [
   "**/public-surface-matrix.spec.ts",
   "**/public-detail-pages.spec.ts",
   "**/writing-tools.spec.ts",
+  "**/translation-family.spec.ts",
 ];
 
 const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
