@@ -129,7 +129,10 @@ for (const width of [320, 390, 768, 1440]) {
             included.boundingBox(),
           ]);
           if (!regionBox || !includedBox) return false;
-          return includedBox.x >= regionBox.x && includedBox.x + includedBox.width <= regionBox.x + regionBox.width;
+          return (
+            includedBox.x >= regionBox.x &&
+            includedBox.x + includedBox.width <= regionBox.x + regionBox.width
+          );
         })
         .toBe(true);
       expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
