@@ -8,7 +8,8 @@ export const Route = createFileRoute("/maps")({
       { title: "Maps | KovaGPT" },
       {
         name: "description",
-        content: "Explore real places, terrain, streets, and satellite imagery with Kova Maps.",
+        content:
+          "Kova Maps is unavailable while provider, legal, privacy, capacity, and cost approval is pending.",
       },
       { name: "robots", content: "noindex" },
     ],
