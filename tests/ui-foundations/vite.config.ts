@@ -11,6 +11,15 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: [
+      ...[
+        "@/hooks/useTier",
+        "@/hooks/use-library-attachment-auto-save",
+        "@/lib/scheduled-tasks.functions",
+        "@tanstack/react-start",
+      ].map((find) => ({
+        find,
+        replacement: fileURLToPath(new URL("./fixture/workspace-services.ts", import.meta.url)),
+      })),
       {
         find: "@/components/auth/ClerkSafe",
         replacement: fileURLToPath(new URL("./fixture/auth.ts", import.meta.url)),
@@ -23,6 +32,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
+        workspace: fileURLToPath(new URL("./fixture/workspace.html", import.meta.url)),
         main: fileURLToPath(new URL("./fixture/index.html", import.meta.url)),
         palette: fileURLToPath(new URL("./fixture/palette.html", import.meta.url)),
       },

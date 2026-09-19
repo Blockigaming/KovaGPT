@@ -8,7 +8,7 @@ const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const styles = await readFile("src/styles.css", "utf8");
 
 test("desktop sidebar fully collapses and has one contained close trigger", () => {
-  assert.match(sidebar, /EXPANDED_WIDTH = 272/);
+  assert.match(sidebar, /EXPANDED_WIDTH = 260/);
   assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
   assert.match(sidebar, /collapsed \? "lg:!w-0"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
