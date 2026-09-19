@@ -75,7 +75,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 }
 
 .kova-empty-chat .kova-greeting h1 {
-  font-size: clamp(1.625rem, 3vw, 2rem);
+  font-size: clamp(1.5rem, 2vw, 1.75rem);
   font-weight: 400;
   line-height: 1.25;
   letter-spacing: -0.025em;
@@ -362,4 +362,16 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 /* The signed-in account control already opens Settings; keep a single entry. */
 .kova-sidebar:has(.kova-account-main) .kova-sidebar-utilities > button:first-of-type {
   display: none;
+}
+
+.kova-sidebar .kova-sidebar-footer > div > p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.kova-sidebar .kova-sign-in {
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }

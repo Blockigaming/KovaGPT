@@ -43,7 +43,9 @@ for (const width of [320, 390, 1024, 1440]) {
       const add = page.getByRole("button", { name: "Add files, tools, or prompts", exact: true });
       await add.click();
       await expect(
-        page.getByRole("dialog", { name: "Add files, tools, or prompts" }),
+        page.getByRole("dialog", {
+          name: width < 1024 ? "Add to your message" : "Add files, tools, or prompts",
+        }),
       ).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(add).toBeFocused();
@@ -64,7 +66,7 @@ test("member mobile header retains Kova branding and changes a real model select
   const trigger = page.getByTestId("model-selector-trigger").filter({ visible: true });
   await expect(trigger).toHaveText("KovaGPT");
   await trigger.click();
-  await expect(page.getByRole("dialog", { name: "Choose model" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Intelligence" })).toBeVisible();
   const option = page.locator('[data-testid^="model-option-"]').filter({ visible: true }).last();
   await option.click();
   await expect(trigger).toBeFocused();
