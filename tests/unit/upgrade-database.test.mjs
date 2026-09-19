@@ -46,7 +46,13 @@ function fakeExecutor(hook = () => {}) {
     execute(command, args, options) {
       const call = { command, args, ...options };
       calls.push(call);
-      return hook(call) ?? { status: 0, stdout: command === "git" ? commit : "", stderr: "" };
+      return (
+        hook(call) ?? {
+          status: 0,
+          stdout: command === "git" && args.includes("rev-parse") ? commit : "",
+          stderr: "",
+        }
+      );
     },
   };
 }
@@ -164,6 +170,25 @@ test("rehearsal installs only the reviewed baseline, upgrades pending files, ass
     JSON.parse(readFileSync(join(root, "artifacts/release/upgrade-database.json"), "utf8")),
     result,
   );
+});
+
+test("a default rehearsal rejects a dirty source before publishing its main receipt", (t) => {
+  const root = fixture(t);
+  const runner = fakeExecutor((call) =>
+    call.command === "git" && call.args.includes("status")
+      ? { status: 0, stdout: " M scripts/release/upgrade-database-seed.sql\n", stderr: "" }
+      : undefined,
+  );
+
+  assert.throws(
+    () => rehearseUpgrade({ root, execute: runner.execute }),
+    /upgrade_source_worktree_dirty/u,
+  );
+  assert.ok(runner.calls.some((call) => call.command === "git" && call.args.includes("status")));
+  assert.ok(
+    !runner.calls.some((call) => call.command === "git" && call.args.includes("rev-parse")),
+  );
+  assert.ok(!existsSync(join(root, "artifacts/release/upgrade-database.json")));
 });
 
 test("a failed startup still cleans its generated project and removes stale success evidence", (t) => {
