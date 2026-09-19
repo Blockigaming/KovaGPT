@@ -9,7 +9,6 @@ import {
   HeartPulse,
   Images,
   LibraryBig,
-  Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -380,9 +379,6 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
-          <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
-            <Map />
-          </Link>
           <button
             type="button"
             className="kova-rail-button"
@@ -495,7 +491,6 @@ export function Sidebar({
                 ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
                 : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {navLink("/maps", "Maps", Map)}
               {navLink("/discovery", "Discover", Globe)}
               <button
                 type="button"

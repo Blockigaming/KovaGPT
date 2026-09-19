@@ -707,11 +707,12 @@ this item is open is a release blocker.
 **Risk:** unapproved map traffic can violate tile-provider terms, leak IP/location data, prompt for
 location without an approved purpose, create unbounded usage/cost, or imply a nonexistent SLA.
 **Consequence of not performing:** Maps remains hidden/disabled; the rest of KovaGPT may release
-only if no Maps control/claim/network path is exposed. **Evidence already collected:** Maps was
-visibly advertised, browser geolocation and OpenStreetMap traffic were present, and no approved
-provider/legal/no-cost production contract was proven. **Automated work already complete:** source
-and production surface inspection identified the gate; hiding/fail-closing remains an engineering
-prerequisite.
+only if no Maps control/claim/network path is exposed. **Evidence already collected:** no approved
+provider/legal/no-cost production contract was proven. **Automated work already complete:** Maps
+navigation is hidden, `/maps` renders a truthful unavailable surface without mounting MapLibre or
+requesting geolocation, and `/api/maps/search` returns `410` before authentication or provider work
+unless the separate build-time and server approval flags are explicitly enabled. Both flags default
+to `false` in `.env.example`; changing them still requires the owner evidence specified here.
 
 **Rollback:** disable the feature/provider configuration, remove navigation/claims, revoke only the
 Kova maps credential if one was explicitly created, stop geolocation requests, and preserve any

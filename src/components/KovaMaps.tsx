@@ -97,6 +97,7 @@ export function KovaMaps() {
   const networkAllowedRef = useRef(false);
   const searchControllerRef = useRef<AbortController | null>(null);
   const searchAttemptedRef = useRef(false);
+  const startupErrorRef = useRef(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
@@ -142,6 +143,7 @@ export function KovaMaps() {
     setNetworkAccess(null);
     setLoading(true);
     searchAttemptedRef.current = false;
+    startupErrorRef.current = false;
     if (!isLoaded) {
       setError(null);
       return;
@@ -258,6 +260,7 @@ export function KovaMaps() {
           if (!isCurrentMap()) return;
           setLoading(false);
           if (!searchAttemptedRef.current) {
+            startupErrorRef.current = true;
             setError("Map data is taking too long to load. Check your connection and try again.");
           }
         }, 12_000);
@@ -284,6 +287,10 @@ export function KovaMaps() {
           loadTimeout = null;
           addMapEnhancements(map, threeDRef.current);
           setLoading(false);
+          if (startupErrorRef.current && !searchAttemptedRef.current) {
+            startupErrorRef.current = false;
+            setError(null);
+          }
           updateView();
         });
         map.on("moveend", updateView);
@@ -405,6 +412,10 @@ export function KovaMaps() {
       } else await selectPlace(next[0], generation);
     } catch (caught) {
       if (controller.signal.aborted || generation !== principalGenerationRef.current) return;
+      markerRef.current?.remove();
+      markerRef.current = null;
+      setResults([]);
+      setSelected(null);
       setError(
         caught instanceof DOMException && caught.name === "TimeoutError"
           ? "Place search timed out. Try again."

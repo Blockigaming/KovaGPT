@@ -13,7 +13,6 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/projects", "Projects", Folder)',
     'navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)',
     'navLink("/apps", "Plugins", PlugZap)',
-    'navLink("/maps", "Maps", Map)',
     'navLink("/discovery", "Discover", Globe)',
     ">More</span>",
     ">Pinned</h2>",
@@ -28,7 +27,7 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
   assert.match(sidebar, /KovaGPT/);
   assert.match(sidebar, /Health is coming soon/);
   assert.match(sidebar, /Finances is coming soon/);
-  assert.match(sidebar, /<Link to="\/maps" className="kova-rail-button" aria-label="Maps"/);
+  assert.doesNotMatch(sidebar, /to="\/maps"|navLink\("\/maps"/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });

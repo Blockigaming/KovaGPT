@@ -60,7 +60,6 @@ for (const theme of themes) {
           "Library",
           "Projects",
           "Plugins",
-          "Maps",
           "Discover",
         ])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();

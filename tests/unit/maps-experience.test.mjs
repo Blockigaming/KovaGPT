@@ -37,11 +37,16 @@ test("Maps uses real providers, map controls, terrain, buildings, and contextual
   assert.match(source, /disposed \|\|[\s\S]*?generation !== principalGenerationRef\.current/);
   assert.match(source, /mapRef\.current !== map/);
   assert.match(source, /if \(loadTimeout !== null\) window\.clearTimeout\(loadTimeout\)/);
+  assert.match(source, /startupErrorRef\.current && !searchAttemptedRef\.current/);
   assert.match(
     source,
     /authFetch\(\`\/api\/maps\/search[\s\S]*?AbortSignal\.any\(\[controller\.signal, AbortSignal\.timeout\(8_000\)\]\)/,
   );
   assert.match(source, /Map context \(untrusted provider data;/);
+  assert.match(
+    source,
+    /catch \(caught\)[\s\S]*?markerRef\.current\?\.remove\(\)[\s\S]*?setResults\(\[\]\)[\s\S]*?setSelected\(null\)/,
+  );
   assert.doesNotMatch(source, /selectedLocation: selected[\s\S]{0,160}\b(?:name|type):/);
   assert.doesNotMatch(source, /VITE_|API_KEY|accessToken|token=/);
 });
@@ -64,7 +69,8 @@ test("Maps search is server-side, bounded, provider-resolved, and fails safely",
   assert.match(route, /MAX_PROVIDER_RESPONSE_BYTES = 256 \* 1024/);
   assert.match(route, /readBoundedUtf8\([\s\S]*?MAX_PROVIDER_RESPONSE_BYTES/);
   assert.match(route, /AbortSignal\.any\(\[request\.signal, AbortSignal\.timeout\(8_000\)\]\)/);
-  assert.doesNotMatch(route, /process\.env|API_KEY|secret/i);
+  assert.match(route, /process\.env\.KOVA_MAPS_PROVIDER_APPROVED !== "true"/);
+  assert.doesNotMatch(route, /API_KEY|secret/i);
 });
 
 test("Maps cache hits skip rolling admission while misses and denials stay guarded", () => {
@@ -166,6 +172,15 @@ test("Maps waits for the authenticated account policy before loading remote tile
     /if \(!networkAllowed \|\| !containerRef\.current \|\| mapRef\.current\) return/,
   );
   assert.ok(source.indexOf("if (!networkAllowed") < source.indexOf('import("maplibre-gl")'));
+});
+
+test("Maps stays fail-closed until its manual provider approval is recorded", () => {
+  const route = read("src/routes/maps.tsx");
+  const sidebar = read("src/components/Sidebar.tsx");
+  assert.match(route, /VITE_KOVA_MAPS_PROVIDER_APPROVED === "true"/);
+  assert.match(route, /Maps is not enabled for this release/);
+  assert.match(route, /will not request your location or\s+contact map providers/);
+  assert.doesNotMatch(sidebar, /to="\/maps"|navLink\("\/maps"/);
 });
 
 test("dedicated research product surfaces and route are absent", () => {

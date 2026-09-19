@@ -20,6 +20,7 @@ const place = {
 };
 
 function fixture({
+  mapsApproved = true,
   userId = "user-a",
   authResponse = null,
   lockdownError = null,
@@ -116,6 +117,7 @@ function fixture({
     Uint8Array,
     crypto,
     console: { error() {} },
+    process: { env: { KOVA_MAPS_PROVIDER_APPROVED: mapsApproved ? "true" : undefined } },
     fetch: async () => {
       calls.push(["provider-fetch"]);
       return Response.json(
@@ -140,6 +142,14 @@ function fixture({
     });
   return { calls, get, request, writes };
 }
+
+test("Maps search fails closed before authentication when provider approval is absent", async () => {
+  const f = fixture({ mapsApproved: false });
+  const response = await f.get({ request: f.request() });
+  assert.equal(response.status, 410);
+  assert.deepEqual(await response.json(), { error: "Maps is not enabled for this release." });
+  assert.deepEqual(f.calls, []);
+});
 
 test("a valid Maps cache hit skips provider admission and fetch", async () => {
   const f = fixture({ cacheData: { payload: { results: [place] } } });

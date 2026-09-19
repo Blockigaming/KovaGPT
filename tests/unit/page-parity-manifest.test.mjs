@@ -89,11 +89,13 @@ test("route manifest includes reusable public, publishing, developer, assistant 
   assert.equal(routes.reviewedPublicRouteCount, 608);
 });
 
-test("Maps is noindex and renders the dedicated provider-backed experience", () => {
+test("Maps is noindex and keeps its provider-backed experience behind approval", () => {
   const maps = read("src/routes/maps.tsx");
   const experience = read("src/components/KovaMaps.tsx");
   assert.match(maps, /name: "robots", content: "noindex"/);
   assert.match(maps, /<KovaMaps \/>/);
+  assert.match(maps, /VITE_KOVA_MAPS_PROVIDER_APPROVED === "true"/);
+  assert.match(maps, /Maps unavailable/);
   assert.match(experience, /id="main-content"/);
   assert.match(experience, /placeholder="Ask Kova about Maps"/);
   assert.match(experience, /tiles\.openfreemap\.org/);

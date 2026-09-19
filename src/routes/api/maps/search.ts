@@ -178,6 +178,9 @@ export const Route = createFileRoute("/api/maps/search")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        if (process.env.KOVA_MAPS_PROVIDER_APPROVED !== "true") {
+          return json({ error: "Maps is not enabled for this release." }, 410);
+        }
         const requestUrl = new URL(request.url);
         const query = requestUrl.searchParams.get("q")?.trim() ?? "";
         if (query.length < 2 || query.length > 160) {
