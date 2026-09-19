@@ -9,6 +9,12 @@ const expectedSidebarCallers = [
   "src/routes/index.tsx",
 ];
 
+test("MAN-09 keeps the release gate closed", () => {
+  const gate = readFileSync("src/lib/maps-release-gate.ts", "utf8");
+
+  assert.match(gate, /export const MAPS_RELEASE_APPROVED = false;/u);
+});
+
 function sourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -36,8 +42,18 @@ test("every Sidebar caller supplies the Maps release decision", () => {
 test("Sidebar exposes and applies the Maps release decision", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 
-  assert.match(sidebar, /mapsReleaseApproved = true/u);
+  assert.match(sidebar, /mapsReleaseApproved = false/u);
   assert.match(sidebar, /data-maps-release-approved=\{mapsReleaseApproved \? "true" : "false"\}/u);
   assert.match(sidebar, /\{mapsReleaseApproved \? \(\s*<Link to="\/maps"/u);
   assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/u);
+});
+
+test("Maps route metadata does not advertise an unapproved provider experience", () => {
+  const route = readFileSync("src/routes/maps.tsx", "utf8");
+
+  assert.match(
+    route,
+    /Maps is unavailable while provider, legal, privacy, capacity, and cost approval is pending\./u,
+  );
+  assert.doesNotMatch(route, /Explore real places/u);
 });
