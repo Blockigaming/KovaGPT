@@ -91,12 +91,21 @@ test("workflow skill mutations retain their replay identity until success is con
     .getByRole("textbox", { name: "Workflow instructions" })
     .fill("Review the draft and check every claim.");
 
-  await page.getByRole("button", { name: "Create and install" }).click();
+  const createAndInstall = page.getByRole("button", { name: "Create and install" });
+  const firstMutationResponse = page.waitForResponse((response) =>
+    isWorkflowSkillDraftMutation(response.request()),
+  );
+  await createAndInstall.click();
+  await firstMutationResponse;
   await expect(page.getByText("Workflow skill update could not be confirmed.")).toBeVisible();
   await expect(page.getByText("Workflow skill created and installed")).toHaveCount(0);
   expect(mutationBodies).toHaveLength(1);
 
-  await page.getByRole("button", { name: "Create and install" }).click();
+  const retryMutationResponse = page.waitForResponse((response) =>
+    isWorkflowSkillDraftMutation(response.request()),
+  );
+  await createAndInstall.click();
+  await retryMutationResponse;
   await expect(page.getByText("Workflow skill created and installed")).toBeVisible();
   expect(mutationBodies).toHaveLength(2);
   expect(mutationBodies[1]).toBe(mutationBodies[0]);
