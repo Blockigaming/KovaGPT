@@ -32,7 +32,8 @@ test("granular acceptance ledger covers every area and evidence stage", () => {
     not_verified: 1,
   });
   assert.deepEqual(ledger.verification.statusCounts, {
-    partial: 23,
+    partial: 22,
+    excluded: 1,
     verified_for_implemented_scope: 27,
     verified_for_reviewed_ancestor_scope: 27,
     not_verified: 54,
