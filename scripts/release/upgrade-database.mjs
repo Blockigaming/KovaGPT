@@ -26,6 +26,14 @@ import {
   parseTemporaryExportCapture,
 } from "./upgrade-database-temp-export-proof.mjs";
 
+import {
+  SCHEDULED_CATALOG_FILE,
+  SCHEDULED_CATALOG_SQL,
+  SCHEDULED_CATALOG_QUERY_SHA256,
+  buildScheduledCatalogEvidence,
+  parseScheduledCatalogCapture,
+} from "./upgrade-database-scheduled-catalog.mjs";
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -94,6 +102,7 @@ export function rehearseUpgrade({
   dryRun = false,
   currentHistory = false,
   captureTemporaryExport = false,
+  captureScheduledCatalog = false,
   execute = spawnSync,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
@@ -101,11 +110,18 @@ export function rehearseUpgrade({
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
     mkdirSync(outputDir, { recursive: true });
-    for (const file of ["upgrade-database.json", "upgrade-failure.log", TEMP_EXPORT_PROOF_FILE])
+    for (const file of [
+      "upgrade-database.json",
+      "upgrade-failure.log",
+      TEMP_EXPORT_PROOF_FILE,
+      SCHEDULED_CATALOG_FILE,
+    ])
       rmSync(join(outputDir, file), { force: true });
   }
   let plan;
   try {
+    if (captureScheduledCatalog && !currentHistory)
+      throw new Error("upgrade_scheduled_catalog_current_history_required");
     if (captureTemporaryExport && !currentHistory)
       throw new Error("upgrade_temp_export_current_history_required");
     const historical = planUpgrade(root);
@@ -142,6 +158,12 @@ export function rehearseUpgrade({
         ? {
             temporaryExportProofPlanned: true,
             temporaryExportQuerySha256: TEMP_EXPORT_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureScheduledCatalog
+        ? {
+            scheduledCatalogPlanned: true,
+            scheduledCatalogQuerySha256: SCHEDULED_CATALOG_QUERY_SHA256,
           }
         : {}),
       ...currentHistoryEvidence,
@@ -240,6 +262,8 @@ export function rehearseUpgrade({
   let result;
   let baselineCapture;
   let proofBytes;
+  let scheduledBaseline;
+  let scheduledBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -252,6 +276,11 @@ export function rehearseUpgrade({
     if (captureTemporaryExport)
       baselineCapture = parseTemporaryExportCapture(
         sql(TEMP_EXPORT_CATALOG_SQL, true),
+        baselineVersions,
+      );
+    if (captureScheduledCatalog)
+      scheduledBaseline = parseScheduledCatalogCapture(
+        sql(SCHEDULED_CATALOG_SQL, true),
         baselineVersions,
       );
     sql(seed);
@@ -268,9 +297,29 @@ export function rehearseUpgrade({
     const upgradedCapture = captureTemporaryExport
       ? parseTemporaryExportCapture(sql(TEMP_EXPORT_CATALOG_SQL, true), finalVersions)
       : null;
+    const scheduledUpgraded = captureScheduledCatalog
+      ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
+      : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
+    const sourceTree =
+      captureTemporaryExport || captureScheduledCatalog
+        ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
+        : null;
+    if (captureScheduledCatalog)
+      scheduledBytes =
+        JSON.stringify(
+          buildScheduledCatalogEvidence({
+            baseline: scheduledBaseline,
+            upgraded: scheduledUpgraded,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
+          null,
+          2,
+        ) + "\n";
     if (captureTemporaryExport) {
-      const sourceTree = run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim();
       proofBytes =
         JSON.stringify(
           buildTemporaryExportProof({
@@ -306,6 +355,15 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(scheduledBytes
+        ? {
+            scheduledCatalog: {
+              file: SCHEDULED_CATALOG_FILE,
+              sha256: sha256(scheduledBytes),
+              querySha256: SCHEDULED_CATALOG_QUERY_SHA256,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
     };
   } catch (error) {
@@ -325,6 +383,7 @@ export function rehearseUpgrade({
   }
   if (failure) throw failure;
   if (proofBytes) writeFileSync(join(outputDir, TEMP_EXPORT_PROOF_FILE), proofBytes);
+  if (scheduledBytes) writeFileSync(join(outputDir, SCHEDULED_CATALOG_FILE), scheduledBytes);
   writeFileSync(join(outputDir, "upgrade-database.json"), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -345,6 +404,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           dryRun: process.argv.includes("--dry-run"),
           currentHistory: !process.argv.includes("--historical-baseline"),
           captureTemporaryExport: !process.argv.includes("--historical-baseline"),
+          captureScheduledCatalog: !process.argv.includes("--historical-baseline"),
         }),
         null,
         2,
