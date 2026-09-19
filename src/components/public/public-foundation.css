@@ -2,6 +2,255 @@
 [data-public-shell] {
   --kova-public-header-height: 6rem;
   --kova-public-reading-width: 68ch;
+  --public-page-width: 72rem;
+  --public-page-gutter: clamp(1rem, 4vw, 3rem);
+  --public-section-space: clamp(3.5rem, 8vw, 7rem);
+}
+
+[data-public-shell] .public-skip-link {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--foreground);
+  color: var(--background);
+}
+[data-public-shell] .public-skip-link:focus {
+  transform: translateY(0);
+}
+
+[data-public-shell] .public-overview {
+  width: min(100%, calc(var(--public-page-width) + 2 * var(--public-page-gutter)));
+  margin-inline: auto;
+  padding-inline: var(--public-page-gutter);
+  overflow-wrap: anywhere;
+}
+[data-public-shell] .public-eyebrow {
+  margin-block-end: 1.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+[data-public-shell] .public-hero {
+  padding-block: var(--public-section-space);
+  text-align: center;
+}
+[data-public-shell] .public-hero h1 {
+  font-size: clamp(2.75rem, 7vw, 6.25rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+[data-public-shell] .public-hero-description {
+  max-width: 34rem;
+  margin: 1.75rem auto;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.7;
+}
+[data-public-shell] .public-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+[data-public-shell] .public-hero .public-actions {
+  justify-content: center;
+}
+[data-public-shell] .public-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  transition: opacity 150ms ease;
+}
+[data-public-shell] .public-action:hover {
+  opacity: 0.8;
+}
+[data-public-shell] .public-action.is-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+}
+[data-public-shell]
+  :is(.public-action, .public-example-options button, .public-table-scroll):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+[data-public-shell] .public-workflow-example {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  background: var(--muted);
+}
+[data-public-shell] .public-example-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--border);
+}
+[data-public-shell] .public-example-toolbar h2 {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+[data-public-shell] .public-example-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+[data-public-shell] .public-example-options button {
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+[data-public-shell] .public-example-options button[aria-pressed="true"] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 5%);
+}
+[data-public-shell] .public-example-conversation {
+  display: grid;
+  align-content: start;
+  gap: 2rem;
+  min-height: 29rem;
+  max-width: 46rem;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2.5rem);
+}
+[data-public-shell] .public-example-prompt {
+  justify-self: end;
+  max-width: 90%;
+  border-radius: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--background);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+[data-public-shell] .public-example-answer h3 {
+  margin-block-end: 1rem;
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+[data-public-shell] .public-example-answer :is(p, li) {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+}
+[data-public-shell] .public-example-answer ol {
+  padding-inline-start: 1.25rem;
+  margin-block-start: 1rem;
+  list-style: decimal;
+}
+[data-public-shell] .public-example-caption {
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-align: center;
+}
+[data-public-shell] .public-editorial-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 7vw, 7rem);
+  padding-block: var(--public-section-space);
+  border-bottom: 1px solid var(--border);
+}
+[data-public-shell] :is(.public-editorial-section h2, .public-closing h2) {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+[data-public-shell] .public-editorial-body > p {
+  margin-block-end: 1.5rem;
+  color: var(--muted-foreground);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+[data-public-shell] .public-overview-faq {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+[data-public-shell] .public-closing {
+  display: grid;
+  justify-items: center;
+  gap: 2rem;
+  padding-block: var(--public-section-space);
+  text-align: center;
+}
+[data-public-shell] .public-plan-comparison {
+  margin-block-start: 5rem;
+}
+[data-public-shell] .public-plan-comparison h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+[data-public-shell] .public-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+[data-public-shell] .public-table-scroll table {
+  width: 100%;
+  min-width: 42rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: start;
+}
+[data-public-shell] .public-table-scroll :is(th, td) {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+[data-public-shell] .public-table-scroll th {
+  font-weight: 500;
+}
+[data-public-shell] .public-table-scroll thead {
+  background: var(--muted);
+}
+[data-public-shell] .public-table-scroll td {
+  color: var(--muted-foreground);
+}
+[data-public-shell] .public-table-scroll tbody tr:last-child > * {
+  border-bottom: 0;
+}
+@media (max-width: 767px) {
+  [data-public-shell] .public-editorial-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-public-shell] .public-example-conversation {
+    min-height: 33rem;
+  }
 }
 
 [data-public-shell] :where(h1, h2, h3, [id], a, button, summary, input, textarea, select) {

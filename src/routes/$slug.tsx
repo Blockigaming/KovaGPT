@@ -2,6 +2,7 @@ import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-route
 import { PUBLIC_PAGE_BY_SLUG } from "@/lib/public-content";
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
+import { ProductOverview } from "@/components/public/ProductOverview";
 import { isReservedPublicPath } from "@/lib/public-route-policy.mjs";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import {
@@ -357,6 +358,7 @@ function Page() {
       </PublicPageView>
     );
   const item = data.item;
+  if (item.slug === "overview") return <ProductOverview />;
   const actions = PAGE_ACTIONS.get(item.slug);
   const related = data.related;
   return (

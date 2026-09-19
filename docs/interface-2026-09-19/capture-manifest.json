@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "archive": "Kova-v10-partial-review.zip",
+  "captures": [
+    {
+      "capture_id": "5faee371-9ccd-47ae-8545-9f2d1c89a8ee",
+      "legacy_reference_id": "P006",
+      "source_url": "https://openai.com/solutions/industries/financial-services/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:16:05.586289+00:00",
+      "path": "reference-captures/P006/desktop-light/initial.png",
+      "sha256": "28b0aa98cf7c31c06a71a7ab651aedc831854f5d6690c063f820b0d94bae0d1b",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "854e5d66-a521-476f-8646-dd4f3710e5bb",
+      "legacy_reference_id": "P009",
+      "source_url": "https://openai.com/academy/ai-fundamentals/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:16:45.328597+00:00",
+      "path": "reference-captures/P009/desktop-light/initial.png",
+      "sha256": "b3fdeebe470f672e11063605c80c8a6ec29ff8fa58bff8a8cd05fb8075aaab76",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "cdb36be5-77e0-4119-bed7-1ed2aab08df2",
+      "legacy_reference_id": "P009",
+      "source_url": "https://openai.com/academy/ai-fundamentals/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:16:53.922053+00:00",
+      "path": "reference-captures/P009/responsive-light/initial.png",
+      "sha256": "3584083ae884c02fae922f72e11f24ab438c1b6ed9edf9eaaff7e66bab8fac5d",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "e6d05a16-9aa2-4dce-bab7-98fc887b126c",
+      "legacy_reference_id": "P017",
+      "source_url": "https://chatgpt.com/writing/apa-citation/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:17:02.256565+00:00",
+      "path": "reference-captures/P017/desktop-light/initial.png",
+      "sha256": "f79a94d7e41794f6c1dd512a17718d1e8ff75d70121c397c7883c9cc9b399737",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "2720f203-bf60-441a-8770-30c36d831abe",
+      "legacy_reference_id": "P026",
+      "source_url": "https://openai.com/business/plugins/box/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:17:14.760515+00:00",
+      "path": "reference-captures/P026/responsive-light/initial.png",
+      "sha256": "500c50255137160e952560ab1da65270e903f98a761dd61291fc60b8278d401e",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "53187535-853b-43be-8a97-e3eed38b2efb",
+      "legacy_reference_id": "P029",
+      "source_url": "https://openai.com/business/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:17:29.200753+00:00",
+      "path": "reference-captures/P029/desktop-light/initial.png",
+      "sha256": "556b443b0ac9dc58604ba6bddc97686e27ef6a7bf3a81edea269e2ec42aa63bc",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": true,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "0aac6a96-cc86-444a-b18c-8a6df54c84b3",
+      "legacy_reference_id": "P030",
+      "source_url": "https://openai.com/business-data/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:17:40.597193+00:00",
+      "path": "reference-captures/P030/responsive-light/initial.png",
+      "sha256": "5f633ef1b82257f62f435fbc7da56989b7476944128e02be09547a78fdafda82",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "fd5b38d8-825d-4edd-9e32-f024ee0fca6e",
+      "legacy_reference_id": "P035",
+      "source_url": "https://chatgpt.com/features/workspace-agents/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:17:51.838409+00:00",
+      "path": "reference-captures/P035/desktop-light/initial.png",
+      "sha256": "c8329e69881a68742d507d3810d5f669a5483b2a913e214a703464436a1a2bcb",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": true,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "2edcb76e-1a85-4337-b16d-fb56136b2e03",
+      "legacy_reference_id": "P035",
+      "source_url": "https://chatgpt.com/features/workspace-agents/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:24:18.807164+00:00",
+      "path": "reference-captures/P035/responsive-light/initial.png",
+      "sha256": "e5666789d1c1b051db7a675bf68c5f3302336e7ec68c3fe71ad7ab55b75bbb01",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": true,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": true,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "3520d90b-7f0c-44df-bc7f-165965f9ec90",
+      "legacy_reference_id": "P036",
+      "source_url": "https://chatgpt.com/business/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:24:26.308921+00:00",
+      "path": "reference-captures/P036/responsive-light/initial.png",
+      "sha256": "1e698ca8e35bea554a29a729c094622e28a3d319b9c52892e40e101aa106f2ef",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": true,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "fb63cce8-6279-461d-a1de-b956357cc114",
+      "legacy_reference_id": "P039",
+      "source_url": "https://openai.com/academy/customer-success/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:17:59.719448+00:00",
+      "path": "reference-captures/P039/desktop-light/initial.png",
+      "sha256": "b2efc46e6df25193a7acc8b25bf045077d7a2ea2bf49a8b5b2f9583a1231bcad",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": false,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "8b60b6ea-e594-4fe6-8b00-73b82572d727",
+      "legacy_reference_id": "P045",
+      "source_url": "https://openai.com/academy/marketing/",
+      "context": "desktop-light",
+      "captured_at": "2026-09-18T21:24:53.238064+00:00",
+      "path": "reference-captures/P045/desktop-light/initial.png",
+      "sha256": "cd9f16e6baa72dae3c9e8ab56617684ac656811839a6fdfb1c3d1453a547be4c",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "pixel_inspected": true,
+      "layout_reference_usable": false,
+      "review_note": "Source rendered a load-error screen; not a valid marketing-page layout reference.",
+      "companion_failure": true,
+      "full_page_capture": false,
+      "visual_approved": false
+    },
+    {
+      "capture_id": "8c6065e7-0f06-4813-be36-c9ecbd9949bf",
+      "legacy_reference_id": "P049",
+      "source_url": "https://openai.com/academy/research/",
+      "context": "responsive-light",
+      "captured_at": "2026-09-18T21:25:20.962693+00:00",
+      "path": "reference-captures/P049/responsive-light/initial.png",
+      "sha256": "56bdc75533a8e721159211e674c4548604e2ba46ed634126953d71f758f66260",
+      "byte_integrity_verified": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixel_inspected": false,
+      "layout_reference_usable": null,
+      "review_note": "Initial viewport only; full source page and interaction approval pending.",
+      "companion_failure": true,
+      "full_page_capture": false,
+      "visual_approved": false
+    }
+  ]
+}
