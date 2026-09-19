@@ -358,7 +358,12 @@ function mock(data, hook = () => null) {
       return (
         hook(call, 0) ?? {
           status: 0,
-          stdout: command === "git" ? (args.at(-1) === "HEAD^{tree}" ? "e" : "d").repeat(40) : "",
+          stdout:
+            command === "git"
+              ? args.includes("status")
+                ? ""
+                : (args.at(-1) === "HEAD^{tree}" ? "e" : "d").repeat(40)
+              : "",
           stderr: "",
         }
       );
