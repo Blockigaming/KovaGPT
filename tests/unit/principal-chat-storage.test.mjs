@@ -93,6 +93,51 @@ test("legacy research progress loads as terminal history", () => {
   assert.equal(loaded.messages[0].activities[0].status, "failed");
 });
 
+test("malformed legacy activities do not hide otherwise valid conversations", () => {
+  const conversations = [
+    {
+      ...conversation("invalid-activity-container"),
+      messages: [
+        {
+          id: "assistant-one",
+          role: "assistant",
+          content: "Still available",
+          activities: { status: "running" },
+        },
+      ],
+    },
+    {
+      ...conversation("partially-valid-activities"),
+      messages: [
+        {
+          id: "assistant-two",
+          role: "assistant",
+          content: "Also available",
+          activities: [
+            null,
+            "invalid",
+            { tool: "search", label: "Finished", status: "done" },
+            { tool: "search", label: "Unknown state", status: "queued" },
+          ],
+        },
+      ],
+    },
+  ];
+  storage.setItem(conversationStorageKey("account-a"), JSON.stringify(conversations));
+  storage.setItem(archivedConversationStorageKey("account-a"), JSON.stringify(conversations));
+
+  for (const loaded of [loadConversations("account-a"), loadArchivedConversations("account-a")]) {
+    assert.deepEqual(
+      loaded.map(({ id }) => id),
+      ["invalid-activity-container", "partially-valid-activities"],
+    );
+    assert.equal(loaded[0].messages[0].activities, undefined);
+    assert.deepEqual(loaded[1].messages[0].activities, [
+      { tool: "search", label: "Finished", status: "done" },
+    ]);
+  }
+});
+
 test("stopping preserves the latest assistant turn and closes only its active work", () => {
   const messages = [
     { id: "user", role: "user", content: "Explain this" },

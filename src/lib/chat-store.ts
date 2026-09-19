@@ -72,6 +72,17 @@ export type Activity = {
   label: string;
   status: "done" | "running" | "failed" | "canceled";
 };
+const ACTIVITY_STATUSES = new Set<Activity["status"]>(["done", "running", "failed", "canceled"]);
+function isActivity(value: unknown): value is Activity {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<Activity>;
+  return (
+    typeof candidate.tool === "string" &&
+    typeof candidate.label === "string" &&
+    typeof candidate.status === "string" &&
+    ACTIVITY_STATUSES.has(candidate.status as Activity["status"])
+  );
+}
 export type PendingConfirm = {
   actionId: string;
   tool: string;
@@ -231,7 +242,10 @@ function sanitizeMessageMemorySources(
   temporary = false,
 ): Message[] {
   return messages.map((message) => {
-    const legacyMessage = message as Message & { researchProgress?: unknown };
+    const legacyMessage = message as Omit<Message, "activities"> & {
+      activities?: unknown;
+      researchProgress?: unknown;
+    };
     const {
       memorySources: rawSources,
       sources: rawResponseSources,
@@ -247,11 +261,15 @@ function sanitizeMessageMemorySources(
         : undefined;
     const responseSources =
       message.role === "assistant" ? normalizeResponseSources(rawResponseSources) : undefined;
-    const activities = rawActivities?.map((activity) =>
-      retiredResearchProgress !== undefined && activity.status === "running"
-        ? { ...activity, status: "failed" as const }
-        : activity,
-    );
+    const activities = Array.isArray(rawActivities)
+      ? rawActivities
+          .filter(isActivity)
+          .map((activity) =>
+            retiredResearchProgress !== undefined && activity.status === "running"
+              ? { ...activity, status: "failed" as const }
+              : activity,
+          )
+      : undefined;
     return {
       ...rest,
       ...(activities?.length ? { activities } : {}),
