@@ -7,7 +7,12 @@ import ts from "typescript";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
-const publicFiles = ["public-surface-matrix.spec.ts", "public-detail-pages.spec.ts"];
+const publicFiles = [
+  "public-surface-matrix.spec.ts",
+  "public-detail-pages.spec.ts",
+  "writing-tools.spec.ts",
+  "translation-family.spec.ts",
+];
 const verificationProjects = ["phone-390x844", "tablet-1024x768", "desktop-1440x900"];
 
 function evaluate(source, env = {}, modules = {}) {

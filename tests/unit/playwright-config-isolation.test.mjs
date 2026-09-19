@@ -33,7 +33,12 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
     "**/auth-visual-regression.spec.ts",
     "**/deployed-baseline-audit.spec.ts",
   ];
-  const publicSpecs = ["**/public-surface-matrix.spec.ts", "**/public-detail-pages.spec.ts"];
+  const publicSpecs = [
+    "**/public-surface-matrix.spec.ts",
+    "**/public-detail-pages.spec.ts",
+    "**/writing-tools.spec.ts",
+    "**/translation-family.spec.ts",
+  ];
   // Check the evaluated exclusions, not the spelling of a literal array. The
   // core suite may omit only the public specs exercised by its dedicated jobs.
   for (const suite of [undefined, "all", "core", "public"]) {
