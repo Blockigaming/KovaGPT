@@ -103,7 +103,10 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
 
   const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("link", { name: "Product" })).toHaveAttribute("aria-current", "page");
+  await expect(menu.getByRole("link", { name: "Features", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(menu.getByRole("link", { name: "Open KovaGPT" })).toBeVisible();
 
   await page.keyboard.press("Escape");
