@@ -63,7 +63,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
-  mapsReleaseApproved = true,
+  mapsReleaseApproved = false,
 }: {
   conversations: Conversation[];
   activeId: string | null;
