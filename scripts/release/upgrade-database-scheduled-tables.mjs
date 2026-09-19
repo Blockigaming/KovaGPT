@@ -12,6 +12,7 @@ set local search_path = pg_catalog;
 with target as (
  select c.* from pg_class c join pg_namespace n on n.oid=c.relnamespace
  where n.nspname='public' and c.relname in ('scheduled_task_runs','scheduled_tasks')
+ and not exists (select 1 from pg_inherits h where h.inhparent=c.oid)
 ), rows as (
  select c.relname::text as name,jsonb_build_object(
  'schema','public','name',c.relname::text,'kind',c.relkind::text,
