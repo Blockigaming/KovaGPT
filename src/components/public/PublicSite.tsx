@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { type ReactNode } from "react";
+import { PublicFaq } from "@/components/public/PublicFaq";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
@@ -39,7 +40,7 @@ export function PublicPageView({
 }) {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
         <section className="relative overflow-hidden border-b border-border/70">
           <div
             aria-hidden="true"
@@ -59,14 +60,14 @@ export function PublicPageView({
               <Link
                 to={primaryAction.to as never}
                 data-public-primary
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                {primaryAction.label} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {primaryAction.label} <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
               </Link>
               {secondaryAction ? (
                 <Link
                   to={secondaryAction.to as never}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-background/70 px-5 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {secondaryAction.label}
                 </Link>
@@ -104,7 +105,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
     } as const);
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
         <section className="relative overflow-hidden border-b border-border/70">
           <div
             aria-hidden="true"
@@ -113,23 +114,26 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
             <nav
               aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-muted-foreground"
+              className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
             >
               <Link
                 to={(sectionLanding?.to ?? `/${item.section}`) as never}
-                className="rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                data-public-breadcrumb
+                className="inline-flex min-h-11 min-w-0 max-w-full items-center rounded-md py-2.5 underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {sectionLanding?.label ?? item.section.replaceAll("-", " ")}
               </Link>
               {categorySlugs.map((category) => (
-                <span key={category} className="contents">
+                <span key={category} className="inline-flex min-w-0 items-baseline gap-2">
                   <span aria-hidden="true">/</span>
-                  <span>{category.replaceAll("-", " ")}</span>
+                  <span className="min-w-0">{category.replaceAll("-", " ")}</span>
                 </span>
               ))}
-              <span aria-hidden="true">/</span>
-              <span aria-current="page" className="truncate text-foreground">
-                {currentPageSlug.replaceAll("-", " ")}
+              <span className="inline-flex min-w-0 items-baseline gap-2">
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="min-w-0 text-foreground">
+                  {currentPageSlug.replaceAll("-", " ")}
+                </span>
               </span>
             </nav>
 
@@ -146,15 +150,15 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               <Link
                 to={item.primaryAction.to as never}
                 data-public-primary
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.primaryAction.label}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
               </Link>
               {item.secondaryAction ? (
                 <Link
                   to={item.secondaryAction.to as never}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-background/70 px-5 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {item.secondaryAction.label}
                 </Link>
@@ -184,7 +188,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           {item.sections.map((section, index) => (
             <article
               key={section.title}
-              className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
+              className="min-w-0 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {String(index + 1).padStart(2, "0")}
@@ -206,6 +210,12 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           ))}
         </section>
 
+        {item.faq?.length ? (
+          <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-20">
+            <PublicFaq items={item.faq} />
+          </div>
+        ) : null}
+
         {item.relatedPages?.length ? (
           <section aria-labelledby="related-pages-heading" className="border-t border-border">
             <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
@@ -220,7 +230,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
                   <Link
                     key={page.to}
                     to={page.to as never}
-                    className="group rounded-2xl border border-border bg-card p-5 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="group min-w-0 rounded-2xl border border-border bg-card p-5 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="font-semibold">{page.title}</h3>
@@ -238,17 +248,17 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         ) : null}
 
         <section className="border-t border-border bg-foreground text-background">
-          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-16 md:flex-row md:items-center">
-            <div>
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-16 md:flex-row md:flex-wrap md:items-center">
+            <div className="min-w-0 md:flex-1 md:basis-64">
               <h2 className="text-2xl font-semibold tracking-[-.025em]">{closing.title}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-background/70">{closing.body}</p>
             </div>
             <Link
               to={item.primaryAction.to as never}
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-background px-5 text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
+              className="inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
             >
               {item.primaryAction.label}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </Link>
           </div>
         </section>

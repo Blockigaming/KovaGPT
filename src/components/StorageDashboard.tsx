@@ -1,99 +1,153 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HardDrive, RefreshCw } from "lucide-react";
 import { getMyStorage, type StorageDto } from "@/utils/storage.functions";
-import { STORAGE_LIMITS_BYTES } from "@/lib/modes";
-import { useTier } from "@/hooks/useTier";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { estimateAccountBrowserBytes, formatStorageBytes } from "@/lib/storage-display";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 
-function fmt(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let n = bytes / 1024;
-  let i = 0;
-  while (n >= 1024 && i < units.length - 1) {
-    n /= 1024;
-    i++;
-  }
-  return `${n.toFixed(n >= 10 ? 0 : 1)} ${units[i]}`;
-}
-
-function estimateLocalBytes(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    let total = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      const v = localStorage.getItem(k) ?? "";
-      total += k.length + v.length;
-    }
-    return total * 2; // rough UTF-16
-  } catch {
-    return 0;
-  }
-}
-
 export function StorageDashboard({ signedIn }: { signedIn: boolean }) {
-  const { tier } = useTier();
-  const cap = STORAGE_LIMITS_BYTES[tier];
+  const { isLoaded, user } = useUser();
+  if (!isLoaded) {
+    return <p role="status">Checking your account...</p>;
+  }
+  const ownerId = signedIn ? (user?.id ?? null) : null;
+  return <AccountStorageDashboard key={ownerId ?? "guest"} ownerId={ownerId} />;
+}
+
+function AccountStorageDashboard({ ownerId }: { ownerId: string | null }) {
   const [remote, setRemote] = useState<StorageDto | null>(null);
-  const [localBytes, setLocalBytes] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [localBytes, setLocalBytes] = useState<number | null>(null);
+  const [loading, setLoading] = useState(ownerId !== null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const activeRef = useRef(false);
+  const requestRef = useRef(0);
 
-  const load = () => {
-    setLocalBytes(estimateLocalBytes());
-    if (!signedIn) return;
+  const load = useCallback(async () => {
+    const request = ++requestRef.current;
+    setLocalBytes(estimateAccountBrowserBytes(ownerId));
+    setRemote(null);
+    setLoadError(null);
+    if (!ownerId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    getMyStorage()
-      .then((d) => setRemote(d))
-      .catch(() => setRemote(null))
-      .finally(() => setLoading(false));
-  };
+    try {
+      const data = await getMyStorage();
+      if (activeRef.current && request === requestRef.current) setRemote(data);
+    } catch {
+      if (activeRef.current && request === requestRef.current) {
+        setLoadError("Cloud storage could not be loaded. Try refreshing your usage.");
+      }
+    } finally {
+      if (activeRef.current && request === requestRef.current) setLoading(false);
+    }
+  }, [ownerId]);
 
-  useEffect(load, [signedIn]);
+  useEffect(() => {
+    activeRef.current = true;
+    void load();
+    return () => {
+      // The owner-keyed child unmounts across account transitions.
+      activeRef.current = false;
+    };
+  }, [load]);
 
-  const cloudBytes = remote?.bytesUsed ?? 0;
-  const pct = cap > 0 ? Math.min(100, Math.round(((cloudBytes + localBytes) / cap) * 100)) : 0;
+  const cap = remote?.limitBytes ?? null;
+  const percent = remote && cap !== null && cap > 0 ? (remote.bytesUsed / cap) * 100 : null;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <HardDrive className="w-4 h-4 text-primary" />
+    <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
+      <section className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <HardDrive className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
             <h3 className="text-sm font-semibold">Storage usage</h3>
           </div>
-          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 shrink-0"
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label={loading ? "Refreshing storage usage" : "Refresh storage usage"}
+            aria-busy={loading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            />
           </Button>
         </div>
 
-        <div className="flex items-baseline justify-between text-sm mb-2">
-          <span className="font-semibold">{fmt(cloudBytes + localBytes)}</span>
-          <span className="text-muted-foreground text-xs">
-            of {fmt(cap)} ({tier})
-          </span>
-        </div>
-        <Progress value={pct} className="h-2" />
+        {loading ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Loading cloud storage usage...
+          </p>
+        ) : loadError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {loadError}
+          </p>
+        ) : remote ? (
+          <div className="space-y-2" role="status">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="text-sm font-semibold">
+                {formatStorageBytes(remote.bytesUsed)} in cloud storage
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {cap === null
+                  ? "Plan limit unavailable"
+                  : `of ${formatStorageBytes(cap)} (${remote.tier})`}
+              </span>
+            </div>
+            {percent !== null && cap !== null ? (
+              <Progress
+                value={Math.min(100, Math.max(0, percent))}
+                aria-label="Cloud storage used"
+                aria-valuetext={`${formatStorageBytes(remote.bytesUsed)} of ${formatStorageBytes(cap)}`}
+                className="h-2"
+              />
+            ) : null}
+            {percent !== null && percent >= 100 ? (
+              <p className="text-xs text-destructive">
+                Cloud storage is full. Remove unneeded cloud items before adding more.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Sign in to view cloud storage usage.</p>
+        )}
 
-        <div className="grid grid-cols-2 gap-3 mt-4 text-xs">
-          <div className="rounded-lg border border-border/70 p-3">
-            <div className="text-muted-foreground">Cloud files</div>
-            <div className="text-sm font-medium mt-1">{fmt(cloudBytes)}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">
-              {remote?.libraryCount ?? 0} library items
+        <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+          <div className="min-w-0 rounded-xl border border-border/70 p-3">
+            <div className="text-muted-foreground">Cloud library</div>
+            <div className="mt-1 text-sm font-medium">
+              {remote
+                ? `${remote.libraryCount} ${remote.libraryCount === 1 ? "item" : "items"}`
+                : loading
+                  ? "Loading..."
+                  : ownerId
+                    ? "Unavailable"
+                    : "Sign in to view"}
             </div>
+            <p className="mt-1 leading-5 text-muted-foreground">
+              Library item count. Cloud usage also includes other stored account content.
+            </p>
           </div>
-          <div className="rounded-lg border border-border/70 p-3">
-            <div className="text-muted-foreground">This device</div>
-            <div className="text-sm font-medium mt-1">{fmt(localBytes)}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">
-              Chats, drafts, preferences
+          <div className="min-w-0 rounded-xl border border-border/70 p-3">
+            <div className="text-muted-foreground">This browser · estimate</div>
+            <div className="mt-1 text-sm font-medium">
+              {localBytes === null ? "Unavailable" : formatStorageBytes(localBytes)}
             </div>
+            <p className="mt-1 leading-5 text-muted-foreground">
+              Saved browser data for this account and shared device preferences. Excludes file
+              caches and does not count toward your cloud quota.
+            </p>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

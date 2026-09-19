@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { PublicFaq } from "@/components/public/PublicFaq";
 import { PublicShell } from "@/components/public/PublicShell";
 
 export type SeoLandingCta = { label: string; to: string };
@@ -17,7 +18,11 @@ export type SeoLandingProps = {
 export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }: SeoLandingProps) {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-14">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto min-w-0 w-full max-w-3xl flex-1 px-6 py-14 [overflow-wrap:anywhere]"
+      >
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-4">{h1}</h1>
         <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-10">{intro}</p>
 
@@ -28,8 +33,8 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
               to={c.to}
               className={
                 i === 0
-                  ? "inline-flex min-h-11 items-center rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-                  : "inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                  ? "inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+                  : "inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
               }
             >
               {c.label}
@@ -69,39 +74,44 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
           </ul>
         </section>
 
-        {faq && faq.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold mb-3">Frequently asked questions</h2>
-            <div className="divide-y divide-border rounded-lg border border-border bg-card">
-              {faq.map((f) => (
-                <details key={f.q} className="group px-4 py-3">
-                  <summary className="cursor-pointer list-none font-medium text-foreground flex items-center justify-between">
-                    <span>{f.q}</span>
-                    <span className="ml-3 text-muted-foreground transition group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        )}
+        {faq && faq.length > 0 ? (
+          <div className="mb-12">
+            <PublicFaq items={faq} />
+          </div>
+        ) : null}
 
-        <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <Link to="/" className="underline hover:text-foreground">
+        <nav
+          aria-label="Related pages"
+          className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground"
+        >
+          <Link
+            to="/"
+            className="inline-flex min-h-11 items-center rounded-sm py-2.5 underline hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          >
             KovaGPT
           </Link>
-          <Link to="/modes" className="underline hover:text-foreground">
+          <Link
+            to="/modes"
+            className="inline-flex min-h-11 items-center rounded-sm py-2.5 underline hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          >
             Modes
           </Link>
-          <Link to="/images" className="underline hover:text-foreground">
+          <Link
+            to="/images"
+            className="inline-flex min-h-11 items-center rounded-sm py-2.5 underline hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          >
             Images
           </Link>
-          <Link to="/pricing" className="underline hover:text-foreground">
+          <Link
+            to="/pricing"
+            className="inline-flex min-h-11 items-center rounded-sm py-2.5 underline hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          >
             Pricing
           </Link>
-          <Link to="/getting-started" className="underline hover:text-foreground">
+          <Link
+            to="/getting-started"
+            className="inline-flex min-h-11 items-center rounded-sm py-2.5 underline hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          >
             Getting Started
           </Link>
         </nav>

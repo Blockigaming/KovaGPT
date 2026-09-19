@@ -4,12 +4,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const SALES_EMAIL = "sales@kovagpt.com";
 
@@ -20,6 +21,7 @@ export function EnterpriseContactDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const openerRef = useRef<HTMLElement | null>(null);
   const [company, setCompany] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -52,7 +54,19 @@ export function EnterpriseContactDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl rounded-[28px] border-border/70 p-7 shadow-2xl">
+      <DialogContent
+        className="max-w-xl rounded-[28px] border-border/70 p-7 shadow-2xl"
+        onOpenAutoFocus={() => {
+          openerRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          if (openerRef.current?.isConnected) {
+            event.preventDefault();
+            openerRef.current.focus();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl tracking-tight">
             Build your Kova Enterprise workspace
@@ -135,7 +149,7 @@ export function EnterpriseContactDialog({
               Your email app should have opened a draft. Nothing has been sent by KovaGPT.
             </p>
           ) : null}
-          <div className="flex justify-end gap-2 pt-1">
+          <DialogFooter className="pt-1">
             <Button
               className="rounded-full px-5"
               type="button"
@@ -147,7 +161,7 @@ export function EnterpriseContactDialog({
             <Button className="rounded-full px-5" type="submit">
               Contact sales
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

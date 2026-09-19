@@ -1,18 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 /**
- * Native-feeling bottom sheet for phones and touch tablets.
- * Features:
- *  - Backdrop dim + tap-outside dismiss
- *  - Escape-key dismiss (for keyboard-connected tablets)
- *  - Focus trap (Tab / Shift+Tab wraps within the sheet)
- *  - Focus restoration on close
- *  - Scroll lock on body while open
- *  - Drag handle with swipe-down to dismiss (touch)
- *  - Rounded top corners, safe-area padding
- *  - Respects prefers-reduced-motion (disables slide transition)
+ * A viewport-anchored mobile dialog with a swipe-to-dismiss handle.
+ * Radix owns modal isolation and nested-layer keyboard behavior. In particular,
+ * Escape in a child menu must not also dismiss this sheet.
  */
 export function MobileBottomSheet({
   open,
@@ -27,149 +20,106 @@ export function MobileBottomSheet({
   children: ReactNode;
   ariaLabel?: string;
 }) {
-  const sheetRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
+  const dragDistance = useRef(0);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const titleId = useId();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(mq.matches);
-    const on = () => setReduceMotion(mq.matches);
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
+  const resetDrag = useCallback(() => {
+    dragStart.current = null;
+    dragDistance.current = 0;
+    setDragY(0);
   }, []);
 
-  // Scroll lock + focus save/restore
   useEffect(() => {
-    if (!open) return;
-    previouslyFocused.current = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    // focus first focusable element in the sheet
-    requestAnimationFrame(() => {
-      const first = sheetRef.current?.querySelector<HTMLElement>(
-        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      (first ?? sheetRef.current)?.focus();
-    });
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      previouslyFocused.current?.focus?.();
-    };
-  }, [open]);
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduceMotion(mq.matches);
+    const onChange = () => setReduceMotion(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
 
-  // Escape + Tab focus trap
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onOpenChange(false);
-        return;
-      }
-      if (e.key !== "Tab" || !sheetRef.current) return;
-      const focusables = sheetRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
+    if (!open) resetDrag();
+  }, [open, resetDrag]);
 
-  if (!open) return null;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    dragStart.current = e.touches[0].clientY;
+  const onTouchStart = (event: React.TouchEvent) => {
+    resetDrag();
+    if (event.touches.length === 1) dragStart.current = event.touches[0].clientY;
   };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (dragStart.current == null) return;
-    const dy = e.touches[0].clientY - dragStart.current;
-    if (dy > 0) setDragY(dy);
+  const onTouchMove = (event: React.TouchEvent) => {
+    if (dragStart.current === null) return;
+    if (event.touches.length !== 1) {
+      resetDrag();
+      return;
+    }
+    const distance = Math.max(0, event.touches[0].clientY - dragStart.current);
+    dragDistance.current = distance;
+    setDragY(distance);
   };
   const onTouchEnd = () => {
-    if (dragY > 90) {
-      onOpenChange(false);
-    }
-    setDragY(0);
-    dragStart.current = null;
+    const dismiss = dragDistance.current > 90;
+    resetDrag();
+    if (dismiss) onOpenChange(false);
   };
 
-  const transform = dragY > 0 ? `translateY(${dragY}px)` : undefined;
-  const transition = reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out";
-
-  const sheet = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title ? undefined : ariaLabel || "Options"}
-      aria-labelledby={title ? titleId : undefined}
-      className="fixed inset-0 z-[100]"
-      data-testid="mobile-bottom-sheet"
-    >
-      <div
-        aria-hidden="true"
-        onClick={() => onOpenChange(false)}
-        className="absolute inset-0 bg-black/50 animate-in fade-in-0 duration-150"
-      />
-      <div
-        ref={sheetRef}
-        tabIndex={-1}
-        style={{ transform, transition, paddingBottom: "env(safe-area-inset-bottom)" }}
-        className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl border-t border-border bg-popover text-popover-foreground shadow-lg animate-in slide-in-from-bottom duration-150"
-      >
-        <div
-          className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          aria-hidden="true"
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 duration-150 motion-reduce:animate-none" />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          data-testid="mobile-bottom-sheet"
+          onOpenAutoFocus={() => {
+            previouslyFocused.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            // Callers use their existing toolbar buttons rather than DialogTrigger.
+            event.preventDefault();
+            if (previouslyFocused.current?.isConnected) previouslyFocused.current.focus();
+          }}
+          style={{
+            transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+            transition: reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out",
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
+          className="fixed inset-x-0 bottom-0 z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl border-t border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom duration-150 motion-reduce:animate-none"
         >
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
-        </div>
-        <div className="flex shrink-0 items-center gap-3 px-4 pb-2">
-          {title ? (
-            <div
-              id={titleId}
-              className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground"
-            >
-              {title}
-            </div>
-          ) : (
-            <div className="flex-1" />
-          )}
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kova-radius-compact)] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Close sheet"
+          <div
+            className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={resetDrag}
+            data-kova-sheet-handle=""
+            aria-hidden="true"
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-[max(.5rem,var(--safe-left))] pb-4 pr-[max(.5rem,var(--safe-right))] [scrollbar-gutter:stable]">
-          {children}
-        </div>
-      </div>
-    </div>
+            <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
+          </div>
+          <div className="flex shrink-0 items-center gap-3 px-4 pb-2">
+            <DialogPrimitive.Title
+              className={
+                title
+                  ? "min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground"
+                  : "sr-only"
+              }
+            >
+              {title || ariaLabel || "Options"}
+            </DialogPrimitive.Title>
+            {!title && <div className="flex-1" />}
+            <DialogPrimitive.Close
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kova-radius-compact)] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Close sheet"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </DialogPrimitive.Close>
+          </div>
+          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-[max(.5rem,var(--safe-left))] pb-4 pr-[max(.5rem,var(--safe-right))] [scrollbar-gutter:stable]">
+            {children}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
-
-  // The composer uses backdrop filtering, which creates a containing block for
-  // fixed descendants. Portaling keeps the sheet anchored to the visual viewport
-  // in landscape and while the on-screen keyboard changes the page geometry.
-  return typeof document === "undefined" ? null : createPortal(sheet, document.body);
 }

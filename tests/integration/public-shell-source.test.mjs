@@ -60,7 +60,7 @@ test("public layouts provide a single skip-link destination", async () => {
   ]);
 
   for (const source of [site, seoLanding, legalArticle]) {
-    assert.match(source, /<main id="main-content" tabIndex=\{-1\}/);
+    assert.match(source, /<main\s+id="main-content"\s+tabIndex=\{-1\}/);
   }
 
   for (const [index, source] of routes.entries()) {

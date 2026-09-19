@@ -14,6 +14,7 @@ export type PublicDetailPage = Readonly<{
   closing?: Readonly<{ title: string; body: string }>;
   relatedPages?: readonly Readonly<{ title: string; summary: string; to: string }>[];
   highlights: readonly string[];
+  faq?: readonly Readonly<{ q: string; a: string }>[];
   sections: readonly Readonly<{
     title: string;
     body: string;

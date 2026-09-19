@@ -313,12 +313,16 @@ export function CommandPalette({
         .slice(1)
         .map((action) => ({
           ...action,
+          score: fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized),
+        }))
+        .filter((action) => action.score > 0)
+        .map((action) => ({
+          ...action,
           score:
-            fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized) +
+            action.score +
             (recentCommands.includes(action.href ?? action.action ?? "") ? 5 : 0) +
             (pinnedCommands.includes(action.href ?? action.action ?? "") ? 20 : 0),
         }))
-        .filter((action) => action.score > 0)
         .sort((a, b) => b.score - a.score),
     [normalized, recentCommands, pinnedCommands],
   );
@@ -465,6 +469,8 @@ export function CommandPalette({
       aria-modal="true"
       aria-label="Search workspace, chats, and actions"
       onKeyDown={(event) => {
+        // Composition keys belong to the IME, never to command execution.
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
         if (event.key === "Tab" && dialogRef.current) {
           const focusable = Array.from(
             dialogRef.current.querySelectorAll<HTMLElement>(
@@ -484,7 +490,11 @@ export function CommandPalette({
         if (event.key === "Escape") {
           event.preventDefault();
           closePalette();
+          return;
         }
+        // Native buttons/links must activate themselves when reached with Tab.
+        // Only the combobox uses aria-activedescendant command navigation.
+        if (event.target !== searchInputRef.current) return;
         if (event.key === "ArrowDown") {
           event.preventDefault();
           setActiveIndex(Math.min(totalItems - 1, activeIndex + 1));
@@ -509,7 +519,7 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
+      <div className="min-w-0 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
@@ -522,7 +532,7 @@ export function CommandPalette({
             aria-controls="command-palette-results"
             aria-activedescendant={`command-option-${activeIndex}`}
             aria-label="Search workspace, commands, and chats"
-            className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
           <button
             type="button"
