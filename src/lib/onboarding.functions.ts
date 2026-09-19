@@ -4,11 +4,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getOnboarding = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase
+    const { data, error } = await context.supabase
       .from("user_onboarding")
       .select("primary_use, response_style, completed, completed_at")
       .eq("user_id", context.userId)
       .maybeSingle();
+    if (error) throw new Error("Onboarding preferences are temporarily unavailable.");
     return data ?? null;
   });
 
