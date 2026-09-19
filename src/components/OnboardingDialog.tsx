@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { getOnboarding, saveOnboarding, skipOnboarding } from "@/lib/onboarding.functions";
+import { shouldOpenOnboarding } from "@/lib/onboarding-response-policy.mjs";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { saveDraft } from "@/lib/chat-store";
 import { ArrowLeft, Check, Sparkles } from "lucide-react";
@@ -164,7 +165,7 @@ export function OnboardingDialog({
     (async () => {
       try {
         const row = await fetchOnboarding();
-        if (!cancelled && (!row || !row.completed)) setOpen(true);
+        if (!cancelled && shouldOpenOnboarding(row)) setOpen(true);
       } catch {
         /* ignore */
       }
