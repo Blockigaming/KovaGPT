@@ -553,3 +553,346 @@
 [data-public-shell] .public-closing h2 {
   max-width: 22ch;
 }
+
+/* Product-led overview: the workspace is visible alongside the first message. */
+[data-public-shell] .public-overview {
+  --public-page-width: 76rem;
+  --public-section-space: clamp(3.5rem, 7vw, 6rem);
+}
+[data-public-shell] .public-overview-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 4.5vw, 4.5rem);
+  padding-block: clamp(3rem, 6vw, 5.5rem);
+}
+[data-public-shell] .public-overview-intro .public-hero {
+  padding: 0;
+  text-align: start;
+}
+[data-public-shell] .public-overview-intro .public-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+[data-public-shell] .public-overview-intro h1 {
+  font-size: clamp(3.25rem, 5.2vw, 4.875rem);
+  line-height: 1.04;
+  letter-spacing: -0.055em;
+  font-weight: 400;
+}
+[data-public-shell] .public-overview-intro .public-hero-description {
+  max-width: 26rem;
+  margin: 1.5rem 0 1.75rem;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+[data-public-shell] .public-overview-intro .public-actions {
+  justify-content: flex-start;
+  gap: 0.625rem;
+}
+[data-public-shell] .public-overview-intro .public-workflow-example {
+  border-radius: 1rem;
+  border-color: color-mix(in srgb, var(--foreground) 12%, var(--background));
+  box-shadow:
+    0 2px 4px #12254a05,
+    0 20px 60px #12254a0d;
+}
+[data-public-shell] .public-demo-window {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+}
+[data-public-shell] .public-demo-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  font-size: 1.375rem;
+  color: var(--public-accent);
+}
+[data-public-shell] .public-demo-brand span {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+}
+[data-public-shell] .public-demo-status {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--public-accent);
+}
+[data-public-shell] .public-overview-intro .public-example-toolbar {
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: transparent;
+}
+[data-public-shell] .public-overview-intro .public-example-toolbar h2 {
+  max-width: 11rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+[data-public-shell] .public-overview-intro .public-example-options {
+  gap: 0;
+}
+[data-public-shell] .public-overview-intro .public-example-options button {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+[data-public-shell] .public-overview-intro .public-example-conversation {
+  min-height: 20rem;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+[data-public-shell] .public-overview-intro .public-example-prompt {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem 1rem 0.25rem 1rem;
+  max-width: 92%;
+}
+[data-public-shell] .public-overview-intro .public-example-answer h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.625rem;
+}
+[data-public-shell] .public-overview-intro .public-example-answer :is(p, li) {
+  font-size: 0.8125rem;
+  line-height: 1.75;
+}
+[data-public-shell] .public-overview-intro .public-example-answer > .public-eyebrow {
+  margin-bottom: 0.875rem;
+  font-size: 0.6875rem;
+}
+[data-public-shell] .public-overview-intro .public-example-answer ol {
+  margin-top: 0.75rem;
+}
+[data-public-shell] .public-overview-intro .public-example-composer {
+  margin-bottom: 1rem;
+  border-radius: 0.875rem;
+  padding: 0.625rem 0.875rem;
+}
+[data-public-shell] .public-overview-intro .public-example-caption {
+  font-size: 0.625rem;
+  padding: 0.625rem;
+  background: var(--muted);
+}
+[data-public-shell] .public-capability-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  padding: 1.5rem 0;
+  border-block: 1px solid var(--border);
+}
+[data-public-shell] .public-capability-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .public-use-cases .public-section-heading {
+  max-width: none;
+  text-align: start;
+  margin-bottom: 2rem;
+}
+[data-public-shell] .public-use-cases .public-section-heading h2 {
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 400;
+}
+[data-public-shell] .public-use-case {
+  border-radius: 1rem;
+  padding: 1.75rem 1.5rem 0;
+}
+[data-public-shell] .public-use-case-writing {
+  background: color-mix(in srgb, #cddded 35%, var(--background));
+}
+[data-public-shell] .public-use-case-learning {
+  background: color-mix(in srgb, #dfd8ef 35%, var(--background));
+}
+[data-public-shell] .public-use-case-planning {
+  background: color-mix(in srgb, #e9e4c9 35%, var(--background));
+}
+[data-public-shell] .public-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 0.75rem;
+}
+[data-public-shell] .public-use-case > p {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 0.875rem;
+}
+[data-public-shell] .public-text-action {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+[data-public-shell] .public-text-action:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+[data-public-shell] .public-text-action:focus-visible {
+  outline: 2px solid var(--public-accent);
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+[data-public-shell] .public-document-excerpt {
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .public-document-illustration {
+  transform: rotate(-2deg) translateY(0.5rem);
+  transform-origin: center bottom;
+}
+[data-public-shell] .public-learning-illustration {
+  transform: translateY(0.5rem);
+}
+[data-public-shell] .public-plan-illustration {
+  transform: rotate(2deg) translateY(0.5rem);
+  transform-origin: center bottom;
+}
+[data-public-shell] .public-plan-band {
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: #152b51;
+  color: #fff;
+}
+[data-public-shell] .public-plan-band :is(p, .public-eyebrow) {
+  color: #c1cde0;
+}
+[data-public-shell] .public-plan-band .public-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+}
+[data-public-shell] .public-plan-band .public-action {
+  background: #fff;
+  color: #152b51;
+}
+[data-public-shell] .public-context-visual {
+  margin-top: 2rem;
+  padding: 0.5rem 1.125rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  box-shadow: 0 10px 30px #12254a06;
+}
+[data-public-shell] .public-context-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .public-context-top > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+[data-public-shell] .public-context-file {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+[data-public-shell] .public-context-file > svg {
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+[data-public-shell] .public-context-file > span {
+  flex: 1;
+}
+[data-public-shell] .public-context-file small {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+[data-public-shell] .public-control-icon {
+  margin-bottom: 1.25rem;
+  color: var(--public-accent);
+}
+[data-public-shell] .public-control-grid article {
+  border-radius: 1rem;
+}
+[data-public-shell] .public-closing {
+  margin-block: 2rem 4rem;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem;
+  border-radius: 1.25rem;
+  background: var(--public-accent-soft);
+}
+@media (max-width: 1000px) {
+  [data-public-shell] .public-overview-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+  [data-public-shell] .public-overview-intro .public-hero {
+    text-align: center;
+  }
+  [data-public-shell] .public-overview-intro .public-hero-description {
+    margin-inline: auto;
+    max-width: 30rem;
+  }
+  [data-public-shell] .public-overview-intro .public-actions {
+    justify-content: center;
+  }
+  [data-public-shell] .public-overview-intro .public-workflow-example {
+    width: 100%;
+    max-width: 38rem;
+    margin-inline: auto;
+  }
+}
+@media (max-width: 767px) {
+  [data-public-shell] .public-capability-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  [data-public-shell] .public-capability-strip span {
+    font-size: 0.6875rem;
+    gap: 0.5rem;
+  }
+  [data-public-shell] .public-use-case {
+    padding: 1.5rem 1.5rem 0;
+  }
+  [data-public-shell] .public-feature-icon {
+    margin-bottom: 1rem;
+  }
+  [data-public-shell]
+    .public-use-case
+    :is(.public-document-illustration, .public-learning-illustration, .public-plan-illustration) {
+    min-height: 14rem;
+  }
+  [data-public-shell] .public-overview-intro .public-example-toolbar {
+    padding-inline: 1rem;
+  }
+  [data-public-shell] .public-overview-intro .public-example-conversation {
+    padding: 1.25rem;
+    min-height: 23rem;
+  }
+  [data-public-shell] .public-overview-intro h1 {
+    font-size: clamp(2.75rem, 10vw, 4rem);
+  }
+}

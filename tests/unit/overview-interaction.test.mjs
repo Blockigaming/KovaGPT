@@ -6,6 +6,22 @@ test("overview example selection updates the response and exposes a single selec
   const hooks = createHookHarness();
   const { ProductOverview } = loadUiModule("src/components/public/ProductOverview.tsx", {
     react: hooks.react,
+    "lucide-react": Object.fromEntries(
+      [
+        "ArrowRight",
+        "ArrowUp",
+        "BookOpen",
+        "Check",
+        "FileText",
+        "Folder",
+        "ListChecks",
+        "MessageSquare",
+        "PenLine",
+        "Plus",
+        "Search",
+        "ShieldCheck",
+      ].map((name) => [name, name]),
+    ),
     "@/components/public/PublicShell": { PublicShell: "PublicShell" },
     "@/components/public/PublicSections": {
       PublicAction: "PublicAction",

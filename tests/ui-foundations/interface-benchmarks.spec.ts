@@ -83,6 +83,13 @@ for (const width of [320, 390, 768, 1440]) {
         await expect(answer.getByRole("heading", { name: heading })).toBeVisible();
         await expect(choices.locator('[aria-pressed="true"]')).toHaveText(label);
       }
+      await page.getByRole("button", { name: "Try the learning example" }).click();
+      await expect(
+        answer.getByRole("heading", { name: "Make room for the next question." }),
+      ).toBeVisible();
+      await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Learn");
+      await page.getByRole("button", { name: "Try the writing example" }).click();
+      await expect(choices.locator('[aria-pressed="true"]')).toHaveText("Write");
       const faq = page.locator("summary").filter({ hasText: "Can I trust every answer?" });
       await faq.focus();
       await page.keyboard.press("Enter");

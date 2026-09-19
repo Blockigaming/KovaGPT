@@ -71,13 +71,19 @@ const cancelLabel = "Cancel and keep my current project settings";
 const confirmLabel = "Confirm changes to the selected project only";
 
 function Fixture() {
-  const surface = new URLSearchParams(location.search).get("surface") ?? "dialog";
+  const standaloneReview = document.documentElement.dataset.kovaReview === "1";
+  const surface =
+    new URLSearchParams(location.search).get("surface") ??
+    (standaloneReview ? "public-overview" : "dialog");
   const [result, setResult] = useState("No action taken");
   const [mobileOpen, setMobileOpen] = useState(false);
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
-  if (surface.startsWith("public-") && new URLSearchParams(location.search).get("review") === "1")
+  if (
+    surface.startsWith("public-") &&
+    (standaloneReview || new URLSearchParams(location.search).get("review") === "1")
+  )
     return <BenchmarkReview initialSurface={surface} />;
   if (surface.startsWith("public-")) return <PublicFixture surface={surface} />;
   if (surface === "enterprise")
