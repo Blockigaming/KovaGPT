@@ -9,6 +9,8 @@ export default defineConfig({
   envDir: false,
   publicDir: false,
   plugins: [react(), tailwindcss()],
+  // ChatInput includes the same code-split document worker as the application.
+  worker: { format: "es" },
   resolve: {
     alias: [
       ...[
