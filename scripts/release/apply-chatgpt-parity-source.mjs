@@ -130,6 +130,12 @@ export function applyChatGptParitySource({ check = checkOnly } = {}) {
     changed.add(replacement.path);
   }
 
+  const chatInputSource =
+    files.get("src/components/ChatInput.tsx") ?? readFileSync("src/components/ChatInput.tsx", "utf8");
+  if (!hasRequiredComposerTools(chatInputSource)) {
+    throw new Error("chatgpt_parity_source_drift:src/components/ChatInput.tsx:composer_tools");
+  }
+
   if (check && changed.size) {
     throw new Error(`chatgpt_parity_source_pending:${[...changed].sort().join(",")}`);
   }
