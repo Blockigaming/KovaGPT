@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -40,6 +41,7 @@ const rehearseUpgrade = (options = {}) =>
       tree: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       trackedFileCount: 1,
       readFile: readFileSync,
+      readDirectory: readdirSync,
     }),
     ...options,
   });

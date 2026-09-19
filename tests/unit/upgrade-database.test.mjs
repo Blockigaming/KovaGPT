@@ -27,6 +27,7 @@ const rehearseUpgrade = (options = {}) =>
       tree: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       trackedFileCount: 1,
       readFile: readFileSync,
+      readDirectory: readdirSync,
     }),
     ...options,
   });

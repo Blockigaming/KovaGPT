@@ -43,7 +43,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
-export function planUpgrade(root = ROOT, readSource = readFileSync) {
+export function planUpgrade(root = ROOT, readSource = readFileSync, readDirectory = readdirSync) {
   const manifestBytes = readSource(join(root, MANIFEST));
   const manifest = JSON.parse(manifestBytes);
   if (
@@ -86,7 +86,7 @@ export function planUpgrade(root = ROOT, readSource = readFileSync) {
     throw new Error("upgrade_baseline_origins_invalid");
   if (baseline.reduce((sum, row) => sum + row.statementCount, 0) !== 1042)
     throw new Error("upgrade_baseline_statement_count_invalid");
-  const sourceNames = readdirSync(join(root, "supabase/migrations")).filter((name) =>
+  const sourceNames = readDirectory(join(root, "supabase/migrations")).filter((name) =>
     /^\d{14}_.+\.sql$/u.test(name),
   );
   if (new Set(sourceNames.map((name) => name.slice(0, 14))).size !== sourceNames.length)
@@ -127,6 +127,7 @@ export function rehearseUpgrade({
   let plan;
   let sourceBefore;
   let readSource = readFileSync;
+  let readDirectory = readdirSync;
   try {
     if (captureScheduledCatalog && !currentHistory)
       throw new Error("upgrade_scheduled_catalog_current_history_required");
@@ -136,8 +137,9 @@ export function rehearseUpgrade({
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
       readSource = sourceBefore.readFile;
+      readDirectory = sourceBefore.readDirectory;
     }
-    const historical = planUpgrade(root, readSource);
+    const historical = planUpgrade(root, readSource, readDirectory);
     plan = currentHistory
       ? extendCurrentHistory(historical, readSource(join(root, CURRENT_HISTORY_SNAPSHOT)))
       : historical;

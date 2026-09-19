@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { join, posix, relative, resolve, sep } from "node:path";
 
 const SHA = /^[a-f0-9]{40}$/u;
@@ -51,10 +51,10 @@ export function captureCleanUpgradeSource(directory) {
   if (git("rev-parse", "--show-toplevel").trim() !== root) fail("root_mismatch");
   if (status().length) fail("worktree_dirty");
   const commit = git("rev-parse", "--verify", "HEAD").trim();
-  const tree = git("rev-parse", "--verify", "HEAD^{tree}").trim();
+  const tree = git("rev-parse", "--verify", `${commit}^{tree}`).trim();
   if (!SHA.test(commit) || !SHA.test(tree)) fail("identity_invalid");
   const files = new Map();
-  for (const entry of git("ls-tree", "-rz", "--full-tree", "HEAD").split("\0").filter(Boolean)) {
+  for (const entry of git("ls-tree", "-rz", "--full-tree", tree).split("\0").filter(Boolean)) {
     const match = /^(100644|100755) blob ([a-f0-9]{40})\t([\s\S]+)$/u.exec(entry);
     if (!match) fail("unsupported_entry");
     const [, mode, oid, path] = match;
@@ -94,9 +94,35 @@ export function captureCleanUpgradeSource(directory) {
     status().length
   )
     fail("changed_during_capture");
-  // The reader verifies the very buffers consumed by planning/SQL execution,
-  // not only a separate read before or after them. It never reads ignored SQL.
-  return Object.freeze({ commit, tree, trackedFileCount: files.size, readFile });
+  // Bind membership as well as contents. A file missing during directory
+  // discovery must not vanish from the plan merely because it is restored later.
+  const readDirectory = (directory) => {
+    const absolute = resolve(directory);
+    const path = relative(root, absolute).split(sep).join("/");
+    const prefix = `${path}/`;
+    const expected = [
+      ...new Set(
+        [...files.keys()]
+          .filter((file) => file.startsWith(prefix))
+          .map((file) => file.slice(prefix.length).split("/")[0]),
+      ),
+    ].sort();
+    if (!expected.length) fail("input_untracked");
+    let observed;
+    try {
+      if (!lstatSync(absolute).isDirectory() || realpathSync(absolute) !== absolute)
+        fail("entry_not_regular");
+      observed = readdirSync(absolute).sort();
+    } catch {
+      fail("directory_unreadable");
+    }
+    if (observed.some((name) => !expected.includes(name))) fail("input_untracked");
+    if (JSON.stringify(observed) !== JSON.stringify(expected)) fail("directory_inventory_changed");
+    // Return captured names, not the live listing, and do not expose mutable state.
+    return expected;
+  };
+  // Each consumed buffer and its filename inventory belong to this one tree.
+  return Object.freeze({ commit, tree, trackedFileCount: files.size, readFile, readDirectory });
 }
 
 export function assertUpgradeSourceUnchanged(before, after) {
@@ -109,7 +135,8 @@ export function assertUpgradeSourceUnchanged(before, after) {
       !SHA.test(source.tree) ||
       !Number.isSafeInteger(source.trackedFileCount) ||
       source.trackedFileCount < 1 ||
-      typeof source.readFile !== "function"
+      typeof source.readFile !== "function" ||
+      typeof source.readDirectory !== "function"
     )
       fail("receipt_invalid");
   }

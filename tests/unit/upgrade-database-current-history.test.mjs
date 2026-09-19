@@ -33,6 +33,7 @@ const rehearseUpgrade = (options = {}) =>
       tree: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       trackedFileCount: 1,
       readFile: readFileSync,
+      readDirectory: readdirSync,
     }),
     ...options,
   });
@@ -226,7 +227,7 @@ test("current snapshot core: bad receipt fails before executing a local command"
       rehearseUpgrade({
         root,
         currentHistory: true,
-        execute: () => assert.fail("invalid receipt must not execute"),
+        execute: () => assert.fail("failed preflight must not execute"),
       }),
     /upgrade_current_history_snapshot_invalid/u,
   );

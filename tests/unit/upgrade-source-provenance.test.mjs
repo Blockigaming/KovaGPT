@@ -334,3 +334,153 @@ test("source provenance: dirty dry-run retains existing files and executes no Gi
   for (const name of FILES)
     assert.equal(readFileSync(join(directory, name), "utf8"), '{"passed":true}\n');
 });
+
+for (const currentHistory of [false, true])
+  test(`source inventory: ${currentHistory ? "current" : "historical"} omitted-and-restored migration cannot pass`, (t) => {
+    const root = fixture(t, true),
+      directory = stale(root);
+    const migrations = git(
+      root,
+      "ls-tree",
+      "-r",
+      "--name-only",
+      "HEAD",
+      "supabase/migrations",
+    ).split("\n");
+    const manifest = JSON.parse(readFileSync(join(root, MANIFEST)));
+    const baseline = new Set(manifest.migrations.map((entry) => entry.version));
+    const candidates = migrations.filter(
+      (path) => !baseline.has(path.split("/").at(-1).slice(0, 14)),
+    );
+    const path = candidates.find((name) => !name.includes("20260903145843"));
+    assert.ok(path);
+    const omittedVersion = path.split("/").at(-1).slice(0, 14);
+    const original = readFileSync(join(root, path));
+    let removed = false;
+    const runner = databaseMock(root);
+    try {
+      assert.throws(() => {
+        const result = rehearseUpgrade({
+          root,
+          currentHistory,
+          inspectSource(directory) {
+            const source = captureCleanUpgradeSource(directory);
+            if (removed) return source;
+            removed = true;
+            rmSync(join(root, path));
+            return {
+              ...source,
+              readFile(filename) {
+                // Restore only after directory discovery has selected a forward
+                // file. Old code can then finish with a clean HEAD but skip SQL.
+                if (candidates.some((name) => join(root, name) === filename))
+                  writeFileSync(join(root, path), original);
+                return source.readFile(filename);
+              },
+            };
+          },
+          execute: runner.execute,
+        });
+        t.diagnostic(
+          JSON.stringify({
+            publishedSuccess: result.passed,
+            omittedVersion,
+            omittedFromPending: !result.pendingVersions.includes(omittedVersion),
+            cleanAtPublication: git(root, "status", "--porcelain") === "",
+          }),
+        );
+      }, /upgrade_source_directory_inventory_changed/u);
+      assert.equal(runner.calls.length, 0);
+      noSuccess(directory);
+    } finally {
+      writeFileSync(join(root, path), original);
+    }
+  });
+
+test("source inventory: directory names come from the captured tree without shared mutable state", (t) => {
+  const root = fixture(t, true),
+    source = captureCleanUpgradeSource(root),
+    path = join(root, "supabase/migrations");
+  const expected = git(root, "ls-tree", "--name-only", "HEAD:supabase/migrations")
+    .split("\n")
+    .sort();
+  const originalIndex = readFileSync(join(root, ".git/index"));
+  assert.deepEqual(source.readDirectory(path), expected);
+  const returned = source.readDirectory(path);
+  returned.pop();
+  returned.push("fabricated.sql");
+  assert.deepEqual(source.readDirectory(path), expected);
+  assert.deepEqual(readFileSync(join(root, ".git/index")), originalIndex);
+});
+
+test("source inventory: ignored added migration after source capture is rejected", (t) => {
+  const root = fixture(t, true),
+    path = "supabase/migrations/20260919120100_ignored_after_capture.sql";
+  writeFileSync(
+    join(root, ".gitignore"),
+    readFileSync(join(root, ".gitignore"), "utf8") + path + "\n",
+  );
+  commit(root);
+  const source = captureCleanUpgradeSource(root);
+  writeFileSync(join(root, path), "select 1;\n");
+  assert.equal(git(root, "status", "--porcelain"), "");
+  assert.throws(() => source.readDirectory(join(root, "supabase/migrations")), /input_untracked/u);
+});
+
+test("source inventory: renamed committed migration cannot replace its captured filename", (t) => {
+  const root = fixture(t, true),
+    directory = join(root, "supabase/migrations"),
+    source = captureCleanUpgradeSource(root),
+    name = source.readDirectory(directory).find((name) => name.endsWith(".sql"));
+  const bytes = readFileSync(join(directory, name));
+  rmSync(join(directory, name));
+  writeFileSync(join(directory, "20260919120200_renamed.sql"), bytes);
+  assert.throws(() => source.readDirectory(directory), /input_untracked/u);
+});
+
+test("source inventory: absent or untracked directory cannot be treated as empty", (t) => {
+  const root = fixture(t, true),
+    source = captureCleanUpgradeSource(root);
+  assert.throws(() => source.readDirectory(join(root, "ignored")), /input_untracked/u);
+  assert.throws(() => source.readDirectory(join(root, "../outside")), /input_untracked/u);
+  rmSync(join(root, "supabase/migrations"), { recursive: true });
+  assert.throws(
+    () => source.readDirectory(join(root, "supabase/migrations")),
+    /directory_unreadable/u,
+  );
+});
+
+test("source inventory: symlink replacement cannot supply a matching directory listing", (t) => {
+  const root = fixture(t, true),
+    source = captureCleanUpgradeSource(root),
+    path = join(root, "supabase/migrations"),
+    replacement = join(root, "ignored/migrations");
+  mkdirSync(join(root, "ignored"));
+  cpSync(path, replacement, { recursive: true });
+  rmSync(path, { recursive: true });
+  symlinkSync(replacement, path);
+  assert.throws(() => source.readDirectory(path), /directory_unreadable/u);
+});
+
+test("source inventory: source receipts must provide a bound directory reader", (t) => {
+  const source = captureCleanUpgradeSource(fixture(t));
+  for (const readDirectory of [null, undefined, "readdirSync", []])
+    assert.throws(
+      () => assertUpgradeSourceUnchanged(source, { ...source, readDirectory }),
+      /receipt_invalid/u,
+    );
+});
+
+test("source inventory: current full rehearsal preserves the entire committed pending range", (t) => {
+  const root = fixture(t, true),
+    runner = databaseMock(root);
+  const dry = rehearseUpgrade({ root, dryRun: true, currentHistory: true });
+  const actual = rehearseUpgrade({ root, currentHistory: true, execute: runner.execute });
+  assert.equal(actual.passed, true);
+  assert.equal(actual.baselineVersions, 98);
+  assert.equal(actual.pendingVersions.length, 83);
+  assert.equal(actual.forwardMigrations.length, 82);
+  assert.deepEqual(actual.pendingVersions, dry.pendingVersions);
+  assert.deepEqual(actual.replayPendingVersions, dry.replayPendingVersions);
+  assert.equal(actual.sourceCommit, git(root, "rev-parse", "HEAD"));
+});

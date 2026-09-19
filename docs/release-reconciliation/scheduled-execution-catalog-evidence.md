@@ -149,3 +149,27 @@ is granted, and all formal proof/readiness flags remain unchanged.
 Git behavior references: [status](https://git-scm.com/docs/git-status),
 [index flags](https://git-scm.com/docs/git-update-index), and
 [tree entries](https://git-scm.com/docs/git-ls-tree).
+
+## Captured migration filename inventory
+
+The committed-source reader also binds directory membership to the initially
+captured tree. Checking only the contents of files that happen to be listed by
+the working directory leaves a gap: a committed migration can disappear during
+planning and return before final verification, without ever reaching the bound
+file reader. Both historical and current rehearsals must reject that omission.
+
+The inspector enumerates the immutable captured tree ID rather than a moving
+HEAD. It derives the expected immediate child names from that tree, validates
+the live directory against that inventory, and returns the captured names.
+Missing, added, renamed, ignored, or redirected directory entries cannot
+silently change the pending range. Planning uses this bound directory reader for
+every full run; standalone planning and dry runs remain observational. The
+returned list is independent, so caller mutation cannot change a later read.
+
+Regression tests remove a committed pending migration after initial inspection
+and restore it before final inspection. The predecessor published success with
+the migration omitted in both historical and current modes; the corrected
+runner fails before any database command. Other tests cover ignored additions,
+renames, missing directories, symlink replacement, and the complete current
+83-version raw pending / 82-version forward-execution range. No SQL, migration
+history, workflow, collector scope, or formal proof status is changed.
