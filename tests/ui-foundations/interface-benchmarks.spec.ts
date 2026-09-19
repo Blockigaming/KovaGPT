@@ -24,7 +24,17 @@ for (const width of [390, 1440]) {
       await page.keyboard.press("Escape");
       await expect(dialog).not.toBeVisible();
       await expect(projects).toBeFocused();
-      await page.locator(".public-hero").getByRole("link", { name: "Explore plans" }).click();
+      if (width < 1024) {
+        const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
+        await menu.click();
+        await page
+          .locator("#public-mobile-navigation")
+          .getByRole("link", { name: "Pricing", exact: true })
+          .click();
+        await expect(menu).toHaveAttribute("aria-expanded", "false");
+      } else {
+        await page.locator(".public-hero").getByRole("link", { name: "Explore plans" }).click();
+      }
       await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
       await expect(page.locator("#main-content")).toBeFocused();
       await page.getByRole("link", { name: "Overview", exact: true }).click();

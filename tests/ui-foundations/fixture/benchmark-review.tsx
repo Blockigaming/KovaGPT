@@ -39,7 +39,7 @@ export function BenchmarkReview({ initialSurface }: { initialSurface: string }) 
   }
   return (
     <div onClickCapture={follow}>
-      <PublicFixture surface={surface} />
+      <PublicFixture key={surface} surface={surface} />
       <Dialog
         open={destination !== null}
         onOpenChange={(open) => {
