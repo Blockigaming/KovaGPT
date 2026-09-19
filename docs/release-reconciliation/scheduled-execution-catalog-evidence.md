@@ -107,3 +107,45 @@ collectors together, source binding, artifact hash linkage and failure cleanup.
 The real hosted PostgreSQL run and its downloadable new-head artifact remain the
 execution evidence. A separately retained live read-only receipt is not a
 substitute for that run or permission to change production.
+
+## Committed-source provenance for every evidence-producing run
+
+Every full rehearsal, including historical mode and the default programmatic API,
+requires a clean committed checkout before reading the manifest, migrations, seed,
+or assertions. This check is independent of the optional catalog collectors.
+Dry runs remain observational and return `executed: false`, including when planning
+uncommitted changes.
+
+`upgrade-source-provenance.mjs` binds the initial commit and tree, checks staged,
+unstaged and visible untracked changes, and verifies all tracked regular-file bytes
+and executable modes against their Git blob identities. It does not rely solely
+on `git status`: `assume-unchanged`, `skip-worktree`, disabled file-mode reporting,
+and ignored additional SQL must not hide a mismatch. Symlink and submodule source
+entries fail closed. The inspector removes inherited Git redirection/configuration
+variables and disables optional index updates, filesystem monitors and untracked
+caches; it performs no checkout, stash, reset, commit, repair or network operation.
+
+The source-bound reader also checks each buffer actually consumed by the planner
+or SQL execution against that initial tree. An input edited and then restored
+between the initial and final observations cannot silently pass through this
+reader. Ignored or otherwise untracked migration inputs are rejected. The existing
+receipt labels must match the initial identity, and another complete source check
+runs after database cleanup and before any success artifact is written. Source
+failure removes stale success evidence and reports bounded errors, not file contents.
+
+The `inspectSource` parameter is a programmatic test seam, analogous to the existing
+mockable database executor; there is no CLI flag or environment bypass. Existing
+orchestration tests declare synthetic source inspectors explicitly. Separate tests
+exercise actual temporary Git repositories and the real source reader, including
+historical/default runs, hidden edits, late commits and post-cleanup changes.
+Only database process calls are mocked in those integration tests.
+
+Use a dedicated checkout without concurrent editors. This is source-byte binding,
+not an immutable filesystem sandbox or attestation of Node, installed dependencies,
+external tools, or JavaScript loaded before inspection. The dependency lockfile and
+hosted runner evidence remain separate inputs. No production or lineage authorization
+is granted, and all formal proof/readiness flags remain unchanged.
+
+Git behavior references: [status](https://git-scm.com/docs/git-status),
+[index flags](https://git-scm.com/docs/git-update-index), and
+[tree entries](https://git-scm.com/docs/git-ls-tree).

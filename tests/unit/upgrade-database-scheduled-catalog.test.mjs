@@ -13,7 +13,11 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { MANIFEST, planUpgrade, rehearseUpgrade } from "../../scripts/release/upgrade-database.mjs";
+import {
+  MANIFEST,
+  planUpgrade,
+  rehearseUpgrade as actualRehearseUpgrade,
+} from "../../scripts/release/upgrade-database.mjs";
 import {
   CURRENT_HISTORY_SNAPSHOT,
   extendCurrentHistory,
@@ -27,6 +31,18 @@ import {
   parseScheduledCatalogCapture,
   buildScheduledCatalogEvidence,
 } from "../../scripts/release/upgrade-database-scheduled-catalog.mjs";
+
+// Database orchestration is mocked here; real Git/source checks have their own suite.
+const rehearseUpgrade = (options = {}) =>
+  actualRehearseUpgrade({
+    inspectSource: () => ({
+      commit: "dddddddddddddddddddddddddddddddddddddddd",
+      tree: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      trackedFileCount: 1,
+      readFile: readFileSync,
+    }),
+    ...options,
+  });
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BASE = ["20260823092107", "20260823092450"];
