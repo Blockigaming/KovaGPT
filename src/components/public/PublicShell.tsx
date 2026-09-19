@@ -183,9 +183,6 @@ export function PublicShell({ children }: { children: ReactNode }) {
       data-public-shell
       className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
     >
-      <a href="#main-content" className="public-skip-link">
-        Skip to content
-      </a>
       <PublicHeader />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       <PublicFooter />

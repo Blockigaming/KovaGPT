@@ -14,21 +14,6 @@
   --public-accent-soft: var(--muted);
 }
 
-[data-public-shell] .public-skip-link {
-  position: fixed;
-  inset-block-start: 0.75rem;
-  inset-inline-start: 0.75rem;
-  z-index: 100;
-  transform: translateY(-200%);
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  background: var(--foreground);
-  color: var(--background);
-}
-[data-public-shell] .public-skip-link:focus {
-  transform: translateY(0);
-}
-
 [data-public-shell] .public-overview {
   width: min(100%, calc(var(--public-page-width) + 2 * var(--public-page-gutter)));
   margin-inline: auto;

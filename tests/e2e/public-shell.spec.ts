@@ -40,6 +40,10 @@ test("public routes share one landmark and a working skip target", async ({ page
       page.locator("main#main-content"),
       `${route} should expose the skip target`,
     ).toHaveCount(1);
+    await expect(
+      page.getByRole("link", { name: "Skip to content" }),
+      `${route} should expose one root-level skip link`,
+    ).toHaveCount(1);
     await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
 
