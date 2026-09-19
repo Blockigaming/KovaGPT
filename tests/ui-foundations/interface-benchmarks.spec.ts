@@ -42,7 +42,10 @@ for (const width of [390, 1440]) {
       await expect(overview).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(hero).toBeVisible();
-      const openKova = page.locator(".public-hero").getByRole("link", { name: "Open KovaGPT" });\n      await openKova.focus();\n      await expect(openKova).toBeFocused();\n      await page.keyboard.press("Enter");
+      const openKova = page.locator(".public-hero").getByRole("link", { name: "Open KovaGPT" });
+      await openKova.focus();
+      await expect(openKova).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(dialog).toContainText(
         "This download includes the overview and pricing comparison only",
       );
