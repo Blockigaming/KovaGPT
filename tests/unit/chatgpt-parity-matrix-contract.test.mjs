@@ -46,3 +46,18 @@ test("the visual goal explicitly rejects a futuristic dashboard detour", () => {
   assert.match(goal, /No Voice mode/iu);
   assert.match(goal, /Source code alone is not visual proof/iu);
 });
+
+test("signed-in viewport matrix reuses the bounded hydration-aware desktop readiness check", () => {
+  const matrix = spec.slice(
+    spec.indexOf('test("signed-in shell uses the same required viewport and theme matrix"'),
+  );
+  assert.match(matrix, /else\s*\{\s*await expectAuthenticatedDesktopReady\(page\);/u);
+  const helper = spec.slice(
+    spec.indexOf("async function expectAuthenticatedDesktopReady"),
+    spec.indexOf('test.describe("ChatGPT-like Kova conversation shell"'),
+  );
+  assert.match(helper, /await waitForKovaHydration\(page\)/u);
+  assert.match(helper, /name: "Account menu", exact: true/u);
+  assert.match(helper, /toBeVisible\(\{ timeout: 15_000 \}\)/u);
+  assert.doesNotMatch(matrix, /test\.skip|waitForTimeout|removeLocatorHandler/u);
+});
