@@ -30,9 +30,11 @@ export async function installAuthenticatedFixture(
     .locator('[role="dialog"][data-state="open"]')
     .filter({ hasText: "Welcome to KovaGPT" });
   await page.addLocatorHandler(welcomeDialog, async () => {
-    await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click();
-    // The locator targets only the open Radix state. Let Playwright wait for
-    // that state to clear before retrying the intercepted test action.
+    // A mobile sheet may already be open when delayed onboarding arrives. Its
+    // overlay can cover the welcome dialog even though this real close button
+    // is visible, so bypass only the pointer hit-test and keep the UI handler.
+    await welcomeDialog.getByRole("button", { name: "Close", exact: true }).click({ force: true });
+    await welcomeDialog.waitFor({ state: "hidden" });
   });
   await page.addInitScript(
     ({ storageKeyPatternSource, user }) => {
