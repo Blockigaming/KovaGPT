@@ -27,14 +27,16 @@ export function ResponsiveModelSelector({
 }) {
   const { isDesktop, interaction } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
-  // Hidden until auth confirms a session: guests must never see the picker.
-  const locked = !isSignedIn;
+  // Signed-out and Free users never receive a switchable model picker.
+  const locked = !isLoaded || !isSignedIn || userTier === "free";
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
-  const current = MODES.find((m) => m.id === mode) ?? MODES[0];
+  const groups = versionGroupsForTier(userTier);
+  const current =
+    groups.flatMap((group) => group.modes).find((item) => item.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
 
   useEffect(() => {
@@ -48,12 +50,13 @@ export function ResponsiveModelSelector({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [open, useSheet]);
 
-  // Signed-out visitors are pinned to the cheapest mode and never see the picker.
+  // Signed-out and Free visitors are pinned to Instant even if stale local state
+  // previously contained a paid/legacy mode.
   useEffect(() => {
-    if (!isLoaded || isSignedIn) return;
+    if (!isLoaded || (isSignedIn && userTier !== "free")) return;
     setOpen(false);
     if (mode !== "instant") onChange("instant");
-  }, [isLoaded, isSignedIn, mode, onChange]);
+  }, [isLoaded, isSignedIn, mode, onChange, userTier]);
 
   const closeAndRestoreFocus = () => {
     setOpen(false);
@@ -107,7 +110,6 @@ export function ResponsiveModelSelector({
     );
   };
 
-  const groups = versionGroupsForTier(userTier);
   const options = groups.map((group) => (
     <div key={group.id} className="pb-1">
       <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">{group.label}</div>
@@ -115,7 +117,7 @@ export function ResponsiveModelSelector({
     </div>
   ));
 
-  // Guests see the brand label in the same position, but no switchable menu.
+  // Guests and Free users see the brand label in the same position, but no switchable menu.
   if (locked)
     return (
       <span className="kova-model-static inline-flex h-10 select-none items-center px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">

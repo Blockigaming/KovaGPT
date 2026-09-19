@@ -153,33 +153,38 @@ const rows: Row[] = [
   ],
   [
     "Chat & modes",
-    "What is Instant mode?",
-    "Instant is optimized for the shortest, fastest replies and is included on Free, Plus, and Pro.",
+    "What is Lite mode?",
+    "Lite is the default fastest Chat effort. Free and signed-out users are locked to Lite; Plus and Pro can also select it.",
   ],
   [
     "Chat & modes",
     "What is Medium mode?",
-    "Medium balances speed and detail for everyday work and is included on Free, Plus, and Pro.",
+    "Medium gives the same Chat model more working time than Lite. It is available on Plus and Pro.",
   ],
   [
     "Chat & modes",
     "What is Thinking mode?",
-    "Thinking uses more careful, structured reasoning for harder requests and is included on Free, Plus, and Pro.",
+    "Thinking is the Plus label for the higher-effort Chat route. It uses the same underlying Chat model with more working time than Medium.",
   ],
   [
     "Chat & modes",
     "What is High mode?",
-    "High emphasizes deeper verification and completeness. It is available on Plus and Pro.",
+    "High is the Pro label for that higher-effort Chat route. It is available on Pro.",
   ],
   [
     "Chat & modes",
-    "What is Extra high mode?",
-    "Extra high explores alternatives with more detailed reasoning before Pro mode. It is available on Pro.",
+    "What is Extra High mode?",
+    "Extra High gives the same Chat model additional bounded analysis, checking, and revision time. It is available on Pro.",
   ],
   [
     "Chat & modes",
-    "What is Pro mode?",
-    "Pro uses the maximum available context and reasoning for polished, comprehensive answers. It is available on Pro.",
+    "What is Max mode?",
+    "Max uses a larger bounded work budget on the same Chat model for difficult requests. It is available on Pro.",
+  ],
+  [
+    "Chat & modes",
+    "What is Ultra mode?",
+    "Ultra is the deepest Pro Chat effort and can use bounded sub-agent orchestration over the same underlying Chat model.",
   ],
   [
     "Chat & modes",
@@ -194,7 +199,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "Do more capable modes take longer?",
-    "They can. Modes that perform deeper reasoning may take longer than Instant or Medium, especially for complex requests.",
+    "They can. Higher-effort modes may take longer than Lite or Medium, especially for complex requests.",
   ],
   [
     "Search & research",
@@ -595,7 +600,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do usage limits work?",
-    "Every published plan has finite chat, image, upload, and storage allowances. The app reports applicable limits; paid plans have higher published allowances but are not unlimited.",
+    "Free Chat has a finite message allowance. Plus and Pro do not use a paid Chat message-count or weekly Work quota; technical per-request, security, concurrency, image, upload, and storage limits still apply where shown in the product.",
   ],
   [
     "Privacy & security",

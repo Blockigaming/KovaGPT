@@ -31,12 +31,22 @@ test("unknown provider information stays unknown instead of being invented", () 
   assert.match(base, /say the active provider or model is not confirmed rather than guessing\./);
 });
 
-test("profile branding does not claim separate foundation weights or training from scratch", () => {
-  assert.match(base, /Cosmo, Orion, and Nova are behavior and compute profiles/);
+test("current topology is product design, not proof of deployed weights or completed training", () => {
   assert.match(
     base,
-    /not claims of separate foundation weights or a foundation model trained from scratch/,
+    /The product design is that Chat effort modes share one underlying Chat model/,
   );
+  assert.match(base, /Cosmo, Orion, and Nova are distinct Work model families/);
+  assert.match(
+    base,
+    /their active provider and pinned upstream revisions must come from trusted runtime information/,
+  );
+  assert.match(
+    base,
+    /Product design is not evidence that any model is loaded, fine-tuned, or serving/,
+  );
+  assert.match(base, /Product labels alone do not prove separate foundation weights/);
+  assert.match(base, /Do not claim training from scratch without verified provenance/);
 });
 
 test("every current mode inherits the shared identity without unsolicited introductions", () => {

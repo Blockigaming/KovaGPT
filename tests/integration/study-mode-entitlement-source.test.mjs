@@ -9,7 +9,7 @@ test("Study generation uses a capable mode selected from the authoritative calle
   const chat = read("src/routes/api/chat.ts");
 
   assert.match(panel, /clientTool: "study"/);
-  assert.match(panel, /mode: "thinking"/);
+  assert.match(panel, /mode: "instant"/);
   assert.match(
     chat,
     /!customKova && clientTool === "study" && auth[\s\S]*studyModeForTier\(callerTier\)/,
