@@ -22,7 +22,7 @@ with target as (
  and not exists (select 1 from pg_attribute a join pg_type typ on typ.oid=a.atttypid
    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
    and (a.attstorage<>typ.typstorage or a.attcompression<>''::"char"
-     or a.attstattarget<>-1 or a.attndims<>0))
+     or a.attstattarget<>-1))
  and not exists (select 1 from pg_statistic_ext statistics where statistics.stxrelid=c.oid)
  and c.relam=(select access.oid from pg_am access where access.amname='heap')
  and c.reloftype=0
@@ -45,7 +45,7 @@ with target as (
  'replicaIdentity',c.relreplident::text,'partition',c.relispartition,
  'parentCount',(select count(*) from pg_inherits h where h.inhrelid=c.oid),
  'columns',coalesce((select jsonb_agg(jsonb_build_object(
-   'ordinal',a.attnum,'name',a.attname::text,'type',format_type(a.atttypid,a.atttypmod),
+   'ordinal',a.attnum,'name',a.attname::text,'type',format_type(a.atttypid,a.atttypmod),'dimensions',a.attndims,
    'notNull',a.attnotnull,'identity',a.attidentity::text,'generated',a.attgenerated::text,
    'aclIsNull',a.attacl is null,
    'defaultSha256',case when d.oid is not null then encode(sha256(convert_to(pg_get_expr(d.adbin,d.adrelid),'UTF8')),'hex') else null end,
@@ -189,6 +189,7 @@ const column = object({
   ordinal: scalar((v) => Number.isSafeInteger(v) && v > 0 && v <= 1600),
   name: text,
   type: text,
+  dimensions: scalar((v) => Number.isSafeInteger(v) && v >= 0 && v <= 6),
   notNull: bool,
   identity: literal("", "a", "d"),
   generated: literal("", "s"),
@@ -408,7 +409,7 @@ export function buildScheduledTableEvidence({
     productionReleaseReady: false,
     productionRowsRestored: false,
     limitations: [
-      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST/column storage options, nondefault column statistics targets, declared array dimensions, extended statistics, non-heap access methods, typed tables, non-origin capture sessions or internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed.",
+      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST/column storage options, nondefault column statistics targets, extended statistics, non-heap access methods, typed tables, non-origin capture sessions or internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed. Declared array dimensions are captured explicitly.",
       "No table rows, sequences, external foreign-key targets, dependency closure, role-membership graph or executable RLS behavior is proven.",
       "Definition hashes compare fixed-search-path PostgreSQL deparser output; equality is not independent semantic equivalence proof.",
       "Later-writer changes remain visible. Fresh-source/live comparison, original effects, recovery and independent review remain separate gates.",
