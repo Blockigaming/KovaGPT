@@ -8,7 +8,7 @@ the 19-entry blocked lineage inventory.
 ## Scope
 
 The collector reads PostgreSQL 17 catalogs in a bounded repeatable-read, read-only
-transaction. It captures columns and default hashes, constraints, indexes, explicit
+transaction. It requires the origin replication role and captures columns and default hashes, constraints, indexes, explicit
 table/column grants, effective table privileges for the three existing API roles,
 RLS enablement/force flags, policy roles and expression hashes, and user-trigger
 identities/definition hashes. No task/run/customer rows or raw routine bodies are
@@ -18,7 +18,7 @@ The fixed search path and byte-order sorting make checkpoint comparisons stable.
 Each observation retains its timestamp, PostgreSQL version, exact migration-version
 set and source commit/tree. A missing table, malformed or extra field, incorrect
 history, duplicate name, invalid hash, or unsupported partition/inheritance layout
-fails validation. Explicit grants are not collapsed into effective privileges. `aclIsNull` records
+fails validation. Per-column storage/compression overrides and extended-statistics objects are unsupported and fail closed. Explicit grants are not collapsed into effective privileges. `aclIsNull` records
 whether `pg_class.relacl` is null independently of the expanded ACL inventory,
 and participates in the ACL hash. An implicit default ACL and an explicitly
 stored identical ACL therefore remain distinguishable. Each index also records

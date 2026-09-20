@@ -16,6 +16,18 @@ for (const [name, expression] of [
   ],
   ["relation options", /and c\.reloptions is null/u],
   [
+    "per-column storage and compression overrides",
+    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\)/u,
+  ],
+  [
+    "extended statistics",
+    /not exists \(select 1 from pg_statistic_ext statistics where statistics\.stxrelid=c\.oid\)/u,
+  ],
+  [
+    "a non-origin replication session",
+    /current_setting\('session_replication_role'\)='origin'/u,
+  ],
+  [
     "TOAST options",
     /not exists \(select 1 from pg_class toast where toast\.oid=c\.reltoastrelid and toast\.reloptions is not null\)/u,
   ],
@@ -134,7 +146,9 @@ test("scheduled scope: documented restrictions match the guarded query instead o
   );
   for (const word of [
     "effective publications",
-    "relation/TOAST options",
+    "relation/TOAST/column storage options",
+    "extended statistics",
+    "non-origin capture sessions",
     "internal constraint triggers",
     "API-role authority",
     "tablespaces",

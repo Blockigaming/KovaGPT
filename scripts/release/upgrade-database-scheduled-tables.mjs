@@ -18,6 +18,11 @@ with target as (
  where n.nspname='public' and c.relname in ('scheduled_task_runs','scheduled_tasks')
  and not exists (select 1 from pg_inherits h where h.inhparent=c.oid)
  and not exists (select 1 from pg_rewrite r where r.ev_class=c.oid)
+ and current_setting('session_replication_role')='origin'
+ and not exists (select 1 from pg_attribute a join pg_type typ on typ.oid=a.atttypid
+   where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+   and (a.attstorage<>typ.typstorage or a.attcompression<>''::"char"))
+ and not exists (select 1 from pg_statistic_ext statistics where statistics.stxrelid=c.oid)
  and not exists (select 1 from pg_publication_tables p where p.schemaname=n.nspname and p.tablename=c.relname)
  and c.reloptions is null
  and not exists (select 1 from pg_class toast where toast.oid=c.reltoastrelid and toast.reloptions is not null)
@@ -400,7 +405,7 @@ export function buildScheduledTableEvidence({
     productionReleaseReady: false,
     productionRowsRestored: false,
     limitations: [
-      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST options, non-origin internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed.",
+      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST/column storage options, extended statistics, non-origin capture sessions or internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed.",
       "No table rows, sequences, external foreign-key targets, dependency closure, role-membership graph or executable RLS behavior is proven.",
       "Definition hashes compare fixed-search-path PostgreSQL deparser output; equality is not independent semantic equivalence proof.",
       "Later-writer changes remain visible. Fresh-source/live comparison, original effects, recovery and independent review remain separate gates.",
