@@ -17,8 +17,12 @@ for (const [name, expression] of [
   ["relation options", /and c\.reloptions is null/u],
   [
     "per-column storage and compression overrides",
-    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\)/u,
+    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\s+or a\.attstattarget<>-1 or a\.attndims<>0\)/u,
   ],
+  ["nondefault per-column statistics targets", /or a\.attstattarget<>-1/u],
+  ["declared array dimensionality", /or a\.attndims<>0/u],
+  ["non-heap table access methods", /c\.relam=\(select access\.oid from pg_am access where access\.amname='heap'\)/u],
+  ["typed-table dependencies", /c\.reloftype=0/u],
   [
     "extended statistics",
     /not exists \(select 1 from pg_statistic_ext statistics where statistics\.stxrelid=c\.oid\)/u,
@@ -144,7 +148,11 @@ test("scheduled scope: documented restrictions match the guarded query instead o
   for (const word of [
     "effective publications",
     "relation/TOAST/column storage options",
+    "nondefault column statistics targets",
+    "declared array dimensions",
     "extended statistics",
+    "non-heap access methods",
+    "typed tables",
     "non-origin capture sessions",
     "internal constraint triggers",
     "API-role authority",
