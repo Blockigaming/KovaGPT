@@ -17,9 +17,10 @@ for (const [name, expression] of [
   ["relation options", /and c\.reloptions is null/u],
   [
     "per-column storage and compression overrides",
-    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\s+or a\.attstattarget<>-1\)/u,
+    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\s+or a\.attstattarget<>-1 or a\.attoptions is not null\)/u,
   ],
   ["nondefault per-column statistics targets", /or a\.attstattarget<>-1/u],
+  ["per-column planner options", /or a\.attoptions is not null/u],
   [
     "non-heap table access methods",
     /c\.relam=\(select access\.oid from pg_am access where access\.amname='heap'\)/u,
@@ -83,6 +84,8 @@ function capture() {
       replicaIdentity: "d",
       partition: false,
       parentCount: 0,
+      attributeSlots: 1,
+      droppedColumns: [],
       columns: [
         {
           ordinal: 1,
@@ -98,6 +101,7 @@ function capture() {
         },
       ],
       constraints: [],
+      inboundForeignKeys: [],
       indexes: [],
       aclIsNull: true,
       acl: [],
@@ -152,7 +156,10 @@ test("scheduled scope: documented restrictions match the guarded query instead o
     "effective publications",
     "relation/TOAST/column storage options",
     "nondefault column statistics targets",
-    "Declared array dimensions are captured explicitly",
+    "planner options",
+    "Declared array dimensions",
+    "dropped attribute slots",
+    "inbound foreign keys",
     "extended statistics",
     "non-heap access methods",
     "typed tables",
