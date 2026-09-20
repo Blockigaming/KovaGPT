@@ -9,9 +9,9 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   const workflow = await read(".github/workflows/ci.yml");
   assert.match(workflow, /cancel-in-progress: true/u);
   const checkoutCount = workflow.match(/uses: actions\/checkout@/gu)?.length ?? 0;
-  const exactHeadCheckoutCount = workflow.match(
-    /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/gu,
-  )?.length ?? 0;
+  const exactHeadCheckoutCount =
+    workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/gu)
+      ?.length ?? 0;
   assert.equal(checkoutCount, 6);
   assert.equal(
     exactHeadCheckoutCount,
