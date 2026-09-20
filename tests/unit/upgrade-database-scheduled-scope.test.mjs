@@ -17,7 +17,7 @@ for (const [name, expression] of [
   ["relation options", /and c\.reloptions is null/u],
   [
     "per-column storage and compression overrides",
-    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"/u,
+    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\s+or a\.attstattarget<>-1 or a\.attoptions is not null\)/u,
   ],
   ["nondefault per-column statistics targets", /or a\.attstattarget<>-1/u],
   ["per-column planner options", /or a\.attoptions is not null/u],
@@ -61,6 +61,11 @@ for (const [name, expression] of [
 
 test("scheduled scope: source query projects array dimensionality", () => {
   assert.match(SCHEDULED_TABLE_SQL, /'dimensions',a\.attndims/u);
+});
+
+test("scheduled scope: declared array dimensions are observed rather than rejected", () => {
+  assert.ok(target);
+  assert.doesNotMatch(target, /a\.attndims\s*<>\s*0/u);
 });
 
 function capture() {
@@ -136,6 +141,20 @@ test("scheduled scope: supported complete observations remain accepted without r
   assert.equal(result.tableCatalogMatch, true);
   assert.equal(result.schemaProofPromoted, false);
   assert.equal(result.productionReleaseReady, false);
+});
+
+test("scheduled scope: baseline safe_logs text array remains in the complete capture", () => {
+  const baseline = capture();
+  const upgraded = capture();
+  for (const observed of [baseline, upgraded]) {
+    observed.tables[0].columns[0].name = "safe_logs";
+    observed.tables[0].columns[0].type = "text[]";
+    observed.tables[0].columns[0].dimensions = 1;
+  }
+
+  const result = build(baseline, upgraded);
+  assert.equal(result.tableCatalogMatch, true);
+  assert.deepEqual(result.changes, []);
 });
 
 for (const stage of ["baseline", "upgraded"]) {
