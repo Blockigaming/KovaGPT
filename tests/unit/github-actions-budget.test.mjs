@@ -35,6 +35,7 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     "\\.github/workflows/ci\\.yml",
     "release-migration-lineage\\.json",
     "migration-preflight",
+    "migration-schema-fingerprint",
     "migration-schema-proof-plan",
   ]) {
     assert.ok(
