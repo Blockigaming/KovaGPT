@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 test("connected apps and scheduled tasks fit the configured viewport", async ({ page }) => {
@@ -14,12 +15,15 @@ test("connected apps and scheduled tasks fit the configured viewport", async ({ 
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });
 
-test("Settings remains reachable from the responsive shell", async ({ page }) => {
+test("Authenticated Settings remains reachable from the responsive shell", async ({ page }) => {
+  await installAuthenticatedFixture(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await page.getByRole("button", { name: "Settings" }).click();
+  const accountSettings = page.locator(".kova-sidebar-footer .kova-account-main");
+  await expect(accountSettings).toBeVisible();
+  await accountSettings.click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });
