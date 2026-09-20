@@ -38,6 +38,7 @@ function capture() {
           ordinal: 1,
           name: "id",
           type: "uuid",
+          dimensions: 0,
           notNull: true,
           identity: "",
           generated: "",
