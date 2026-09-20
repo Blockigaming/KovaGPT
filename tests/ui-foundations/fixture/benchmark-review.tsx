@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { PublicFixture } from "./public-pages";
 import {
   Dialog,
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 // Only the downloadable review uses this boundary. Application routing is unchanged.
 export function BenchmarkReview({ initialSurface }: { initialSurface: string }) {
+  const router = useRouter();
   const [surface, setSurface] = useState(initialSurface);
   const [surfaceRevision, setSurfaceRevision] = useState(0);
   const [destination, setDestination] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function BenchmarkReview({ initialSurface }: { initialSurface: string }) 
     event.preventDefault();
     event.stopPropagation();
     if (href === "/overview" || href === "/pricing") {
+      void router.navigate({ to: href === "/pricing" ? "/pricing" : "/overview" });
       setSurface(href === "/pricing" ? "public-comparison" : "public-overview");
       // PublicHeader owns its open state. Remount the contained surface so a
       // same-surface selection closes that menu just like a route transition.

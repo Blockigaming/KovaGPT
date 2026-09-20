@@ -50,6 +50,17 @@ test("writing tool exposes recovered controls and local word count", async ({ pa
   await page.getByLabel("Text for Word counter").fill('"Hello." "Goodbye."');
   await page.getByRole("button", { name: "Run Word counter" }).click();
   await expect(page.getByRole("region", { name: "Result" })).toContainText("2 sentences");
+
+  await page.getByLabel("Text for Word counter").fill("你好世界");
+  await page.getByRole("button", { name: "Run Word counter" }).click();
+  await expect(page.getByRole("region", { name: "Result" })).toContainText("2 words");
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "notes.markdown",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.from("Imported Markdown"),
+  });
+  await expect(page.getByLabel("Text for Word counter")).toHaveValue("Imported Markdown");
 });
 
 test("generated rewrites send selected settings and discard stale responses", async ({ page }) => {
@@ -121,6 +132,21 @@ test("focused checkers hide inapplicable settings and auth errors give sign-in g
   await page.getByRole("button", { name: "Run AI text generator" }).click();
   await expect(page.getByRole("alert")).toContainText("Daily message limit reached (50/day)");
   await expect(page.getByRole("alert")).toContainText("review plans for more usage");
+
+  await page.unroute("**/api/write");
+  await page.route("**/api/write", (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: '{"error":"Two-factor authentication is required to continue."}',
+    }),
+  );
+  await page.getByLabel("Text for AI text generator").fill("Draft after MFA");
+  await page.getByRole("button", { name: "Run AI text generator" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Two-factor authentication is required to continue.",
+  );
+  await expect(page.getByRole("alert")).not.toContainText("please try again");
 });
 
 test("truthful local-only tools never fabricate external analysis", async ({ page }) => {

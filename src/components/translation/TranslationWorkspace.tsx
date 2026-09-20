@@ -8,7 +8,7 @@ type Refinement = "translate" | "fluent" | "professional" | "simple";
 const MAX_FILE_BYTES = 40_000;
 const MAX_INPUT_CHARACTERS = 40_000;
 const WRITE_MAX_BODY_BYTES = 64 * 1024;
-const WRITE_REQUEST_TIMEOUT_MS = 50_000;
+const WRITE_REQUEST_TIMEOUT_MS = 130_000;
 
 function LanguageSelect({
   label,
@@ -115,14 +115,16 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
       };
       if (requestRevision !== revisionRef.current) return;
       if (!response.ok || typeof payload.text !== "string" || !payload.text.trim()) {
-        const quotaDetail =
+        const apiDetail =
           typeof payload.error === "string" ? payload.error.slice(0, 240).trim() : "";
         setError(
           response.status === 401
             ? "Sign in to translate with Kova. Your text is still here."
-            : response.status === 429
-              ? `${quotaDetail || "Daily translation limit reached. It resets within 24 hours."} Your text is still here; review plans for more usage.`
-              : "Kova couldn't translate that right now. Your text is still here—please try again.",
+            : response.status === 403
+              ? `${apiDetail || "Your account is not authorized to use translation."} Your text is still here.`
+              : response.status === 429
+                ? `${apiDetail || "Daily translation limit reached. It resets within 24 hours."} Your text is still here; review plans for more usage.`
+                : "Kova couldn't translate that right now. Your text is still here—please try again.",
         );
         return;
       }
@@ -156,7 +158,10 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
     setError("");
     if (file.size > MAX_FILE_BYTES) {
       setError("Choose a text file no larger than 40 KB.");
-    } else if (!file.type.startsWith("text/") && !/\.(txt|md|csv|json)$/iu.test(file.name)) {
+    } else if (
+      !file.type.startsWith("text/") &&
+      !/\.(txt|md|markdown|csv|json)$/iu.test(file.name)
+    ) {
       setError("Kova can import TXT, Markdown, CSV, or JSON files here.");
     } else {
       try {

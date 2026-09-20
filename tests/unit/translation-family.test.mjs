@@ -69,15 +69,17 @@ test("translation calls the guarded writing API and preserves input on errors", 
   assert.match(workspace, /MAX_FILE_BYTES = 40_000/);
   assert.match(workspace, /MAX_INPUT_CHARACTERS = 40_000/);
   assert.match(workspace, /WRITE_MAX_BODY_BYTES = 64 \* 1024/);
-  assert.match(workspace, /WRITE_REQUEST_TIMEOUT_MS = 50_000/);
+  assert.match(workspace, /WRITE_REQUEST_TIMEOUT_MS = 130_000/);
   assert.match(workspace, /WRITE_REQUEST_TIMEOUT_MS,\s*\)/);
   assert.match(workspace, /requestRevision !== revisionRef\.current/);
   assert.match(workspace, /response\.status === 401/);
+  assert.match(workspace, /response\.status === 403/);
   assert.match(workspace, /response\.status === 429/);
   assert.match(workspace, /payload\.error\.slice\(0, 240\)/);
   assert.match(workspace, /!payload\.text\.trim\(\)/);
   assert.match(workspace, /tabIndex=\{-1\}/);
   assert.match(workspace, /role="status" aria-live="polite"/);
+  assert.match(workspace, /txt\|md\|markdown\|csv\|json/);
   assert.equal((workspace.match(/dir="auto"/g) ?? []).length, 2);
   assert.doesNotMatch(workspace, /fake|Math\.random/i);
 });
