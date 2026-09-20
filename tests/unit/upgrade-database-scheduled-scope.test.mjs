@@ -59,6 +59,11 @@ for (const [name, expression] of [
   });
 }
 
+test("scheduled scope: declared array dimensions are observed rather than rejected", () => {
+  assert.ok(target);
+  assert.doesNotMatch(target, /a\.attndims\s*<>\s*0/u);
+});
+
 function capture() {
   return {
     schemaVersion: 1,
@@ -132,6 +137,20 @@ test("scheduled scope: supported complete observations remain accepted without r
   assert.equal(result.tableCatalogMatch, true);
   assert.equal(result.schemaProofPromoted, false);
   assert.equal(result.productionReleaseReady, false);
+});
+
+test("scheduled scope: baseline safe_logs text array remains in the complete capture", () => {
+  const baseline = capture();
+  const upgraded = capture();
+  for (const observed of [baseline, upgraded]) {
+    observed.tables[0].columns[0].name = "safe_logs";
+    observed.tables[0].columns[0].type = "text[]";
+    observed.tables[0].columns[0].dimensions = 1;
+  }
+
+  const result = build(baseline, upgraded);
+  assert.equal(result.tableCatalogMatch, true);
+  assert.deepEqual(result.changes, []);
 });
 
 for (const stage of ["baseline", "upgraded"]) {
