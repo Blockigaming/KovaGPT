@@ -58,6 +58,7 @@ function table(name) {
         ordinal: 1,
         name: "id",
         type: "uuid",
+        dimensions: 0,
         notNull: true,
         identity: "",
         generated: "",
@@ -195,6 +196,7 @@ for (const [path, value] of [
   ["tables.0.persistence", "t"],
   ["tables.0.columns.0.ordinal", 0],
   ["tables.0.columns.0.type", null],
+  ["tables.0.columns.0.dimensions", -1],
   ["tables.0.columns.0.defaultSha256", "bad"],
   ["tables.0.columns.0.identity", "z"],
   ["tables.0.columns.0.notNull", 1],
@@ -286,6 +288,20 @@ test("scheduled tables: actual ACL and RLS differences remain differences", () =
   assert.notEqual(result.baseline.fingerprint.rls, result.upgraded.fingerprint.rls);
   assert.notEqual(result.baseline.fingerprint.acl, result.upgraded.fingerprint.acl);
   assert.equal(result.schemaProofPromoted, false);
+});
+test("scheduled tables: declared array dimensions change the schema fingerprint", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  before.tables[0].columns[0].type = "text[]";
+  before.tables[0].columns[0].dimensions = 1;
+  after.tables[0].columns[0].type = "text[]";
+  after.tables[0].columns[0].dimensions = 2;
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.deepEqual(result.changes, [{ table: "public.scheduled_task_runs", fields: ["columns"] }]);
+  assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
+  for (const category of ["acl", "rls", "trigger"])
+    assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
 });
 test("scheduled tables: bad output and source identity cannot publish evidence", () => {
   for (const data of ["", null, "{}\n{}", "x".repeat(1024 * 1024 + 1)])
@@ -645,11 +661,12 @@ test("scheduled tables: changing the chosen existing replica index changes the s
   assert.equal(result.productionReleaseReady, false);
 });
 
-test("scheduled tables: old captures without storage and replica flags fail instead of guessing", () => {
-  for (const field of ["aclIsNull", "replicaIdentity"]) {
+test("scheduled tables: old captures without catalog flags fail instead of guessing", () => {
+  for (const field of ["aclIsNull", "replicaIdentity", "dimensions"]) {
     const c = capture();
     if (field === "aclIsNull") delete c.tables[0].aclIsNull;
-    else delete c.tables[0].indexes[0].replicaIdentity;
+    else if (field === "replicaIdentity") delete c.tables[0].indexes[0].replicaIdentity;
+    else delete c.tables[0].columns[0].dimensions;
     assert.throws(
       () => validateScheduledTableCapture(c, BASE),
       /upgrade_scheduled_tables_invalid/u,
@@ -735,6 +752,7 @@ for (const [path, invalid] of [
 
 for (const [name, projection] of [
   ["column ACL storage", /'aclIsNull',a\.attacl is null/u],
+  ["declared array dimensions", /'dimensions',a\.attndims/u],
   ["clustering index", /'clustered',x\.indisclustered/u],
   ["trigger function owner", /'functionOwner',pg_get_userbyid\(p\.proowner\)/u],
   [
