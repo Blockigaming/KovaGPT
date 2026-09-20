@@ -41,6 +41,15 @@ test("writing tool exposes recovered controls and local word count", async ({ pa
   await input.fill("Kova counts these four words.");
   await expect(page.getByText("5 words · 29 characters")).toBeVisible();
   await expect(page.getByRole("button", { name: "Run AI text generator" })).toBeEnabled();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "https://kovagpt.com/writing/ai-text-generator",
+  );
+
+  await page.goto("/writing/word-counter");
+  await page.getByLabel("Text for Word counter").fill('"Hello." "Goodbye."');
+  await page.getByRole("button", { name: "Run Word counter" }).click();
+  await expect(page.getByRole("region", { name: "Result" })).toContainText("2 sentences");
 });
 
 test("generated rewrites send selected settings and discard stale responses", async ({ page }) => {
@@ -99,6 +108,19 @@ test("focused checkers hide inapplicable settings and auth errors give sign-in g
   await page.getByLabel("Text for AI text generator").fill("Draft this");
   await page.getByRole("button", { name: "Run AI text generator" }).click();
   await expect(page.getByRole("alert")).toContainText("Sign in to use Kova's generation tools");
+
+  await page.unroute("**/api/write");
+  await page.route("**/api/write", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: '{"error":"Daily message limit reached (50/day). Resets in 24 hours or upgrade for more."}',
+    }),
+  );
+  await page.getByLabel("Text for AI text generator").fill("Draft another version");
+  await page.getByRole("button", { name: "Run AI text generator" }).click();
+  await expect(page.getByRole("alert")).toContainText("Daily message limit reached (50/day)");
+  await expect(page.getByRole("alert")).toContainText("review plans for more usage");
 });
 
 test("truthful local-only tools never fabricate external analysis", async ({ page }) => {

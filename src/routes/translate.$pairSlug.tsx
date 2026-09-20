@@ -20,6 +20,9 @@ export const Route = createFileRoute("/translate/$pairSlug")({
         content: "Translate text while preserving meaning, tone, and intent with Kova.",
       },
     ],
+    links: loaderData?.pair
+      ? [{ rel: "canonical", href: `https://kovagpt.com/translate/${loaderData.pair.slug}` }]
+      : [],
   }),
   component: TranslationPairPage,
 });

@@ -23,6 +23,7 @@ import {
 const MAX_FILE_BYTES = 40_000;
 const MAX_INPUT_CHARACTERS = 40_000;
 const WRITE_MAX_BODY_BYTES = 64 * 1024;
+const WRITE_REQUEST_TIMEOUT_MS = 50_000;
 const ACCEPTED_FILE_TYPES = new Set([
   "text/plain",
   "text/markdown",
@@ -30,12 +31,25 @@ const ACCEPTED_FILE_TYPES = new Set([
   "application/json",
 ]);
 
+function countSentences(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "sentence" });
+    return [...segmenter.segment(trimmed)].filter(({ segment }) => /[\p{L}\p{N}]/u.test(segment))
+      .length;
+  }
+  return trimmed
+    .split(/[.!?]+(?:["'’”)}\]»]+)?(?:\s+|$)/u)
+    .filter((segment) => /[\p{L}\p{N}]/u.test(segment)).length;
+}
+
 function textStats(text: string) {
   const trimmed = text.trim();
   return {
     words: trimmed ? trimmed.split(/\s+/u).length : 0,
     characters: text.length,
-    sentences: trimmed ? trimmed.split(/[.!?]+(?:\s|$)/u).filter(Boolean).length : 0,
+    sentences: countSentences(text),
     lines: text ? text.split(/\r?\n/u).length : 0,
   };
 }
@@ -162,21 +176,29 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
     const requestRevision = revisionRef.current;
     setBusy(true);
     try {
-      const response = await fetchWithTimeoutAuthenticated("/api/write", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
+      const response = await fetchWithTimeoutAuthenticated(
+        "/api/write",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        },
+        WRITE_REQUEST_TIMEOUT_MS,
+      );
       const payload = (await response.json().catch(() => ({}))) as {
         text?: string;
         error?: string;
       };
       if (requestRevision !== revisionRef.current) return;
       if (!response.ok || typeof payload.text !== "string" || !payload.text.trim()) {
+        const quotaDetail =
+          typeof payload.error === "string" ? payload.error.slice(0, 240).trim() : "";
         const message =
           response.status === 401
             ? "Sign in to use Kova's generation tools. Your text is still here."
-            : "Kova couldn't complete that request. Your text is still here—please try again.";
+            : response.status === 429
+              ? `${quotaDetail || "Daily generation limit reached. It resets within 24 hours."} Your text is still here; review plans for more usage.`
+              : "Kova couldn't complete that request. Your text is still here—please try again.";
         setError(message);
         return;
       }

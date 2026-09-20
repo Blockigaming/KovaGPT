@@ -8,6 +8,7 @@ type Refinement = "translate" | "fluent" | "professional" | "simple";
 const MAX_FILE_BYTES = 40_000;
 const MAX_INPUT_CHARACTERS = 40_000;
 const WRITE_MAX_BODY_BYTES = 64 * 1024;
+const WRITE_REQUEST_TIMEOUT_MS = 50_000;
 
 function LanguageSelect({
   label,
@@ -63,6 +64,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
   const [translation, setTranslation] = useState("");
   const [busy, setBusy] = useState<Refinement | null>(null);
   const [error, setError] = useState("");
+  const [announcement, setAnnouncement] = useState("");
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const revisionRef = useRef(0);
@@ -95,27 +97,39 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
     const requestRevision = revisionRef.current;
     setBusy(refinement);
     setError("");
+    setAnnouncement("");
     setCopied(false);
     try {
-      const response = await fetchWithTimeoutAuthenticated("/api/write", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
+      const response = await fetchWithTimeoutAuthenticated(
+        "/api/write",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        },
+        WRITE_REQUEST_TIMEOUT_MS,
+      );
       const payload = (await response.json().catch(() => ({}))) as {
         text?: string;
         error?: string;
       };
       if (requestRevision !== revisionRef.current) return;
       if (!response.ok || typeof payload.text !== "string" || !payload.text.trim()) {
+        const quotaDetail =
+          typeof payload.error === "string" ? payload.error.slice(0, 240).trim() : "";
         setError(
           response.status === 401
             ? "Sign in to translate with Kova. Your text is still here."
-            : "Kova couldn't translate that right now. Your text is still here—please try again.",
+            : response.status === 429
+              ? `${quotaDetail || "Daily translation limit reached. It resets within 24 hours."} Your text is still here; review plans for more usage.`
+              : "Kova couldn't translate that right now. Your text is still here—please try again.",
         );
         return;
       }
       setTranslation(payload.text);
+      setAnnouncement(
+        refinement === "translate" ? "Translation complete." : "Translation revision complete.",
+      );
     } catch {
       if (requestRevision !== revisionRef.current) return;
       setError(
@@ -134,6 +148,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
     setSource(translation || source);
     setTranslation(translation ? source : "");
     setError("");
+    setAnnouncement("");
   };
 
   const importFile = async (file?: File) => {
@@ -153,6 +168,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
         revisionRef.current += 1;
         setSource(importedText);
         setTranslation("");
+        setAnnouncement("");
       } catch {
         setError("Kova couldn't read that file. Your existing text was not changed.");
       }
@@ -178,6 +194,9 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
         className="min-h-full bg-background px-4 pb-12 pt-12 sm:px-6 sm:pt-16 lg:px-8"
       >
         <div className="mx-auto w-full max-w-4xl">
+          <p className="sr-only" role="status" aria-live="polite">
+            {announcement}
+          </p>
           <header className="text-center">
             <h1 className="text-[30px] font-semibold tracking-[-0.03em] sm:text-[34px]">{title}</h1>
             <p className="mt-2 text-[15px] leading-6 text-muted-foreground sm:text-base">
@@ -195,6 +214,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   revisionRef.current += 1;
                   setSourceLanguage(value);
                   setTranslation("");
+                  setAnnouncement("");
                 }}
               />
               <button
@@ -213,6 +233,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   revisionRef.current += 1;
                   setTargetLanguage(value);
                   setTranslation("");
+                  setAnnouncement("");
                 }}
               />
             </div>
@@ -233,6 +254,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     setSource(event.target.value);
                     setTranslation("");
                     setError("");
+                    setAnnouncement("");
                   }}
                   placeholder="Type, paste, or upload file to translate"
                   className="h-full min-h-64 w-full resize-y bg-transparent px-5 pb-16 pt-5 text-[15px] leading-7 outline-none placeholder:text-muted-foreground"

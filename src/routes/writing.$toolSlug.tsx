@@ -16,6 +16,9 @@ export const Route = createFileRoute("/writing/$toolSlug")({
         content: loaderData?.tool.shortDescription ?? "A focused Kova writing tool.",
       },
     ],
+    links: loaderData?.tool
+      ? [{ rel: "canonical", href: `https://kovagpt.com/writing/${loaderData.tool.slug}` }]
+      : [],
   }),
   component: WritingToolPage,
 });

@@ -19,6 +19,10 @@ test("language-pair route presets both languages and swaps locally", async ({ pa
   ).toBeVisible();
   await expect(page.getByLabel("Source language", { exact: true })).toHaveValue("English");
   await expect(page.getByLabel("Target language", { exact: true })).toHaveValue("French");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "https://kovagpt.com/translate/english-to-french",
+  );
   await page.getByLabel("Source content to translate").fill("Hello world");
   await page.getByRole("button", { name: "Swap source and target languages" }).click();
   await expect(page.getByLabel("Source language", { exact: true })).toHaveValue("French");
@@ -62,6 +66,10 @@ test("translation ignores stale responses and supports focus and RTL content", a
   releaseResponse?.();
   await expect(translateButton).toBeEnabled();
   await expect(page.getByLabel("Translation", { exact: true })).toHaveValue("");
+
+  await translateButton.click();
+  await expect(page.getByLabel("Translation", { exact: true })).toHaveValue("Outdated translation");
+  await expect(page.getByRole("status")).toHaveText("Translation complete.");
 });
 
 test("unknown language pair uses the real not-found screen without overflow", async ({ page }) => {

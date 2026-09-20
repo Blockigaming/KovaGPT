@@ -81,19 +81,26 @@ test("detector and plagiarism tools state truthful capability boundaries", () =>
 
 test("writing family bounds requests and rejects stale or unusable responses", () => {
   assert.match(workspace, /<AppShell>/);
-  assert.match(workspace, /fetchWithTimeoutAuthenticated\("\/api\/write"/);
+  assert.match(workspace, /fetchWithTimeoutAuthenticated\(\s*"\/api\/write"/);
   assert.match(workspace, /MAX_FILE_BYTES = 40_000/);
   assert.match(workspace, /MAX_INPUT_CHARACTERS = 40_000/);
   assert.match(workspace, /WRITE_MAX_BODY_BYTES = 64 \* 1024/);
+  assert.match(workspace, /WRITE_REQUEST_TIMEOUT_MS = 50_000/);
+  assert.match(workspace, /WRITE_REQUEST_TIMEOUT_MS,\s*\)/);
   assert.match(workspace, /requestRevision !== revisionRef\.current/);
   assert.match(workspace, /response\.status === 401/);
+  assert.match(workspace, /response\.status === 429/);
+  assert.match(workspace, /payload\.error\.slice\(0, 240\)/);
   assert.match(workspace, /!payload\.text\.trim\(\)/);
+  assert.match(workspace, /new Intl\.Segmenter\(undefined, \{ granularity: "sentence" \}\)/);
   assert.match(workspace, /Files stay in this browser until you submit text/);
   assert.match(workspace, /tabIndex=\{-1\}/);
   assert.match(workspace, /break-words whitespace-pre-wrap/);
   assert.match(indexRoute, /WRITING_TOOLS\.map/);
   assert.match(indexRoute, /tabIndex=\{-1\}/);
   assert.match(detailRoute, /throw notFound\(\)/);
+  assert.match(detailRoute, /rel: "canonical"/);
+  assert.match(detailRoute, /https:\/\/kovagpt\.com\/writing\/\$\{loaderData\.tool\.slug\}/);
   assert.doesNotMatch(detailRoute, /name: "robots"/);
 });
 
