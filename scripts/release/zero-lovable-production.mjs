@@ -1,11 +1,18 @@
 import { writeFileSync } from "node:fs";
 
 const SHA = /^[a-f0-9]{40}$/u;
-const ASSET = /["'(]((?:https?:\/\/[^"')]+)?\/assets\/[^"')?\s]+(?:\?[^"')\s]*)?)/giu;
+const ASSET =
+  /["'`](https?:\/\/[^"'`\s]+\/assets\/[^"'`\s]+|\/assets\/[^"'`\s]+|\.\.?\/[^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const BUILD_META =
+  /<meta\b(?=[^>]*\bname=["']kova-build["'])(?=[^>]*\bcontent=["']([a-f0-9]{40})["'])[^>]*>/giu;
 const RETIRED_ROUTES = [
   "/.lovable/oauth/consent",
   "/lovable/email/suppression",
   "/lovable/email/auth/preview",
+  "/lovable/email/auth/webhook",
+  "/lovable/email/queue/process",
+  "/lovable/email/transactional/preview",
+  "/lovable/email/transactional/send",
 ];
 
 function normalizeBase(value) {
@@ -17,11 +24,12 @@ function normalizeBase(value) {
   return url;
 }
 
-function discoverAssets(source, base) {
+function discoverAssets(source, parent, origin) {
   const assets = new Set();
   for (const match of source.matchAll(ASSET)) {
-    const url = new URL(match[1], base);
-    if (url.origin === base.origin) assets.add(url.href);
+    const url = new URL(match[1], parent);
+    url.hash = "";
+    if (url.origin === origin) assets.add(url.href);
   }
   return [...assets].sort();
 }
@@ -77,10 +85,15 @@ export async function collectZeroLovableProductionEvidence({
 
   const rootResult = await request(base);
   if (rootResult.response.status !== 200) failures.push("root_status_not_200");
-  const pending = discoverAssets(rootResult.body, base);
+  const rootBuildShas = [...rootResult.body.matchAll(BUILD_META)].map((match) => match[1]);
+  const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
+  if (rootBuildSha !== expectedSha) failures.push("root_build_sha_mismatch");
+
+  const pending = discoverAssets(rootResult.body, base, base.origin);
   const seen = new Set();
   const assets = [];
   const contentHits = [];
+  let browserBuildShaFound = false;
   while (pending.length && seen.size < maxAssets) {
     const url = pending.shift();
     if (seen.has(url)) continue;
@@ -93,11 +106,19 @@ export async function collectZeroLovableProductionEvidence({
       contentHits.push(url);
       failures.push(`lovable_asset_content:${url}`);
     }
-    for (const nested of discoverAssets(result.body, base)) {
+    if (result.body.includes(expectedSha)) browserBuildShaFound = true;
+    for (const nested of discoverAssets(result.body, new URL(url), base.origin)) {
       if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
     }
   }
   if (pending.length) failures.push(`asset_limit_exceeded:${maxAssets}`);
+  if (!browserBuildShaFound) failures.push("browser_build_sha_not_found");
+
+  const exactSha =
+    version?.sha === expectedSha &&
+    headerSha === expectedSha &&
+    rootBuildSha === expectedSha &&
+    browserBuildShaFound;
 
   return {
     schemaVersion: 1,
@@ -107,7 +128,9 @@ export async function collectZeroLovableProductionEvidence({
     expectedSha,
     observedSha: version?.sha ?? null,
     observedHeaderSha: headerSha,
-    exactSha: version?.sha === expectedSha && headerSha === expectedSha,
+    observedRootSha: rootBuildSha,
+    browserBuildShaFound,
+    exactSha,
     routes: routeRecords,
     assetScan: { count: assets.length, assets, lovableContentHits: contentHits },
     limitations: [

@@ -26,9 +26,15 @@ test("production evidence passes only with exact SHA, absent retired routes, and
         return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
       }
       if (url.includes("lovable")) return response("missing", { status: 404 });
-      if (url.endsWith("/")) return response('<script src="/assets/app.js"></script>');
-      if (url.endsWith("/assets/app.js")) return response('import("/assets/chunk.js")');
-      if (url.endsWith("/assets/chunk.js")) return response("export const clean = true;");
+      if (url.endsWith("/")) {
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
+        );
+      }
+      if (url.endsWith("/assets/app.js")) return response('import("./lazy/chunk.js")');
+      if (url.endsWith("/assets/lazy/chunk.js")) {
+        return response(`export const buildSha = "${sha}";`);
+      }
       throw new Error(`unexpected URL ${url}`);
     },
     () =>
@@ -40,6 +46,8 @@ test("production evidence passes only with exact SHA, absent retired routes, and
   );
   assert.equal(evidence.pass, true);
   assert.equal(evidence.exactSha, true);
+  assert.equal(evidence.observedRootSha, sha);
+  assert.equal(evidence.browserBuildShaFound, true);
   assert.equal(evidence.assetScan.count, 2);
   assert.deepEqual(evidence.failures, []);
 });
@@ -69,8 +77,78 @@ test("production evidence fails closed on stale SHA, live legacy route, and hidd
   assert.equal(evidence.pass, false);
   assert.equal(evidence.exactSha, false);
   assert.ok(evidence.failures.includes("version_sha_mismatch"));
+  assert.ok(evidence.failures.includes("root_build_sha_mismatch"));
+  assert.ok(evidence.failures.includes("browser_build_sha_not_found"));
   assert.ok(evidence.failures.includes("retired_route_not_404:/.lovable/oauth/consent"));
   assert.ok(evidence.failures.some((failure) => failure.startsWith("lovable_asset_content:")));
+});
+
+test("production evidence probes every retired email route", async () => {
+  const requested = [];
+  await withFetch(
+    async (input) => {
+      const url = String(input);
+      requested.push(new URL(url).pathname);
+      if (url.endsWith("/api/version")) {
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      }
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/")) {
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
+        );
+      }
+      if (url.endsWith("/assets/app.js")) return response(`const buildSha = "${sha}";`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  for (const path of [
+    "/lovable/email/auth/preview",
+    "/lovable/email/auth/webhook",
+    "/lovable/email/queue/process",
+    "/lovable/email/suppression",
+    "/lovable/email/transactional/preview",
+    "/lovable/email/transactional/send",
+  ]) {
+    assert.ok(requested.includes(path), path);
+  }
+});
+
+test("production evidence rejects a frontend that is not bound to the expected SHA", async () => {
+  const stale = "b".repeat(40);
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version")) {
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      }
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/")) {
+        return response(
+          `<meta name="kova-build" content="${stale}"><script src="/assets/app.js"></script>`,
+        );
+      }
+      if (url.endsWith("/assets/app.js")) return response(`const buildSha = "${stale}";`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.exactSha, false);
+  assert.equal(evidence.observedRootSha, stale);
+  assert.equal(evidence.browserBuildShaFound, false);
+  assert.ok(evidence.failures.includes("root_build_sha_mismatch"));
+  assert.ok(evidence.failures.includes("browser_build_sha_not_found"));
 });
 
 test("production evidence rejects mutable or non-HTTPS targets", async () => {
