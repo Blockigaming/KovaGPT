@@ -460,10 +460,10 @@ test("temporary export: historical fixture remains a drop and current source con
   const lineage = JSON.parse(readFileSync(join(ROOT, "release-migration-lineage.json")));
   assert.equal(
     lineage.entries.filter((entry) => entry.status === "requires_schema_proof").length,
-    19,
+    18,
   );
   assert.equal(
     lineage.entries.find((entry) => entry.remoteVersion === "20260824085042").status,
-    "requires_schema_proof",
+    "schema_proven",
   );
 });
