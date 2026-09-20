@@ -49,7 +49,22 @@ No production source caller references those URLs. Their former route modules, s
 - `npm run security:ai-runtime` separately rejects provider secrets and managed-gateway paths.
 - `tests/unit/lovable-removal.test.mjs` proves the retired files and generated manifest entries are absent while the Kova-owned OAuth, suppression, and auth-template paths remain.
 - `tests/api/help-submit-security.test.mjs` proves support delivery continues through the fixed-recipient Kova queue.
+- `npm run release:zero-lovable:production -- https://kovagpt.com <exact-40-character-sha>` is a read-only, fail-closed public collector. It requires `/api/version` and `X-Kova-Build` to match the expected SHA, requires all three retired routes to return 404 without redirects, recursively inventories same-origin assets discovered from HTML/JavaScript, and rejects Lovable-named asset paths or readable content. Set `KOVA_ZERO_LOVABLE_EVIDENCE_FILE` to a new path to retain JSON evidence; the collector will not overwrite an existing file.
+
+## Remaining external-caller and control-plane evidence
+
+Repository search proves there is no source caller, redirect, proxy, package, environment declaration, generated route, email/webhook handler, or deployable artifact that requires the retired URLs. Closing #208 still requires read-only exports from systems outside this repository. Record each export's capture time, scope, stable resource identifier (never a secret), query/window, and result:
+
+| System | Read-only evidence required | Passing result |
+| --- | --- | --- |
+| Azure Container Apps | Active production revision/image digest, configured environment-variable **names**, ingress rules, and sanitized request/application logs covering a declared window | Deployed revision binds to the same exact SHA; no Lovable names, URLs, credentials, routes, or requests |
+| Cloudflare | DNS/origin and route/redirect/Worker configuration plus sanitized request/security logs for the same window | No Worker, redirect, cache rule, origin, or request preserves a retired path or Lovable host |
+| Supabase | Auth redirect/site URL configuration, Edge Function inventory, secret **names**, webhook/hook configuration, and sanitized function/auth logs | No callback, function, hook, secret name, or request calls a retired route or Lovable host |
+| OAuth/email/webhook providers | Registered callback/webhook endpoints and recent sanitized delivery/call logs | All legitimate callers use Kova-owned routes; no delivery targets a retired route |
+| Public production | JSON from the exact-SHA collector above plus an authenticated browser HAR reviewed for host/path names | Exact SHA; retired routes are 404; no Lovable-named asset, request, redirect, or response content |
+
+Do not infer “no external caller” from repository search alone. A provider/control-plane inventory with an explicit observation window is required. Redact values and user data; retain names, stable IDs, timestamps, status codes, target hosts/paths, and hashes needed to reproduce the conclusion.
 
 ## Production proof boundary
 
-This repository establishes zero active Lovable dependency in source and locally built artifacts. It does not by itself prove the state of the currently deployed revision or external control planes. Issue #208 remains the production-evidence tracker until an authorized operator verifies the deployed SHA, confirms the retired compatibility URLs return 404, confirms no Lovable-named asset is served, and inspects Azure, Cloudflare, Supabase/provider configuration and sanitized request logs for Lovable runtime traffic. Those checks are read-only unless separately authorized; this source-only change does not perform or claim a deployment.
+This repository establishes zero active Lovable dependency in source and locally built artifacts. It does not by itself prove the state of the currently deployed revision or external control planes. Issue #208 remains the production-evidence tracker until the public collector passes on the exact deployed SHA, an authenticated HAR is clean, and the external inventories above prove there is no legitimate caller. Those checks are read-only unless separately authorized; this source-only change does not perform or claim a deployment.
