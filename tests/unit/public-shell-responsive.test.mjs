@@ -88,7 +88,7 @@ test("public header wraps without losing navigation destinations or bounded cont
   const links = elements(desktop, (node) => node.type === "Link");
   assert.deepEqual(
     links.map((node) => node.props.to),
-    ["/features", "/use-cases", "/business", "/developers", "/trust", "/pricing"],
+    ["/overview", "/features", "/use-cases", "/business", "/pricing", "/download"],
   );
   for (const link of links) {
     assert.ok(text(link).trim());

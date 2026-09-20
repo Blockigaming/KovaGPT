@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { PublicFixture } from "./public-pages";
+import { BenchmarkReview } from "./benchmark-review";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -70,12 +71,20 @@ const cancelLabel = "Cancel and keep my current project settings";
 const confirmLabel = "Confirm changes to the selected project only";
 
 function Fixture() {
-  const surface = new URLSearchParams(location.search).get("surface") ?? "dialog";
+  const standaloneReview = document.documentElement.dataset.kovaReview === "1";
+  const surface =
+    new URLSearchParams(location.search).get("surface") ??
+    (standaloneReview ? "public-overview" : "dialog");
   const [result, setResult] = useState("No action taken");
   const [mobileOpen, setMobileOpen] = useState(false);
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
+  if (
+    surface.startsWith("public-") &&
+    (standaloneReview || new URLSearchParams(location.search).get("review") === "1")
+  )
+    return <BenchmarkReview initialSurface={surface} />;
   if (surface.startsWith("public-")) return <PublicFixture surface={surface} />;
   if (surface === "enterprise")
     return (
@@ -225,11 +234,20 @@ function Fixture() {
   );
 }
 
-const rootRoute = createRootRoute();
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: Fixture });
+const rootRoute = createRootRoute({ component: Fixture });
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
+const overviewRoute = createRoute({ getParentRoute: () => rootRoute, path: "/overview" });
+const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: "/pricing" });
+const initialSurface = new URLSearchParams(location.search).get("surface");
+const initialRoute =
+  initialSurface === "public-comparison"
+    ? "/pricing"
+    : initialSurface === "public-overview"
+      ? "/overview"
+      : "/";
 const router = createRouter({
-  routeTree: rootRoute.addChildren([indexRoute]),
-  history: createMemoryHistory({ initialEntries: ["/"] }),
+  routeTree: rootRoute.addChildren([indexRoute, overviewRoute, pricingRoute]),
+  history: createMemoryHistory({ initialEntries: [initialRoute] }),
 });
 
 createRoot(document.getElementById("root")!).render(

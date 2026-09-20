@@ -87,22 +87,29 @@ export const Route = createFileRoute("/api/write")({
           return Response.json({ error: "empty_text" }, { status: 400 });
         }
 
+        if (body.instructions !== undefined && typeof body.instructions !== "string") {
+          return Response.json({ error: "invalid_instructions" }, { status: 400 });
+        }
+        const extraInstruction = (body.instructions ?? "").slice(0, 2000).trim();
+
         let instruction: string;
         if (action === "tone") {
           if (body.tone !== undefined && typeof body.tone !== "string") {
             return Response.json({ error: "invalid_tone" }, { status: 400 });
           }
           const tone = (body.tone ?? "professional").slice(0, 60);
-          instruction = `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`;
+          instruction = [
+            `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`,
+            extraInstruction,
+          ]
+            .filter(Boolean)
+            .join("\n");
         } else if (action === "custom") {
-          if (body.instructions !== undefined && typeof body.instructions !== "string") {
-            return Response.json({ error: "invalid_instructions" }, { status: 400 });
-          }
-          instruction = (body.instructions ?? "").slice(0, 2000).trim();
+          instruction = extraInstruction;
           if (!instruction)
             return Response.json({ error: "missing_instructions" }, { status: 400 });
         } else {
-          instruction = PROMPTS[action];
+          instruction = [PROMPTS[action], extraInstruction].filter(Boolean).join("\n");
         }
 
         const missingProvider = missingAiProviderResponse();

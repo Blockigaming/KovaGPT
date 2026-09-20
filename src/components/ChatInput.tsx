@@ -1086,6 +1086,9 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
+              enterKeyHint={
+                effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer ? "send" : "enter"
+              }
               className="kova-composer-input max-h-[200px] flex-1 resize-none overflow-y-auto border-0 bg-transparent text-foreground outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
               aria-label="Message KovaGPT"
               aria-keyshortcuts={

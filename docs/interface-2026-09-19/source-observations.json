@@ -1,0 +1,816 @@
+{
+  "date": "2026-09-19",
+  "pages": [
+    {
+      "page_id": "KOVA-0003",
+      "source_url": "https://chatgpt.com/writing/ai-detector/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review writing for AI-like patterns",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Reduce AI tone", "Make it original", "Polish writing"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Do not claim proof of authorship or a reliable AI probability without a validated detector.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0009",
+      "source_url": "https://chatgpt.com/writing/ai-humanizer/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Rewrite text in a natural voice",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Shorten text", "Improve clarity", "Make it original"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Do not promise detection evasion.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0010",
+      "source_url": "https://chatgpt.com/writing/ai-text-generator/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Generate text from a brief",
+      "observed_setting_labels": ["Text", "Friendly", "Standard"],
+      "observed_followup_labels": ["Reduce AI tone", "Turn notes into writing", "Change the tone"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Preserve purpose, audience and supplied constraints.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0012",
+      "source_url": "https://chatgpt.com/writing/apa-citation/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Build an APA citation",
+      "observed_setting_labels": ["APA 7", "URL"],
+      "observed_followup_labels": ["Fix grammar", "Improve clarity", "Polish writing"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Require source metadata and disclose missing fields; never invent author, date or publication.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0076",
+      "source_url": "https://chatgpt.com/writing/cv-generator/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Draft a CV from supplied experience",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Shorten text", "Reduce AI tone", "Improve clarity"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Never invent qualifications or employment.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0079",
+      "source_url": "https://chatgpt.com/writing/email-writer/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Draft an email",
+      "observed_setting_labels": ["Friendly", "Standard"],
+      "observed_followup_labels": ["Change the tone", "Shorten text", "Make it skimmable"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Draft and copy only; sending is a separately authorized integration.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0082",
+      "source_url": "https://chatgpt.com/writing/essay-checker/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review an essay",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Check originality", "Polish writing", "Make it skimmable"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Show actionable suggestions; no guaranteed grade or originality score.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0094",
+      "source_url": "https://chatgpt.com/writing/grammar/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review grammar and phrasing",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Improve clarity", "Polish writing", "Shorten text"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Preserve meaning; make proposed changes inspectable.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0095",
+      "source_url": "https://chatgpt.com/writing/harvard-referencing-generator/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Build a Harvard reference",
+      "observed_setting_labels": ["URL"],
+      "observed_followup_labels": ["Fix grammar", "Improve clarity", "Check originality"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Specify the supported Harvard variant; no edition selector was established by this extraction.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0110",
+      "source_url": "https://chatgpt.com/writing/mla-citation/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Build an MLA citation",
+      "observed_setting_labels": ["MLA 9", "URL"],
+      "observed_followup_labels": ["Fix grammar", "Improve clarity", "Polish writing"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Validate supplied metadata; do not fabricate missing source fields.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0125",
+      "source_url": "https://chatgpt.com/writing/paragraph-rewriter/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Rewrite a paragraph",
+      "observed_setting_labels": ["Friendly", "The same length"],
+      "observed_followup_labels": ["Improve clarity", "Polish writing", "Change the tone"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Keep length and tone as separate settings.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0126",
+      "source_url": "https://chatgpt.com/writing/paraphrase/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Paraphrase supplied writing",
+      "observed_setting_labels": ["Email", "Friendly", "Shorter"],
+      "observed_followup_labels": ["Fix grammar", "Polish writing", "Improve clarity"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Keep format, tone and length as separate settings.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0129",
+      "source_url": "https://chatgpt.com/writing/plagiarism-check/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review possible text overlap",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Check for AI", "Fix grammar", "Improve clarity"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "A model alone is not an exhaustive plagiarism checker; corpus coverage and matched sources require a real service.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0138",
+      "source_url": "https://chatgpt.com/writing/punctuation-checker/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review punctuation",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Fix grammar", "Improve clarity", "Shorten text"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Let the user inspect punctuation changes in context.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0144",
+      "source_url": "https://chatgpt.com/writing/resume-building/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Draft a resume from supplied experience",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Shorten text", "Reduce AI tone", "Improve clarity"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Keep distinct from CV output; do not invent achievements.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0145",
+      "source_url": "https://chatgpt.com/writing/rewording-tool/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Reword supplied text",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Shorten text", "Make it original", "Polish writing"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Preserve claims, names and intent.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0149",
+      "source_url": "https://chatgpt.com/writing/sentence-rewriter/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Rewrite a sentence",
+      "observed_setting_labels": ["Friendly", "The same length"],
+      "observed_followup_labels": ["Improve clarity", "Make it original", "Change the tone"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Keep sentence-level input and output useful without silently broadening the task.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0167",
+      "source_url": "https://chatgpt.com/writing/spell-checker/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Review spelling",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Polish writing", "Shorten text", "Check for AI"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Preserve proper names and make language assumptions explicit.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0170",
+      "source_url": "https://chatgpt.com/writing/story-generator/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Draft a story from a prompt",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Make it original", "Reduce AI tone", "Turn notes into writing"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Support supplied characters, setting and constraints without adding unverified controls.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0176",
+      "source_url": "https://chatgpt.com/writing/summarizer/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Summarize supplied content",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Make it skimmable", "Shorten text", "Check for AI"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Ground the result in input; explain unsupported URL/file sources.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0200",
+      "source_url": "https://chatgpt.com/writing/word-counter/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Count words, characters and sentences",
+      "observed_setting_labels": [],
+      "observed_followup_labels": ["Fix grammar", "Polish writing", "Improve clarity"],
+      "observed_shared_structure": [
+        "Chat application navigation",
+        "Writing breadcrumb",
+        "Tool title and description",
+        "Three follow-up actions",
+        "Legal footer"
+      ],
+      "kova_requirement": "Use deterministic local counting; define Unicode and sentence-boundary behavior before acceptance.",
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0203",
+      "source_url": "https://chatgpt.com/writing/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Writing hub and directory",
+      "observed_tool_links": [
+        "https://chatgpt.com/writing/ai-detector/",
+        "https://chatgpt.com/writing/ai-humanizer/",
+        "https://chatgpt.com/writing/ai-text-generator/",
+        "https://chatgpt.com/writing/apa-citation/",
+        "https://chatgpt.com/writing/cv-generator/",
+        "https://chatgpt.com/writing/email-writer/",
+        "https://chatgpt.com/writing/essay-checker/",
+        "https://chatgpt.com/writing/grammar/",
+        "https://chatgpt.com/writing/harvard-referencing-generator/",
+        "https://chatgpt.com/writing/mla-citation/",
+        "https://chatgpt.com/writing/paragraph-rewriter/",
+        "https://chatgpt.com/writing/paraphrase/",
+        "https://chatgpt.com/writing/plagiarism-check/",
+        "https://chatgpt.com/writing/punctuation-checker/",
+        "https://chatgpt.com/writing/resume-building/",
+        "https://chatgpt.com/writing/rewording-tool/",
+        "https://chatgpt.com/writing/sentence-rewriter/",
+        "https://chatgpt.com/writing/spell-checker/",
+        "https://chatgpt.com/writing/story-generator/",
+        "https://chatgpt.com/writing/summarizer/",
+        "https://chatgpt.com/writing/word-counter/"
+      ],
+      "observed_input_count": 3,
+      "limitations": [
+        "Text extraction does not establish layout, viewport behavior or exact input roles.",
+        "Dropdown contents, menu behavior and suggestion destinations were not tested.",
+        "No desktop/mobile screenshot was captured in this step; browser connection timed out.",
+        "Three input markers had no usable labels in the text extraction; search/filter/composer behavior remains unclassified."
+      ]
+    },
+    {
+      "page_id": "KOVA-0399",
+      "source_url": "https://chatgpt.com/features/voice/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Voice feature marketing",
+      "observed_structure": [
+        "Feature hero and media",
+        "Three demonstration tabs",
+        "Voice setup and transcript steps",
+        "Benefits, example prompts, related features and closing action"
+      ],
+      "kova_hold": "Capability hold: verify Kova voice/video support and plan availability before publishing claims or enabling actions",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0400",
+      "source_url": "https://chatgpt.com/features/voice-with-video/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Voice feature marketing",
+      "observed_structure": [
+        "Feature hero, media and availability copy",
+        "Analyze/advice/study demonstration tabs",
+        "Voice, camera, screen-share and transcript steps",
+        "Example prompts, related features and closing action"
+      ],
+      "kova_hold": "Capability hold: verify Kova voice/video support and plan availability before publishing claims or enabling actions",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0411",
+      "source_url": "https://chatgpt.com/students/2026/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Student promotion landing page",
+      "observed_structure": [
+        "Promotion hero and claim action",
+        "Reminder action and media",
+        "Feature sections",
+        "Eligibility, verification, billing, cancellation and support FAQs",
+        "Student initiatives and closing action"
+      ],
+      "kova_hold": "Commercial hold: no Kova student promotion, verification provider or offer terms established; do not copy source benefits or prices",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0396",
+      "source_url": "https://chatgpt.com/college-students/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Redirect to student promotion",
+      "observed_structure": ["Observed unlocalized redirect to https://chatgpt.com/students/2026/"],
+      "kova_hold": "Alias only; canonical student-offer target remains on commercial hold",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0487",
+      "source_url": "https://openai.com/education/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Education audience landing page",
+      "observed_structure": [
+        "Education hero",
+        "Institutional credibility section",
+        "Four audience entry cards",
+        "Quote carousel",
+        "Resources"
+      ],
+      "kova_hold": "Content hold: use original Kova education content; do not copy institution endorsements, partnerships or claims",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    },
+    {
+      "page_id": "KOVA-0537",
+      "source_url": "https://openai.com/news/ai-adoption/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": false,
+      "observed_load_more_label": false
+    },
+    {
+      "page_id": "KOVA-0538",
+      "source_url": "https://openai.com/news/applied-ai/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": false,
+      "observed_load_more_label": false
+    },
+    {
+      "page_id": "KOVA-0539",
+      "source_url": "https://openai.com/news/company-announcements/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": false,
+      "heading_note": "Returned heading was Recent news; this alone does not prove the category URL is an alias."
+    },
+    {
+      "page_id": "KOVA-0540",
+      "source_url": "https://openai.com/news/engineering/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed",
+        "Load-more control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": true
+    },
+    {
+      "page_id": "KOVA-0541",
+      "source_url": "https://openai.com/news/global-affairs/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed",
+        "Load-more control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": true
+    },
+    {
+      "page_id": "KOVA-0542",
+      "source_url": "https://openai.com/news/intelligence-age/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": false,
+      "observed_load_more_label": false
+    },
+    {
+      "page_id": "KOVA-0543",
+      "source_url": "https://openai.com/news/research/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed",
+        "Load-more control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": true
+    },
+    {
+      "page_id": "KOVA-0544",
+      "source_url": "https://openai.com/news/safety-alignment/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed",
+        "Load-more control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": true
+    },
+    {
+      "page_id": "KOVA-0545",
+      "source_url": "https://openai.com/news/security/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Editorial category listing",
+      "observed_structure": [
+        "Category heading",
+        "Shared category navigation",
+        "Article cards with date and category",
+        "Sort and media visibility controls",
+        "Site footer",
+        "Filter control label observed",
+        "Load-more control label observed"
+      ],
+      "kova_hold": "Publishing hold: original Kova editorial content only; exclude Codex and unsupported-provider entries; no invented articles or publication dates",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out.",
+        "A false control observation means not seen in extraction, not confirmed absent. Sort/filter option lists and result behavior remain unverified."
+      ],
+      "observed_filter_label": true,
+      "observed_load_more_label": true
+    },
+    {
+      "page_id": "KOVA-0444",
+      "source_url": "https://openai.com/business/learn/gartner-2026-agentic-coding-leader/",
+      "reviewed_on": "2026-09-19",
+      "method": "Official page opened with web lookup; rendered text extraction",
+      "observed_purpose": "Source-content mismatch",
+      "observed_structure": [
+        "Requested Gartner/agentic-coding URL returned a page titled Get access to OpenAI on AWS"
+      ],
+      "kova_hold": "Source hold: inspect final destination and body; do not infer Codex exclusion solely from the slug",
+      "limitations": [
+        "Official rendered text only; viewport layout and interactions not verified.",
+        "No new screenshot captured; browser connection timed out."
+      ]
+    }
+  ]
+}

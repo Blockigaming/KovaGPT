@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "historical": {
+    "scope_pages": 212,
+    "provenance": "KovaGPT_Interface_ULTIMATE_Handoff_2026-09-18.md sections 3 and Formal last-scored rubric; recovered 2026-09-19",
+    "categories": [
+      {
+        "name": "Foundation/preparation",
+        "weight": 25,
+        "completed": 25,
+        "required": 25
+      },
+      {
+        "name": "Core state/permission",
+        "weight": 5,
+        "completed": 5,
+        "required": 5
+      },
+      {
+        "name": "Initial captures",
+        "weight": 20,
+        "completed": 44,
+        "required": 424
+      },
+      {
+        "name": "Block evidence",
+        "weight": 10,
+        "completed": 11,
+        "required": 1159
+      },
+      {
+        "name": "Supplemental controls",
+        "weight": 10,
+        "completed": 1,
+        "required": 33
+      },
+      {
+        "name": "Fully prepared source pages",
+        "weight": 10,
+        "completed": 0,
+        "required": 212
+      },
+      {
+        "name": "Core visual/interaction",
+        "weight": 10,
+        "completed": 0,
+        "required": 10
+      },
+      {
+        "name": "Final Combine decisions",
+        "weight": 5,
+        "completed": 0,
+        "required": 5
+      },
+      {
+        "name": "Final handoff",
+        "weight": 5,
+        "completed": 0,
+        "required": 5
+      }
+    ]
+  },
+  "current_blockers": [
+    "The expanded target register is provisional, with public candidates, app definitions and broader filter reviews unresolved.",
+    "The historical 44 captures, 11 blocks and one supplemental control must be mapped to active IDs and their acceptance evidence reconciled before reuse.",
+    "Expanded block and supplemental-control inventories have not been enumerated; their denominators are unknown.",
+    "Foundation/core-state credit was awarded for the earlier scope; coverage of the added targets has not been audited.",
+    "Desktop/mobile source coverage, complete interaction specifications, final Combine decisions and final handoff remain incomplete."
+  ],
+  "reporting_rules": [
+    "Preserve the original nine weights; do not substitute page counts, tests or PRs for readiness points.",
+    "Historical percentage is reproducible but is never labeled current overall completion.",
+    "Record every completed work step with --record; zero delta is valid.",
+    "Do not silently invent denominators or transfer old points to the larger scope.",
+    "A source-text specification is partial until visual and interaction evidence is integrated."
+  ]
+}

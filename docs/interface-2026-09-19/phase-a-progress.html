@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>KovaGPT · Phase A progress</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f6f8fb;
+        color: #172333;
+        font:
+          15px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 1180px;
+        margin: auto;
+        padding: 48px 24px;
+      }
+      h1 {
+        font-size: clamp(34px, 5vw, 60px);
+        font-weight: 550;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+        margin: 18px 0;
+      }
+      h2 {
+        font-size: 26px;
+        font-weight: 550;
+        letter-spacing: -0.02em;
+        margin: 0 0 16px;
+      }
+      p {
+        max-width: 850px;
+      }
+      .eyebrow {
+        color: #275ba0;
+        text-transform: uppercase;
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.12em;
+      }
+      .muted {
+        color: #596b80;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin: 30px 0;
+      }
+      .card,
+      section {
+        background: white;
+        border: 1px solid #dce3ed;
+        border-radius: 18px;
+        padding: 24px;
+      }
+      .card strong {
+        display: block;
+        font-size: 34px;
+        line-height: 1.3;
+        font-weight: 550;
+        letter-spacing: -0.035em;
+      }
+      .card span {
+        color: #52657b;
+        font-size: 13px;
+      }
+      .accent {
+        background: #eaf2ff;
+        border-color: #c9dcf8;
+      }
+      section {
+        margin: 24px 0;
+      }
+      .table {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #e5eaf0;
+        vertical-align: top;
+      }
+      thead th {
+        color: #566b83;
+        font-size: 12px;
+      }
+      tbody th {
+        font-weight: 550;
+      }
+      a {
+        color: #225b9f;
+        text-underline-offset: 3px;
+      }
+      input {
+        width: 100%;
+        max-width: 550px;
+        min-height: 44px;
+        padding: 10px 14px;
+        border: 1px solid #b6c6da;
+        border-radius: 9px;
+        font: inherit;
+        margin: 10px 0 18px;
+      }
+      :focus-visible {
+        outline: 3px solid #79a9ef;
+        outline-offset: 3px;
+      }
+      .note {
+        padding-left: 16px;
+        border-left: 3px solid #6093dd;
+      }
+      li {
+        margin: 9px 0;
+      }
+      footer {
+        padding: 10px 0 30px;
+        color: #5b6d82;
+        font-size: 13px;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 28px 16px;
+        }
+        section,
+        .card {
+          padding: 18px;
+        }
+        th,
+        td {
+          padding: 10px 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">KovaGPT Interface / Phase A / 19 September 2026</div>
+      <h1>Progress you can trace.</h1>
+      <p class="muted">
+        Every completed work step has a recorded calculation. Source discovery, text specifications
+        and visual acceptance remain separate evidence levels.
+      </p>
+      <p>
+        <a href="page-register.json">Open numbered page register</a> ·
+        <a href="writing-family-spec.md">Writing specification</a> ·
+        <a href="news-family-spec.md">News specification</a>
+      </p>
+      <div class="grid">
+        <div class="card accent">
+          <span>Current Phase A percentage</span><strong>Not yet scorable</strong
+          ><span>Expanded denominators and carried credits need reconciliation.</span>
+        </div>
+        <div class="card">
+          <span>Historical Phase A · 212-page scope</span><strong>32.4734114%</strong
+          ><span>Exact fraction 65826560/2027091; not current completion.</span>
+        </div>
+        <div class="card">
+          <span>Phase B</span><strong>3 drafts</strong
+          ><span>3 benchmark pages; 0 visually accepted.</span>
+        </div>
+        <div class="card">
+          <span>Phase C</span><strong>0%</strong
+          ><span>0 of 629 active pages have final production acceptance.</span>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <strong>629</strong><span>Provisional active targets / 634 stable records</span>
+        </div>
+        <div class="card">
+          <strong>226</strong><span>Public candidates needing eligibility review</span>
+        </div>
+        <div class="card"><strong>59</strong><span>App definitions awaiting disposition</span></div>
+        <div class="card">
+          <strong>36</strong
+          ><span>Active pages with new text observations, plus one retained alias</span>
+        </div>
+      </div>
+      <section>
+        <h2>Step-by-step ledger</h2>
+        <p class="muted">
+          The points column reports change to the historical score, which remains frozen. Current
+          readiness points cannot be calculated from text-review counts. Lower pending counts
+          describe scope work, not completed pages.
+        </p>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Step</th>
+                <th>Completed work</th>
+                <th>Targets</th>
+                <th>Public pending</th>
+                <th>App pending</th>
+                <th>Active text reviews</th>
+                <th>Historical Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">1</th>
+                <td>Recover the latest register and reproduce the historical nine-part score</td>
+                <td>630</td>
+                <td>237</td>
+                <td>66</td>
+                <td>0</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">2</th>
+                <td>
+                  Implement the exact historical calculation and explicit expanded-scope blockers
+                </td>
+                <td>630</td>
+                <td>237</td>
+                <td>66</td>
+                <td>0</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">3</th>
+                <td>
+                  Document source text and partial specifications for the writing hub and 21
+                  distinct tools
+                </td>
+                <td>630</td>
+                <td>237</td>
+                <td>66</td>
+                <td>22</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">4</th>
+                <td>
+                  Resolve one student alias, specify education and nine news layouts, and record
+                  five remaining capability/source holds
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>66</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">5</th>
+                <td>
+                  Map seven duplicate app definitions to existing targets while preserving their
+                  product eligibility holds
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>59</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">6</th>
+                <td>
+                  Validate the score, evidence boundaries, writing coverage and app mappings with
+                  six automated checks
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>59</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">7</th>
+                <td>
+                  Render the offline progress dashboard and reconcile every exported register and
+                  route count
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>59</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">8</th>
+                <td>
+                  Redesign the overview, rebuild its direct-open preview, and pass TypeScript plus
+                  20 focused checks; visual acceptance remains pending
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>59</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <th scope="row">9</th>
+                <td>
+                  Apply the owner-required OpenAI/ChatGPT reference style, remove the independent
+                  overview redesign, and retain per-page visual acceptance gates
+                </td>
+                <td>629</td>
+                <td>226</td>
+                <td>59</td>
+                <td>36</td>
+                <td>0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section>
+        <h2>Original nine-part calculation</h2>
+        <p class="note">
+          Historical evidence is preserved for audit. The 44 capture credits are not 44 newly
+          inspected or newly accepted images. They must be reconciled with the current register
+          before reuse.
+        </p>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Weight</th>
+                <th>Historical credit / total</th>
+                <th>Earned points</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Foundation/preparation</th>
+                <td>25%</td>
+                <td>25 / 25</td>
+                <td>25.000000</td>
+              </tr>
+              <tr>
+                <th scope="row">Core state/permission</th>
+                <td>5%</td>
+                <td>5 / 5</td>
+                <td>5.000000</td>
+              </tr>
+              <tr>
+                <th scope="row">Initial captures</th>
+                <td>20%</td>
+                <td>44 / 424</td>
+                <td>2.075472</td>
+              </tr>
+              <tr>
+                <th scope="row">Block evidence</th>
+                <td>10%</td>
+                <td>11 / 1159</td>
+                <td>0.094909</td>
+              </tr>
+              <tr>
+                <th scope="row">Supplemental controls</th>
+                <td>10%</td>
+                <td>1 / 33</td>
+                <td>0.303030</td>
+              </tr>
+              <tr>
+                <th scope="row">Fully prepared source pages</th>
+                <td>10%</td>
+                <td>0 / 212</td>
+                <td>0.000000</td>
+              </tr>
+              <tr>
+                <th scope="row">Core visual/interaction</th>
+                <td>10%</td>
+                <td>0 / 10</td>
+                <td>0.000000</td>
+              </tr>
+              <tr>
+                <th scope="row">Final Combine decisions</th>
+                <td>5%</td>
+                <td>0 / 5</td>
+                <td>0.000000</td>
+              </tr>
+              <tr>
+                <th scope="row">Final handoff</th>
+                <td>5%</td>
+                <td>0 / 5</td>
+                <td>0.000000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section>
+        <h2>What prevents a current percentage?</h2>
+        <ul>
+          <li>
+            The expanded target register is provisional, with public candidates, app definitions and
+            broader filter reviews unresolved.
+          </li>
+          <li>
+            The historical 44 captures, 11 blocks and one supplemental control must be mapped to
+            active IDs and their acceptance evidence reconciled before reuse.
+          </li>
+          <li>
+            Expanded block and supplemental-control inventories have not been enumerated; their
+            denominators are unknown.
+          </li>
+          <li>
+            Foundation/core-state credit was awarded for the earlier scope; coverage of the added
+            targets has not been audited.
+          </li>
+          <li>
+            Desktop/mobile source coverage, complete interaction specifications, final Combine
+            decisions and final handoff remain incomplete.
+          </li>
+        </ul>
+        <p class="note">
+          The browser connection timed out while setting up source capture and again on one retry.
+          This pass produced no new screenshots. The overview preview has a new composition; visual
+          acceptance remains pending.
+        </p>
+      </section>
+      <section>
+        <h2>Source observations</h2>
+        <label for="filter">Find a page by ID, path or purpose</label><br /><input
+          id="filter"
+          type="search"
+          placeholder="Try writing, education, or KOVA-0537"
+        />
+        <p id="result-count" class="muted" aria-live="polite">37 records</p>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Stable ID</th>
+                <th>Primary source</th>
+                <th>Purpose</th>
+                <th>Evidence level</th>
+              </tr>
+            </thead>
+            <tbody id="source-rows">
+              <tr>
+                <th scope="row">KOVA-0003</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/ai-detector/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/ai-detector/</a
+                  >
+                </td>
+                <td>Review writing for AI-like patterns</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0009</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/ai-humanizer/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/ai-humanizer/</a
+                  >
+                </td>
+                <td>Rewrite text in a natural voice</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0010</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/ai-text-generator/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/ai-text-generator/</a
+                  >
+                </td>
+                <td>Generate text from a brief</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0012</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/apa-citation/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/apa-citation/</a
+                  >
+                </td>
+                <td>Build an APA citation</td>
+                <td>
+                  Text reviewed · source screenshots: initial only unapproved · candidate
+                  screenshots: missing · controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0076</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/cv-generator/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/cv-generator/</a
+                  >
+                </td>
+                <td>Draft a CV from supplied experience</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0079</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/email-writer/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/email-writer/</a
+                  >
+                </td>
+                <td>Draft an email</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0082</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/essay-checker/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/essay-checker/</a
+                  >
+                </td>
+                <td>Review an essay</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0094</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/grammar/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/grammar/</a
+                  >
+                </td>
+                <td>Review grammar and phrasing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0095</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/harvard-referencing-generator/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/harvard-referencing-generator/</a
+                  >
+                </td>
+                <td>Build a Harvard reference</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0110</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/mla-citation/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/mla-citation/</a
+                  >
+                </td>
+                <td>Build an MLA citation</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0125</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/paragraph-rewriter/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/paragraph-rewriter/</a
+                  >
+                </td>
+                <td>Rewrite a paragraph</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0126</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/paraphrase/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/paraphrase/</a
+                  >
+                </td>
+                <td>Paraphrase supplied writing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0129</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/plagiarism-check/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/plagiarism-check/</a
+                  >
+                </td>
+                <td>Review possible text overlap</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0138</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/punctuation-checker/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/punctuation-checker/</a
+                  >
+                </td>
+                <td>Review punctuation</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0144</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/resume-building/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/resume-building/</a
+                  >
+                </td>
+                <td>Draft a resume from supplied experience</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0145</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/rewording-tool/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/rewording-tool/</a
+                  >
+                </td>
+                <td>Reword supplied text</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0149</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/sentence-rewriter/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/sentence-rewriter/</a
+                  >
+                </td>
+                <td>Rewrite a sentence</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0167</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/spell-checker/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/spell-checker/</a
+                  >
+                </td>
+                <td>Review spelling</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0170</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/story-generator/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/story-generator/</a
+                  >
+                </td>
+                <td>Draft a story from a prompt</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0176</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/summarizer/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/summarizer/</a
+                  >
+                </td>
+                <td>Summarize supplied content</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0200</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/writing/word-counter/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/writing/word-counter/</a
+                  >
+                </td>
+                <td>Count words, characters and sentences</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0203</th>
+                <td>
+                  <a href="https://chatgpt.com/writing/" target="_blank" rel="noopener noreferrer"
+                    >/writing/</a
+                  >
+                </td>
+                <td>Writing hub and directory</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0399</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/features/voice/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/features/voice/</a
+                  >
+                </td>
+                <td>Voice feature marketing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0400</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/features/voice-with-video/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/features/voice-with-video/</a
+                  >
+                </td>
+                <td>Voice feature marketing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0411</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/students/2026/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/students/2026/</a
+                  >
+                </td>
+                <td>Student promotion landing page</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0396</th>
+                <td>
+                  <a
+                    href="https://chatgpt.com/college-students/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/college-students/</a
+                  >
+                </td>
+                <td>Redirect to student promotion</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0487</th>
+                <td>
+                  <a href="https://openai.com/education/" target="_blank" rel="noopener noreferrer"
+                    >/education/</a
+                  >
+                </td>
+                <td>Education audience landing page</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0537</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/ai-adoption/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/ai-adoption/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0538</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/applied-ai/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/applied-ai/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0539</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/company-announcements/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/company-announcements/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0540</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/engineering/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/engineering/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0541</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/global-affairs/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/global-affairs/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0542</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/intelligence-age/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/intelligence-age/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0543</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/research/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/research/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0544</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/safety-alignment/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/safety-alignment/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0545</th>
+                <td>
+                  <a
+                    href="https://openai.com/news/security/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/news/security/</a
+                  >
+                </td>
+                <td>Editorial category listing</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">KOVA-0444</th>
+                <td>
+                  <a
+                    href="https://openai.com/business/learn/gartner-2026-agentic-coding-leader/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >/business/learn/gartner-2026-agentic-coding-leader/</a
+                  >
+                </td>
+                <td>Source-content mismatch</td>
+                <td>
+                  Text reviewed · source screenshots: missing · candidate screenshots: missing ·
+                  controls: pending · visual acceptance: pending
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <footer>
+        Nothing in this report approves a student offer, voice capability, new provider or
+        publication of source company claims. The overview composition and example entry points were
+        updated separately; no merge or deployment occurred.
+      </footer>
+    </main>
+    <script>
+      const filter = document.getElementById("filter"),
+        rows = [...document.querySelectorAll("#source-rows tr")];
+      filter.addEventListener("input", () => {
+        const q = filter.value.trim().toLowerCase();
+        let visible = 0;
+        for (const row of rows) {
+          row.hidden = !row.textContent.toLowerCase().includes(q);
+          if (!row.hidden) visible++;
+        }
+        document.getElementById("result-count").textContent =
+          visible + " of " + rows.length + " records";
+      });
+    </script>
+  </body>
+</html>

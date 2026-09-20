@@ -1,0 +1,193 @@
+{
+  "date": "2026-09-19",
+  "previous_planned_targets": 634,
+  "active_planned_targets": 629,
+  "tracked_records": 634,
+  "remaining_public_candidates": 226,
+  "decisions": [
+    {
+      "id": "KOVA-0466",
+      "decision": "MERGED_REFERENCE",
+      "target_id": "KOVA-0078",
+      "source": "https://openai.com/chatgpt/download/",
+      "observed_redirect": "https://chatgpt.com/download/",
+      "evidence": "Official URL opened via web lookup on 2026-09-19; redirect target returned"
+    },
+    {
+      "id": "KOVA-0467",
+      "decision": "MERGED_REFERENCE",
+      "target_id": "KOVA-0134",
+      "source": "https://openai.com/chatgpt/pricing/",
+      "observed_redirect": "https://chatgpt.com/pricing/",
+      "evidence": "Official URL opened via web lookup on 2026-09-19; redirect target returned"
+    },
+    {
+      "id": "KOVA-0519",
+      "decision": "EXCLUDED_PROVIDER",
+      "source": "https://openai.com/form/sponsored-agents-hubspot/",
+      "evidence": "Official form reviewed: HubSpot-specific sponsored-agent beta, company details and advertising eligibility. Outside verified provider scope."
+    },
+    {
+      "id": "KOVA-0492",
+      "decision": "EXCLUDED_CODEX",
+      "source": "https://openai.com/form/aardvark-beta-signup/",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security."
+    },
+    {
+      "id": "KOVA-0396",
+      "decision": "MERGED_REFERENCE",
+      "target_id": "KOVA-0411",
+      "source": "https://chatgpt.com/college-students/",
+      "observed_redirect": "https://chatgpt.com/students/2026/",
+      "evidence": "Official unlocalized URL opened via web lookup 2026-09-19; locale variant retained as historical provenance, not separately verified"
+    },
+    {
+      "id": "KOVA-0487",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/education/",
+      "reason": "Unique education landing layout established by source text; content/capability and visual gates remain open"
+    },
+    {
+      "id": "KOVA-0537",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/ai-adoption/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0538",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/applied-ai/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0539",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/company-announcements/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0540",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/engineering/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0541",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/global-affairs/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0542",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/intelligence-age/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0543",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/research/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0544",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/safety-alignment/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    },
+    {
+      "id": "KOVA-0545",
+      "decision": "SPEC_PENDING",
+      "source": "https://openai.com/news/security/",
+      "reason": "Distinct category URL retained; shared editorial listing layout. Content and full-control acceptance remain pending."
+    }
+  ],
+  "app_review_decisions": [
+    {
+      "review_id": "REVIEW-016",
+      "source_route": "/aardvark/findings/:id",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-023",
+      "source_route": "/aardvark/malware",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-027",
+      "source_route": "/aardvark",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-031",
+      "source_route": "/aardvark/scans",
+      "decision": "EXCLUDE_CODEX",
+      "evidence": "https://openai.com/index/codex-security-now-in-research-preview/",
+      "reason": "Aardvark is the former name of Codex Security; excluded product identity verified in official announcement."
+    },
+    {
+      "review_id": "REVIEW-013",
+      "source_route": "/pro-subscriber-gift",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0409",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    },
+    {
+      "review_id": "REVIEW-026",
+      "source_route": "/futures",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0401",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    },
+    {
+      "review_id": "REVIEW-033",
+      "source_route": "/students/2026",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0411",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    },
+    {
+      "review_id": "REVIEW-036",
+      "source_route": "/football",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0385",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    },
+    {
+      "review_id": "REVIEW-068",
+      "source_route": "/college-students",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0411",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior. Unlocalized /college-students source redirects to /students/2026; KOVA-0396 is the retained alias record."
+    },
+    {
+      "review_id": "REVIEW-069",
+      "source_route": "/images-2-0-giveaway",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0403",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    },
+    {
+      "review_id": "REVIEW-070",
+      "source_route": "/rosalind-workbench",
+      "decision": "MAP_EXISTING_TARGET",
+      "target_id": "KOVA-0410",
+      "evidence": "Retained APP_ROUTE_DECISIONS.csv route identity and stable register path; source-observations.json additionally verifies the student alias",
+      "reason": "Existing register destination resolves this manifest definition; mapping does not approve the underlying candidate or establish rendered behavior."
+    }
+  ],
+  "remaining_app_reviews": 59
+}

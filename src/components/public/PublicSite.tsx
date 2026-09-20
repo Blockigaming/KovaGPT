@@ -42,10 +42,6 @@ export function PublicPageView({
     <PublicShell>
       <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
         <section className="relative overflow-hidden border-b border-border/70">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent"
-          />
           <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {eyebrow}

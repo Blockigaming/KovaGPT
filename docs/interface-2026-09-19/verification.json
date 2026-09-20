@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-19",
+  "base_commit": "438c8a379b550c69e0f73c1e61f2dd0fc953efcf",
+  "typecheck": "passed",
+  "focused_tests": {
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0
+  },
+  "production_build": "passed",
+  "built_output_audit": "passed",
+  "register_validation": "634 retained records / 629 active targets; passed",
+  "source_png_integrity": "13 hashes and dimensions matched; source readiness not certified",
+  "live_browser": "Public reference inspection restored; local preview URL blocked by cloud browser policy",
+  "new_source_captures": 3,
+  "candidate_visual_checks": 0,
+  "authenticated_functional_checks": "Source empty chat inspected; no Kova authenticated flow or model generation tested",
+  "visual_accepted_pages": 0,
+  "production_operations": "none",
+  "new_benchmark_browser_cases": "12 cases per engine (4 offline-navigation and 8 overview/comparison); 36 total executions; new-head hosted results pending",
+  "prior_head_hosted_checks": {
+    "head": "091e2fe0bc3f9c76e60d335d171232a8b2f16d23",
+    "Candidate Source Evidence": "success",
+    "Shared UI Browser": "success",
+    "KovaGPT CI": "skipped",
+    "Azure Container Readiness": "skipped"
+  }
+}
