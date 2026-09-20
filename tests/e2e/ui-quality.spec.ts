@@ -49,11 +49,11 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineStyle).toBe("solid");
   expect(focused.outlineWidth).toBe(2);
-  expect(focused.outlineOffset).toBe(1);
+  expect(focused.outlineOffset).toBe(2);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
   expect(unfocused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).toBe(unfocused.boxShadow);
+  expect(focused.boxShadow).toBe("none");
 
   if (page.viewportSize()!.width >= 1024) {
     const metrics = await composer.evaluate((element) => {
@@ -61,9 +61,19 @@ test("empty workspace remains contained and composer focus is deliberate", async
         element.querySelector(selector)?.getBoundingClientRect() ?? null;
       const shell = element.getBoundingClientRect();
       const axis = element.parentElement?.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const toPixels = (value: string) =>
+        value.trim().endsWith("rem")
+          ? Number.parseFloat(value) * rootFontSize
+          : Number.parseFloat(value);
       return {
         shell: { width: shell.width, height: shell.height },
         axisWidth: axis?.width ?? 0,
+        composerHeight: toPixels(style.getPropertyValue("--composer-height")),
+        controlSize: toPixels(style.getPropertyValue("--composer-control")),
+        borderBlock:
+          Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth),
         row: bounds(".kova-composer-row"),
         input: bounds(".kova-composer-input"),
         plus: bounds(".kova-attach-button"),
@@ -73,16 +83,15 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.shell.height).toBeGreaterThanOrEqual(60);
-    expect(metrics.shell.height).toBeLessThanOrEqual(66);
-    expect(metrics.row?.height).toBeGreaterThanOrEqual(60);
-    expect(metrics.input?.height).toBeGreaterThanOrEqual(58);
-    const coarsePointer = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
-    const expectedControlSize = coarsePointer ? 44 : 40;
-    expect(metrics.plus?.width).toBe(expectedControlSize);
-    expect(metrics.plus?.height).toBe(expectedControlSize);
-    expect(metrics.send?.width).toBe(expectedControlSize);
-    expect(metrics.send?.height).toBe(expectedControlSize);
+    expect(metrics.composerHeight).toBe(50);
+    expect(metrics.controlSize).toBe(44);
+    expect(metrics.shell.height).toBeCloseTo(metrics.composerHeight + metrics.borderBlock, 1);
+    expect(metrics.row?.height).toBeCloseTo(metrics.composerHeight, 1);
+    expect(metrics.input?.height).toBeCloseTo(metrics.composerHeight, 1);
+    expect(metrics.plus?.width).toBe(metrics.controlSize);
+    expect(metrics.plus?.height).toBe(metrics.controlSize);
+    expect(metrics.send?.width).toBe(metrics.controlSize);
+    expect(metrics.send?.height).toBe(metrics.controlSize);
     expect(metrics.plus?.y).toBe(metrics.send?.y);
 
     await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
@@ -107,6 +116,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   }
 
   const starterLayout = await page.locator(".kova-starter-grid").evaluate((grid) => {
+    const style = getComputedStyle(grid);
     const visibleLabels = Array.from(
       grid.querySelectorAll(".kova-starter-prompt > span:last-child"),
     )
@@ -116,16 +126,19 @@ test("empty workspace remains contained and composer focus is deliberate", async
         scrollWidth: label.scrollWidth,
       }));
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length,
+      display: style.display,
+      flexWrap: style.flexWrap,
+      justifyContent: style.justifyContent,
       visibleLabels,
     };
   });
+  expect(starterLayout.display).toBe("flex");
+  expect(starterLayout.flexWrap).toBe("wrap");
+  expect(starterLayout.justifyContent).toBe("center");
   expect(starterLayout.visibleLabels.length).toBeGreaterThan(0);
   for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
   }
-  if (page.viewportSize()!.width === 1024) expect(starterLayout.columns).toBe(2);
-  if (page.viewportSize()!.width >= 1280) expect(starterLayout.columns).toBe(4);
 
   await input.clear();
   await page.getByRole("button", { name: "Start with Make a plan" }).click();
@@ -212,42 +225,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
     const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
-    await expect(greetingMark).toBeVisible();
+    await expect(greetingMark).toBeHidden();
     await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
     await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
     expect(await greetingMark.getAttribute("role")).toBeNull();
     expect(await greetingMark.getAttribute("aria-label")).toBeNull();
-    const greetingMarkStyle = await greetingMark.evaluate((element) => {
-      const style = getComputedStyle(element);
-      const parentStyle = getComputedStyle(element.parentElement!);
-      const sample = (value: string) => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 1;
-        canvas.height = 1;
-        const context = canvas.getContext("2d")!;
-        context.fillStyle = value;
-        context.fillRect(0, 0, 1, 1);
-        return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((channel) => {
-          const normalized = channel / 255;
-          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        });
-      };
-      const luminance = ([red, green, blue]: number[]) =>
-        0.2126 * red + 0.7152 * green + 0.0722 * blue;
-      const foreground = luminance(sample(style.color));
-      const background = luminance(sample(parentStyle.backgroundColor));
-      return {
-        color: style.color,
-        surrounding: parentStyle.backgroundColor,
-        contrast:
-          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
-        paths: element.querySelectorAll("circle, path").length,
-      };
-    });
-    expect(greetingMarkStyle.color).not.toBe("rgba(0, 0, 0, 0)");
-    expect(greetingMarkStyle.color).not.toBe(greetingMarkStyle.surrounding);
-    expect(greetingMarkStyle.contrast).toBeGreaterThanOrEqual(3);
-    expect(greetingMarkStyle.paths).toBeGreaterThanOrEqual(2);
+    expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
     if (page.viewportSize()!.width >= 1024) {
       const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
       await expect(sidebarBrand).toHaveCount(1);

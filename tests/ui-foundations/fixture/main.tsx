@@ -234,11 +234,20 @@ function Fixture() {
   );
 }
 
-const rootRoute = createRootRoute();
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: Fixture });
+const rootRoute = createRootRoute({ component: Fixture });
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
+const overviewRoute = createRoute({ getParentRoute: () => rootRoute, path: "/overview" });
+const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: "/pricing" });
+const initialSurface = new URLSearchParams(location.search).get("surface");
+const initialRoute =
+  initialSurface === "public-comparison"
+    ? "/pricing"
+    : initialSurface === "public-overview"
+      ? "/overview"
+      : "/";
 const router = createRouter({
-  routeTree: rootRoute.addChildren([indexRoute]),
-  history: createMemoryHistory({ initialEntries: ["/"] }),
+  routeTree: rootRoute.addChildren([indexRoute, overviewRoute, pricingRoute]),
+  history: createMemoryHistory({ initialEntries: [initialRoute] }),
 });
 
 createRoot(document.getElementById("root")!).render(

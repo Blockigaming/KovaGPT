@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { calculatePhaseA } from "./phase-a-progress.mjs";
+import { formatEvidenceLevel } from "./report-evidence.mjs";
 const root = new URL("../../docs/interface-2026-09-19/", import.meta.url);
 const read = (name) => JSON.parse(readFileSync(new URL(name, root), "utf8"));
 const fixture = () => [
@@ -28,6 +29,18 @@ test("source text earns no visual acceptance and merged aliases do not inflate a
   assert.equal(
     calculatePhaseA(...withoutAlias).current.newly_documented_source_pages,
     result.current.newly_documented_source_pages,
+  );
+});
+test("report evidence labels follow the current register fields", () => {
+  const page = {
+    source_screenshot_status: "DESKTOP_VIEWPORT_REVIEWED",
+    candidate_screenshot_status: "CAPTURED",
+    full_page_and_controls_reviewed: "True",
+    visual_accepted: "True",
+  };
+  assert.equal(
+    formatEvidenceLevel(page),
+    "Text reviewed · source screenshots: desktop viewport reviewed · candidate screenshots: captured · controls: reviewed · visual acceptance: accepted",
   );
 });
 test("rejects stale scope totals and invalid historical credit", () => {

@@ -48,7 +48,7 @@ The final command outcomes are recorded in `verification.json`. Source/component
 ## Next work
 
 1. Capture the chat, pricing and overview references and candidate pages at 1440×900 and 390×844, including full-page scrolling and meaningful safe states.
-2. Resolve the 237 candidates, 66 app definitions and three wider filter-review groups before freezing the page total. Preserve the existing 205 curated references and exclusion history.
+2. Resolve the 226 public candidates and 59 app definitions before freezing the page total. Preserve the current 204 curated destinations, explicit merges and exclusion history.
 3. Refine the benchmark drafts against source measurements. Keep intentional Kova branding and truthful Kova product data.
 4. Implement subsequent layout-family batches, recording per-page feature, link, responsive and interaction checks.
 5. Verify authenticated streaming, uploads, settings, billing and provider connection lifecycles in an appropriate test environment. No live transactions or account connection changes were performed here.
@@ -108,4 +108,4 @@ The tests reject stale scope counts, invalid historical credits and duplicate/un
 
 ## Overview composition refresh
 
-Following owner feedback, the overview now places its interactive example workspace beside the hero on desktop and stacks it on smaller screens. Three distinct feature panels have working example-entry buttons. The page adds a compact capability strip, an illustrative Projects panel, a navy pricing section and a more contained closing section. Existing account, model, plan and provider behavior is unchanged. The standalone HTML export opens directly into the overview and keeps the existing contained navigation. Visual acceptance remains pending; no screenshot is claimed from the unavailable browser.
+Following owner feedback and the later source-style correction, the overview now uses a centered three-line hero followed by a full-width interactive example workspace, then three restrained editorial use-case cards for writing, learning and planning. The cards contain illustrative states rather than entry buttons. A compact plans band, privacy/judgment section and simple closing follow; the earlier split hero, capability strip, Projects panel and navy pricing treatment were removed. Existing account, model, plan and provider behavior is unchanged. The standalone HTML export opens directly into the overview and keeps the existing contained navigation. Visual acceptance remains pending; no new production-page screenshot is claimed by this source-text pass.

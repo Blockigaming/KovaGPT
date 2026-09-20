@@ -40,6 +40,10 @@ test("public routes share one landmark and a working skip target", async ({ page
       page.locator("main#main-content"),
       `${route} should expose the skip target`,
     ).toHaveCount(1);
+    await expect(
+      page.getByRole("link", { name: "Skip to content" }),
+      `${route} should expose one root-level skip link`,
+    ).toHaveCount(1);
     await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
 
@@ -99,7 +103,10 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
 
   const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("link", { name: "Product" })).toHaveAttribute("aria-current", "page");
+  await expect(menu.getByRole("link", { name: "Features", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(menu.getByRole("link", { name: "Open KovaGPT" })).toBeVisible();
 
   await page.keyboard.press("Escape");

@@ -13,7 +13,7 @@ For every active register row:
 
 ## Immediate correction
 
-Reference: https://chatgpt.com/overview/, opened 2026-09-19, and the preserved source screenshot `reference-captures/live-2026-09-19/kova-overview-source-20260919.jpg`.
+Reference: https://chatgpt.com/overview/, opened 2026-09-19, and the source screenshot `kova-overview-source-20260919.jpg`, retained as private external evidence in the owner's review set. The source capture is intentionally not committed to this public repository; exact-head CI artifacts contain candidate evidence only.
 
 The corrected overview returns to a centered three-line hero, monochrome pill actions, a wide product illustration below it, a centered feature heading, neutral cards, restrained pricing/privacy sections and a closing horizontal action band. The previous independent split hero, colored feature cards, extra Projects section and FAQ section have been removed from this page. Source customer stories and Codex artwork are not republished as Kova claims.
 

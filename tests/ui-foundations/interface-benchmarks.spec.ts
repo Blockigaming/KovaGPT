@@ -11,6 +11,10 @@ for (const width of [390, 1440]) {
       );
       const hero = page.locator(".public-hero h1");
       await expect(hero).toHaveCSS("font-weight", "600");
+      await expect(page.locator('a[href="/overview"]').first()).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
       const headingColor = await hero.evaluate((el) => getComputedStyle(el).color);
       await expect(page.locator(".public-hero .public-action").first()).toHaveCSS(
         "background-color",
@@ -26,11 +30,13 @@ for (const width of [390, 1440]) {
       await expect(projects).toBeFocused();
       if (width < 1024) {
         const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
+        const mobileNavigation = page.locator("#public-mobile-navigation");
         await menu.click();
-        await page
-          .locator("#public-mobile-navigation")
-          .getByRole("link", { name: "Pricing", exact: true })
-          .click();
+        await mobileNavigation.getByRole("link", { name: "About", exact: true }).click();
+        await expect(menu).toHaveAttribute("aria-expanded", "false");
+        await expect(page.locator("#main-content")).toBeFocused();
+        await menu.click();
+        await mobileNavigation.getByRole("link", { name: "Pricing", exact: true }).click();
         await expect(menu).toHaveAttribute("aria-expanded", "false");
       } else {
         await page
@@ -40,11 +46,34 @@ for (const width of [390, 1440]) {
       }
       await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
       await expect(page.locator("#main-content")).toBeFocused();
-      const overview = page.getByRole("link", { name: "Overview", exact: true });
-      await overview.focus();
-      await expect(overview).toBeFocused();
-      await page.keyboard.press("Enter");
+      await expect(page.locator('a[href="/pricing"]').first()).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      if (width < 1024) {
+        const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
+        const mobileNavigation = page.locator("#public-mobile-navigation");
+        await menu.click();
+        await mobileNavigation.getByRole("link", { name: "Pricing", exact: true }).click();
+        await expect(menu).toHaveAttribute("aria-expanded", "false");
+        await expect(page.locator("#main-content")).toBeFocused();
+        await menu.click();
+        const about = mobileNavigation.getByRole("link", { name: "About", exact: true });
+        await about.focus();
+        await expect(about).toBeFocused();
+        await page.keyboard.press("Enter");
+        await expect(menu).toHaveAttribute("aria-expanded", "false");
+      } else {
+        const overview = page.getByRole("link", { name: "Overview", exact: true });
+        await overview.focus();
+        await expect(overview).toBeFocused();
+        await page.keyboard.press("Enter");
+      }
       await expect(hero).toBeVisible();
+      await expect(page.locator('a[href="/overview"]').first()).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
       const openKova = page.locator(".public-hero").getByRole("link", { name: "Open KovaGPT" });
       await openKova.focus();
       await expect(openKova).toBeFocused();

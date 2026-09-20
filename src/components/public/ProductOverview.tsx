@@ -48,7 +48,7 @@ export function ProductOverview() {
         >
           <PublicAction to="/">Open KovaGPT</PublicAction>
           <PublicAction to="/download" secondary>
-            Download the app
+            Use KovaGPT on the web
           </PublicAction>
         </PublicHero>
 
