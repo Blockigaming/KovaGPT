@@ -33,7 +33,11 @@ function decodeBase64Url(value, label) {
   if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/u.test(value)) {
     throw new TypeError(`Invalid ${label}`);
   }
-  return Buffer.from(value, "base64url");
+  const decoded = Buffer.from(value, "base64url");
+  if (decoded.toString("base64url") !== value) {
+    throw new TypeError(`Invalid ${label}`);
+  }
+  return decoded;
 }
 
 function encodeJson(value) {
@@ -173,13 +177,24 @@ export function decryptKovaSecret(envelope, env = process.env) {
   const [version, ivText, ciphertextText, tagText, ...extra] = envelope.split(".");
   if (version !== "v1" || extra.length > 0) throw new TypeError("Invalid encrypted secret");
   const key = encryptionKey(env);
-  const iv = decodeBase64Url(ivText, "secret IV");
-  const ciphertext = decodeBase64Url(ciphertextText, "secret ciphertext");
-  const tag = decodeBase64Url(tagText, "secret tag");
+  let iv;
+  let ciphertext;
+  let tag;
+  try {
+    iv = decodeBase64Url(ivText, "secret IV");
+    ciphertext = decodeBase64Url(ciphertextText, "secret ciphertext");
+    tag = decodeBase64Url(tagText, "secret tag");
+  } catch {
+    throw new TypeError("Invalid encrypted secret");
+  }
   if (iv.length !== 12 || tag.length !== 16) throw new TypeError("Invalid encrypted secret");
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+  } catch {
+    throw new TypeError("Invalid encrypted secret");
+  }
 }
 
 function signingConfiguration(env) {

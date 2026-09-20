@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 158,
-  "latest": "20260920170657_kova_identity_session_store.sql",
+  "count": 159,
+  "latest": "20260920232443_kova_auth_foreign_key_indexes.sql",
   "migrations": [
     {
       "order": 1,
@@ -3401,6 +3401,25 @@
         "auth_password_recoveries_pending_idx",
         "auth_mfa_factors_account_idx",
         "auth_audit_account_time_idx"
+      ]
+    },
+    {
+      "order": 159,
+      "filename": "20260920232443_kova_auth_foreign_key_indexes.sql",
+      "timestamp": "20260920232443",
+      "sha256": "65446ec07aef1f47db2b097f5c21175e349730f9ca051caa1f995c41c729772d",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": [
+        "auth_email_verifications_identity_idx",
+        "auth_mfa_recovery_codes_account_idx",
+        "auth_session_handoffs_account_idx",
+        "auth_audit_session_idx"
       ]
     }
   ]

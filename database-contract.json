@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 158,
+  "migrationCount": 159,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -775,10 +775,14 @@
     "app_notifications_owner_created_idx",
     "auth_active_password_credential",
     "auth_audit_account_time_idx",
+    "auth_audit_session_idx",
     "auth_email_identity_unique",
+    "auth_email_verifications_identity_idx",
     "auth_email_verifications_pending_idx",
     "auth_mfa_factors_account_idx",
+    "auth_mfa_recovery_codes_account_idx",
     "auth_password_recoveries_pending_idx",
+    "auth_session_handoffs_account_idx",
     "auth_sessions_account_active_idx",
     "canvas_comments_document_created",
     "canvas_personal_identity",
@@ -2711,5 +2715,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "27c41395f8d5013c733e0551868602af6f80d81467aa0271354aa77336dafb36"
+  "sha256": "3bb101eabb9ce51e98e86f07b3dcce5f1dfdc97a09d986fca4957e6d0a5df4f4"
 }

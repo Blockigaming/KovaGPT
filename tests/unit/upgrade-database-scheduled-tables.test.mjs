@@ -537,8 +537,8 @@ for (const all of [false, true])
     assert.equal(proof.sourceCommit, sourceCommit);
     assert.equal(proof.sourceTree, sourceTree);
     assert.equal(proof.baseline.capture.ledgerVersionCount, 98);
-    assert.equal(proof.upgraded.capture.ledgerVersionCount, 181);
-    assert.equal(result.forwardMigrations.length, 83);
+    assert.equal(proof.upgraded.capture.ledgerVersionCount, 182);
+    assert.equal(result.forwardMigrations.length, 84);
     assert.equal(proof.schemaProofPromoted, false);
     const sql = r.calls.filter((c) => c.command === "docker").map((c) => c.input);
     assert.equal(sql.filter((s) => s === SCHEDULED_TABLE_SQL).length, 2);

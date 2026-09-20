@@ -10,6 +10,13 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const foreignKeyIndexMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260920232443_kova_auth_foreign_key_indexes.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 async function database() {
   const db = new PGlite();
@@ -42,6 +49,7 @@ async function database() {
     $$;
   `);
   await db.exec(migration);
+  await db.exec(foreignKeyIndexMigration);
   return db;
 }
 
@@ -120,6 +128,35 @@ test("migration creates the complete private auth schema with browser roles deni
           'public.kova_auth_resolve_session(text,timestamptz)', 'execute') as service_resolve
     `);
     assert.deepEqual(functionSecurity.rows, [{ user_resolve: false, service_resolve: true }]);
+  } finally {
+    await db.close();
+  }
+});
+
+test("follow-up migration covers the staging advisor foreign-key findings", async () => {
+  const db = await database();
+  try {
+    const indexes = await db.query(`
+      select indexname
+      from pg_indexes
+      where schemaname = 'kova_private'
+        and indexname in (
+          'auth_email_verifications_identity_idx',
+          'auth_mfa_recovery_codes_account_idx',
+          'auth_session_handoffs_account_idx',
+          'auth_audit_session_idx'
+        )
+      order by indexname
+    `);
+    assert.deepEqual(
+      indexes.rows.map(({ indexname }) => indexname),
+      [
+        "auth_audit_session_idx",
+        "auth_email_verifications_identity_idx",
+        "auth_mfa_recovery_codes_account_idx",
+        "auth_session_handoffs_account_idx",
+      ],
+    );
   } finally {
     await db.close();
   }
