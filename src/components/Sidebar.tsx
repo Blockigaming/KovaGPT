@@ -494,6 +494,7 @@ export function Sidebar({
                 type="button"
                 className={navRow(searchOpen)}
                 onClick={() => setSearchOpen((value) => !value)}
+                aria-label="Search chats"
                 aria-expanded={searchOpen}
                 aria-controls={searchOpen ? "sidebar-chat-search" : undefined}
               >
