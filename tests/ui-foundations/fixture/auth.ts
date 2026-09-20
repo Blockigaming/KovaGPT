@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 // Isolated presentation identities only. No auth/backend module or credentials.
 const exampleUser = {
   id: "workspace-example",
@@ -16,6 +14,6 @@ export function useUser() {
     ? { isLoaded: true, isSignedIn: true, user: exampleUser }
     : { isLoaded: true, isSignedIn: false, user: null };
 }
-export function SignInButton({ children }: { children: ReactNode; mode?: string }) {
+export function SignInButton({ children }: { children: React.ReactNode; mode?: string }) {
   return children;
 }
