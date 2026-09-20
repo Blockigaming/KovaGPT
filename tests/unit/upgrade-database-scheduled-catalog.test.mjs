@@ -497,9 +497,9 @@ test("scheduled catalog: preflight clears stale proof; dry-run leaves files and 
   assert.equal(existsSync(path), false);
 });
 
-test("scheduled catalog: adds no production authority or formal lineage promotion", () => {
+test("scheduled catalog: adds no production authority or scheduled lineage promotion", () => {
   const lineage = JSON.parse(readFileSync(join(ROOT, "release-migration-lineage.json")));
-  assert.equal(lineage.entries.filter((r) => r.status === "requires_schema_proof").length, 19);
+  assert.equal(lineage.entries.filter((r) => r.status === "requires_schema_proof").length, 18);
   for (const version of BASE)
     assert.equal(
       lineage.entries.find((r) => r.remoteVersion === version).status,
