@@ -33,6 +33,8 @@ function capture() {
       replicaIdentity: "d",
       partition: false,
       parentCount: 0,
+      attributeSlots: 1,
+      droppedColumns: [],
       columns: [
         {
           ordinal: 1,
@@ -48,6 +50,7 @@ function capture() {
         },
       ],
       constraints: [],
+      inboundForeignKeys: [],
       indexes: [],
       aclIsNull: true,
       acl: [],
