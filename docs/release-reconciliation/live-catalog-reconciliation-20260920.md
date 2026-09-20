@@ -2,10 +2,10 @@
 
 ## Decision
 
-Promote only remote migration `20260824085042` (`remove_temporary_day15_source_export`) to
-`schema_proven`, backed by `proof-20260824085042`. Keep the two scheduled-object mappings
-blocked because their live ACL fingerprints differ from both the 98-migration rehearsal baseline
-and source-final state.
+Keep all 19 structural mappings blocked. The temporary-export object-family fingerprints match,
+but that scoped absence evidence does not prove the full effects of the 504-line candidate source
+migration `20260824090000`. The two scheduled-object mappings also remain blocked because their
+live ACL fingerprints differ from both the 98-migration rehearsal baseline and source-final state.
 
 This report records read-only catalog evidence. It does not authorize migration-history repair,
 schema changes, backup/restore actions, deployment, or production traffic changes.
@@ -41,7 +41,7 @@ reported digest `sha256:383de147866c2d1903cfdb7d204f6f701c36010af9a6c81a7689b621
 Its source-final history contained 180 versions; its production-shaped baseline contained the
 same 98 versions observed remotely.
 
-## Temporary-export proof
+## Temporary-export scoped evidence
 
 The exact signature was absent, the routine family was empty, and there were zero inbound
 dependencies and zero literal stored-routine references in both live production and isolated
@@ -54,9 +54,11 @@ source-final captures.
 | RLS                  | `1625cf9ce9407f79f96a762aa02f67465cbc5c1e1c3bb3dba2e56cbe4d6abd95` | Same                  |
 | Function             | `2a1b181d96d9553def58a598ecffbd8e097b612b87b8995c5461c883efba47c5` | Same                  |
 
-The proof is limited to this removed temporary-export object family. A literal stored-routine-body
-scan cannot exclude dynamically constructed references. It proves neither other lineage mappings
-nor repaired migration history.
+This evidence is limited to the removed temporary-export object family. A literal
+stored-routine-body scan cannot exclude dynamically constructed references. It does not prove the
+tables, constraints, data, indexes, privileges, or other RPC effects of source migration
+`20260824090000`; therefore it does not satisfy the full lineage mapping and no `schema_proven`
+promotion is made.
 
 ## Scheduled-object blockers
 
@@ -72,11 +74,13 @@ explicit `anon`, `authenticated`, and `service_role` execute grants in addition 
 `PUBLIC` grant. Effective execution is unchanged, but the normalized ACL differs. The other six
 scheduled routines match the rehearsal baseline ACL state.
 
-These differences are evidence, not authorization to alter privileges. The two scheduled-object
-lineage candidates remain `requires_schema_proof`.
+These differences are evidence, not authorization to alter privileges. All 19 structural lineage
+candidates remain `requires_schema_proof`.
 
 ## Remaining gates
 
-Independent review and exact-head CI are required before merging this promotion. Production
-history repair, recovery evidence, release readiness, and production acceptance remain separate
-blocked milestones.
+Independent review and exact-head CI are required before merging this evidence record. A future
+proof format must bind the capture/query digest, exact ledger-version digest, capture timestamp,
+source commit/tree, and artifact digest before any promotion is considered. Production history
+repair, recovery evidence, release readiness, and production acceptance remain separate blocked
+milestones.
