@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { formatEvidenceLevel } from "./report-evidence.mjs";
 const root = new URL("../../docs/interface-2026-09-19/", import.meta.url);
 const read = (name) => JSON.parse(readFileSync(new URL(name, root), "utf8"));
 const report = read("phase-a-progress.json"),
@@ -20,15 +21,6 @@ const escape = (value) =>
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
   );
-const humanizeEvidenceValue = (value) => String(value).replaceAll("_", " ").toLowerCase();
-export const formatEvidenceLevel = (page) =>
-  [
-    "Text reviewed",
-    `source screenshots: ${humanizeEvidenceValue(page.source_screenshot_status)}`,
-    `candidate screenshots: ${humanizeEvidenceValue(page.candidate_screenshot_status)}`,
-    `controls: ${page.full_page_and_controls_reviewed === "True" ? "reviewed" : "pending"}`,
-    `visual acceptance: ${page.visual_accepted === "True" ? "accepted" : "pending"}`,
-  ].join(" · ");
 const registerPagesById = new Map(register.pages.map((page) => [page.page_id, page]));
 const rows = report.historical.categories
   .map(

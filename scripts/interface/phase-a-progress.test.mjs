@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { calculatePhaseA } from "./phase-a-progress.mjs";
-import { formatEvidenceLevel } from "./render-phase-a-report.mjs";
+import { formatEvidenceLevel } from "./report-evidence.mjs";
 const root = new URL("../../docs/interface-2026-09-19/", import.meta.url);
 const read = (name) => JSON.parse(readFileSync(new URL(name, root), "utf8"));
 const fixture = () => [
