@@ -53,6 +53,8 @@ function table(name) {
     replicaIdentity: "d",
     partition: false,
     parentCount: 0,
+    attributeSlots: 1,
+    droppedColumns: [],
     columns: [
       {
         ordinal: 1,
@@ -77,6 +79,7 @@ function table(name) {
         definitionSha256: sha,
       },
     ],
+    inboundForeignKeys: [],
     indexes: [
       {
         name: `${name}_pkey`,
@@ -192,6 +195,8 @@ for (const [path, value] of [
   ["tables.0.kind", "v"],
   ["tables.0.rowSecurity", "true"],
   ["tables.0.parentCount", 1],
+  ["tables.0.attributeSlots", 0],
+  ["tables.0.droppedColumns", [2]],
   ["tables.0.partition", true],
   ["tables.0.persistence", "t"],
   ["tables.0.columns.0.ordinal", 0],
@@ -202,6 +207,7 @@ for (const [path, value] of [
   ["tables.0.columns.0.notNull", 1],
   ["tables.0.constraints.0.validated", "true"],
   ["tables.0.constraints.0.kind", "z"],
+  ["tables.0.inboundForeignKeys", [{}]],
   ["tables.0.indexes.0.ready", null],
   ["tables.0.indexes.0.replicaIdentity", "false"],
   ["tables.0.aclIsNull", "true"],
@@ -240,6 +246,19 @@ for (const path of [
     target.extra = "do not retain";
     assert.throws(() => validateScheduledTableCapture(c, BASE), /invalid/u);
   });
+test("scheduled tables: reject an unrequested inbound-foreign-key field", () => {
+  const c = capture();
+  c.tables[0].inboundForeignKeys.push({
+    sourceTable: "public.child",
+    name: "child_parent_fkey",
+    validated: true,
+    deferrable: false,
+    initiallyDeferred: false,
+    definitionSha256: sha,
+    extra: "do not retain",
+  });
+  assert.throws(() => validateScheduledTableCapture(c, BASE), /invalid/u);
+});
 test("scheduled tables: exact ordered histories and complete inventories are mandatory", () => {
   for (const mutate of [
     (c) => c.tables.pop(),
@@ -265,9 +284,11 @@ test("scheduled tables: exact ordered histories and complete inventories are man
     /invalid/u,
   );
 });
-test("scheduled tables: dropped ordinal gaps are valid but repeated column names are not", () => {
+test("scheduled tables: accounted dropped ordinal gaps are valid but repeated names are not", () => {
   const c = capture();
   c.tables[0].columns.push({ ...c.tables[0].columns[0], ordinal: 3, name: "title" });
+  c.tables[0].attributeSlots = 3;
+  c.tables[0].droppedColumns = [2];
   assert.doesNotThrow(() => validateScheduledTableCapture(c, BASE));
   c.tables[0].columns[1].name = "id";
   assert.throws(() => validateScheduledTableCapture(c, BASE), /invalid/u);
@@ -302,6 +323,39 @@ test("scheduled tables: declared array dimensions change the schema fingerprint"
   assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
   for (const category of ["acl", "rls", "trigger"])
     assert.equal(result.baseline.fingerprint[category], result.upgraded.fingerprint[category]);
+});
+test("scheduled tables: dropped attribute slots change schema and preserve ordinal history", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  after.tables[0].attributeSlots = 2;
+  after.tables[0].droppedColumns = [2];
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
+  assert.deepEqual(result.changes, [
+    {
+      table: "public.scheduled_task_runs",
+      fields: ["attributeSlots", "droppedColumns"],
+    },
+  ]);
+});
+test("scheduled tables: inbound foreign keys change the schema fingerprint", () => {
+  const before = capture();
+  const after = capture(FINAL);
+  after.tables[0].inboundForeignKeys.push({
+    sourceTable: "public.scheduled_task_deliveries",
+    name: "scheduled_task_deliveries_task_run_id_fkey",
+    validated: true,
+    deferrable: false,
+    initiallyDeferred: false,
+    definitionSha256: "d".repeat(64),
+  });
+  const result = build(before, after);
+  assert.equal(result.tableCatalogMatch, false);
+  assert.notEqual(result.baseline.fingerprint.schema, result.upgraded.fingerprint.schema);
+  assert.deepEqual(result.changes, [
+    { table: "public.scheduled_task_runs", fields: ["inboundForeignKeys"] },
+  ]);
 });
 test("scheduled tables: bad output and source identity cannot publish evidence", () => {
   for (const data of ["", null, "{}\n{}", "x".repeat(1024 * 1024 + 1)])
@@ -753,6 +807,8 @@ for (const [path, invalid] of [
 for (const [name, projection] of [
   ["column ACL storage", /'aclIsNull',a\.attacl is null/u],
   ["declared array dimensions", /'dimensions',a\.attndims/u],
+  ["dropped attribute slots", /'droppedColumns'[\s\S]*a\.attisdropped/u],
+  ["inbound foreign keys", /where q\.confrelid=c\.oid and q\.contype='f'/u],
   ["clustering index", /'clustered',x\.indisclustered/u],
   ["trigger function owner", /'functionOwner',pg_get_userbyid\(p\.proowner\)/u],
   [
