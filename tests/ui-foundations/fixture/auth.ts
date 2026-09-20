@@ -12,7 +12,9 @@ const exampleUser = {
 export const clerkEnabled = true;
 export function useUser() {
   const member = new URLSearchParams(location.search).get("session") === "member";
-  return { isLoaded: true, isSignedIn: member, user: member ? exampleUser : null };
+  return member
+    ? { isLoaded: true, isSignedIn: true, user: exampleUser }
+    : { isLoaded: true, isSignedIn: false, user: null };
 }
 export function SignInButton({ children }: { children: ReactNode; mode?: string }) {
   return children;
