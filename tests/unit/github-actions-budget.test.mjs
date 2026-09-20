@@ -8,6 +8,16 @@ const read = (path) => readFile(path, "utf8");
 test("primary CI avoids duplicate branch runs and gates expensive work", async () => {
   const workflow = await read(".github/workflows/ci.yml");
   assert.match(workflow, /cancel-in-progress: true/u);
+  const checkoutCount = workflow.match(/uses: actions\/checkout@/gu)?.length ?? 0;
+  const exactHeadCheckoutCount = workflow.match(
+    /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/gu,
+  )?.length ?? 0;
+  assert.equal(checkoutCount, 6);
+  assert.equal(
+    exactHeadCheckoutCount,
+    checkoutCount,
+    "every CI checkout must use the immutable PR head instead of GitHub's synthetic merge ref",
+  );
   assert.match(workflow, /github\.event\.pull_request\.draft == false/u);
   assert.match(workflow, /branches:\s+- main/u);
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
