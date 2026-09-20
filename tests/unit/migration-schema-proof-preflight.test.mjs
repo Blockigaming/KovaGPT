@@ -34,6 +34,17 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
     git(["commit", "-m", "source checkpoint"]);
     const sourceCommit = git(["rev-parse", "HEAD"]);
     const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
+    const emptyTree = execFileSync("git", ["mktree"], {
+      cwd: directory,
+      encoding: "utf8",
+      input: "",
+    }).trim();
+    const replacementCommit = execFileSync(
+      "git",
+      ["commit-tree", emptyTree, "-m", "malicious replacement checkpoint"],
+      { cwd: directory, encoding: "utf8" },
+    ).trim();
+    git(["replace", sourceCommit, replacementCommit]);
     const targetProjectRef = "abcdefghijklmnopqrst";
     const proofId = `proof-${remoteVersion}`;
     const sourceLedgerVersions = [sourceVersion];
@@ -185,6 +196,7 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
 
     const environment = {
       ...process.env,
+      GIT_NO_REPLACE_OBJECTS: "0",
       SUPABASE_PROJECT_REF: targetProjectRef,
       KOVA_PRODUCTION_SUPABASE_PROJECT_REF: "zyxwvutsrqponmlkjihg",
       KOVA_MIGRATION_MANIFEST: paths.manifest,
