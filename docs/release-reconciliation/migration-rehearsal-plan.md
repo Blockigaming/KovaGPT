@@ -25,8 +25,10 @@ KOVA_MIGRATION_SCHEMA_PROOF_FILE with matching normalized schema, ACL, RLS, and 
 fingerprints. It also requires the exact source and remote capture artifacts named by
 KOVA_MIGRATION_SCHEMA_SOURCE_ARTIFACT and KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT. Ready mode
 hashes and parses those artifacts, recomputes their capture digests and fingerprints, binds the
-source commit/tree, requires the promoted lineage entry's reviewed query and scope digests, and
-derives the remote ledger digest from the reviewed history export.
+source commit/tree, verifies the complete source ledger against that commit's Git tree, requires
+the promoted lineage entry's reviewed query and scope digests, and derives the remote ledger digest
+from the reviewed history export. The declared source commit must be available in the local Git
+object database; a shallow or incomplete checkout fails closed.
 
 For a reviewed rehearsal target, provide KOVA_REMOTE_MIGRATION_FILE and
 KOVA_MIGRATION_LINEAGE_FILE. When the lineage contains schema_proven entries, also provide

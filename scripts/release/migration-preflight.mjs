@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 import {
   digestMigrationSchemaScope,
@@ -85,6 +86,59 @@ function validOrderedVersions(versions, expectedCount) {
     versions.every((version) => typeof version === "string" && VERSION.test(version)) &&
     JSON.stringify(versions) === JSON.stringify([...new Set(versions)].sort())
   );
+}
+
+export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = process.cwd()) {
+  if (!GIT_SHA.test(sourceCommit ?? ""))
+    throw new Error("migration_schema_proof_source_commit_invalid");
+
+  try {
+    const git = (args) =>
+      execFileSync("git", ["-C", resolve(repositoryPath), ...args], {
+        encoding: "utf8",
+        maxBuffer: MAX_SCHEMA_PROOF_ARTIFACT_BYTES,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+    const resolvedCommit = git(["rev-parse", "--verify", `${sourceCommit}^{commit}`]).trim();
+    if (resolvedCommit !== sourceCommit)
+      throw new Error("migration_schema_proof_source_commit_mismatch");
+    const sourceTree = git(["rev-parse", `${resolvedCommit}^{tree}`]).trim();
+    if (!GIT_SHA.test(sourceTree)) throw new Error("migration_schema_proof_source_tree_invalid");
+
+    const migrationPaths = git([
+      "ls-tree",
+      "-r",
+      "--name-only",
+      "-z",
+      resolvedCommit,
+      "--",
+      "supabase/migrations",
+    ])
+      .split("\0")
+      .filter(Boolean);
+    const versions = migrationPaths.map((path) => {
+      if (
+        !path.startsWith("supabase/migrations/") ||
+        path.slice("supabase/migrations/".length).includes("/")
+      ) {
+        throw new Error("migration_schema_proof_source_ledger_invalid");
+      }
+      const match = FILENAME.exec(basename(path));
+      if (!match) throw new Error("migration_schema_proof_source_ledger_invalid");
+      return match[1];
+    });
+    if (!validOrderedVersions(versions, versions.length))
+      throw new Error("migration_schema_proof_source_ledger_invalid");
+    return {
+      sourceCommit: resolvedCommit,
+      sourceTree,
+      ledgerVersions: versions,
+      ledgerVersionsSha256: ledgerVersionsSha256(versions),
+    };
+  } catch (error) {
+    if (error?.message?.startsWith("migration_schema_proof_source_")) throw error;
+    throw new Error("migration_schema_proof_source_commit_unavailable");
+  }
 }
 
 function equalStringSets(left, right) {
@@ -504,7 +558,7 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
 
 export function validateSchemaProofArtifactBindings(
   value,
-  { sourceArtifactPath, remoteArtifactPath },
+  { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath = process.cwd() },
 ) {
   if (
     value?.schemaVersion !== 2 ||
@@ -536,6 +590,11 @@ export function validateSchemaProofArtifactBindings(
     throw new Error("migration_schema_proof_remote_artifact_invalid");
   }
 
+  const sourceCommit = inspectMigrationSourceCommit(
+    value.sourceProvenance.sourceCommit,
+    sourceRepositoryPath,
+  );
+
   if (
     !exactRecord(sourceArtifact, [
       "schemaVersion",
@@ -552,8 +611,11 @@ export function validateSchemaProofArtifactBindings(
     sourceArtifact.createdAt !== value.sourceProvenance.artifactCreatedAt ||
     sourceArtifact.sourceCommit !== value.sourceProvenance.sourceCommit ||
     sourceArtifact.sourceTree !== value.sourceProvenance.sourceTree ||
+    sourceArtifact.sourceTree !== sourceCommit.sourceTree ||
     !validOrderedVersions(sourceArtifact.ledgerVersions, value.observedSourceMigrationCount) ||
+    !equalStringSets(sourceArtifact.ledgerVersions, sourceCommit.ledgerVersions) ||
     ledgerVersionsSha256(sourceArtifact.ledgerVersions) !== sourceArtifact.ledgerVersionsSha256 ||
+    sourceArtifact.ledgerVersionsSha256 !== sourceCommit.ledgerVersionsSha256 ||
     sourceArtifact.ledgerVersionsSha256 !== value.sourceProvenance.ledgerVersionsSha256 ||
     !Array.isArray(sourceArtifact.captures)
   ) {

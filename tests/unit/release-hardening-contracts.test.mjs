@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -188,7 +189,27 @@ test("migration lineage binds a complete remote export and permits clean targets
   );
 });
 
-test("schema-proven lineage requires provenance-bound evidence and repaired history", () => {
+test("schema-proven lineage requires provenance-bound evidence and repaired history", (t) => {
+  const sourceRepository = mkdtempSync(join(tmpdir(), "kova-schema-source-"));
+  t.after(() => rmSync(sourceRepository, { recursive: true, force: true }));
+  mkdirSync(join(sourceRepository, "supabase", "migrations"), { recursive: true });
+  writeFileSync(
+    join(sourceRepository, "supabase", "migrations", "20260101000000_source.sql"),
+    "select 1;\n",
+  );
+  writeFileSync(
+    join(sourceRepository, "supabase", "migrations", "20260101000001_later.sql"),
+    "select 2;\n",
+  );
+  const git = (args) =>
+    execFileSync("git", args, { cwd: sourceRepository, encoding: "utf8" }).trim();
+  git(["init"]);
+  git(["config", "user.name", "Kova Test"]);
+  git(["config", "user.email", "test@kovagpt.invalid"]);
+  git(["add", "supabase/migrations"]);
+  git(["commit", "-m", "source checkpoint"]);
+  const sourceCommit = git(["rev-parse", "HEAD"]);
+  const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
   const snapshot = {
     schemaVersion: 1,
     scope: {
@@ -207,10 +228,10 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
   const scopeSha256 = digestMigrationSchemaScope(snapshot);
   const lineage = {
     schemaVersion: 1,
-    observedSourceCommit: "1".repeat(40),
+    observedSourceCommit: sourceCommit,
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 3,
-    observedSourceMigrationCount: 1,
+    observedSourceMigrationCount: 2,
     entries: [
       {
         remoteVersion: "20260102000000",
@@ -224,7 +245,9 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
       },
     ],
   };
-  const manifest = { migrations: [{ timestamp: "20260101000000" }] };
+  const manifest = {
+    migrations: [{ timestamp: "20260101000000" }, { timestamp: "20260101000001" }],
+  };
   const analysis = validateMigrationLineage(lineage, manifest);
   assert.equal(analysis.schemaProven, 1);
   const unboundLineage = structuredClone(lineage);
@@ -242,17 +265,18 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
     .update(remote.versions.join("\n"))
     .digest("hex");
   const sourceVersions = ["20260101000000"];
+  const sourceLedgerVersions = ["20260101000000", "20260101000001"];
   const sourceLedgerVersionsSha256 = createHash("sha256")
-    .update(sourceVersions.join("\n"))
+    .update(sourceLedgerVersions.join("\n"))
     .digest("hex");
   const proof = {
     schemaVersion: 2,
     targetProjectRef: "abcdefghijklmnopqrst",
-    observedSourceMigrationCount: 1,
+    observedSourceMigrationCount: 2,
     observedRemoteMigrationCount: 3,
     sourceProvenance: {
-      sourceCommit: "1".repeat(40),
-      sourceTree: "2".repeat(40),
+      sourceCommit,
+      sourceTree,
       artifactSha256: "3".repeat(64),
       artifactCreatedAt: "2026-01-02T02:00:00.000Z",
       ledgerVersionsSha256: sourceLedgerVersionsSha256,
@@ -287,9 +311,9 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
   };
   assert.deepEqual(validateSchemaProofEvidence(proof, lineage, remote), {
     proofCount: 1,
-    observedSourceMigrationCount: 1,
-    sourceCommit: "1".repeat(40),
-    sourceTree: "2".repeat(40),
+    observedSourceMigrationCount: 2,
+    sourceCommit,
+    sourceTree,
     sourceArtifactSha256: "3".repeat(64),
     remoteArtifactSha256: "5".repeat(64),
     remoteLedgerVersionsSha256,
@@ -362,7 +386,7 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
   );
   assert.throws(
     () =>
-      validateSchemaProofEvidence({ ...proof, observedSourceMigrationCount: 2 }, lineage, remote),
+      validateSchemaProofEvidence({ ...proof, observedSourceMigrationCount: 3 }, lineage, remote),
     /migration_schema_proof_source_count_mismatch/u,
   );
 
@@ -378,7 +402,7 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
         sourceCommit: proof.sourceProvenance.sourceCommit,
         sourceTree: proof.sourceProvenance.sourceTree,
         ledgerVersionsSha256: proof.sourceProvenance.ledgerVersionsSha256,
-        ledgerVersions: sourceVersions,
+        ledgerVersions: sourceLedgerVersions,
         captures: [
           {
             proofId: proof.proofs[0].proofId,
@@ -427,12 +451,81 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
       validateSchemaProofArtifactBindings(boundProof, {
         sourceArtifactPath,
         remoteArtifactPath,
+        sourceRepositoryPath: sourceRepository,
       }),
       {
         sourceArtifactSha256: boundProof.sourceProvenance.artifactSha256,
         remoteArtifactSha256: boundProof.remoteProvenance.artifactSha256,
       },
     );
+
+    const wrongTreeArtifact = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(sourceArtifact.toString("utf8")),
+        sourceTree: "f".repeat(40),
+      }),
+    );
+    writeFileSync(sourceArtifactPath, wrongTreeArtifact);
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            sourceProvenance: {
+              ...boundProof.sourceProvenance,
+              sourceTree: "f".repeat(40),
+              artifactSha256: createHash("sha256").update(wrongTreeArtifact).digest("hex"),
+            },
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_source_artifact_invalid/u,
+    );
+
+    const wrongLedgerVersions = ["20260101000000", "20260101000002"];
+    const wrongLedgerVersionsSha256 = createHash("sha256")
+      .update(wrongLedgerVersions.join("\n"))
+      .digest("hex");
+    const wrongLedgerArtifact = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(sourceArtifact.toString("utf8")),
+        ledgerVersionsSha256: wrongLedgerVersionsSha256,
+        ledgerVersions: wrongLedgerVersions,
+        captures: [
+          {
+            ...JSON.parse(sourceArtifact.toString("utf8")).captures[0],
+            ledgerVersionsSha256: wrongLedgerVersionsSha256,
+          },
+        ],
+      }),
+    );
+    writeFileSync(sourceArtifactPath, wrongLedgerArtifact);
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            sourceProvenance: {
+              ...boundProof.sourceProvenance,
+              ledgerVersionsSha256: wrongLedgerVersionsSha256,
+              artifactSha256: createHash("sha256").update(wrongLedgerArtifact).digest("hex"),
+            },
+            proofs: [
+              {
+                ...boundProof.proofs[0],
+                sourceCapture: {
+                  ...boundProof.proofs[0].sourceCapture,
+                  ledgerVersionsSha256: wrongLedgerVersionsSha256,
+                },
+              },
+            ],
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_source_artifact_invalid/u,
+    );
+    writeFileSync(sourceArtifactPath, sourceArtifact);
+
     assert.throws(
       () =>
         validateSchemaProofArtifactBindings(
@@ -443,7 +536,7 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
               artifactSha256: "f".repeat(64),
             },
           },
-          { sourceArtifactPath, remoteArtifactPath },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
         ),
       /migration_schema_proof_remote_artifact_mismatch/u,
     );
@@ -476,7 +569,7 @@ test("schema-proven lineage requires provenance-bound evidence and repaired hist
               artifactSha256: createHash("sha256").update(tamperedRemoteArtifact).digest("hex"),
             },
           },
-          { sourceArtifactPath, remoteArtifactPath },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
         ),
       /migration_schema_proof_artifact_capture_mismatch/u,
     );

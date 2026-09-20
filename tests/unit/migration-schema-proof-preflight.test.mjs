@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -21,8 +21,19 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
   try {
     const sourceVersion = "20260101000000";
     const remoteVersion = "20260102000000";
-    const sourceCommit = "1".repeat(40);
-    const sourceTree = "2".repeat(40);
+    mkdirSync(join(directory, "supabase", "migrations"), { recursive: true });
+    writeFileSync(
+      join(directory, "supabase", "migrations", `${sourceVersion}_source.sql`),
+      "select 1;\n",
+    );
+    const git = (args) => execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
+    git(["init"]);
+    git(["config", "user.name", "Kova Test"]);
+    git(["config", "user.email", "test@kovagpt.invalid"]);
+    git(["add", "supabase/migrations"]);
+    git(["commit", "-m", "source checkpoint"]);
+    const sourceCommit = git(["rev-parse", "HEAD"]);
+    const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
     const targetProjectRef = "abcdefghijklmnopqrst";
     const proofId = `proof-${remoteVersion}`;
     const sourceLedgerVersions = [sourceVersion];
@@ -188,6 +199,7 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
       KOVA_BACKUP_EVIDENCE: paths.otherEvidence,
     };
     const stdout = execFileSync(process.execPath, [script.pathname, "--ready"], {
+      cwd: directory,
       encoding: "utf8",
       env: environment,
     });
@@ -205,6 +217,7 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
     const missingArtifactEnvironment = { ...environment };
     delete missingArtifactEnvironment.KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT;
     const missing = spawnSync(process.execPath, [script.pathname, "--ready"], {
+      cwd: directory,
       encoding: "utf8",
       env: missingArtifactEnvironment,
     });

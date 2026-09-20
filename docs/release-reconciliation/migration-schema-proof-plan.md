@@ -25,7 +25,7 @@ The proof file must bind all entries to one reviewed source checkpoint and one r
 - for every proof, the exact capture timestamp, collector-query SHA-256, canonical capture SHA-256, ledger-version SHA-256, and four normalized fingerprints;
 - the target project, complete observed source and remote migration counts, remote version, candidate source versions, and stable proof ID.
 
-The promoted lineage entry itself pins the reviewed collector query and canonical object-scope SHA-256 values. The validator independently derives the remote ledger digest from `KOVA_REMOTE_MIGRATION_FILE`, requires the source commit to match the lineage's `observedSourceCommit`, requires both captures to match the lineage's query and scope digests, rejects captures created after their artifacts, and compares all four fingerprints. Self-reported equal hashes are not sufficient.
+The promoted lineage entry itself pins the reviewed collector query and canonical object-scope SHA-256 values. The validator independently derives the remote ledger digest from `KOVA_REMOTE_MIGRATION_FILE`, resolves the lineage's `observedSourceCommit` from the local Git object database, and requires the source artifact's tree and complete ordered migration ledger to exactly match that commit. It also requires both captures to match the lineage's query and scope digests, rejects captures created after their artifacts, and compares all four fingerprints. Self-reported equal hashes are not sufficient. Ready mode therefore fails closed when the declared source commit is unavailable, including in a shallow checkout that does not contain it.
 
 Ready mode also requires these exact reviewed artifact files:
 
