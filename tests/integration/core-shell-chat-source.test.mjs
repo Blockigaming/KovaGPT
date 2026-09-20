@@ -171,6 +171,8 @@ test("temporary chat changes create a clean privacy boundary", () => {
   assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
   assert.match(index, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
   assert.match(index, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
+  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
   assert.match(index, /temporary: tempChat/);
   assert.match(
     index,
