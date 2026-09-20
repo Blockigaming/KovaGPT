@@ -18,6 +18,13 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     checkoutCount,
     "every CI checkout must use the immutable PR head instead of GitHub's synthetic merge ref",
   );
+  for (const artifact of ["integration-test-log", "deployed-baseline", "candidate-visual"])
+    assert.ok(
+      workflow.includes(
+        `name: ${artifact}-` + "${{ github.event.pull_request.head.sha || github.sha }}",
+      ),
+      `${artifact} must be labeled with the exact checked-out head`,
+    );
   assert.match(workflow, /github\.event\.pull_request\.draft == false/u);
   assert.match(workflow, /branches:\s+- main/u);
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
