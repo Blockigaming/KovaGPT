@@ -17,7 +17,7 @@ for (const [name, expression] of [
   ["relation options", /and c\.reloptions is null/u],
   [
     "per-column storage and compression overrides",
-    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"\s+or a\.attstattarget<>-1 or a\.attoptions is not null\)/u,
+    /pg_attribute a join pg_type typ on typ\.oid=a\.atttypid\s+where a\.attrelid=c\.oid and a\.attnum>0 and not a\.attisdropped\s+and \(a\.attstorage<>typ\.typstorage or a\.attcompression<>''::"char"/u,
   ],
   ["nondefault per-column statistics targets", /or a\.attstattarget<>-1/u],
   ["per-column planner options", /or a\.attoptions is not null/u],
@@ -58,6 +58,10 @@ for (const [name, expression] of [
     assert.match(target, expression);
   });
 }
+
+test("scheduled scope: source query projects array dimensionality", () => {
+  assert.match(SCHEDULED_TABLE_SQL, /'dimensions',a\.attndims/u);
+});
 
 function capture() {
   return {
