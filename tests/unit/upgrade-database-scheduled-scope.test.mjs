@@ -21,7 +21,10 @@ for (const [name, expression] of [
   ],
   ["nondefault per-column statistics targets", /or a\.attstattarget<>-1/u],
   ["declared array dimensionality", /or a\.attndims<>0/u],
-  ["non-heap table access methods", /c\.relam=\(select access\.oid from pg_am access where access\.amname='heap'\)/u],
+  [
+    "non-heap table access methods",
+    /c\.relam=\(select access\.oid from pg_am access where access\.amname='heap'\)/u,
+  ],
   ["typed-table dependencies", /c\.reloftype=0/u],
   [
     "extended statistics",
