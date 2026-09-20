@@ -22,7 +22,7 @@ with target as (
  and not exists (select 1 from pg_attribute a join pg_type typ on typ.oid=a.atttypid
    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
    and (a.attstorage<>typ.typstorage or a.attcompression<>''::"char"
-     or a.attstattarget<>-1))
+     or a.attstattarget<>-1 or a.attoptions is not null))
  and not exists (select 1 from pg_statistic_ext statistics where statistics.stxrelid=c.oid)
  and c.relam=(select access.oid from pg_am access where access.amname='heap')
  and c.reloftype=0
@@ -44,6 +44,9 @@ with target as (
  'rowSecurity',c.relrowsecurity,'forceRowSecurity',c.relforcerowsecurity,
  'replicaIdentity',c.relreplident::text,'partition',c.relispartition,
  'parentCount',(select count(*) from pg_inherits h where h.inhrelid=c.oid),
+ 'attributeSlots',c.relnatts,
+ 'droppedColumns',coalesce((select jsonb_agg(a.attnum order by a.attnum) from pg_attribute a
+   where a.attrelid=c.oid and a.attnum>0 and a.attisdropped),'[]'::jsonb),
  'columns',coalesce((select jsonb_agg(jsonb_build_object(
    'ordinal',a.attnum,'name',a.attname::text,'type',format_type(a.atttypid,a.atttypmod),'dimensions',a.attndims,
    'notNull',a.attnotnull,'identity',a.attidentity::text,'generated',a.attgenerated::text,
@@ -57,6 +60,13 @@ with target as (
    'deferrable',q.condeferrable,'initiallyDeferred',q.condeferred,
    'definitionSha256',encode(sha256(convert_to(pg_get_constraintdef(q.oid),'UTF8')),'hex')
  ) order by q.conname::text collate "C") from pg_constraint q where q.conrelid=c.oid),'[]'::jsonb),
+ 'inboundForeignKeys',coalesce((select jsonb_agg(jsonb_build_object(
+   'sourceTable',format('%I.%I',sn.nspname,sc.relname),'name',q.conname::text,
+   'validated',q.convalidated,'deferrable',q.condeferrable,'initiallyDeferred',q.condeferred,
+   'definitionSha256',encode(sha256(convert_to(pg_get_constraintdef(q.oid),'UTF8')),'hex')
+ ) order by sn.nspname::text collate "C",sc.relname::text collate "C",q.conname::text collate "C")
+ from pg_constraint q join pg_class sc on sc.oid=q.conrelid join pg_namespace sn on sn.oid=sc.relnamespace
+ where q.confrelid=c.oid and q.contype='f'),'[]'::jsonb),
  'indexes',coalesce((select jsonb_agg(jsonb_build_object(
    'name',i.relname::text,'primary',x.indisprimary,'unique',x.indisunique,'valid',x.indisvalid,
    'ready',x.indisready,'replicaIdentity',x.indisreplident,'clustered',x.indisclustered,
@@ -205,6 +215,14 @@ const constraint = object({
   initiallyDeferred: bool,
   definitionSha256: hash,
 });
+const inboundForeignKey = object({
+  sourceTable: text,
+  name: text,
+  validated: bool,
+  deferrable: bool,
+  initiallyDeferred: bool,
+  definitionSha256: hash,
+});
 const index = object({
   name: text,
   primary: bool,
@@ -243,8 +261,14 @@ const table = object({
   replicaIdentity: literal("d", "n", "f", "i"),
   partition: literal(false),
   parentCount: literal(0),
+  attributeSlots: integer,
+  droppedColumns: array(
+    scalar((v) => Number.isSafeInteger(v) && v > 0 && v <= 1600),
+    (v) => [v],
+  ),
   columns: array(column, (r) => [r.ordinal], 1, 1600),
   constraints: array(constraint, named),
+  inboundForeignKeys: array(inboundForeignKey, (r) => [r.sourceTable, r.name]),
   indexes: array(index, named),
   aclIsNull: bool,
   acl: array(object(grant), grantKey),
@@ -302,8 +326,13 @@ export function validateScheduledTableCapture(input, expectedVersions) {
     fail();
   for (const row of capture.tables) {
     const names = new Set(row.columns.map((c) => c.name));
+    const ordinals = [...row.columns.map((c) => c.ordinal), ...row.droppedColumns].sort(
+      (a, b) => a - b,
+    );
     if (
       names.size !== row.columns.length ||
+      row.attributeSlots !== ordinals.length ||
+      ordinals.some((ordinal, index) => ordinal !== index + 1) ||
       row.columnAcl.some((g) => !names.has(g.column)) ||
       JSON.stringify(row.effectivePrivileges.map((r) => r.role)) !== JSON.stringify(roleNames)
     )
@@ -330,8 +359,11 @@ function fingerprint(capture) {
       "replicaIdentity",
       "partition",
       "parentCount",
+      "attributeSlots",
+      "droppedColumns",
       "columns",
       "constraints",
+      "inboundForeignKeys",
       "indexes",
     ],
     acl: ["owner", "aclIsNull", "acl", "columnAcl", "effectivePrivileges"],
@@ -409,7 +441,7 @@ export function buildScheduledTableEvidence({
     productionReleaseReady: false,
     productionRowsRestored: false,
     limitations: [
-      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST/column storage options, nondefault column statistics targets, extended statistics, non-heap access methods, typed tables, non-origin capture sessions or internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed. Declared array dimensions are captured explicitly.",
+      "Only the two named ordinary public tables; inheritance, rules, effective publications, relation/TOAST/column storage options, nondefault column statistics targets or planner options, extended statistics, non-heap access methods, typed tables, non-origin capture sessions or non-origin internal constraint triggers, noncanonical API-role authority, nondefault tablespaces and a named PUBLIC role fail closed. Declared array dimensions, dropped attribute slots and inbound foreign keys are captured explicitly.",
       "No table rows, sequences, external foreign-key targets, dependency closure, role-membership graph or executable RLS behavior is proven.",
       "Definition hashes compare fixed-search-path PostgreSQL deparser output; equality is not independent semantic equivalence proof.",
       "Later-writer changes remain visible. Fresh-source/live comparison, original effects, recovery and independent review remain separate gates.",
