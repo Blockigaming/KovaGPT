@@ -21,6 +21,17 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/u,
   );
   assert.match(workflow, /run_database: \$\{\{ steps\.scope\.outputs\.run_database \}\}/u);
+  for (const databaseProofPath of [
+    "\\.github/workflows/ci\\.yml",
+    "release-migration-lineage\\.json",
+    "migration-preflight",
+    "migration-schema-proof-plan",
+  ]) {
+    assert.ok(
+      workflow.includes(databaseProofPath),
+      `${databaseProofPath} must trigger isolated database CI`,
+    );
+  }
   assert.match(
     workflow,
     /isolated-database:[\s\S]*?needs\.verify\.outputs\.run_database == 'true'/u,
