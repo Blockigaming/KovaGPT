@@ -93,12 +93,35 @@ export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = proc
     throw new Error("migration_schema_proof_source_commit_invalid");
 
   try {
+    const env = { ...process.env };
+    for (const key of Object.keys(env)) if (key.startsWith("GIT_")) delete env[key];
+    Object.assign(env, {
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_TERMINAL_PROMPT: "0",
+      GIT_NO_REPLACE_OBJECTS: "1",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+    });
     const git = (args) =>
-      execFileSync("git", ["-C", resolve(repositoryPath), ...args], {
-        encoding: "utf8",
-        maxBuffer: MAX_SCHEMA_PROOF_ARTIFACT_BYTES,
-        stdio: ["ignore", "pipe", "ignore"],
-      });
+      execFileSync(
+        "git",
+        [
+          "--no-optional-locks",
+          "-c",
+          "core.fsmonitor=false",
+          "-c",
+          "core.untrackedCache=false",
+          "-C",
+          resolve(repositoryPath),
+          ...args,
+        ],
+        {
+          env,
+          encoding: "utf8",
+          maxBuffer: MAX_SCHEMA_PROOF_ARTIFACT_BYTES,
+          stdio: ["ignore", "pipe", "ignore"],
+        },
+      );
     const resolvedCommit = git(["rev-parse", "--verify", `${sourceCommit}^{commit}`]).trim();
     if (resolvedCommit !== sourceCommit)
       throw new Error("migration_schema_proof_source_commit_mismatch");
