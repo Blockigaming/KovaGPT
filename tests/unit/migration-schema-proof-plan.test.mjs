@@ -21,6 +21,7 @@ const manifest = {
 test("schema proof plan includes only unresolved lineage entries and deduplicates source versions", () => {
   const lineage = {
     schemaVersion: 1,
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 3,
     observedSourceMigrationCount: 2,
@@ -45,9 +46,19 @@ test("schema proof plan includes only unresolved lineage entries and deduplicate
   };
 
   assert.deepEqual(buildMigrationSchemaProofPlan(lineage, manifest), {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
+    observedSourceMigrationCount: 2,
     observedRemoteMigrationCount: 3,
+    requiredSourceProvenanceFields: [
+      "sourceCommit",
+      "sourceTree",
+      "artifactSha256",
+      "artifactCreatedAt",
+      "ledgerVersionsSha256",
+    ],
+    requiredRemoteProvenanceFields: ["artifactSha256", "artifactCreatedAt", "ledgerVersionsSha256"],
     requiredProofCount: 1,
     sourceVersions: ["20260101000000", "20260101000001"],
     entries: [
@@ -56,6 +67,13 @@ test("schema proof plan includes only unresolved lineage entries and deduplicate
         remoteVersion: "20260102000001",
         remoteName: "needs proof",
         sourceVersions: ["20260101000000", "20260101000001"],
+        requiredLineagePromotionFields: ["proofId", "querySha256", "scopeSha256"],
+        requiredCaptureProvenanceFields: [
+          "capturedAt",
+          "querySha256",
+          "captureSha256",
+          "ledgerVersionsSha256",
+        ],
         requiredFingerprintFields: ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"],
         reason: "normalized database state must match",
       },
@@ -66,6 +84,7 @@ test("schema proof plan includes only unresolved lineage entries and deduplicate
 test("schema proof plan is empty when every remote-only lineage entry is already proven", () => {
   const lineage = {
     schemaVersion: 1,
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 2,
     observedSourceMigrationCount: 2,
