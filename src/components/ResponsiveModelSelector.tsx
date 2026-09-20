@@ -152,7 +152,9 @@ export function ResponsiveModelSelector({
           ) : (
             <>
               KovaGPT
-              {!compact ? <span className="ml-1 font-normal">· {current.label}</span> : null}
+              {!compact || topbar ? (
+                <span className="ml-1 font-normal">· {current.label}</span>
+              ) : null}
             </>
           )}
         </span>
