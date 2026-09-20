@@ -98,6 +98,9 @@ test("writing family bounds requests and rejects stale or unusable responses", (
   assert.match(workspace, /\(\{ isWordLike \}\) => isWordLike/);
   assert.match(workspace, /"txt", "md", "markdown", "csv", "json"/);
   assert.match(workspace, /Files stay in this browser until you submit text/);
+  assert.match(workspace, /<p className="sr-only" role="status" aria-live="polite">/);
+  assert.match(workspace, /setAnnouncement\("Writing result complete\."\)/);
+  assert.doesNotMatch(workspace, /<section\s+aria-live="polite"\s+aria-label="Result"/);
   assert.match(workspace, /tabIndex=\{-1\}/);
   assert.match(workspace, /break-words whitespace-pre-wrap/);
   assert.match(indexRoute, /WRITING_TOOLS\.map/);

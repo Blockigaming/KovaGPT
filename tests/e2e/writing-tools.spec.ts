@@ -50,6 +50,7 @@ test("writing tool exposes recovered controls and local word count", async ({ pa
   await page.getByLabel("Text for Word counter").fill('"Hello." "Goodbye."');
   await page.getByRole("button", { name: "Run Word counter" }).click();
   await expect(page.getByRole("region", { name: "Result" })).toContainText("2 sentences");
+  await expect(page.getByRole("status")).toHaveText("Writing result complete.");
 
   await page.getByLabel("Text for Word counter").fill("你好世界");
   await page.getByRole("button", { name: "Run Word counter" }).click();

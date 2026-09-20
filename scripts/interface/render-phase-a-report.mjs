@@ -20,6 +20,16 @@ const escape = (value) =>
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
   );
+const humanizeEvidenceValue = (value) => String(value).replaceAll("_", " ").toLowerCase();
+export const formatEvidenceLevel = (page) =>
+  [
+    "Text reviewed",
+    `source screenshots: ${humanizeEvidenceValue(page.source_screenshot_status)}`,
+    `candidate screenshots: ${humanizeEvidenceValue(page.candidate_screenshot_status)}`,
+    `controls: ${page.full_page_and_controls_reviewed === "True" ? "reviewed" : "pending"}`,
+    `visual acceptance: ${page.visual_accepted === "True" ? "accepted" : "pending"}`,
+  ].join(" · ");
+const registerPagesById = new Map(register.pages.map((page) => [page.page_id, page]));
 const rows = report.historical.categories
   .map(
     (c) =>
@@ -33,10 +43,11 @@ const steps = history
   )
   .join("");
 const sourceRows = observations.pages
-  .map(
-    (p) =>
-      `<tr><th scope="row">${escape(p.page_id)}</th><td><a href="${escape(p.source_url)}" target="_blank" rel="noopener noreferrer">${escape(new URL(p.source_url).pathname)}</a></td><td>${escape(p.observed_purpose)}</td><td>Text reviewed · visuals/controls pending</td></tr>`,
-  )
+  .map((p) => {
+    const registerPage = registerPagesById.get(p.page_id);
+    if (!registerPage) throw new Error(`Missing register entry for observation ${p.page_id}`);
+    return `<tr><th scope="row">${escape(p.page_id)}</th><td><a href="${escape(p.source_url)}" target="_blank" rel="noopener noreferrer">${escape(new URL(p.source_url).pathname)}</a></td><td>${escape(p.observed_purpose)}</td><td>${escape(formatEvidenceLevel(registerPage))}</td></tr>`;
+  })
   .join("");
 const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KovaGPT · Phase A progress</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f6f8fb;color:#172333;font:15px/1.6 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:48px 24px}h1{font-size:clamp(34px,5vw,60px);font-weight:550;line-height:1.08;letter-spacing:-.045em;margin:18px 0}h2{font-size:26px;font-weight:550;letter-spacing:-.02em;margin:0 0 16px}p{max-width:850px}.eyebrow{color:#275ba0;text-transform:uppercase;font-size:12px;font-weight:650;letter-spacing:.12em}.muted{color:#596b80}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:30px 0}.card,section{background:white;border:1px solid #dce3ed;border-radius:18px;padding:24px}.card strong{display:block;font-size:34px;line-height:1.3;font-weight:550;letter-spacing:-.035em}.card span{color:#52657b;font-size:13px}.accent{background:#eaf2ff;border-color:#c9dcf8}section{margin:24px 0}.table{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}th,td{padding:13px 12px;border-bottom:1px solid #e5eaf0;vertical-align:top}thead th{color:#566b83;font-size:12px}tbody th{font-weight:550}a{color:#225b9f;text-underline-offset:3px}input{width:100%;max-width:550px;min-height:44px;padding:10px 14px;border:1px solid #b6c6da;border-radius:9px;font:inherit;margin:10px 0 18px}:focus-visible{outline:3px solid #79a9ef;outline-offset:3px}.note{padding-left:16px;border-left:3px solid #6093dd}li{margin:9px 0}footer{padding:10px 0 30px;color:#5b6d82;font-size:13px}@media(max-width:600px){main{padding:28px 16px}section,.card{padding:18px}th,td{padding:10px 8px}}

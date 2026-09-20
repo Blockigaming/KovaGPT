@@ -106,6 +106,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
   const [length, setLength] = useState("Standard");
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
+  const [announcement, setAnnouncement] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +137,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
       revisionRef.current += 1;
       setText(importedText);
       setResult("");
+      setAnnouncement("");
     } catch {
       setError("Kova couldn't read that file. Your existing text was not changed.");
     } finally {
@@ -146,24 +148,28 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
   const run = async () => {
     if (!text.trim() || busy) return;
     setError("");
+    setAnnouncement("");
     setCopied(false);
 
     if (tool.action === "count") {
       setResult(
         `${stats.words} words · ${stats.characters} characters · ${stats.sentences} sentences · ${stats.lines} lines`,
       );
+      setAnnouncement("Writing result complete.");
       return;
     }
     if (tool.action === "detector") {
       setResult(
         `Writing-pattern review: ${stats.words} words across ${stats.sentences} sentences. No detector can reliably prove whether a person or AI wrote text, so Kova does not invent an “AI percentage.” Review repetitive phrasing, unsupported claims, and voice consistency instead.`,
       );
+      setAnnouncement("Writing result complete.");
       return;
     }
     if (tool.action === "plagiarism") {
       setResult(
         "Kova cannot truthfully report a plagiarism score without comparing this text against a licensed source corpus. Check distinctive phrases in a trusted search or institutional checker, and verify that borrowed ideas, quotations, and data have citations.",
       );
+      setAnnouncement("Writing result complete.");
       return;
     }
 
@@ -218,6 +224,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
         return;
       }
       setResult(payload.text);
+      setAnnouncement("Writing result complete.");
     } catch {
       if (requestRevision !== revisionRef.current) return;
       setError(
@@ -246,6 +253,9 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
         className="min-h-full bg-background px-4 pb-12 pt-4 sm:px-6 lg:px-8"
       >
         <div className="mx-auto w-full max-w-[760px]">
+          <p className="sr-only" role="status" aria-live="polite">
+            {announcement}
+          </p>
           <header className="flex min-h-10 items-center gap-1 text-sm text-muted-foreground">
             <Link
               to="/writing"
@@ -285,6 +295,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                 setText(event.target.value);
                 setResult("");
                 setError("");
+                setAnnouncement("");
               }}
               placeholder={tool.placeholder}
               rows={8}
@@ -324,6 +335,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                       setFormat(value);
                       setResult("");
                       setError("");
+                      setAnnouncement("");
                     }}
                   />
                   <SelectControl
@@ -335,6 +347,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                       setTone(value);
                       setResult("");
                       setError("");
+                      setAnnouncement("");
                     }}
                   />
                   <SelectControl
@@ -346,6 +359,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                       setLength(value);
                       setResult("");
                       setError("");
+                      setAnnouncement("");
                     }}
                   />
                 </>
@@ -384,7 +398,6 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
 
           {result && (
             <section
-              aria-live="polite"
               aria-label="Result"
               className="mt-6 rounded-2xl border border-border bg-background p-5 shadow-sm"
             >
@@ -408,6 +421,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                     onClick={() => {
                       setResult("");
                       setError("");
+                      setAnnouncement("");
                     }}
                     className="grid h-9 w-9 place-items-center rounded-lg hover:bg-muted"
                     aria-label="Clear result"
@@ -434,6 +448,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                     setText(suggestion);
                     setResult("");
                     setError("");
+                    setAnnouncement("");
                   }}
                   className="min-h-16 rounded-2xl border border-border bg-background px-4 py-3 text-left text-sm leading-5 transition-colors hover:bg-muted"
                 >
