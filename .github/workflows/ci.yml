@@ -140,7 +140,7 @@ jobs:
         if: steps.integration.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: integration-test-log-${{ github.sha }}
+          name: integration-test-log-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ci/integration-tests.log
           if-no-files-found: error
           retention-days: 7
@@ -160,7 +160,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: deployed-baseline-${{ github.sha }}
+          name: deployed-baseline-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ui-audit/deployed-baseline
           if-no-files-found: warn
           retention-days: 7
@@ -183,7 +183,7 @@ jobs:
         if: always() && steps.candidate_visual.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: candidate-visual-${{ github.sha }}
+          name: candidate-visual-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ui-audit/candidate-visual/*.png
           if-no-files-found: error
           retention-days: 7
