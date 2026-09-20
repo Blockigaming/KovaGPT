@@ -64,7 +64,7 @@ test("member mobile header retains Kova branding and changes a real model select
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/workspace.html?session=member");
   const trigger = page.getByTestId("model-selector-trigger").filter({ visible: true });
-  await expect(trigger).toHaveText("KovaGPT· Instant");
+  await expect(trigger).toHaveText("KovaGPT· Lite");
   await trigger.click();
   await expect(page.getByRole("dialog", { name: "Intelligence" })).toBeVisible();
   const option = page.locator('[data-testid^="model-option-"]').filter({ visible: true }).last();
