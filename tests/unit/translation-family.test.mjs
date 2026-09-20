@@ -63,12 +63,21 @@ test("observed translation controls and full language choices remain implemented
 });
 
 test("translation calls the guarded writing API and preserves input on errors", () => {
-  assert.match(workspace, /authFetch\("\/api\/write"/);
+  assert.match(workspace, /fetchWithTimeoutAuthenticated\("\/api\/write"/);
   assert.match(workspace, /action: "custom"/);
   assert.match(workspace, /Your text is still here/);
+  assert.match(workspace, /MAX_FILE_BYTES = 40_000/);
+  assert.match(workspace, /MAX_INPUT_CHARACTERS = 40_000/);
+  assert.match(workspace, /WRITE_MAX_BODY_BYTES = 64 \* 1024/);
+  assert.match(workspace, /requestRevision !== revisionRef\.current/);
+  assert.match(workspace, /response\.status === 401/);
+  assert.match(workspace, /!payload\.text\.trim\(\)/);
+  assert.match(workspace, /tabIndex=\{-1\}/);
+  assert.equal((workspace.match(/dir="auto"/g) ?? []).length, 2);
   assert.doesNotMatch(workspace, /fake|Math\.random/i);
 });
 
 test("unknown pair routes fail through the application not-found boundary", () => {
   assert.match(pairRoute, /throw notFound\(\)/);
+  assert.doesNotMatch(pairRoute, /name: "robots"/);
 });

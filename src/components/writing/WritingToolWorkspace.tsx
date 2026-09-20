@@ -12,7 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { authFetch } from "@/lib/auth-fetch";
+import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import {
   WRITING_FORMATS,
   WRITING_LENGTHS,
@@ -20,7 +20,9 @@ import {
   type WritingTool,
 } from "@/lib/writing-tool-catalog";
 
-const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_FILE_BYTES = 40_000;
+const MAX_INPUT_CHARACTERS = 40_000;
+const WRITE_MAX_BODY_BYTES = 64 * 1024;
 const ACCEPTED_FILE_TYPES = new Set([
   "text/plain",
   "text/markdown",
@@ -80,13 +82,14 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const revisionRef = useRef(0);
   const stats = useMemo(() => textStats(text), [text]);
 
   const importFile = async (file?: File) => {
     if (!file) return;
     setError("");
     if (file.size > MAX_FILE_BYTES) {
-      setError("Choose a text file smaller than 1 MB.");
+      setError("Choose a text file no larger than 40 KB.");
       return;
     }
     const extension = file.name.toLowerCase().split(".").pop();
@@ -98,7 +101,13 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
       return;
     }
     try {
-      setText(await file.text());
+      const importedText = await file.text();
+      if (importedText.length > MAX_INPUT_CHARACTERS) {
+        setError("Choose a text file with no more than 40,000 characters.");
+        return;
+      }
+      revisionRef.current += 1;
+      setText(importedText);
       setResult("");
     } catch {
       setError("Kova couldn't read that file. Your existing text was not changed.");
@@ -131,31 +140,41 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
       return;
     }
 
+    const instruction = [
+      tool.instruction,
+      tool.supportsSettings === false
+        ? undefined
+        : `Use a ${tone.toLowerCase()} tone, ${length.toLowerCase()} length, and ${format.toLowerCase()} format.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const requestBody = JSON.stringify({
+      text,
+      action: tool.action,
+      ...(instruction ? { instructions: instruction } : {}),
+      ...(tool.action === "tone" ? { tone } : {}),
+    });
+    if (new TextEncoder().encode(requestBody).byteLength > WRITE_MAX_BODY_BYTES) {
+      setError("Shorten your text so the request stays below 64 KB.");
+      return;
+    }
+
+    const requestRevision = revisionRef.current;
     setBusy(true);
     try {
-      const instruction = [
-        tool.instruction,
-        `Use a ${tone.toLowerCase()} tone, ${length.toLowerCase()} length, and ${format.toLowerCase()} format.`,
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const response = await authFetch("/api/write", {
+      const response = await fetchWithTimeoutAuthenticated("/api/write", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          action: tool.action,
-          ...(tool.action === "custom" ? { instructions: instruction } : {}),
-          ...(tool.action === "tone" ? { tone } : {}),
-        }),
+        body: requestBody,
       });
       const payload = (await response.json().catch(() => ({}))) as {
         text?: string;
         error?: string;
       };
-      if (!response.ok || typeof payload.text !== "string") {
+      if (requestRevision !== revisionRef.current) return;
+      if (!response.ok || typeof payload.text !== "string" || !payload.text.trim()) {
         const message =
-          payload.error === "unauthorized"
+          response.status === 401
             ? "Sign in to use Kova's generation tools. Your text is still here."
             : "Kova couldn't complete that request. Your text is still here—please try again.";
         setError(message);
@@ -163,6 +182,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
       }
       setResult(payload.text);
     } catch {
+      if (requestRevision !== revisionRef.current) return;
       setError(
         "Kova couldn't reach the writing service. Your text is still here—please try again.",
       );
@@ -183,7 +203,11 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
 
   return (
     <AppShell>
-      <main id="main-content" className="min-h-full bg-background px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-full bg-background px-4 pb-12 pt-4 sm:px-6 lg:px-8"
+      >
         <div className="mx-auto w-full max-w-[760px]">
           <header className="flex min-h-10 items-center gap-1 text-sm text-muted-foreground">
             <Link
@@ -218,7 +242,9 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
             <textarea
               id="writing-input"
               value={text}
+              maxLength={MAX_INPUT_CHARACTERS}
               onChange={(event) => {
+                revisionRef.current += 1;
                 setText(event.target.value);
                 setResult("");
                 setError("");
@@ -249,20 +275,44 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
               >
                 <FolderOpen aria-hidden="true" className="h-4 w-4" /> Library
               </Link>
-              <div className="hidden h-5 w-px bg-border sm:block" />
-              <SelectControl
-                label="Format"
-                value={format}
-                options={WRITING_FORMATS}
-                onChange={setFormat}
-              />
-              <SelectControl label="Tone" value={tone} options={WRITING_TONES} onChange={setTone} />
-              <SelectControl
-                label="Length"
-                value={length}
-                options={WRITING_LENGTHS}
-                onChange={setLength}
-              />
+              {tool.supportsSettings !== false && (
+                <>
+                  <div className="hidden h-5 w-px bg-border sm:block" />
+                  <SelectControl
+                    label="Format"
+                    value={format}
+                    options={WRITING_FORMATS}
+                    onChange={(value) => {
+                      revisionRef.current += 1;
+                      setFormat(value);
+                      setResult("");
+                      setError("");
+                    }}
+                  />
+                  <SelectControl
+                    label="Tone"
+                    value={tone}
+                    options={WRITING_TONES}
+                    onChange={(value) => {
+                      revisionRef.current += 1;
+                      setTone(value);
+                      setResult("");
+                      setError("");
+                    }}
+                  />
+                  <SelectControl
+                    label="Length"
+                    value={length}
+                    options={WRITING_LENGTHS}
+                    onChange={(value) => {
+                      revisionRef.current += 1;
+                      setLength(value);
+                      setResult("");
+                      setError("");
+                    }}
+                  />
+                </>
+              )}
               <button
                 type="button"
                 aria-label={`Run ${tool.title}`}
@@ -329,7 +379,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                   </button>
                 </div>
               </div>
-              <p className="whitespace-pre-wrap text-[15px] leading-7">{result}</p>
+              <p className="break-words whitespace-pre-wrap text-[15px] leading-7">{result}</p>
             </section>
           )}
 
@@ -343,6 +393,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                   key={suggestion}
                   type="button"
                   onClick={() => {
+                    revisionRef.current += 1;
                     setText(suggestion);
                     setResult("");
                     setError("");

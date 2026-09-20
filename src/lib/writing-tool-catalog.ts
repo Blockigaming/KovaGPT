@@ -30,6 +30,7 @@ export type WritingTool = {
   placeholder: string;
   action: WritingToolAction;
   instruction?: string;
+  supportsSettings?: boolean;
   suggestions: readonly [string, string, string];
 };
 
@@ -40,6 +41,7 @@ export const WRITING_TOOLS = [
     shortDescription: "Review writing signals without pretending authorship can be proven.",
     placeholder: "Paste text to review its writing patterns",
     action: "detector",
+    supportsSettings: false,
     suggestions: ["Review sentence patterns", "Find repetitive wording", "Explain detector limits"],
   },
   {
@@ -114,6 +116,7 @@ export const WRITING_TOOLS = [
     shortDescription: "Correct grammar, spelling, and punctuation while keeping your meaning.",
     placeholder: "Paste text to check",
     action: "grammar",
+    supportsSettings: false,
     suggestions: ["Fix a paragraph", "Check an email", "Polish an assignment"],
   },
   {
@@ -161,6 +164,7 @@ export const WRITING_TOOLS = [
       "Prepare text for a real source comparison without fabricating a match score.",
     placeholder: "Paste text to prepare for source checking",
     action: "plagiarism",
+    supportsSettings: false,
     suggestions: ["Find phrases to search", "Review citation gaps", "Explain source checking"],
   },
   {
@@ -168,7 +172,10 @@ export const WRITING_TOOLS = [
     title: "Punctuation checker",
     shortDescription: "Correct punctuation while keeping your wording and meaning intact.",
     placeholder: "Paste text to check its punctuation",
-    action: "grammar",
+    action: "custom",
+    instruction:
+      "Correct only punctuation errors. Do not change spelling, grammar, wording, word order, facts, or formatting. Return only the corrected text.",
+    supportsSettings: false,
     suggestions: ["Check commas", "Fix quotation marks", "Review a paragraph"],
   },
   {
@@ -206,7 +213,10 @@ export const WRITING_TOOLS = [
     title: "Spell checker",
     shortDescription: "Correct spelling and obvious typos while preserving your words.",
     placeholder: "Paste text to check its spelling",
-    action: "grammar",
+    action: "custom",
+    instruction:
+      "Correct only spelling errors and obvious typos. Do not change grammar, punctuation, wording, word order, facts, or formatting. Return only the corrected text.",
+    supportsSettings: false,
     suggestions: ["Check a paragraph", "Fix an email", "Review a document"],
   },
   {
@@ -232,6 +242,7 @@ export const WRITING_TOOLS = [
     shortDescription: "Count words, characters, sentences, and lines locally as you type.",
     placeholder: "Type or paste text to count",
     action: "count",
+    supportsSettings: false,
     suggestions: ["Count an essay", "Check a caption length", "Measure a draft"],
   },
 ] as const satisfies readonly WritingTool[];

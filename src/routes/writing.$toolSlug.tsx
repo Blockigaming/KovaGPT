@@ -15,7 +15,6 @@ export const Route = createFileRoute("/writing/$toolSlug")({
         name: "description",
         content: loaderData?.tool.shortDescription ?? "A focused Kova writing tool.",
       },
-      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: WritingToolPage,

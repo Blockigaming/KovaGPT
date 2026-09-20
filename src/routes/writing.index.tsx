@@ -20,7 +20,11 @@ export const Route = createFileRoute("/writing/")({
 function WritingIndex() {
   return (
     <AppShell>
-      <main id="main-content" className="min-h-full bg-background px-4 pb-16 pt-14 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-full bg-background px-4 pb-16 pt-14 sm:px-6 lg:px-8"
+      >
         <div className="mx-auto w-full max-w-5xl">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-border bg-background shadow-sm">

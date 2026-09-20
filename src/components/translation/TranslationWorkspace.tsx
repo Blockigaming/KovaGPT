@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Paperclip, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { authFetch } from "@/lib/auth-fetch";
+import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { TRANSLATION_LANGUAGES, type TranslationPair } from "@/lib/translation-catalog";
 
 type Refinement = "translate" | "fluent" | "professional" | "simple";
-const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_FILE_BYTES = 40_000;
+const MAX_INPUT_CHARACTERS = 40_000;
+const WRITE_MAX_BODY_BYTES = 64 * 1024;
 
 function LanguageSelect({
   label,
@@ -63,6 +65,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const revisionRef = useRef(0);
 
   const title = pair
     ? `Translate ${pair.source} To ${pair.target === "Portuguese (Portugal)" ? "Portuguese" : pair.target} In Kova`
@@ -71,9 +74,6 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
   const run = async (refinement: Refinement = "translate") => {
     const input = refinement === "translate" ? source : translation;
     if (!input.trim() || busy) return;
-    setBusy(refinement);
-    setError("");
-    setCopied(false);
     const instruction =
       refinement === "translate"
         ? `Translate this ${sourceLanguage === "Detect language" ? "from its detected language" : `from ${sourceLanguage}`} to ${targetLanguage}. Preserve the original meaning, tone, names, numbers, formatting, and intent. Return only the translation.`
@@ -82,19 +82,34 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
           : refinement === "professional"
             ? `Rewrite this ${targetLanguage} translation in a polished professional tone. Preserve every fact and return only the revised translation.`
             : `Rewrite this ${targetLanguage} translation in very simple language while preserving its meaning. Return only the revision.`;
+    const requestBody = JSON.stringify({
+      text: input,
+      action: "custom",
+      instructions: instruction,
+    });
+    if (new TextEncoder().encode(requestBody).byteLength > WRITE_MAX_BODY_BYTES) {
+      setError("Shorten your text so the request stays below 64 KB.");
+      return;
+    }
+
+    const requestRevision = revisionRef.current;
+    setBusy(refinement);
+    setError("");
+    setCopied(false);
     try {
-      const response = await authFetch("/api/write", {
+      const response = await fetchWithTimeoutAuthenticated("/api/write", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input, action: "custom", instructions: instruction }),
+        body: requestBody,
       });
       const payload = (await response.json().catch(() => ({}))) as {
         text?: string;
         error?: string;
       };
-      if (!response.ok || typeof payload.text !== "string") {
+      if (requestRevision !== revisionRef.current) return;
+      if (!response.ok || typeof payload.text !== "string" || !payload.text.trim()) {
         setError(
-          payload.error === "unauthorized"
+          response.status === 401
             ? "Sign in to translate with Kova. Your text is still here."
             : "Kova couldn't translate that right now. Your text is still here—please try again.",
         );
@@ -102,6 +117,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
       }
       setTranslation(payload.text);
     } catch {
+      if (requestRevision !== revisionRef.current) return;
       setError(
         "Kova couldn't reach the translation service. Your text is still here—please try again.",
       );
@@ -112,6 +128,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
 
   const swap = () => {
     if (sourceLanguage === "Detect language") return;
+    revisionRef.current += 1;
     setSourceLanguage(targetLanguage);
     setTargetLanguage(sourceLanguage);
     setSource(translation || source);
@@ -123,12 +140,18 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
     if (!file) return;
     setError("");
     if (file.size > MAX_FILE_BYTES) {
-      setError("Choose a text file smaller than 1 MB.");
+      setError("Choose a text file no larger than 40 KB.");
     } else if (!file.type.startsWith("text/") && !/\.(txt|md|csv|json)$/iu.test(file.name)) {
       setError("Kova can import TXT, Markdown, CSV, or JSON files here.");
     } else {
       try {
-        setSource(await file.text());
+        const importedText = await file.text();
+        if (importedText.length > MAX_INPUT_CHARACTERS) {
+          setError("Choose a text file with no more than 40,000 characters.");
+          return;
+        }
+        revisionRef.current += 1;
+        setSource(importedText);
         setTranslation("");
       } catch {
         setError("Kova couldn't read that file. Your existing text was not changed.");
@@ -151,6 +174,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
     <AppShell>
       <main
         id="main-content"
+        tabIndex={-1}
         className="min-h-full bg-background px-4 pb-12 pt-12 sm:px-6 sm:pt-16 lg:px-8"
       >
         <div className="mx-auto w-full max-w-4xl">
@@ -168,6 +192,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 value={sourceLanguage}
                 allowDetect
                 onChange={(value) => {
+                  revisionRef.current += 1;
                   setSourceLanguage(value);
                   setTranslation("");
                 }}
@@ -185,6 +210,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 label="Target language"
                 value={targetLanguage}
                 onChange={(value) => {
+                  revisionRef.current += 1;
                   setTargetLanguage(value);
                   setTranslation("");
                 }}
@@ -199,8 +225,11 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 <textarea
                   id="translation-source"
                   aria-label="Source content to translate"
+                  dir="auto"
                   value={source}
+                  maxLength={MAX_INPUT_CHARACTERS}
                   onChange={(event) => {
+                    revisionRef.current += 1;
                     setSource(event.target.value);
                     setTranslation("");
                     setError("");
@@ -247,6 +276,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 <textarea
                   id="translation-output"
                   aria-label="Translation"
+                  dir="auto"
                   value={translation}
                   readOnly
                   placeholder="Translation"

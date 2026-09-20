@@ -33,6 +33,37 @@ test("translator enables submission without fabricating an unsigned result", asy
   await expect(page.getByRole("button", { name: "Make it professional" })).toBeDisabled();
 });
 
+test("translation ignores stale responses and supports focus and RTL content", async ({ page }) => {
+  let requestStarted = false;
+  let releaseResponse: (() => void) | undefined;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  await page.route("**/api/write", async (route) => {
+    requestStarted = true;
+    await responseGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"text":"Outdated translation"}',
+    });
+  });
+
+  await page.goto("/translate/english-to-urdu");
+  await expect(page.locator("main#main-content")).toHaveAttribute("tabindex", "-1");
+  await expect(page.getByLabel("Source content to translate")).toHaveAttribute("dir", "auto");
+  await expect(page.getByLabel("Translation", { exact: true })).toHaveAttribute("dir", "auto");
+
+  await page.getByLabel("Source content to translate").fill("Hello world");
+  const translateButton = page.getByRole("button", { name: "Translate", exact: true });
+  await translateButton.click();
+  await expect.poll(() => requestStarted).toBe(true);
+  await page.getByLabel("Target language", { exact: true }).selectOption("Arabic");
+  releaseResponse?.();
+  await expect(translateButton).toBeEnabled();
+  await expect(page.getByLabel("Translation", { exact: true })).toHaveValue("");
+});
+
 test("unknown language pair uses the real not-found screen without overflow", async ({ page }) => {
   await page.goto("/translate/not-a-real-pair");
   await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();

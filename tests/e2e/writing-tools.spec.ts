@@ -43,6 +43,64 @@ test("writing tool exposes recovered controls and local word count", async ({ pa
   await expect(page.getByRole("button", { name: "Run AI text generator" })).toBeEnabled();
 });
 
+test("generated rewrites send selected settings and discard stale responses", async ({ page }) => {
+  let requestBody: Record<string, unknown> | undefined;
+  let releaseResponse: (() => void) | undefined;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+
+  await page.route("**/api/write", async (route) => {
+    requestBody = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
+    await responseGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"text":"Old result"}',
+    });
+  });
+
+  await page.goto("/writing/paragraph-rewriter");
+  await page.getByLabel("Format").selectOption("Email");
+  await page.getByLabel("Tone").selectOption("Casual");
+  await page.getByLabel("Length").selectOption("Brief");
+  const input = page.getByLabel("Text for Paragraph rewriter");
+  await input.fill("Original paragraph");
+  const runButton = page.getByRole("button", { name: "Run Paragraph rewriter" });
+  await runButton.click();
+
+  await expect.poll(() => requestBody).toBeTruthy();
+  expect(requestBody?.action).toBe("improve");
+  expect(requestBody?.instructions).toContain("casual tone, brief length, and email format");
+
+  await input.fill("Updated while the request is pending");
+  releaseResponse?.();
+  await expect(runButton).toBeEnabled();
+  await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+  await expect(input).toHaveValue("Updated while the request is pending");
+});
+
+test("focused checkers hide inapplicable settings and auth errors give sign-in guidance", async ({
+  page,
+}) => {
+  await page.goto("/writing/punctuation-checker");
+  await expect(page.getByLabel("Format")).toHaveCount(0);
+  await expect(page.getByLabel("Tone")).toHaveCount(0);
+  await expect(page.getByLabel("Length")).toHaveCount(0);
+
+  await page.route("**/api/write", (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: '{"error":"Unauthorized"}',
+    }),
+  );
+  await page.goto("/writing/ai-text-generator");
+  await page.getByLabel("Text for AI text generator").fill("Draft this");
+  await page.getByRole("button", { name: "Run AI text generator" }).click();
+  await expect(page.getByRole("alert")).toContainText("Sign in to use Kova's generation tools");
+});
+
 test("truthful local-only tools never fabricate external analysis", async ({ page }) => {
   await page.goto("/writing/ai-detector");
   await page

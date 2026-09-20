@@ -19,7 +19,6 @@ export const Route = createFileRoute("/translate/$pairSlug")({
         name: "description",
         content: "Translate text while preserving meaning, tone, and intent with Kova.",
       },
-      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: TranslationPairPage,
