@@ -180,9 +180,10 @@
     {
       "remoteVersion": "20260824085042",
       "remoteName": "remove_temporary_day15_source_export",
-      "status": "requires_schema_proof",
-      "candidateSourceVersions": ["20260824090000"],
-      "reason": "Removal safety depends on the deployed catalog and data shape."
+      "status": "schema_proven",
+      "sourceVersions": ["20260824090000"],
+      "comparison": "schema-acl-rls-function-fingerprint",
+      "proofId": "proof-20260824085042"
     },
     {
       "remoteVersion": "20260824085444",
