@@ -546,8 +546,8 @@
     "missingEvidencePaths": 0,
     "retainedLegacyTests": 135,
     "missingRetainedLegacyTests": 0,
-    "currentTestFiles": 504,
-    "currentTestInventorySha256": "8240016611cfb0d0a5a38d60e2c372807777d7dfb0d8d3e7a043b7b1e7721c23",
+    "currentTestFiles": 556,
+    "currentTestInventorySha256": "bf43615940ea72c151375a179758d5184710953ca1b5408e5fc017a4fc859484",
     "statusCounts": {
       "partial": 22,
       "verified_for_implemented_scope": 27,

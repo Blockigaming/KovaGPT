@@ -12,6 +12,7 @@ import {
   hasRecentPasswordRecoveryFlow,
   markPasswordRecoveryFlow,
 } from "@/lib/oauth-session";
+import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -34,8 +35,21 @@ function ResetPassword() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
+  const useKovaRecovery = browserKovaAuthEnabled() && recoveryToken !== null;
 
   useEffect(() => {
+    const kovaToken = new URLSearchParams(window.location.search).get("token");
+    if (browserKovaAuthEnabled() && kovaToken) {
+      setRecoveryToken(kovaToken);
+      setReady(true);
+      if (!/^[A-Za-z0-9_-]{43,128}$/.test(kovaToken)) {
+        setError(
+          "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
+        );
+      }
+      return;
+    }
     if (!getSupabaseClientConfigStatus().configured) {
       setReady(true);
       setError("Account recovery is temporarily unavailable. Please try again later.");
@@ -107,8 +121,9 @@ function ResetPassword() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    const minimumLength = useKovaRecovery ? 12 : 6;
+    if (password.length < minimumLength) {
+      toast.error(`Password must be at least ${minimumLength} characters.`);
       return;
     }
     if (password !== confirm) {
@@ -117,6 +132,20 @@ function ResetPassword() {
     }
     setLoading(true);
     try {
+      if (useKovaRecovery && recoveryToken) {
+        const response = await kovaAuthJson("/api/auth/recovery/reset", {
+          token: recoveryToken,
+          password,
+        });
+        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+        if (!response.ok) {
+          throw new Error(typeof payload.error === "string" ? payload.error : "Recovery failed");
+        }
+        window.history.replaceState({}, document.title, "/reset-password");
+        toast.success("Password updated and other sessions signed out.");
+        window.location.replace("/");
+        return;
+      }
       const { error: updateErr } = await supabase.auth.updateUser({ password });
       if (updateErr) throw updateErr;
       const { error: signOutError } = await supabase.auth.signOut({
@@ -175,7 +204,7 @@ function ResetPassword() {
                 id="new-pw"
                 type="password"
                 autoComplete="new-password"
-                minLength={6}
+                minLength={useKovaRecovery ? 12 : 6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 maxLength={1024}
@@ -188,7 +217,7 @@ function ResetPassword() {
                 id="confirm-pw"
                 type="password"
                 autoComplete="new-password"
-                minLength={6}
+                minLength={useKovaRecovery ? 12 : 6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 maxLength={1024}

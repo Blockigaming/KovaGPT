@@ -16,6 +16,7 @@ import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
+import { browserKovaAuthEnabled, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
 
 type Mode = "sign-in" | "sign-up";
 type Step = "identify" | "magic-sent";
@@ -47,6 +48,7 @@ export function AuthDialog({
   const submittingRef = useRef(false);
   const navigate = useNavigate();
   const providers = useAuthProviders(open);
+  const useKovaAuth = browserKovaAuthEnabled();
 
   useEffect(() => {
     if (!open) return;
@@ -66,9 +68,13 @@ export function AuthDialog({
   const isSignUp = mode === "sign-up";
   const emailValid = isValidEmail(email);
   // Only claim Google is available once the deployment has confirmed it.
-  const googleAvailable = providers.resolved && providers.google;
-  const googleUnavailable = providers.resolved && !providers.google;
-  const googleCheckFailed = Boolean(providers.error);
+  const googleAvailable = useKovaAuth
+    ? import.meta.env.VITE_KOVA_GOOGLE_AUTH_ENABLED === "true"
+    : providers.resolved && providers.google;
+  const googleUnavailable = useKovaAuth
+    ? !googleAvailable
+    : providers.resolved && !providers.google;
+  const googleCheckFailed = !useKovaAuth && Boolean(providers.error);
 
   const guard = (method: "email" | "google" | "passkey") => {
     if (submittingRef.current) return false;
@@ -106,6 +112,15 @@ export function AuthDialog({
     if (!guard("google")) return;
     try {
       rememberPostAuthRedirect();
+      if (useKovaAuth) {
+        const start = new URL("/api/auth/google/start", browserKovaAuthOrigin());
+        start.searchParams.set(
+          "return_to",
+          `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        );
+        window.location.assign(start.toString());
+        return;
+      }
       const { providerAuth } = await import("@/integrations/provider-auth");
       const result = await providerAuth.auth.signInWithOAuth("google", {
         redirect_uri: getOAuthRedirectUri(),
@@ -282,7 +297,8 @@ export function AuthDialog({
                 </div>
               </div>
 
-              {!isSignUp &&
+              {!useKovaAuth &&
+              !isSignUp &&
               providers.resolved &&
               providers.passkeys &&
               browserSupportsPasskeys() ? (
@@ -322,10 +338,10 @@ export function AuthDialog({
                   type="button"
                   onClick={handleGoogle}
                   disabled={loading || !googleAvailable}
-                  aria-busy={loading || !providers.resolved}
+                  aria-busy={loading || (!useKovaAuth && !providers.resolved)}
                   className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                 >
-                  {loadingMethod === "google" || !providers.resolved ? (
+                  {loadingMethod === "google" || (!useKovaAuth && !providers.resolved) ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -348,19 +364,21 @@ export function AuthDialog({
                     </svg>
                   )}
                   <span aria-live="polite">
-                    {providers.resolved ? "Continue with Google" : "Checking Google availability…"}
+                    {googleAvailable ? "Continue with Google" : "Checking Google availability…"}
                   </span>
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => void requestMagicLink(false)}
-                disabled={loading || !emailValid}
-                className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
-              >
-                Email me a sign-in link
-              </button>
+              {!useKovaAuth ? (
+                <button
+                  type="button"
+                  onClick={() => void requestMagicLink(false)}
+                  disabled={loading || !emailValid}
+                  className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                >
+                  Email me a sign-in link
+                </button>
+              ) : null}
             </>
           )}
 

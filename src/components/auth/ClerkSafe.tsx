@@ -24,7 +24,11 @@ import {
   useState,
 } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
+import {
+  getSupabaseClientConfigStatus,
+  signOutLegacySupabaseSession,
+  supabase,
+} from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -56,6 +60,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User as UserIcon } from "lucide-react";
+import {
+  browserKovaAuthMode,
+  fetchKovaSession,
+  setKovaSessionActive,
+  type KovaBrowserPrincipal,
+} from "@/lib/kova-auth-browser";
 
 export const clerkEnabled = true;
 
@@ -79,7 +89,183 @@ function isActiveBan(bannedUntil: string | undefined) {
   return !Number.isFinite(timestamp) || timestamp > Date.now();
 }
 
-export function ClerkProvider({ children }: { children: ReactNode }) {
+function KovaClerkProvider({
+  children,
+  allowLegacyFallback,
+}: {
+  children: ReactNode;
+  allowLegacyFallback: boolean;
+}) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [authIssue, setAuthIssue] = useState<AuthIssue>(null);
+  const [useLegacy, setUseLegacy] = useState(false);
+  const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
+  const authReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
+    const result = purgeUnscopedPrivateBrowserStorage(userId);
+    const failureCount = result.local.failures.length + result.session.failures.length;
+    if (failureCount > 0) {
+      console.warn("[KovaAuth] Transitional browser cleanup was incomplete", {
+        failureCount,
+      });
+    }
+    dispatchPrincipalBrowserStorageCleared(userId);
+  }, []);
+
+  const toSession = useCallback((principal: KovaBrowserPrincipal): Session => {
+    const confirmedAt = principal.emailVerified ? new Date().toISOString() : undefined;
+    const user = {
+      id: principal.accountId,
+      aud: "authenticated",
+      role: "authenticated",
+      email: principal.email,
+      email_confirmed_at: confirmedAt,
+      confirmed_at: confirmedAt,
+      app_metadata: { provider: "kova", providers: ["kova"] },
+      user_metadata: principal.displayName ? { full_name: principal.displayName } : {},
+      identities: [],
+      created_at: "",
+      updated_at: "",
+    } as SupabaseUser;
+    const expiresAt = Math.floor(Date.parse(principal.expiresAt) / 1000);
+    return {
+      access_token: "kova-cookie-session",
+      refresh_token: "",
+      token_type: "bearer",
+      expires_at: Number.isFinite(expiresAt) ? expiresAt : undefined,
+      expires_in: Number.isFinite(expiresAt)
+        ? Math.max(0, expiresAt - Math.floor(Date.now() / 1000))
+        : 0,
+      user,
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const principal = await fetchKovaSession();
+        if (cancelled) return;
+        if (!principal && allowLegacyFallback) {
+          setKovaSessionActive(false);
+          setUseLegacy(true);
+          return;
+        }
+        purgeOwnerlessStateFor(principal?.accountId ?? null);
+        setKovaSessionActive(Boolean(principal) || !allowLegacyFallback);
+        setSession(principal ? toSession(principal) : null);
+        setAuthIssue(null);
+        setIsLoaded(true);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[KovaAuth] Kova session restore failed", {
+          error: error instanceof Error ? error.name : "unknown_error",
+        });
+        setSession(null);
+        setAuthIssue("temporarily_unavailable");
+        setIsLoaded(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [allowLegacyFallback, purgeOwnerlessStateFor, toSession]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const wantsSignIn = params.get("sign-in") === "1";
+    const wantsSignUp = params.get("sign-up") === "1";
+    if (!wantsSignIn && !wantsSignUp) return;
+    setDialog({ open: true, mode: wantsSignUp ? "sign-up" : "sign-in" });
+    params.delete("sign-in");
+    params.delete("sign-up");
+    params.delete("redirect_url");
+    const qs = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
+    );
+  }, []);
+
+  const openAuth = useCallback((mode: "sign-in" | "sign-up") => {
+    authReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDialog({ open: true, mode });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    // Dual mode must retire the dormant hosted-auth session first. Otherwise,
+    // a reload after Kova logout could silently reveal a stale legacy account.
+    if (allowLegacyFallback) {
+      const { error } = await signOutLegacySupabaseSession();
+      if (error) throw new Error("Legacy session sign out failed");
+    }
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Kova sign out failed");
+    const userId = session?.user.id ?? null;
+    if (userId) {
+      clearPrincipalBrowserStorage(userId);
+      dispatchPrincipalBrowserStorageCleared(userId);
+    }
+    purgeUnscopedPrivateBrowserStorage(null);
+    setKovaSessionActive(false);
+    if (!allowLegacyFallback) setKovaSessionActive(true);
+    setSession(null);
+    setIsLoaded(true);
+    window.location.assign("/");
+  }, [allowLegacyFallback, session]);
+
+  const value = useMemo<AuthCtx>(
+    () => ({
+      session,
+      user: session?.user ?? null,
+      isLoaded,
+      authIssue,
+      openAuth,
+      signOut,
+    }),
+    [session, isLoaded, authIssue, openAuth, signOut],
+  );
+
+  if (useLegacy) return <SupabaseClerkProvider>{children}</SupabaseClerkProvider>;
+
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {authIssue ? (
+        <div
+          role="alert"
+          className="fixed left-1/2 top-4 z-[120] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
+        >
+          <span>KovaGPT could not verify your session. Your browser data was not changed.</span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-border px-2.5 py-1 font-medium hover:bg-accent"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+      <AuthDialog
+        open={dialog.open}
+        mode={dialog.mode}
+        returnFocusTarget={authReturnFocusRef.current}
+        onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
+      />
+    </Ctx.Provider>
+  );
+}
+
+function SupabaseClerkProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -509,6 +695,12 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       />
     </Ctx.Provider>
   );
+}
+
+export function ClerkProvider({ children }: { children: ReactNode }) {
+  const mode = browserKovaAuthMode();
+  if (mode === "supabase") return <SupabaseClerkProvider>{children}</SupabaseClerkProvider>;
+  return <KovaClerkProvider allowLegacyFallback={mode === "dual"}>{children}</KovaClerkProvider>;
 }
 
 function useAuthCtx(): AuthCtx {

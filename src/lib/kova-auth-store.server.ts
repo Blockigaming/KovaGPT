@@ -1,0 +1,336 @@
+import { randomUUID } from "node:crypto";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateKovaToken } from "@/lib/kova-auth-crypto.server.mjs";
+import type { KovaPrincipal } from "@/lib/kova-auth-crypto.server.mjs";
+
+type JsonObject = Record<string, unknown>;
+
+type PasswordLookup = {
+  accountId: string;
+  credentialId: string;
+  credentialRevision: number;
+  passwordHash: string;
+  email: string;
+  displayName: string | null;
+  mfaRequired: boolean;
+};
+
+type CandidateResult = {
+  accountId: string;
+  candidateUsed: boolean;
+};
+
+type SupabaseRpcError = { code?: string; message?: string };
+
+export class KovaAuthStoreError extends Error {
+  readonly operation: string;
+  readonly databaseCode: string | null;
+
+  constructor(operation: string, error?: SupabaseRpcError | null) {
+    super(`Kova auth store operation failed: ${operation}`);
+    this.name = "KovaAuthStoreError";
+    this.operation = operation;
+    this.databaseCode = typeof error?.code === "string" ? error.code : null;
+  }
+}
+
+async function rpc<T>(operation: string, args: JsonObject): Promise<T> {
+  const { data, error } = await supabaseAdmin.rpc(operation as never, args as never);
+  if (error) throw new KovaAuthStoreError(operation, error);
+  return data as T;
+}
+
+function firstRow<T>(value: unknown, operation: string): T {
+  if (!Array.isArray(value) || value.length !== 1 || !value[0]) {
+    throw new KovaAuthStoreError(operation);
+  }
+  return value[0] as T;
+}
+
+function optionalFirstRow<T>(value: unknown): T | null {
+  return Array.isArray(value) && value.length === 1 && value[0] ? (value[0] as T) : null;
+}
+
+function principalFromRow(row: Record<string, unknown>): KovaPrincipal {
+  if (
+    typeof row.account_id !== "string" ||
+    typeof row.session_id !== "string" ||
+    typeof row.email !== "string" ||
+    typeof row.email_verified !== "boolean" ||
+    (row.assurance_level !== "aal1" && row.assurance_level !== "aal2")
+  ) {
+    throw new KovaAuthStoreError("invalid_principal_row");
+  }
+  return {
+    accountId: row.account_id,
+    sessionId: row.session_id,
+    email: row.email,
+    emailVerified: row.email_verified,
+    assuranceLevel: row.assurance_level,
+    expiresAt: typeof row.expires_at === "string" ? row.expires_at : undefined,
+    displayName: typeof row.display_name === "string" ? row.display_name : null,
+  };
+}
+
+export async function createCompatibilityPrincipal(): Promise<string> {
+  const marker = randomUUID();
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email: `shadow+${marker}@auth.invalid.kovagpt.com`,
+    password: generateKovaToken(48),
+    email_confirm: true,
+    app_metadata: { provider: "kova_shadow", providers: ["kova_shadow"] },
+    user_metadata: { kova_shadow: true },
+  });
+  if (error || !data.user?.id)
+    throw new KovaAuthStoreError("create_compatibility_principal", error);
+  return data.user.id;
+}
+
+export async function deleteCompatibilityPrincipal(accountId: string): Promise<void> {
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(accountId, false);
+  if (error) throw new KovaAuthStoreError("delete_compatibility_principal", error);
+}
+
+export async function disableLegacyPassword(accountId: string): Promise<void> {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(accountId, {
+    password: generateKovaToken(48),
+  });
+  if (error) throw new KovaAuthStoreError("disable_legacy_password", error);
+}
+
+export async function hasVerifiedLegacyMfa(accountId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.auth.admin.mfa.listFactors({ userId: accountId });
+  if (error) throw new KovaAuthStoreError("list_legacy_mfa", error);
+  return data.factors.some((factor) => factor.status === "verified");
+}
+
+export async function createPasswordAccount(input: {
+  candidateAccountId: string;
+  email: string;
+  displayName: string;
+  passwordHash: string;
+  verificationDigest: string;
+  verificationExpiresAt: string;
+  emailPayload: JsonObject;
+}): Promise<CandidateResult & { verificationCreated: boolean }> {
+  const value = await rpc<unknown>("kova_auth_create_password_account", {
+    p_candidate_account_id: input.candidateAccountId,
+    p_email: input.email,
+    p_display_name: input.displayName,
+    p_password_hash: input.passwordHash,
+    p_verification_digest_hex: input.verificationDigest,
+    p_verification_expires_at: input.verificationExpiresAt,
+    p_email_payload: input.emailPayload,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_create_password_account");
+  if (
+    typeof row.account_id !== "string" ||
+    typeof row.candidate_used !== "boolean" ||
+    typeof row.verification_created !== "boolean"
+  ) {
+    throw new KovaAuthStoreError("kova_auth_create_password_account");
+  }
+  return {
+    accountId: row.account_id,
+    candidateUsed: row.candidate_used,
+    verificationCreated: row.verification_created,
+  };
+}
+
+export async function consumeVerification(input: {
+  verificationDigest: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_consume_verification", {
+    p_verification_digest_hex: input.verificationDigest,
+    p_session_digest_hex: input.sessionDigest,
+    p_session_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_consume_verification"));
+}
+
+export async function lookupPassword(email: string): Promise<PasswordLookup | null> {
+  const value = await rpc<unknown>("kova_auth_password_lookup", { p_email: email });
+  const row = optionalFirstRow<Record<string, unknown>>(value);
+  if (!row) return null;
+  if (
+    typeof row.account_id !== "string" ||
+    typeof row.credential_id !== "string" ||
+    typeof row.credential_revision !== "number" ||
+    typeof row.password_hash !== "string" ||
+    typeof row.email !== "string" ||
+    typeof row.mfa_required !== "boolean"
+  ) {
+    throw new KovaAuthStoreError("kova_auth_password_lookup");
+  }
+  return {
+    accountId: row.account_id,
+    credentialId: row.credential_id,
+    credentialRevision: row.credential_revision,
+    passwordHash: row.password_hash,
+    email: row.email,
+    displayName: typeof row.display_name === "string" ? row.display_name : null,
+    mfaRequired: row.mfa_required,
+  };
+}
+
+export async function createPasswordSession(input: {
+  accountId: string;
+  credentialId: string;
+  credentialRevision: number;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_create_session", {
+    p_account_id: input.accountId,
+    p_credential_id: input.credentialId,
+    p_credential_revision: input.credentialRevision,
+    p_token_digest_hex: input.sessionDigest,
+    p_assurance_level: "aal1",
+    p_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_create_session"));
+}
+
+export async function resolveSession(sessionDigest: string): Promise<KovaPrincipal | null> {
+  const value = await rpc<unknown>("kova_auth_resolve_session", {
+    p_token_digest_hex: sessionDigest,
+  });
+  const row = optionalFirstRow<Record<string, unknown>>(value);
+  return row ? principalFromRow(row) : null;
+}
+
+export async function rotateSession(input: {
+  oldDigest: string;
+  newDigest: string;
+  expiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_rotate_session", {
+    p_old_digest_hex: input.oldDigest,
+    p_new_digest_hex: input.newDigest,
+    p_expires_at: input.expiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_rotate_session"));
+}
+
+export async function revokeSession(sessionDigest: string): Promise<boolean> {
+  return Boolean(
+    await rpc<boolean>("kova_auth_revoke_session", { p_token_digest_hex: sessionDigest }),
+  );
+}
+
+export async function createRecovery(input: {
+  email: string;
+  recoveryDigest: string;
+  recoveryExpiresAt: string;
+  emailPayload: JsonObject;
+}): Promise<boolean> {
+  return Boolean(
+    await rpc<boolean>("kova_auth_create_recovery", {
+      p_email: input.email,
+      p_recovery_digest_hex: input.recoveryDigest,
+      p_recovery_expires_at: input.recoveryExpiresAt,
+      p_email_payload: input.emailPayload,
+    }),
+  );
+}
+
+export async function recoveryTarget(recoveryDigest: string): Promise<string | null> {
+  const value = await rpc<unknown>("kova_auth_recovery_target", {
+    p_recovery_digest_hex: recoveryDigest,
+  });
+  return typeof value === "string" ? value : null;
+}
+
+export async function consumeRecovery(input: {
+  recoveryDigest: string;
+  passwordHash: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_consume_recovery", {
+    p_recovery_digest_hex: input.recoveryDigest,
+    p_password_hash: input.passwordHash,
+    p_session_digest_hex: input.sessionDigest,
+    p_session_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_consume_recovery"));
+}
+
+export async function createOAuthState(input: {
+  stateDigest: string;
+  nonceDigest: string;
+  pkceVerifierCiphertext: string;
+  returnTo: string;
+  expiresAt: string;
+}): Promise<void> {
+  const value = await rpc<unknown>("kova_auth_create_oauth_state", {
+    p_state_digest_hex: input.stateDigest,
+    p_nonce_digest_hex: input.nonceDigest,
+    p_pkce_verifier_ciphertext: input.pkceVerifierCiphertext,
+    p_return_to: input.returnTo,
+    p_expires_at: input.expiresAt,
+  });
+  if (typeof value !== "string") throw new KovaAuthStoreError("kova_auth_create_oauth_state");
+}
+
+export async function consumeOAuthState(stateDigest: string): Promise<{
+  nonceDigest: string;
+  pkceVerifierCiphertext: string;
+  returnTo: string;
+}> {
+  const value = await rpc<unknown>("kova_auth_consume_oauth_state", {
+    p_state_digest_hex: stateDigest,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_consume_oauth_state");
+  if (
+    typeof row.nonce_digest_hex !== "string" ||
+    typeof row.pkce_verifier_ciphertext !== "string" ||
+    typeof row.return_to !== "string"
+  ) {
+    throw new KovaAuthStoreError("kova_auth_consume_oauth_state");
+  }
+  return {
+    nonceDigest: row.nonce_digest_hex,
+    pkceVerifierCiphertext: row.pkce_verifier_ciphertext,
+    returnTo: row.return_to,
+  };
+}
+
+export async function finishGoogle(input: {
+  candidateAccountId: string;
+  providerSubject: string;
+  email: string;
+  displayName: string;
+  handoffDigest: string;
+  handoffExpiresAt: string;
+}): Promise<CandidateResult> {
+  const value = await rpc<unknown>("kova_auth_finish_google", {
+    p_candidate_account_id: input.candidateAccountId,
+    p_provider_subject: input.providerSubject,
+    p_email: input.email,
+    p_email_verified: true,
+    p_display_name: input.displayName,
+    p_handoff_digest_hex: input.handoffDigest,
+    p_handoff_expires_at: input.handoffExpiresAt,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_finish_google");
+  if (typeof row.account_id !== "string" || typeof row.candidate_used !== "boolean") {
+    throw new KovaAuthStoreError("kova_auth_finish_google");
+  }
+  return { accountId: row.account_id, candidateUsed: row.candidate_used };
+}
+
+export async function consumeHandoff(input: {
+  handoffDigest: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_consume_handoff", {
+    p_handoff_digest_hex: input.handoffDigest,
+    p_session_digest_hex: input.sessionDigest,
+    p_session_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_consume_handoff"));
+}

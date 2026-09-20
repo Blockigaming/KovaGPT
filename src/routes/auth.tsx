@@ -9,6 +9,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
+import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
 import { cn } from "@/lib/utils";
 
 type AuthSearch = { email?: string; mode?: "sign-in" | "sign-up" };
@@ -62,6 +63,8 @@ function AuthPage() {
   const search = useSearch({ from: "/auth" });
   const navigate = useNavigate();
   const isSignUp = search.mode === "sign-up";
+  const useKovaAuth = browserKovaAuthEnabled();
+  const minimumPasswordLength = useKovaAuth ? 12 : 6;
 
   const [email, setEmail] = useState(search.email ?? "");
   const [editingEmail, setEditingEmail] = useState(!search.email);
@@ -92,7 +95,7 @@ function AuthPage() {
 
   const emailValid = isValidEmail(email);
   const showEmailError = editingEmail && emailTouched && !emailValid;
-  const showPasswordError = passwordTouched && password.length < 6;
+  const showPasswordError = passwordTouched && password.length < minimumPasswordLength;
 
   const guard = () => {
     if (submittingRef.current) return false;
@@ -113,13 +116,37 @@ function AuthPage() {
       toast.error("Please enter a valid email address.");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (password.length < minimumPasswordLength) {
+      toast.error(`Password must be at least ${minimumPasswordLength} characters.`);
       return;
     }
     if (!guard()) return;
     const normalizedEmail = email.trim().toLowerCase();
     try {
+      if (useKovaAuth) {
+        const response = await kovaAuthJson(isSignUp ? "/api/auth/signup" : "/api/auth/login", {
+          email: normalizedEmail,
+          password,
+          ...(isSignUp && fullName.trim() ? { displayName: fullName.trim() } : {}),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+        if (!response.ok) {
+          toast.error(
+            typeof payload.error === "string"
+              ? payload.error
+              : "Authentication could not be completed. Please try again.",
+          );
+          return;
+        }
+        if (isSignUp) {
+          toast.success("If this address can be registered, check your inbox to continue.");
+          void navigate({ to: "/" });
+          return;
+        }
+        toast.success("Welcome back.");
+        window.location.replace(getSafePostAuthRedirect());
+        return;
+      }
       if (isSignUp) {
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
@@ -320,7 +347,7 @@ function AuthPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   onBlur={() => setPasswordTouched(true)}
-                  minLength={6}
+                  minLength={minimumPasswordLength}
                   maxLength={1024}
                   aria-invalid={showPasswordError}
                   aria-describedby="kova-auth-page-password-requirement"
@@ -342,7 +369,7 @@ function AuthPage() {
                   showPasswordError ? "text-destructive" : "text-muted-foreground",
                 )}
               >
-                Use at least 6 characters.
+                Use at least {minimumPasswordLength} characters.
               </p>
             </div>
 
@@ -358,21 +385,23 @@ function AuthPage() {
 
             <Button
               type="submit"
-              disabled={loading || !emailValid || password.length < 6}
+              disabled={loading || !emailValid || password.length < minimumPasswordLength}
               className="h-14 w-full rounded-full text-[15px] font-medium"
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Continue
             </Button>
 
-            <button
-              type="button"
-              onClick={() => void sendMagicLink(false)}
-              disabled={loading || !emailValid}
-              className="h-12 w-full rounded-full text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              Email me a link instead
-            </button>
+            {!useKovaAuth ? (
+              <button
+                type="button"
+                onClick={() => void sendMagicLink(false)}
+                disabled={loading || !emailValid}
+                className="h-12 w-full rounded-full text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                Email me a link instead
+              </button>
+            ) : null}
           </form>
         )}
       </main>

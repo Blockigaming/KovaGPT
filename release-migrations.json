@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 157,
-  "latest": "20260915120000_maps_geocoder_cache.sql",
+  "count": 158,
+  "latest": "20260920170657_kova_identity_session_store.sql",
   "migrations": [
     {
       "order": 1,
@@ -3350,6 +3350,58 @@
       "rls": ["maps_geocoder_cache"],
       "policies": [],
       "indexes": ["maps_geocoder_cache_expires_idx"]
+    },
+    {
+      "order": 158,
+      "filename": "20260920170657_kova_identity_session_store.sql",
+      "timestamp": "20260920170657",
+      "sha256": "a71ff2034dfe83eb6e4718dab45da75c2015767fc09a05bc43582e5475238579",
+      "tables": [
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private",
+        "kova_private"
+      ],
+      "functions": [
+        "require_digest",
+        "audit",
+        "legacy_mfa_required",
+        "kova_auth_create_password_account",
+        "kova_auth_consume_verification",
+        "kova_auth_password_lookup",
+        "kova_auth_create_session",
+        "kova_auth_resolve_session",
+        "kova_auth_rotate_session",
+        "kova_auth_revoke_session",
+        "kova_auth_create_recovery",
+        "kova_auth_recovery_target",
+        "kova_auth_consume_recovery",
+        "kova_auth_create_oauth_state",
+        "kova_auth_consume_oauth_state",
+        "kova_auth_finish_google",
+        "kova_auth_consume_handoff"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": [
+        "auth_email_identity_unique",
+        "auth_active_password_credential",
+        "auth_sessions_account_active_idx",
+        "auth_email_verifications_pending_idx",
+        "auth_password_recoveries_pending_idx",
+        "auth_mfa_factors_account_idx",
+        "auth_audit_account_time_idx"
+      ]
     }
   ]
 }

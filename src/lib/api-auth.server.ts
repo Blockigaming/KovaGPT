@@ -5,6 +5,9 @@ import type { Database } from "@/integrations/supabase/types";
 import type { BillingTier } from "@/lib/billing-plans";
 import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { evaluateAuthenticatedUser, parseBearerToken } from "@/lib/auth-security.mjs";
+import { resolveKovaAuthMode, selectAuthCredential } from "@/lib/kova-auth-contract.mjs";
+import { digestKovaToken, signKovaCompatibilityJwt } from "@/lib/kova-auth-crypto.server.mjs";
+import { resolveSession } from "@/lib/kova-auth-store.server";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
@@ -14,6 +17,7 @@ export type AuthedCaller = {
   supabaseUser: SupabaseClient<Database>;
   supabaseAdmin: SupabaseClient<Database>;
   emailVerified: boolean;
+  claims?: Record<string, unknown>;
 };
 
 function jsonError(message: string, status: number) {
@@ -51,10 +55,14 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
   // so protected routes return a truthful 401 even when a deployment is
   // missing auth configuration, rather than exposing configuration state as a
   // 500 response to unauthenticated callers.
-  const header = request.headers.get("authorization");
-  if (!header) return null;
-  const token = parseBearerToken(header);
-  if (!token) return unauthorized("Invalid or expired session");
+  let credential: ReturnType<typeof selectAuthCredential>;
+  try {
+    credential = selectAuthCredential(request, resolveKovaAuthMode());
+  } catch {
+    return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+  if (credential.kind === "anonymous") return null;
+  if (credential.kind === "invalid") return unauthorized("Invalid or expired session");
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -69,6 +77,52 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     });
     return jsonError("Authentication is temporarily unavailable.", 503);
   }
+  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  if (credential.provider === "kova") {
+    try {
+      const principal = await resolveSession(digestKovaToken(credential.token));
+      if (!principal) return unauthorized("Invalid or expired session");
+      const compatibilityToken = signKovaCompatibilityJwt(principal);
+      const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        global: { headers: { Authorization: `Bearer ${compatibilityToken}` } },
+        auth: {
+          storage: undefined,
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+      const claims = {
+        sub: principal.accountId,
+        email: principal.email,
+        email_verified: principal.emailVerified,
+        aal: principal.assuranceLevel,
+        session_id: principal.sessionId,
+        role: "authenticated",
+      };
+      return {
+        userId: principal.accountId,
+        supabaseUser: verifier,
+        supabaseAdmin,
+        emailVerified: principal.emailVerified,
+        claims,
+      };
+    } catch (error) {
+      console.error("[auth] Kova session validation failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return jsonError("Authentication is temporarily unavailable.", 503);
+    }
+  }
+
+  const token = parseBearerToken(credential.authorization);
+  if (!token) return unauthorized("Invalid or expired session");
   const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: {
@@ -101,13 +155,6 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     return unauthorized("Invalid or expired session");
   }
 
-  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      storage: undefined,
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
   return {
     userId: access.userId,
     // This client carries the verified caller's JWT and is therefore subject
@@ -115,6 +162,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     supabaseUser: verifier,
     supabaseAdmin,
     emailVerified: access.emailVerified,
+    claims: claimsData.claims as Record<string, unknown>,
   };
 }
 

@@ -119,6 +119,13 @@ import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthRefreshRouteImport } from './routes/api/auth/refresh'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
+import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiAuthTokenRouteImport } from './routes/api/auth/token'
+import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
 import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/console'
@@ -178,6 +185,11 @@ import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
 import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './routes/$section.$category.$subcategory.$articleSlug'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
+import { Route as ApiAuthGoogleExchangeRouteImport } from './routes/api/auth/google/exchange'
+import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
+import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/recovery/request'
+import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
@@ -745,6 +757,41 @@ const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
   path: '/api/agents/teams',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRefreshRoute = ApiAuthRefreshRouteImport.update({
+  id: '/api/auth/refresh',
+  path: '/api/auth/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
+  id: '/api/auth/signup',
+  path: '/api/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthTokenRoute = ApiAuthTokenRouteImport.update({
+  id: '/api/auth/token',
+  path: '/api/auth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
+  id: '/api/auth/verify',
+  path: '/api/auth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
@@ -1052,6 +1099,31 @@ const SectionCategorySubcategoryArticleSlugRoute =
     path: '/$section/$category/$subcategory/$articleSlug',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/api/auth/google/callback',
+  path: '/api/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleExchangeRoute = ApiAuthGoogleExchangeRouteImport.update({
+  id: '/api/auth/google/exchange',
+  path: '/api/auth/google/exchange',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
+  id: '/api/auth/google/start',
+  path: '/api/auth/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRecoveryRequestRoute = ApiAuthRecoveryRequestRouteImport.update({
+  id: '/api/auth/recovery/request',
+  path: '/api/auth/recovery/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRecoveryResetRoute = ApiAuthRecoveryResetRouteImport.update({
+  id: '/api/auth/recovery/reset',
+  path: '/api/auth/recovery/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1211,6 +1283,13 @@ export interface FileRoutesByFullPath {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1270,6 +1349,11 @@ export interface FileRoutesByFullPath {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1390,6 +1474,13 @@ export interface FileRoutesByTo {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1449,6 +1540,11 @@ export interface FileRoutesByTo {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1570,6 +1666,13 @@ export interface FileRoutesById {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1629,6 +1732,11 @@ export interface FileRoutesById {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1751,6 +1859,13 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -1810,6 +1925,11 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -1930,6 +2050,13 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -1989,6 +2116,11 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2109,6 +2241,13 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -2168,6 +2307,11 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2286,6 +2430,13 @@ export interface RootRouteChildren {
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthRefreshRoute: typeof ApiAuthRefreshRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
+  ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiAuthTokenRoute: typeof ApiAuthTokenRoute
+  ApiAuthVerifyRoute: typeof ApiAuthVerifyRoute
   ApiDeveloperConsoleRoute: typeof ApiDeveloperConsoleRoute
   ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
   ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
@@ -2340,6 +2491,11 @@ export interface RootRouteChildren {
   ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   OauthMcpActionRoute: typeof OauthMcpActionRoute
   SectionCategorySubcategoryArticleSlugRoute: typeof SectionCategorySubcategoryArticleSlugRoute
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+  ApiAuthGoogleExchangeRoute: typeof ApiAuthGoogleExchangeRoute
+  ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
+  ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
+  ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
@@ -3121,6 +3277,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentsTeamsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/refresh': {
+      id: '/api/auth/refresh'
+      path: '/api/auth/refresh'
+      fullPath: '/api/auth/refresh'
+      preLoaderRoute: typeof ApiAuthRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/signup': {
+      id: '/api/auth/signup'
+      path: '/api/auth/signup'
+      fullPath: '/api/auth/signup'
+      preLoaderRoute: typeof ApiAuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/token': {
+      id: '/api/auth/token'
+      path: '/api/auth/token'
+      fullPath: '/api/auth/token'
+      preLoaderRoute: typeof ApiAuthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/verify': {
+      id: '/api/auth/verify'
+      path: '/api/auth/verify'
+      fullPath: '/api/auth/verify'
+      preLoaderRoute: typeof ApiAuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat/confirm': {
       id: '/api/chat/confirm'
       path: '/confirm'
@@ -3534,6 +3739,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SectionCategorySubcategoryArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/api/auth/google/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/exchange': {
+      id: '/api/auth/google/exchange'
+      path: '/api/auth/google/exchange'
+      fullPath: '/api/auth/google/exchange'
+      preLoaderRoute: typeof ApiAuthGoogleExchangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/start': {
+      id: '/api/auth/google/start'
+      path: '/api/auth/google/start'
+      fullPath: '/api/auth/google/start'
+      preLoaderRoute: typeof ApiAuthGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/recovery/request': {
+      id: '/api/auth/recovery/request'
+      path: '/api/auth/recovery/request'
+      fullPath: '/api/auth/recovery/request'
+      preLoaderRoute: typeof ApiAuthRecoveryRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/recovery/reset': {
+      id: '/api/auth/recovery/reset'
+      path: '/api/auth/recovery/reset'
+      fullPath: '/api/auth/recovery/reset'
+      preLoaderRoute: typeof ApiAuthRecoveryResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -3797,6 +4037,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthRefreshRoute: ApiAuthRefreshRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
+  ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiAuthTokenRoute: ApiAuthTokenRoute,
+  ApiAuthVerifyRoute: ApiAuthVerifyRoute,
   ApiDeveloperConsoleRoute: ApiDeveloperConsoleRoute,
   ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
   ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
@@ -3853,6 +4100,11 @@ const rootRouteChildren: RootRouteChildren = {
   OauthMcpActionRoute: OauthMcpActionRoute,
   SectionCategorySubcategoryArticleSlugRoute:
     SectionCategorySubcategoryArticleSlugRoute,
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+  ApiAuthGoogleExchangeRoute: ApiAuthGoogleExchangeRoute,
+  ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
+  ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
+  ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,

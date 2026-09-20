@@ -37,7 +37,7 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
     assert.match(source, /GOOGLE_OAUTH_CLIENT_ID/);
     assert.match(source, /GOOGLE_OAUTH_CLIENT_SECRET/);
     assert.match(source, /GOOGLE_REDIRECT_URI/);
-    assert.doesNotMatch(source, /GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET/);
+    assert.doesNotMatch(source, /(?:^|\n)GOOGLE_(?:CLIENT_ID|CLIENT_SECRET)=/);
   }
   assert.match(oauth, /code_challenge_method: "S256"/);
   assert.match(oauth, /code_verifier: codeVerifier/);

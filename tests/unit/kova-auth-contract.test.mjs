@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   KOVA_SESSION_COOKIE,
@@ -10,6 +11,14 @@ import {
 } from "../../src/lib/kova-auth-contract.mjs";
 
 const token = "A".repeat(43);
+const browserClientSource = readFileSync(
+  new URL("../../src/integrations/supabase/client.ts", import.meta.url),
+  "utf8",
+);
+const providerSource = readFileSync(
+  new URL("../../src/components/auth/ClerkSafe.tsx", import.meta.url),
+  "utf8",
+);
 
 test("auth mode defaults safely and rejects configuration drift", () => {
   assert.equal(resolveKovaAuthMode({}), "supabase");
@@ -84,4 +93,24 @@ test("provider modes do not accept disabled credential types", () => {
   assert.deepEqual(selectAuthCredential(cookie, "supabase"), { kind: "anonymous" });
   assert.equal(selectAuthCredential(bearer, "supabase").provider, "supabase");
   assert.equal(selectAuthCredential(cookie, "kova").provider, "kova");
+});
+
+test("dual-mode logout cannot reveal a dormant legacy session or cached Kova token", () => {
+  assert.match(browserClientSource, /export async function signOutLegacySupabaseSession/u);
+  assert.match(
+    providerSource,
+    /if \(allowLegacyFallback\)[\s\S]+await signOutLegacySupabaseSession\(\)[\s\S]+fetch\("\/api\/auth\/logout"/u,
+  );
+  assert.match(
+    providerSource,
+    /setKovaSessionActive\(false\);\s+if \(!allowLegacyFallback\) setKovaSessionActive\(true\)/u,
+  );
+  assert.match(
+    browserClientSource,
+    /setKovaSessionActive\(false\);\s+if \(browserKovaAuthMode\(\) === "kova"\) setKovaSessionActive\(true\)/u,
+  );
+  assert.match(
+    providerSource,
+    /purgeOwnerlessStateFor\(principal\?\.accountId \?\? null\);\s+setKovaSessionActive/u,
+  );
 });
