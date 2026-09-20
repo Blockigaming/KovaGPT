@@ -23,10 +23,7 @@ for (const [name, expression] of [
     "extended statistics",
     /not exists \(select 1 from pg_statistic_ext statistics where statistics\.stxrelid=c\.oid\)/u,
   ],
-  [
-    "a non-origin replication session",
-    /current_setting\('session_replication_role'\)='origin'/u,
-  ],
+  ["a non-origin replication session", /current_setting\('session_replication_role'\)='origin'/u],
   [
     "TOAST options",
     /not exists \(select 1 from pg_class toast where toast\.oid=c\.reltoastrelid and toast\.reloptions is not null\)/u,
