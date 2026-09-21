@@ -71,7 +71,6 @@ export async function restoreChatHistoryState(stored, ownerId) {
     const local = row.local === null ? null : normalizeChatHistory(row.local, ownerId);
     if (local && local.id !== id) throw new Error("chat_history_device_unavailable");
     let localHash = await chatHistoryHash(local, row.archived);
-    let migratedLegacyPayload = false;
     if (localHash !== row.localHash) {
       const hasRetiredDeepResearchTool =
         Array.isArray(row.local?.messages) &&
@@ -82,7 +81,6 @@ export async function restoreChatHistoryState(stored, ownerId) {
       const legacyHash = await chatHistoryHash(row.local, row.archived);
       if (!hasRetiredDeepResearchTool || legacyHash !== row.localHash)
         throw new Error("chat_history_device_unavailable");
-      migratedLegacyPayload = true;
     }
     let request = null,
       conflict = null;
@@ -94,7 +92,8 @@ export async function restoreChatHistoryState(stored, ownerId) {
         request.id !== id ||
         !Number.isSafeInteger(request.expectedRevision) ||
         request.expectedRevision < 0 ||
-        typeof request.archived !== "boolean"
+        typeof request.archived !== "boolean" ||
+        (request.retryable !== undefined && typeof request.retryable !== "boolean")
       )
         throw new Error("chat_history_device_unavailable");
       const rawRequestPayload = request.payload;
@@ -113,10 +112,9 @@ export async function restoreChatHistoryState(stored, ownerId) {
         const legacyRequestHash = await chatHistoryHash(rawRequestPayload, request.archived);
         if (!hasRetiredDeepResearchTool || request.hash !== legacyRequestHash)
           throw new Error("chat_history_device_unavailable");
-        // A valid pre-retirement request cannot be retried with a hash for bytes we no longer
-        // persist. Drop only the captured request; the migrated local row is queued afresh.
-        request = null;
-        migratedLegacyPayload = true;
+        // Preserve the mutation identity long enough for the initial cloud pull to acknowledge
+        // an already-accepted legacy write, but never retry bytes whose canonical hash changed.
+        request = { ...request, hash: normalizedRequestHash, retryable: false };
       }
     }
     if (row.conflict) {
@@ -136,7 +134,7 @@ export async function restoreChatHistoryState(stored, ownerId) {
       ...row,
       local,
       localHash,
-      dirty: row.dirty || migratedLegacyPayload,
+      dirty: row.dirty,
       request,
       conflict,
     };
@@ -241,7 +239,7 @@ export function nextChatHistoryRequest(state) {
   const record = Object.values(state.records).find(
     (r) => r.dirty && !r.migration && !r.conflict && !r.failure,
   );
-  if (!record) return null;
+  if (!record || record.request?.retryable === false) return null;
   return (
     record.request ?? {
       mutationId: crypto.randomUUID(),
@@ -398,7 +396,17 @@ export async function applyChatHistoryPage(state, page) {
   next.cursor = cursor;
   if (!page.hasMore) {
     for (const [id, r] of Object.entries(next.records)) {
-      if (r.seenInEpoch === false && !r.dirty && !r.migration && !r.conflict)
+      let current = r;
+      if (current.request?.retryable === false && !current.conflict) {
+        current = { ...current, request: null, dirty: true };
+        next.records[id] = current;
+      }
+      if (
+        current.seenInEpoch === false &&
+        !current.dirty &&
+        !current.migration &&
+        !current.conflict
+      )
         delete next.records[id];
     }
   }
