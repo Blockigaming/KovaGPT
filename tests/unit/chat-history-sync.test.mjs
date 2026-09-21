@@ -204,6 +204,50 @@ test("pre-retirement Deep Research cache hashes migrate without discarding the d
   assert.equal(reconciled.records.legacy.dirty, false);
 });
 
+test("progress-only Deep Research caches migrate without discarding clean device state", async () => {
+  const payload = {
+    ...chat("legacy-progress"),
+    messages: [
+      {
+        id: "response",
+        role: "assistant",
+        content: "Interrupted research",
+        researchProgress: {
+          stage: "searching",
+          label: "Searching sources",
+          status: "running",
+          progress: 0.4,
+        },
+      },
+    ],
+  };
+  const legacyHash = await chatHistoryHash(payload, false);
+  const state = createChatHistoryState(OWNER);
+  state.records["legacy-progress"] = {
+    id: "legacy-progress",
+    revision: 1,
+    serverHash: legacyHash,
+    local: payload,
+    archived: false,
+    localHash: legacyHash,
+    migration: false,
+    dirty: false,
+    request: null,
+    conflict: null,
+  };
+
+  const restored = await restoreChatHistoryState(structuredClone(state), OWNER);
+  assert.equal(restored.records["legacy-progress"].local.messages[0].researchProgress, undefined);
+  assert.equal(restored.records["legacy-progress"].dirty, false);
+  assert.notEqual(restored.records["legacy-progress"].localHash, legacyHash);
+
+  const remote = chat("legacy-progress", "newer cloud edit");
+  const reconciled = await applyChatHistoryPage(restored, page([row(remote, 2, 1)]));
+  assert.equal(reconciled.records["legacy-progress"].local.messages[0].content, "newer cloud edit");
+  assert.equal(reconciled.records["legacy-progress"].conflict, null);
+  assert.equal(reconciled.records["legacy-progress"].dirty, false);
+});
+
 test("pre-retirement captured mutations stay correlatable without being retried", async () => {
   const acceptedPayload = {
     ...chat("legacy-request", "accepted snapshot"),
