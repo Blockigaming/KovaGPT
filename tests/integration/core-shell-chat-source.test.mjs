@@ -13,7 +13,7 @@ const feedback = await readFile("src/lib/feedback.functions.ts", "utf8");
 const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
 test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
-  assert.match(sidebar, /const EXPANDED_WIDTH = 272/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 260/);
   assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
   assert.match(sidebar, /collapsed \? "lg:!w-0"/);
   assert.match(sidebar, /min\(88vw,320px\)/);

@@ -59,6 +59,14 @@ async function imageOwners(page: Page) {
   });
 }
 
+async function openAuthenticatedSettings(page: Page) {
+  const settings = page.locator(
+    'button.kova-account-main[aria-label="Settings"]:visible, button.kova-rail-account[aria-label="Settings"]:visible',
+  );
+  await expect(settings).toHaveCount(1);
+  await settings.click();
+}
+
 for (const path of ["/", "/apps"]) {
   test(`device reset from ${path} removes private image bytes and preserves another profile`, async ({
     page,
@@ -66,7 +74,7 @@ for (const path of ["/", "/apps"]) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto(path);
-    await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+    await openAuthenticatedSettings(page);
     await seedImageHistory(page);
     await page.getByRole("tab", { name: "Storage", exact: true }).click();
     await page
@@ -96,7 +104,7 @@ test("successful account deletion also removes IndexedDB image history from Chat
     await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await openAuthenticatedSettings(page);
   await seedImageHistory(page);
   await page.getByRole("tab", { name: "Data control", exact: true }).click();
   await page.getByRole("button", { name: "Delete account", exact: true }).click();

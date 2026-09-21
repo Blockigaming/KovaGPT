@@ -1,5 +1,19 @@
-// This isolated browser fixture represents a guest. It cannot authenticate,
-// acquire credentials, or import the production auth/backend module.
+// Isolated presentation identities only. No auth/backend module or credentials.
+const exampleUser = {
+  id: "workspace-example",
+  fullName: "Example account",
+  firstName: "Example",
+  username: "example",
+  email: "example@example.invalid",
+  imageUrl: "",
+};
+export const clerkEnabled = true;
 export function useUser() {
-  return { isLoaded: true, isSignedIn: false, user: null };
+  const member = new URLSearchParams(location.search).get("session") === "member";
+  return member
+    ? { isLoaded: true, isSignedIn: true, user: exampleUser }
+    : { isLoaded: true, isSignedIn: false, user: null };
+}
+export function SignInButton({ children }: { children: React.ReactNode; mode?: string }) {
+  return children;
 }

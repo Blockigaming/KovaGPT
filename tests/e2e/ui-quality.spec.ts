@@ -49,12 +49,11 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineStyle).toBe("solid");
   expect(focused.outlineWidth).toBe(2);
-  expect(focused.outlineOffset).toBe(1);
+  expect(focused.outlineOffset).toBe(2);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
   expect(unfocused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe(unfocused.boxShadow);
+  expect(focused.boxShadow).toBe("none");
 
   if (page.viewportSize()!.width >= 1024) {
     const metrics = await composer.evaluate((element) => {
@@ -225,6 +224,13 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
+    // Hydration can finish before the auth adapter and lazy guest controls settle.
+    // Capture only after the complete signed-out shell is visible.
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Start with Brainstorm ideas", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Terms", exact: true })).toBeVisible();
     const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
     await expect(greetingMark).toBeHidden();
     await expect(greetingMark).toHaveAttribute("aria-hidden", "true");

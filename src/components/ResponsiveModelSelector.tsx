@@ -147,11 +147,14 @@ export function ResponsiveModelSelector({
         className={triggerClass}
       >
         <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
-          {compact ? (
+          {compact && !topbar ? (
             current.label
           ) : (
             <>
-              KovaGPT<span className="ml-1 font-normal">· {current.label}</span>
+              KovaGPT
+              {!compact || topbar ? (
+                <span className="ml-1 font-normal">· {current.label}</span>
+              ) : null}
             </>
           )}
         </span>
