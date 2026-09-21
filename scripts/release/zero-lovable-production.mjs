@@ -39,6 +39,7 @@ function discoverAssets(source, parent, origin) {
   return [...assets].sort();
 }
 
+// Fetch URLs stay intact; persisted evidence must never retain signed-query credentials.
 function redactUrl(value) {
   try {
     const url = new URL(String(value));
