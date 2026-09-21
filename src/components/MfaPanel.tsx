@@ -174,7 +174,7 @@ export function MfaPanel() {
 
   return (
     <div className="space-y-4">
-      <PasskeyPanel />
+      {!useKovaAuth ? <PasskeyPanel /> : null}
       <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck className="w-4 h-4 text-primary" />
@@ -303,18 +303,20 @@ export function MfaPanel() {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <LogOut className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-semibold">Active sessions</h3>
+      {!useKovaAuth ? (
+        <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <LogOut className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold">Active sessions</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Sign out of KovaGPT on every other device where your account is currently active.
+          </p>
+          <Button variant="outline" size="sm" onClick={signOutOthers} disabled={busy}>
+            Sign out other sessions
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Sign out of KovaGPT on every other device where your account is currently active.
-        </p>
-        <Button variant="outline" size="sm" onClick={signOutOthers} disabled={busy}>
-          Sign out other sessions
-        </Button>
-      </div>
+      ) : null}
     </div>
   );
 }
