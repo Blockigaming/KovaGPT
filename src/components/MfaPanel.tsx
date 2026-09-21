@@ -1,19 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, KeyRound, LogOut, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { PasskeyPanel } from "@/components/PasskeyPanel";
-import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled, clearKovaAuthCache, kovaAuthJson } from "@/lib/kova-auth-browser";
 
-type Factor = { id: string; friendly_name?: string | null; status: string };
+type Factor = {
+  id: string;
+  friendly_name?: string | null;
+  status: string;
+  recoveryCodesRemaining?: number;
+};
 
-/**
- * Real MFA UI using Supabase auth.mfa. Handles TOTP enroll, verify, unenroll,
- * plus a "sign out other sessions" action. Recovery codes are intentionally
- * not displayed because Supabase TOTP does not issue server-verifiable codes.
- */
+function verifiedRecoveryCodes(value: unknown): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length !== 8 ||
+    !value.every((item) => typeof item === "string" && /^[A-Za-z0-9_-]{43,128}$/u.test(item)) ||
+    new Set(value).size !== 8
+  ) {
+    throw new Error("invalid_recovery_codes_response");
+  }
+  return value;
+}
+
+/** Owned MFA and device controls, with the legacy provider retained only in legacy mode. */
 export function MfaPanel() {
   const [factors, setFactors] = useState<Factor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +40,20 @@ export function MfaPanel() {
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [confirmRegeneration, setConfirmRegeneration] = useState(false);
+  const mutationInFlight = useRef(false);
   const useKovaAuth = browserKovaAuthEnabled();
+
+  const beginMutation = () => {
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
+    setBusy(true);
+    return true;
+  };
+  const endMutation = () => {
+    mutationInFlight.current = false;
+    setBusy(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,13 +66,29 @@ export function MfaPanel() {
         });
         if (!response.ok) throw new Error("kova_mfa_factors");
         const payload = (await response.json()) as {
-          factors?: Array<{ id: string; friendlyName: string | null }>;
+          factors?: Array<{
+            id: string;
+            friendlyName: string | null;
+            recoveryCodesRemaining: number;
+          }>;
         };
+        if (
+          !Array.isArray(payload.factors) ||
+          payload.factors.some(
+            (factor) =>
+              !Number.isSafeInteger(factor.recoveryCodesRemaining) ||
+              factor.recoveryCodesRemaining < 0 ||
+              factor.recoveryCodesRemaining > 8,
+          )
+        ) {
+          throw new Error("kova_mfa_factors_invalid");
+        }
         setFactors(
-          (payload.factors ?? []).map((factor) => ({
+          payload.factors.map((factor) => ({
             id: factor.id,
             friendly_name: factor.friendlyName,
             status: "verified",
+            recoveryCodesRemaining: factor.recoveryCodesRemaining,
           })),
         );
       } else {
@@ -69,7 +111,8 @@ export function MfaPanel() {
   }, [load]);
 
   async function startEnroll() {
-    setBusy(true);
+    if (!beginMutation()) return;
+    setRecoveryCodes([]);
     try {
       if (useKovaAuth) {
         const response = await kovaAuthJson("/api/auth/mfa/enroll", {});
@@ -95,22 +138,23 @@ export function MfaPanel() {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("Authenticator setup could not start. Please try again.");
+    } finally {
+      endMutation();
     }
-    setBusy(false);
   }
 
   async function verify() {
-    if (!enrolling) return;
-    setBusy(true);
+    if (!enrolling || !beginMutation()) return;
     try {
       if (useKovaAuth) {
         const response = await kovaAuthJson("/api/auth/mfa/verify", {
           factorId: enrolling.factorId,
           code: code.trim(),
         });
-        const payload = (await response.json()) as { recoveryCodes?: string[] };
-        if (!response.ok || !Array.isArray(payload.recoveryCodes)) throw new Error("verify");
-        setRecoveryCodes(payload.recoveryCodes);
+        const payload = (await response.json()) as { recoveryCodes?: unknown };
+        if (!response.ok) throw new Error("verify");
+        setRecoveryCodes(verifiedRecoveryCodes(payload.recoveryCodes));
+        clearKovaAuthCache();
       } else {
         const { data: chal, error: cErr } = await supabase.auth.mfa.challenge({
           factorId: enrolling.factorId,
@@ -132,12 +176,13 @@ export function MfaPanel() {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("That code was not accepted. Check your authenticator and try again.");
+    } finally {
+      endMutation();
     }
-    setBusy(false);
   }
 
   async function unenroll(id: string) {
-    setBusy(true);
+    if (!beginMutation()) return;
     try {
       if (useKovaAuth) {
         const response = await kovaAuthJson("/api/auth/mfa/remove", { factorId: id });
@@ -146,6 +191,9 @@ export function MfaPanel() {
         const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
         if (error) throw error;
       }
+      setRecoveryCodes([]);
+      setConfirmRegeneration(false);
+      if (useKovaAuth) clearKovaAuthCache();
       toast.success("Two-factor removed");
       load();
     } catch (error) {
@@ -153,23 +201,59 @@ export function MfaPanel() {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("The authenticator could not be removed. Please try again.");
+    } finally {
+      endMutation();
     }
-    setBusy(false);
   }
 
   async function signOutOthers() {
-    setBusy(true);
+    if (!beginMutation()) return;
     try {
-      const { error } = await supabase.auth.signOut({ scope: "others" });
-      if (error) throw error;
+      if (useKovaAuth) {
+        const response = await kovaAuthJson("/api/auth/sessions/revoke-others", {});
+        const payload = (await response.json()) as { revokedCount?: unknown };
+        if (
+          !response.ok ||
+          typeof payload.revokedCount !== "number" ||
+          !Number.isSafeInteger(payload.revokedCount) ||
+          payload.revokedCount < 0
+        ) {
+          throw new Error("kova_other_sessions_failed");
+        }
+        clearKovaAuthCache();
+      } else {
+        const { error } = await supabase.auth.signOut({ scope: "others" });
+        if (error) throw error;
+      }
       toast.success("Signed out on other devices");
     } catch (error) {
       console.error("[mfa] remote session sign-out failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("Other sessions could not be signed out. Please try again.");
+    } finally {
+      endMutation();
     }
-    setBusy(false);
+  }
+
+  async function regenerateRecoveryCodes() {
+    if (!useKovaAuth || !confirmRegeneration || !beginMutation()) return;
+    setRecoveryCodes([]);
+    try {
+      const response = await kovaAuthJson("/api/auth/mfa/recovery/regenerate", { confirm: true });
+      const payload = (await response.json()) as { recoveryCodes?: unknown };
+      if (!response.ok) throw new Error("kova_recovery_regeneration_failed");
+      setRecoveryCodes(verifiedRecoveryCodes(payload.recoveryCodes));
+      clearKovaAuthCache();
+      setConfirmRegeneration(false);
+      toast.success("Recovery codes replaced. Save the new codes now.");
+      void load();
+    } catch {
+      clearKovaAuthCache();
+      toast.error("Could not confirm new recovery codes. Sign in again before trying again.");
+    } finally {
+      endMutation();
+    }
   }
 
   return (
@@ -286,6 +370,50 @@ export function MfaPanel() {
         )}
       </div>
 
+      {useKovaAuth &&
+      !loading &&
+      !loadError &&
+      factors.some((factor) => factor.status === "verified") ? (
+        <div className="rounded-2xl border border-border bg-card/60 p-5">
+          <h3 className="text-sm font-semibold">Recovery codes</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {factors[0]?.recoveryCodesRemaining} unused recovery codes remain.
+          </p>
+          {confirmRegeneration ? (
+            <div className="mt-3 space-y-3" role="group" aria-label="Replace recovery codes">
+              <p className="text-sm text-muted-foreground">
+                All existing recovery codes will stop working. Other devices will be signed out.
+                Save the new codes before leaving this page.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={regenerateRecoveryCodes} disabled={busy}>
+                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Replace recovery codes
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setConfirmRegeneration(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              disabled={busy || recoveryCodes.length > 0}
+              onClick={() => setConfirmRegeneration(true)}
+            >
+              Generate new recovery codes
+            </Button>
+          )}
+        </div>
+      ) : null}
+
       {recoveryCodes.length > 0 ? (
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5" role="status">
           <h3 className="text-sm font-semibold">Save your recovery codes now</h3>
@@ -294,7 +422,9 @@ export function MfaPanel() {
           </p>
           <ul className="mt-3 grid gap-1 font-mono text-xs sm:grid-cols-2">
             {recoveryCodes.map((recoveryCode) => (
-              <li key={recoveryCode}>{recoveryCode}</li>
+              <li key={recoveryCode} className="min-w-0 break-all">
+                {recoveryCode}
+              </li>
             ))}
           </ul>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => setRecoveryCodes([])}>
@@ -303,20 +433,18 @@ export function MfaPanel() {
         </div>
       ) : null}
 
-      {!useKovaAuth ? (
-        <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <LogOut className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold">Active sessions</h3>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Sign out of KovaGPT on every other device where your account is currently active.
-          </p>
-          <Button variant="outline" size="sm" onClick={signOutOthers} disabled={busy}>
-            Sign out other sessions
-          </Button>
+      <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <LogOut className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-semibold">Active sessions</h3>
         </div>
-      ) : null}
+        <p className="text-xs text-muted-foreground mb-3">
+          Sign out of KovaGPT on every other device where your account is currently active.
+        </p>
+        <Button variant="outline" size="sm" onClick={signOutOthers} disabled={busy}>
+          Sign out other sessions
+        </Button>
+      </div>
     </div>
   );
 }

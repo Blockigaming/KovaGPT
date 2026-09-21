@@ -21,20 +21,31 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
     read("src/lib/api-auth.server.ts"),
     read("src/integrations/supabase/auth-middleware.ts"),
   ]);
-  for (const source of [apiAuth, middleware]) {
-    assert.match(source, /auth\.getUser\(token\)/);
-    assert.match(source, /auth\.getClaims\(token\)/);
-    assert.match(source, /evaluateAuthenticatedUser/);
-    assert.match(source, /mfa_required/);
-  }
+  assert.match(apiAuth, /auth\.getUser\(token\)/);
+  assert.match(apiAuth, /auth\.getClaims\(token\)/);
+  assert.match(apiAuth, /evaluateAuthenticatedUser/);
+  assert.match(apiAuth, /mfa_required/);
+  assert.match(middleware, /import \{ optionalUser \} from "@\/lib\/api-auth\.server"/);
+  assert.match(middleware, /const auth = await optionalUser\(request\)/);
+  assert.match(middleware, /if \(!auth\) failAuthentication\(401, "Unauthorized"\)/);
+  assert.match(middleware, /if \(auth instanceof Response\)/);
+  assert.doesNotMatch(middleware, /createClient/);
   const authoritativeUserCheck = apiAuth.indexOf("verifier.auth.getUser(token)");
-  const privilegedClient = apiAuth.indexOf("const supabaseAdmin = createClient<Database>");
+  const privilegedClient = apiAuth.indexOf(
+    "supabaseAdmin: createAdminClient()",
+    authoritativeUserCheck,
+  );
   assert.ok(authoritativeUserCheck >= 0);
   assert.ok(privilegedClient > authoritativeUserCheck);
+  const ownedSessionCheck = apiAuth.indexOf(
+    "await resolveSession(digestKovaToken(credential.token))",
+  );
+  assert.ok(ownedSessionCheck >= 0);
+  assert.ok(apiAuth.indexOf("supabaseAdmin: createAdminClient()") > ownedSessionCheck);
   assert.doesNotMatch(middleware, /Missing Supabase environment variable\(s\).*throw new Error/s);
   assert.ok(
-    middleware.indexOf("parseBearerToken(authHeader)") <
-      middleware.indexOf("process.env.SUPABASE_URL"),
+    middleware.indexOf("const auth = await optionalUser(request)") <
+      middleware.indexOf("return next("),
   );
 });
 
@@ -54,7 +65,7 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.doesNotMatch(challenge, /data\.session/);
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
   assert.match(panel, /!useKovaAuth \? <PasskeyPanel \/> : null/);
-  assert.match(panel, /!useKovaAuth \? \(\s*<div[\s\S]*Active sessions/);
+  assert.match(panel, /kovaAuthJson\("\/api\/auth\/sessions\/revoke-others", \{\}\)/);
 });
 
 test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {

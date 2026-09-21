@@ -366,6 +366,35 @@ export async function removeTotpFactor(input: {
   );
 }
 
+export async function regenerateMfaRecoveryCodes(input: {
+  sessionDigest: string;
+  recoveryDigests: string[];
+  nextSessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_regenerate_mfa_recovery_codes", {
+    p_session_digest_hex: input.sessionDigest,
+    p_recovery_digest_hexes: input.recoveryDigests,
+    p_next_session_digest_hex: input.nextSessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  const principal = principalFromRow(firstRow(value, "kova_auth_regenerate_mfa_recovery_codes"));
+  if (principal.assuranceLevel !== "aal2" || !principal.emailVerified) {
+    throw new KovaAuthStoreError("kova_auth_regenerate_mfa_recovery_codes");
+  }
+  return principal;
+}
+
+export async function revokeOtherSessions(sessionDigest: string): Promise<number> {
+  const value = await rpc<unknown>("kova_auth_revoke_other_sessions", {
+    p_session_digest_hex: sessionDigest,
+  });
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new KovaAuthStoreError("kova_auth_revoke_other_sessions");
+  }
+  return value;
+}
+
 export async function resolveSession(sessionDigest: string): Promise<KovaPrincipal | null> {
   const value = await rpc<unknown>("kova_auth_resolve_session", {
     p_token_digest_hex: sessionDigest,

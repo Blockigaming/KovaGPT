@@ -99,11 +99,21 @@ jobs:
       - name: Verify committed migration inventory
         run: npm run release:migrations
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Lint
         run: npm run lint
 
       - name: Build without deploying
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072 --max-semi-space-size=8
         run: npm run build
+
+      - name: Verify generated contracts match the exact head
+        run: >-
+          npm run release:manifest && npm run release:schema &&
+          git diff --exit-code -- release-migrations.json database-contract.json src/routeTree.gen.ts
 
       - name: Verify release bundle
         run: npm run release:bundle

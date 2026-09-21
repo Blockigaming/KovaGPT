@@ -42,18 +42,21 @@ import {
   finishGoogle,
   finishMfaLogin,
   finishMfaRecoveryLogin,
+  KovaAuthStoreError,
   hasVerifiedLegacyMfa,
   lookupPassword,
   listTotpFactors,
   readMfaLoginChallenge,
   readTotpEnrollment,
+  regenerateMfaRecoveryCodes,
   removeTotpFactor,
   recoveryTarget,
   resolveSession,
+  revokeOtherSessions,
   revokeSession,
   rotateSession,
 } from "@/lib/kova-auth-store.server";
-import { safeRelativeRedirect } from "@/lib/auth-security.mjs";
+import { isCrossSiteMutation, safeRelativeRedirect } from "@/lib/auth-security.mjs";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import {
@@ -594,6 +597,81 @@ export async function handleKovaMfaRemove(request: Request): Promise<Response> {
     return json({ removed: true });
   } catch {
     return jsonError("The authenticator could not be removed.", 403);
+  }
+}
+
+export async function handleKovaMfaRecoveryRegenerate(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  const limited = await rateLimit(request, "kova_auth_mfa_regenerate", 5, 900);
+  if (limited) return limited;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  if (body.confirm !== true || Object.keys(body).length !== 1) {
+    return jsonError("Confirm that you want to replace your recovery codes.", 400);
+  }
+  try {
+    const current = await resolveSession(sessionDigest);
+    if (!current || !current.emailVerified || current.assuranceLevel !== "aal2") {
+      return jsonError(
+        "Sign in with two-factor authentication before replacing recovery codes.",
+        403,
+      );
+    }
+    const accountLimit = await rateLimit(
+      request,
+      "kova_auth_mfa_regenerate_account",
+      3,
+      900,
+      `account:${current.accountId}`,
+    );
+    if (accountLimit) return accountLimit;
+    const recoveryCodes = Array.from({ length: 8 }, () => generateKovaToken());
+    const nextToken = generateKovaToken();
+    const principal = await regenerateMfaRecoveryCodes({
+      sessionDigest,
+      recoveryDigests: recoveryCodes.map(digestKovaToken),
+      nextSessionDigest: digestKovaToken(nextToken),
+      sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+    });
+    if (principal.accountId !== current.accountId) {
+      throw new KovaAuthStoreError("recovery_regeneration_account_mismatch");
+    }
+    return json(
+      { session: publicPrincipal(principal), recoveryCodes },
+      { headers: sessionResponse(principal, nextToken).headers },
+    );
+  } catch (error) {
+    return jsonError(
+      "Recovery codes could not be replaced. Please try again.",
+      error instanceof KovaAuthStoreError && error.databaseCode === "P0001" ? 403 : 503,
+    );
+  }
+}
+
+export async function handleKovaRevokeOtherSessions(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  const limited = await rateLimit(request, "kova_auth_revoke_other_sessions", 5, 900);
+  if (limited) return limited;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  if (Object.keys(body).length !== 0) return jsonError("Invalid request.", 400);
+  try {
+    return json({ revokedCount: await revokeOtherSessions(sessionDigest) });
+  } catch (error) {
+    return jsonError(
+      "Other sessions could not be signed out. Please try again.",
+      error instanceof KovaAuthStoreError && error.databaseCode === "P0001" ? 401 : 503,
+    );
   }
 }
 

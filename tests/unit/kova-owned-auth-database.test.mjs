@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
@@ -45,8 +46,15 @@ const mfaRecoveryLoginMigration = await readFile(
   ),
   "utf8",
 );
+const mfaRecoveryControlsMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260921160105_kova_owned_mfa_recovery_controls.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
-async function database() {
+async function database({ legacyRecoveryAbi = false } = {}) {
   const db = new PGlite();
   await db.exec(`
     create role anon;
@@ -82,6 +90,15 @@ async function database() {
   await db.exec(mfaLoginIndexMigration);
   await db.exec(mfaEnrollmentMigration);
   await db.exec(mfaRecoveryLoginMigration);
+  if (legacyRecoveryAbi) {
+    await db.exec(`
+      create function public.kova_auth_regenerate_mfa_recovery_codes(text,text[],timestamptz default now())
+      returns boolean language sql security definer set search_path = '' as $$ select true $$;
+      revoke all on function public.kova_auth_regenerate_mfa_recovery_codes(text,text[],timestamptz) from public,anon,authenticated;
+      grant execute on function public.kova_auth_regenerate_mfa_recovery_codes(text,text[],timestamptz) to service_role;
+    `);
+  }
+  await db.exec(mfaRecoveryControlsMigration);
   return db;
 }
 
@@ -92,6 +109,9 @@ const verificationExpiry = "2026-09-20T18:00:00Z";
 const sessionExpiry = "2026-10-20T17:00:00Z";
 const digest = (byte) => byte.repeat(64);
 const passwordHash = `scrypt-v1$32768$8$1$${"a".repeat(32)}$${"b".repeat(64)}`;
+const namedDigest = (label) => createHash("sha256").update(label).digest("hex");
+const replacementDigests = () =>
+  Array.from({ length: 8 }, (_, i) => namedDigest(`replacement-${i}`));
 
 async function createVerifiedPasswordAccount(db, options = {}) {
   const accountId = options.accountId ?? firstAccount;
@@ -118,6 +138,91 @@ async function createVerifiedPasswordAccount(db, options = {}) {
     [verificationDigest, sessionDigest, sessionExpiry, now],
   );
   return verified.rows[0];
+}
+
+async function ownedMfaFixture(db) {
+  await db.query(
+    `insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3), ($4, $5, $3)`,
+    [firstAccount, "owner@example.com", now, secondAccount, "other@example.com"],
+  );
+  const current = await createVerifiedPasswordAccount(db);
+  await createVerifiedPasswordAccount(db, {
+    accountId: secondAccount,
+    email: "other@example.com",
+    verificationDigest: digest("3"),
+    sessionDigest: digest("4"),
+  });
+  const started = await db.query(
+    `select * from public.kova_auth_begin_totp_enrollment($1, $2, $3, $4)`,
+    [digest("2"), "v1.encrypted.secret.envelope", "Primary authenticator", now],
+  );
+  const factorId = started.rows[0].factor_id;
+  const oldDigests = Array.from({ length: 8 }, (_, i) => namedDigest(`initial-${i}`));
+  await db.query(`select public.kova_auth_activate_totp($1, $2, $3, $4)`, [
+    digest("2"),
+    factorId,
+    oldDigests,
+    now,
+  ]);
+  const credential = (
+    await db.query(`select id, revision from kova_private.auth_credentials where account_id = $1`, [
+      firstAccount,
+    ])
+  ).rows[0];
+  await db.query(`select * from public.kova_auth_create_session($1, $2, $3, $4, 'aal2', $5, $6)`, [
+    firstAccount,
+    credential.id,
+    credential.revision,
+    namedDigest("sibling-session"),
+    sessionExpiry,
+    now,
+  ]);
+  return { current, factorId, credential, oldDigests };
+}
+
+async function authSnapshot(db) {
+  const [accounts, codes, sessions, audit] = await Promise.all([
+    db.query(`select id, session_epoch from kova_private.auth_accounts order by id`),
+    db.query(
+      `select id, account_id, encode(code_digest,'hex') as digest, consumed_at from kova_private.auth_mfa_recovery_codes order by id`,
+    ),
+    db.query(
+      `select id, account_id, encode(token_digest,'hex') as digest, assurance_level, session_epoch, revoked_at, rotated_from from kova_private.auth_sessions order by id`,
+    ),
+    db.query(
+      `select id, account_id, session_id, event_type, metadata from kova_private.auth_audit_events order by id`,
+    ),
+  ]);
+  return { accounts: accounts.rows, codes: codes.rows, sessions: sessions.rows, audit: audit.rows };
+}
+
+const regenerate = (db, changes = {}) =>
+  db.query(`select * from public.kova_auth_regenerate_mfa_recovery_codes($1, $2, $3, $4, $5)`, [
+    changes.sessionDigest ?? digest("2"),
+    changes.codes === undefined ? replacementDigests() : changes.codes,
+    changes.nextDigest ?? namedDigest("rotated-current"),
+    changes.expiresAt === undefined ? sessionExpiry : changes.expiresAt,
+    changes.now === undefined ? now : changes.now,
+  ]);
+
+async function beginRecoveryChallenge(
+  db,
+  credential,
+  tokenDigest = namedDigest("login-challenge"),
+) {
+  await db.query(`select * from public.kova_auth_begin_mfa_login($1,$2,$3,$4,$5,$6)`, [
+    firstAccount,
+    credential.id,
+    credential.revision,
+    tokenDigest,
+    "2026-09-20T17:05:00Z",
+    now,
+  ]);
+  await db.query(`select * from public.kova_auth_read_mfa_login_challenge($1,$2)`, [
+    tokenDigest,
+    now,
+  ]);
+  return tokenDigest;
 }
 
 test("migration creates the complete private auth schema with browser roles denied", async () => {
@@ -335,10 +440,13 @@ test("owned recovery-code login is atomic, AAL2, and single-use", async () => {
     ]);
 
     await assert.rejects(
-      db.query(
-        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
-        [digest("9"), digest("b"), digest("c"), sessionExpiry, now],
-      ),
+      db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`, [
+        digest("9"),
+        digest("b"),
+        digest("c"),
+        sessionExpiry,
+        now,
+      ]),
       /kova_auth_invalid_recovery_code/u,
     );
     assert.equal(
@@ -404,10 +512,13 @@ test("owned recovery-code login is atomic, AAL2, and single-use", async () => {
     );
 
     await assert.rejects(
-      db.query(
-        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
-        [digest("9"), digest("a"), digest("d"), sessionExpiry, now],
-      ),
+      db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`, [
+        digest("9"),
+        digest("a"),
+        digest("d"),
+        sessionExpiry,
+        now,
+      ]),
       /kova_auth_invalid_mfa_challenge/u,
     );
 
@@ -424,10 +535,13 @@ test("owned recovery-code login is atomic, AAL2, and single-use", async () => {
       now,
     ]);
     await assert.rejects(
-      db.query(
-        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
-        [digest("e"), digest("a"), digest("f"), sessionExpiry, now],
-      ),
+      db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`, [
+        digest("e"),
+        digest("a"),
+        digest("f"),
+        sessionExpiry,
+        now,
+      ]),
       /kova_auth_invalid_recovery_code/u,
     );
   } finally {
@@ -487,6 +601,537 @@ test("owned TOTP enrollment activates MFA, stores eight digests, and revokes oth
       [firstAccount],
     );
     assert.equal(account.rows[0].mfa_required, false);
+  } finally {
+    await db.close();
+  }
+});
+
+test("recovery migration retires the older staging ABI without leaving a non-rotating overload", async () => {
+  const db = await database({ legacyRecoveryAbi: true });
+  try {
+    const rows = (
+      await db.query(
+        `select p.pronargs from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='kova_auth_regenerate_mfa_recovery_codes'`,
+      )
+    ).rows;
+    assert.deepEqual(rows, [{ pronargs: 5 }]);
+    await assert.rejects(
+      db.query(`select public.kova_auth_regenerate_mfa_recovery_codes($1,$2,$3)`, [
+        digest("2"),
+        replacementDigests(),
+        now,
+      ]),
+      /does not exist/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("recovery controls expose only service RPCs, with the private lock helper inaccessible", async () => {
+  const db = await database();
+  try {
+    const rows = (
+      await db.query(`
+      select n.nspname as schema_name, p.proname as name, p.prosecdef as definer,
+        p.proconfig,
+        has_function_privilege('anon',p.oid,'execute') as anon_execute,
+        has_function_privilege('authenticated',p.oid,'execute') as user_execute,
+        has_function_privilege('service_role',p.oid,'execute') as service_execute,
+        exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+          where a.grantee=0 and a.privilege_type='EXECUTE') as public_execute
+      from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where p.proname in ('lock_auth_session','kova_auth_regenerate_mfa_recovery_codes','kova_auth_revoke_other_sessions')
+      order by p.proname
+    `)
+    ).rows;
+    assert.equal(rows.length, 3);
+    for (const row of rows) {
+      assert.equal(row.anon_execute, false);
+      assert.equal(row.user_execute, false);
+      assert.equal(row.public_execute, false);
+      assert.ok(row.proconfig.includes('search_path=""'));
+      const helper = row.name === "lock_auth_session";
+      assert.equal(row.schema_name, helper ? "kova_private" : "public");
+      assert.equal(row.definer, !helper);
+      assert.equal(row.service_execute, !helper);
+      if (!helper) assert.ok(row.proconfig.includes("statement_timeout=5s"));
+    }
+    await ownedMfaFixture(db);
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`set role ${role}`);
+      try {
+        await assert.rejects(regenerate(db), /permission denied/u);
+        await assert.rejects(
+          db.query(`select public.kova_auth_revoke_other_sessions($1,$2)`, [digest("2"), now]),
+          /permission denied/u,
+        );
+        await assert.rejects(
+          db.query(`select * from kova_private.auth_mfa_recovery_codes`),
+          /permission denied/u,
+        );
+      } finally {
+        await db.exec("reset role");
+      }
+    }
+    await db.exec("set role service_role");
+    assert.equal((await regenerate(db)).rows[0].assurance_level, "aal2");
+  } finally {
+    await db.close();
+  }
+});
+
+test("regeneration replaces eight digests, rotates the caller, retires other sessions, and cannot be replayed", async () => {
+  const db = await database();
+  try {
+    const f = await ownedMfaFixture(db);
+    const result = (await regenerate(db)).rows[0];
+    assert.equal(result.account_id, firstAccount);
+    assert.equal(result.assurance_level, "aal2");
+    assert.equal(result.email_verified, true);
+    assert.notEqual(result.session_id, f.current.session_id);
+    const rows = (
+      await db.query(
+        `select encode(code_digest,'hex') as digest, consumed_at from kova_private.auth_mfa_recovery_codes where account_id=$1 order by digest`,
+        [firstAccount],
+      )
+    ).rows;
+    assert.deepEqual(
+      rows.map((r) => r.digest),
+      replacementDigests().sort(),
+    );
+    assert.ok(rows.every((r) => r.consumed_at === null && !f.oldDigests.includes(r.digest)));
+    for (const retired of [digest("2"), namedDigest("sibling-session")]) {
+      assert.deepEqual(
+        (await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [retired, now]))
+          .rows,
+        [],
+      );
+    }
+    for (const [token, owner] of [
+      [namedDigest("rotated-current"), firstAccount],
+      [digest("4"), secondAccount],
+    ]) {
+      assert.equal(
+        (await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [token, now]))
+          .rows[0].account_id,
+        owner,
+      );
+    }
+    const successor = (
+      await db.query(
+        `select rotated_from, session_epoch from kova_private.auth_sessions where id=$1`,
+        [result.session_id],
+      )
+    ).rows[0];
+    assert.equal(successor.rotated_from, f.current.session_id);
+    assert.equal(Number(successor.session_epoch), 1);
+    const audit = (
+      await db.query(
+        `select session_id, metadata from kova_private.auth_audit_events where event_type='mfa_recovery_codes_regenerated'`,
+      )
+    ).rows;
+    assert.deepEqual(audit, [{ session_id: result.session_id, metadata: { code_count: 8 } }]);
+    const beforeReplay = await authSnapshot(db);
+    await assert.rejects(regenerate(db), /kova_auth_invalid_session/u);
+    await assert.rejects(
+      regenerate(db, {
+        sessionDigest: namedDigest("rotated-current"),
+        nextDigest: namedDigest("another-session"),
+      }),
+      /kova_auth_invalid_recovery_codes/u,
+    );
+    assert.deepEqual(await authSnapshot(db), beforeReplay);
+  } finally {
+    await db.close();
+  }
+});
+
+test("an active AAL2 device can replace exhausted or absent codes without disabling MFA", async (t) => {
+  const db = await database();
+  try {
+    await ownedMfaFixture(db);
+    for (const [name, sql] of [
+      [
+        "exhausted",
+        "update kova_private.auth_mfa_recovery_codes set consumed_at=$1 where account_id=$2",
+      ],
+      [
+        "absent",
+        "delete from kova_private.auth_mfa_recovery_codes where created_at<=$1 and account_id=$2",
+      ],
+    ])
+      await t.test(name, async () => {
+        await db.exec("begin");
+        try {
+          await db.query(sql, [now, firstAccount]);
+          assert.equal((await regenerate(db)).rows[0].assurance_level, "aal2");
+          assert.equal(
+            (
+              await db.query(
+                `select count(*)::int as count from kova_private.auth_mfa_recovery_codes where account_id=$1 and consumed_at is null`,
+                [firstAccount],
+              )
+            ).rows[0].count,
+            8,
+          );
+          assert.equal(
+            (
+              await db.query(`select mfa_required from kova_private.auth_accounts where id=$1`, [
+                firstAccount,
+              ])
+            ).rows[0].mfa_required,
+            true,
+          );
+        } finally {
+          await db.exec("rollback");
+        }
+      });
+  } finally {
+    await db.close();
+  }
+});
+
+test("regeneration fails closed for invalid sessions, account state, factor state, and code sets", async (t) => {
+  const db = await database();
+  try {
+    await ownedMfaFixture(db);
+    const mutations = [
+      [
+        "aal1",
+        "update kova_private.auth_sessions set assurance_level='aal1' where token_digest=decode($1,'hex')",
+        [digest("2")],
+      ],
+      [
+        "revoked",
+        "update kova_private.auth_sessions set revoked_at=$1 where token_digest=decode($2,'hex')",
+        [now, digest("2")],
+      ],
+      [
+        "expired",
+        "update kova_private.auth_sessions set expires_at=$1 where token_digest=decode($2,'hex')",
+        ["2026-09-20T17:00:01Z", digest("2")],
+        { now: "2026-09-20T17:00:01Z" },
+      ],
+      [
+        "stale epoch",
+        "update kova_private.auth_accounts set session_epoch=session_epoch+1 where id=$1",
+        [firstAccount],
+      ],
+      [
+        "suspended",
+        "update kova_private.auth_accounts set suspended_until=$1 where id=$2",
+        [sessionExpiry, firstAccount],
+      ],
+      [
+        "deleted",
+        "update kova_private.auth_accounts set deleted_at=$1 where id=$2",
+        [now, firstAccount],
+      ],
+      [
+        "unverified",
+        "update kova_private.auth_accounts set email_verified_at=null where id=$1",
+        [firstAccount],
+      ],
+      [
+        "MFA disabled",
+        "update kova_private.auth_accounts set mfa_required=false where id=$1",
+        [firstAccount],
+      ],
+      [
+        "factor disabled",
+        "update kova_private.auth_mfa_factors set state='disabled', disabled_at=$1 where account_id=$2",
+        [now, firstAccount],
+      ],
+      [
+        "factor pending",
+        "update kova_private.auth_mfa_factors set state='pending', verified_at=null where account_id=$1",
+        [firstAccount],
+      ],
+    ];
+    for (const [name, sql, params, changes = {}] of mutations)
+      await t.test(name, async () => {
+        await db.exec("begin");
+        try {
+          await db.query(sql, params);
+          const before = await authSnapshot(db);
+          await db.exec("savepoint attempt");
+          await assert.rejects(regenerate(db, changes), /kova_auth_/u);
+          await db.exec("rollback to savepoint attempt");
+          assert.deepEqual(await authSnapshot(db), before);
+        } finally {
+          await db.exec("rollback");
+        }
+      });
+    const invalidInputs = [
+      ["unknown session", { sessionDigest: namedDigest("missing-session") }],
+      ["another account's aal1 session", { sessionDigest: digest("4") }],
+      ["same session token", { nextDigest: digest("2") }],
+      ["malformed successor", { nextDigest: "invalid" }],
+      ["null time", { now: null }],
+      ["infinite time", { now: "infinity" }],
+      ["null expiry", { expiresAt: null }],
+      ["infinite expiry", { expiresAt: "infinity" }],
+      ["expired successor", { expiresAt: now }],
+      ["null codes", { codes: null }],
+      ["empty codes", { codes: [] }],
+      ["seven codes", { codes: replacementDigests().slice(1) }],
+      ["nine codes", { codes: [...replacementDigests(), namedDigest("ninth")] }],
+      ["duplicate codes", { codes: Array(8).fill(namedDigest("duplicate")) }],
+      ["null member", { codes: [null, ...replacementDigests().slice(1)] }],
+      ["malformed member", { codes: ["invalid", ...replacementDigests().slice(1)] }],
+      [
+        "uppercase member",
+        { codes: [replacementDigests()[0].toUpperCase(), ...replacementDigests().slice(1)] },
+      ],
+      [
+        "two dimensions",
+        { codes: [replacementDigests().slice(0, 4), replacementDigests().slice(4)] },
+      ],
+      [
+        "reuse an old code",
+        { codes: [namedDigest("initial-0"), ...replacementDigests().slice(1)] },
+      ],
+    ];
+    for (const [name, changes] of invalidInputs)
+      await t.test(name, async () => {
+        const before = await authSnapshot(db);
+        await assert.rejects(regenerate(db, changes), /kova_auth_/u);
+        assert.deepEqual(await authSnapshot(db), before);
+      });
+  } finally {
+    await db.close();
+  }
+});
+
+test("session-insert and audit failures roll back code replacement, revocations, and the epoch", async () => {
+  const db = await database();
+  try {
+    await ownedMfaFixture(db);
+    const before = await authSnapshot(db);
+    await assert.rejects(regenerate(db, { nextDigest: digest("4") }), /duplicate key/u);
+    assert.deepEqual(await authSnapshot(db), before);
+    await db.exec(`
+      create function public.test_recovery_audit_failure() returns trigger language plpgsql as $$
+      begin
+        if new.event_type in ('mfa_recovery_codes_regenerated','other_sessions_revoked') then
+          raise exception 'test_audit_failure';
+        end if;
+        return new;
+      end $$;
+      create trigger test_recovery_audit_failure before insert on kova_private.auth_audit_events
+      for each row execute function public.test_recovery_audit_failure();
+    `);
+    await assert.rejects(regenerate(db), /test_audit_failure/u);
+    assert.deepEqual(await authSnapshot(db), before);
+    await assert.rejects(
+      db.query(`select public.kova_auth_revoke_other_sessions($1,$2)`, [digest("2"), now]),
+      /test_audit_failure/u,
+    );
+    assert.deepEqual(await authSnapshot(db), before);
+  } finally {
+    await db.close();
+  }
+});
+
+test("old recovery codes fail after regeneration while a new code still signs in once at AAL2", async () => {
+  const db = await database();
+  try {
+    const f = await ownedMfaFixture(db);
+    await regenerate(db);
+    const challenge = await beginRecoveryChallenge(db, f.credential);
+    const finish = (code, session) =>
+      db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1,$2,$3,$4,$5)`, [
+        challenge,
+        code,
+        namedDigest(session),
+        sessionExpiry,
+        now,
+      ]);
+    await assert.rejects(
+      finish(f.oldDigests[0], "rejected-session"),
+      /kova_auth_invalid_recovery_code/u,
+    );
+    const principal = (await finish(replacementDigests()[0], "recovered-session")).rows[0];
+    assert.equal(principal.account_id, firstAccount);
+    assert.equal(principal.assurance_level, "aal2");
+    assert.equal(
+      (
+        await db.query(
+          `select count(*)::int as count from kova_private.auth_mfa_recovery_codes where account_id=$1 and consumed_at is null`,
+          [firstAccount],
+        )
+      ).rows[0].count,
+      7,
+    );
+    await assert.rejects(
+      finish(replacementDigests()[1], "replayed-challenge"),
+      /kova_auth_invalid_mfa_challenge/u,
+    );
+    const nextChallenge = await beginRecoveryChallenge(
+      db,
+      f.credential,
+      namedDigest("fresh-challenge"),
+    );
+    await assert.rejects(
+      db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1,$2,$3,$4,$5)`, [
+        nextChallenge,
+        replacementDigests()[0],
+        namedDigest("replayed-code"),
+        sessionExpiry,
+        now,
+      ]),
+      /kova_auth_invalid_recovery_code/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("recovery completion rechecks the factor and credential after the charged challenge read", async (t) => {
+  const db = await database();
+  try {
+    const f = await ownedMfaFixture(db);
+    const challenge = await beginRecoveryChallenge(db, f.credential);
+    for (const [name, sql, params] of [
+      [
+        "factor disabled",
+        "update kova_private.auth_mfa_factors set state='disabled', disabled_at=$1 where id=$2",
+        [now, f.factorId],
+      ],
+      [
+        "factor no longer verified",
+        "update kova_private.auth_mfa_factors set verified_at=null where id=$1",
+        [f.factorId],
+      ],
+      [
+        "credential revision changed",
+        "update kova_private.auth_credentials set revision=revision+1 where id=$1",
+        [f.credential.id],
+      ],
+      [
+        "credential disabled",
+        "update kova_private.auth_credentials set disabled_at=$1 where id=$2",
+        [now, f.credential.id],
+      ],
+    ])
+      await t.test(name, async () => {
+        await db.exec("begin");
+        try {
+          await db.query(sql, params);
+          const before = await authSnapshot(db);
+          await db.exec("savepoint attempt");
+          await assert.rejects(
+            db.query(`select * from public.kova_auth_finish_mfa_recovery_login($1,$2,$3,$4,$5)`, [
+              challenge,
+              f.oldDigests[0],
+              namedDigest("denied-login"),
+              sessionExpiry,
+              now,
+            ]),
+            /kova_auth_/u,
+          );
+          await db.exec("rollback to savepoint attempt");
+          assert.deepEqual(await authSnapshot(db), before);
+          assert.equal(
+            (
+              await db.query(
+                `select consumed_at from kova_private.auth_mfa_login_challenges where token_digest=decode($1,'hex')`,
+                [challenge],
+              )
+            ).rows[0].consumed_at,
+            null,
+          );
+        } finally {
+          await db.exec("rollback");
+        }
+      });
+  } finally {
+    await db.close();
+  }
+});
+
+test("owned sign-out preserves the caller, isolates accounts, and retires late old-epoch rotations", async () => {
+  const db = await database();
+  try {
+    await ownedMfaFixture(db);
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_revoke_other_sessions($1,$2) as count`, [
+          digest("2"),
+          now,
+        ])
+      ).rows[0].count,
+      1,
+    );
+    assert.equal(
+      (await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [digest("2"), now]))
+        .rows[0].account_id,
+      firstAccount,
+    );
+    assert.deepEqual(
+      (
+        await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [
+          namedDigest("sibling-session"),
+          now,
+        ])
+      ).rows,
+      [],
+    );
+    assert.equal(
+      (await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [digest("4"), now]))
+        .rows[0].account_id,
+      secondAccount,
+    );
+    // A concurrent rotate can insert after the revocation UPDATE snapshot;
+    // its copied pre-revocation epoch must still make that token unusable.
+    await db.query(
+      `insert into kova_private.auth_sessions(account_id,token_digest,assurance_level,session_epoch,expires_at,created_at,last_seen_at)
+      values ($1,decode($2,'hex'),'aal2',0,$3,$4,$4)`,
+      [firstAccount, namedDigest("late-rotation"), sessionExpiry, now],
+    );
+    assert.deepEqual(
+      (
+        await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [
+          namedDigest("late-rotation"),
+          now,
+        ])
+      ).rows,
+      [],
+    );
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_revoke_other_sessions($1,$2) as count`, [
+          digest("2"),
+          now,
+        ])
+      ).rows[0].count,
+      1,
+    );
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_revoke_other_sessions($1,$2) as count`, [
+          digest("2"),
+          now,
+        ])
+      ).rows[0].count,
+      0,
+    );
+    // AAL1 is sufficient only for an account that does not require MFA.
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_revoke_other_sessions($1,$2) as count`, [
+          digest("4"),
+          now,
+        ])
+      ).rows[0].count,
+      0,
+    );
+    assert.equal(
+      (await db.query(`select * from public.kova_auth_resolve_session($1,$2)`, [digest("2"), now]))
+        .rows[0].account_id,
+      firstAccount,
+    );
   } finally {
     await db.close();
   }

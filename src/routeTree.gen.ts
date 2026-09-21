@@ -194,12 +194,14 @@ import { Route as ApiAuthMfaRemoveRouteImport } from './routes/api/auth/mfa/remo
 import { Route as ApiAuthMfaVerifyRouteImport } from './routes/api/auth/mfa/verify'
 import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/recovery/request'
 import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
+import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
+import { Route as ApiAuthMfaRecoveryRegenerateRouteImport } from './routes/api/auth/mfa/recovery/regenerate'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
 import { Route as ApiScimV2OrganizationIdSplatRouteImport } from './routes/api/scim/v2/$organizationId/$'
 
@@ -1148,6 +1150,12 @@ const ApiAuthRecoveryResetRoute = ApiAuthRecoveryResetRouteImport.update({
   path: '/api/auth/recovery/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSessionsRevokeOthersRoute =
+  ApiAuthSessionsRevokeOthersRouteImport.update({
+    id: '/api/auth/sessions/revoke-others',
+    path: '/api/auth/sessions/revoke-others',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1182,6 +1190,12 @@ const ProjectsProjectIdChatChatIdRoute =
     id: '/chat/$chatId',
     path: '/chat/$chatId',
     getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ApiAuthMfaRecoveryRegenerateRoute =
+  ApiAuthMfaRecoveryRegenerateRouteImport.update({
+    id: '/api/auth/mfa/recovery/regenerate',
+    path: '/api/auth/mfa/recovery/regenerate',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiIntegrationsOauthCallbackProviderRoute =
   ApiIntegrationsOauthCallbackProviderRouteImport.update({
@@ -1382,12 +1396,14 @@ export interface FileRoutesByFullPath {
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1577,12 +1593,14 @@ export interface FileRoutesByTo {
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1773,12 +1791,14 @@ export interface FileRoutesById {
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1970,12 +1990,14 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/mfa/recovery/regenerate'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesByTo: FileRoutesByTo
@@ -2165,12 +2187,14 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/mfa/recovery/regenerate'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   id:
@@ -2360,12 +2384,14 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/mfa/recovery/regenerate'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesById: FileRoutesById
@@ -2548,11 +2574,13 @@ export interface RootRouteChildren {
   ApiAuthMfaVerifyRoute: typeof ApiAuthMfaVerifyRoute
   ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
+  ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiAuthMfaRecoveryRegenerateRoute: typeof ApiAuthMfaRecoveryRegenerateRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
   ApiScimV2OrganizationIdSplatRoute: typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -3854,6 +3882,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthRecoveryResetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/sessions/revoke-others': {
+      id: '/api/auth/sessions/revoke-others'
+      path: '/api/auth/sessions/revoke-others'
+      fullPath: '/api/auth/sessions/revoke-others'
+      preLoaderRoute: typeof ApiAuthSessionsRevokeOthersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -3895,6 +3930,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId/chat/$chatId'
       preLoaderRoute: typeof ProjectsProjectIdChatChatIdRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/api/auth/mfa/recovery/regenerate': {
+      id: '/api/auth/mfa/recovery/regenerate'
+      path: '/api/auth/mfa/recovery/regenerate'
+      fullPath: '/api/auth/mfa/recovery/regenerate'
+      preLoaderRoute: typeof ApiAuthMfaRecoveryRegenerateRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/callback/$provider': {
       id: '/api/integrations/oauth/callback/$provider'
@@ -4189,11 +4231,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthMfaVerifyRoute: ApiAuthMfaVerifyRoute,
   ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
+  ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiAuthMfaRecoveryRegenerateRoute: ApiAuthMfaRecoveryRegenerateRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
   ApiScimV2OrganizationIdSplatRoute: ApiScimV2OrganizationIdSplatRoute,

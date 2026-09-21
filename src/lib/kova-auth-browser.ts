@@ -13,6 +13,7 @@ type PrincipalCache = { principal: KovaBrowserPrincipal | null; refreshAt: numbe
 
 let tokenCache: TokenCache = null;
 let principalCache: PrincipalCache = null;
+let cacheGeneration = 0;
 // In dual mode, hold direct Supabase access on the Kova path until the
 // HttpOnly-cookie probe proves that the browser has no Kova session. This
 // prevents a stale legacy localStorage token from briefly loading a different
@@ -42,9 +43,14 @@ export function browserKovaAuthOrigin(currentOrigin = window.location.origin): s
 export function setKovaSessionActive(active: boolean): void {
   kovaSessionActive = active;
   if (!active) {
-    tokenCache = null;
-    principalCache = null;
+    clearKovaAuthCache();
   }
+}
+
+export function clearKovaAuthCache(): void {
+  cacheGeneration++;
+  tokenCache = null;
+  principalCache = null;
 }
 
 export function isKovaSessionActive(): boolean {
@@ -52,12 +58,16 @@ export function isKovaSessionActive(): boolean {
 }
 
 export async function fetchKovaSession(): Promise<KovaBrowserPrincipal | null> {
+  const generation = cacheGeneration;
   const response = await fetch("/api/auth/session", {
     credentials: "same-origin",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error(`kova_session_${response.status}`);
   const payload = (await response.json()) as { session?: unknown };
+  // A response started before a credential change must not restore the old
+  // principal after the MFA/device control has invalidated the cache.
+  if (generation !== cacheGeneration) throw new Error("kova_session_changed");
   if (payload.session === null) {
     principalCache = { principal: null, refreshAt: Date.now() + 5_000 };
     return null;
@@ -95,6 +105,7 @@ export async function getCachedKovaSession(): Promise<KovaBrowserPrincipal | nul
 export async function getKovaCompatibilityToken(): Promise<string | null> {
   if (!kovaSessionActive) return null;
   if (tokenCache && tokenCache.refreshAt > Date.now()) return tokenCache.token;
+  const generation = cacheGeneration;
   const response = await fetch("/api/auth/token", {
     credentials: "same-origin",
     headers: { Accept: "application/json" },
@@ -104,6 +115,7 @@ export async function getKovaCompatibilityToken(): Promise<string | null> {
   }
   if (!response.ok) throw new Error(`kova_token_${response.status}`);
   const payload = (await response.json()) as { accessToken?: unknown; expiresIn?: unknown };
+  if (generation !== cacheGeneration || !kovaSessionActive) return null;
   if (
     typeof payload.accessToken !== "string" ||
     typeof payload.expiresIn !== "number" ||

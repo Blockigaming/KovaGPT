@@ -77,13 +77,14 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     });
     return jsonError("Authentication is temporarily unavailable.", 503);
   }
-  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      storage: undefined,
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  const createAdminClient = () =>
+    createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
   if (credential.provider === "kova") {
     try {
@@ -109,7 +110,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
       return {
         userId: principal.accountId,
         supabaseUser: verifier,
-        supabaseAdmin,
+        supabaseAdmin: createAdminClient(),
         emailVerified: principal.emailVerified,
         claims,
       };
@@ -160,7 +161,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     // This client carries the verified caller's JWT and is therefore subject
     // to RLS. Use it for authorization lookups before service-role writes.
     supabaseUser: verifier,
-    supabaseAdmin,
+    supabaseAdmin: createAdminClient(),
     emailVerified: access.emailVerified,
     claims: claimsData.claims as Record<string, unknown>,
   };

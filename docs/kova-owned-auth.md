@@ -98,14 +98,61 @@ source phase:
   encryption, Google ID-token verification, and five-minute ES256 RLS JWTs;
 - same-origin API routes for signup, password plus TOTP or one-time recovery-code
   login, TOTP enrollment and removal, logout, session rotation, email verification,
-  password recovery, and Google OAuth;
+  password recovery, recovery-code regeneration, other-device session revocation,
+  and Google OAuth;
 - a dual-mode browser/provider adapter that prefers a Kova cookie but retains
   the legacy session path when no Kova cookie exists.
 
-This is not the final cutover. Recovery-code regeneration, passkey adapters,
+This is not the final cutover. Owned passkey adapters,
 the complete removal of `auth.users` compatibility principals, production
 credential migration, and the production switch remain blocked on their later
 release gates.
+
+## Owned recovery-code and device controls
+
+`POST /api/auth/mfa/recovery/regenerate` requires the current owned cookie,
+an account-verified AAL2 session, an active verified owned TOTP factor, and an
+explicit `{ "confirm": true }` body. Account identities and replacement codes
+cannot be supplied by the browser. Both client-key and verified-account rate
+limits apply, and cross-site requests are rejected before the mutation.
+
+The server generates eight opaque codes and a new session token. One transaction
+replaces the prior code digests, increments the account session epoch, retires
+all prior sessions, and creates the replacement AAL2 session. Only the new
+SHA-256 digests are stored. The response rotates the HttpOnly cookie and shows
+the codes once; they are not logged or persisted in browser storage. Reusing
+the old session or submitting a duplicate/invalid digest set fails without
+partial changes. Missing or exhausted old code sets do not block a user who
+still has a valid AAL2 session and active owned factor.
+
+`POST /api/auth/sessions/revoke-others` accepts no account selector. It derives
+ownership from the cookie, increments the account epoch, and preserves only the
+current session at that epoch. A concurrent rotation with the prior epoch
+cannot become a valid sibling afterward. Accounts requiring MFA must use AAL2;
+accounts without MFA may use their valid AAL1 session. The Kova-mode settings
+control calls this owned endpoint, never Supabase Auth as a fallback.
+
+Recovery-code consumption rechecks the current factor and credential revision
+inside its locked transaction. Regeneration and recovery consumption lock the
+account before the related session/challenge/code rows. Public RPC execution is
+restricted to `service_role`; the lock helper and all private auth tables remain
+inaccessible to browser roles. Audit events contain counts and internal context,
+not plaintext codes or digests.
+
+The controls migration explicitly retires the earlier three-argument staging
+regeneration function with `DROP FUNCTION ... RESTRICT`. The supported
+five-argument RPC requires a fresh session digest and returns the rotated
+principal. Unexpected database dependencies block the migration rather than
+being removed with `CASCADE`.
+
+The browser invalidates cached principals and compatibility tokens after these
+changes, including responses already in flight. This does **not** revoke an
+already issued five-minute compatibility JWT at the PostgREST/RLS boundary.
+Eliminating that residual authorization window remains a cutover gate, along
+with deployed multi-device rehearsal, passkey ownership, and legacy retirement.
+Local regression tests execute the PostgreSQL transitions and the actual
+handler/store path with synthetic data; component tests drive the actual UI
+callbacks. These are not evidence of a deployed staging or production cutover.
 
 ## Configuration contract
 
