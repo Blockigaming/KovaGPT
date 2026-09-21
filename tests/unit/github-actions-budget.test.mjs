@@ -44,6 +44,7 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     "migration-preflight",
     "migration-schema-fingerprint",
     "migration-schema-proof-plan",
+    "migration-temp-export-source-proof",
   ]) {
     assert.ok(
       workflow.includes(databaseProofPath),
@@ -71,6 +72,18 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     workflow,
     /git diff --exit-code -- release-migrations\.json database-contract\.json/u,
   );
+});
+
+test("staging rehearsal retains the pinned migration proof commit", async () => {
+  const workflow = await read(".github/workflows/staging-rehearsal.yml");
+  const checkout = workflow.match(
+    /- uses: actions\/checkout@[\s\S]*?- uses: actions\/setup-node@/u,
+  )?.[0];
+
+  assert.ok(checkout, "staging rehearsal must include checkout before setup-node");
+  assert.match(checkout, /persist-credentials: false/u);
+  assert.match(checkout, /fetch-depth: 0/u);
+  assert.match(workflow, /npm run release:validate/u);
 });
 
 test("Azure readiness preserves required-check visibility while skipping irrelevant heavy stages", async () => {
