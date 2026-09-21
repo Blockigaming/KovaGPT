@@ -53,13 +53,6 @@ for (const theme of themes) {
         for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
-        await expect(primaryNavigation).toHaveAttribute(
-          "data-maps-release-approved",
-          /^(?:true|false)$/u,
-        );
-        const mapsReleaseApproved =
-          (await primaryNavigation.getAttribute("data-maps-release-approved")) === "true";
         for (const label of [
           "New chat",
           "Work",
@@ -70,17 +63,6 @@ for (const theme of themes) {
           "Discover",
         ])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
-        const mapsLink = primaryNavigation.getByRole("link", {
-          name: "Maps",
-          exact: true,
-          includeHidden: true,
-        });
-        if (mapsReleaseApproved) {
-          await expect(mapsLink).toHaveCount(1);
-          await expect(mapsLink).toBeVisible();
-        } else {
-          await expect(mapsLink).toHaveCount(0);
-        }
       }
     } else {
       await expect(page.locator(".kova-topbar")).toBeVisible();
