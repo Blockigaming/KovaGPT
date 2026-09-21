@@ -3481,7 +3481,7 @@
       "order": 163,
       "filename": "20260921023426_kova_owned_mfa_recovery_login.sql",
       "timestamp": "20260921023426",
-      "sha256": "1103343bd67a5cb05e46ba60ae141ea532fc639996b98b16eb535da3b9654aeb",
+      "sha256": "279c7589fc5b6d8f29101457858c892fbda054bd6efe0d918f6393bff4f761b8",
       "tables": [],
       "functions": ["kova_auth_finish_mfa_recovery_login"],
       "destructive": false,
