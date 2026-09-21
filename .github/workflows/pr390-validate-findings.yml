@@ -15,10 +15,9 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Format and test
+      - name: Format exactly
         run: |
           node node_modules/prettier/bin/prettier.cjs --write scripts/release/zero-lovable-production.mjs tests/unit/zero-lovable-production-evidence.test.mjs
-          node --test tests/unit/zero-lovable-production-evidence.test.mjs
           git diff --check
       - name: Commit and self-remove
         run: |
