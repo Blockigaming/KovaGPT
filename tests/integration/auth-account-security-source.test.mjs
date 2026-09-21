@@ -53,8 +53,8 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(challenge, /expires_at: Math\.round\(Date\.now\(\) \/ 1000\) \+ data\.expires_in/);
   assert.doesNotMatch(challenge, /data\.session/);
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
-  assert.match(panel, /!useKovaAuth \\? <PasskeyPanel \\/> : null/);
-  assert.match(panel, /!useKovaAuth \\? \\(\\s*<div[\\s\\S]*Active sessions/);
+  assert.match(panel, /!useKovaAuth \? <PasskeyPanel \/> : null/);
+  assert.match(panel, /!useKovaAuth \? \(\s*<div[\s\S]*Active sessions/);
 });
 
 test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {
