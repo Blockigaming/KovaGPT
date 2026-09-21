@@ -52,7 +52,7 @@ test("the September 15 review keeps all nineteen structural mappings blocked", (
 });
 
 test("the proof checkpoint contains every current candidate migration", () => {
-  assert.equal(lineage.observedSourceCommit, "8fe9f31c09ea2227b76ad8de3ab7133cf08b0ae3");
+  assert.equal(lineage.observedSourceCommit, "eb5596c77bc6309dc4856b716ac7f4143add13c1");
   assert.equal(lineage.observedSourceMigrationCount, 157);
 });
 
