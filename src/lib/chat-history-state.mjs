@@ -24,6 +24,19 @@ export function createChatHistoryState(ownerId, localEpoch = crypto.randomUUID()
   };
 }
 const recordSizes = new WeakMap();
+
+function hasRetiredDeepResearchState(payload) {
+  return (
+    Array.isArray(payload?.messages) &&
+    payload.messages.some(
+      (message) =>
+        message?.role === "assistant" &&
+        (message.requestedTool === "deep_research" ||
+          Object.prototype.hasOwnProperty.call(message, "researchProgress")),
+    )
+  );
+}
+
 function checkCapacity(records) {
   const rows = Object.values(records);
   if (rows.length > 10000 || rows.filter((r) => r.local).length > 1000)
@@ -72,14 +85,8 @@ export async function restoreChatHistoryState(stored, ownerId) {
     if (local && local.id !== id) throw new Error("chat_history_device_unavailable");
     let localHash = await chatHistoryHash(local, row.archived);
     if (localHash !== row.localHash) {
-      const hasRetiredDeepResearchTool =
-        Array.isArray(row.local?.messages) &&
-        row.local.messages.some(
-          (message) =>
-            message?.role === "assistant" && message.requestedTool === "deep_research",
-        );
       const legacyHash = await chatHistoryHash(row.local, row.archived);
-      if (!hasRetiredDeepResearchTool || legacyHash !== row.localHash)
+      if (!hasRetiredDeepResearchState(row.local) || legacyHash !== row.localHash)
         throw new Error("chat_history_device_unavailable");
     }
     let request = null,
@@ -103,14 +110,8 @@ export async function restoreChatHistoryState(stored, ownerId) {
         throw new Error("chat_history_device_unavailable");
       const normalizedRequestHash = await chatHistoryHash(request.payload, request.archived);
       if (request.hash !== normalizedRequestHash) {
-        const hasRetiredDeepResearchTool =
-          Array.isArray(rawRequestPayload?.messages) &&
-          rawRequestPayload.messages.some(
-            (message) =>
-              message?.role === "assistant" && message.requestedTool === "deep_research",
-          );
         const legacyRequestHash = await chatHistoryHash(rawRequestPayload, request.archived);
-        if (!hasRetiredDeepResearchTool || request.hash !== legacyRequestHash)
+        if (!hasRetiredDeepResearchState(rawRequestPayload) || request.hash !== legacyRequestHash)
           throw new Error("chat_history_device_unavailable");
         // Preserve the mutation identity long enough for the initial cloud pull to acknowledge
         // an already-accepted legacy write, but never retry bytes whose canonical hash changed.
