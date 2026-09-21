@@ -44,6 +44,7 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     "migration-preflight",
     "migration-schema-fingerprint",
     "migration-schema-proof-plan",
+    "migration-temp-export-source-proof",
   ]) {
     assert.ok(
       workflow.includes(databaseProofPath),
