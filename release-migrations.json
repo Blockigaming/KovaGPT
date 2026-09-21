@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 161,
-  "latest": "20260921003901_kova_owned_totp_login_indexes.sql",
+  "count": 162,
+  "latest": "20260921020250_kova_owned_mfa_enrollment.sql",
   "migrations": [
     {
       "order": 1,
@@ -3456,6 +3456,26 @@
         "auth_mfa_login_challenges_credential_idx",
         "auth_mfa_login_challenges_factor_idx"
       ]
+    },
+    {
+      "order": 162,
+      "filename": "20260921020250_kova_owned_mfa_enrollment.sql",
+      "timestamp": "20260921020250",
+      "sha256": "000e02a5f0486ed35260291a2436710f3e853eb73409c4c8c510c29963fc94e0",
+      "tables": [],
+      "functions": [
+        "kova_auth_begin_totp_enrollment",
+        "kova_auth_read_totp_enrollment",
+        "kova_auth_activate_totp",
+        "kova_auth_list_totp_factors",
+        "kova_auth_remove_totp_factor"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

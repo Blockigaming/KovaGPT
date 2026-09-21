@@ -188,6 +188,10 @@ import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './rou
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiAuthGoogleExchangeRouteImport } from './routes/api/auth/google/exchange'
 import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
+import { Route as ApiAuthMfaEnrollRouteImport } from './routes/api/auth/mfa/enroll'
+import { Route as ApiAuthMfaFactorsRouteImport } from './routes/api/auth/mfa/factors'
+import { Route as ApiAuthMfaRemoveRouteImport } from './routes/api/auth/mfa/remove'
+import { Route as ApiAuthMfaVerifyRouteImport } from './routes/api/auth/mfa/verify'
 import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/recovery/request'
 import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
@@ -1114,6 +1118,26 @@ const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
   path: '/api/auth/google/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthMfaEnrollRoute = ApiAuthMfaEnrollRouteImport.update({
+  id: '/api/auth/mfa/enroll',
+  path: '/api/auth/mfa/enroll',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaFactorsRoute = ApiAuthMfaFactorsRouteImport.update({
+  id: '/api/auth/mfa/factors',
+  path: '/api/auth/mfa/factors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaRemoveRoute = ApiAuthMfaRemoveRouteImport.update({
+  id: '/api/auth/mfa/remove',
+  path: '/api/auth/mfa/remove',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaVerifyRoute = ApiAuthMfaVerifyRouteImport.update({
+  id: '/api/auth/mfa/verify',
+  path: '/api/auth/mfa/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRecoveryRequestRoute = ApiAuthRecoveryRequestRouteImport.update({
   id: '/api/auth/recovery/request',
   path: '/api/auth/recovery/request',
@@ -1352,6 +1376,10 @@ export interface FileRoutesByFullPath {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
@@ -1543,6 +1571,10 @@ export interface FileRoutesByTo {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
@@ -1735,6 +1767,10 @@ export interface FileRoutesById {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
@@ -1928,6 +1964,10 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
@@ -2119,6 +2159,10 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
@@ -2310,6 +2354,10 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/developer/payments/webhook'
@@ -2494,6 +2542,10 @@ export interface RootRouteChildren {
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiAuthGoogleExchangeRoute: typeof ApiAuthGoogleExchangeRoute
   ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
+  ApiAuthMfaEnrollRoute: typeof ApiAuthMfaEnrollRoute
+  ApiAuthMfaFactorsRoute: typeof ApiAuthMfaFactorsRoute
+  ApiAuthMfaRemoveRoute: typeof ApiAuthMfaRemoveRoute
+  ApiAuthMfaVerifyRoute: typeof ApiAuthMfaVerifyRoute
   ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
@@ -3760,6 +3812,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthGoogleStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/mfa/enroll': {
+      id: '/api/auth/mfa/enroll'
+      path: '/api/auth/mfa/enroll'
+      fullPath: '/api/auth/mfa/enroll'
+      preLoaderRoute: typeof ApiAuthMfaEnrollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/factors': {
+      id: '/api/auth/mfa/factors'
+      path: '/api/auth/mfa/factors'
+      fullPath: '/api/auth/mfa/factors'
+      preLoaderRoute: typeof ApiAuthMfaFactorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/remove': {
+      id: '/api/auth/mfa/remove'
+      path: '/api/auth/mfa/remove'
+      fullPath: '/api/auth/mfa/remove'
+      preLoaderRoute: typeof ApiAuthMfaRemoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/verify': {
+      id: '/api/auth/mfa/verify'
+      path: '/api/auth/mfa/verify'
+      fullPath: '/api/auth/mfa/verify'
+      preLoaderRoute: typeof ApiAuthMfaVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/recovery/request': {
       id: '/api/auth/recovery/request'
       path: '/api/auth/recovery/request'
@@ -4103,6 +4183,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiAuthGoogleExchangeRoute: ApiAuthGoogleExchangeRoute,
   ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
+  ApiAuthMfaEnrollRoute: ApiAuthMfaEnrollRoute,
+  ApiAuthMfaFactorsRoute: ApiAuthMfaFactorsRoute,
+  ApiAuthMfaRemoveRoute: ApiAuthMfaRemoveRoute,
+  ApiAuthMfaVerifyRoute: ApiAuthMfaVerifyRoute,
   ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,

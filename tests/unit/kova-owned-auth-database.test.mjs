@@ -31,6 +31,13 @@ const mfaLoginIndexMigration = await readFile(
   ),
   "utf8",
 );
+const mfaEnrollmentMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260921020250_kova_owned_mfa_enrollment.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 async function database() {
   const db = new PGlite();
@@ -66,6 +73,7 @@ async function database() {
   await db.exec(foreignKeyIndexMigration);
   await db.exec(mfaLoginMigration);
   await db.exec(mfaLoginIndexMigration);
+  await db.exec(mfaEnrollmentMigration);
   return db;
 }
 
@@ -199,10 +207,10 @@ test("owned TOTP login challenges are short-lived, attempt-bounded, and create A
           'auth_mfa_login_challenges_factor_idx'
         ) order by indexname
     `);
-    assert.deepEqual(indexes.rows.map(({ indexname }) => indexname), [
-      "auth_mfa_login_challenges_credential_idx",
-      "auth_mfa_login_challenges_factor_idx",
-    ]);
+    assert.deepEqual(
+      indexes.rows.map(({ indexname }) => indexname),
+      ["auth_mfa_login_challenges_credential_idx", "auth_mfa_login_challenges_factor_idx"],
+    );
     const factorId = "30000000-0000-4000-8000-000000000003";
     await db.query(
       `insert into kova_private.auth_mfa_factors(
@@ -253,6 +261,63 @@ test("owned TOTP login challenges are short-lived, attempt-bounded, and create A
       ]),
       /kova_auth_invalid_mfa_challenge/u,
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("owned TOTP enrollment activates MFA, stores eight digests, and revokes other sessions", async () => {
+  const db = await database();
+  try {
+    await db.query(`insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3)`, [
+      firstAccount,
+      "owner@example.com",
+      now,
+    ]);
+    await createVerifiedPasswordAccount(db);
+    const started = await db.query(
+      `select * from public.kova_auth_begin_totp_enrollment($1, $2, $3, $4)`,
+      [digest("2"), "v1.encrypted.secret.envelope", "Primary authenticator", now],
+    );
+    assert.equal(started.rows[0].email, "owner@example.com");
+    const factorId = started.rows[0].factor_id;
+    const pending = await db.query(
+      `select * from public.kova_auth_read_totp_enrollment($1, $2, $3)`,
+      [digest("2"), factorId, now],
+    );
+    assert.equal(pending.rows[0].secret_envelope, "v1.encrypted.secret.envelope");
+    const recoveryDigests = ["a", "b", "c", "d", "e", "f", "7", "8"].map(digest);
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_activate_totp($1, $2, $3, $4) as enabled`, [
+          digest("2"),
+          factorId,
+          recoveryDigests,
+          now,
+        ])
+      ).rows[0].enabled,
+      true,
+    );
+    const factors = await db.query(`select * from public.kova_auth_list_totp_factors($1, $2)`, [
+      digest("2"),
+      now,
+    ]);
+    assert.equal(factors.rows[0].recovery_codes_remaining, 8);
+    assert.equal(
+      (
+        await db.query(`select public.kova_auth_remove_totp_factor($1, $2, $3) as removed`, [
+          digest("2"),
+          factorId,
+          now,
+        ])
+      ).rows[0].removed,
+      true,
+    );
+    const account = await db.query(
+      `select mfa_required from kova_private.auth_accounts where id = $1`,
+      [firstAccount],
+    );
+    assert.equal(account.rows[0].mfa_required, false);
   } finally {
     await db.close();
   }

@@ -12,6 +12,7 @@ import {
   digestKovaToken,
   encryptKovaSecret,
   generateKovaToken,
+  generateKovaTotpEnrollment,
   hashKovaPassword,
   KOVA_AUTH_CHALLENGE_SECONDS,
   KOVA_AUTH_HANDOFF_SECONDS,
@@ -28,7 +29,9 @@ import {
   consumeOAuthState,
   consumeRecovery,
   consumeVerification,
+  activateTotp,
   beginMfaLogin,
+  beginTotpEnrollment,
   createCompatibilityPrincipal,
   createOAuthState,
   createPasswordAccount,
@@ -40,7 +43,10 @@ import {
   finishMfaLogin,
   hasVerifiedLegacyMfa,
   lookupPassword,
+  listTotpFactors,
   readMfaLoginChallenge,
+  readTotpEnrollment,
+  removeTotpFactor,
   recoveryTarget,
   resolveSession,
   revokeSession,
@@ -453,6 +459,110 @@ export async function handleKovaToken(request: Request): Promise<Response> {
       error: error instanceof Error ? error.name : "unknown_error",
     });
     return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+}
+
+function requireSessionDigest(request: Request): string | Response {
+  const credential = readKovaSessionToken(request);
+  if (!credential?.ok) return jsonError("Invalid or expired session.", 401);
+  return digestKovaToken(credential.token);
+}
+
+export async function handleKovaMfaFactors(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  try {
+    return json({ factors: await listTotpFactors(sessionDigest) });
+  } catch {
+    return jsonError("Security settings could not be loaded.", 401);
+  }
+}
+
+export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  const limited = await rateLimit(request, "kova_auth_mfa_enroll", 10, 900);
+  if (limited) return limited;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  const friendlyName =
+    typeof body.friendlyName === "string" && body.friendlyName.trim()
+      ? body.friendlyName.trim().slice(0, 120)
+      : "Authenticator app";
+  try {
+    const principal = await resolveSession(sessionDigest);
+    if (!principal) return jsonError("Invalid or expired session.", 401);
+    const enrollment = generateKovaTotpEnrollment(principal.email);
+    const created = await beginTotpEnrollment({
+      sessionDigest,
+      secretEnvelope: encryptKovaSecret(enrollment.secret),
+      friendlyName,
+    });
+    return json({
+      factorId: created.factorId,
+      secret: enrollment.secret,
+      uri: enrollment.uri,
+    });
+  } catch (error) {
+    console.error("[KovaAuth] MFA enrollment failed", {
+      error: error instanceof Error ? error.name : "unknown_error",
+    });
+    return jsonError("Authenticator setup could not start.", 503);
+  }
+}
+
+export async function handleKovaMfaVerify(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  const limited = await rateLimit(request, "kova_auth_mfa_verify", 10, 900);
+  if (limited) return limited;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  const factorId = typeof body.factorId === "string" ? body.factorId : "";
+  const code = typeof body.code === "string" ? body.code : "";
+  if (!/^[0-9a-f-]{36}$/iu.test(factorId) || !/^\d{6}$/u.test(code)) {
+    return jsonError("Invalid verification request.", 400);
+  }
+  try {
+    const envelope = await readTotpEnrollment({ sessionDigest, factorId });
+    if (!verifyKovaTotp(code, decryptKovaSecret(envelope))) {
+      return jsonError("That code was not accepted.", 401);
+    }
+    const recoveryCodes = Array.from({ length: 8 }, () => generateKovaToken());
+    await activateTotp({
+      sessionDigest,
+      factorId,
+      recoveryDigests: recoveryCodes.map(digestKovaToken),
+    });
+    return json({ enabled: true, recoveryCodes });
+  } catch (error) {
+    console.error("[KovaAuth] MFA verification failed", {
+      error: error instanceof Error ? error.name : "unknown_error",
+    });
+    return jsonError("Authenticator verification could not be completed.", 401);
+  }
+}
+
+export async function handleKovaMfaRemove(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  const factorId = typeof body.factorId === "string" ? body.factorId : "";
+  if (!/^[0-9a-f-]{36}$/iu.test(factorId)) return jsonError("Invalid factor.", 400);
+  try {
+    await removeTotpFactor({ sessionDigest, factorId });
+    return json({ removed: true });
+  } catch {
+    return jsonError("The authenticator could not be removed.", 403);
   }
 }
 

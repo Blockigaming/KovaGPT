@@ -15,6 +15,7 @@ export function digestMatches(value: string, expectedHex: string): boolean;
 export function hashKovaPassword(password: string): Promise<string>;
 export function verifyKovaPassword(password: string, encoded: string): Promise<boolean>;
 export function verifyKovaTotp(code: string, base32Secret: string, now?: number): boolean;
+export function generateKovaTotpEnrollment(email: string): { secret: string; uri: string };
 export function encryptKovaSecret(plaintext: string, env?: NodeJS.ProcessEnv): string;
 export function decryptKovaSecret(envelope: string, env?: NodeJS.ProcessEnv): string;
 export function signKovaCompatibilityJwt(

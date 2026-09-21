@@ -109,6 +109,33 @@ function decodeBase32(value) {
   return Buffer.from(bytes);
 }
 
+function encodeBase32(value) {
+  let bits = 0;
+  let accumulator = 0;
+  let encoded = "";
+  for (const byte of value) {
+    accumulator = (accumulator << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      encoded += BASE32_ALPHABET[(accumulator >>> bits) & 31];
+    }
+  }
+  if (bits > 0) encoded += BASE32_ALPHABET[(accumulator << (5 - bits)) & 31];
+  return encoded;
+}
+
+export function generateKovaTotpEnrollment(email) {
+  const normalizedEmail = normalizeKovaEmail(email);
+  const secret = encodeBase32(randomBytes(20));
+  const label = encodeURIComponent(`KovaGPT:${normalizedEmail}`);
+  const issuer = encodeURIComponent("KovaGPT");
+  return {
+    secret,
+    uri: `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`,
+  };
+}
+
 function totpAt(secret, counter) {
   const counterBytes = Buffer.alloc(8);
   counterBytes.writeBigUInt64BE(BigInt(counter));

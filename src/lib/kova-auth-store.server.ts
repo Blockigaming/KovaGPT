@@ -263,6 +263,94 @@ export async function finishMfaLogin(input: {
   return principalFromRow(firstRow(value, "kova_auth_finish_mfa_login"));
 }
 
+export async function beginTotpEnrollment(input: {
+  sessionDigest: string;
+  secretEnvelope: string;
+  friendlyName: string;
+}): Promise<{ factorId: string; email: string }> {
+  const value = await rpc<unknown>("kova_auth_begin_totp_enrollment", {
+    p_session_digest_hex: input.sessionDigest,
+    p_secret_envelope: input.secretEnvelope,
+    p_friendly_name: input.friendlyName,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_begin_totp_enrollment");
+  if (typeof row.factor_id !== "string" || typeof row.email !== "string") {
+    throw new KovaAuthStoreError("kova_auth_begin_totp_enrollment");
+  }
+  return { factorId: row.factor_id, email: row.email };
+}
+
+export async function readTotpEnrollment(input: {
+  sessionDigest: string;
+  factorId: string;
+}): Promise<string> {
+  const value = await rpc<unknown>("kova_auth_read_totp_enrollment", {
+    p_session_digest_hex: input.sessionDigest,
+    p_factor_id: input.factorId,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_read_totp_enrollment");
+  if (typeof row.secret_envelope !== "string") {
+    throw new KovaAuthStoreError("kova_auth_read_totp_enrollment");
+  }
+  return row.secret_envelope;
+}
+
+export async function activateTotp(input: {
+  sessionDigest: string;
+  factorId: string;
+  recoveryDigests: string[];
+}): Promise<boolean> {
+  return Boolean(
+    await rpc<boolean>("kova_auth_activate_totp", {
+      p_session_digest_hex: input.sessionDigest,
+      p_factor_id: input.factorId,
+      p_recovery_digest_hexes: input.recoveryDigests,
+    }),
+  );
+}
+
+export async function listTotpFactors(sessionDigest: string): Promise<
+  Array<{
+    id: string;
+    friendlyName: string | null;
+    verifiedAt: string;
+    recoveryCodesRemaining: number;
+  }>
+> {
+  const value = await rpc<unknown>("kova_auth_list_totp_factors", {
+    p_session_digest_hex: sessionDigest,
+  });
+  if (!Array.isArray(value)) throw new KovaAuthStoreError("kova_auth_list_totp_factors");
+  return value.map((item) => {
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.factor_id !== "string" ||
+      typeof row.verified_at !== "string" ||
+      typeof row.recovery_codes_remaining !== "number"
+    ) {
+      throw new KovaAuthStoreError("kova_auth_list_totp_factors");
+    }
+    return {
+      id: row.factor_id,
+      friendlyName: typeof row.friendly_name === "string" ? row.friendly_name : null,
+      verifiedAt: row.verified_at,
+      recoveryCodesRemaining: row.recovery_codes_remaining,
+    };
+  });
+}
+
+export async function removeTotpFactor(input: {
+  sessionDigest: string;
+  factorId: string;
+}): Promise<boolean> {
+  return Boolean(
+    await rpc<boolean>("kova_auth_remove_totp_factor", {
+      p_session_digest_hex: input.sessionDigest,
+      p_factor_id: input.factorId,
+    }),
+  );
+}
+
 export async function resolveSession(sessionDigest: string): Promise<KovaPrincipal | null> {
   const value = await rpc<unknown>("kova_auth_resolve_session", {
     p_token_digest_hex: sessionDigest,

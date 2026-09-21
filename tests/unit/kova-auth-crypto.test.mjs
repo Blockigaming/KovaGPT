@@ -13,6 +13,7 @@ import {
   digestKovaToken,
   encryptKovaSecret,
   generateKovaToken,
+  generateKovaTotpEnrollment,
   hashKovaPassword,
   normalizeKovaEmail,
   signKovaCompatibilityJwt,
@@ -48,6 +49,15 @@ test("TOTP verification accepts the current RFC 6238 code and a narrow clock win
   assert.equal(verifyKovaTotp("000000", secret, 59_000), false);
   assert.equal(verifyKovaTotp("28708", secret, 59_000), false);
   assert.equal(verifyKovaTotp("287082", "not-base32", 59_000), false);
+});
+
+test("TOTP enrollment creates a high-entropy KovaGPT authenticator URI", () => {
+  const enrollment = generateKovaTotpEnrollment("Owner@Example.com");
+  assert.match(enrollment.secret, /^[A-Z2-7]{32}$/u);
+  assert.match(
+    enrollment.uri,
+    /^otpauth:\/\/totp\/KovaGPT%3Aowner%40example\.com\?secret=[A-Z2-7]{32}&issuer=KovaGPT&algorithm=SHA1&digits=6&period=30$/u,
+  );
 });
 
 test("OAuth secret encryption pins its key and authenticates ciphertext", () => {
