@@ -104,11 +104,15 @@ export function buildTemporaryExportSourceProof(
   const entry = lineage?.entries?.find(
     (candidate) => candidate.remoteVersion === TEMP_EXPORT_REMOTE_VERSION,
   );
+  const sourceVersions =
+    entry?.status === "requires_schema_proof"
+      ? entry.candidateSourceVersions
+      : entry?.status === "schema_proven"
+        ? entry.sourceVersions
+        : undefined;
   if (
     lineage?.observedSourceCommit === undefined ||
-    entry?.status !== "requires_schema_proof" ||
-    JSON.stringify(entry.candidateSourceVersions) !==
-      JSON.stringify([TEMP_EXPORT_CANDIDATE_VERSION]) ||
+    JSON.stringify(sourceVersions) !== JSON.stringify([TEMP_EXPORT_CANDIDATE_VERSION]) ||
     manifest?.schemaVersion !== 1 ||
     !Array.isArray(manifest.migrations) ||
     manifest.count !== manifest.migrations.length
