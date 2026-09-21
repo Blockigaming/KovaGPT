@@ -101,10 +101,10 @@ test("successful account deletion also removes IndexedDB image history from Chat
   });
   await page.goto("/");
   await page
-      .getByRole("button", { name: "Settings", exact: true })
-      .filter({ visible: true })
-      .first()
-      .click();
+    .getByRole("button", { name: "Settings", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await seedImageHistory(page);
   await page.getByRole("tab", { name: "Data control", exact: true }).click();
   await page.getByRole("button", { name: "Delete account", exact: true }).click();
