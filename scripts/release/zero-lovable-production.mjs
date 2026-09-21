@@ -32,7 +32,8 @@ const LOVABLE_HOST = /(?:^|\.)lovable\.(?:app|dev)$/iu;
 function normalizeBase(value) {
   const url = new URL(value);
   if (url.protocol !== "https:") throw new Error("production_base_must_use_https");
-  if (LOVABLE_HOST.test(url.hostname)) throw new Error("production_base_must_not_use_lovable");
+  if (LOVABLE_HOST.test(url.hostname))
+    throw new Error("production_base_must_not_use_lovable");
   url.pathname = "/";
   url.search = "";
   url.hash = "";
@@ -57,7 +58,11 @@ function addAssetReference(
   url.hash = "";
   if (url.origin !== origin) return;
   const pathname = url.pathname.toLowerCase();
-  if (allowAny || pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname)) {
+  if (
+    allowAny ||
+    pathname.includes("/assets/") ||
+    /\.(?:mjs|cjs|js|css)$/u.test(pathname)
+  ) {
     assets.add(url.href);
   }
 }
@@ -91,7 +96,9 @@ function discoverAssets(source, parent, origin) {
       rel.has("stylesheet") ||
       rel.has("modulepreload") ||
       (rel.has("preload") && ["script", "style"].includes(as));
-    addAssetReference(assets, reference, parent, origin, { allowAny: executableLink });
+    addAssetReference(assets, reference, parent, origin, {
+      allowAny: executableLink,
+    });
   }
 
   for (const pattern of [JS_DYNAMIC_IMPORT, JS_STATIC_IMPORT, JS_REQUIRE]) {
