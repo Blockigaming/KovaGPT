@@ -91,6 +91,18 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
   assert.equal(digest, "a8aadcc911f244b39d49c6b6028fdbde52a41398cc14d2e6103ae2f65a76818e");
 });
 
+test("the live report pins read-only provenance and preserves scheduled-object blockers", () => {
+  const report = readFileSync(
+    "docs/release-reconciliation/live-catalog-reconciliation-20260920.md",
+    "utf8",
+  );
+  assert.match(report, /REPEATABLE READ.*, `READ ONLY`/u);
+  assert.match(report, /Application\/customer rows queried: none/u);
+  assert.match(report, /e6dbb8b559b88ea1696b7e229b73269fd464d0c90f3306721e7fd19a66a2b140/u);
+  assert.match(report, /383de147866c2d1903cfdb7d204f6f701c36010af9a6c81a7689b621150542ac/u);
+  assert.match(report, /All 19 structural lineage\s+candidates remain `requires_schema_proof`/u);
+});
+
 test("the reviewed evidence distinguishes the historical and current-state baselines", () => {
   const report = readFileSync(
     "docs/release-reconciliation/remote-only-migrations-20260915.md",
