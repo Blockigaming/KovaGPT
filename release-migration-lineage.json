@@ -72,11 +72,7 @@
       "remoteVersion": "20260823151927",
       "remoteName": "day15_chat_feature_hardening",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220701",
-        "20260824090000",
-        "20260904230332"
-      ],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source contract is a later reconciliation of multiple production changes."
     },
     {
@@ -103,11 +99,7 @@
       "remoteVersion": "20260823215132",
       "remoteName": "harden_user_scoped_security_definer_helpers",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260903145843",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260903145843", "20260904230329"],
       "reason": "Function ownership, grants, and definitions need a schema fingerprint comparison."
     },
     {
@@ -135,11 +127,7 @@
       "remoteVersion": "20260823215619",
       "remoteName": "least_privilege_connector_table_grants",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260903145843",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260903145843", "20260904230329"],
       "reason": "Table and function grants must be compared from normalized ACL fingerprints."
     },
     {
@@ -165,44 +153,28 @@
       "remoteVersion": "20260824081812",
       "remoteName": "day15_message_version_branch_integrity",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220701",
-        "20260824090000",
-        "20260904230332"
-      ],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824081926",
       "remoteName": "day15_workspace_read_model_and_context_bounds",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220701",
-        "20260824090000",
-        "20260904230332"
-      ],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824082127",
       "remoteName": "day15_selected_range_version_metadata",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220701",
-        "20260824090000",
-        "20260904230332"
-      ],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
       "remoteVersion": "20260824084005",
       "remoteName": "day15_utf16_selection_offsets",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220701",
-        "20260824090000",
-        "20260904230332"
-      ],
+      "candidateSourceVersions": ["20260823220701", "20260824090000", "20260904230332"],
       "reason": "The source reconciliation is a later aggregate of production schema changes."
     },
     {
