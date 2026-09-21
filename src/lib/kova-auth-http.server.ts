@@ -20,6 +20,7 @@ import {
   signKovaCompatibilityJwt,
   verifyGoogleIdToken,
   verifyKovaPassword,
+  verifyKovaTotp,
 } from "@/lib/kova-auth-crypto.server.mjs";
 import type { KovaPrincipal } from "@/lib/kova-auth-crypto.server.mjs";
 import {
@@ -27,6 +28,7 @@ import {
   consumeOAuthState,
   consumeRecovery,
   consumeVerification,
+  beginMfaLogin,
   createCompatibilityPrincipal,
   createOAuthState,
   createPasswordAccount,
@@ -35,8 +37,10 @@ import {
   deleteCompatibilityPrincipal,
   disableLegacyPassword,
   finishGoogle,
+  finishMfaLogin,
   hasVerifiedLegacyMfa,
   lookupPassword,
+  readMfaLoginChallenge,
   recoveryTarget,
   resolveSession,
   revokeSession,
@@ -57,6 +61,7 @@ const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_STATE_COOKIE = "__Host-kova_oauth_state";
 const DUMMY_PASSWORD_HASH =
   "scrypt-v1$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const MFA_LOGIN_CHALLENGE_SECONDS = 300;
 
 function noStoreHeaders(extra?: HeadersInit): Headers {
   const headers = new Headers(extra);
@@ -316,6 +321,37 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
 
+  const challengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
+  if (challengeToken) {
+    const code = typeof body.code === "string" ? body.code : "";
+    if (!/^\d{6}$/u.test(code)) return jsonError("Enter a valid 6-digit code.", 400);
+    const challengeLimit = await rateLimit(request, "kova_auth_mfa_login", 10, 900);
+    if (challengeLimit) return challengeLimit;
+    try {
+      const challengeDigest = digestKovaToken(challengeToken);
+      const challenge = await readMfaLoginChallenge(challengeDigest);
+      const secret = decryptKovaSecret(challenge.secretEnvelope);
+      if (!verifyKovaTotp(code, secret)) {
+        return jsonError(
+          "That code was not accepted. Check your authenticator and try again.",
+          401,
+        );
+      }
+      const sessionToken = generateKovaToken();
+      const principal = await finishMfaLogin({
+        challengeDigest,
+        sessionDigest: digestKovaToken(sessionToken),
+        sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+      });
+      return sessionResponse(principal, sessionToken);
+    } catch (error) {
+      console.error("[KovaAuth] MFA login failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return jsonError("That verification attempt expired or could not be completed.", 401);
+    }
+  }
+
   let email: string;
   try {
     email = normalizeKovaEmail(typeof body.email === "string" ? body.email : "");
@@ -331,12 +367,25 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
     const passwordValid = credential
       ? await verifyKovaPassword(password, credential.passwordHash)
       : await verifyKovaPassword(password, DUMMY_PASSWORD_HASH);
-    if (!credential || !passwordValid || credential.mfaRequired) {
-      return jsonError(
-        credential?.mfaRequired
-          ? "Two-factor authentication is required. Use account recovery until Kova MFA migration is enabled."
-          : "That email and password could not be verified.",
-        credential?.mfaRequired ? 403 : 401,
+    if (!credential || !passwordValid) {
+      return jsonError("That email and password could not be verified.", 401);
+    }
+    if (credential.mfaRequired) {
+      const nextChallengeToken = generateKovaToken();
+      await beginMfaLogin({
+        accountId: credential.accountId,
+        credentialId: credential.credentialId,
+        credentialRevision: credential.credentialRevision,
+        challengeDigest: digestKovaToken(nextChallengeToken),
+        expiresAt: futureIso(MFA_LOGIN_CHALLENGE_SECONDS),
+      });
+      return json(
+        {
+          mfaRequired: true,
+          challengeToken: nextChallengeToken,
+          expiresIn: MFA_LOGIN_CHALLENGE_SECONDS,
+        },
+        { status: 202 },
       );
     }
     const sessionToken = generateKovaToken();

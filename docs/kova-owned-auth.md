@@ -90,19 +90,21 @@ change production configuration, or authorize deployment.
 The feature branch now includes a staging-gated implementation of the next
 source phase:
 
-- eleven RLS-enabled tables in the non-exposed `kova_private` schema;
+- twelve RLS-enabled tables in the non-exposed `kova_private` schema;
 - service-role-only RPCs for password accounts, verification, recovery,
-  opaque sessions, Google state, and one-time cross-origin handoffs;
+  opaque sessions, TOTP login challenges, Google state, and one-time
+  cross-origin handoffs;
 - scrypt password hashing, SHA-256 token digests, AES-256-GCM OAuth-secret
   encryption, Google ID-token verification, and five-minute ES256 RLS JWTs;
-- same-origin API routes for signup, login, logout, session rotation, email
-  verification, password recovery, and Google OAuth;
+- same-origin API routes for signup, password plus TOTP login, logout, session
+  rotation, email verification, password recovery, and Google OAuth;
 - a dual-mode browser/provider adapter that prefers a Kova cookie but retains
   the legacy session path when no Kova cookie exists.
 
-This is not the final cutover. MFA/passkey adapters, the complete removal of
-`auth.users` compatibility principals, production credential migration, and
-the production switch remain blocked on their later release gates.
+This is not the final cutover. Owned MFA enrollment and recovery-code flows,
+passkey adapters, the complete removal of `auth.users` compatibility
+principals, production credential migration, and the production switch remain
+blocked on their later release gates.
 
 ## Configuration contract
 

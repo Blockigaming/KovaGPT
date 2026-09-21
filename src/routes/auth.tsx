@@ -77,6 +77,8 @@ function AuthPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
   const emailInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
 
@@ -85,6 +87,8 @@ function AuthPage() {
     setEditingEmail(!search.email);
     setEmailTouched(false);
     setPasswordTouched(false);
+    setMfaChallengeToken(null);
+    setMfaCode("");
   }, [search.email]);
 
   useEffect(() => {
@@ -129,7 +133,11 @@ function AuthPage() {
           password,
           ...(isSignUp && fullName.trim() ? { displayName: fullName.trim() } : {}),
         });
-        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: unknown;
+          mfaRequired?: unknown;
+          challengeToken?: unknown;
+        };
         if (!response.ok) {
           toast.error(
             typeof payload.error === "string"
@@ -141,6 +149,11 @@ function AuthPage() {
         if (isSignUp) {
           toast.success("If this address can be registered, check your inbox to continue.");
           void navigate({ to: "/" });
+          return;
+        }
+        if (payload.mfaRequired === true && typeof payload.challengeToken === "string") {
+          setMfaChallengeToken(payload.challengeToken);
+          setMfaCode("");
           return;
         }
         toast.success("Welcome back.");
@@ -183,6 +196,35 @@ function AuthPage() {
         error: err instanceof Error ? err.name : "unknown_error",
       });
       toast.error("Authentication could not be completed. Please try again.");
+    } finally {
+      release();
+    }
+  };
+
+  const submitMfa = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!mfaChallengeToken || !/^\d{6}$/u.test(mfaCode) || !guard()) return;
+    try {
+      const response = await kovaAuthJson("/api/auth/login", {
+        challengeToken: mfaChallengeToken,
+        code: mfaCode,
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+      if (!response.ok) {
+        toast.error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "Two-factor verification could not be completed.",
+        );
+        return;
+      }
+      toast.success("Welcome back.");
+      window.location.replace(getSafePostAuthRedirect());
+    } catch (error) {
+      console.error("[KovaAuth] MFA authentication failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Two-factor verification could not be completed.");
     } finally {
       release();
     }
@@ -234,12 +276,19 @@ function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
-            {magicSent
-              ? "Sign-in link requested"
-              : isSignUp
-                ? "Create your account"
-                : "Enter your password"}
+            {mfaChallengeToken
+              ? "Two-factor verification"
+              : magicSent
+                ? "Sign-in link requested"
+                : isSignUp
+                  ? "Create your account"
+                  : "Enter your password"}
           </h1>
+          {mfaChallengeToken ? (
+            <p className="mt-3 text-[15px] text-muted-foreground">
+              Enter the 6-digit code from your authenticator app to finish signing in.
+            </p>
+          ) : null}
           {magicSent ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
               We asked our email provider to send a sign-in link to {email}. Delivery can take a few
@@ -248,7 +297,44 @@ function AuthPage() {
           ) : null}
         </div>
 
-        {magicSent ? (
+        {mfaChallengeToken ? (
+          <form onSubmit={submitMfa} className="space-y-3">
+            <Label htmlFor="kova-auth-page-mfa" className="sr-only">
+              Authenticator code
+            </Label>
+            <Input
+              id="kova-auth-page-mfa"
+              autoFocus
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              aria-label="Authenticator code"
+              placeholder="123456"
+              value={mfaCode}
+              onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              disabled={loading}
+              className="h-14 rounded-2xl text-center font-mono text-lg tracking-[0.35em]"
+            />
+            <Button
+              type="submit"
+              disabled={loading || mfaCode.length !== 6}
+              className="h-14 w-full rounded-full text-[15px]"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify and sign in"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={loading}
+              className="h-12 w-full rounded-full text-sm text-muted-foreground"
+              onClick={() => {
+                setMfaChallengeToken(null);
+                setMfaCode("");
+              }}
+            >
+              Back to password
+            </Button>
+          </form>
+        ) : magicSent ? (
           <div className="space-y-3">
             <Button
               variant="outline"

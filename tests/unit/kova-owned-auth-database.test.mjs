@@ -17,6 +17,20 @@ const foreignKeyIndexMigration = await readFile(
   ),
   "utf8",
 );
+const mfaLoginMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260921002928_kova_owned_totp_login_challenges.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const mfaLoginIndexMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260921003901_kova_owned_totp_login_indexes.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 async function database() {
   const db = new PGlite();
@@ -50,6 +64,8 @@ async function database() {
   `);
   await db.exec(migration);
   await db.exec(foreignKeyIndexMigration);
+  await db.exec(mfaLoginMigration);
+  await db.exec(mfaLoginIndexMigration);
   return db;
 }
 
@@ -104,6 +120,7 @@ test("migration creates the complete private auth schema with browser roles deni
         "auth_email_verifications",
         "auth_identities",
         "auth_mfa_factors",
+        "auth_mfa_login_challenges",
         "auth_mfa_recovery_codes",
         "auth_oauth_states",
         "auth_password_recoveries",
@@ -156,6 +173,85 @@ test("follow-up migration covers the staging advisor foreign-key findings", asyn
         "auth_mfa_recovery_codes_account_idx",
         "auth_session_handoffs_account_idx",
       ],
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("owned TOTP login challenges are short-lived, attempt-bounded, and create AAL2 sessions", async () => {
+  const db = await database();
+  try {
+    await db.query(`insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3)`, [
+      firstAccount,
+      "owner@example.com",
+      now,
+    ]);
+    await createVerifiedPasswordAccount(db);
+    const credential = await db.query(
+      `select id, revision from kova_private.auth_credentials where account_id = $1`,
+      [firstAccount],
+    );
+    const indexes = await db.query(`
+      select indexname from pg_indexes where schemaname = 'kova_private'
+        and indexname in (
+          'auth_mfa_login_challenges_credential_idx',
+          'auth_mfa_login_challenges_factor_idx'
+        ) order by indexname
+    `);
+    assert.deepEqual(indexes.rows.map(({ indexname }) => indexname), [
+      "auth_mfa_login_challenges_credential_idx",
+      "auth_mfa_login_challenges_factor_idx",
+    ]);
+    const factorId = "30000000-0000-4000-8000-000000000003";
+    await db.query(
+      `insert into kova_private.auth_mfa_factors(
+        id, account_id, factor_type, state, secret_ciphertext, verified_at
+      ) values ($1, $2, 'totp', 'active', convert_to($3, 'utf8'), $4)`,
+      [factorId, firstAccount, "v1.encrypted.secret.envelope", now],
+    );
+    await db.query(`update kova_private.auth_accounts set mfa_required = true where id = $1`, [
+      firstAccount,
+    ]);
+    const challengeExpiry = "2026-09-20T17:05:00Z";
+    const begun = await db.query(
+      `select * from public.kova_auth_begin_mfa_login($1, $2, $3, $4, $5, $6)`,
+      [
+        firstAccount,
+        credential.rows[0].id,
+        credential.rows[0].revision,
+        digest("3"),
+        challengeExpiry,
+        now,
+      ],
+    );
+    assert.deepEqual(begun.rows, [
+      { factor_id: factorId, secret_envelope: "v1.encrypted.secret.envelope" },
+    ]);
+    const readable = await db.query(
+      `select * from public.kova_auth_read_mfa_login_challenge($1, $2)`,
+      [digest("3"), now],
+    );
+    assert.equal(readable.rows[0].account_id, firstAccount);
+    assert.equal(readable.rows[0].secret_envelope, "v1.encrypted.secret.envelope");
+    const finished = await db.query(
+      `select * from public.kova_auth_finish_mfa_login($1, $2, $3, $4)`,
+      [digest("3"), digest("4"), sessionExpiry, now],
+    );
+    assert.equal(finished.rows[0].assurance_level, "aal2");
+    const resolved = await db.query(`select * from public.kova_auth_resolve_session($1, $2)`, [
+      digest("4"),
+      now,
+    ]);
+    assert.equal(resolved.rows[0].assurance_level, "aal2");
+    await assert.rejects(
+      db.query(`select * from public.kova_auth_finish_mfa_login($1, $2, $3, $4)`, [
+        digest("3"),
+        digest("5"),
+        sessionExpiry,
+        now,
+      ]),
+      /kova_auth_invalid_mfa_challenge/u,
     );
   } finally {
     await db.close();

@@ -18,6 +18,7 @@ import {
   signKovaCompatibilityJwt,
   verifyGoogleIdToken,
   verifyKovaPassword,
+  verifyKovaTotp,
 } from "../../src/lib/kova-auth-crypto.server.mjs";
 
 function encodedJson(value) {
@@ -37,6 +38,16 @@ test("opaque tokens, normalized emails, and scrypt passwords fail closed", async
   assert.equal(await verifyKovaPassword("wrong password", passwordHash), false);
   assert.equal(await verifyKovaPassword("correct horse battery staple", `${passwordHash}x`), false);
   await assert.rejects(() => hashKovaPassword("too-short"), /12 or more/u);
+});
+
+test("TOTP verification accepts the current RFC 6238 code and a narrow clock window", () => {
+  const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+  assert.equal(verifyKovaTotp("287082", secret, 59_000), true);
+  assert.equal(verifyKovaTotp("287082", secret, 89_000), true);
+  assert.equal(verifyKovaTotp("287082", secret, 119_000), false);
+  assert.equal(verifyKovaTotp("000000", secret, 59_000), false);
+  assert.equal(verifyKovaTotp("28708", secret, 59_000), false);
+  assert.equal(verifyKovaTotp("287082", "not-base32", 59_000), false);
 });
 
 test("OAuth secret encryption pins its key and authenticates ciphertext", () => {

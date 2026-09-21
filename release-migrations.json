@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 159,
-  "latest": "20260920232443_kova_auth_foreign_key_indexes.sql",
+  "count": 161,
+  "latest": "20260921003901_kova_owned_totp_login_indexes.sql",
   "migrations": [
     {
       "order": 1,
@@ -3420,6 +3420,41 @@
         "auth_mfa_recovery_codes_account_idx",
         "auth_session_handoffs_account_idx",
         "auth_audit_session_idx"
+      ]
+    },
+    {
+      "order": 160,
+      "filename": "20260921002928_kova_owned_totp_login_challenges.sql",
+      "timestamp": "20260921002928",
+      "sha256": "ebf1f75bb7524c566e5adbf118334acd832cd54e1050077cdbaa48c756436682",
+      "tables": ["kova_private"],
+      "functions": [
+        "kova_auth_begin_mfa_login",
+        "kova_auth_read_mfa_login_challenge",
+        "kova_auth_finish_mfa_login"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["auth_mfa_login_challenges_account_idx"]
+    },
+    {
+      "order": 161,
+      "filename": "20260921003901_kova_owned_totp_login_indexes.sql",
+      "timestamp": "20260921003901",
+      "sha256": "141cb0c60b368930072460ee61212d06aa096465c53e4d4f8659e31fa7eb0883",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": [
+        "auth_mfa_login_challenges_credential_idx",
+        "auth_mfa_login_challenges_factor_idx"
       ]
     }
   ]

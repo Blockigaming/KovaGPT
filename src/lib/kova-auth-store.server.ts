@@ -20,6 +20,14 @@ type CandidateResult = {
   candidateUsed: boolean;
 };
 
+type MfaChallenge = {
+  accountId: string;
+  credentialId: string;
+  credentialRevision: number;
+  factorId: string;
+  secretEnvelope: string;
+};
+
 type SupabaseRpcError = { code?: string; message?: string };
 
 export class KovaAuthStoreError extends Error {
@@ -191,6 +199,68 @@ export async function createPasswordSession(input: {
     p_expires_at: input.sessionExpiresAt,
   });
   return principalFromRow(firstRow(value, "kova_auth_create_session"));
+}
+
+function mfaChallengeFromRow(row: Record<string, unknown>): MfaChallenge {
+  if (
+    typeof row.account_id !== "string" ||
+    typeof row.credential_id !== "string" ||
+    typeof row.credential_revision !== "number" ||
+    typeof row.factor_id !== "string" ||
+    typeof row.secret_envelope !== "string"
+  ) {
+    throw new KovaAuthStoreError("invalid_mfa_challenge_row");
+  }
+  return {
+    accountId: row.account_id,
+    credentialId: row.credential_id,
+    credentialRevision: row.credential_revision,
+    factorId: row.factor_id,
+    secretEnvelope: row.secret_envelope,
+  };
+}
+
+export async function beginMfaLogin(input: {
+  accountId: string;
+  credentialId: string;
+  credentialRevision: number;
+  challengeDigest: string;
+  expiresAt: string;
+}): Promise<Pick<MfaChallenge, "factorId" | "secretEnvelope">> {
+  const value = await rpc<unknown>("kova_auth_begin_mfa_login", {
+    p_account_id: input.accountId,
+    p_credential_id: input.credentialId,
+    p_credential_revision: input.credentialRevision,
+    p_challenge_digest_hex: input.challengeDigest,
+    p_expires_at: input.expiresAt,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_begin_mfa_login");
+  if (typeof row.factor_id !== "string" || typeof row.secret_envelope !== "string") {
+    throw new KovaAuthStoreError("kova_auth_begin_mfa_login");
+  }
+  return { factorId: row.factor_id, secretEnvelope: row.secret_envelope };
+}
+
+export async function readMfaLoginChallenge(challengeDigest: string): Promise<MfaChallenge> {
+  const value = await rpc<unknown>("kova_auth_read_mfa_login_challenge", {
+    p_challenge_digest_hex: challengeDigest,
+  });
+  return mfaChallengeFromRow(
+    firstRow<Record<string, unknown>>(value, "kova_auth_read_mfa_login_challenge"),
+  );
+}
+
+export async function finishMfaLogin(input: {
+  challengeDigest: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_finish_mfa_login", {
+    p_challenge_digest_hex: input.challengeDigest,
+    p_token_digest_hex: input.sessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_finish_mfa_login"));
 }
 
 export async function resolveSession(sessionDigest: string): Promise<KovaPrincipal | null> {

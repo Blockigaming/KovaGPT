@@ -2,6 +2,7 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   createPrivateKey,
   createPublicKey,
   randomBytes,
@@ -22,6 +23,7 @@ const SCRYPT_P = 1;
 const SCRYPT_BYTES = 32;
 const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
 const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 function assertWellFormed(value, label) {
   if (typeof value !== "string" || !value.isWellFormed()) {
@@ -85,6 +87,51 @@ export function digestMatches(value, expectedHex) {
     return false;
   }
   return timingSafeEqual(actual, Buffer.from(expectedHex, "hex"));
+}
+
+function decodeBase32(value) {
+  if (typeof value !== "string") throw new TypeError("Invalid TOTP secret");
+  const normalized = value.trim().replaceAll(" ", "").replace(/=+$/u, "").toUpperCase();
+  if (normalized.length < 16 || !/^[A-Z2-7]+$/u.test(normalized)) {
+    throw new TypeError("Invalid TOTP secret");
+  }
+  let bits = 0;
+  let accumulator = 0;
+  const bytes = [];
+  for (const character of normalized) {
+    accumulator = (accumulator << 5) | BASE32_ALPHABET.indexOf(character);
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((accumulator >>> bits) & 0xff);
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function totpAt(secret, counter) {
+  const counterBytes = Buffer.alloc(8);
+  counterBytes.writeBigUInt64BE(BigInt(counter));
+  const digest = createHmac("sha1", secret).update(counterBytes).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  const binary = digest.readUInt32BE(offset) & 0x7fffffff;
+  return String(binary % 1_000_000).padStart(6, "0");
+}
+
+export function verifyKovaTotp(code, base32Secret, now = Date.now()) {
+  if (typeof code !== "string" || !/^\d{6}$/u.test(code) || !Number.isFinite(now)) return false;
+  try {
+    const secret = decodeBase32(base32Secret);
+    const counter = Math.floor(now / 30_000);
+    const submitted = Buffer.from(code, "ascii");
+    for (let offset = -1; offset <= 1; offset += 1) {
+      const expected = Buffer.from(totpAt(secret, counter + offset), "ascii");
+      if (timingSafeEqual(submitted, expected)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function validatePassword(password) {
