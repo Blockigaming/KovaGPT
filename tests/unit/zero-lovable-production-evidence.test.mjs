@@ -375,6 +375,64 @@ test("production evidence bounds individual and aggregate response bytes", async
   );
 });
 
+test("production evidence rejects a redirected production root", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.includes("lovable") && !url.endsWith("/"))
+        return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return responseAt(
+          "https://lovable.example/",
+          `<meta name="kova-build" content="${sha}"><script src="/runtime.js"></script>`,
+        );
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.pass, false);
+  assert.ok(evidence.failures.includes("root_redirected"));
+});
+
+test("production evidence discovers root-relative JavaScript outside assets", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script><script src="/legacy.js"></script>`,
+        );
+      if (url.endsWith("/assets/app.js"))
+        return javascriptResponse(`const buildSha = "${sha}";`);
+      if (url.endsWith("/legacy.js"))
+        return javascriptResponse("window.LOVABLE_RUNTIME = true;");
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.pass, false);
+  assert.ok(
+    evidence.failures.includes(
+      "lovable_asset_content:https://kovagpt.example/legacy.js",
+    ),
+  );
+});
+
 test("production evidence rejects mutable or non-HTTPS targets", async () => {
   await assert.rejects(
     collectZeroLovableProductionEvidence({ baseUrl: "http://kovagpt.example", expectedSha: sha }),
