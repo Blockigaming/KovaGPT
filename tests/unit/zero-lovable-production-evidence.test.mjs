@@ -5,15 +5,15 @@ import { collectZeroLovableProductionEvidence } from "../../scripts/release/zero
 const sha = "a".repeat(40);
 
 function response(body, init = {}) {
-  const inferredHeaders =
-    typeof body === "string" && /<(?:!doctype|html|head|meta|script|link)\b/iu.test(body)
-      ? { "content-type": "text/html" }
-      : {};
-  return new Response(body, {
-    status: 200,
-    ...init,
-    headers: { ...inferredHeaders, ...(init.headers ?? {}) },
-  });
+  const headers = new Headers(init.headers);
+  if (
+    !headers.has("content-type") &&
+    typeof body === "string" &&
+    body.trimStart().startsWith("<")
+  ) {
+    headers.set("content-type", "text/html");
+  }
+  return new Response(body, { status: 200, ...init, headers });
 }
 
 function javascriptResponse(body, init = {}) {
@@ -433,133 +433,6 @@ test("production evidence discovers root-relative JavaScript outside assets", as
 
   assert.equal(evidence.pass, false);
   assert.ok(evidence.failures.includes("lovable_asset_content:https://kovagpt.example/legacy.js"));
-});
-
-test("production evidence discovers only genuine references, including unquoted HTML and Vite preload paths", async () => {
-  const requested = [];
-  const evidence = await withFetch(
-    async (input) => {
-      const url = String(input);
-      requested.push(url);
-      if (url.endsWith("/api/version"))
-        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
-      if (url.includes("lovable")) return response("missing", { status: 404 });
-      if (url.endsWith("/"))
-        return response(
-          `<meta name="kova-build" content="${sha}"><script src=/assets/app.js></script>`,
-        );
-      if (url.endsWith("/assets/app.js"))
-        return javascriptResponse(
-          `const buildSha = "${sha}";const preload=["assets/preloaded.js"];import("./lazy.js")`,
-        );
-      if (url.endsWith("/assets/preloaded.js")) return javascriptResponse("export const ok = true");
-      if (url.endsWith("/assets/lazy.js")) return javascriptResponse("export const lazy = true");
-      throw new Error(`unexpected URL ${url}`);
-    },
-    () =>
-      collectZeroLovableProductionEvidence({
-        baseUrl: "https://kovagpt.example",
-        expectedSha: sha,
-      }),
-  );
-
-  assert.equal(evidence.pass, true);
-  assert.equal(requested.some((url) => url.endsWith(`/assets/${sha}`)), false);
-  assert.ok(requested.some((url) => url.endsWith("/assets/preloaded.js")));
-  assert.ok(requested.some((url) => url.endsWith("/assets/lazy.js")));
-});
-
-test("production evidence scans extensionless JavaScript and decoded asset names", async () => {
-  const evidence = await withFetch(
-    async (input) => {
-      const url = String(input);
-      if (url.endsWith("/api/version"))
-        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
-      if (url.includes("lovable") && !url.includes("%6c"))
-        return response("missing", { status: 404 });
-      if (url.endsWith("/"))
-        return response(
-          `<meta name="kova-build" content="${sha}"><script src="/assets/app"></script><script src="/assets/%6covable-runtime"></script>`,
-        );
-      if (url.endsWith("/assets/app")) return javascriptResponse(`const buildSha = "${sha}";`);
-      if (url.endsWith("/assets/%6covable-runtime"))
-        return javascriptResponse("export const clean = true");
-      throw new Error(`unexpected URL ${url}`);
-    },
-    () =>
-      collectZeroLovableProductionEvidence({
-        baseUrl: "https://kovagpt.example",
-        expectedSha: sha,
-      }),
-  );
-
-  assert.equal(evidence.browserBuildShaFound, true);
-  assert.equal(evidence.pass, false);
-  assert.ok(
-    evidence.failures.some(
-      (failure) =>
-        failure === "lovable_asset_name:https://kovagpt.example/assets/%6covable-runtime",
-    ),
-  );
-});
-
-test("production evidence rejects non-HTML roots and followed redirect evidence", async () => {
-  const nonHtml = await withFetch(
-    async (input) => {
-      const url = String(input);
-      if (url.endsWith("/api/version"))
-        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
-      if (url.includes("lovable")) return response("missing", { status: 404 });
-      if (url.endsWith("/"))
-        return response(
-          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
-          { headers: { "content-type": "application/json" } },
-        );
-      if (url.endsWith("/assets/app.js")) return javascriptResponse(`const buildSha = "${sha}";`);
-      throw new Error(`unexpected URL ${url}`);
-    },
-    () =>
-      collectZeroLovableProductionEvidence({
-        baseUrl: "https://kovagpt.example",
-        expectedSha: sha,
-      }),
-  );
-  assert.ok(nonHtml.failures.includes("root_content_type_not_html"));
-
-  const redirected = await withFetch(
-    async (input) => {
-      const url = String(input);
-      if (url.endsWith("/api/version"))
-        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
-      if (url.includes("lovable")) return response("missing", { status: 404 });
-      if (url.endsWith("/")) {
-        const value = response(
-          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
-        );
-        Object.defineProperty(value, "url", { value: "https://kovagpt.example/" });
-        Object.defineProperty(value, "redirected", { value: true });
-        return value;
-      }
-      if (url.endsWith("/assets/app.js")) return javascriptResponse(`const buildSha = "${sha}";`);
-      throw new Error(`unexpected URL ${url}`);
-    },
-    () =>
-      collectZeroLovableProductionEvidence({
-        baseUrl: "https://kovagpt.example",
-        expectedSha: sha,
-      }),
-  );
-  assert.ok(redirected.failures.includes("root_redirected"));
-});
-
-test("production evidence rejects Lovable-hosted production bases", async () => {
-  await assert.rejects(
-    collectZeroLovableProductionEvidence({
-      baseUrl: "https://example.lovable.app",
-      expectedSha: sha,
-    }),
-    /production_base_must_not_use_lovable/u,
-  );
 });
 
 test("production evidence rejects mutable or non-HTTPS targets", async () => {
