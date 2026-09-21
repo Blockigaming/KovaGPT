@@ -54,6 +54,30 @@ jobs:
       - name: Install lockfile dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Preserve exact-head source for continued isolated validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          evidence="$RUNNER_TEMP/kova-auth-source"
+          mkdir -p "$evidence"
+          git bundle create "$evidence/source.bundle" HEAD
+          git bundle verify "$evidence/source.bundle"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree.txt"
+          cd "$evidence"
+          sha256sum source.bundle commit.txt tree.txt > SHA256SUMS
+
+      - name: Upload exact-head source without dependencies or credentials
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: kova-auth-source-${{ github.sha }}
+          path: ${{ runner.temp }}/kova-auth-source/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
       # Opt-in export repairs a missing local checkout; it is not a release or
       # an application deployment. Only repository objects, dependency files,
       # and the Node executable are archived, never environment/config files.
