@@ -32,6 +32,7 @@ import {
   activateTotp,
   beginMfaLogin,
   beginTotpEnrollment,
+  changePassword,
   createCompatibilityPrincipal,
   createOAuthState,
   createPasswordAccount,
@@ -517,6 +518,8 @@ export async function handleKovaMfaFactors(request: Request): Promise<Response> 
 export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_enroll", 10, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -552,6 +555,8 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
 export async function handleKovaMfaVerify(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_verify", 10, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -560,21 +565,44 @@ export async function handleKovaMfaVerify(request: Request): Promise<Response> {
   if (body instanceof Response) return body;
   const factorId = typeof body.factorId === "string" ? body.factorId : "";
   const code = typeof body.code === "string" ? body.code : "";
-  if (!/^[0-9a-f-]{36}$/iu.test(factorId) || !/^\d{6}$/u.test(code)) {
+  if (
+    !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(factorId) ||
+    !/^\d{6}$/u.test(code) ||
+    Object.keys(body).length !== 2
+  ) {
     return jsonError("Invalid verification request.", 400);
   }
   try {
+    const current = await resolveSession(sessionDigest);
+    if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    const accountLimit = await rateLimit(
+      request,
+      "kova_auth_mfa_verify_account",
+      10,
+      900,
+      `account:${current.accountId}`,
+    );
+    if (accountLimit) return accountLimit;
     const envelope = await readTotpEnrollment({ sessionDigest, factorId });
     if (!verifyKovaTotp(code, decryptKovaSecret(envelope))) {
       return jsonError("That code was not accepted.", 401);
     }
     const recoveryCodes = Array.from({ length: 8 }, () => generateKovaToken());
-    await activateTotp({
+    const nextToken = generateKovaToken();
+    const principal = await activateTotp({
       sessionDigest,
       factorId,
       recoveryDigests: recoveryCodes.map(digestKovaToken),
+      nextSessionDigest: digestKovaToken(nextToken),
+      sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
     });
-    return json({ enabled: true, recoveryCodes });
+    if (principal.accountId !== current.accountId || principal.sessionId === current.sessionId) {
+      throw new KovaAuthStoreError("mfa_activation_account_mismatch");
+    }
+    return json(
+      { enabled: true, recoveryCodes, session: publicPrincipal(principal) },
+      { headers: sessionResponse(principal, nextToken).headers },
+    );
   } catch (error) {
     console.error("[KovaAuth] MFA verification failed", {
       error: error instanceof Error ? error.name : "unknown_error",
@@ -586,17 +614,144 @@ export async function handleKovaMfaVerify(request: Request): Promise<Response> {
 export async function handleKovaMfaRemove(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  const limited = await rateLimit(request, "kova_auth_mfa_remove", 5, 900);
+  if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
   const factorId = typeof body.factorId === "string" ? body.factorId : "";
-  if (!/^[0-9a-f-]{36}$/iu.test(factorId)) return jsonError("Invalid factor.", 400);
+  if (
+    !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(factorId) ||
+    Object.keys(body).length !== 1
+  ) {
+    return jsonError("Invalid factor.", 400);
+  }
   try {
-    await removeTotpFactor({ sessionDigest, factorId });
-    return json({ removed: true });
+    const current = await resolveSession(sessionDigest);
+    if (!current?.emailVerified || current.assuranceLevel !== "aal2") {
+      return jsonError("Two-factor authentication is required.", 403);
+    }
+    const nextToken = generateKovaToken();
+    const principal = await removeTotpFactor({
+      sessionDigest,
+      factorId,
+      nextSessionDigest: digestKovaToken(nextToken),
+      sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+    });
+    if (
+      principal.accountId !== current.accountId ||
+      !principal.emailVerified ||
+      principal.sessionId === current.sessionId
+    ) {
+      throw new KovaAuthStoreError("mfa_removal_account_mismatch");
+    }
+    return json(
+      { removed: true, session: publicPrincipal(principal) },
+      { headers: sessionResponse(principal, nextToken).headers },
+    );
   } catch {
     return jsonError("The authenticator could not be removed.", 403);
+  }
+}
+
+export async function handleKovaPasswordStatus(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (request.method !== "GET") return jsonError("Method not allowed.", 405);
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  try {
+    const principal = await resolveSession(sessionDigest);
+    if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    const credential = await lookupPassword(principal.email);
+    if (credential && credential.accountId !== principal.accountId) {
+      throw new KovaAuthStoreError("password_status_account_mismatch");
+    }
+    return json({ hasPassword: Boolean(credential) });
+  } catch {
+    return jsonError("Password settings could not be loaded.", 503);
+  }
+}
+
+export async function handleKovaPasswordChange(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  const limited = await rateLimit(request, "kova_auth_password_change", 5, 900);
+  if (limited) return limited;
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  if (
+    typeof body.currentPassword !== "string" ||
+    typeof body.newPassword !== "string" ||
+    Object.keys(body).length !== 2
+  )
+    return jsonError("Invalid request.", 400);
+  try {
+    const current = await resolveSession(sessionDigest);
+    if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    const accountLimit = await rateLimit(
+      request,
+      "kova_auth_password_change_account",
+      5,
+      900,
+      `account:${current.accountId}`,
+    );
+    if (accountLimit) return accountLimit;
+    const credential = await lookupPassword(current.email);
+    const validPassword = await verifyKovaPassword(
+      body.currentPassword,
+      credential?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
+    if (
+      !credential ||
+      credential.accountId !== current.accountId ||
+      !validPassword ||
+      (credential.mfaRequired && current.assuranceLevel !== "aal2")
+    ) {
+      return jsonError("Your current credentials could not be verified.", 401);
+    }
+    if (body.newPassword === body.currentPassword) {
+      return jsonError("Choose a different password.", 400);
+    }
+    let passwordHash: string;
+    try {
+      passwordHash = await hashKovaPassword(body.newPassword);
+    } catch {
+      return jsonError("Use a password with at least 12 characters and at most 1,024 bytes.", 400);
+    }
+    const nextToken = generateKovaToken();
+    const principal = await changePassword({
+      sessionDigest,
+      credentialId: credential.credentialId,
+      credentialRevision: credential.credentialRevision,
+      passwordHash,
+      nextSessionDigest: digestKovaToken(nextToken),
+      sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+    });
+    if (
+      principal.accountId !== current.accountId ||
+      !principal.emailVerified ||
+      principal.sessionId === current.sessionId ||
+      principal.assuranceLevel !== current.assuranceLevel
+    ) {
+      throw new KovaAuthStoreError("password_change_principal_mismatch");
+    }
+    return json(
+      { changed: true, session: publicPrincipal(principal) },
+      { headers: sessionResponse(principal, nextToken).headers },
+    );
+  } catch (error) {
+    return jsonError(
+      "Password could not be changed. Sign in again and retry.",
+      error instanceof KovaAuthStoreError && error.databaseCode === "P0001" ? 401 : 503,
+    );
   }
 }
 

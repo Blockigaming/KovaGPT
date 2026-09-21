@@ -314,14 +314,22 @@ export async function activateTotp(input: {
   sessionDigest: string;
   factorId: string;
   recoveryDigests: string[];
-}): Promise<boolean> {
-  return Boolean(
-    await rpc<boolean>("kova_auth_activate_totp", {
-      p_session_digest_hex: input.sessionDigest,
-      p_factor_id: input.factorId,
-      p_recovery_digest_hexes: input.recoveryDigests,
-    }),
-  );
+  nextSessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const operation = "kova_auth_activate_totp_with_session";
+  const value = await rpc<unknown>(operation, {
+    p_session_digest_hex: input.sessionDigest,
+    p_factor_id: input.factorId,
+    p_recovery_digest_hexes: input.recoveryDigests,
+    p_next_session_digest_hex: input.nextSessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  const principal = principalFromRow(firstRow(value, operation));
+  if (!principal.emailVerified || principal.assuranceLevel !== "aal2") {
+    throw new KovaAuthStoreError(operation);
+  }
+  return principal;
 }
 
 export async function listTotpFactors(sessionDigest: string): Promise<
@@ -357,13 +365,37 @@ export async function listTotpFactors(sessionDigest: string): Promise<
 export async function removeTotpFactor(input: {
   sessionDigest: string;
   factorId: string;
-}): Promise<boolean> {
-  return Boolean(
-    await rpc<boolean>("kova_auth_remove_totp_factor", {
-      p_session_digest_hex: input.sessionDigest,
-      p_factor_id: input.factorId,
-    }),
-  );
+  nextSessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const operation = "kova_auth_remove_totp_with_session";
+  const value = await rpc<unknown>(operation, {
+    p_session_digest_hex: input.sessionDigest,
+    p_factor_id: input.factorId,
+    p_next_session_digest_hex: input.nextSessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, operation));
+}
+
+export async function changePassword(input: {
+  sessionDigest: string;
+  credentialId: string;
+  credentialRevision: number;
+  passwordHash: string;
+  nextSessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const operation = "kova_auth_change_password";
+  const value = await rpc<unknown>(operation, {
+    p_session_digest_hex: input.sessionDigest,
+    p_credential_id: input.credentialId,
+    p_credential_revision: input.credentialRevision,
+    p_password_hash: input.passwordHash,
+    p_next_session_digest_hex: input.nextSessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, operation));
 }
 
 export async function regenerateMfaRecoveryCodes(input: {

@@ -8,6 +8,7 @@ on:
       - src/lib/kova-auth*
       - src/lib/kova-session*
       - src/components/MfaPanel.tsx
+      - src/components/KovaPasswordPanel.tsx
       - src/routes/auth.tsx
       - src/routes/api/auth/**
       - supabase/migrations/**
@@ -15,6 +16,7 @@ on:
       - tests/unit/kova-owned-auth*
       - tests/unit/kova-session*
       - tests/integration/auth-account-security-source.test.mjs
+      - tests/helpers/kova-auth*.mjs
       - package.json
       - package-lock.json
 

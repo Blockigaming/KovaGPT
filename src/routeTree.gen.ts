@@ -121,6 +121,7 @@ import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
 import { Route as ApiAuthRefreshRouteImport } from './routes/api/auth/refresh'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
@@ -773,6 +774,11 @@ const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
   path: '/api/auth/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRefreshRoute = ApiAuthRefreshRouteImport.update({
   id: '/api/auth/refresh',
   path: '/api/auth/refresh',
@@ -1323,6 +1329,7 @@ export interface FileRoutesByFullPath {
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
@@ -1520,6 +1527,7 @@ export interface FileRoutesByTo {
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
@@ -1718,6 +1726,7 @@ export interface FileRoutesById {
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
@@ -1917,6 +1926,7 @@ export interface FileRouteTypes {
     | '/api/agents/teams'
     | '/api/auth/login'
     | '/api/auth/logout'
+    | '/api/auth/password'
     | '/api/auth/refresh'
     | '/api/auth/session'
     | '/api/auth/signup'
@@ -2114,6 +2124,7 @@ export interface FileRouteTypes {
     | '/api/agents/teams'
     | '/api/auth/login'
     | '/api/auth/logout'
+    | '/api/auth/password'
     | '/api/auth/refresh'
     | '/api/auth/session'
     | '/api/auth/signup'
@@ -2311,6 +2322,7 @@ export interface FileRouteTypes {
     | '/api/agents/teams'
     | '/api/auth/login'
     | '/api/auth/logout'
+    | '/api/auth/password'
     | '/api/auth/refresh'
     | '/api/auth/session'
     | '/api/auth/signup'
@@ -2506,6 +2518,7 @@ export interface RootRouteChildren {
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
   ApiAuthRefreshRoute: typeof ApiAuthRefreshRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
@@ -3371,6 +3384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthLogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/refresh': {
       id: '/api/auth/refresh'
       path: '/api/auth/refresh'
@@ -4161,6 +4181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
   ApiAuthRefreshRoute: ApiAuthRefreshRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,

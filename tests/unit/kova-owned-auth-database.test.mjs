@@ -99,6 +99,15 @@ async function database({ legacyRecoveryAbi = false } = {}) {
     `);
   }
   await db.exec(mfaRecoveryControlsMigration);
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../supabase/migrations/20260921171133_kova_owned_auth_session_mutations.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   return db;
 }
 

@@ -83,6 +83,7 @@ function fixture(options = {}) {
     "@/components/ui/button": { Button: "button" },
     "@/components/ui/input": { Input: "input" },
     "@/components/PasskeyPanel": { PasskeyPanel: "legacy-passkeys" },
+    "@/components/KovaPasswordPanel": { KovaPasswordPanel: "owned-password" },
     "@/lib/kova-auth-browser": {
       browserKovaAuthEnabled: () => options.owned !== false,
       clearKovaAuthCache: () => calls.push(["clear-cache"]),

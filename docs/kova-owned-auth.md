@@ -99,7 +99,7 @@ source phase:
 - same-origin API routes for signup, password plus TOTP or one-time recovery-code
   login, TOTP enrollment and removal, logout, session rotation, email verification,
   password recovery, recovery-code regeneration, other-device session revocation,
-  and Google OAuth;
+  signed-in password changes, and Google OAuth;
 - a dual-mode browser/provider adapter that prefers a Kova cookie but retains
   the legacy session path when no Kova cookie exists.
 
@@ -155,6 +155,34 @@ handler/store path with synthetic data; component tests drive the actual UI
 callbacks. These are not evidence of a deployed staging or production cutover.
 
 ## Configuration contract
+
+### Owned password and MFA session mutations
+
+`GET /api/auth/password` returns only whether the current verified Kova account
+has an owned password. `POST /api/auth/password` accepts exactly the current
+password and the new password. It rechecks the current password using scrypt,
+binds the resulting credential ID/revision to the cookie owner, enforces MFA
+where required, and applies client/account throttling and CSRF protection.
+One transaction replaces the hash, retires pending recovery/MFA challenges,
+disables unfinished authenticator enrollment, advances the account epoch,
+revokes prior sessions, and issues a replacement cookie for this device.
+No password, hash, recovery code, or session token is written to audit metadata.
+
+TOTP activation and removal now use the `*_with_session` RPCs, which atomically
+rotate the current session and retire other sessions. The previous non-rotating
+RPCs remain in migration history but are not executable by `service_role` or
+browser roles. Pending activation expires after ten minutes; invalid code sets,
+wrong-account factors, stale sessions, and replacement-token collisions roll
+back without changing factor or account state. Removing the last factor returns
+an AAL1 session only when no other owned or legacy MFA requirement remains.
+
+TOTP login consumption now rechecks the active factor and credential revision
+under account-first locks. A factor removed between HTTP verification and RPC
+completion cannot mint an AAL2 session. Ordinary cookie refresh uses the same
+account-first session lock as security mutations. These source/database checks
+do not constitute a deployed rehearsal or retire hosted authentication.
+
+### Environment and provider configuration
 
 The server and compiled browser must use matching `KOVA_AUTH_MODE` and
 `VITE_KOVA_AUTH_MODE` values. The default is `supabase`; `dual` and `kova` are
