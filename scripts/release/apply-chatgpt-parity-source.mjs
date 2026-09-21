@@ -151,7 +151,8 @@ export function applyChatGptParitySource({ check = checkOnly } = {}) {
   }
 
   const chatInputSource =
-    files.get("src/components/ChatInput.tsx") ?? readFileSync("src/components/ChatInput.tsx", "utf8");
+    files.get("src/components/ChatInput.tsx") ??
+    readFileSync("src/components/ChatInput.tsx", "utf8");
   if (!hasRequiredComposerTools(chatInputSource)) {
     throw new Error("chatgpt_parity_source_drift:src/components/ChatInput.tsx:composer_tools");
   }

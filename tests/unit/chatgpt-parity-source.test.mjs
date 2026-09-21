@@ -19,7 +19,10 @@ test("composer-tool parity preserves user-visible label whitespace", () => {
 test("parity script direct execution handles URL-escaped filesystem paths", () => {
   const path = "/tmp/Kova GPT/scripts/release/apply-chatgpt-parity-source.mjs";
   assert.equal(
-    isDirectExecution("file:///tmp/Kova%20GPT/scripts/release/apply-chatgpt-parity-source.mjs", path),
+    isDirectExecution(
+      "file:///tmp/Kova%20GPT/scripts/release/apply-chatgpt-parity-source.mjs",
+      path,
+    ),
     true,
   );
   assert.equal(
