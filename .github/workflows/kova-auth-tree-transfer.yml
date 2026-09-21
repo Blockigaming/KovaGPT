@@ -1,0 +1,205 @@
+name: Kova Auth Tree Transfer
+
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/kova-auth-tree-transfer.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout pinned source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 8d97a9e88262a93cfab47d7b5cd3b16a978c0e08
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Transfer verified passkey blobs without moving refs
+        env:
+          GIT_OBJECT_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          """Transfer hash-pinned source blobs only; never move refs or deploy."""
+          import base64
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import urllib.request
+          import zlib
+
+          REPOSITORY = "Blockigaming/KovaGPT"
+          BRANCH = "refs/heads/codex/kova-owned-auth-foundation"
+          BASE = "8d97a9e88262a93cfab47d7b5cd3b16a978c0e08"
+          BASE_TREE = "3f0c6c21180462f0b8eea005a0167ddccfffbf13"
+          TREE = "2edf8a11e8ac9e48a6b46c54eb958a645fa9b29d"
+          PATCH_SHA256 = "2f6a136433ad772f2b0b163d18d9851b22c594bf6f0c5982d6660e1cbf85f8f7"
+          PARTS = [
+              [
+                  "089ba9b6a8e16fee4921e3ae0d29187090ca35c1",
+                  6000
+              ],
+              [
+                  "fa9eea0c4304c0b54fba5fa651e8115a7bd0d3a5",
+                  6000
+              ],
+              [
+                  "898ca9a9eb02ac676c16de4d02a166177303c94b",
+                  3000
+              ],
+              [
+                  "bfb15225278f7026543c138ed54d6e17b82b7b82",
+                  3000
+              ],
+              [
+                  "665fdcdfd5364b3492b9e41643e06cfb081d7c74",
+                  6000
+              ],
+              [
+                  "1c8470f76bd47bb1f8e18daf900dfdbe8b9b4027",
+                  6000
+              ],
+              [
+                  "c7d48e99930d249269046fb25b7492c6b9a82a66",
+                  6000
+              ],
+              [
+                  "afbb29e7c4050184711eb8cf294b5f67533c892c",
+                  6000
+              ],
+              [
+                  "280f1b4ec41225c3691c814a4df35f09ecf3afce",
+                  2562
+              ]
+          ]
+          FILES = {
+              ".github/workflows/kova-owned-auth-source.yml": "ca6dc8aa9e78498a7b8b18285bf3812135805f3f",
+              "database-contract.json": "16a411dc6680b4e8409c2e9fdd98584229977133",
+              "docs/kova-owned-auth.md": "a123b23b99473df434cc241f76d4408ad2a549f5",
+              "package-lock.json": "f1d52b6a125a193f3675272c667b47b3eab0a14b",
+              "package.json": "fb1e539619874895eca049a9fb57f79000e3eb67",
+              "release-migrations.json": "dcfa07e7b609fea848f7c8f5bcd00cc33de43529",
+              "src/components/KovaPasskeyPanel.tsx": "8f6ef3ef443091fbd49f7b959a69039a6d1bc1f0",
+              "src/components/MfaPanel.tsx": "cc255670cd47be9fb256ea7546c3a9cb66c808e8",
+              "src/components/auth/AuthDialog.tsx": "ae07dcede3b0169fbf182d754f3f35bf05115f26",
+              "src/lib/kova-auth-http.server.ts": "122b301f2707f86ad21437209a2f54abf43b300f",
+              "src/lib/kova-auth-passkey-browser.ts": "377feaaaf78f8df40246311031f91e9445d1464b",
+              "src/lib/kova-auth-passkey-crypto.server.d.mts": "61fb02406463e1dafb075bf560bc43857d95f6b5",
+              "src/lib/kova-auth-passkey-crypto.server.mjs": "669371769148b87e8f63e315d84762f1e369d76f",
+              "src/lib/kova-auth-passkey-http.server.ts": "21fac797b0231ddace674dffce1fc350d3549497",
+              "src/lib/kova-auth-passkey-store.server.ts": "3039fe549be0da951e4131333528439274bacd83",
+              "src/lib/kova-auth-store.server.ts": "123ef4e50842eca19bb56126353e195867642c3e",
+              "src/routeTree.gen.ts": "a76ee71b7ae500046671fdf64cf1c77bf86116a0",
+              "src/routes/api/auth/passkeys/index.ts": "a44660cdf43c642b31d87d6c7a12629ddd4bb673",
+              "src/routes/api/auth/passkeys/login/options.ts": "90b07a23f9f9252628dbb50d0576fcf50b44583a",
+              "src/routes/api/auth/passkeys/login/verify.ts": "1de84fc894bf8de4e95349750045be28578022d7",
+              "src/routes/api/auth/passkeys/register/options.ts": "352a9afb93274b7804c478c0df8a7b1c9fd73b99",
+              "src/routes/api/auth/passkeys/register/verify.ts": "c202355fb5bcfa3e1ce4c876d81dfeadb0a9b107",
+              "src/routes/api/auth/passkeys/remove.ts": "3c31bd60965c74c80e14cb35db2124843993e7cc",
+              "src/routes/api/auth/passkeys/rename.ts": "0911507bbc965ba19c9adc0b007496d109d728eb",
+              "src/routes/auth.tsx": "938b47dd7575941d0dce9afa39f2e0afe986e6d2",
+              "supabase/migrations/20260921180400_kova_owned_passkeys.sql": "9be5797eb7c286648900542789b2da93e963138d",
+              "tests/helpers/kova-auth-http.mjs": "4eff8ed3da58f3dbe67212202aea3e1f2d41f1cd",
+              "tests/helpers/kova-passkey-database.mjs": "23925b854390b9baf9ac10a9879b4d53954ee20d",
+              "tests/helpers/kova-passkey-fixture.mjs": "22e1a8ab3ca3bb32be8419f620b2b612a8fdc3d3",
+              "tests/helpers/kova-passkey-http.mjs": "ed6fa5d6d29f580894bc0c03522b386c8ddb5b40",
+              "tests/helpers/kova-react-fixture.mjs": "05f208289f4ec0600c285c3d76b94eff44e41716",
+              "tests/unit/kova-auth-mfa-panel-runtime.test.mjs": "541a755f00c7aae1bade8ee8b3cda9b540eea70e",
+              "tests/unit/kova-auth-passkey-browser.test.mjs": "8025e09eea90bb52355eec79d9f39c0dac2f9473",
+              "tests/unit/kova-auth-passkey-crypto.test.mjs": "e92a2c6d23024c32ac5f367818c30eb6d570c275",
+              "tests/unit/kova-auth-passkey-database.test.mjs": "3c6395687102cfffd7d635ee6867815573b93447",
+              "tests/unit/kova-auth-passkey-http.test.mjs": "c2144a5486a994829a2962fb4104d78462a55dbe",
+              "tests/unit/kova-auth-passkey-ui.test.mjs": "28ea831d8da83f857fe7690a5d975f3e3f494a8b",
+              "tests/unit/kova-owned-auth-database.test.mjs": "32665dae9eaeb8c7d27f2270acceef5a2440495f",
+              "tests/unit/upgrade-database-scheduled-catalog.test.mjs": "5d94191f6cba572d8dc3946aa627c53f62fc7e33",
+              "tests/unit/upgrade-database-scheduled-tables.test.mjs": "3ce50a4e362f45eb6b3f52176f495ed2e18d0ce3",
+              "tests/unit/upgrade-database-temp-export-proof.test.mjs": "84801b449eaca8709d078c3f5a239e1ebedd6290",
+              "tests/unit/upgrade-source-provenance.test.mjs": "98d261400b561cbba3fa0c6587e951bdb626f8c9"
+          }
+
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def git(*args, data=None):
+              return subprocess.check_output(["git", *args], input=data)
+
+          def blob_hash(value):
+              return hashlib.sha1(b"blob " + str(len(value)).encode() + b"\0" + value).hexdigest()
+
+          def api(method, path, body=None):
+              allowed_read = path == "/git/ref/heads/codex/kova-owned-auth-foundation" or path in {
+                  "/git/blobs/" + sha for sha, _ in PARTS
+              }
+              require((method == "GET" and allowed_read) or
+                      (method == "POST" and path == "/git/blobs"), "Out-of-scope API request")
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + REPOSITORY + path,
+                  data=None if body is None else json.dumps(body).encode(),
+                  method=method,
+                  headers={
+                      "Authorization": "Bearer " + os.environ["GIT_OBJECT_TOKEN"],
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  raw = response.read(2_000_001)
+              require(len(raw) <= 2_000_000, "Oversized API response")
+              return json.loads(raw)
+
+          def main():
+              require(os.environ["GITHUB_REPOSITORY"] == REPOSITORY, "Wrong repository")
+              require(os.environ["GITHUB_REF"] == BRANCH, "Wrong branch")
+              require(git("rev-parse", "HEAD").decode().strip() == BASE, "Wrong source base")
+              require(git("rev-parse", "HEAD^{tree}").decode().strip() == BASE_TREE, "Wrong base tree")
+              require(not git("status", "--porcelain"), "Dirty source checkout")
+              require(api("GET", "/git/ref/heads/codex/kova-owned-auth-foundation")["object"]["sha"]
+                      == os.environ["GITHUB_SHA"], "Branch advanced during transfer")
+              compressed = bytearray()
+              for sha, size in PARTS:
+                  item = api("GET", "/git/blobs/" + sha)
+                  require(item["sha"] == sha and item["encoding"] == "base64", "Invalid part response")
+                  raw = base64.b64decode("".join(item["content"].split()), validate=True)
+                  require(len(raw) == size and blob_hash(raw) == sha, "Part hash mismatch")
+                  compressed.extend(raw)
+              require(len(compressed) == 44562, "Compressed size mismatch")
+              decoder = zlib.decompressobj()
+              patch = decoder.decompress(compressed, 205847)
+              require(decoder.eof and not decoder.unconsumed_tail and not decoder.unused_data,
+                      "Invalid compressed stream")
+              require(len(patch) == 205846 and hashlib.sha256(patch).hexdigest() == PATCH_SHA256,
+                      "Patch digest mismatch")
+              # Index-only construction; no feature code is run and no user data is read.
+              git("apply", "--cached", "--check", "--whitespace=error", data=patch)
+              git("apply", "--cached", "--whitespace=error", data=patch)
+              changed = git("diff", "--cached", "--name-only", "-z").decode().rstrip("\0").split("\0")
+              require(sorted(changed) == sorted(FILES), "Unexpected changed paths")
+              require(git("write-tree").decode().strip() == TREE, "Feature tree mismatch")
+              for path, sha in FILES.items():
+                  stage = git("ls-files", "--stage", "--", path).decode()
+                  require(stage.startswith("100644 " + sha + " 0\t"), "Unexpected index entry")
+                  content = git("cat-file", "blob", sha)
+                  require(len(content) <= 1_000_000 and blob_hash(content) == sha, "Source blob mismatch")
+                  created = api("POST", "/git/blobs", {
+                      "encoding": "base64", "content": base64.b64encode(content).decode(),
+                  })
+                  require(created["sha"] == sha, "Uploaded blob mismatch")
+                  print("VERIFIED_BLOB", path, sha, flush=True)
+              require(api("GET", "/git/ref/heads/codex/kova-owned-auth-foundation")["object"]["sha"]
+                      == os.environ["GITHUB_SHA"], "Branch advanced during transfer")
+              print("VERIFIED_TREE=" + TREE, flush=True)
+
+          if __name__ == "__main__":
+              main()
+          PY
