@@ -70,9 +70,7 @@ function assetKind(value) {
 
 function isTextAsset(kind, contentType = "") {
   return (
-    kind !== "other" ||
-    /^text\//iu.test(contentType) ||
-    /(?:json|xml|svg)/iu.test(contentType)
+    kind !== "other" || /^text\//iu.test(contentType) || /(?:json|xml|svg)/iu.test(contentType)
   );
 }
 
