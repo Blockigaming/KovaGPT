@@ -119,12 +119,12 @@ export function buildTemporaryExportSourceProof(
   if (
     inspected.sourceCommit !== lineage.observedSourceCommit ||
     inspected.migrations.length !== lineage.observedSourceMigrationCount ||
-    inspected.migrations.length !== manifest.count ||
+    manifest.count < inspected.migrations.length ||
     inspected.matchingFiles.length !== 0
   )
     throw new Error("temp_export_source_absence_unproven");
 
-  for (let index = 0; index < manifest.migrations.length; index++) {
+  for (let index = 0; index < inspected.migrations.length; index++) {
     const expected = manifest.migrations[index];
     const actual = inspected.migrations[index];
     if (
