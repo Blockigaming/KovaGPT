@@ -7,12 +7,7 @@ import {
   validateMigrationLineage,
 } from "./migration-preflight.mjs";
 
-const FINGERPRINT_FIELDS = [
-  "schemaSha256",
-  "aclSha256",
-  "rlsSha256",
-  "functionSha256",
-];
+const FINGERPRINT_FIELDS = ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"];
 const CAPTURE_PROVENANCE_FIELDS = [
   "capturedAt",
   "querySha256",
@@ -26,20 +21,13 @@ const SOURCE_PROVENANCE_FIELDS = [
   "artifactCreatedAt",
   "ledgerVersionsSha256",
 ];
-const REMOTE_PROVENANCE_FIELDS = [
-  "artifactSha256",
-  "artifactCreatedAt",
-  "ledgerVersionsSha256",
-];
+const REMOTE_PROVENANCE_FIELDS = ["artifactSha256", "artifactCreatedAt", "ledgerVersionsSha256"];
 const LINEAGE_PROMOTION_FIELDS = ["proofId", "querySha256", "scopeSha256"];
 
 export function buildMigrationSchemaProofPlan(
   lineage,
   manifest,
-  {
-    repositoryPath = process.cwd(),
-    inspectSource = inspectMigrationSourceCommit,
-  } = {},
+  { repositoryPath = process.cwd(), inspectSource = inspectMigrationSourceCommit } = {},
 ) {
   const analysis = validateMigrationLineage(lineage, manifest);
   validateLineageSourceCheckpoint(lineage, manifest, {
@@ -59,9 +47,7 @@ export function buildMigrationSchemaProofPlan(
       reason: entry.reason,
     }));
 
-  const sourceVersions = [
-    ...new Set(entries.flatMap((entry) => entry.sourceVersions)),
-  ].sort();
+  const sourceVersions = [...new Set(entries.flatMap((entry) => entry.sourceVersions))].sort();
 
   return {
     schemaVersion: 2,
@@ -81,9 +67,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const lineagePath = resolve(
     process.env.KOVA_MIGRATION_LINEAGE_FILE ?? "release-migration-lineage.json",
   );
-  const manifestPath = resolve(
-    process.env.KOVA_MIGRATION_MANIFEST ?? "release-migrations.json",
-  );
+  const manifestPath = resolve(process.env.KOVA_MIGRATION_MANIFEST ?? "release-migrations.json");
   const lineage = JSON.parse(readFileSync(lineagePath, "utf8"));
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   process.stdout.write(
