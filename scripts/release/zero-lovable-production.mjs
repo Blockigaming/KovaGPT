@@ -35,6 +35,7 @@ const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const DEFAULT_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const JAVASCRIPT_CONTENT_TYPE = /(?:javascript|ecmascript)/iu;
 const CSS_CONTENT_TYPE = /^text\/css\b/iu;
+const CSS_URL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s"')][^)]*?))\s*\)/giu;
 const HTML_CONTENT_TYPE = /^(?:text\/html|application\/xhtml\+xml)\b/iu;
 const LOVABLE_HOST = /(?:^|\.)lovable\.(?:app|dev)$/iu;
 
@@ -140,6 +141,14 @@ function discoverAssets(source, parent, origin) {
   return [...assets].sort();
 }
 
+function discoverCssAssets(source, parent, origin) {
+  const assets = new Set();
+  for (const match of source.matchAll(CSS_URL)) {
+    addAssetReference(assets, match[1] ?? match[2] ?? match[3], parent, origin, { allowAny: true });
+  }
+  return [...assets].sort();
+}
+
 function withoutHtmlComments(source) {
   return source.replace(/<!--[\s\S]*?-->/gu, "");
 }
@@ -147,8 +156,7 @@ function withoutHtmlComments(source) {
 function discoverLinkHeaderAssets(value, parent, origin) {
   const assets = new Set();
   for (const match of (value ?? "").matchAll(/<([^>]+)>\s*((?:;[^,]*)?)(?:,|$)/gu)) {
-    const parameters = match[2];
-    const rel = parameters.match(/;\s*rel\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;,\s]+))/iu);
+    const parameters = match[2];    const rel = parameters.match(/;\s*rel\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;,\s]+))/iu);
     const relations = new Set((rel?.[1] ?? rel?.[2] ?? rel?.[3] ?? "").toLowerCase().split(/\s+/u));
     if (!relations.has("preload") && !relations.has("modulepreload")) continue;
     addAssetReference(assets, match[1], parent, origin, { allowAny: true });
@@ -229,6 +237,8 @@ async function readBoundedText(response, limits) {
   if (!response.body) return { body: "", bytes: 0 };
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  const strictDecoder = new TextDecoder("utf-8", { fatal: true });
+  const chunks = [];
   let body = "";
   let bytes = 0;
   for (;;) {
@@ -250,10 +260,18 @@ async function readBoundedText(response, limits) {
       error.bytes = bytes;
       throw error;
     }
+    chunks.push(value);
     body += decoder.decode(value, { stream: true });
   }
   body += decoder.decode();
-  return { body, bytes };
+  let invalidUtf8 = false;
+  try {
+    for (const chunk of chunks) strictDecoder.decode(chunk, { stream: true });
+    strictDecoder.decode();
+  } catch {
+    invalidUtf8 = true;
+  }
+  return { body, bytes, invalidUtf8 };
 }
 
 async function request(url, { redirect = "follow", method = "GET" } = {}, limits) {
@@ -266,8 +284,9 @@ async function request(url, { redirect = "follow", method = "GET" } = {}, limits
   let body = "";
   let bytes = 0;
   let readFailure = null;
+  let invalidUtf8 = false;
   try {
-    ({ body, bytes } = await readBoundedText(response, limits));
+    ({ body, bytes, invalidUtf8 } = await readBoundedText(response, limits));
   } catch (error) {
     if (!["response_body_limit_exceeded", "aggregate_body_limit_exceeded"].includes(error?.code))
       throw error;
@@ -279,6 +298,7 @@ async function request(url, { redirect = "follow", method = "GET" } = {}, limits
     response,
     body,
     readFailure,
+    invalidUtf8,
     record: {
       method,
       url: redactUrl(finalUrl),
@@ -297,8 +317,7 @@ export async function collectZeroLovableProductionEvidence({
   maxResponseBytes = DEFAULT_MAX_RESPONSE_BYTES,
   maxTotalBytes = DEFAULT_MAX_TOTAL_BYTES,
   now = () => new Date(),
-}) {
-  if (!SHA.test(expectedSha ?? "")) throw new Error("expected_sha_required");
+}) {  if (!SHA.test(expectedSha ?? "")) throw new Error("expected_sha_required");
   if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 1)
     throw new Error("max_response_bytes_invalid");
   if (!Number.isSafeInteger(maxTotalBytes) || maxTotalBytes < maxResponseBytes)
@@ -446,12 +465,17 @@ export async function collectZeroLovableProductionEvidence({
     if (!contentTypeValid) failures.push(`asset_content_type_mismatch:${displayUrl}`);
 
     if (!result.readFailure && isTextAsset(kind, contentType)) {
+      if (result.invalidUtf8) failures.push(`asset_invalid_utf8:${displayUrl}`);
       if (/lovable/iu.test(result.body)) {
-        contentHits.push(displayUrl);
-        failures.push(`lovable_asset_content:${displayUrl}`);
+        contentHits.push(displayUrl);        failures.push(`lovable_asset_content:${displayUrl}`);
       }
       if (kind === "javascript" && contentTypeValid && result.body.includes(expectedSha))
         browserBuildShaFound = true;
+      if (kind === "css") {
+        for (const nested of discoverCssAssets(result.body, finalUrl, base.origin)) {
+          if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
+        }
+      }
       for (const nested of discoverAssets(result.body, finalUrl, base.origin)) {
         if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
       }
