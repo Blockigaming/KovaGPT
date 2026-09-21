@@ -84,6 +84,10 @@ test("first resolution and guest-to-user transitions purge only ownerless privat
     clerkSource,
     /pendingValidationUserIdRef = useRef<string \| undefined>\(undefined\)/,
   );
+  assert.match(
+    clerkSource,
+    /pendingValidationUserIdRef\.current = candidate\.user\.id;[\s\S]{0,220}validatedSessionRef\.current\?\.user\.id !== candidate\.user\.id[\s\S]{0,220}setSession\(null\);[\s\S]{0,120}setPendingMfaSession\(null\);[\s\S]{0,120}setIsLoaded\(false\);/,
+  );
   assert.match(clerkSource, /const result = purgeUnscopedPrivateBrowserStorage\(userId\)/);
   assert.match(
     clerkSource,
