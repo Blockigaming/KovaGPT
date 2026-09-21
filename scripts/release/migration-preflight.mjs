@@ -152,16 +152,67 @@ export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = proc
     });
     if (!validOrderedVersions(versions, versions.length))
       throw new Error("migration_schema_proof_source_ledger_invalid");
+    const migrations = migrationPaths.map((path, index) => ({
+      version: versions[index],
+      filename: basename(path),
+      sha256: sha256(git(["show", `${resolvedCommit}:${path}`])),
+    }));
     return {
       sourceCommit: resolvedCommit,
       sourceTree,
       ledgerVersions: versions,
       ledgerVersionsSha256: ledgerVersionsSha256(versions),
+      migrations,
     };
   } catch (error) {
     if (error?.message?.startsWith("migration_schema_proof_source_")) throw error;
     throw new Error("migration_schema_proof_source_commit_unavailable");
   }
+}
+
+export function validateLineageSourceCheckpoint(
+  lineage,
+  manifest,
+  {
+    repositoryPath = process.cwd(),
+    inspectSource = inspectMigrationSourceCommit,
+  } = {},
+) {
+  const checkpoint = inspectSource(lineage.observedSourceCommit, repositoryPath);
+  if (
+    checkpoint.sourceCommit !== lineage.observedSourceCommit ||
+    checkpoint.ledgerVersions.length !== lineage.observedSourceMigrationCount ||
+    !Array.isArray(checkpoint.migrations) ||
+    checkpoint.migrations.length !== checkpoint.ledgerVersions.length
+  ) {
+    throw new Error("migration_lineage_source_checkpoint_invalid");
+  }
+  const currentByVersion = new Map(
+    (manifest?.migrations ?? []).map((migration) => [migration.timestamp, migration]),
+  );
+  const checkpointByVersion = new Map(
+    checkpoint.migrations.map((migration) => [migration.version, migration]),
+  );
+  const referencedVersions = [
+    ...new Set(
+      lineage.entries.flatMap((entry) =>
+        entry.status === "equivalent"
+          ? [entry.sourceVersion]
+          : entry.status === "schema_proven"
+            ? entry.sourceVersions
+            : entry.candidateSourceVersions,
+      ),
+    ),
+  ].sort();
+  for (const version of referencedVersions) {
+    const current = currentByVersion.get(version);
+    const pinned = checkpointByVersion.get(version);
+    if (!current || !pinned)
+      throw new Error(`migration_lineage_source_checkpoint_version_missing:${version}`);
+    if (current.filename !== pinned.filename || current.sha256 !== pinned.sha256)
+      throw new Error(`migration_lineage_source_checkpoint_content_mismatch:${version}`);
+  }
+  return checkpoint;
 }
 
 function equalStringSets(left, right) {
@@ -767,6 +818,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const lineagePath = requiredEvidence("KOVA_MIGRATION_LINEAGE_FILE");
     const lineage = JSON.parse(readFileSync(lineagePath, "utf8"));
     const lineageAnalysis = validateMigrationLineage(lineage, manifest);
+    validateLineageSourceCheckpoint(lineage, manifest);
     if (lineageAnalysis.targetProjectRef !== targetRef)
       throw new Error("migration_lineage_target_mismatch");
     assertRemoteLineageInventory(lineageAnalysis, remoteEvidence, reconciliation);
