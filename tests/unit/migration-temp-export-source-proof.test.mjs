@@ -116,8 +116,7 @@ test("source inspector verifies every committed byte digest and scans case-insen
     commit,
     ".",
     () => checkpoint,
-    (_root, _commit, filename) =>
-      filename === rows[0].filename ? alpha : beta,
+    (_root, _commit, filename) => (filename === rows[0].filename ? alpha : beta),
   );
   assert.deepEqual(proof.matchingFiles, [rows[1].filename]);
 });
