@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { validateMigrationLineage } from "./migration-preflight.mjs";
+import {
+  inspectMigrationSourceCommit,
+  validateLineageSourceCheckpoint,
+  validateMigrationLineage,
+} from "./migration-preflight.mjs";
 
 const FINGERPRINT_FIELDS = ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"];
 const CAPTURE_PROVENANCE_FIELDS = [
@@ -20,8 +24,16 @@ const SOURCE_PROVENANCE_FIELDS = [
 const REMOTE_PROVENANCE_FIELDS = ["artifactSha256", "artifactCreatedAt", "ledgerVersionsSha256"];
 const LINEAGE_PROMOTION_FIELDS = ["proofId", "querySha256", "scopeSha256"];
 
-export function buildMigrationSchemaProofPlan(lineage, manifest) {
+export function buildMigrationSchemaProofPlan(
+  lineage,
+  manifest,
+  {
+    repositoryPath = process.cwd(),
+    inspectSource = inspectMigrationSourceCommit,
+  } = {},
+) {
   const analysis = validateMigrationLineage(lineage, manifest);
+  validateLineageSourceCheckpoint(lineage, manifest, { repositoryPath, inspectSource });
   const entries = lineage.entries
     .filter((entry) => entry.status === "requires_schema_proof")
     .map((entry) => ({
