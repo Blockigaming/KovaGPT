@@ -548,3 +548,138 @@ test("production evidence rejects mutable or non-HTTPS targets", async () => {
     /expected_sha_required/u,
   );
 });
+
+test("production evidence traverses worker-loaded and cached resources", async () => {
+  const requested = [];
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (new URL(url).pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(`<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`);
+      if (url.endsWith("/app.js"))
+        return javascriptResponse(
+          `const buildSha="${sha}";navigator.serviceWorker.register("/sw.js")`,
+        );
+      if (url.endsWith("/sw.js"))
+        return javascriptResponse(
+          `importScripts("/worker-runtime.js");cache.add("/offline.html");cache.addAll(["/one.js", "/two.js"]);`,
+        );
+      if (url.endsWith("/worker-runtime.js")) return javascriptResponse("self.LOVABLE=true");
+      if (url.endsWith("/one.js") || url.endsWith("/two.js")) return javascriptResponse("clean");
+      if (url.endsWith("/offline.html")) return response("clean offline page");
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.pass, false);
+  for (const path of ["/worker-runtime.js", "/offline.html", "/one.js", "/two.js"])
+    assert.ok(
+      requested.some((url) => url.endsWith(path)),
+      path,
+    );
+  assert.ok(
+    evidence.failures.includes("lovable_asset_content:https://kovagpt.example/worker-runtime.js"),
+  );
+});
+
+test("production evidence scans manifests, icons, and HTTP Link resource hints", async () => {
+  const requested = [];
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (new URL(url).pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/app.js"></script><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/favicon.svg">`,
+          { headers: { link: '</hinted.js>; rel="preload"; as="script"' } },
+        );
+      if (url.endsWith("/app.js")) return javascriptResponse(`const buildSha="${sha}"`);
+      if (url.endsWith("/hinted.js")) return javascriptResponse("window.LOVABLE_HINT=true");
+      if (url.endsWith("/manifest.webmanifest"))
+        return response(JSON.stringify({ name: "Kova", icons: [{ src: "/manifest-icon.svg" }] }), {
+          headers: { "content-type": "application/manifest+json" },
+        });
+      if (url.endsWith("/favicon.svg") || url.endsWith("/manifest-icon.svg"))
+        return response("<svg></svg>", { headers: { "content-type": "image/svg+xml" } });
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.pass, false);
+  for (const path of ["/manifest.webmanifest", "/favicon.svg", "/manifest-icon.svg", "/hinted.js"])
+    assert.ok(
+      requested.some((url) => url.endsWith(path)),
+      path,
+    );
+  assert.ok(evidence.failures.includes("lovable_asset_content:https://kovagpt.example/hinted.js"));
+});
+
+test("production evidence ignores build metadata inside HTML comments", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (new URL(url).pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<!-- <meta name="kova-build" content="${sha}"> --><script src="/app.js"></script>`,
+        );
+      if (url.endsWith("/app.js")) return javascriptResponse(`const buildSha="${sha}"`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.observedRootSha, null);
+  assert.ok(evidence.failures.includes("root_build_sha_mismatch"));
+});
+
+test("production evidence scans the version response body for Lovable markers", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha, provider: "Lovable" }), {
+          headers: { "x-kova-build": sha },
+        });
+      if (new URL(url).pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(`<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`);
+      if (url.endsWith("/app.js")) return javascriptResponse(`const buildSha="${sha}"`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.ok(evidence.failures.includes("lovable_version_content"));
+});
+
+test("production evidence rejects Lovable FQDN targets with trailing dots", async () => {
+  for (const baseUrl of ["https://lovable.app./", "https://tenant.lovable.dev./"])
+    await assert.rejects(
+      collectZeroLovableProductionEvidence({ baseUrl, expectedSha: sha }),
+      /production_base_must_not_use_lovable/u,
+    );
+});

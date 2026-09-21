@@ -13,6 +13,10 @@ const JS_WORKER_NEW_URL =
 const JS_WORKER_DIRECT = /\bnew\s+(?:Worker|SharedWorker)\s*\(\s*["'`]([^"'`\r\n]+)["'`]/gu;
 const SERVICE_WORKER_REGISTER =
   /\b(?:navigator\.)?serviceWorker\.register\s*\(\s*["'`]([^"'`\r\n]+)["'`]/gu;
+const WORKER_IMPORT_SCRIPTS = /\bimportScripts\s*\(([^)]*)\)/gu;
+const CACHE_ADD = /\b(?:cache|caches(?:\.open\([^)]*\))?)\.add\s*\(\s*["'`]([^"'`\r\n]+)["'`]/gu;
+const CACHE_ADD_ALL = /\b(?:cache|caches(?:\.open\([^)]*\))?)\.addAll\s*\(\s*\[([^\]]*)\]/gu;
+const STRING_REFERENCE = /["'`]([^"'`\r\n]+)["'`]/gu;
 const VITE_PRELOAD_REFERENCE =
   /["'`](assets\/[^"'`\r\n]+\.(?:mjs|cjs|js|css)(?:\?[^"'`\r\n]*)?)["'`]/gu;
 const BUILD_META =
@@ -37,7 +41,8 @@ const LOVABLE_HOST = /(?:^|\.)lovable\.(?:app|dev)$/iu;
 function normalizeBase(value) {
   const url = new URL(value);
   if (url.protocol !== "https:") throw new Error("production_base_must_use_https");
-  if (LOVABLE_HOST.test(url.hostname)) throw new Error("production_base_must_not_use_lovable");
+  const hostname = url.hostname.replace(/\.+$/u, "");
+  if (LOVABLE_HOST.test(hostname)) throw new Error("production_base_must_not_use_lovable");
   url.pathname = "/";
   url.search = "";
   url.hash = "";
@@ -87,12 +92,14 @@ function discoverAssets(source, parent, origin) {
     }
     const rel = new Set((attributes.get("rel") ?? "").toLowerCase().split(/\s+/u).filter(Boolean));
     const as = (attributes.get("as") ?? "").toLowerCase();
-    const executableLink =
+    const browserConsumedLink =
       rel.has("stylesheet") ||
       rel.has("modulepreload") ||
-      (rel.has("preload") && ["script", "style"].includes(as));
+      rel.has("manifest") ||
+      [...rel].some((value) => value === "icon" || value.endsWith("icon")) ||
+      (rel.has("preload") && ["script", "style", "fetch"].includes(as));
     addAssetReference(assets, reference, parent, origin, {
-      allowAny: executableLink,
+      allowAny: browserConsumedLink,
     });
   }
 
@@ -116,6 +123,57 @@ function discoverAssets(source, parent, origin) {
     });
   }
 
+  for (const match of source.matchAll(WORKER_IMPORT_SCRIPTS)) {
+    for (const reference of match[1].matchAll(STRING_REFERENCE)) {
+      addAssetReference(assets, reference[1], parent, origin, { allowAny: true });
+    }
+  }
+  for (const match of source.matchAll(CACHE_ADD)) {
+    addAssetReference(assets, match[1], parent, origin, { allowAny: true });
+  }
+  for (const match of source.matchAll(CACHE_ADD_ALL)) {
+    for (const reference of match[1].matchAll(STRING_REFERENCE)) {
+      addAssetReference(assets, reference[1], parent, origin, { allowAny: true });
+    }
+  }
+
+  return [...assets].sort();
+}
+
+function withoutHtmlComments(source) {
+  return source.replace(/<!--[\s\S]*?-->/gu, "");
+}
+
+function discoverLinkHeaderAssets(value, parent, origin) {
+  const assets = new Set();
+  for (const match of (value ?? "").matchAll(/<([^>]+)>\s*((?:;[^,]*)?)(?:,|$)/gu)) {
+    const parameters = match[2];
+    const rel = parameters.match(/;\s*rel\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;,\s]+))/iu);
+    const relations = new Set((rel?.[1] ?? rel?.[2] ?? rel?.[3] ?? "").toLowerCase().split(/\s+/u));
+    if (!relations.has("preload") && !relations.has("modulepreload")) continue;
+    addAssetReference(assets, match[1], parent, origin, { allowAny: true });
+  }
+  return [...assets].sort();
+}
+
+function discoverJsonAssets(source, parent, origin) {
+  let document;
+  try {
+    document = JSON.parse(source);
+  } catch {
+    return [];
+  }
+  const assets = new Set();
+  const visit = (value, key = "") => {
+    if (typeof value === "string" && key === "src") {
+      addAssetReference(assets, value, parent, origin, { allowAny: true });
+    } else if (Array.isArray(value)) {
+      value.forEach(visit);
+    } else if (value && typeof value === "object") {
+      Object.entries(value).forEach(([childKey, child]) => visit(child, childKey.toLowerCase()));
+    }
+  };
+  visit(document);
   return [...assets].sort();
 }
 
@@ -248,6 +306,7 @@ export async function collectZeroLovableProductionEvidence({
   const base = normalizeBase(baseUrl);
   const failures = [];
   const limits = { budget: { bytes: 0 }, maxResponseBytes, maxTotalBytes };
+  const hintedAssets = [];
   const versionUrl = new URL("/api/version", base);
   const versionResult = await request(versionUrl, { redirect: "manual" }, limits);
   if (versionResult.readFailure) failures.push(`${versionResult.readFailure}:/api/version`);
@@ -266,15 +325,30 @@ export async function collectZeroLovableProductionEvidence({
     failures.push("version_response_not_json");
   }
   const headerSha = versionResult.response.headers.get("x-kova-build");
+  if (/lovable/iu.test(versionResult.body)) failures.push("lovable_version_content");
   if (versionResult.response.status !== 200) failures.push("version_status_not_200");
   if (version?.sha !== expectedSha) failures.push("version_sha_mismatch");
   if (headerSha !== expectedSha) failures.push("version_header_sha_mismatch");
+  hintedAssets.push(
+    ...discoverLinkHeaderAssets(
+      versionResult.response.headers.get("link"),
+      versionFinalUrl,
+      base.origin,
+    ),
+  );
 
   const routeRecords = [];
   for (const path of RETIRED_ROUTES) {
     for (const method of SAFE_ROUTE_PROBES) {
       const result = await request(new URL(path, base), { redirect: "manual", method }, limits);
       routeRecords.push({ path, ...result.record });
+      hintedAssets.push(
+        ...discoverLinkHeaderAssets(
+          result.response.headers.get("link"),
+          new URL(result.response.url || new URL(path, base).href),
+          base.origin,
+        ),
+      );
       if (result.readFailure) failures.push(`${result.readFailure}:${method}:${path}`);
       if (/lovable/iu.test(result.body))
         failures.push(`lovable_retired_route_content:${method}:${path}`);
@@ -307,11 +381,16 @@ export async function collectZeroLovableProductionEvidence({
   )
     failures.push("root_redirected");
   if (/lovable/iu.test(rootResult.body)) failures.push("lovable_root_content");
-  const rootBuildShas = [...rootResult.body.matchAll(BUILD_META)].map((match) => match[1]);
+  const liveRootBody = withoutHtmlComments(rootResult.body);
+  const rootBuildShas = [...liveRootBody.matchAll(BUILD_META)].map((match) => match[1]);
   const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
   if (rootBuildSha !== expectedSha) failures.push("root_build_sha_mismatch");
 
-  const pending = discoverAssets(rootResult.body, rootFinalUrl, base.origin);
+  const pending = [
+    ...hintedAssets,
+    ...discoverAssets(liveRootBody, rootFinalUrl, base.origin),
+    ...discoverLinkHeaderAssets(rootResult.response.headers.get("link"), rootFinalUrl, base.origin),
+  ];
   const seen = new Set();
   const assets = [];
   const contentHits = [];
@@ -374,6 +453,18 @@ export async function collectZeroLovableProductionEvidence({
       if (kind === "javascript" && contentTypeValid && result.body.includes(expectedSha))
         browserBuildShaFound = true;
       for (const nested of discoverAssets(result.body, finalUrl, base.origin)) {
+        if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
+      }
+      if (/(?:application\/manifest\+json|application\/json)/iu.test(contentType)) {
+        for (const nested of discoverJsonAssets(result.body, finalUrl, base.origin)) {
+          if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
+        }
+      }
+      for (const nested of discoverLinkHeaderAssets(
+        result.response.headers.get("link"),
+        finalUrl,
+        base.origin,
+      )) {
         if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
       }
     }
