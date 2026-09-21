@@ -435,6 +435,106 @@ test("production evidence discovers root-relative JavaScript outside assets", as
   assert.ok(evidence.failures.includes("lovable_asset_content:https://kovagpt.example/legacy.js"));
 });
 
+test("production evidence scans Worker, SharedWorker, and service-worker runtime references", async () => {
+  const requested = [];
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
+        );
+      if (url.endsWith("/assets/app.js"))
+        return javascriptResponse(
+          `const buildSha="${sha}";new Worker(new URL("/assets/document-extraction.worker.js",import.meta.url));new SharedWorker("/assets/shared.worker.js");navigator.serviceWorker.register("/kova-sw.js");`,
+        );
+      if (url.endsWith("/assets/document-extraction.worker.js"))
+        return javascriptResponse("window.LOVABLE_WORKER=true");
+      if (url.endsWith("/assets/shared.worker.js"))
+        return javascriptResponse("self.LOVABLE_SHARED=true");
+      if (url.endsWith("/kova-sw.js")) return javascriptResponse("self.LOVABLE_SW=true");
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.pass, false);
+  assert.ok(requested.some((url) => url.endsWith("/assets/document-extraction.worker.js")));
+  assert.ok(requested.some((url) => url.endsWith("/assets/shared.worker.js")));
+  assert.ok(requested.some((url) => url.endsWith("/kova-sw.js")));
+  assert.ok(
+    evidence.failures.includes(
+      "lovable_asset_content:https://kovagpt.example/assets/document-extraction.worker.js",
+    ),
+  );
+  assert.ok(evidence.failures.includes("lovable_asset_content:https://kovagpt.example/kova-sw.js"));
+});
+
+test("production evidence rejects redirects from the version endpoint", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response("", {
+          status: 302,
+          headers: { location: "https://lovable.example/api/version" },
+        });
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
+        );
+      if (url.endsWith("/assets/app.js")) return javascriptResponse(`const buildSha="${sha}";`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.pass, false);
+  assert.ok(evidence.failures.includes("version_redirected"));
+});
+
+test("production evidence scans retired-route 404 response bodies for Lovable markers", async () => {
+  const evidence = await withFetch(
+    async (input, init = {}) => {
+      const url = String(input);
+      if (url.endsWith("/api/version"))
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.endsWith("/lovable/email/auth/webhook") && (init.method ?? "GET") === "GET")
+        return response("LOVABLE branded not-found page", { status: 404 });
+      if (url.includes("lovable")) return response("missing", { status: 404 });
+      if (url.endsWith("/"))
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script>`,
+        );
+      if (url.endsWith("/assets/app.js")) return javascriptResponse(`const buildSha="${sha}";`);
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+
+  assert.equal(evidence.pass, false);
+  assert.ok(
+    evidence.failures.includes("lovable_retired_route_content:GET:/lovable/email/auth/webhook"),
+  );
+});
+
 test("production evidence rejects mutable or non-HTTPS targets", async () => {
   await assert.rejects(
     collectZeroLovableProductionEvidence({ baseUrl: "http://kovagpt.example", expectedSha: sha }),
