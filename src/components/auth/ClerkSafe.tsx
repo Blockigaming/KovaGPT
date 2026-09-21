@@ -191,6 +191,13 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       }
 
       pendingValidationUserIdRef.current = candidate.user.id;
+      if (validatedSessionRef.current?.user.id !== candidate.user.id) {
+        // Guest-to-account and account-switch events become principal-unresolved
+        // before any user/MFA validation can yield back to the browser.
+        setSession(null);
+        setPendingMfaSession(null);
+        setIsLoaded(false);
+      }
       if (
         browserStorageUserIdRef.current &&
         browserStorageUserIdRef.current !== candidate.user.id
