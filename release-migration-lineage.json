@@ -18,9 +18,7 @@
       "remoteVersion": "20260823092107",
       "remoteName": "day14_scheduled_execution",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260822143000"
-      ],
+      "candidateSourceVersions": ["20260822143000"],
       "reason": "The source reconciliation is not byte-equivalent to the observed production statement."
     },
     {
@@ -36,9 +34,7 @@
       "remoteVersion": "20260823092450",
       "remoteName": "day14_scheduled_execution",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260822143000"
-      ],
+      "candidateSourceVersions": ["20260822143000"],
       "reason": "The source reconciliation is not byte-equivalent to the observed production statement."
     },
     {
@@ -100,10 +96,7 @@
       "remoteVersion": "20260823215044",
       "remoteName": "revoke_client_ddl_table_privileges",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "The source file consolidates several separately recorded production hardenings."
     },
     {
@@ -121,30 +114,21 @@
       "remoteVersion": "20260823215222",
       "remoteName": "lock_down_trigger_only_functions",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "The source file consolidates several separately recorded production hardenings."
     },
     {
       "remoteVersion": "20260823215259",
       "remoteName": "explicitly_lock_server_only_tables",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "Table ACL and RLS equivalence is not proven by migration names."
     },
     {
       "remoteVersion": "20260823215454",
       "remoteName": "lock_down_postgres_client_defaults",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260904230329"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260904230329"],
       "reason": "Default-privilege equivalence requires an isolated database comparison."
     },
     {
@@ -162,10 +146,7 @@
       "remoteVersion": "20260823215848",
       "remoteName": "optimize_rls_auth_initplans",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260823220903",
-        "20260903145843"
-      ],
+      "candidateSourceVersions": ["20260823220903", "20260903145843"],
       "reason": "RLS expression equivalence requires a normalized policy comparison."
     },
     {
@@ -228,9 +209,7 @@
       "remoteVersion": "20260824085042",
       "remoteName": "remove_temporary_day15_source_export",
       "status": "requires_schema_proof",
-      "candidateSourceVersions": [
-        "20260824090000"
-      ],
+      "candidateSourceVersions": ["20260824090000"],
       "reason": "Removal safety depends on the deployed catalog and data shape."
     },
     {
