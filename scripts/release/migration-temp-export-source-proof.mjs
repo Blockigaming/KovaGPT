@@ -17,8 +17,7 @@ const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 function gitEnvironment() {
   const env = { ...process.env };
-  for (const key of Object.keys(env))
-    if (key.startsWith("GIT_")) delete env[key];
+  for (const key of Object.keys(env)) if (key.startsWith("GIT_")) delete env[key];
   return {
     ...env,
     GIT_OPTIONAL_LOCKS: "0",
@@ -81,16 +80,10 @@ export function inspectTemporaryExportSource(
       !SHA256.test(migration.sha256 ?? "")
     )
       throw new Error("temp_export_source_checkpoint_invalid");
-    const bytes = readMigration(
-      repositoryPath,
-      sourceCommit,
-      migration.filename,
-    );
+    const bytes = readMigration(repositoryPath, sourceCommit, migration.filename);
     if (!Buffer.isBuffer(bytes) || hash(bytes) !== migration.sha256)
       throw new Error("temp_export_source_content_mismatch");
-    if (
-      Buffer.from(bytes.toString("utf8").toLowerCase(), "utf8").includes(needle)
-    )
+    if (Buffer.from(bytes.toString("utf8").toLowerCase(), "utf8").includes(needle))
       matchingFiles.push(migration.filename);
     return {
       order: index + 1,
@@ -106,10 +99,7 @@ export function inspectTemporaryExportSource(
 export function buildTemporaryExportSourceProof(
   lineage,
   manifest,
-  {
-    repositoryPath = process.cwd(),
-    inspectSource = inspectTemporaryExportSource,
-  } = {},
+  { repositoryPath = process.cwd(), inspectSource = inspectTemporaryExportSource } = {},
 ) {
   const entry = lineage?.entries?.find(
     (candidate) => candidate.remoteVersion === TEMP_EXPORT_REMOTE_VERSION,
@@ -175,15 +165,8 @@ export function buildTemporaryExportSourceProof(
   };
 }
 
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
-  const lineage = JSON.parse(
-    readFileSync("release-migration-lineage.json", "utf8"),
-  );
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const lineage = JSON.parse(readFileSync("release-migration-lineage.json", "utf8"));
   const manifest = JSON.parse(readFileSync("release-migrations.json", "utf8"));
-  console.log(
-    JSON.stringify(buildTemporaryExportSourceProof(lineage, manifest), null, 2),
-  );
+  console.log(JSON.stringify(buildTemporaryExportSourceProof(lineage, manifest), null, 2));
 }
