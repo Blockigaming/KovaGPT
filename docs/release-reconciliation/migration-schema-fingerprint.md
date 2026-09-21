@@ -17,6 +17,10 @@ Top-level category rows and object keys are canonicalized before hashing. Nested
 
 Every category hash includes the complete declared scope as well as the category rows. Two captures using different proof scopes therefore cannot accidentally produce matching proof fingerprints merely because a category happens to be empty or identical.
 
+`digestMigrationSchemaSnapshot()` separately computes the canonical SHA-256 of the complete sanitized snapshot. The version-2 proof gate uses that digest to bind each proof entry to the snapshot stored in its reviewed source or remote artifact. Object keys are canonicalized; array order remains exact because it may carry sequence semantics.
+
+`digestMigrationSchemaScope()` hashes the canonical `scope` object independently. A `schema_proven` lineage entry pins that scope digest and the reviewed collector-query digest, preventing an artifact for a narrower or different object family from satisfying the mapping accidentally.
+
 Run locally against an already-captured snapshot with:
 
 ```bash

@@ -20,16 +20,22 @@ whose remote history has no remote-only migrations. A truncated, stale, empty, o
 export cannot clear the gate.
 
 An equivalent mapping also requires its source version to be present in remote history after a
-human-authorized history repair. A schema_proven mapping requires a separate
+human-authorized history repair. A schema_proven mapping requires a version-2
 KOVA_MIGRATION_SCHEMA_PROOF_FILE with matching normalized schema, ACL, RLS, and function
-fingerprints. The proof file records its target, observed remote count, remote version, source
-versions, and equal source/remote SHA-256 fingerprints for all four categories.
+fingerprints. It also requires the exact source and remote capture artifacts named by
+KOVA_MIGRATION_SCHEMA_SOURCE_ARTIFACT and KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT. Ready mode
+hashes and parses those artifacts, recomputes their capture digests and fingerprints, binds the
+source commit/tree, verifies the complete source ledger against that commit's Git tree, requires
+the promoted lineage entry's reviewed query and scope digests, and derives the remote ledger digest
+from the reviewed history export. The declared source commit must be available in the local Git
+object database; a shallow or incomplete checkout fails closed.
 
 For a reviewed rehearsal target, provide KOVA_REMOTE_MIGRATION_FILE and
-KOVA_MIGRATION_LINEAGE_FILE, plus KOVA_MIGRATION_SCHEMA_PROOF_FILE when the lineage contains
-schema_proven entries, then run npm run release:migration-preflight:ready. A different production
-or staging target needs its own reviewed lineage capture; copying this file or a proof is not
-evidence.
+KOVA_MIGRATION_LINEAGE_FILE. When the lineage contains schema_proven entries, also provide
+KOVA_MIGRATION_SCHEMA_PROOF_FILE, KOVA_MIGRATION_SCHEMA_SOURCE_ARTIFACT, and
+KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT, then run npm run release:migration-preflight:ready. A
+different production or staging target needs its own reviewed lineage capture; copying these files
+is not evidence.
 
 ## Historical baseline on August 16, 2026
 
@@ -71,7 +77,7 @@ The history contains an exact-content duplicate for the two historical email-inf
 7. Run the complete 14-table two-user isolation harness and Supabase advisors.
 8. Verify the invite-acceptance functions require a confirmed recipient email and cannot be executed by public/anon directly.
 9. Capture exact evidence files for fresh database, upgrade rehearsal, two-user RLS, remote migration history, normalized schema proof where applicable, and backup/recovery.
-10. Supply KOVA_REMOTE_MIGRATION_FILE, KOVA_MIGRATION_LINEAGE_FILE, and a schema-proof file for any schema_proven entries, then run npm run release:migration-preflight:ready.
+10. Supply KOVA_REMOTE_MIGRATION_FILE, KOVA_MIGRATION_LINEAGE_FILE, and the version-2 proof plus both bound capture artifacts for any schema_proven entries, then run npm run release:migration-preflight:ready.
 
 ## Hard stops
 

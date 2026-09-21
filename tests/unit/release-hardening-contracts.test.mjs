@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -9,9 +14,15 @@ import {
   normalizeRemoteVersions,
   reconcileMigrationVersions,
   validateRemoteMigrationEvidence,
+  validateSchemaProofArtifactBindings,
   validateSchemaProofEvidence,
   validateMigrationLineage,
 } from "../../scripts/release/migration-preflight.mjs";
+import {
+  digestMigrationSchemaScope,
+  digestMigrationSchemaSnapshot,
+  fingerprintMigrationSchemaSnapshot,
+} from "../../scripts/release/migration-schema-fingerprint.mjs";
 import { assertSafeRlsTarget, validateRlsMatrix } from "../../scripts/release/rls-two-user.mjs";
 import {
   normalizeStripeEnvironmentValue,
@@ -76,6 +87,7 @@ test("migration lineage makes production drift explicit and blocks unproven mapp
   };
   const lineage = {
     schemaVersion: 1,
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 4,
     observedSourceMigrationCount: 2,
@@ -99,6 +111,7 @@ test("migration lineage makes production drift explicit and blocks unproven mapp
     ],
   };
   assert.deepEqual(validateMigrationLineage(lineage, manifest), {
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 4,
     observedSourceMigrationCount: 2,
@@ -136,6 +149,7 @@ test("migration lineage binds a complete remote export and permits clean targets
   };
   const cleanLineage = {
     schemaVersion: 1,
+    observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 2,
     observedSourceMigrationCount: 2,
@@ -175,18 +189,49 @@ test("migration lineage binds a complete remote export and permits clean targets
   );
 });
 
-test("schema-proven lineage requires matching external fingerprint evidence and repaired history", () => {
-  const fingerprint = {
-    schemaSha256: "a".repeat(64),
-    aclSha256: "b".repeat(64),
-    rlsSha256: "c".repeat(64),
-    functionSha256: "d".repeat(64),
+test("schema-proven lineage requires provenance-bound evidence and repaired history", (t) => {
+  const sourceRepository = mkdtempSync(join(tmpdir(), "kova-schema-source-"));
+  t.after(() => rmSync(sourceRepository, { recursive: true, force: true }));
+  mkdirSync(join(sourceRepository, "supabase", "migrations"), { recursive: true });
+  writeFileSync(
+    join(sourceRepository, "supabase", "migrations", "20260101000000_source.sql"),
+    "select 1;\n",
+  );
+  writeFileSync(
+    join(sourceRepository, "supabase", "migrations", "20260101000001_later.sql"),
+    "select 2;\n",
+  );
+  const git = (args) =>
+    execFileSync("git", args, { cwd: sourceRepository, encoding: "utf8" }).trim();
+  git(["init"]);
+  git(["config", "user.name", "Kova Test"]);
+  git(["config", "user.email", "test@kovagpt.invalid"]);
+  git(["add", "supabase/migrations"]);
+  git(["commit", "-m", "source checkpoint"]);
+  const sourceCommit = git(["rev-parse", "HEAD"]);
+  const sourceTree = git(["rev-parse", "HEAD^{tree}"]);
+  const snapshot = {
+    schemaVersion: 1,
+    scope: {
+      proofId: "proof-20260102000000",
+      objects: ["public.reconciled_table"],
+    },
+    categories: {
+      schema: [{ table: "public.reconciled_table", columnsSha256: "a".repeat(64) }],
+      acl: [{ table: "public.reconciled_table", grantee: "authenticated", privilege: "SELECT" }],
+      rls: [{ table: "public.reconciled_table", enabled: true }],
+      function: [{ applicable: false }],
+    },
   };
+  const fingerprint = fingerprintMigrationSchemaSnapshot(snapshot);
+  const captureSha256 = digestMigrationSchemaSnapshot(snapshot);
+  const scopeSha256 = digestMigrationSchemaScope(snapshot);
   const lineage = {
     schemaVersion: 1,
+    observedSourceCommit: sourceCommit,
     targetProjectRef: "abcdefghijklmnopqrst",
     observedRemoteMigrationCount: 3,
-    observedSourceMigrationCount: 1,
+    observedSourceMigrationCount: 2,
     entries: [
       {
         remoteVersion: "20260102000000",
@@ -195,32 +240,84 @@ test("schema-proven lineage requires matching external fingerprint evidence and 
         sourceVersions: ["20260101000000"],
         comparison: "schema-acl-rls-function-fingerprint",
         proofId: "proof-20260102000000",
+        querySha256: "6".repeat(64),
+        scopeSha256,
       },
     ],
   };
-  const manifest = { migrations: [{ timestamp: "20260101000000" }] };
+  const manifest = {
+    migrations: [{ timestamp: "20260101000000" }, { timestamp: "20260101000001" }],
+  };
   const analysis = validateMigrationLineage(lineage, manifest);
   assert.equal(analysis.schemaProven, 1);
+  const unboundLineage = structuredClone(lineage);
+  delete unboundLineage.entries[0].scopeSha256;
+  assert.throws(
+    () => validateMigrationLineage(unboundLineage, manifest),
+    /migration_lineage_schema_proven_invalid/u,
+  );
   const remote = {
     targetProjectRef: "abcdefghijklmnopqrst",
     migrationCount: 3,
     versions: ["20260101000000", "20260102000000", "20260103000000"],
   };
+  const remoteLedgerVersionsSha256 = createHash("sha256")
+    .update(remote.versions.join("\n"))
+    .digest("hex");
+  const sourceVersions = ["20260101000000"];
+  const sourceLedgerVersions = ["20260101000000", "20260101000001"];
+  const sourceLedgerVersionsSha256 = createHash("sha256")
+    .update(sourceLedgerVersions.join("\n"))
+    .digest("hex");
   const proof = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     targetProjectRef: "abcdefghijklmnopqrst",
+    observedSourceMigrationCount: 2,
     observedRemoteMigrationCount: 3,
+    sourceProvenance: {
+      sourceCommit,
+      sourceTree,
+      artifactSha256: "3".repeat(64),
+      artifactCreatedAt: "2026-01-02T02:00:00.000Z",
+      ledgerVersionsSha256: sourceLedgerVersionsSha256,
+    },
+    remoteProvenance: {
+      artifactSha256: "5".repeat(64),
+      artifactCreatedAt: "2026-01-02T03:00:00.000Z",
+      ledgerVersionsSha256: remoteLedgerVersionsSha256,
+    },
     proofs: [
       {
         proofId: "proof-20260102000000",
         remoteVersion: "20260102000000",
-        sourceVersions: ["20260101000000"],
-        sourceFingerprint: fingerprint,
-        remoteFingerprint: { ...fingerprint },
+        sourceVersions,
+        scopeSha256,
+        sourceCapture: {
+          capturedAt: "2026-01-02T01:00:00.000Z",
+          querySha256: "6".repeat(64),
+          captureSha256,
+          ledgerVersionsSha256: sourceLedgerVersionsSha256,
+          fingerprint,
+        },
+        remoteCapture: {
+          capturedAt: "2026-01-02T01:30:00.000Z",
+          querySha256: "6".repeat(64),
+          captureSha256,
+          ledgerVersionsSha256: remoteLedgerVersionsSha256,
+          fingerprint: { ...fingerprint },
+        },
       },
     ],
   };
-  assert.deepEqual(validateSchemaProofEvidence(proof, lineage, remote), { proofCount: 1 });
+  assert.deepEqual(validateSchemaProofEvidence(proof, lineage, remote), {
+    proofCount: 1,
+    observedSourceMigrationCount: 2,
+    sourceCommit,
+    sourceTree,
+    sourceArtifactSha256: "3".repeat(64),
+    remoteArtifactSha256: "5".repeat(64),
+    remoteLedgerVersionsSha256,
+  });
   assert.throws(
     () =>
       validateSchemaProofEvidence(
@@ -229,7 +326,10 @@ test("schema-proven lineage requires matching external fingerprint evidence and 
           proofs: [
             {
               ...proof.proofs[0],
-              remoteFingerprint: { ...fingerprint, aclSha256: "e".repeat(64) },
+              remoteCapture: {
+                ...proof.proofs[0].remoteCapture,
+                fingerprint: { ...fingerprint, aclSha256: "e".repeat(64) },
+              },
             },
           ],
         },
@@ -238,6 +338,244 @@ test("schema-proven lineage requires matching external fingerprint evidence and 
       ),
     /migration_schema_proof_entry_invalid/u,
   );
+  assert.throws(
+    () =>
+      validateSchemaProofEvidence(
+        {
+          ...proof,
+          proofs: [{ ...proof.proofs[0], scopeSha256: "f".repeat(64) }],
+        },
+        lineage,
+        remote,
+      ),
+    /migration_schema_proof_entry_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      validateSchemaProofEvidence(
+        {
+          ...proof,
+          remoteProvenance: {
+            ...proof.remoteProvenance,
+            ledgerVersionsSha256: "9".repeat(64),
+          },
+        },
+        lineage,
+        remote,
+      ),
+    /migration_schema_proof_remote_provenance_invalid/u,
+  );
+  assert.throws(
+    () =>
+      validateSchemaProofEvidence(
+        {
+          ...proof,
+          sourceProvenance: {
+            ...proof.sourceProvenance,
+            sourceCommit: "a".repeat(40),
+          },
+        },
+        lineage,
+        remote,
+      ),
+    /migration_schema_proof_source_provenance_invalid/u,
+  );
+  assert.throws(
+    () => validateSchemaProofEvidence({ ...proof, schemaVersion: 1 }, lineage, remote),
+    /migration_schema_proof_schema_invalid/u,
+  );
+  assert.throws(
+    () =>
+      validateSchemaProofEvidence({ ...proof, observedSourceMigrationCount: 3 }, lineage, remote),
+    /migration_schema_proof_source_count_mismatch/u,
+  );
+
+  const directory = mkdtempSync(join(tmpdir(), "kova-schema-proof-"));
+  try {
+    const sourceArtifactPath = join(directory, "source-artifact.json");
+    const remoteArtifactPath = join(directory, "remote-artifact.json");
+    const sourceArtifact = Buffer.from(
+      JSON.stringify({
+        schemaVersion: 1,
+        artifactKind: "migration-schema-source-captures",
+        createdAt: proof.sourceProvenance.artifactCreatedAt,
+        sourceCommit: proof.sourceProvenance.sourceCommit,
+        sourceTree: proof.sourceProvenance.sourceTree,
+        ledgerVersionsSha256: proof.sourceProvenance.ledgerVersionsSha256,
+        ledgerVersions: sourceLedgerVersions,
+        captures: [
+          {
+            proofId: proof.proofs[0].proofId,
+            remoteVersion: proof.proofs[0].remoteVersion,
+            capturedAt: proof.proofs[0].sourceCapture.capturedAt,
+            querySha256: proof.proofs[0].sourceCapture.querySha256,
+            ledgerVersionsSha256: proof.proofs[0].sourceCapture.ledgerVersionsSha256,
+            snapshot,
+          },
+        ],
+      }),
+    );
+    const remoteArtifactValue = {
+      schemaVersion: 1,
+      artifactKind: "migration-schema-remote-captures",
+      createdAt: proof.remoteProvenance.artifactCreatedAt,
+      targetProjectRef: proof.targetProjectRef,
+      ledgerVersionsSha256: proof.remoteProvenance.ledgerVersionsSha256,
+      ledgerVersions: remote.versions,
+      captures: [
+        {
+          proofId: proof.proofs[0].proofId,
+          remoteVersion: proof.proofs[0].remoteVersion,
+          capturedAt: proof.proofs[0].remoteCapture.capturedAt,
+          querySha256: proof.proofs[0].remoteCapture.querySha256,
+          ledgerVersionsSha256: proof.proofs[0].remoteCapture.ledgerVersionsSha256,
+          snapshot,
+        },
+      ],
+    };
+    const remoteArtifact = Buffer.from(JSON.stringify(remoteArtifactValue));
+    writeFileSync(sourceArtifactPath, sourceArtifact);
+    writeFileSync(remoteArtifactPath, remoteArtifact);
+    const boundProof = {
+      ...proof,
+      sourceProvenance: {
+        ...proof.sourceProvenance,
+        artifactSha256: createHash("sha256").update(sourceArtifact).digest("hex"),
+      },
+      remoteProvenance: {
+        ...proof.remoteProvenance,
+        artifactSha256: createHash("sha256").update(remoteArtifact).digest("hex"),
+      },
+    };
+    assert.deepEqual(
+      validateSchemaProofArtifactBindings(boundProof, {
+        sourceArtifactPath,
+        remoteArtifactPath,
+        sourceRepositoryPath: sourceRepository,
+      }),
+      {
+        sourceArtifactSha256: boundProof.sourceProvenance.artifactSha256,
+        remoteArtifactSha256: boundProof.remoteProvenance.artifactSha256,
+      },
+    );
+
+    const wrongTreeArtifact = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(sourceArtifact.toString("utf8")),
+        sourceTree: "f".repeat(40),
+      }),
+    );
+    writeFileSync(sourceArtifactPath, wrongTreeArtifact);
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            sourceProvenance: {
+              ...boundProof.sourceProvenance,
+              sourceTree: "f".repeat(40),
+              artifactSha256: createHash("sha256").update(wrongTreeArtifact).digest("hex"),
+            },
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_source_artifact_invalid/u,
+    );
+
+    const wrongLedgerVersions = ["20260101000000", "20260101000002"];
+    const wrongLedgerVersionsSha256 = createHash("sha256")
+      .update(wrongLedgerVersions.join("\n"))
+      .digest("hex");
+    const wrongLedgerArtifact = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(sourceArtifact.toString("utf8")),
+        ledgerVersionsSha256: wrongLedgerVersionsSha256,
+        ledgerVersions: wrongLedgerVersions,
+        captures: [
+          {
+            ...JSON.parse(sourceArtifact.toString("utf8")).captures[0],
+            ledgerVersionsSha256: wrongLedgerVersionsSha256,
+          },
+        ],
+      }),
+    );
+    writeFileSync(sourceArtifactPath, wrongLedgerArtifact);
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            sourceProvenance: {
+              ...boundProof.sourceProvenance,
+              ledgerVersionsSha256: wrongLedgerVersionsSha256,
+              artifactSha256: createHash("sha256").update(wrongLedgerArtifact).digest("hex"),
+            },
+            proofs: [
+              {
+                ...boundProof.proofs[0],
+                sourceCapture: {
+                  ...boundProof.proofs[0].sourceCapture,
+                  ledgerVersionsSha256: wrongLedgerVersionsSha256,
+                },
+              },
+            ],
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_source_artifact_invalid/u,
+    );
+    writeFileSync(sourceArtifactPath, sourceArtifact);
+
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            remoteProvenance: {
+              ...boundProof.remoteProvenance,
+              artifactSha256: "f".repeat(64),
+            },
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_remote_artifact_mismatch/u,
+    );
+
+    const tamperedRemoteArtifact = Buffer.from(
+      JSON.stringify({
+        ...remoteArtifactValue,
+        captures: [
+          {
+            ...remoteArtifactValue.captures[0],
+            snapshot: {
+              ...snapshot,
+              categories: {
+                ...snapshot.categories,
+                rls: [{ table: "public.reconciled_table", enabled: false }],
+              },
+            },
+          },
+        ],
+      }),
+    );
+    writeFileSync(remoteArtifactPath, tamperedRemoteArtifact);
+    assert.throws(
+      () =>
+        validateSchemaProofArtifactBindings(
+          {
+            ...boundProof,
+            remoteProvenance: {
+              ...boundProof.remoteProvenance,
+              artifactSha256: createHash("sha256").update(tamperedRemoteArtifact).digest("hex"),
+            },
+          },
+          { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath: sourceRepository },
+        ),
+      /migration_schema_proof_artifact_capture_mismatch/u,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
   const remoteLineage = classifyRemoteMigrationLineage(["20260102000000"], lineage);
   assert.throws(
     () => assertLineageSourceVersionsRepaired(remoteLineage, ["20260102000000"]),

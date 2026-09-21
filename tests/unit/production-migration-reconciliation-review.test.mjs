@@ -51,6 +51,11 @@ test("the September 15 review keeps all nineteen structural mappings blocked", (
   assert.equal(lineage.entries.filter((entry) => entry.status === "schema_proven").length, 0);
 });
 
+test("the proof checkpoint contains every current candidate migration", () => {
+  assert.equal(lineage.observedSourceCommit, "eb5596c77bc6309dc4856b716ac7f4143add13c1");
+  assert.equal(lineage.observedSourceMigrationCount, 157);
+});
+
 test("workspace candidates include the existing canonical reconciliation", () => {
   for (const version of workspace) {
     assert.ok(entries.get(version).candidateSourceVersions.includes("20260904230332"));
@@ -75,9 +80,11 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
     assert.equal(entry.candidateSourceVersions.filter((v) => v === candidate).length, 1);
     entry.candidateSourceVersions = entry.candidateSourceVersions.filter((v) => v !== candidate);
   }
-  // Pin the semantic content of main's 3f155680... lineage blob. This preserves
-  // the historical 93-source snapshot, all five equivalences, hashes, reasons,
-  // safety notes, and every pre-existing candidate without relying on formatting.
+  // Pin the semantic content of main's 3f155680... lineage blob. The current
+  // reviewed checkpoint is restored to the historical values before hashing so
+  // this still detects changes outside the explicitly reviewed checkpoint update.
+  restored.observedSourceCommit = "21e2a300ada52e3b8e9a50dd4654fd59f15c41b2";
+  restored.observedSourceMigrationCount = 93;
   const digest = createHash("sha256")
     .update(JSON.stringify(canonical(restored)))
     .digest("hex");

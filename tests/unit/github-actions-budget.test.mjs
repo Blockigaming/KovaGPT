@@ -8,6 +8,23 @@ const read = (path) => readFile(path, "utf8");
 test("primary CI avoids duplicate branch runs and gates expensive work", async () => {
   const workflow = await read(".github/workflows/ci.yml");
   assert.match(workflow, /cancel-in-progress: true/u);
+  const checkoutCount = workflow.match(/uses: actions\/checkout@/gu)?.length ?? 0;
+  const exactHeadCheckoutCount =
+    workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/gu)
+      ?.length ?? 0;
+  assert.equal(checkoutCount, 6);
+  assert.equal(
+    exactHeadCheckoutCount,
+    checkoutCount,
+    "every CI checkout must use the immutable PR head instead of GitHub's synthetic merge ref",
+  );
+  for (const artifact of ["integration-test-log", "deployed-baseline", "candidate-visual"])
+    assert.ok(
+      workflow.includes(
+        `name: ${artifact}-` + "${{ github.event.pull_request.head.sha || github.sha }}",
+      ),
+      `${artifact} must be labeled with the exact checked-out head`,
+    );
   assert.match(workflow, /github\.event\.pull_request\.draft == false/u);
   assert.match(workflow, /branches:\s+- main/u);
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
@@ -21,6 +38,18 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     /name: Repository formatting audit[\s\S]{0,120}continue-on-error:\s*true/u,
   );
   assert.match(workflow, /run_database: \$\{\{ steps\.scope\.outputs\.run_database \}\}/u);
+  for (const databaseProofPath of [
+    "\\.github/workflows/ci\\.yml",
+    "release-migration-lineage\\.json",
+    "migration-preflight",
+    "migration-schema-fingerprint",
+    "migration-schema-proof-plan",
+  ]) {
+    assert.ok(
+      workflow.includes(databaseProofPath),
+      `${databaseProofPath} must trigger isolated database CI`,
+    );
+  }
   assert.match(
     workflow,
     /isolated-database:[\s\S]*?needs\.verify\.outputs\.run_database == 'true'/u,

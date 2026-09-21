@@ -17,7 +17,7 @@ test("the observed production migration drift is fully inventoried and conservat
 
   assert.equal(lineage.targetProjectRef, "mfbycmbjygcfkrsuepxf");
   assert.equal(lineage.observedRemoteMigrationCount, 98);
-  assert.equal(lineage.observedSourceMigrationCount, 93);
+  assert.equal(lineage.observedSourceMigrationCount, 157);
   assert.equal(analysis.remoteVersions.length, 24);
   assert.equal(analysis.equivalent, 5);
   assert.equal(analysis.schemaProven, 0);
