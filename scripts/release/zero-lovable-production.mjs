@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 
 const SHA = /^[a-f0-9]{40}$/u;
-const ASSET =
-  /["'`](https?:\/\/[^"'`\s]+\/assets\/[^"'`\s]+|\/assets\/[^"'`\s]+|\.\.?\/[^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]/giu;
+const QUOTED_REFERENCE = /["'`]([^"'`\r\n]+)["'`]/gu;
 const BUILD_META =
   /<meta\b(?=[^>]*\bname=["']kova-build["'])(?=[^>]*\bcontent=["']([a-f0-9]{40})["'])[^>]*>/giu;
 const RETIRED_ROUTES = [
@@ -31,10 +30,18 @@ function normalizeBase(value) {
 
 function discoverAssets(source, parent, origin) {
   const assets = new Set();
-  for (const match of source.matchAll(ASSET)) {
-    const url = new URL(match[1], parent);
+  for (const match of source.matchAll(QUOTED_REFERENCE)) {
+    let url;
+    try {
+      url = new URL(match[1].trim(), parent);
+    } catch {
+      continue;
+    }
     url.hash = "";
-    if (url.origin === origin) assets.add(url.href);
+    const pathname = url.pathname.toLowerCase();
+    const isScannable =
+      pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname);
+    if (isScannable && url.origin === origin) assets.add(url.href);
   }
   return [...assets].sort();
 }
@@ -192,12 +199,14 @@ export async function collectZeroLovableProductionEvidence({
   const rootResult = await request(base, {}, limits);
   if (rootResult.readFailure) failures.push(`${rootResult.readFailure}:root`);
   if (rootResult.response.status !== 200) failures.push("root_status_not_200");
+  const rootFinalUrl = new URL(rootResult.response.url || base.href);
+  if (rootFinalUrl.href !== base.href) failures.push("root_redirected");
   if (/lovable/iu.test(rootResult.body)) failures.push("lovable_root_content");
   const rootBuildShas = [...rootResult.body.matchAll(BUILD_META)].map((match) => match[1]);
   const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
   if (rootBuildSha !== expectedSha) failures.push("root_build_sha_mismatch");
 
-  const pending = discoverAssets(rootResult.body, base, base.origin);
+  const pending = discoverAssets(rootResult.body, rootFinalUrl, base.origin);
   const seen = new Set();
   const assets = [];
   const contentHits = [];
