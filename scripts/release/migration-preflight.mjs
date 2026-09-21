@@ -16,10 +16,22 @@ const GIT_SHA = /^[a-f0-9]{40}$/u;
 const PROOF_ID = /^[a-z0-9][a-z0-9_-]{2,127}$/u;
 const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const MAX_SCHEMA_PROOF_ARTIFACT_BYTES = 64 * 1024 * 1024;
-const LINEAGE_STATUS = new Set(["equivalent", "schema_proven", "requires_schema_proof"]);
-const EQUIVALENCE_COMPARISON = new Set(["exact-content", "terminal-newline-only"]);
+const LINEAGE_STATUS = new Set([
+  "equivalent",
+  "schema_proven",
+  "requires_schema_proof",
+]);
+const EQUIVALENCE_COMPARISON = new Set([
+  "exact-content",
+  "terminal-newline-only",
+]);
 const SCHEMA_PROOF_COMPARISON = "schema-acl-rls-function-fingerprint";
-const FINGERPRINT_FIELDS = ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"];
+const FINGERPRINT_FIELDS = [
+  "schemaSha256",
+  "aclSha256",
+  "rlsSha256",
+  "functionSha256",
+];
 
 function plainRecord(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -83,18 +95,24 @@ function validOrderedVersions(versions, expectedCount) {
   return (
     Array.isArray(versions) &&
     versions.length === expectedCount &&
-    versions.every((version) => typeof version === "string" && VERSION.test(version)) &&
+    versions.every(
+      (version) => typeof version === "string" && VERSION.test(version),
+    ) &&
     JSON.stringify(versions) === JSON.stringify([...new Set(versions)].sort())
   );
 }
 
-export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = process.cwd()) {
+export function inspectMigrationSourceCommit(
+  sourceCommit,
+  repositoryPath = process.cwd(),
+) {
   if (!GIT_SHA.test(sourceCommit ?? ""))
     throw new Error("migration_schema_proof_source_commit_invalid");
 
   try {
     const env = { ...process.env };
-    for (const key of Object.keys(env)) if (key.startsWith("GIT_")) delete env[key];
+    for (const key of Object.keys(env))
+      if (key.startsWith("GIT_")) delete env[key];
     Object.assign(env, {
       GIT_OPTIONAL_LOCKS: "0",
       GIT_TERMINAL_PROMPT: "0",
@@ -122,11 +140,16 @@ export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = proc
           stdio: ["ignore", "pipe", "ignore"],
         },
       );
-    const resolvedCommit = git(["rev-parse", "--verify", `${sourceCommit}^{commit}`]).trim();
+    const resolvedCommit = git([
+      "rev-parse",
+      "--verify",
+      `${sourceCommit}^{commit}`,
+    ]).trim();
     if (resolvedCommit !== sourceCommit)
       throw new Error("migration_schema_proof_source_commit_mismatch");
     const sourceTree = git(["rev-parse", `${resolvedCommit}^{tree}`]).trim();
-    if (!GIT_SHA.test(sourceTree)) throw new Error("migration_schema_proof_source_tree_invalid");
+    if (!GIT_SHA.test(sourceTree))
+      throw new Error("migration_schema_proof_source_tree_invalid");
 
     const migrationPaths = git([
       "ls-tree",
@@ -147,7 +170,8 @@ export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = proc
         throw new Error("migration_schema_proof_source_ledger_invalid");
       }
       const match = FILENAME.exec(basename(path));
-      if (!match) throw new Error("migration_schema_proof_source_ledger_invalid");
+      if (!match)
+        throw new Error("migration_schema_proof_source_ledger_invalid");
       return match[1];
     });
     if (!validOrderedVersions(versions, versions.length))
@@ -165,7 +189,8 @@ export function inspectMigrationSourceCommit(sourceCommit, repositoryPath = proc
       migrations,
     };
   } catch (error) {
-    if (error?.message?.startsWith("migration_schema_proof_source_")) throw error;
+    if (error?.message?.startsWith("migration_schema_proof_source_"))
+      throw error;
     throw new Error("migration_schema_proof_source_commit_unavailable");
   }
 }
@@ -178,7 +203,10 @@ export function validateLineageSourceCheckpoint(
     inspectSource = inspectMigrationSourceCommit,
   } = {},
 ) {
-  const checkpoint = inspectSource(lineage.observedSourceCommit, repositoryPath);
+  const checkpoint = inspectSource(
+    lineage.observedSourceCommit,
+    repositoryPath,
+  );
   if (
     checkpoint.sourceCommit !== lineage.observedSourceCommit ||
     checkpoint.ledgerVersions.length !== lineage.observedSourceMigrationCount ||
@@ -188,7 +216,10 @@ export function validateLineageSourceCheckpoint(
     throw new Error("migration_lineage_source_checkpoint_invalid");
   }
   const currentByVersion = new Map(
-    (manifest?.migrations ?? []).map((migration) => [migration.timestamp, migration]),
+    (manifest?.migrations ?? []).map((migration) => [
+      migration.timestamp,
+      migration,
+    ]),
   );
   const checkpointByVersion = new Map(
     checkpoint.migrations.map((migration) => [migration.version, migration]),
@@ -208,15 +239,25 @@ export function validateLineageSourceCheckpoint(
     const current = currentByVersion.get(version);
     const pinned = checkpointByVersion.get(version);
     if (!current || !pinned)
-      throw new Error(`migration_lineage_source_checkpoint_version_missing:${version}`);
-    if (current.filename !== pinned.filename || current.sha256 !== pinned.sha256)
-      throw new Error(`migration_lineage_source_checkpoint_content_mismatch:${version}`);
+      throw new Error(
+        `migration_lineage_source_checkpoint_version_missing:${version}`,
+      );
+    if (
+      current.filename !== pinned.filename ||
+      current.sha256 !== pinned.sha256
+    )
+      throw new Error(
+        `migration_lineage_source_checkpoint_content_mismatch:${version}`,
+      );
   }
   return checkpoint;
 }
 
 function equalStringSets(left, right) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
 }
 
 function validFingerprint(value) {
@@ -235,9 +276,13 @@ function equalFingerprint(left, right) {
 }
 
 export function analyzeMigrationManifest(manifest) {
-  if (!manifest || typeof manifest !== "object") throw new Error("migration_manifest_invalid");
-  const migrations = Array.isArray(manifest.migrations) ? manifest.migrations : [];
-  if (manifest.count !== migrations.length) throw new Error("migration_manifest_count_mismatch");
+  if (!manifest || typeof manifest !== "object")
+    throw new Error("migration_manifest_invalid");
+  const migrations = Array.isArray(manifest.migrations)
+    ? manifest.migrations
+    : [];
+  if (manifest.count !== migrations.length)
+    throw new Error("migration_manifest_count_mismatch");
   if (!migrations.length) throw new Error("migration_manifest_empty");
 
   const versions = [];
@@ -252,9 +297,11 @@ export function analyzeMigrationManifest(manifest) {
     if (migration.order !== index + 1)
       throw new Error(`migration_order_invalid:${migration.filename}`);
     const match = FILENAME.exec(migration.filename ?? "");
-    if (!match) throw new Error(`migration_filename_invalid:${migration.filename}`);
+    if (!match)
+      throw new Error(`migration_filename_invalid:${migration.filename}`);
     const version = match[1];
-    if (version < previous) throw new Error(`migration_order_not_monotonic:${migration.filename}`);
+    if (version < previous)
+      throw new Error(`migration_order_not_monotonic:${migration.filename}`);
     previous = version;
     versions.push(version);
     if (!SHA256.test(migration.sha256 ?? ""))
@@ -265,12 +312,15 @@ export function analyzeMigrationManifest(manifest) {
     if (migration.destructive) destructive += 1;
     if (migration.dataBackfill) dataBackfill += 1;
     if (Array.isArray(migration.rls) && migration.rls.length) rlsChanges += 1;
-    if (Array.isArray(migration.functions) && migration.functions.length) functionChanges += 1;
+    if (Array.isArray(migration.functions) && migration.functions.length)
+      functionChanges += 1;
   }
 
   if (manifest.latest !== migrations.at(-1).filename)
     throw new Error("migration_manifest_latest_mismatch");
-  const duplicateContent = [...hashes.values()].filter((group) => group.length > 1);
+  const duplicateContent = [...hashes.values()].filter(
+    (group) => group.length > 1,
+  );
   return {
     count: migrations.length,
     first: migrations[0].filename,
@@ -319,16 +369,22 @@ export function reconcileMigrationVersions(localVersions, remoteVersions) {
 }
 
 export function validateMigrationLineage(lineage, manifest) {
-  if (!lineage || typeof lineage !== "object") throw new Error("migration_lineage_invalid");
-  if (lineage.schemaVersion !== 1) throw new Error("migration_lineage_schema_invalid");
+  if (!lineage || typeof lineage !== "object")
+    throw new Error("migration_lineage_invalid");
+  if (lineage.schemaVersion !== 1)
+    throw new Error("migration_lineage_schema_invalid");
   if (!GIT_SHA.test(lineage.observedSourceCommit ?? ""))
     throw new Error("migration_lineage_source_commit_invalid");
   if (!/^[a-z0-9]{20}$/u.test(lineage.targetProjectRef ?? ""))
     throw new Error("migration_lineage_target_invalid");
-  if (!Array.isArray(lineage.entries)) throw new Error("migration_lineage_entries_invalid");
+  if (!Array.isArray(lineage.entries))
+    throw new Error("migration_lineage_entries_invalid");
 
   const sourceByVersion = new Map(
-    (manifest?.migrations ?? []).map((migration) => [migration.timestamp, migration]),
+    (manifest?.migrations ?? []).map((migration) => [
+      migration.timestamp,
+      migration,
+    ]),
   );
   if (
     !Number.isSafeInteger(lineage.observedSourceMigrationCount) ||
@@ -357,7 +413,8 @@ export function validateMigrationLineage(lineage, manifest) {
     remoteVersions.add(entry.remoteVersion);
     if (typeof entry.remoteName !== "string" || !entry.remoteName.trim())
       throw new Error("migration_lineage_remote_name_invalid");
-    if (!LINEAGE_STATUS.has(entry.status)) throw new Error("migration_lineage_status_invalid");
+    if (!LINEAGE_STATUS.has(entry.status))
+      throw new Error("migration_lineage_status_invalid");
 
     if (entry.status === "equivalent") {
       const source = sourceByVersion.get(entry.sourceVersion);
@@ -379,7 +436,9 @@ export function validateMigrationLineage(lineage, manifest) {
         : [];
       if (
         !sourceVersions.length ||
-        sourceVersions.some((version) => !VERSION.test(version) || !sourceByVersion.has(version)) ||
+        sourceVersions.some(
+          (version) => !VERSION.test(version) || !sourceByVersion.has(version),
+        ) ||
         entry.comparison !== SCHEMA_PROOF_COMPARISON ||
         typeof entry.proofId !== "string" ||
         !PROOF_ID.test(entry.proofId) ||
@@ -397,7 +456,9 @@ export function validateMigrationLineage(lineage, manifest) {
     if (
       !Array.isArray(entry.candidateSourceVersions) ||
       !entry.candidateSourceVersions.length ||
-      entry.candidateSourceVersions.some((version) => !sourceByVersion.has(version)) ||
+      entry.candidateSourceVersions.some(
+        (version) => !sourceByVersion.has(version),
+      ) ||
       typeof entry.reason !== "string" ||
       !entry.reason.trim()
     ) {
@@ -419,7 +480,9 @@ export function validateMigrationLineage(lineage, manifest) {
 }
 
 export function classifyRemoteMigrationLineage(remoteVersions, lineage) {
-  const byRemoteVersion = new Map(lineage.entries.map((entry) => [entry.remoteVersion, entry]));
+  const byRemoteVersion = new Map(
+    lineage.entries.map((entry) => [entry.remoteVersion, entry]),
+  );
   const unknownRemote = [];
   const equivalent = [];
   const schemaProven = [];
@@ -430,7 +493,10 @@ export function classifyRemoteMigrationLineage(remoteVersions, lineage) {
     if (!entry) {
       unknownRemote.push(version);
     } else if (entry.status === "equivalent") {
-      equivalent.push({ remoteVersion: version, sourceVersion: entry.sourceVersion });
+      equivalent.push({
+        remoteVersion: version,
+        sourceVersion: entry.sourceVersion,
+      });
     } else if (entry.status === "schema_proven") {
       schemaProven.push({
         remoteVersion: version,
@@ -455,7 +521,8 @@ export function validateRemoteMigrationEvidence(value) {
     : Array.isArray(value.versions)
       ? value.versions
       : null;
-  if (!migrations) throw new Error("remote_migration_evidence_versions_missing");
+  if (!migrations)
+    throw new Error("remote_migration_evidence_versions_missing");
   if (
     !Number.isSafeInteger(value.migrationCount) ||
     value.migrationCount < 0 ||
@@ -473,10 +540,17 @@ export function validateRemoteMigrationEvidence(value) {
   };
 }
 
-export function assertRemoteLineageInventory(lineageAnalysis, remoteEvidence, reconciliation) {
+export function assertRemoteLineageInventory(
+  lineageAnalysis,
+  remoteEvidence,
+  reconciliation,
+) {
   if (remoteEvidence.targetProjectRef !== lineageAnalysis.targetProjectRef)
     throw new Error("migration_lineage_target_mismatch");
-  if (remoteEvidence.migrationCount !== lineageAnalysis.observedRemoteMigrationCount)
+  if (
+    remoteEvidence.migrationCount !==
+    lineageAnalysis.observedRemoteMigrationCount
+  )
     throw new Error("migration_lineage_remote_count_mismatch");
   const inventoried = lineageAnalysis.remoteVersions;
   const observed = reconciliation.unknownRemote;
@@ -484,7 +558,10 @@ export function assertRemoteLineageInventory(lineageAnalysis, remoteEvidence, re
     throw new Error("migration_lineage_remote_inventory_mismatch");
 }
 
-export function assertLineageSourceVersionsRepaired(remoteLineage, remoteVersions) {
+export function assertLineageSourceVersionsRepaired(
+  remoteLineage,
+  remoteVersions,
+) {
   const remote = new Set(remoteVersions);
   const repairedSources = [
     ...remoteLineage.equivalent.map((entry) => entry.sourceVersion),
@@ -497,7 +574,8 @@ export function assertLineageSourceVersionsRepaired(remoteLineage, remoteVersion
 export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("migration_schema_proof_invalid");
-  if (value.schemaVersion !== 2) throw new Error("migration_schema_proof_schema_invalid");
+  if (value.schemaVersion !== 2)
+    throw new Error("migration_schema_proof_schema_invalid");
   if (
     !exactRecord(value, [
       "schemaVersion",
@@ -515,11 +593,14 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
   const observedRemote = validateRemoteMigrationEvidence(remoteEvidence);
   if (value.targetProjectRef !== observedRemote.targetProjectRef)
     throw new Error("migration_schema_proof_target_mismatch");
-  if (value.observedSourceMigrationCount !== lineage.observedSourceMigrationCount)
+  if (
+    value.observedSourceMigrationCount !== lineage.observedSourceMigrationCount
+  )
     throw new Error("migration_schema_proof_source_count_mismatch");
   if (value.observedRemoteMigrationCount !== observedRemote.migrationCount)
     throw new Error("migration_schema_proof_remote_count_mismatch");
-  if (!Array.isArray(value.proofs)) throw new Error("migration_schema_proof_entries_invalid");
+  if (!Array.isArray(value.proofs))
+    throw new Error("migration_schema_proof_entries_invalid");
 
   const sourceProvenanceFields = [
     "sourceCommit",
@@ -528,7 +609,11 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
     "artifactCreatedAt",
     "ledgerVersionsSha256",
   ];
-  const remoteProvenanceFields = ["artifactSha256", "artifactCreatedAt", "ledgerVersionsSha256"];
+  const remoteProvenanceFields = [
+    "artifactSha256",
+    "artifactCreatedAt",
+    "ledgerVersionsSha256",
+  ];
   const sourceProvenance = value.sourceProvenance;
   const remoteProvenance = value.remoteProvenance;
   if (
@@ -542,7 +627,9 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
   ) {
     throw new Error("migration_schema_proof_source_provenance_invalid");
   }
-  const expectedRemoteLedgerSha256 = ledgerVersionsSha256(observedRemote.versions);
+  const expectedRemoteLedgerSha256 = ledgerVersionsSha256(
+    observedRemote.versions,
+  );
   if (
     !exactRecord(remoteProvenance, remoteProvenanceFields) ||
     !SHA256.test(remoteProvenance.artifactSha256 ?? "") ||
@@ -552,7 +639,9 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
     throw new Error("migration_schema_proof_remote_provenance_invalid");
   }
 
-  const required = lineage.entries.filter((entry) => entry.status === "schema_proven");
+  const required = lineage.entries.filter(
+    (entry) => entry.status === "schema_proven",
+  );
   if (value.proofs.length !== required.length)
     throw new Error("migration_schema_proof_entry_count_mismatch");
   const proofs = new Map();
@@ -592,10 +681,14 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
       sourceCapture.querySha256 !== remoteCapture.querySha256 ||
       !SHA256.test(sourceCapture.captureSha256 ?? "") ||
       !SHA256.test(remoteCapture.captureSha256 ?? "") ||
-      sourceCapture.ledgerVersionsSha256 !== sourceProvenance.ledgerVersionsSha256 ||
-      remoteCapture.ledgerVersionsSha256 !== remoteProvenance.ledgerVersionsSha256 ||
-      Date.parse(sourceCapture.capturedAt) > Date.parse(sourceProvenance.artifactCreatedAt) ||
-      Date.parse(remoteCapture.capturedAt) > Date.parse(remoteProvenance.artifactCreatedAt) ||
+      sourceCapture.ledgerVersionsSha256 !==
+        sourceProvenance.ledgerVersionsSha256 ||
+      remoteCapture.ledgerVersionsSha256 !==
+        remoteProvenance.ledgerVersionsSha256 ||
+      Date.parse(sourceCapture.capturedAt) >
+        Date.parse(sourceProvenance.artifactCreatedAt) ||
+      Date.parse(remoteCapture.capturedAt) >
+        Date.parse(remoteProvenance.artifactCreatedAt) ||
       !equalFingerprint(sourceCapture.fingerprint, remoteCapture.fingerprint)
     ) {
       throw new Error("migration_schema_proof_entry_invalid");
@@ -632,7 +725,11 @@ export function validateSchemaProofEvidence(value, lineage, remoteEvidence) {
 
 export function validateSchemaProofArtifactBindings(
   value,
-  { sourceArtifactPath, remoteArtifactPath, sourceRepositoryPath = process.cwd() },
+  {
+    sourceArtifactPath,
+    remoteArtifactPath,
+    sourceRepositoryPath = process.cwd(),
+  },
 ) {
   if (
     value?.schemaVersion !== 2 ||
@@ -686,11 +783,19 @@ export function validateSchemaProofArtifactBindings(
     sourceArtifact.sourceCommit !== value.sourceProvenance.sourceCommit ||
     sourceArtifact.sourceTree !== value.sourceProvenance.sourceTree ||
     sourceArtifact.sourceTree !== sourceCommit.sourceTree ||
-    !validOrderedVersions(sourceArtifact.ledgerVersions, value.observedSourceMigrationCount) ||
-    !equalStringSets(sourceArtifact.ledgerVersions, sourceCommit.ledgerVersions) ||
-    ledgerVersionsSha256(sourceArtifact.ledgerVersions) !== sourceArtifact.ledgerVersionsSha256 ||
+    !validOrderedVersions(
+      sourceArtifact.ledgerVersions,
+      value.observedSourceMigrationCount,
+    ) ||
+    !equalStringSets(
+      sourceArtifact.ledgerVersions,
+      sourceCommit.ledgerVersions,
+    ) ||
+    ledgerVersionsSha256(sourceArtifact.ledgerVersions) !==
+      sourceArtifact.ledgerVersionsSha256 ||
     sourceArtifact.ledgerVersionsSha256 !== sourceCommit.ledgerVersionsSha256 ||
-    sourceArtifact.ledgerVersionsSha256 !== value.sourceProvenance.ledgerVersionsSha256 ||
+    sourceArtifact.ledgerVersionsSha256 !==
+      value.sourceProvenance.ledgerVersionsSha256 ||
     !Array.isArray(sourceArtifact.captures)
   ) {
     throw new Error("migration_schema_proof_source_artifact_invalid");
@@ -709,9 +814,14 @@ export function validateSchemaProofArtifactBindings(
     remoteArtifact.artifactKind !== "migration-schema-remote-captures" ||
     remoteArtifact.createdAt !== value.remoteProvenance.artifactCreatedAt ||
     remoteArtifact.targetProjectRef !== value.targetProjectRef ||
-    !validOrderedVersions(remoteArtifact.ledgerVersions, value.observedRemoteMigrationCount) ||
-    ledgerVersionsSha256(remoteArtifact.ledgerVersions) !== remoteArtifact.ledgerVersionsSha256 ||
-    remoteArtifact.ledgerVersionsSha256 !== value.remoteProvenance.ledgerVersionsSha256 ||
+    !validOrderedVersions(
+      remoteArtifact.ledgerVersions,
+      value.observedRemoteMigrationCount,
+    ) ||
+    ledgerVersionsSha256(remoteArtifact.ledgerVersions) !==
+      remoteArtifact.ledgerVersionsSha256 ||
+    remoteArtifact.ledgerVersionsSha256 !==
+      value.remoteProvenance.ledgerVersionsSha256 ||
     !Array.isArray(remoteArtifact.captures)
   ) {
     throw new Error("migration_schema_proof_remote_artifact_invalid");
@@ -749,7 +859,12 @@ export function validateSchemaProofArtifactBindings(
       } catch {
         throw new Error(`migration_schema_proof_${side}_artifact_invalid`);
       }
-      captures.set(capture.proofId, { capture, fingerprint, captureSha256, scopeSha256 });
+      captures.set(capture.proofId, {
+        capture,
+        fingerprint,
+        captureSha256,
+        scopeSha256,
+      });
     }
     return captures;
   };
@@ -763,14 +878,18 @@ export function validateSchemaProofArtifactBindings(
       !remote ||
       source.capture.remoteVersion !== proof.remoteVersion ||
       remote.capture.remoteVersion !== proof.remoteVersion ||
-      !proof.sourceVersions.every((version) => sourceArtifact.ledgerVersions.includes(version)) ||
+      !proof.sourceVersions.every((version) =>
+        sourceArtifact.ledgerVersions.includes(version),
+      ) ||
       !remoteArtifact.ledgerVersions.includes(proof.remoteVersion) ||
       source.capture.capturedAt !== proof.sourceCapture.capturedAt ||
       remote.capture.capturedAt !== proof.remoteCapture.capturedAt ||
       source.capture.querySha256 !== proof.sourceCapture.querySha256 ||
       remote.capture.querySha256 !== proof.remoteCapture.querySha256 ||
-      source.capture.ledgerVersionsSha256 !== proof.sourceCapture.ledgerVersionsSha256 ||
-      remote.capture.ledgerVersionsSha256 !== proof.remoteCapture.ledgerVersionsSha256 ||
+      source.capture.ledgerVersionsSha256 !==
+        proof.sourceCapture.ledgerVersionsSha256 ||
+      remote.capture.ledgerVersionsSha256 !==
+        proof.remoteCapture.ledgerVersionsSha256 ||
       source.scopeSha256 !== proof.scopeSha256 ||
       remote.scopeSha256 !== proof.scopeSha256 ||
       source.captureSha256 !== proof.sourceCapture.captureSha256 ||
@@ -786,22 +905,28 @@ export function validateSchemaProofArtifactBindings(
 
 function requiredEvidence(name) {
   const path = process.env[name];
-  if (!path || !existsSync(resolve(path))) throw new Error(`missing_release_evidence:${name}`);
+  if (!path || !existsSync(resolve(path)))
+    throw new Error(`missing_release_evidence:${name}`);
   return resolve(path);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const sourceOnly = process.argv.includes("--source-only") || !process.argv.includes("--ready");
+  const sourceOnly =
+    process.argv.includes("--source-only") || !process.argv.includes("--ready");
   const ready = process.argv.includes("--ready");
-  const manifestPath = resolve(process.env.KOVA_MIGRATION_MANIFEST ?? "release-migrations.json");
+  const manifestPath = resolve(
+    process.env.KOVA_MIGRATION_MANIFEST ?? "release-migrations.json",
+  );
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const analysis = analyzeMigrationManifest(manifest);
   const report = { sourceOnly, ready, ...analysis };
 
   if (ready) {
     const targetRef = process.env.SUPABASE_PROJECT_REF ?? "";
-    if (!/^[a-z0-9]{20}$/u.test(targetRef)) throw new Error("SUPABASE_PROJECT_REF_required");
-    const productionRef = process.env.KOVA_PRODUCTION_SUPABASE_PROJECT_REF ?? "";
+    if (!/^[a-z0-9]{20}$/u.test(targetRef))
+      throw new Error("SUPABASE_PROJECT_REF_required");
+    const productionRef =
+      process.env.KOVA_PRODUCTION_SUPABASE_PROJECT_REF ?? "";
     if (
       targetRef === productionRef &&
       process.env.KOVA_PRODUCTION_MIGRATION_APPROVED !== targetRef
@@ -814,28 +939,51 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     );
     if (remoteEvidence.targetProjectRef !== targetRef)
       throw new Error("remote_migration_evidence_target_mismatch");
-    const reconciliation = reconcileMigrationVersions(analysis.versions, remoteEvidence.versions);
+    const reconciliation = reconcileMigrationVersions(
+      analysis.versions,
+      remoteEvidence.versions,
+    );
     const lineagePath = requiredEvidence("KOVA_MIGRATION_LINEAGE_FILE");
     const lineage = JSON.parse(readFileSync(lineagePath, "utf8"));
     const lineageAnalysis = validateMigrationLineage(lineage, manifest);
     validateLineageSourceCheckpoint(lineage, manifest);
     if (lineageAnalysis.targetProjectRef !== targetRef)
       throw new Error("migration_lineage_target_mismatch");
-    assertRemoteLineageInventory(lineageAnalysis, remoteEvidence, reconciliation);
-    const remoteLineage = classifyRemoteMigrationLineage(reconciliation.unknownRemote, lineage);
-    if (remoteLineage.unknownRemote.length) throw new Error("remote_migration_history_unknown");
+    assertRemoteLineageInventory(
+      lineageAnalysis,
+      remoteEvidence,
+      reconciliation,
+    );
+    const remoteLineage = classifyRemoteMigrationLineage(
+      reconciliation.unknownRemote,
+      lineage,
+    );
+    if (remoteLineage.unknownRemote.length)
+      throw new Error("remote_migration_history_unknown");
     if (remoteLineage.requiresSchemaProof.length)
       throw new Error("remote_migration_lineage_unverified");
     assertLineageSourceVersionsRepaired(remoteLineage, remoteEvidence.versions);
     let schemaProof;
     if (lineageAnalysis.schemaProven) {
-      const schemaProofPath = requiredEvidence("KOVA_MIGRATION_SCHEMA_PROOF_FILE");
-      const schemaProofEvidence = JSON.parse(readFileSync(schemaProofPath, "utf8"));
+      const schemaProofPath = requiredEvidence(
+        "KOVA_MIGRATION_SCHEMA_PROOF_FILE",
+      );
+      const schemaProofEvidence = JSON.parse(
+        readFileSync(schemaProofPath, "utf8"),
+      );
       schemaProof = {
-        ...validateSchemaProofEvidence(schemaProofEvidence, lineage, remoteEvidence),
+        ...validateSchemaProofEvidence(
+          schemaProofEvidence,
+          lineage,
+          remoteEvidence,
+        ),
         ...validateSchemaProofArtifactBindings(schemaProofEvidence, {
-          sourceArtifactPath: requiredEvidence("KOVA_MIGRATION_SCHEMA_SOURCE_ARTIFACT"),
-          remoteArtifactPath: requiredEvidence("KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT"),
+          sourceArtifactPath: requiredEvidence(
+            "KOVA_MIGRATION_SCHEMA_SOURCE_ARTIFACT",
+          ),
+          remoteArtifactPath: requiredEvidence(
+            "KOVA_MIGRATION_SCHEMA_REMOTE_ARTIFACT",
+          ),
         }),
       };
     }
