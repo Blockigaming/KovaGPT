@@ -199,6 +199,7 @@ export async function collectZeroLovableProductionEvidence({
   if (rootResult.readFailure) failures.push(`${rootResult.readFailure}:root`);
   if (rootResult.response.status !== 200) failures.push("root_status_not_200");
   const rootFinalUrl = new URL(rootResult.response.url || base.href);
+  // A redirect changes the production surface being certified, so it is never an alternate base.
   if (rootFinalUrl.href !== base.href) failures.push("root_redirected");
   if (/lovable/iu.test(rootResult.body)) failures.push("lovable_root_content");
   const rootBuildShas = [...rootResult.body.matchAll(BUILD_META)].map((match) => match[1]);
