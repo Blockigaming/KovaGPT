@@ -7,17 +7,35 @@ const REQUIRED_COMPOSER_TOOLS = `[
   { id: "image", label: "Create Image", icon: ImagePlus },
 ]`;
 
-function compactSource(source) {
-  return source.replace(/\s+/gu, "");
+function compactSyntax(source) {
+  let result = "";
+  let quote = null;
+  let escaped = false;
+  for (const char of source) {
+    if (quote) {
+      result += char;
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      result += char;
+      continue;
+    }
+    if (!/\s/u.test(char)) result += char;
+  }
+  return result;
 }
 
-function hasRequiredComposerTools(source) {
+export function hasRequiredComposerTools(source) {
   const declaration = source.match(
     /const\s+COMPOSER_TOOLS\s*:\s*readonly\s+ComposerAction\[\]\s*=\s*(\[[\s\S]*?\]);/u,
   );
   return (
     declaration?.[1] != null &&
-    compactSource(declaration[1]) === compactSource(REQUIRED_COMPOSER_TOOLS)
+    compactSyntax(declaration[1]) === compactSyntax(REQUIRED_COMPOSER_TOOLS)
   );
 }
 
