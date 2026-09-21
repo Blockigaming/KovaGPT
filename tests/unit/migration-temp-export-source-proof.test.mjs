@@ -86,6 +86,21 @@ test("temporary export source proof permits later manifest migrations beyond the
   assert.equal(proof.fullLedgerScanned, true);
 });
 
+test("temporary export source proof remains valid after reviewed schema promotion", () => {
+  const promotedLineage = structuredClone(lineage);
+  promotedLineage.entries[0] = {
+    remoteVersion: TEMP_EXPORT_REMOTE_VERSION,
+    status: "schema_proven",
+    sourceVersions: [TEMP_EXPORT_CANDIDATE_VERSION],
+    schemaProofId: `proof-${TEMP_EXPORT_REMOTE_VERSION}`,
+  };
+  const proof = buildTemporaryExportSourceProof(promotedLineage, manifest, {
+    inspectSource: () => structuredClone(inspected),
+  });
+  assert.equal(proof.candidate.filename, rows[0].filename);
+  assert.equal(proof.fullLedgerScanned, true);
+});
+
 test("temporary export source proof rejects any symbol occurrence", () => {
   assert.throws(
     () =>
