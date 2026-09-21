@@ -190,12 +190,72 @@ test("pre-retirement Deep Research cache hashes migrate without discarding the d
 
   const restored = await restoreChatHistoryState(structuredClone(state), OWNER);
   assert.equal(restored.records.legacy.local.messages[0].requestedTool, undefined);
-  assert.equal(restored.records.legacy.dirty, true);
+  assert.equal(restored.records.legacy.dirty, false);
   assert.notEqual(restored.records.legacy.localHash, legacyHash);
   assert.equal(
     restored.records.legacy.localHash,
     await chatHistoryHash(restored.records.legacy.local, false),
   );
+
+  const remote = chat("legacy", "newer cloud edit");
+  const reconciled = await applyChatHistoryPage(restored, page([row(remote, 2, 1)]));
+  assert.equal(reconciled.records.legacy.local.messages[0].content, "newer cloud edit");
+  assert.equal(reconciled.records.legacy.conflict, null);
+  assert.equal(reconciled.records.legacy.dirty, false);
+});
+
+test("pre-retirement captured mutations stay correlatable without being retried", async () => {
+  const acceptedPayload = {
+    ...chat("legacy-request", "accepted snapshot"),
+    messages: [
+      {
+        id: "response",
+        role: "assistant",
+        content: "Legacy result",
+        requestedTool: "deep_research",
+      },
+    ],
+  };
+  const localPayload = chat("legacy-request", "newer local edit");
+  const mutationId = crypto.randomUUID();
+  const state = createChatHistoryState(OWNER);
+  state.epoch = EPOCH;
+  state.records["legacy-request"] = {
+    id: "legacy-request",
+    revision: 0,
+    serverHash: null,
+    local: localPayload,
+    archived: false,
+    localHash: await chatHistoryHash(localPayload, false),
+    migration: false,
+    dirty: true,
+    request: {
+      mutationId,
+      epoch: EPOCH,
+      id: "legacy-request",
+      expectedRevision: 0,
+      payload: acceptedPayload,
+      archived: false,
+      hash: await chatHistoryHash(acceptedPayload, false),
+    },
+    conflict: null,
+  };
+
+  const restored = await restoreChatHistoryState(structuredClone(state), OWNER);
+  assert.equal(restored.records["legacy-request"].request.mutationId, mutationId);
+  assert.equal(restored.records["legacy-request"].request.retryable, false);
+  assert.equal(nextChatHistoryRequest(restored), null);
+
+  const acceptedNormalized = normalizeChatHistory(acceptedPayload, OWNER);
+  const reconciled = await applyChatHistoryPage(
+    restored,
+    page([row(acceptedNormalized, 1, 1, mutationId)]),
+  );
+  assert.equal(reconciled.records["legacy-request"].request, null);
+  assert.equal(reconciled.records["legacy-request"].revision, 1);
+  assert.equal(reconciled.records["legacy-request"].dirty, true);
+  assert.equal(reconciled.records["legacy-request"].local.messages[0].content, "newer local edit");
+  assert.equal(nextChatHistoryRequest(reconciled).expectedRevision, 1);
 });
 
 test("durable history validates and preserves assistant retry states", () => {
