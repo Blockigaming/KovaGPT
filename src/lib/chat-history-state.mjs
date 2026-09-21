@@ -26,6 +26,7 @@ export function createChatHistoryState(ownerId, localEpoch = crypto.randomUUID()
 const recordSizes = new WeakMap();
 
 function hasRetiredDeepResearchState(payload) {
+  // Different pre-retirement schema generations persisted either marker.
   return (
     Array.isArray(payload?.messages) &&
     payload.messages.some(
