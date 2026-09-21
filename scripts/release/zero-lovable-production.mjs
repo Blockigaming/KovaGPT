@@ -1,7 +1,15 @@
 import { writeFileSync } from "node:fs";
 
 const SHA = /^[a-f0-9]{40}$/u;
-const QUOTED_REFERENCE = /["'`]([^"'`\r\n]+)["'`]/gu;
+const HTML_TAG = /<(script|link)\b([^>]*)>/giu;
+const HTML_ATTRIBUTE =
+  /\b([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gu;
+const JS_DYNAMIC_IMPORT = /\bimport\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*\)/gu;
+const JS_STATIC_IMPORT =
+  /\b(?:import|export)\s+(?:[^"'`\r\n;]*?\sfrom\s*)?["'`]([^"'`\r\n]+)["'`]/gu;
+const JS_REQUIRE = /\brequire\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*\)/gu;
+const VITE_PRELOAD_REFERENCE =
+  /["'`](assets\/[^"'`\r\n]+\.(?:mjs|cjs|js|css)(?:\?[^"'`\r\n]*)?)["'`]/gu;
 const BUILD_META =
   /<meta\b(?=[^>]*\bname=["']kova-build["'])(?=[^>]*\bcontent=["']([a-f0-9]{40})["'])[^>]*>/giu;
 const RETIRED_ROUTES = [
@@ -18,31 +26,96 @@ const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const DEFAULT_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const JAVASCRIPT_CONTENT_TYPE = /(?:javascript|ecmascript)/iu;
 const CSS_CONTENT_TYPE = /^text\/css\b/iu;
+const HTML_CONTENT_TYPE = /^(?:text\/html|application\/xhtml\+xml)\b/iu;
+const LOVABLE_HOST = /(?:^|\.)lovable\.(?:app|dev)$/iu;
 
 function normalizeBase(value) {
   const url = new URL(value);
   if (url.protocol !== "https:") throw new Error("production_base_must_use_https");
+  if (LOVABLE_HOST.test(url.hostname)) throw new Error("production_base_must_not_use_lovable");
   url.pathname = "/";
   url.search = "";
   url.hash = "";
   return url;
 }
 
+function addAssetReference(
+  assets,
+  reference,
+  parent,
+  origin,
+  { allowAny = false, resolveFromOriginRoot = false } = {},
+) {
+  const value = reference?.trim();
+  if (!value || /^(?:data:|javascript:|#)/iu.test(value)) return;
+  let url;
+  try {
+    url = new URL(value, resolveFromOriginRoot ? new URL("/", origin) : parent);
+  } catch {
+    return;
+  }
+  url.hash = "";
+  if (url.origin !== origin) return;
+  const pathname = url.pathname.toLowerCase();
+  if (allowAny || pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname)) {
+    assets.add(url.href);
+  }
+}
+
 function discoverAssets(source, parent, origin) {
   const assets = new Set();
-  for (const match of source.matchAll(QUOTED_REFERENCE)) {
-    let url;
-    try {
-      url = new URL(match[1].trim(), parent);
-    } catch {
+
+  for (const match of source.matchAll(HTML_TAG)) {
+    const tag = match[1].toLowerCase();
+    const attributes = new Map();
+    for (const attribute of match[2].matchAll(HTML_ATTRIBUTE)) {
+      attributes.set(
+        attribute[1].toLowerCase(),
+        attribute[2] ?? attribute[3] ?? attribute[4] ?? "",
+      );
+    }
+    const reference = tag === "script" ? attributes.get("src") : attributes.get("href");
+    if (!reference) continue;
+    if (tag === "script") {
+      addAssetReference(assets, reference, parent, origin, { allowAny: true });
       continue;
     }
-    url.hash = "";
-    const pathname = url.pathname.toLowerCase();
-    const isScannable = pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname);
-    if (isScannable && url.origin === origin) assets.add(url.href);
+    const rel = new Set(
+      (attributes.get("rel") ?? "")
+        .toLowerCase()
+        .split(/\s+/u)
+        .filter(Boolean),
+    );
+    const as = (attributes.get("as") ?? "").toLowerCase();
+    const executableLink =
+      rel.has("stylesheet") ||
+      rel.has("modulepreload") ||
+      (rel.has("preload") && ["script", "style"].includes(as));
+    addAssetReference(assets, reference, parent, origin, { allowAny: executableLink });
   }
+
+  for (const pattern of [JS_DYNAMIC_IMPORT, JS_STATIC_IMPORT, JS_REQUIRE]) {
+    for (const match of source.matchAll(pattern)) {
+      addAssetReference(assets, match[1], parent, origin, { allowAny: true });
+    }
+  }
+
+  for (const match of source.matchAll(VITE_PRELOAD_REFERENCE)) {
+    addAssetReference(assets, match[1], parent, origin, {
+      allowAny: true,
+      resolveFromOriginRoot: true,
+    });
+  }
+
   return [...assets].sort();
+}
+
+function decodedPathname(value) {
+  try {
+    return decodeURIComponent(new URL(value).pathname);
+  } catch {
+    return null;
+  }
 }
 
 // Fetch URLs stay intact; persisted evidence must never retain signed-query credentials.
@@ -77,7 +150,11 @@ function assetKind(value) {
 
 function isTextAsset(kind, contentType = "") {
   return (
-    kind !== "other" || /^text\//iu.test(contentType) || /(?:json|xml|svg)/iu.test(contentType)
+    kind !== "other" ||
+    /^text\//iu.test(contentType) ||
+    JAVASCRIPT_CONTENT_TYPE.test(contentType) ||
+    CSS_CONTENT_TYPE.test(contentType) ||
+    /(?:json|xml|svg)/iu.test(contentType)
   );
 }
 
@@ -195,12 +272,20 @@ export async function collectZeroLovableProductionEvidence({
     }
   }
 
-  const rootResult = await request(base, {}, limits);
+  const rootResult = await request(base, { redirect: "manual" }, limits);
   if (rootResult.readFailure) failures.push(`${rootResult.readFailure}:root`);
   if (rootResult.response.status !== 200) failures.push("root_status_not_200");
+  const rootContentType = rootResult.response.headers.get("content-type") ?? "";
+  if (!HTML_CONTENT_TYPE.test(rootContentType)) failures.push("root_content_type_not_html");
   const rootFinalUrl = new URL(rootResult.response.url || base.href);
   // A redirect changes the production surface being certified, so it is never an alternate base.
-  if (rootFinalUrl.href !== base.href) failures.push("root_redirected");
+  if (
+    rootResult.response.redirected ||
+    (rootResult.response.status >= 300 && rootResult.response.status < 400) ||
+    rootResult.response.headers.get("location") ||
+    rootFinalUrl.href !== base.href
+  )
+    failures.push("root_redirected");
   if (/lovable/iu.test(rootResult.body)) failures.push("lovable_root_content");
   const rootBuildShas = [...rootResult.body.matchAll(BUILD_META)].map((match) => match[1]);
   const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
@@ -217,26 +302,42 @@ export async function collectZeroLovableProductionEvidence({
     seen.add(url);
     const requestedUrl = new URL(url);
     const requestedDisplayUrl = redactUrl(requestedUrl);
-    if (/lovable/iu.test(requestedUrl.pathname))
+    const requestedPathname = decodedPathname(requestedUrl);
+    if (requestedPathname === null)
+      failures.push(`asset_path_decode_failed:${requestedDisplayUrl}`);
+    else if (/lovable/iu.test(requestedPathname))
       failures.push(`lovable_asset_name:${requestedDisplayUrl}`);
-    const result = await request(url, {}, limits);
+    const result = await request(url, { redirect: "manual" }, limits);
     assets.push(result.record);
     const finalUrl = new URL(result.response.url || url);
     const displayUrl = result.record.url;
+    const redirected =
+      result.response.redirected ||
+      (result.response.status >= 300 && result.response.status < 400) ||
+      Boolean(result.response.headers.get("location")) ||
+      finalUrl.href !== requestedUrl.href;
+    if (redirected) failures.push(`asset_redirected:${displayUrl}`);
     if (finalUrl.origin !== base.origin) failures.push(`asset_redirect_cross_origin:${displayUrl}`);
-    if (/lovable/iu.test(finalUrl.pathname)) failures.push(`lovable_asset_name:${displayUrl}`);
+    const finalPathname = decodedPathname(finalUrl);
+    if (finalPathname === null) failures.push(`asset_path_decode_failed:${displayUrl}`);
+    else if (/lovable/iu.test(finalPathname)) failures.push(`lovable_asset_name:${displayUrl}`);
     if (result.readFailure) failures.push(`${result.readFailure}:${displayUrl}`);
     if (result.response.status !== 200) failures.push(`asset_status_not_200:${displayUrl}`);
 
     const requestedKind = assetKind(requestedUrl);
     const finalKind = assetKind(finalUrl);
-    const kind =
+    const pathKind =
       requestedKind === "javascript" || finalKind === "javascript"
         ? "javascript"
         : requestedKind === "css" || finalKind === "css"
           ? "css"
           : "other";
     const contentType = result.response.headers.get("content-type") ?? "";
+    const kind = JAVASCRIPT_CONTENT_TYPE.test(contentType)
+      ? "javascript"
+      : CSS_CONTENT_TYPE.test(contentType)
+        ? "css"
+        : pathKind;
     const contentTypeValid =
       kind === "javascript"
         ? JAVASCRIPT_CONTENT_TYPE.test(contentType)
