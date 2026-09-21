@@ -18,6 +18,20 @@ const manifest = {
   ],
 };
 
+const proofPlanOptions = {
+  inspectSource: (sourceCommit) => ({
+    sourceCommit,
+    sourceTree: "2".repeat(40),
+    ledgerVersions: manifest.migrations.map((migration) => migration.timestamp),
+    ledgerVersionsSha256: "3".repeat(64),
+    migrations: manifest.migrations.map(({ timestamp, filename, sha256 }) => ({
+      version: timestamp,
+      filename,
+      sha256,
+    })),
+  }),
+};
+
 test("schema proof plan includes only unresolved lineage entries and deduplicates source versions", () => {
   const lineage = {
     schemaVersion: 1,
@@ -45,7 +59,7 @@ test("schema proof plan includes only unresolved lineage entries and deduplicate
     ],
   };
 
-  assert.deepEqual(buildMigrationSchemaProofPlan(lineage, manifest), {
+  assert.deepEqual(buildMigrationSchemaProofPlan(lineage, manifest, proofPlanOptions), {
     schemaVersion: 2,
     observedSourceCommit: "1".repeat(40),
     targetProjectRef: "abcdefghijklmnopqrst",
@@ -101,8 +115,55 @@ test("schema proof plan is empty when every remote-only lineage entry is already
     ],
   };
 
-  const plan = buildMigrationSchemaProofPlan(lineage, manifest);
+  const plan = buildMigrationSchemaProofPlan(lineage, manifest, proofPlanOptions);
   assert.equal(plan.requiredProofCount, 0);
   assert.deepEqual(plan.sourceVersions, []);
   assert.deepEqual(plan.entries, []);
+});
+
+test("schema proof plan rejects absent or content-changed candidates at the pinned checkpoint", () => {
+  const lineage = {
+    schemaVersion: 1,
+    observedSourceCommit: "1".repeat(40),
+    targetProjectRef: "abcdefghijklmnopqrst",
+    observedRemoteMigrationCount: 1,
+    observedSourceMigrationCount: 2,
+    entries: [
+      {
+        remoteVersion: "20260102000000",
+        remoteName: "needs proof",
+        status: "requires_schema_proof",
+        candidateSourceVersions: ["20260101000001"],
+        reason: "normalized database state must match",
+      },
+    ],
+  };
+  assert.throws(
+    () =>
+      buildMigrationSchemaProofPlan(lineage, manifest, {
+        inspectSource: (sourceCommit) => ({
+          ...proofPlanOptions.inspectSource(sourceCommit),
+          migrations: proofPlanOptions
+            .inspectSource(sourceCommit)
+            .migrations.filter((migration) => migration.version !== "20260101000001"),
+        }),
+      }),
+    /migration_lineage_source_checkpoint_(?:invalid|version_missing)/u,
+  );
+  assert.throws(
+    () =>
+      buildMigrationSchemaProofPlan(lineage, manifest, {
+        inspectSource: (sourceCommit) => ({
+          ...proofPlanOptions.inspectSource(sourceCommit),
+          migrations: proofPlanOptions
+            .inspectSource(sourceCommit)
+            .migrations.map((migration) =>
+              migration.version === "20260101000001"
+                ? { ...migration, sha256: "c".repeat(64) }
+                : migration,
+            ),
+        }),
+      }),
+    /migration_lineage_source_checkpoint_content_mismatch/u,
+  );
 });
