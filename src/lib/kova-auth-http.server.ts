@@ -330,15 +330,14 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
 
   const challengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
   if (challengeToken) {
-    const code = typeof body.code === "string" ? body.code : "";
-    const recoveryCode = typeof body.recoveryCode === "string" ? body.recoveryCode : "";
-    const usingTotp = code.length > 0;
-    const usingRecovery = recoveryCode.length > 0;
-    if (usingTotp === usingRecovery) {
+    const hasCode = body.code !== undefined;
+    const hasRecoveryCode = body.recoveryCode !== undefined;
+    if (hasCode === hasRecoveryCode) {
       return jsonError("Enter an authenticator code or recovery code.", 400);
     }
 
-    if (usingTotp) {
+    if (hasCode) {
+      const code = typeof body.code === "string" ? body.code : "";
       if (!/^\d{6}$/u.test(code)) return jsonError("Enter a valid 6-digit code.", 400);
       const challengeLimit = await rateLimit(request, "kova_auth_mfa_login", 10, 900);
       if (challengeLimit) return challengeLimit;
@@ -367,6 +366,7 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
       }
     }
 
+    const recoveryCode = typeof body.recoveryCode === "string" ? body.recoveryCode : "";
     const recoveryLimit = await rateLimit(request, "kova_auth_mfa_recovery_login", 10, 900);
     if (recoveryLimit) return recoveryLimit;
     try {
