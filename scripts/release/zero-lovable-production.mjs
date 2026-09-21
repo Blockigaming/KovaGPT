@@ -158,8 +158,7 @@ export async function collectZeroLovableProductionEvidence({
   const failures = [];
   const limits = { budget: { bytes: 0 }, maxResponseBytes, maxTotalBytes };
   const versionResult = await request(new URL("/api/version", base), {}, limits);
-  if (versionResult.readFailure)
-    failures.push(`${versionResult.readFailure}:/api/version`);
+  if (versionResult.readFailure) failures.push(`${versionResult.readFailure}:/api/version`);
   let version = null;
   try {
     version = JSON.parse(versionResult.body);
@@ -177,8 +176,7 @@ export async function collectZeroLovableProductionEvidence({
       const result = await request(new URL(path, base), { redirect: "manual", method }, limits);
       routeRecords.push({ path, ...result.record });
       if (result.readFailure) failures.push(`${result.readFailure}:${method}:${path}`);
-      if (result.response.status !== 404)
-        failures.push(`retired_route_not_404:${method}:${path}`);
+      if (result.response.status !== 404) failures.push(`retired_route_not_404:${method}:${path}`);
       if (result.response.headers.get("location"))
         failures.push(`retired_route_redirects:${method}:${path}`);
       const allowed = [
