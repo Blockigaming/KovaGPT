@@ -74,6 +74,20 @@ const DUMMY_PASSWORD_HASH =
   "scrypt-v1$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MFA_LOGIN_CHALLENGE_SECONDS = 300;
 
+// Server-only protocol helpers shared with the WebAuthn routes. Keep cookie,
+// throttling, error and body-size behavior identical across auth methods.
+export const kovaAuthHttp = {
+  json,
+  jsonError,
+  kovaModeAvailable,
+  readJsonObject,
+  rateLimit,
+  requireSessionDigest,
+  sessionResponse,
+  publicOrigin,
+  futureIso,
+};
+
 function noStoreHeaders(extra?: HeadersInit): Headers {
   const headers = new Headers(extra);
   headers.set("Cache-Control", "no-store");
@@ -167,12 +181,15 @@ function sessionResponse(principal: KovaPrincipal, token?: string): Response {
   return Response.json({ session: publicPrincipal(principal) }, { headers });
 }
 
-async function readJsonObject(request: Request): Promise<Record<string, unknown> | Response> {
+async function readJsonObject(
+  request: Request,
+  maxBytes = MAX_AUTH_BODY_BYTES,
+): Promise<Record<string, unknown> | Response> {
   const mediaType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (mediaType !== "application/json")
     return jsonError("Content-Type must be application/json.", 415);
   try {
-    const raw = await readUtf8BodyBounded(request, MAX_AUTH_BODY_BYTES);
+    const raw = await readUtf8BodyBounded(request, maxBytes);
     const value = JSON.parse(raw) as unknown;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return jsonError("Invalid request.", 400);

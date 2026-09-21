@@ -108,6 +108,12 @@ async function database({ legacyRecoveryAbi = false } = {}) {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL("../../supabase/migrations/20260921180400_kova_owned_passkeys.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   return db;
 }
 
@@ -253,6 +259,8 @@ test("migration creates the complete private auth schema with browser roles deni
         "auth_mfa_login_challenges",
         "auth_mfa_recovery_codes",
         "auth_oauth_states",
+        "auth_passkey_challenges",
+        "auth_passkeys",
         "auth_password_recoveries",
         "auth_session_handoffs",
         "auth_sessions",

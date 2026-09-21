@@ -90,7 +90,7 @@ change production configuration, or authorize deployment.
 The feature branch now includes a staging-gated implementation of the next
 source phase:
 
-- twelve RLS-enabled tables in the non-exposed `kova_private` schema;
+- fourteen RLS-enabled tables in the non-exposed `kova_private` schema;
 - service-role-only RPCs for password accounts, verification, recovery,
   opaque sessions, TOTP enrollment and login challenges, one-time MFA recovery
   code storage, Google state, and one-time cross-origin handoffs;
@@ -99,12 +99,12 @@ source phase:
 - same-origin API routes for signup, password plus TOTP or one-time recovery-code
   login, TOTP enrollment and removal, logout, session rotation, email verification,
   password recovery, recovery-code regeneration, other-device session revocation,
-  signed-in password changes, and Google OAuth;
+  signed-in password changes, owned WebAuthn passkeys, and Google OAuth;
 - a dual-mode browser/provider adapter that prefers a Kova cookie but retains
   the legacy session path when no Kova cookie exists.
 
-This is not the final cutover. Owned passkey adapters,
-the complete removal of `auth.users` compatibility principals, production
+This is not the final cutover. Deployed passkey/device rehearsal and existing
+hosted-passkey migration, complete removal of `auth.users` compatibility principals, production
 credential migration, and the production switch remain blocked on their later
 release gates.
 
@@ -149,10 +149,66 @@ The browser invalidates cached principals and compatibility tokens after these
 changes, including responses already in flight. This does **not** revoke an
 already issued five-minute compatibility JWT at the PostgREST/RLS boundary.
 Eliminating that residual authorization window remains a cutover gate, along
-with deployed multi-device rehearsal, passkey ownership, and legacy retirement.
+with deployed multi-device rehearsal and legacy retirement.
 Local regression tests execute the PostgreSQL transitions and the actual
 handler/store path with synthetic data; component tests drive the actual UI
 callbacks. These are not evidence of a deployed staging or production cutover.
+
+## Owned passkeys
+
+The dormant owned implementation uses pinned `@simplewebauthn/server` 14.0.2
+and `@simplewebauthn/browser` 14.0.0. Passkeys are available on the owned login
+dialog/password page and in `KovaPasskeyPanel`. Hosted mode retains its separate
+Supabase passkey surface; failures never fall back between authorities.
+
+The relying-party ID is the hostname of the existing exact HTTPS
+`KOVA_AUTH_PUBLIC_ORIGIN`, not a caller-supplied value or forwarded Host header.
+Passkey ceremonies run on that application origin. No new deployment secret or
+environment flag is introduced by these source changes. Existing hosted passkeys
+are **not** imported or silently treated as Kova credentials.
+
+The server requests discoverable credentials with user verification required and
+accepts ES256, RS256 or Ed25519 keys. Registration uses `none` attestation, so
+verification never fetches vendor attestation metadata. Actual attestation/assertion
+verification checks the challenge, exact origin, RP hash, ceremony type, user
+presence/verification, signatures, counter rules and backup eligibility. Embedded
+cross-origin ceremonies, malformed/noncanonical binary encodings and incorrect
+user handles are rejected. User handles are derived from stable account UUIDs.
+
+`POST /api/auth/passkeys/register/options` requires an owned session and either
+current-password verification at AAL1 or an already verified AAL2 session. The
+resulting registration challenge binds the account, session and applicable
+password credential revision. `POST /api/auth/passkeys/login/options` is
+discoverable: no email/account selector or credential list is accepted or returned.
+Both create five-minute SHA-256-digested challenges and a browser-bound
+`__Host-kova_passkey` cookie (Secure, HttpOnly, SameSite=Strict).
+
+The matching `/register/verify` and `/login/verify` endpoints claim the challenge
+once before cryptographic verification. A server-only receipt is required to
+finish; browser-provided verification flags cannot replace proof. A failed proof
+burns its claim. The database then rechecks the active account, credential, epoch,
+counter/revision and registration session under account-first locks. Synced keys
+with zero counters still use a revision check to reject concurrent stale proofs.
+Successful login creates an AAL2 session. Adding a key rotates the current session
+and retires other sessions without making password-only accounts TOTP-required.
+
+`GET /api/auth/passkeys` returns only the current owner's display metadata and
+management capability state. `/rename` accepts a bounded display name; `/remove`
+requires AAL2 and explicit confirmation, preserves another demonstrably usable
+owned sign-in method, disables the key and rotates the session. Maximum ten
+active keys are allowed. Removing a key does not remove it from the physical
+device/password manager. Secrets, public-key bytes and raw WebAuthn response
+objects are never logged. Browser caches are cleared across successful or
+uncertain session-changing responses; plaintext confirmation passwords are
+not persisted.
+
+All eight RPCs are service-role-only, with empty search paths and bounded
+statement timeouts. Both new tables use private-schema RLS and deny browser
+access. Local tests include real synthetic P-256 signatures through the actual
+HTTP/store/PostgreSQL path, negative security cases, and UI callback tests.
+They do not prove physical-device interoperability, browser-native biometrics,
+deployed staging readiness or production cutover. The five-minute compatibility
+JWT revocation window and hosted-auth retirement are still open gates.
 
 ## Configuration contract
 

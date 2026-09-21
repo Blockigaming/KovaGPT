@@ -80,6 +80,9 @@ function principalFromRow(row: Record<string, unknown>): KovaPrincipal {
   };
 }
 
+// Shared only by server-side owned-auth stores, never by browser code.
+export const kovaAuthStore = { rpc, firstRow, principalFromRow };
+
 export async function createCompatibilityPrincipal(): Promise<string> {
   const marker = randomUUID();
   const { data, error } = await supabaseAdmin.auth.admin.createUser({

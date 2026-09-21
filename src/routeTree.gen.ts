@@ -193,6 +193,9 @@ import { Route as ApiAuthMfaEnrollRouteImport } from './routes/api/auth/mfa/enro
 import { Route as ApiAuthMfaFactorsRouteImport } from './routes/api/auth/mfa/factors'
 import { Route as ApiAuthMfaRemoveRouteImport } from './routes/api/auth/mfa/remove'
 import { Route as ApiAuthMfaVerifyRouteImport } from './routes/api/auth/mfa/verify'
+import { Route as ApiAuthPasskeysIndexRouteImport } from './routes/api/auth/passkeys/index'
+import { Route as ApiAuthPasskeysRemoveRouteImport } from './routes/api/auth/passkeys/remove'
+import { Route as ApiAuthPasskeysRenameRouteImport } from './routes/api/auth/passkeys/rename'
 import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/recovery/request'
 import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
 import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
@@ -203,6 +206,10 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiAuthMfaRecoveryRegenerateRouteImport } from './routes/api/auth/mfa/recovery/regenerate'
+import { Route as ApiAuthPasskeysLoginOptionsRouteImport } from './routes/api/auth/passkeys/login/options'
+import { Route as ApiAuthPasskeysLoginVerifyRouteImport } from './routes/api/auth/passkeys/login/verify'
+import { Route as ApiAuthPasskeysRegisterOptionsRouteImport } from './routes/api/auth/passkeys/register/options'
+import { Route as ApiAuthPasskeysRegisterVerifyRouteImport } from './routes/api/auth/passkeys/register/verify'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
 import { Route as ApiScimV2OrganizationIdSplatRouteImport } from './routes/api/scim/v2/$organizationId/$'
 
@@ -1146,6 +1153,21 @@ const ApiAuthMfaVerifyRoute = ApiAuthMfaVerifyRouteImport.update({
   path: '/api/auth/mfa/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthPasskeysIndexRoute = ApiAuthPasskeysIndexRouteImport.update({
+  id: '/api/auth/passkeys/',
+  path: '/api/auth/passkeys/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasskeysRemoveRoute = ApiAuthPasskeysRemoveRouteImport.update({
+  id: '/api/auth/passkeys/remove',
+  path: '/api/auth/passkeys/remove',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasskeysRenameRoute = ApiAuthPasskeysRenameRouteImport.update({
+  id: '/api/auth/passkeys/rename',
+  path: '/api/auth/passkeys/rename',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRecoveryRequestRoute = ApiAuthRecoveryRequestRouteImport.update({
   id: '/api/auth/recovery/request',
   path: '/api/auth/recovery/request',
@@ -1201,6 +1223,30 @@ const ApiAuthMfaRecoveryRegenerateRoute =
   ApiAuthMfaRecoveryRegenerateRouteImport.update({
     id: '/api/auth/mfa/recovery/regenerate',
     path: '/api/auth/mfa/recovery/regenerate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysLoginOptionsRoute =
+  ApiAuthPasskeysLoginOptionsRouteImport.update({
+    id: '/api/auth/passkeys/login/options',
+    path: '/api/auth/passkeys/login/options',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysLoginVerifyRoute =
+  ApiAuthPasskeysLoginVerifyRouteImport.update({
+    id: '/api/auth/passkeys/login/verify',
+    path: '/api/auth/passkeys/login/verify',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysRegisterOptionsRoute =
+  ApiAuthPasskeysRegisterOptionsRouteImport.update({
+    id: '/api/auth/passkeys/register/options',
+    path: '/api/auth/passkeys/register/options',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysRegisterVerifyRoute =
+  ApiAuthPasskeysRegisterVerifyRouteImport.update({
+    id: '/api/auth/passkeys/register/verify',
+    path: '/api/auth/passkeys/register/verify',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiIntegrationsOauthCallbackProviderRoute =
@@ -1401,6 +1447,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
   '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
@@ -1410,7 +1458,12 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1599,6 +1652,8 @@ export interface FileRoutesByTo {
   '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
   '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
@@ -1608,7 +1663,12 @@ export interface FileRoutesByTo {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1798,6 +1858,8 @@ export interface FileRoutesById {
   '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
   '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
   '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
   '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
@@ -1807,7 +1869,12 @@ export interface FileRoutesById {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
   '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1998,6 +2065,8 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/factors'
     | '/api/auth/mfa/remove'
     | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
@@ -2007,7 +2076,12 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesByTo: FileRoutesByTo
@@ -2196,6 +2270,8 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/factors'
     | '/api/auth/mfa/remove'
     | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
@@ -2205,7 +2281,12 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys'
     | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   id:
@@ -2394,6 +2475,8 @@ export interface FileRouteTypes {
     | '/api/auth/mfa/factors'
     | '/api/auth/mfa/remove'
     | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
     | '/api/auth/recovery/request'
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
@@ -2403,7 +2486,12 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys/'
     | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesById: FileRoutesById
@@ -2585,6 +2673,8 @@ export interface RootRouteChildren {
   ApiAuthMfaFactorsRoute: typeof ApiAuthMfaFactorsRoute
   ApiAuthMfaRemoveRoute: typeof ApiAuthMfaRemoveRoute
   ApiAuthMfaVerifyRoute: typeof ApiAuthMfaVerifyRoute
+  ApiAuthPasskeysRemoveRoute: typeof ApiAuthPasskeysRemoveRoute
+  ApiAuthPasskeysRenameRoute: typeof ApiAuthPasskeysRenameRoute
   ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
@@ -2593,7 +2683,12 @@ export interface RootRouteChildren {
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiAuthPasskeysIndexRoute: typeof ApiAuthPasskeysIndexRoute
   ApiAuthMfaRecoveryRegenerateRoute: typeof ApiAuthMfaRecoveryRegenerateRoute
+  ApiAuthPasskeysLoginOptionsRoute: typeof ApiAuthPasskeysLoginOptionsRoute
+  ApiAuthPasskeysLoginVerifyRoute: typeof ApiAuthPasskeysLoginVerifyRoute
+  ApiAuthPasskeysRegisterOptionsRoute: typeof ApiAuthPasskeysRegisterOptionsRoute
+  ApiAuthPasskeysRegisterVerifyRoute: typeof ApiAuthPasskeysRegisterVerifyRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
   ApiScimV2OrganizationIdSplatRoute: typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -3888,6 +3983,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthMfaVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/passkeys/': {
+      id: '/api/auth/passkeys/'
+      path: '/api/auth/passkeys'
+      fullPath: '/api/auth/passkeys/'
+      preLoaderRoute: typeof ApiAuthPasskeysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/remove': {
+      id: '/api/auth/passkeys/remove'
+      path: '/api/auth/passkeys/remove'
+      fullPath: '/api/auth/passkeys/remove'
+      preLoaderRoute: typeof ApiAuthPasskeysRemoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/rename': {
+      id: '/api/auth/passkeys/rename'
+      path: '/api/auth/passkeys/rename'
+      fullPath: '/api/auth/passkeys/rename'
+      preLoaderRoute: typeof ApiAuthPasskeysRenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/recovery/request': {
       id: '/api/auth/recovery/request'
       path: '/api/auth/recovery/request'
@@ -3956,6 +4072,34 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/mfa/recovery/regenerate'
       fullPath: '/api/auth/mfa/recovery/regenerate'
       preLoaderRoute: typeof ApiAuthMfaRecoveryRegenerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/login/options': {
+      id: '/api/auth/passkeys/login/options'
+      path: '/api/auth/passkeys/login/options'
+      fullPath: '/api/auth/passkeys/login/options'
+      preLoaderRoute: typeof ApiAuthPasskeysLoginOptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/login/verify': {
+      id: '/api/auth/passkeys/login/verify'
+      path: '/api/auth/passkeys/login/verify'
+      fullPath: '/api/auth/passkeys/login/verify'
+      preLoaderRoute: typeof ApiAuthPasskeysLoginVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/register/options': {
+      id: '/api/auth/passkeys/register/options'
+      path: '/api/auth/passkeys/register/options'
+      fullPath: '/api/auth/passkeys/register/options'
+      preLoaderRoute: typeof ApiAuthPasskeysRegisterOptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/register/verify': {
+      id: '/api/auth/passkeys/register/verify'
+      path: '/api/auth/passkeys/register/verify'
+      fullPath: '/api/auth/passkeys/register/verify'
+      preLoaderRoute: typeof ApiAuthPasskeysRegisterVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/callback/$provider': {
@@ -4250,6 +4394,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthMfaFactorsRoute: ApiAuthMfaFactorsRoute,
   ApiAuthMfaRemoveRoute: ApiAuthMfaRemoveRoute,
   ApiAuthMfaVerifyRoute: ApiAuthMfaVerifyRoute,
+  ApiAuthPasskeysRemoveRoute: ApiAuthPasskeysRemoveRoute,
+  ApiAuthPasskeysRenameRoute: ApiAuthPasskeysRenameRoute,
   ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
@@ -4258,7 +4404,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiAuthPasskeysIndexRoute: ApiAuthPasskeysIndexRoute,
   ApiAuthMfaRecoveryRegenerateRoute: ApiAuthMfaRecoveryRegenerateRoute,
+  ApiAuthPasskeysLoginOptionsRoute: ApiAuthPasskeysLoginOptionsRoute,
+  ApiAuthPasskeysLoginVerifyRoute: ApiAuthPasskeysLoginVerifyRoute,
+  ApiAuthPasskeysRegisterOptionsRoute: ApiAuthPasskeysRegisterOptionsRoute,
+  ApiAuthPasskeysRegisterVerifyRoute: ApiAuthPasskeysRegisterVerifyRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
   ApiScimV2OrganizationIdSplatRoute: ApiScimV2OrganizationIdSplatRoute,

@@ -10,6 +10,8 @@ import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
 import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
+import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 
 type AuthSearch = { email?: string; mode?: "sign-in" | "sign-up" };
@@ -74,6 +76,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passkeySupported, setPasskeySupported] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -82,6 +85,10 @@ function AuthPage() {
   const [mfaMethod, setMfaMethod] = useState<"totp" | "recovery">("totp");
   const emailInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    setPasskeySupported(browserSupportsPasskeys());
+  }, []);
 
   useEffect(() => {
     setEmail(search.email ?? "");
@@ -206,8 +213,7 @@ function AuthPage() {
 
   const submitMfa = async (event: React.FormEvent) => {
     event.preventDefault();
-    const mfaInputValid =
-      mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
+    const mfaInputValid = mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
     if (!mfaChallengeToken || !mfaInputValid || !guard()) return;
     try {
       const response = await kovaAuthJson("/api/auth/login", {
@@ -230,6 +236,22 @@ function AuthPage() {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("Two-factor verification could not be completed.");
+    } finally {
+      release();
+    }
+  };
+
+  const submitPasskey = async () => {
+    if (!useKovaAuth || !browserSupportsPasskeys() || !guard()) return;
+    try {
+      await signInWithKovaPasskey();
+      setPassword("");
+      setMfaCode("");
+      setMfaChallengeToken(null);
+      setMfaMethod("totp");
+      window.location.replace(getSafePostAuthRedirect());
+    } catch {
+      toast.error("Passkey sign-in was cancelled or could not be completed.");
     } finally {
       release();
     }
@@ -304,6 +326,17 @@ function AuthPage() {
           ) : null}
         </div>
 
+        {useKovaAuth && !isSignUp && !mfaChallengeToken && passkeySupported ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={submitPasskey}
+            className="mb-4 h-14 w-full rounded-full"
+          >
+            Continue with a passkey
+          </Button>
+        ) : null}
         {mfaChallengeToken ? (
           <form onSubmit={submitMfa} className="space-y-3">
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">

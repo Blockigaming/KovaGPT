@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 165,
-  "latest": "20260921171133_kova_owned_auth_session_mutations.sql",
+  "count": 166,
+  "latest": "20260921180400_kova_owned_passkeys.sql",
   "migrations": [
     {
       "order": 1,
@@ -3530,6 +3530,35 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 166,
+      "filename": "20260921180400_kova_owned_passkeys.sql",
+      "timestamp": "20260921180400",
+      "sha256": "ba586689eba79befe258097ac80fd6936c0f116387f334f1b478430df938afa4",
+      "tables": ["kova_private", "kova_private"],
+      "functions": [
+        "kova_auth_begin_passkey_challenge",
+        "kova_auth_claim_passkey_challenge",
+        "kova_auth_finish_passkey_registration",
+        "kova_auth_lookup_passkey",
+        "kova_auth_finish_passkey_login",
+        "kova_auth_list_passkeys",
+        "kova_auth_rename_passkey",
+        "kova_auth_remove_passkey"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": [
+        "auth_passkeys_account_idx",
+        "auth_passkey_challenges_account_idx",
+        "auth_passkey_challenges_session_idx",
+        "auth_passkey_challenges_credential_idx",
+        "auth_passkey_challenges_expiry_idx"
+      ]
     }
   ]
 }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { PasskeyPanel } from "@/components/PasskeyPanel";
 import { KovaPasswordPanel } from "@/components/KovaPasswordPanel";
+import { KovaPasskeyPanel } from "@/components/KovaPasskeyPanel";
 import { browserKovaAuthEnabled, clearKovaAuthCache, kovaAuthJson } from "@/lib/kova-auth-browser";
 
 type Factor = {
@@ -260,6 +261,7 @@ export function MfaPanel() {
   return (
     <div className="space-y-4">
       {!useKovaAuth ? <PasskeyPanel /> : null}
+      {useKovaAuth ? <KovaPasskeyPanel /> : null}
       {useKovaAuth ? <KovaPasswordPanel /> : null}
       <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5">
         <div className="flex items-center gap-2 mb-1">

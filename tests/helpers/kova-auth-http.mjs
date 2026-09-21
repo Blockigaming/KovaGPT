@@ -49,6 +49,7 @@ export function authHttp(options = {}) {
         },
       },
     },
+    ...options.modules,
   };
   function load(source) {
     const exports = {};
@@ -62,7 +63,7 @@ export function authHttp(options = {}) {
       Error,
       TypeError,
       Date,
-      process: { env: {} },
+      process: { env: options.env ?? {} },
       console: { error: (...args) => logs.push(args) },
       require: (name) => {
         assert.ok(Object.hasOwn(modules, name), `Unexpected module: ${name}`);
@@ -73,7 +74,14 @@ export function authHttp(options = {}) {
   }
   const store = load(storeSource);
   modules["@/lib/kova-auth-store.server"] = store;
-  return { ...load(httpSource), store, calls, limits, logs };
+  const http = load(httpSource);
+  modules["@/lib/kova-auth-http.server"] = http;
+  const loadModule = (name, path) => {
+    const loaded = load(compile(path));
+    modules[name] = loaded;
+    return loaded;
+  };
+  return { ...http, loadModule, store, calls, limits, logs };
 }
 
 export function authRequest(

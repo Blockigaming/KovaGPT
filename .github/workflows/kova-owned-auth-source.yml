@@ -9,6 +9,8 @@ on:
       - src/lib/kova-session*
       - src/components/MfaPanel.tsx
       - src/components/KovaPasswordPanel.tsx
+      - src/components/KovaPasskeyPanel.tsx
+      - src/components/auth/AuthDialog.tsx
       - src/routes/auth.tsx
       - src/routes/api/auth/**
       - supabase/migrations/**

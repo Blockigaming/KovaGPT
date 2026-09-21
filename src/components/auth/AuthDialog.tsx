@@ -15,6 +15,7 @@ import {
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
+import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { cn } from "@/lib/utils";
 import { browserKovaAuthEnabled, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
 
@@ -42,6 +43,7 @@ export function AuthDialog({
   const [step, setStep] = useState<Step>("identify");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passkeySupported, setPasskeySupported] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "passkey" | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -49,6 +51,10 @@ export function AuthDialog({
   const navigate = useNavigate();
   const providers = useAuthProviders(open);
   const useKovaAuth = browserKovaAuthEnabled();
+
+  useEffect(() => {
+    setPasskeySupported(browserSupportsPasskeys());
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +97,7 @@ export function AuthDialog({
 
   const handleContinueEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setEmailTouched(true);
     if (!emailValid) {
       toast.error("Please enter a valid email address.");
@@ -147,19 +154,22 @@ export function AuthDialog({
 
   const handlePasskey = async () => {
     const supported = browserSupportsPasskeys();
-    if (!providers.resolved || !providers.passkeys || !supported) {
+    if ((!useKovaAuth && (!providers.resolved || !providers.passkeys)) || !supported) {
       toast.error("Passkey sign-in is not available on this browser or deployment.");
       return;
     }
     if (!guard("passkey")) return;
     try {
+      if (useKovaAuth) {
+        await signInWithKovaPasskey();
+        onOpenChange(false);
+        window.location.reload();
+        return;
+      }
       const { error } = await supabase.auth.signInWithPasskey();
       if (error) throw error;
       onOpenChange(false);
-    } catch (error) {
-      console.error("[KovaAuth] Passkey authentication failed", {
-        error: error instanceof Error ? error.name : "unknown_error",
-      });
+    } catch {
       toast.error("Passkey sign-in was cancelled or could not be completed.");
     } finally {
       release();
@@ -297,11 +307,9 @@ export function AuthDialog({
                 </div>
               </div>
 
-              {!useKovaAuth &&
-              !isSignUp &&
-              providers.resolved &&
-              providers.passkeys &&
-              browserSupportsPasskeys() ? (
+              {!isSignUp &&
+              (useKovaAuth || (providers.resolved && providers.passkeys)) &&
+              passkeySupported ? (
                 <button
                   type="button"
                   onClick={() => void handlePasskey()}
