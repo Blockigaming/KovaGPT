@@ -64,6 +64,28 @@ test("temporary export source proof binds the complete pinned ledger without pro
   assert.equal(proof.productionReleaseReady, false);
 });
 
+test("temporary export source proof permits later manifest migrations beyond the pinned checkpoint", () => {
+  const extendedManifest = {
+    schemaVersion: 1,
+    count: 3,
+    migrations: [
+      ...rows,
+      {
+        order: 3,
+        timestamp: "20260921000000",
+        filename: "20260921000000_future_migration.sql",
+        sha256: "5".repeat(64),
+      },
+    ],
+  };
+  const proof = buildTemporaryExportSourceProof(lineage, extendedManifest, {
+    inspectSource: () => structuredClone(inspected),
+  });
+  assert.equal(proof.migrationCount, lineage.observedSourceMigrationCount);
+  assert.equal(proof.candidate.filename, rows[0].filename);
+  assert.equal(proof.fullLedgerScanned, true);
+});
+
 test("temporary export source proof rejects any symbol occurrence", () => {
   assert.throws(
     () =>
