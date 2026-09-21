@@ -118,7 +118,7 @@ test("ready preflight requires and verifies both provenance-bound schema artifac
           order: 1,
           timestamp: sourceVersion,
           filename: `${sourceVersion}_source.sql`,
-          sha256: "5".repeat(64),
+          sha256: sha256("select 1;\n"),
           destructive: false,
           dataBackfill: false,
           rls: [],
