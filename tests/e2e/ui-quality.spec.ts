@@ -224,6 +224,13 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
+    // Hydration can finish before the auth adapter and lazy guest controls settle.
+    // Capture only after the complete signed-out shell is visible.
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Start with Brainstorm ideas", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Terms", exact: true })).toBeVisible();
     const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
     await expect(greetingMark).toBeHidden();
     await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
