@@ -1,4 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const checkOnly = process.argv.includes("--check");
 
@@ -163,7 +165,11 @@ export function applyChatGptParitySource({ check = checkOnly } = {}) {
   return { changed: [...changed].sort(), check };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+export function isDirectExecution(moduleUrl, argvPath = process.argv[1]) {
+  return Boolean(argvPath && moduleUrl === pathToFileURL(resolve(argvPath)).href);
+}
+
+if (isDirectExecution(import.meta.url)) {
   const result = applyChatGptParitySource();
   console.log(
     `CHATGPT_PARITY_SOURCE=${checkOnly ? "PASS" : "APPLIED"} files=${result.changed.join(",") || "none"}`,
