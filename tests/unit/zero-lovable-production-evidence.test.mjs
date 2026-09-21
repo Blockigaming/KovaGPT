@@ -412,10 +412,8 @@ test("production evidence discovers root-relative JavaScript outside assets", as
         return response(
           `<meta name="kova-build" content="${sha}"><script src="/assets/app.js"></script><script src="/legacy.js"></script>`,
         );
-      if (url.endsWith("/assets/app.js"))
-        return javascriptResponse(`const buildSha = "${sha}";`);
-      if (url.endsWith("/legacy.js"))
-        return javascriptResponse("window.LOVABLE_RUNTIME = true;");
+      if (url.endsWith("/assets/app.js")) return javascriptResponse(`const buildSha = "${sha}";`);
+      if (url.endsWith("/legacy.js")) return javascriptResponse("window.LOVABLE_RUNTIME = true;");
       throw new Error(`unexpected URL ${url}`);
     },
     () =>
@@ -426,11 +424,7 @@ test("production evidence discovers root-relative JavaScript outside assets", as
   );
 
   assert.equal(evidence.pass, false);
-  assert.ok(
-    evidence.failures.includes(
-      "lovable_asset_content:https://kovagpt.example/legacy.js",
-    ),
-  );
+  assert.ok(evidence.failures.includes("lovable_asset_content:https://kovagpt.example/legacy.js"));
 });
 
 test("production evidence rejects mutable or non-HTTPS targets", async () => {

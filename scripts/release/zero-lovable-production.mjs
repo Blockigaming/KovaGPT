@@ -39,8 +39,7 @@ function discoverAssets(source, parent, origin) {
     }
     url.hash = "";
     const pathname = url.pathname.toLowerCase();
-    const isScannable =
-      pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname);
+    const isScannable = pathname.includes("/assets/") || /\.(?:mjs|cjs|js|css)$/u.test(pathname);
     if (isScannable && url.origin === origin) assets.add(url.href);
   }
   return [...assets].sort();
