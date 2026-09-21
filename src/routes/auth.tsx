@@ -79,6 +79,7 @@ function AuthPage() {
   const [cooldown, setCooldown] = useState(0);
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
+  const [mfaMethod, setMfaMethod] = useState<"totp" | "recovery">("totp");
   const emailInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
 
@@ -89,6 +90,7 @@ function AuthPage() {
     setPasswordTouched(false);
     setMfaChallengeToken(null);
     setMfaCode("");
+    setMfaMethod("totp");
   }, [search.email]);
 
   useEffect(() => {
@@ -154,6 +156,7 @@ function AuthPage() {
         if (payload.mfaRequired === true && typeof payload.challengeToken === "string") {
           setMfaChallengeToken(payload.challengeToken);
           setMfaCode("");
+          setMfaMethod("totp");
           return;
         }
         toast.success("Welcome back.");
@@ -203,11 +206,13 @@ function AuthPage() {
 
   const submitMfa = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!mfaChallengeToken || !/^\d{6}$/u.test(mfaCode) || !guard()) return;
+    const mfaInputValid =
+      mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
+    if (!mfaChallengeToken || !mfaInputValid || !guard()) return;
     try {
       const response = await kovaAuthJson("/api/auth/login", {
         challengeToken: mfaChallengeToken,
-        code: mfaCode,
+        ...(mfaMethod === "totp" ? { code: mfaCode } : { recoveryCode: mfaCode }),
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
       if (!response.ok) {
@@ -286,7 +291,9 @@ function AuthPage() {
           </h1>
           {mfaChallengeToken ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
-              Enter the 6-digit code from your authenticator app to finish signing in.
+              {mfaMethod === "totp"
+                ? "Enter the 6-digit code from your authenticator app to finish signing in."
+                : "Enter one of the recovery codes you saved when you enabled two-factor authentication."}
             </p>
           ) : null}
           {magicSent ? (
@@ -300,23 +307,35 @@ function AuthPage() {
         {mfaChallengeToken ? (
           <form onSubmit={submitMfa} className="space-y-3">
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
-              Authenticator code
+              {mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
             </Label>
             <Input
               id="kova-auth-page-mfa"
               autoFocus
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              aria-label="Authenticator code"
-              placeholder="123456"
+              autoComplete={mfaMethod === "totp" ? "one-time-code" : "off"}
+              inputMode={mfaMethod === "totp" ? "numeric" : "text"}
+              aria-label={mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
+              placeholder={mfaMethod === "totp" ? "123456" : "Recovery code"}
               value={mfaCode}
-              onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(event) =>
+                setMfaCode(
+                  mfaMethod === "totp"
+                    ? event.target.value.replace(/\D/g, "").slice(0, 6)
+                    : event.target.value.slice(0, 256),
+                )
+              }
               disabled={loading}
-              className="h-14 rounded-2xl text-center font-mono text-lg tracking-[0.35em]"
+              spellCheck={false}
+              className={cn(
+                "h-14 rounded-2xl text-center font-mono text-lg",
+                mfaMethod === "totp" && "tracking-[0.35em]",
+              )}
             />
             <Button
               type="submit"
-              disabled={loading || mfaCode.length !== 6}
+              disabled={
+                loading || (mfaMethod === "totp" ? mfaCode.length !== 6 : mfaCode.length === 0)
+              }
               className="h-14 w-full rounded-full text-[15px]"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify and sign in"}
@@ -327,8 +346,21 @@ function AuthPage() {
               disabled={loading}
               className="h-12 w-full rounded-full text-sm text-muted-foreground"
               onClick={() => {
+                setMfaMethod((method) => (method === "totp" ? "recovery" : "totp"));
+                setMfaCode("");
+              }}
+            >
+              {mfaMethod === "totp" ? "Use a recovery code" : "Use an authenticator code"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={loading}
+              className="h-12 w-full rounded-full text-sm text-muted-foreground"
+              onClick={() => {
                 setMfaChallengeToken(null);
                 setMfaCode("");
+                setMfaMethod("totp");
               }}
             >
               Back to password

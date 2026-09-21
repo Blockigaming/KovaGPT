@@ -38,6 +38,13 @@ const mfaEnrollmentMigration = await readFile(
   ),
   "utf8",
 );
+const mfaRecoveryLoginMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260921023426_kova_owned_mfa_recovery_login.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 async function database() {
   const db = new PGlite();
@@ -74,6 +81,7 @@ async function database() {
   await db.exec(mfaLoginMigration);
   await db.exec(mfaLoginIndexMigration);
   await db.exec(mfaEnrollmentMigration);
+  await db.exec(mfaRecoveryLoginMigration);
   return db;
 }
 
@@ -150,9 +158,26 @@ test("migration creates the complete private auth schema with browser roles deni
         has_function_privilege('authenticated',
           'public.kova_auth_resolve_session(text,timestamptz)', 'execute') as user_resolve,
         has_function_privilege('service_role',
-          'public.kova_auth_resolve_session(text,timestamptz)', 'execute') as service_resolve
+          'public.kova_auth_resolve_session(text,timestamptz)', 'execute') as service_resolve,
+        has_function_privilege('anon',
+          'public.kova_auth_finish_mfa_recovery_login(text,text,text,timestamptz,timestamptz)',
+          'execute') as anon_recovery,
+        has_function_privilege('authenticated',
+          'public.kova_auth_finish_mfa_recovery_login(text,text,text,timestamptz,timestamptz)',
+          'execute') as user_recovery,
+        has_function_privilege('service_role',
+          'public.kova_auth_finish_mfa_recovery_login(text,text,text,timestamptz,timestamptz)',
+          'execute') as service_recovery
     `);
-    assert.deepEqual(functionSecurity.rows, [{ user_resolve: false, service_resolve: true }]);
+    assert.deepEqual(functionSecurity.rows, [
+      {
+        user_resolve: false,
+        service_resolve: true,
+        anon_recovery: false,
+        user_recovery: false,
+        service_recovery: true,
+      },
+    ]);
   } finally {
     await db.close();
   }
@@ -260,6 +285,150 @@ test("owned TOTP login challenges are short-lived, attempt-bounded, and create A
         now,
       ]),
       /kova_auth_invalid_mfa_challenge/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("owned recovery-code login is atomic, AAL2, and single-use", async () => {
+  const db = await database();
+  try {
+    await db.query(`insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3)`, [
+      firstAccount,
+      "owner@example.com",
+      now,
+    ]);
+    await createVerifiedPasswordAccount(db);
+    const credential = await db.query(
+      `select id, revision from kova_private.auth_credentials where account_id = $1`,
+      [firstAccount],
+    );
+    const factorId = "30000000-0000-4000-8000-000000000003";
+    await db.query(
+      `insert into kova_private.auth_mfa_factors(
+        id, account_id, factor_type, state, secret_ciphertext, verified_at
+      ) values ($1, $2, 'totp', 'active', convert_to($3, 'utf8'), $4)`,
+      [factorId, firstAccount, "v1.encrypted.secret.envelope", now],
+    );
+    await db.query(`update kova_private.auth_accounts set mfa_required = true where id = $1`, [
+      firstAccount,
+    ]);
+    await db.query(
+      `insert into kova_private.auth_mfa_recovery_codes(account_id, code_digest, created_at)
+       values ($1, decode($2, 'hex'), $3)`,
+      [firstAccount, digest("a"), now],
+    );
+
+    const challengeExpiry = "2026-09-20T17:05:00Z";
+    await db.query(`select * from public.kova_auth_begin_mfa_login($1, $2, $3, $4, $5, $6)`, [
+      firstAccount,
+      credential.rows[0].id,
+      credential.rows[0].revision,
+      digest("9"),
+      challengeExpiry,
+      now,
+    ]);
+    await db.query(`select * from public.kova_auth_read_mfa_login_challenge($1, $2)`, [
+      digest("9"),
+      now,
+    ]);
+
+    await assert.rejects(
+      db.query(
+        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
+        [digest("9"), digest("b"), digest("c"), sessionExpiry, now],
+      ),
+      /kova_auth_invalid_recovery_code/u,
+    );
+    assert.equal(
+      (
+        await db.query(
+          `select consumed_at from kova_private.auth_mfa_recovery_codes
+            where account_id = $1 and code_digest = decode($2, 'hex')`,
+          [firstAccount, digest("a")],
+        )
+      ).rows[0].consumed_at,
+      null,
+    );
+    assert.equal(
+      (
+        await db.query(
+          `select consumed_at from kova_private.auth_mfa_login_challenges
+            where account_id = $1 and token_digest = decode($2, 'hex')`,
+          [firstAccount, digest("9")],
+        )
+      ).rows[0].consumed_at,
+      null,
+    );
+
+    const finished = await db.query(
+      `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
+      [digest("9"), digest("a"), digest("c"), sessionExpiry, now],
+    );
+    assert.equal(finished.rows[0].assurance_level, "aal2");
+    const resolved = await db.query(`select * from public.kova_auth_resolve_session($1, $2)`, [
+      digest("c"),
+      now,
+    ]);
+    assert.equal(resolved.rows[0].assurance_level, "aal2");
+    assert.notEqual(
+      (
+        await db.query(
+          `select consumed_at from kova_private.auth_mfa_recovery_codes
+            where account_id = $1 and code_digest = decode($2, 'hex')`,
+          [firstAccount, digest("a")],
+        )
+      ).rows[0].consumed_at,
+      null,
+    );
+    assert.notEqual(
+      (
+        await db.query(
+          `select consumed_at from kova_private.auth_mfa_login_challenges
+            where account_id = $1 and token_digest = decode($2, 'hex')`,
+          [firstAccount, digest("9")],
+        )
+      ).rows[0].consumed_at,
+      null,
+    );
+    assert.equal(
+      (
+        await db.query(
+          `select count(*)::int as count from kova_private.auth_audit_events
+            where account_id = $1 and event_type = 'mfa_recovery_login' and outcome = 'success'`,
+          [firstAccount],
+        )
+      ).rows[0].count,
+      1,
+    );
+
+    await assert.rejects(
+      db.query(
+        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
+        [digest("9"), digest("a"), digest("d"), sessionExpiry, now],
+      ),
+      /kova_auth_invalid_mfa_challenge/u,
+    );
+
+    await db.query(`select * from public.kova_auth_begin_mfa_login($1, $2, $3, $4, $5, $6)`, [
+      firstAccount,
+      credential.rows[0].id,
+      credential.rows[0].revision,
+      digest("e"),
+      challengeExpiry,
+      now,
+    ]);
+    await db.query(`select * from public.kova_auth_read_mfa_login_challenge($1, $2)`, [
+      digest("e"),
+      now,
+    ]);
+    await assert.rejects(
+      db.query(
+        `select * from public.kova_auth_finish_mfa_recovery_login($1, $2, $3, $4, $5)`,
+        [digest("e"), digest("a"), digest("f"), sessionExpiry, now],
+      ),
+      /kova_auth_invalid_recovery_code/u,
     );
   } finally {
     await db.close();

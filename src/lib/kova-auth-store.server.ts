@@ -263,6 +263,21 @@ export async function finishMfaLogin(input: {
   return principalFromRow(firstRow(value, "kova_auth_finish_mfa_login"));
 }
 
+export async function finishMfaRecoveryLogin(input: {
+  challengeDigest: string;
+  recoveryDigest: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const value = await rpc<unknown>("kova_auth_finish_mfa_recovery_login", {
+    p_challenge_digest_hex: input.challengeDigest,
+    p_recovery_digest_hex: input.recoveryDigest,
+    p_token_digest_hex: input.sessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  return principalFromRow(firstRow(value, "kova_auth_finish_mfa_recovery_login"));
+}
+
 export async function beginTotpEnrollment(input: {
   sessionDigest: string;
   secretEnvelope: string;

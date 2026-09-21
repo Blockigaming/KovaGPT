@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 162,
-  "latest": "20260921020250_kova_owned_mfa_enrollment.sql",
+  "count": 163,
+  "latest": "20260921023426_kova_owned_mfa_recovery_login.sql",
   "migrations": [
     {
       "order": 1,
@@ -3471,6 +3471,20 @@
         "kova_auth_remove_totp_factor"
       ],
       "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 163,
+      "filename": "20260921023426_kova_owned_mfa_recovery_login.sql",
+      "timestamp": "20260921023426",
+      "sha256": "1103343bd67a5cb05e46ba60ae141ea532fc639996b98b16eb535da3b9654aeb",
+      "tables": [],
+      "functions": ["kova_auth_finish_mfa_recovery_login"],
+      "destructive": false,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

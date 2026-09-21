@@ -41,6 +41,7 @@ import {
   disableLegacyPassword,
   finishGoogle,
   finishMfaLogin,
+  finishMfaRecoveryLogin,
   hasVerifiedLegacyMfa,
   lookupPassword,
   listTotpFactors,
@@ -330,31 +331,61 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
   const challengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
   if (challengeToken) {
     const code = typeof body.code === "string" ? body.code : "";
-    if (!/^\d{6}$/u.test(code)) return jsonError("Enter a valid 6-digit code.", 400);
-    const challengeLimit = await rateLimit(request, "kova_auth_mfa_login", 10, 900);
-    if (challengeLimit) return challengeLimit;
+    const recoveryCode = typeof body.recoveryCode === "string" ? body.recoveryCode : "";
+    const usingTotp = code.length > 0;
+    const usingRecovery = recoveryCode.length > 0;
+    if (usingTotp === usingRecovery) {
+      return jsonError("Enter an authenticator code or recovery code.", 400);
+    }
+
+    if (usingTotp) {
+      if (!/^\d{6}$/u.test(code)) return jsonError("Enter a valid 6-digit code.", 400);
+      const challengeLimit = await rateLimit(request, "kova_auth_mfa_login", 10, 900);
+      if (challengeLimit) return challengeLimit;
+      try {
+        const challengeDigest = digestKovaToken(challengeToken);
+        const challenge = await readMfaLoginChallenge(challengeDigest);
+        const secret = decryptKovaSecret(challenge.secretEnvelope);
+        if (!verifyKovaTotp(code, secret)) {
+          return jsonError(
+            "That code was not accepted. Check your authenticator and try again.",
+            401,
+          );
+        }
+        const sessionToken = generateKovaToken();
+        const principal = await finishMfaLogin({
+          challengeDigest,
+          sessionDigest: digestKovaToken(sessionToken),
+          sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+        });
+        return sessionResponse(principal, sessionToken);
+      } catch (error) {
+        console.error("[KovaAuth] MFA login failed", {
+          error: error instanceof Error ? error.name : "unknown_error",
+        });
+        return jsonError("That verification attempt expired or could not be completed.", 401);
+      }
+    }
+
+    const recoveryLimit = await rateLimit(request, "kova_auth_mfa_recovery_login", 10, 900);
+    if (recoveryLimit) return recoveryLimit;
     try {
       const challengeDigest = digestKovaToken(challengeToken);
-      const challenge = await readMfaLoginChallenge(challengeDigest);
-      const secret = decryptKovaSecret(challenge.secretEnvelope);
-      if (!verifyKovaTotp(code, secret)) {
-        return jsonError(
-          "That code was not accepted. Check your authenticator and try again.",
-          401,
-        );
-      }
+      const recoveryDigest = digestKovaToken(recoveryCode);
+      await readMfaLoginChallenge(challengeDigest);
       const sessionToken = generateKovaToken();
-      const principal = await finishMfaLogin({
+      const principal = await finishMfaRecoveryLogin({
         challengeDigest,
+        recoveryDigest,
         sessionDigest: digestKovaToken(sessionToken),
         sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
       });
       return sessionResponse(principal, sessionToken);
     } catch (error) {
-      console.error("[KovaAuth] MFA login failed", {
+      console.error("[KovaAuth] MFA recovery login failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
-      return jsonError("That verification attempt expired or could not be completed.", 401);
+      return jsonError("That recovery code was not accepted. Check it and try again.", 401);
     }
   }
 

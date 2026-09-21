@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 162,
+  "migrationCount": 163,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -492,6 +492,7 @@
     "kova_auth_create_session",
     "kova_auth_finish_google",
     "kova_auth_finish_mfa_login",
+    "kova_auth_finish_mfa_recovery_login",
     "kova_auth_list_totp_factors",
     "kova_auth_password_lookup",
     "kova_auth_read_mfa_login_challenge",
@@ -1971,6 +1972,7 @@
     "execute on function public.kova_auth_begin_mfa_login(uuid, uuid, bigint, text, timestamptz, timestamptz) to service_role",
     "execute on function public.kova_auth_begin_totp_enrollment(text,text,text,timestamptz) to service_role",
     "execute on function public.kova_auth_finish_mfa_login(text, text, timestamptz, timestamptz) to service_role",
+    "execute on function public.kova_auth_finish_mfa_recovery_login(text, text, text, timestamptz, timestamptz) to service_role",
     "execute on function public.kova_auth_list_totp_factors(text,timestamptz) to service_role",
     "execute on function public.kova_auth_read_mfa_login_challenge(text, timestamptz) to service_role",
     "execute on function public.kova_auth_read_totp_enrollment(text,uuid,timestamptz) to service_role",
@@ -2503,6 +2505,7 @@
     "all on function public.kova_auth_begin_mfa_login(uuid, uuid, bigint, text, timestamptz, timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_begin_totp_enrollment(text,text,text,timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_finish_mfa_login(text, text, timestamptz, timestamptz) from public, anon, authenticated",
+    "all on function public.kova_auth_finish_mfa_recovery_login(text, text, text, timestamptz, timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_list_totp_factors(text,timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_read_mfa_login_challenge(text, timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_read_totp_enrollment(text,uuid,timestamptz) from public, anon, authenticated",
@@ -2744,5 +2747,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "f75ac7bd425751935ffc07ec1ffc7b21d224b5ebb314af5569da9d11c64c1507"
+  "sha256": "0bad4011a06e01de2407b9eaeff7793362ffffe0df866d7f7329f073019c78de"
 }
