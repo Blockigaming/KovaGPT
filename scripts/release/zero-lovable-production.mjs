@@ -8,6 +8,11 @@ const JS_DYNAMIC_IMPORT = /\bimport\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*\)/gu;
 const JS_STATIC_IMPORT =
   /\b(?:import|export)\s+(?:[^"'`\r\n;]*?\sfrom\s*)?["'`]([^"'`\r\n]+)["'`]/gu;
 const JS_REQUIRE = /\brequire\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*\)/gu;
+const JS_WORKER_NEW_URL =
+  /\bnew\s+(?:Worker|SharedWorker)\s*\(\s*new\s+URL\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*,\s*import\.meta\.url\s*\)/gu;
+const JS_WORKER_DIRECT = /\bnew\s+(?:Worker|SharedWorker)\s*\(\s*["'`]([^"'`\r\n]+)["'`]/gu;
+const SERVICE_WORKER_REGISTER =
+  /\b(?:navigator\.)?serviceWorker\.register\s*\(\s*["'`]([^"'`\r\n]+)["'`]/gu;
 const VITE_PRELOAD_REFERENCE =
   /["'`](assets\/[^"'`\r\n]+\.(?:mjs|cjs|js|css)(?:\?[^"'`\r\n]*)?)["'`]/gu;
 const BUILD_META =
@@ -91,7 +96,14 @@ function discoverAssets(source, parent, origin) {
     });
   }
 
-  for (const pattern of [JS_DYNAMIC_IMPORT, JS_STATIC_IMPORT, JS_REQUIRE]) {
+  for (const pattern of [
+    JS_DYNAMIC_IMPORT,
+    JS_STATIC_IMPORT,
+    JS_REQUIRE,
+    JS_WORKER_NEW_URL,
+    JS_WORKER_DIRECT,
+    SERVICE_WORKER_REGISTER,
+  ]) {
     for (const match of source.matchAll(pattern)) {
       addAssetReference(assets, match[1], parent, origin, { allowAny: true });
     }
@@ -236,8 +248,17 @@ export async function collectZeroLovableProductionEvidence({
   const base = normalizeBase(baseUrl);
   const failures = [];
   const limits = { budget: { bytes: 0 }, maxResponseBytes, maxTotalBytes };
-  const versionResult = await request(new URL("/api/version", base), {}, limits);
+  const versionUrl = new URL("/api/version", base);
+  const versionResult = await request(versionUrl, { redirect: "manual" }, limits);
   if (versionResult.readFailure) failures.push(`${versionResult.readFailure}:/api/version`);
+  const versionFinalUrl = new URL(versionResult.response.url || versionUrl.href);
+  if (
+    versionResult.response.redirected ||
+    (versionResult.response.status >= 300 && versionResult.response.status < 400) ||
+    versionResult.response.headers.get("location") ||
+    versionFinalUrl.href !== versionUrl.href
+  )
+    failures.push("version_redirected");
   let version = null;
   try {
     version = JSON.parse(versionResult.body);
@@ -255,6 +276,8 @@ export async function collectZeroLovableProductionEvidence({
       const result = await request(new URL(path, base), { redirect: "manual", method }, limits);
       routeRecords.push({ path, ...result.record });
       if (result.readFailure) failures.push(`${result.readFailure}:${method}:${path}`);
+      if (/lovable/iu.test(result.body))
+        failures.push(`lovable_retired_route_content:${method}:${path}`);
       if (result.response.status !== 404) failures.push(`retired_route_not_404:${method}:${path}`);
       if (result.response.headers.get("location"))
         failures.push(`retired_route_redirects:${method}:${path}`);
