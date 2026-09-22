@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PasskeyPanel } from "@/components/PasskeyPanel";
 import { KovaPasswordPanel } from "@/components/KovaPasswordPanel";
 import { KovaPasskeyPanel } from "@/components/KovaPasskeyPanel";
-import { browserKovaAuthEnabled, clearKovaAuthCache, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { clearKovaAuthCache, isKovaSessionActive, kovaAuthJson } from "@/lib/kova-auth-browser";
 
 type Factor = {
   id: string;
@@ -44,7 +44,7 @@ export function MfaPanel() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [confirmRegeneration, setConfirmRegeneration] = useState(false);
   const mutationInFlight = useRef(false);
-  const useKovaAuth = browserKovaAuthEnabled();
+  const useKovaAuth = isKovaSessionActive();
 
   const beginMutation = () => {
     if (mutationInFlight.current) return false;
