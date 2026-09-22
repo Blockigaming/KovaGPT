@@ -78,7 +78,7 @@
       "value": false
     },
     "minReplicas": {
-      "value": 1
+      "value": 0
     },
     "maxReplicas": {
       "value": 4
