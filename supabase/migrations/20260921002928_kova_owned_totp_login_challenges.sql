@@ -5,16 +5,22 @@
 create table kova_private.auth_mfa_login_challenges (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references kova_private.auth_accounts(id) on delete cascade,
-  credential_id uuid not null references kova_private.auth_credentials(id) on delete cascade,
-  credential_revision bigint not null check (credential_revision > 0),
+  credential_id uuid references kova_private.auth_credentials(id) on delete cascade,
+  credential_revision bigint check (credential_revision is null or credential_revision > 0),
   factor_id uuid not null references kova_private.auth_mfa_factors(id) on delete cascade,
+  challenge_source text not null default 'password'
+    check (challenge_source in ('password', 'google')),
   token_digest bytea not null unique check (octet_length(token_digest) = 32),
   attempts smallint not null default 0 check (attempts between 0 and 5),
   expires_at timestamptz not null,
   consumed_at timestamptz,
   created_at timestamptz not null default now(),
   check (expires_at > created_at),
-  check (consumed_at is null or consumed_at >= created_at)
+  check (consumed_at is null or consumed_at >= created_at),
+  check (
+    (challenge_source = 'password' and credential_id is not null and credential_revision is not null)
+    or (challenge_source = 'google' and credential_id is null and credential_revision is null)
+  )
 );
 
 create index auth_mfa_login_challenges_account_idx
@@ -97,11 +103,16 @@ begin
   select * into v_account from kova_private.auth_accounts where id = v_challenge.account_id for update;
   if v_account.id is null or v_account.deleted_at is not null or v_account.email_verified_at is null
     or (v_account.suspended_until is not null and v_account.suspended_until > p_now)
-    or not exists (
-      select 1 from kova_private.auth_credentials c where c.id = v_challenge.credential_id
-        and c.account_id = v_challenge.account_id and c.revision = v_challenge.credential_revision
-        and c.activated_at is not null and c.disabled_at is null
-    ) then raise exception 'kova_auth_account_unavailable'; end if;
+    or (
+      v_challenge.challenge_source = 'password'
+      and not exists (
+        select 1 from kova_private.auth_credentials c where c.id = v_challenge.credential_id
+          and c.account_id = v_challenge.account_id and c.revision = v_challenge.credential_revision
+          and c.activated_at is not null and c.disabled_at is null
+      )
+    )
+    or v_challenge.challenge_source not in ('password', 'google')
+    then raise exception 'kova_auth_account_unavailable'; end if;
   update kova_private.auth_mfa_login_challenges set consumed_at = p_now where id = v_challenge.id;
   insert into kova_private.auth_sessions(
     account_id, token_digest, assurance_level, session_epoch, expires_at, created_at, last_seen_at
@@ -115,6 +126,84 @@ begin
     true, 'aal2'::text, p_expires_at;
 end
 $$;
+
+create function public.kova_auth_consume_handoff_with_mfa(
+  p_handoff_digest_hex text, p_session_digest_hex text, p_session_expires_at timestamptz,
+  p_challenge_digest_hex text, p_challenge_expires_at timestamptz,
+  p_now timestamptz default now()
+) returns table(
+  mfa_required boolean, account_id uuid, session_id uuid, email text,
+  email_verified boolean, assurance_level text, expires_at timestamptz
+)
+language plpgsql security definer set search_path = '' set statement_timeout = '5s' as $
+#variable_conflict use_column
+declare
+  v_handoff kova_private.auth_session_handoffs;
+  v_account kova_private.auth_accounts;
+  v_factor kova_private.auth_mfa_factors;
+  v_session_id uuid;
+  v_mfa_required boolean;
+begin
+  if p_session_expires_at <= p_now then raise exception 'kova_auth_invalid_session'; end if;
+  select * into v_handoff from kova_private.auth_session_handoffs
+   where token_digest = kova_private.require_digest(p_handoff_digest_hex)
+     and consumed_at is null and expires_at > p_now for update;
+  if v_handoff.id is null then raise exception 'kova_auth_invalid_handoff'; end if;
+
+  select * into v_account from kova_private.auth_accounts
+   where id = v_handoff.account_id and deleted_at is null for update;
+  if v_account.id is null or v_account.email_verified_at is null
+    or (v_account.suspended_until is not null and v_account.suspended_until > p_now)
+    then raise exception 'kova_auth_account_unavailable'; end if;
+
+  v_mfa_required := v_account.mfa_required or kova_private.legacy_mfa_required(v_account.id);
+  if v_mfa_required then
+    if p_challenge_expires_at <= p_now or p_challenge_expires_at > p_now + interval '10 minutes' then
+      raise exception 'kova_auth_invalid_mfa_challenge';
+    end if;
+    perform kova_private.require_digest(p_challenge_digest_hex);
+    select * into v_factor from kova_private.auth_mfa_factors f
+     where f.account_id = v_account.id and f.factor_type = 'totp' and f.state = 'active'
+       and f.disabled_at is null
+     order by f.verified_at asc nulls last, f.created_at asc limit 1;
+    if v_factor.id is null then raise exception 'kova_auth_mfa_migration_required'; end if;
+
+    update kova_private.auth_mfa_login_challenges set consumed_at = p_now
+     where account_id = v_account.id and consumed_at is null;
+    insert into kova_private.auth_mfa_login_challenges(
+      account_id, credential_id, credential_revision, factor_id, challenge_source,
+      token_digest, expires_at, created_at
+    ) values (
+      v_account.id, null, null, v_factor.id, 'google',
+      kova_private.require_digest(p_challenge_digest_hex), p_challenge_expires_at, p_now
+    );
+    update kova_private.auth_session_handoffs set consumed_at = p_now where id = v_handoff.id;
+    perform kova_private.audit(v_account.id, null, 'google_mfa_challenge_created', 'success',
+      jsonb_build_object('factor_id', v_factor.id), p_now);
+    return query select true, v_account.id, null::uuid, v_account.primary_email,
+      true, null::text, p_challenge_expires_at;
+    return;
+  end if;
+
+  update kova_private.auth_session_handoffs set consumed_at = p_now where id = v_handoff.id;
+  insert into kova_private.auth_sessions(
+    account_id, token_digest, assurance_level, session_epoch, expires_at, created_at, last_seen_at
+  ) values (
+    v_account.id, kova_private.require_digest(p_session_digest_hex),
+    v_handoff.assurance_level, v_account.session_epoch, p_session_expires_at, p_now, p_now
+  ) returning id into v_session_id;
+  perform kova_private.audit(v_account.id, v_session_id, 'oauth_handoff_consumed', 'success', '{}', p_now);
+  return query select false, v_account.id, v_session_id, v_account.primary_email,
+    true, v_handoff.assurance_level, p_session_expires_at;
+end
+$;
+
+revoke all on function public.kova_auth_consume_handoff_with_mfa(
+  text, text, timestamptz, text, timestamptz, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.kova_auth_consume_handoff_with_mfa(
+  text, text, timestamptz, text, timestamptz, timestamptz
+) to service_role;
 
 revoke all on function public.kova_auth_begin_mfa_login(uuid, uuid, bigint, text, timestamptz, timestamptz) from public, anon, authenticated;
 revoke all on function public.kova_auth_read_mfa_login_challenge(text, timestamptz) from public, anon, authenticated;
