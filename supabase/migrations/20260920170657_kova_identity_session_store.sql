@@ -756,6 +756,14 @@ returns uuid language sql stable security definer set search_path = '' as $
     from candidates
 $;
 
+-- Full installs already have the private project invite implementations by this
+-- timestamp. Isolated auth-schema tests intentionally do not, so parse the
+-- replacement only when those compatibility functions exist.
+do $project_invite_bridge$
+begin
+  if to_regprocedure('kova_private.accept_project_invite(uuid)') is not null
+     and to_regprocedure('kova_private.decline_project_invite(uuid)') is not null then
+    execute $accept$
 create or replace function kova_private.accept_project_invite(_invite_id uuid)
 returns uuid
 language plpgsql
@@ -797,7 +805,8 @@ begin
   return invite_project_id;
 end;
 $;
-
+$accept$;
+    execute $decline$
 create or replace function kova_private.decline_project_invite(_invite_id uuid)
 returns boolean
 language plpgsql
@@ -831,6 +840,10 @@ begin
   return true;
 end;
 $;
+$decline$;
+  end if;
+end
+$project_invite_bridge$;
 
 create function public.kova_auth_directory_email(p_account_id uuid)
 returns text
