@@ -1,0 +1,145 @@
+name: Kova Auth Tree Transfer
+
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/kova-auth-tree-transfer.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout pinned source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 7243b90e55fa4633b0ecb5cef93c3f8d59869134
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Transfer verified revocation blobs without moving refs
+        env:
+          GIT_OBJECT_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYTHON'
+          import base64
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import urllib.request
+          import zlib
+
+          REPOSITORY = "Blockigaming/KovaGPT"
+          BRANCH = "refs/heads/codex/kova-owned-auth-foundation"
+          BASE = '7243b90e55fa4633b0ecb5cef93c3f8d59869134'
+          BASE_TREE = '2edf8a11e8ac9e48a6b46c54eb958a645fa9b29d'
+          TREE = '5eca84fea86ec524e1a504de7d65819265612c1f'
+          PATCH_SHA256 = '12c96252c25b921de4a455ce70656dc83be4c7a82c1e8fcad1685e7b64c205e5'
+          PARTS = [('f492e940f21e18901807d8a320ec0710e794ecca', 'f492e940f21e18901807d8a320ec0710e794ecca'), ('07d360ed94412dcb9e5d07398cfb8001fcbc6e65', '07d360ed94412dcb9e5d07398cfb8001fcbc6e65'), ('8de68f135f6c698c8bf63332a3659357af55342d', '2a641e230ee490d42c9248fb8f828a477df13769'), ('d8f01c511db546d01e7f10538c96371854a554b8', 'd8f01c511db546d01e7f10538c96371854a554b8')]
+          FILES = {
+            ".github/workflows/kova-owned-auth-source.yml": "a0cc4faee91145996c2cbf2c5cda9d0951875ddc",
+            "database-contract.json": "98a797a091ddb43acbb38dc16b96e7f6280d0e99",
+            "docs/kova-owned-auth.md": "b7b1e251ceabaaf6c840af8b498a14a2beab3316",
+            "release-migrations.json": "f983800753c60a618fb9c36d8443b033c1518a70",
+            "scripts/release/kova-auth-revocation-proof.sql": "a53221fe6de3b4507a96bb09af43979b8d0768f5",
+            "src/integrations/supabase/client.ts": "58a55b85bae9a7f6ec4cfb1519571e1360b7b4fc",
+            "src/lib/kova-auth-crypto.server.mjs": "36714958c75d78a2f9ded79303067b5e7d111f98",
+            "src/lib/kova-auth-data-fetch.ts": "3f050d5b0fa7d1bdbba9a2bdffc2b694ca52c9a7",
+            "supabase/migrations/20260922001355_kova_owned_compatibility_revocation.sql": "6ce38a1234ad1d24973086afdc0461cd3a8b7919",
+            "tests/helpers/kova-auth-database.mjs": "95e90ff123bb2800f41151340d376d68ddeed157",
+            "tests/unit/kova-auth-compatibility-revocation.test.mjs": "9772e10d8d4b7311da2e02423423fd2bb46082a3",
+            "tests/unit/kova-auth-crypto.test.mjs": "cea624a1ec21f7acf103ae2db6c13a1617ed43b2",
+            "tests/unit/kova-auth-data-fetch.test.mjs": "1c15ffec31157c4eaa54be78c3a27b65bcaf1f5f",
+            "tests/unit/kova-owned-auth-database.test.mjs": "98e84da01e679e875351e5c3e9ff3df93b8e7f19",
+            "tests/unit/upgrade-database-scheduled-catalog.test.mjs": "34540135093c04bf80f96c7e5fab78fb4a4a72a5",
+            "tests/unit/upgrade-database-scheduled-tables.test.mjs": "4ff0ed1fd49ffcd94d3cd7b64e38b1d36c05899a",
+            "tests/unit/upgrade-database-temp-export-proof.test.mjs": "c82b8ac47e9ff4028f13bf5474d3ab8f410044b8",
+            "tests/unit/upgrade-source-provenance.test.mjs": "cfa0107234df58c02437acfeea2bcb8c7db21963"
+          }
+
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def git(*args, data=None):
+              return subprocess.check_output(["git", *args], input=data)
+
+          def blob_hash(data):
+              return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+
+          def api(method, path, body=None):
+              reads = {"/git/ref/heads/codex/kova-owned-auth-foundation"} | {
+                  "/git/blobs/" + remote for remote, _ in PARTS
+              }
+              require((method == "GET" and path in reads) or
+                      (method == "POST" and path == "/git/blobs"), "Out-of-scope API operation")
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + REPOSITORY + path,
+                  data=None if body is None else json.dumps(body).encode(),
+                  method=method,
+                  headers={
+                      "Authorization": "Bearer " + os.environ["GIT_OBJECT_TOKEN"],
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  raw = response.read(2_000_001)
+              require(len(raw) <= 2_000_000, "Oversized response")
+              return json.loads(raw)
+
+          require(os.environ["GITHUB_REPOSITORY"] == REPOSITORY, "Wrong repository")
+          require(os.environ["GITHUB_REF"] == BRANCH, "Wrong branch")
+          require(git("rev-parse", "HEAD").decode().strip() == BASE, "Wrong source base")
+          require(git("rev-parse", "HEAD^{tree}").decode().strip() == BASE_TREE, "Wrong base tree")
+          require(not git("status", "--porcelain"), "Dirty checkout")
+          require(api("GET", "/git/ref/heads/codex/kova-owned-auth-foundation")["object"]["sha"]
+                  == os.environ["GITHUB_SHA"], "Branch advanced")
+          compressed = bytearray()
+          for remote, expected in PARTS:
+              item = api("GET", "/git/blobs/" + remote)
+              require(item["sha"] == remote and item["encoding"] == "base64", "Invalid blob response")
+              raw = base64.b64decode("".join(item["content"].split()), validate=True)
+              require(len(raw) <= 4500 and blob_hash(raw) == remote, "Transport blob mismatch")
+              if remote != expected:
+                  # Restore an independently reproduced one-character transport omission.
+                  # Both the original Git hash and the complete patch digest must match.
+                  encoded = base64.b64encode(raw).decode().rstrip("=")
+                  require(encoded.count("vnp9T/KcT") == 1, "Unexpected transport omission")
+                  encoded = encoded.replace("vnp9T/KcT", "vnp9Tt/KcT")
+                  raw = base64.b64decode(encoded[:-1] + "J", validate=True)
+              require(blob_hash(raw) == expected, "Original blob mismatch")
+              compressed.extend(raw)
+          require(len(compressed) == 16482, "Compressed size mismatch")
+          decoder = zlib.decompressobj()
+          patch = decoder.decompress(compressed, 59829)
+          require(decoder.eof and not decoder.unconsumed_tail and not decoder.unused_data, "Invalid stream")
+          require(len(patch) == 59828 and hashlib.sha256(patch).hexdigest() == PATCH_SHA256,
+                  "Patch digest mismatch")
+          # Only populate Git's index and immutable blob objects. Never execute source,
+          # alter a working-tree file, create commits, move refs, or access deployments.
+          git("apply", "--cached", "--check", "--whitespace=error", data=patch)
+          git("apply", "--cached", "--whitespace=error", data=patch)
+          changed = git("diff", "--cached", "--name-only", "-z").decode().rstrip("\0").split("\0")
+          require(sorted(changed) == sorted(FILES), "Unexpected changed paths")
+          require(git("write-tree").decode().strip() == TREE, "Feature tree mismatch")
+          for path, sha in FILES.items():
+              stage = git("ls-files", "--stage", "--", path).decode()
+              require(stage.startswith("100644 " + sha + " 0\t"), "Unexpected index entry")
+              content = git("cat-file", "blob", sha)
+              require(len(content) <= 256000 and blob_hash(content) == sha, "Source blob mismatch")
+              created = api("POST", "/git/blobs", {
+                  "encoding": "base64", "content": base64.b64encode(content).decode(),
+              })
+              require(created["sha"] == sha, "Uploaded blob mismatch")
+              print("VERIFIED_BLOB", path, sha, flush=True)
+          print("VERIFIED_TREE=" + TREE, flush=True)
+          PYTHON
