@@ -121,10 +121,11 @@ param cloudflareClientCertificateSha256Fingerprints array
 @description('Enable production AI generation only after production provider verification.')
 param generationEnabled bool = false
 
-@description('Minimum production web replicas.')
-@minValue(0)
-@maxValue(1)
-param minReplicas int = 1
+@description('Migration cost freeze: production must remain scaled to zero until a separately reviewed Azure activation change.')
+@allowed([
+  0
+])
+param minReplicas int = 0
 
 @description('Maximum production web replicas.')
 @minValue(1)
