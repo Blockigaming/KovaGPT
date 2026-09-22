@@ -78,6 +78,12 @@ test("production Azure example is complete, inert, and production-scoped", () =>
   assert.doesNotMatch(bicep, /param minReplicas int = 1/u);
   assert.ok(bicep.includes("output containerAppFqdn string = ''"));
 
+  const handoff = read("docs/release/KOVAGPT_MANUAL_HANDOFF.md");
+  const man02 = handoff.split("### MAN-02 —")[1]?.split("### MAN-03 —")[0];
+  assert.ok(man02, "missing MAN-02 production handoff");
+  assert.match(man02, /Migration freeze stop:/u);
+  assert.doesNotMatch(man02, /az deployment group create/u);
+
   const exampleEnv = read(".env.example");
   assert.match(exampleEnv, /^KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS=$/mu);
 });
