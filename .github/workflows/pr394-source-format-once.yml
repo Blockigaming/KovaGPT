@@ -1,0 +1,104 @@
+name: PR 394 one-time source formatting
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/pr394-source-format-once.yml]
+permissions:
+  contents: write
+jobs:
+  format-source:
+    if: github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require the inspected auth parent
+        run: test "$(git rev-parse HEAD^)" = 8d7bff433edfddc568b1674875c49e743585165a
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only the 34 reported source files
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/pr394-format-files" <<'FILES'
+          src/components/KovaPasskeyPanel.tsx
+          src/components/KovaPasswordPanel.tsx
+          src/lib/kova-auth-contract.mjs
+          src/lib/kova-auth-data-fetch.ts
+          src/lib/kova-auth-passkey-browser.ts
+          src/lib/kova-auth-passkey-crypto.server.d.mts
+          src/lib/kova-auth-passkey-crypto.server.mjs
+          src/lib/kova-auth-passkey-http.server.ts
+          src/lib/kova-auth-passkey-store.server.ts
+          src/routes/api/auth/passkeys/index.ts
+          src/routes/api/auth/passkeys/login/options.ts
+          src/routes/api/auth/passkeys/login/verify.ts
+          src/routes/api/auth/passkeys/register/options.ts
+          src/routes/api/auth/passkeys/register/verify.ts
+          src/routes/api/auth/passkeys/remove.ts
+          src/routes/api/auth/passkeys/rename.ts
+          src/routes/api/auth/password.ts
+          tests/helpers/kova-auth-database.mjs
+          tests/helpers/kova-auth-http.mjs
+          tests/helpers/kova-passkey-database.mjs
+          tests/helpers/kova-passkey-fixture.mjs
+          tests/helpers/kova-passkey-http.mjs
+          tests/helpers/kova-react-fixture.mjs
+          tests/unit/kova-auth-compatibility-revocation.test.mjs
+          tests/unit/kova-auth-data-fetch.test.mjs
+          tests/unit/kova-auth-passkey-browser.test.mjs
+          tests/unit/kova-auth-passkey-crypto.test.mjs
+          tests/unit/kova-auth-passkey-database.test.mjs
+          tests/unit/kova-auth-passkey-http.test.mjs
+          tests/unit/kova-auth-passkey-ui.test.mjs
+          tests/unit/kova-auth-password-panel-runtime.test.mjs
+          tests/unit/kova-auth-session-mutations-database.test.mjs
+          tests/unit/kova-auth-session-mutations-http.test.mjs
+          tests/unit/kova-session.server.test.mjs
+          FILES
+          mapfile -t files < "$RUNNER_TEMP/pr394-format-files"
+          ./node_modules/.bin/prettier --write "${files[@]}"
+          ./node_modules/.bin/prettier --check "${files[@]}"
+          git diff --check
+      - name: Create an unreferenced source-only candidate, without moving any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+          workflow = '.github/workflows/pr394-source-format-once.yml'
+          allowed = set((pathlib.Path(os.environ['RUNNER_TEMP']) / 'pr394-format-files').read_text().splitlines())
+          changed = subprocess.check_output(['git', 'diff', '--name-only', '-z']).decode().strip('\0').split('\0')
+          changed = [p for p in changed if p]
+          assert changed and set(changed) <= allowed, 'unexpected source mutation'
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          tree = subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip()
+          def post(endpoint, payload):
+              request = urllib.request.Request(
+                  'https://api.github.com/repos/Blockigaming/KovaGPT/' + endpoint,
+                  data=json.dumps(payload).encode(), method='POST', headers={
+                      'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                      'Accept': 'application/vnd.github+json',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                      'Content-Type': 'application/json',
+                  })
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          entries = [{'path': p, 'mode': '100644', 'type': 'blob', 'content': pathlib.Path(p).read_text()} for p in sorted(changed)]
+          entries.append({'path': workflow, 'mode': '100644', 'type': 'blob', 'sha': None})
+          result = post('git/trees', {'base_tree': tree, 'tree': entries})
+          commit = post('git/commits', {
+              'message': 'style(auth): format the 34 files blocking exact-head validation',
+              'tree': result['sha'], 'parents': [head],
+          })
+          print('REPAIR_CANDIDATE_SHA=' + commit['sha'])
+          print('FORMATTED_SOURCE_FILES=' + str(len(changed)))
+          print('No branch moved; one-time workflow removed from candidate tree.')
+          PY
