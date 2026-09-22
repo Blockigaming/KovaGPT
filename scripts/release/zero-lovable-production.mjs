@@ -1,7 +1,8 @@
 import { writeFileSync } from "node:fs";
 
 const SHA = /^[a-f0-9]{40}$/u;
-const HTML_TAG = /<(script|link)\b([^>]*)>/giu;
+const HTML_TAG =
+  /<(base|script|link|img|source|video|audio|track|iframe|embed|object|input)\b([^>]*)>/giu;
 const HTML_ATTRIBUTE =
   /\b([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gu;
 const JS_DYNAMIC_IMPORT = /\bimport\s*\(\s*["'`]([^"'`\r\n]+)["'`]\s*\)/gu;
@@ -33,6 +34,7 @@ const RETIRED_ROUTES = [
 const SAFE_ROUTE_PROBES = ["GET", "HEAD", "OPTIONS"];
 const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const DEFAULT_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
+const DEFAULT_MAX_DURATION_MS = 120_000;
 const JAVASCRIPT_CONTENT_TYPE = /(?:javascript|ecmascript)/iu;
 const CSS_CONTENT_TYPE = /^text\/css\b/iu;
 const CSS_URL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s"')][^)]*?))\s*\)/giu;
@@ -55,10 +57,15 @@ function addAssetReference(
   reference,
   parent,
   origin,
-  { allowAny = false, resolveFromOriginRoot = false } = {},
+  { allowAny = false, resolveFromOriginRoot = false, rejectedDataUrls } = {},
 ) {
   const value = reference?.trim();
-  if (!value || /^(?:data:|javascript:|#)/iu.test(value)) return;
+  if (!value || /^(?:javascript:|#)/iu.test(value)) return;
+  if (/^data:/iu.test(value)) {
+    const comma = value.indexOf(",");
+    rejectedDataUrls?.add(comma === -1 ? "data:" : value.slice(0, comma + 1));
+    return;
+  }
   let url;
   try {
     url = new URL(value, resolveFromOriginRoot ? new URL("/", origin) : parent);
@@ -73,11 +80,27 @@ function addAssetReference(
   }
 }
 
-function discoverAssets(source, parent, origin) {
+function discoverAssets(source, parent, origin, rejectedDataUrls = new Set()) {
   const assets = new Set();
+  let documentBase = parent;
+
+  for (const match of source.matchAll(HTML_TAG)) {
+    if (match[1].toLowerCase() !== "base") continue;
+    const href = [...match[2].matchAll(HTML_ATTRIBUTE)].find(
+      (attribute) => attribute[1].toLowerCase() === "href",
+    );
+    if (!href) continue;
+    try {
+      documentBase = new URL(href[2] ?? href[3] ?? href[4] ?? "", parent);
+      break;
+    } catch {
+      // Browsers ignore invalid base URLs and continue looking for a usable base.
+    }
+  }
 
   for (const match of source.matchAll(HTML_TAG)) {
     const tag = match[1].toLowerCase();
+    if (tag === "base") continue;
     const attributes = new Map();
     for (const attribute of match[2].matchAll(HTML_ATTRIBUTE)) {
       attributes.set(
@@ -85,10 +108,29 @@ function discoverAssets(source, parent, origin) {
         attribute[2] ?? attribute[3] ?? attribute[4] ?? "",
       );
     }
+    if (!["script", "link"].includes(tag)) {
+      const references = [];
+      for (const name of tag === "object" ? ["data"] : ["src"]) {
+        if (attributes.get(name)) references.push(attributes.get(name));
+      }
+      for (const candidate of (attributes.get("srcset") ?? "").split(",")) {
+        const reference = candidate.trim().split(/\s+/u)[0];
+        if (reference) references.push(reference);
+      }
+      for (const reference of references)
+        addAssetReference(assets, reference, documentBase, origin, {
+          allowAny: true,
+          rejectedDataUrls,
+        });
+      continue;
+    }
     const reference = tag === "script" ? attributes.get("src") : attributes.get("href");
     if (!reference) continue;
     if (tag === "script") {
-      addAssetReference(assets, reference, parent, origin, { allowAny: true });
+      addAssetReference(assets, reference, documentBase, origin, {
+        allowAny: true,
+        rejectedDataUrls,
+      });
       continue;
     }
     const rel = new Set((attributes.get("rel") ?? "").toLowerCase().split(/\s+/u).filter(Boolean));
@@ -99,8 +141,9 @@ function discoverAssets(source, parent, origin) {
       rel.has("manifest") ||
       [...rel].some((value) => value === "icon" || value.endsWith("icon")) ||
       (rel.has("preload") && ["script", "style", "fetch"].includes(as));
-    addAssetReference(assets, reference, parent, origin, {
+    addAssetReference(assets, reference, documentBase, origin, {
       allowAny: browserConsumedLink,
+      rejectedDataUrls,
     });
   }
 
@@ -113,7 +156,7 @@ function discoverAssets(source, parent, origin) {
     SERVICE_WORKER_REGISTER,
   ]) {
     for (const match of source.matchAll(pattern)) {
-      addAssetReference(assets, match[1], parent, origin, { allowAny: true });
+      addAssetReference(assets, match[1], parent, origin, { allowAny: true, rejectedDataUrls });
     }
   }
 
@@ -156,7 +199,8 @@ function withoutHtmlComments(source) {
 function discoverLinkHeaderAssets(value, parent, origin) {
   const assets = new Set();
   for (const match of (value ?? "").matchAll(/<([^>]+)>\s*((?:;[^,]*)?)(?:,|$)/gu)) {
-    const parameters = match[2];    const rel = parameters.match(/;\s*rel\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;,\s]+))/iu);
+    const parameters = match[2];
+    const rel = parameters.match(/;\s*rel\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;,\s]+))/iu);
     const relations = new Set((rel?.[1] ?? rel?.[2] ?? rel?.[3] ?? "").toLowerCase().split(/\s+/u));
     if (!relations.has("preload") && !relations.has("modulepreload")) continue;
     addAssetReference(assets, match[1], parent, origin, { allowAny: true });
@@ -233,6 +277,17 @@ function isTextAsset(kind, contentType = "") {
   );
 }
 
+function responseCookies(response) {
+  const values = response.headers.getSetCookie?.() ?? [];
+  if (!values.length) {
+    const combined = response.headers.get("set-cookie");
+    if (combined) values.push(combined);
+  }
+  return values
+    .map((value) => value.split(";", 1)[0]?.trim())
+    .filter((value) => value?.includes("="));
+}
+
 async function readBoundedText(response, limits) {
   if (!response.body) return { body: "", bytes: 0 };
   const reader = response.body.getReader();
@@ -274,13 +329,25 @@ async function readBoundedText(response, limits) {
   return { body, bytes, invalidUtf8 };
 }
 
-async function request(url, { redirect = "follow", method = "GET" } = {}, limits) {
-  const response = await fetch(url, {
-    method,
-    redirect,
-    signal: AbortSignal.timeout(15_000),
-    headers: { "user-agent": "KovaGPT-read-only-zero-lovable-evidence/1" },
-  });
+async function request(url, { redirect = "follow", method = "GET", cookie } = {}, limits) {
+  const remainingMs = limits.deadline - Date.now();
+  if (remainingMs <= 0) return deadlineResult(url, method);
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      redirect,
+      signal: AbortSignal.timeout(Math.min(15_000, remainingMs)),
+      headers: {
+        "user-agent": "KovaGPT-read-only-zero-lovable-evidence/1",
+        ...(cookie ? { cookie } : {}),
+      },
+    });
+  } catch (error) {
+    if (Date.now() >= limits.deadline || error?.name === "TimeoutError")
+      return deadlineResult(url, method);
+    throw error;
+  }
   let body = "";
   let bytes = 0;
   let readFailure = null;
@@ -310,21 +377,49 @@ async function request(url, { redirect = "follow", method = "GET" } = {}, limits
   };
 }
 
+function deadlineResult(url, method) {
+  const response = new Response("", { status: 408 });
+  Object.defineProperty(response, "url", { value: String(url) });
+  return {
+    response,
+    body: "",
+    readFailure: "collection_deadline_exceeded",
+    invalidUtf8: false,
+    record: {
+      method,
+      url: redactUrl(url),
+      status: 408,
+      location: null,
+      contentType: null,
+      bytes: 0,
+    },
+  };
+}
+
 export async function collectZeroLovableProductionEvidence({
   baseUrl,
   expectedSha,
   maxAssets = 500,
   maxResponseBytes = DEFAULT_MAX_RESPONSE_BYTES,
   maxTotalBytes = DEFAULT_MAX_TOTAL_BYTES,
+  maxDurationMs = DEFAULT_MAX_DURATION_MS,
   now = () => new Date(),
-}) {  if (!SHA.test(expectedSha ?? "")) throw new Error("expected_sha_required");
+}) {
+  if (!SHA.test(expectedSha ?? "")) throw new Error("expected_sha_required");
   if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 1)
     throw new Error("max_response_bytes_invalid");
   if (!Number.isSafeInteger(maxTotalBytes) || maxTotalBytes < maxResponseBytes)
     throw new Error("max_total_bytes_invalid");
+  if (!Number.isSafeInteger(maxDurationMs) || maxDurationMs < 1)
+    throw new Error("max_duration_ms_invalid");
   const base = normalizeBase(baseUrl);
   const failures = [];
-  const limits = { budget: { bytes: 0 }, maxResponseBytes, maxTotalBytes };
+  const limits = {
+    budget: { bytes: 0 },
+    maxResponseBytes,
+    maxTotalBytes,
+    deadline: Date.now() + maxDurationMs,
+  };
   const hintedAssets = [];
   const versionUrl = new URL("/api/version", base);
   const versionResult = await request(versionUrl, { redirect: "manual" }, limits);
@@ -404,12 +499,15 @@ export async function collectZeroLovableProductionEvidence({
   const rootBuildShas = [...liveRootBody.matchAll(BUILD_META)].map((match) => match[1]);
   const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
   if (rootBuildSha !== expectedSha) failures.push("root_build_sha_mismatch");
+  const assetCookie = responseCookies(rootResult.response).join("; ");
+  const rejectedDataUrls = new Set();
 
   const pending = [
     ...hintedAssets,
-    ...discoverAssets(liveRootBody, rootFinalUrl, base.origin),
+    ...discoverAssets(liveRootBody, rootFinalUrl, base.origin, rejectedDataUrls),
     ...discoverLinkHeaderAssets(rootResult.response.headers.get("link"), rootFinalUrl, base.origin),
   ];
+  for (const value of rejectedDataUrls) failures.push(`data_url_asset_rejected:${value}`);
   const seen = new Set();
   const assets = [];
   const contentHits = [];
@@ -425,7 +523,11 @@ export async function collectZeroLovableProductionEvidence({
       failures.push(`asset_path_decode_failed:${requestedDisplayUrl}`);
     else if (/lovable/iu.test(requestedPathname))
       failures.push(`lovable_asset_name:${requestedDisplayUrl}`);
-    const result = await request(url, { redirect: "manual" }, limits);
+    const result = await request(
+      url,
+      { redirect: "manual", cookie: requestedUrl.origin === base.origin ? assetCookie : "" },
+      limits,
+    );
     assets.push(result.record);
     const finalUrl = new URL(result.response.url || url);
     const displayUrl = result.record.url;
@@ -467,7 +569,8 @@ export async function collectZeroLovableProductionEvidence({
     if (!result.readFailure && isTextAsset(kind, contentType)) {
       if (result.invalidUtf8) failures.push(`asset_invalid_utf8:${displayUrl}`);
       if (/lovable/iu.test(result.body)) {
-        contentHits.push(displayUrl);        failures.push(`lovable_asset_content:${displayUrl}`);
+        contentHits.push(displayUrl);
+        failures.push(`lovable_asset_content:${displayUrl}`);
       }
       if (kind === "javascript" && contentTypeValid && result.body.includes(expectedSha))
         browserBuildShaFound = true;
@@ -476,9 +579,11 @@ export async function collectZeroLovableProductionEvidence({
           if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
         }
       }
-      for (const nested of discoverAssets(result.body, finalUrl, base.origin)) {
+      const nestedDataUrls = new Set();
+      for (const nested of discoverAssets(result.body, finalUrl, base.origin, nestedDataUrls)) {
         if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
       }
+      for (const value of nestedDataUrls) failures.push(`data_url_asset_rejected:${value}`);
       if (/(?:application\/manifest\+json|application\/json)/iu.test(contentType)) {
         for (const nested of discoverJsonAssets(result.body, finalUrl, base.origin)) {
           if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
@@ -492,6 +597,7 @@ export async function collectZeroLovableProductionEvidence({
         if (!seen.has(nested) && !pending.includes(nested)) pending.push(nested);
       }
     }
+    if (result.readFailure === "collection_deadline_exceeded") break;
     if (result.readFailure === "aggregate_body_limit_exceeded") break;
   }
   if (pending.length) failures.push(`asset_limit_exceeded:${maxAssets}`);
