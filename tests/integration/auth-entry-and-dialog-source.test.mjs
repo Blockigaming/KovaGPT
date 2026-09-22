@@ -29,7 +29,11 @@ test("the valid password step is named, gated, and keeps auth calls unchanged", 
   assert.match(authRoute, /htmlFor="kova-auth-page-email"/u);
   assert.match(authRoute, /htmlFor="kova-auth-page-password"/u);
   assert.match(authRoute, /aria-describedby="kova-auth-page-password-requirement"/u);
-  assert.match(authRoute, /disabled=\{loading \|\| !emailValid \|\| password\.length < 6\}/u);
+  assert.match(authRoute, /const minimumPasswordLength = useKovaAuth \? 12 : 6/u);
+  assert.match(
+    authRoute,
+    /disabled=\{loading \|\| !emailValid \|\| password\.length < minimumPasswordLength\}/u,
+  );
   assert.match(authRoute, /h-11 w-11/u);
   assert.match(authRoute, /\{ title: "KovaGPT Account" \}/u);
   assert.doesNotMatch(authRoute, /\{ title: "KovaGPT Sign In" \}/u);
