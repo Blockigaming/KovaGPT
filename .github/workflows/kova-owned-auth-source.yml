@@ -1,7 +1,6 @@
 name: Kova Owned Auth Source
 
 on:
-  workflow_dispatch:
   push:
     branches: [codex/kova-owned-auth-foundation]
     paths:
