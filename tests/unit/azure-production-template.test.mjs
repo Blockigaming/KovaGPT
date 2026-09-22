@@ -49,7 +49,7 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     /^https:\/\/REPLACE_WITH_PRODUCTION_KEY_VAULT\.vault\.azure\.net\/secrets\/kova-ip-hash-secret\/REPLACE_WITH_VERSION$/u,
   );
   assert.equal(parameters.generationEnabled.value, false);
-  assert.equal(parameters.minReplicas.value, 1);
+  assert.equal(parameters.minReplicas.value, 0);
   assert.equal(parameters.deployBudget.value, false);
   assert.deepEqual(parameters.cloudflareClientCertificateSha256Fingerprints.value, [
     "REPLACE_WITH_64_HEX_CLOUDFLARE_CLIENT_CERT_SHA256",
@@ -68,6 +68,12 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     assert.match(bicep, new RegExp(`type: '${type}'[\\s\\S]*?tcpSocket:`, "u"));
   }
   assert.doesNotMatch(bicep, /httpGet:/u);
+  assert.match(
+    bicep,
+    /@allowed\(\[\s*0\s*\]\)\s*param minReplicas int = 0/su,
+    "production must remain hard-frozen at zero replicas during migration",
+  );
+  assert.doesNotMatch(bicep, /param minReplicas int = 1/u);
 
   const exampleEnv = read(".env.example");
   assert.match(exampleEnv, /^KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS=$/mu);
