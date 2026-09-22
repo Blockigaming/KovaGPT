@@ -14,12 +14,19 @@ import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 
-type AuthSearch = { email?: string; mode?: "sign-in" | "sign-up" };
+type AuthSearch = {
+  email?: string;
+  mode?: "sign-in" | "sign-up";
+  googleMfa?: boolean;
+  returnTo?: string;
+};
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): AuthSearch => ({
     email: typeof search.email === "string" ? search.email.trim() : undefined,
     mode: search.mode === "sign-up" ? "sign-up" : "sign-in",
+    googleMfa: search.google_mfa === "1",
+    returnTo: typeof search.return_to === "string" ? search.return_to : undefined,
   }),
   beforeLoad: ({ search }) => {
     if (search.email && isValidEmail(search.email)) return;
@@ -107,6 +114,7 @@ function AuthPage() {
   }, [cooldown]);
 
   const emailValid = isValidEmail(email);
+  const hasMfaChallenge = Boolean(mfaChallengeToken) || search.googleMfa === true;
   const showEmailError = editingEmail && emailTouched && !emailValid;
   const showPasswordError = passwordTouched && password.length < minimumPasswordLength;
 
@@ -214,10 +222,10 @@ function AuthPage() {
   const submitMfa = async (event: React.FormEvent) => {
     event.preventDefault();
     const mfaInputValid = mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
-    if (!mfaChallengeToken || !mfaInputValid || !guard()) return;
+    if (!hasMfaChallenge || !mfaInputValid || !guard()) return;
     try {
       const response = await kovaAuthJson("/api/auth/login", {
-        challengeToken: mfaChallengeToken,
+        ...(search.googleMfa ? { googleMfa: true } : { challengeToken: mfaChallengeToken }),
         ...(mfaMethod === "totp" ? { code: mfaCode } : { recoveryCode: mfaCode }),
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
@@ -230,7 +238,9 @@ function AuthPage() {
         return;
       }
       toast.success("Welcome back.");
-      window.location.replace(getSafePostAuthRedirect());
+      window.location.replace(
+        getSafePostAuthRedirect(search.googleMfa ? search.returnTo : undefined),
+      );
     } catch (error) {
       console.error("[KovaAuth] MFA authentication failed", {
         error: error instanceof Error ? error.name : "unknown_error",
@@ -303,7 +313,7 @@ function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
-            {mfaChallengeToken
+            {hasMfaChallenge
               ? "Two-factor verification"
               : magicSent
                 ? "Sign-in link requested"
@@ -311,7 +321,7 @@ function AuthPage() {
                   ? "Create your account"
                   : "Enter your password"}
           </h1>
-          {mfaChallengeToken ? (
+          {hasMfaChallenge ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
               {mfaMethod === "totp"
                 ? "Enter the 6-digit code from your authenticator app to finish signing in."
@@ -326,7 +336,7 @@ function AuthPage() {
           ) : null}
         </div>
 
-        {useKovaAuth && !isSignUp && !mfaChallengeToken && passkeySupported ? (
+        {useKovaAuth && !isSignUp && !hasMfaChallenge && passkeySupported ? (
           <Button
             type="button"
             variant="outline"
@@ -337,7 +347,7 @@ function AuthPage() {
             Continue with a passkey
           </Button>
         ) : null}
-        {mfaChallengeToken ? (
+        {hasMfaChallenge ? (
           <form onSubmit={submitMfa} className="space-y-3">
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
               {mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
@@ -394,9 +404,10 @@ function AuthPage() {
                 setMfaChallengeToken(null);
                 setMfaCode("");
                 setMfaMethod("totp");
+                if (search.googleMfa) void navigate({ to: "/" });
               }}
             >
-              Back to password
+              {search.googleMfa ? "Cancel" : "Back to password"}
             </Button>
           </form>
         ) : magicSent ? (
