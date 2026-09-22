@@ -1,0 +1,263 @@
+name: PR 390 state regression repair
+on:
+  push:
+    branches: [codex/issue-208-production-evidence]
+    paths: [.github/workflows/pr390-state-repair-once.yml]
+permissions:
+  contents: write
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve the inspected collector source
+        run: git diff --exit-code 077a6576b048d98923fb6fec089e0eb5f17738d7 HEAD -- scripts/release/zero-lovable-production.mjs tests/unit/zero-lovable-production-evidence.test.mjs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Apply bounded source and regression changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/release/zero-lovable-production.mjs')
+          s=p.read_text()
+          start=s.index('function responseCookies(response) {')
+          end=s.index('\nasync function readBoundedText',start)
+          s=s[:start]+'''function createCookieJar(origin) {
+            const cookies = new Map();
+            let sequence = 0;
+            const matchesPath = (requestPath, cookiePath) =>
+              requestPath === cookiePath ||
+              (requestPath.startsWith(cookiePath) &&
+                (cookiePath.endsWith("/") || requestPath[cookiePath.length] === "/"));
+            return {
+              update(response, requestUrl) {
+                const url = new URL(response.url || requestUrl);
+                if (url.origin !== origin) return;
+                const values = response.headers.getSetCookie?.() ?? [];
+                if (!values.length && response.headers.has("set-cookie"))
+                  values.push(response.headers.get("set-cookie"));
+                for (const value of values) {
+                  const [pair, ...parts] = value.split(";");
+                  const separator = pair.indexOf("=");
+                  if (separator <= 0) continue;
+                  const name = pair.slice(0, separator).trim();
+                  const content = pair.slice(separator + 1).trim();
+                  if (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u.test(name)) continue;
+                  const attributes = new Map(parts.map((part) => {
+                    const position = part.indexOf("=");
+                    return position === -1
+                      ? [part.trim().toLowerCase(), ""]
+                      : [part.slice(0, position).trim().toLowerCase(), part.slice(position + 1).trim()];
+                  }));
+                  const domain = (attributes.get("domain") ?? url.hostname).toLowerCase().replace(/^\\./u, "");
+                  if (domain !== url.hostname && !url.hostname.endsWith(`.${domain}`)) continue;
+                  const slash = url.pathname.lastIndexOf("/");
+                  const defaultPath = slash <= 0 ? "/" : url.pathname.slice(0, slash);
+                  const requestedPath = attributes.get("path") ?? "";
+                  const path = requestedPath.startsWith("/") ? requestedPath : defaultPath;
+                  if (name.startsWith("__Secure-") && !attributes.has("secure")) continue;
+                  if (name.startsWith("__Host-") &&
+                      (!attributes.has("secure") || attributes.has("domain") || path !== "/")) continue;
+                  const key = JSON.stringify([name, domain, path]);
+                  let expires = Date.parse(attributes.get("expires") ?? "");
+                  const maxAge = attributes.get("max-age");
+                  if (/^-?\\d+$/u.test(maxAge ?? "")) expires = Date.now() + Number(maxAge) * 1000;
+                  if (Number.isFinite(expires) && expires <= Date.now()) {
+                    cookies.delete(key);
+                    continue;
+                  }
+                  cookies.set(key, {
+                    name, content, path, expires,
+                    sequence: cookies.get(key)?.sequence ?? sequence++,
+                  });
+                }
+              },
+              header(requestUrl) {
+                const url = new URL(requestUrl);
+                if (url.origin !== origin) return "";
+                return [...cookies.values()]
+                  .filter((cookie) => (!Number.isFinite(cookie.expires) || cookie.expires > Date.now()) &&
+                    matchesPath(url.pathname, cookie.path))
+                  .sort((a, b) => b.path.length - a.path.length || a.sequence - b.sequence)
+                  .map((cookie) => `${cookie.name}=${cookie.content}`).join("; ");
+              },
+            };
+          }
+          '''+s[end:]
+          replacements={
+            '  const assetCookie = responseCookies(rootResult.response).join("; ");':
+              '  const cookieJar = createCookieJar(base.origin);\n  cookieJar.update(rootResult.response, rootFinalUrl);',
+            '{ redirect: "manual", cookie: requestedUrl.origin === base.origin ? assetCookie : "" }':
+              '{ redirect: "manual", cookie: cookieJar.header(requestedUrl) }',
+            '    const finalUrl = new URL(result.response.url || url);':
+              '    const finalUrl = new URL(result.response.url || url);\n    cookieJar.update(result.response, requestedUrl);',
+            '  let response;\n  try {\n    response = await fetch(url, {':
+              '  let response;\n  const signal = AbortSignal.timeout(Math.min(15_000, remainingMs));\n  try {\n    response = await fetch(url, {',
+            'signal: AbortSignal.timeout(Math.min(15_000, remainingMs)),': 'signal,',
+            'if (Date.now() >= limits.deadline || error?.name === "TimeoutError")':
+              'if (signal.aborted || Date.now() >= limits.deadline || ["AbortError", "TimeoutError"].includes(error?.name))',
+            '  } catch (error) {\n    if (!["response_body_limit_exceeded", "aggregate_body_limit_exceeded"].includes(error?.code))':
+              '  } catch (error) {\n    if (signal.aborted || Date.now() >= limits.deadline || ["AbortError", "TimeoutError"].includes(error?.name))\n      return deadlineResult(url, method);\n    if (!["response_body_limit_exceeded", "aggregate_body_limit_exceeded"].includes(error?.code))',
+          }
+          for before,after in replacements.items():
+            assert s.count(before)==1, before
+            s=s.replace(before,after)
+          start=s.index('  for (const match of source.matchAll(WORKER_IMPORT_SCRIPTS))')
+          end=s.index('  return [...assets].sort();',start)
+          part=s[start:end]
+          assert part.count('{ allowAny: true }')==3
+          s=s[:start]+part.replace('{ allowAny: true }','{ allowAny: true, rejectedDataUrls }')+s[end:]
+          p.write_text(s)
+          p=Path('tests/unit/zero-lovable-production-evidence.test.mjs')
+          s=p.read_text()+'''
+
+          test("production evidence updates cookies set by recursive asset responses", async () => {
+            const calls = [];
+            const evidence = await withFetch(async (input, options) => {
+              const url = new URL(input);
+              const cookie = new Headers(options.headers).get("cookie") ?? "";
+              calls.push([url.pathname, cookie]);
+              if (url.pathname === "/api/version")
+                return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+              if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+              if (url.pathname === "/") return response(
+                `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+                { headers: { "set-cookie": "variant=old; Path=/; Secure" } },
+              );
+              if (url.pathname === "/app.js") return javascriptResponse(
+                `export const buildSha="${sha}"; import("/nested/chunk.js");`,
+                { headers: { "set-cookie": "variant=new; Path=/; Secure" } },
+              );
+              if (url.pathname === "/nested/chunk.js") return javascriptResponse(
+                cookie === "variant=new" ? "globalThis.Lovable=true" : "export const clean=true;",
+              );
+              throw new Error(`unexpected URL ${url}`);
+            }, () => collectZeroLovableProductionEvidence({ baseUrl: "https://kovagpt.example", expectedSha: sha }));
+            assert.equal(evidence.pass, false);
+            assert.deepEqual(calls.find(([path]) => path === "/app.js"), ["/app.js", "variant=old"]);
+            assert.deepEqual(calls.find(([path]) => path === "/nested/chunk.js"), ["/nested/chunk.js", "variant=new"]);
+            assert.ok(evidence.failures.some((failure) => failure.startsWith("lovable_asset_content:")));
+          });
+
+          test("production evidence removes expired cookies and scopes asset cookies by path", async () => {
+            const calls = [];
+            const evidence = await withFetch(async (input, options) => {
+              const url = new URL(input);
+              const cookie = new Headers(options.headers).get("cookie") ?? "";
+              calls.push([url.pathname, cookie]);
+              if (url.pathname === "/api/version")
+                return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+              if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+              if (url.pathname === "/") return response(
+                `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+                { headers: { "set-cookie": "variant=old; Path=/; Secure" } },
+              );
+              if (url.pathname === "/app.js") {
+                const result = javascriptResponse(`const buildSha="${sha}"; import("/nested/chunk.js"); import("/outside.js");`);
+                result.headers.append("set-cookie", "variant=gone; Max-Age=0; Path=/; Secure");
+                result.headers.append("set-cookie", "scoped=active; Path=/nested; Secure");
+                result.headers.append("set-cookie", "foreign=ignored; Domain=elsewhere.example; Path=/");
+                return result;
+              }
+              if (["/nested/chunk.js", "/outside.js"].includes(url.pathname)) return javascriptResponse("export {};");
+              throw new Error(`unexpected URL ${url}`);
+            }, () => collectZeroLovableProductionEvidence({ baseUrl: "https://kovagpt.example", expectedSha: sha }));
+            assert.equal(evidence.pass, true);
+            assert.deepEqual(calls.find(([path]) => path === "/nested/chunk.js"), ["/nested/chunk.js", "scoped=active"]);
+            assert.deepEqual(calls.find(([path]) => path === "/outside.js"), ["/outside.js", ""]);
+          });
+
+          test("production evidence returns failed JSON when an asset body is aborted", async () => {
+            const evidence = await withFetch(async (input) => {
+              const url = new URL(input);
+              if (url.pathname === "/api/version")
+                return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+              if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+              if (url.pathname === "/") return response(
+                `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+              );
+              if (url.pathname === "/app.js") return new Response(new ReadableStream({
+                start(controller) { controller.error(new DOMException("body timed out", "AbortError")); },
+              }), { headers: { "content-type": "application/javascript" } });
+              throw new Error(`unexpected URL ${url}`);
+            }, () => collectZeroLovableProductionEvidence({ baseUrl: "https://kovagpt.example", expectedSha: sha }));
+            assert.equal(evidence.pass, false);
+            assert.ok(evidence.failures.some((failure) => failure.startsWith("collection_deadline_exceeded:")));
+            assert.doesNotThrow(() => JSON.stringify(evidence));
+          });
+
+          test("production evidence rejects data URLs in every worker dependency form", async () => {
+            for (const dependency of [
+              'importScripts("data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true")',
+              'cache.add("data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true")',
+              'cache.addAll(["data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true"])',
+            ]) {
+              const evidence = await withFetch(async (input) => {
+                const url = new URL(input);
+                if (url.pathname === "/api/version")
+                  return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+                if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+                if (url.pathname === "/") return response(
+                  `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+                );
+                if (url.pathname === "/app.js") return javascriptResponse(
+                  `const buildSha="${sha}"; navigator.serviceWorker.register("/worker.js");`,
+                );
+                if (url.pathname === "/worker.js") return javascriptResponse(dependency);
+                throw new Error(`unexpected URL ${url}`);
+              }, () => collectZeroLovableProductionEvidence({ baseUrl: "https://kovagpt.example", expectedSha: sha }));
+              assert.equal(evidence.pass, false, dependency);
+              assert.ok(evidence.failures.some((failure) => failure.startsWith("data_url_asset_rejected:")), dependency);
+              assert.equal(JSON.stringify(evidence).includes("%4c%6f%76"), false);
+            }
+          });
+          '''
+          p.write_text(s)
+          PY
+      - name: Verify red baseline and green repaired source
+        run: |
+          cp scripts/release/zero-lovable-production.mjs "$RUNNER_TEMP/repaired-collector.mjs"
+          git show HEAD:scripts/release/zero-lovable-production.mjs > scripts/release/zero-lovable-production.mjs
+          set +e
+          node --test --test-name-pattern='updates cookies set|removes expired cookies|asset body is aborted|every worker dependency' tests/unit/zero-lovable-production-evidence.test.mjs > "$RUNNER_TEMP/red.log" 2>&1
+          result=$?
+          set -e
+          cp "$RUNNER_TEMP/repaired-collector.mjs" scripts/release/zero-lovable-production.mjs
+          cat "$RUNNER_TEMP/red.log"
+          test "$result" -ne 0
+          grep -Eq '(# |ℹ )fail 4' "$RUNNER_TEMP/red.log"
+          ./node_modules/.bin/prettier --write scripts/release/zero-lovable-production.mjs tests/unit/zero-lovable-production-evidence.test.mjs
+          ./node_modules/.bin/prettier --check scripts/release/zero-lovable-production.mjs tests/unit/zero-lovable-production-evidence.test.mjs
+          node --test tests/unit/zero-lovable-production-evidence.test.mjs
+          git diff --check
+      - name: Create verified source candidate without moving any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+          paths=['scripts/release/zero-lovable-production.mjs','tests/unit/zero-lovable-production-evidence.test.mjs']
+          assert set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())==set(paths)
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
+          def post(endpoint,payload):
+            request=urllib.request.Request('https://api.github.com/repos/Blockigaming/KovaGPT/'+endpoint,
+              data=json.dumps(payload).encode(),method='POST',headers={
+                'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json',
+                'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'})
+            with urllib.request.urlopen(request,timeout=30) as response: return json.load(response)
+          entries=[{'path':p,'mode':'100644','type':'blob','content':pathlib.Path(p).read_text()} for p in paths]
+          entries.append({'path':'.github/workflows/pr390-state-repair-once.yml','mode':'100644','type':'blob','sha':None})
+          result=post('git/trees',{'base_tree':tree,'tree':entries})
+          commit=post('git/commits',{'message':'fix(collector): preserve recursive cookies and reject aborted or encoded worker evidence','tree':result['sha'],'parents':[head]})
+          print('REPAIR_CANDIDATE_SHA='+commit['sha'])
+          print('Temporary workflow removed; no branch moved.')
+          PY
