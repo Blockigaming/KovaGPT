@@ -239,7 +239,8 @@ language plpgsql security definer set search_path = '' set statement_timeout = '
 #variable_conflict use_column
 declare
   v_email text := lower(btrim(p_email));
-  v_account_id uuid; v_legacy_id uuid; v_identity_id uuid; v_existing_active boolean;
+  v_account_id uuid; v_legacy_id uuid; v_identity_id uuid;
+  v_existing_active boolean; v_existing_pending boolean;
 begin
   if p_candidate_account_id is null or char_length(v_email) not between 3 and 320 or
      v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' or
@@ -297,14 +298,24 @@ begin
     return query select v_account_id, v_account_id = p_candidate_account_id, false;
     return;
   end if;
+  select exists(select 1 from kova_private.auth_credentials c
+    where c.account_id = v_account_id and c.credential_type = 'password'
+      and c.activated_at is null and c.disabled_at is null) into v_existing_pending;
+  if v_existing_pending then
+    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'accepted', '{}', p_now);
+    return query select v_account_id, v_account_id = p_candidate_account_id, false;
+    return;
+  end if;
 
   insert into kova_private.auth_credentials(
     account_id, credential_type, secret_hash, algorithm, activated_at, created_at, updated_at
   ) values (v_account_id, 'password', p_password_hash, 'scrypt-v1', null, p_now, p_now)
-  on conflict (account_id) where credential_type = 'password' and disabled_at is null do update set
-    secret_hash = excluded.secret_hash, algorithm = excluded.algorithm,
-    revision = kova_private.auth_credentials.revision + 1,
-    activated_at = null, updated_at = excluded.updated_at;
+  on conflict (account_id) where credential_type = 'password' and disabled_at is null do nothing;
+  if not found then
+    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'accepted', '{}', p_now);
+    return query select v_account_id, v_account_id = p_candidate_account_id, false;
+    return;
+  end if;
   update kova_private.auth_email_verifications set consumed_at = p_now
    where account_id = v_account_id and consumed_at is null;
   insert into kova_private.auth_email_verifications(
