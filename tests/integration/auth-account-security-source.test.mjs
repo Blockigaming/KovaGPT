@@ -50,8 +50,9 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
 });
 
 test("browser auth gates aal1 sessions and keeps normal sign-out device-local", async () => {
-  const [provider, challenge, panel] = await Promise.all([
+  const [provider, browserAuth, challenge, panel] = await Promise.all([
     read("src/components/auth/ClerkSafe.tsx"),
+    read("src/lib/kova-auth-browser.ts"),
     read("src/components/auth/MfaChallengeDialog.tsx"),
     read("src/components/MfaPanel.tsx"),
   ]);
@@ -59,11 +60,17 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(provider, /nextLevel === "aal2"/);
   assert.match(provider, /setPendingMfaSession\(candidate\)/);
   assert.match(provider, /signOut\(\{ scope: "local" \}\)/);
+  assert.match(browserAuth, /response\.status === 401[\s\S]*new KovaSessionRejectedError\(\)/);
+  assert.match(
+    provider,
+    /isKovaSessionRejectedError\(error\)[\s\S]*setKovaSessionActive\(true\)[\s\S]*setUseLegacy\(false\)[\s\S]*setIsLoaded\(true\)/,
+  );
   assert.match(challenge, /challengeAndVerify/);
   assert.match(challenge, /\^\\d\{6\}\$/);
   assert.match(challenge, /expires_at: Math\.round\(Date\.now\(\) \/ 1000\) \+ data\.expires_in/);
   assert.doesNotMatch(challenge, /data\.session/);
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
+  assert.match(panel, /const useKovaAuth = isKovaSessionActive\(\)/);
   assert.match(panel, /!useKovaAuth \? <PasskeyPanel \/> : null/);
   assert.match(panel, /kovaAuthJson\("\/api\/auth\/sessions\/revoke-others", \{\}\)/);
 });
