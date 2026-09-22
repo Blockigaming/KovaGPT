@@ -18,11 +18,12 @@ jobs:
       - name: Archive only the two inspected commits
         shell: bash
         run: |
-          test "$(git rev-parse HEAD^)" = 9cffce383835626b019367da62908b57771b6430
+          git cat-file -e 48bc3d1b46df8fa7156ace3f12486cc226a2abad^{commit}
+          git cat-file -e 4f07f77d40b8785a271ec7fa6e35c4b27314b32b^{commit}
           mkdir "$RUNNER_TEMP/requested-source"
-          git archive --format=tar --output="$RUNNER_TEMP/requested-source/pr390.tar" 9cffce383835626b019367da62908b57771b6430
+          git archive --format=tar --output="$RUNNER_TEMP/requested-source/pr390.tar" 48bc3d1b46df8fa7156ace3f12486cc226a2abad
           git archive --format=tar --output="$RUNNER_TEMP/requested-source/pr394.tar" 4f07f77d40b8785a271ec7fa6e35c4b27314b32b
-          printf '%s\n' 'pr390 9cffce383835626b019367da62908b57771b6430' 'pr394 4f07f77d40b8785a271ec7fa6e35c4b27314b32b' > "$RUNNER_TEMP/requested-source/COMMITS.txt"
+          printf '%s\n' 'pr390 48bc3d1b46df8fa7156ace3f12486cc226a2abad' 'pr394 4f07f77d40b8785a271ec7fa6e35c4b27314b32b' > "$RUNNER_TEMP/requested-source/COMMITS.txt"
           cd "$RUNNER_TEMP/requested-source"
           sha256sum pr390.tar pr394.tar > SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
