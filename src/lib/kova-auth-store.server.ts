@@ -97,6 +97,11 @@ export async function createCompatibilityPrincipal(): Promise<string> {
   return data.user.id;
 }
 
+export async function compatibilityDirectoryEmail(accountId: string): Promise<string | null> {
+  const value = await rpc<unknown>("kova_auth_directory_email", { p_account_id: accountId });
+  return typeof value === "string" && value ? value : null;
+}
+
 export async function deleteCompatibilityPrincipal(accountId: string): Promise<void> {
   const { error } = await supabaseAdmin.auth.admin.deleteUser(accountId, false);
   if (error) throw new KovaAuthStoreError("delete_compatibility_principal", error);
