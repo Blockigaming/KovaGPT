@@ -59,7 +59,9 @@ test("production Azure example is complete, inert, and production-scoped", () =>
   assert.match(bicep, /param kovaIpHashSecretUri string/u);
   assert.match(bicep, /keyVaultUrl: kovaIpHashSecretUri/u);
   assert.match(bicep, /secretRef: 'kova-ip-hash-secret'/u);
-  assert.match(bicep, /clientCertificateMode: 'require'/u);
+  assert.doesNotMatch(bicep, /^\s*ingress:\s*\{/mu, "frozen production must have no ingress");
+  assert.match(bicep, /rules:\s*\[\s*\]/u, "frozen production must have no scale rules");
+  assert.doesNotMatch(bicep, /name: 'http'/u, "HTTP must not wake a replica");
   assert.match(bicep, /param cloudflareClientCertificateSha256Fingerprints array/u);
   assert.match(bicep, /name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'/u);
   assert.match(bicep, /join\(cloudflareClientCertificateSha256Fingerprints, ','\)/u);
