@@ -133,7 +133,8 @@ const now = "2026-09-20T17:00:00Z";
 const verificationExpiry = "2026-09-20T18:00:00Z";
 const sessionExpiry = "2026-10-20T17:00:00Z";
 const digest = (byte) => byte.repeat(64);
-const passwordHash = `scrypt-v1$32768$8$1$${"a".repeat(32)}$${"b".repeat(64)}`;
+const passwordHash = `scrypt-v1$32768$8$1${"a".repeat(32)}${"b".repeat(64)}`;
+const replacementPasswordHash = `scrypt-v1$32768$8$1${"c".repeat(32)}${"d".repeat(64)}`;
 const namedDigest = (label) => createHash("sha256").update(label).digest("hex");
 const replacementDigests = () =>
   Array.from({ length: 8 }, (_, i) => namedDigest(`replacement-${i}`));
@@ -1212,6 +1213,12 @@ test("signup, verification, and session creation are atomic and one-time", async
     ]);
     assert.equal(resolved.rows[0].account_id, firstAccount);
     assert.equal(resolved.rows[0].email, "owner@example.com");
+    const directory = await db.query(
+      `select kova_private.verified_auth_user_for_email($1) as account_id,
+              public.kova_auth_directory_email($2) as email`,
+      ["OWNER@EXAMPLE.COM", firstAccount],
+    );
+    assert.deepEqual(directory.rows, [{ account_id: firstAccount, email: "owner@example.com" }]);
     await assert.rejects(() =>
       db.query(`select * from public.kova_auth_consume_verification($1, $2, $3, $4)`, [
         digest("1"),
@@ -1219,6 +1226,84 @@ test("signup, verification, and session creation are atomic and one-time", async
         sessionExpiry,
         now,
       ]),
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("a repeated pending signup cannot replace the first password or verification", async () => {
+  const db = await database();
+  try {
+    await db.query(
+      `insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3), ($4, $5, $3)`,
+      [
+        firstAccount,
+        "first-shadow@invalid.kovagpt.com",
+        now,
+        secondAccount,
+        "second-shadow@invalid.kovagpt.com",
+      ],
+    );
+    const create = (candidate, password, verification, token) =>
+      db.query(
+        `select * from public.kova_auth_create_password_account(
+          $1, $2, $3, $4, $5, $6, $7::jsonb, $8
+        )`,
+        [
+          candidate,
+          "owner@example.com",
+          "Owner",
+          password,
+          verification,
+          verificationExpiry,
+          JSON.stringify({ to: "owner@example.com", token }),
+          now,
+        ],
+      );
+
+    assert.deepEqual((await create(firstAccount, passwordHash, digest("1"), "first-token")).rows, [
+      { account_id: firstAccount, candidate_used: true, verification_created: true },
+    ]);
+    assert.deepEqual(
+      (await create(secondAccount, replacementPasswordHash, digest("3"), "replacement-token")).rows,
+      [{ account_id: firstAccount, candidate_used: false, verification_created: false }],
+    );
+
+    const credential = await db.query(
+      `select secret_hash, revision, activated_at from kova_private.auth_credentials
+       where account_id = $1 and credential_type = 'password' and disabled_at is null`,
+      [firstAccount],
+    );
+    assert.equal(credential.rows[0].secret_hash, passwordHash);
+    assert.equal(credential.rows[0].revision, 1);
+    assert.equal(credential.rows[0].activated_at, null);
+
+    const verification = await db.query(
+      `select encode(token_digest,'hex') as digest, consumed_at
+         from kova_private.auth_email_verifications where account_id = $1`,
+      [firstAccount],
+    );
+    assert.deepEqual(verification.rows, [{ digest: digest("1"), consumed_at: null }]);
+    const queue = await db.query(`select payload from public.test_email_queue order by id`);
+    assert.equal(queue.rows.length, 1);
+    assert.equal(queue.rows[0].payload.token, "first-token");
+
+    await db.query(`select * from public.kova_auth_consume_verification($1,$2,$3,$4)`, [
+      digest("1"),
+      digest("2"),
+      sessionExpiry,
+      now,
+    ]);
+    assert.equal(
+      (
+        await db.query(
+          `select secret_hash from kova_private.auth_credentials
+           where account_id = $1 and credential_type = 'password' and disabled_at is null`,
+          [firstAccount],
+        )
+      ).rows[0].secret_hash,
+      passwordHash,
     );
   } finally {
     await db.close();
@@ -1438,6 +1523,121 @@ test("Google OAuth state and cross-origin handoff are both single-use", async ()
         now,
       ]),
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Google-only accounts continue through owned TOTP and recovery MFA", async () => {
+  const db = await database();
+  try {
+    await db.query(
+      `insert into auth.users(id, email, email_confirmed_at) values ($1, $2, $3), ($4, $5, $3)`,
+      [
+        firstAccount,
+        "google-shadow@invalid.kovagpt.com",
+        now,
+        secondAccount,
+        "unused-candidate@invalid.kovagpt.com",
+      ],
+    );
+    await db.query(
+      `select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`,
+      [
+        firstAccount,
+        "google-mfa-subject",
+        "google-mfa@example.com",
+        "Google MFA",
+        digest("a"),
+        verificationExpiry,
+        now,
+      ],
+    );
+    await db.query(`select * from public.kova_auth_consume_handoff($1,$2,$3,$4)`, [
+      digest("a"),
+      digest("b"),
+      sessionExpiry,
+      now,
+    ]);
+    const enrolled = await db.query(
+      `select * from public.kova_auth_begin_totp_enrollment($1,$2,$3,$4)`,
+      [digest("b"), "v1.google.mfa.secret.envelope", "Google authenticator", now],
+    );
+    const factorId = enrolled.rows[0].factor_id;
+    const recoveryDigests = Array.from({ length: 8 }, (_, i) =>
+      namedDigest(`google-recovery-${i}`),
+    );
+    await db.query(`select public.kova_auth_activate_totp($1,$2,$3,$4)`, [
+      digest("b"),
+      factorId,
+      recoveryDigests,
+      now,
+    ]);
+
+    const beginGoogleChallenge = async (handoffDigest, challengeDigest, unusedSessionDigest) => {
+      await db.query(
+        `select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`,
+        [
+          secondAccount,
+          "google-mfa-subject",
+          "google-mfa@example.com",
+          "Google MFA",
+          handoffDigest,
+          verificationExpiry,
+          now,
+        ],
+      );
+      const exchange = await db.query(
+        `select * from public.kova_auth_consume_handoff_with_mfa($1,$2,$3,$4,$5,$6)`,
+        [
+          handoffDigest,
+          unusedSessionDigest,
+          sessionExpiry,
+          challengeDigest,
+          "2026-09-20T17:05:00Z",
+          now,
+        ],
+      );
+      assert.equal(exchange.rows[0].mfa_required, true);
+      assert.equal(exchange.rows[0].account_id, firstAccount);
+      assert.equal(exchange.rows[0].session_id, null);
+      assert.equal(exchange.rows[0].email, "google-mfa@example.com");
+      const challenge = await db.query(
+        `select credential_id, credential_revision, challenge_source
+           from kova_private.auth_mfa_login_challenges
+          where token_digest = decode($1, 'hex') and consumed_at is null`,
+        [challengeDigest],
+      );
+      assert.deepEqual(challenge.rows, [
+        { credential_id: null, credential_revision: null, challenge_source: "google" },
+      ]);
+      await db.query(`select * from public.kova_auth_read_mfa_login_challenge($1,$2)`, [
+        challengeDigest,
+        now,
+      ]);
+    };
+
+    await beginGoogleChallenge(digest("c"), namedDigest("google-totp-challenge"), digest("d"));
+    const totp = await db.query(
+      `select * from public.kova_auth_finish_mfa_login($1,$2,$3,$4)`,
+      [namedDigest("google-totp-challenge"), namedDigest("google-totp-session"), sessionExpiry, now],
+    );
+    assert.equal(totp.rows[0].account_id, firstAccount);
+    assert.equal(totp.rows[0].assurance_level, "aal2");
+
+    await beginGoogleChallenge(digest("e"), namedDigest("google-recovery-challenge"), digest("f"));
+    const recovery = await db.query(
+      `select * from public.kova_auth_finish_mfa_recovery_login($1,$2,$3,$4,$5)`,
+      [
+        namedDigest("google-recovery-challenge"),
+        recoveryDigests[0],
+        namedDigest("google-recovery-session"),
+        sessionExpiry,
+        now,
+      ],
+    );
+    assert.equal(recovery.rows[0].account_id, firstAccount);
+    assert.equal(recovery.rows[0].assurance_level, "aal2");
   } finally {
     await db.close();
   }
