@@ -25,7 +25,7 @@ import {
 } from "@/lib/kova-auth-crypto.server.mjs";
 import type { KovaPrincipal } from "@/lib/kova-auth-crypto.server.mjs";
 import {
-  consumeHandoff,
+  exchangeGoogleHandoff,
   consumeOAuthState,
   consumeRecovery,
   consumeVerification,
@@ -70,6 +70,7 @@ const MAX_AUTH_BODY_BYTES = 8 * 1024;
 const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_STATE_COOKIE = "__Host-kova_oauth_state";
+const GOOGLE_MFA_COOKIE = "__Host-kova_google_mfa";
 const DUMMY_PASSWORD_HASH =
   "scrypt-v1$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MFA_LOGIN_CHALLENGE_SECONDS = 300;
@@ -143,6 +144,18 @@ function googleStateCookie(state: string): string {
 
 function clearGoogleStateCookie(): string {
   return `${GOOGLE_STATE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function googleMfaCookie(challenge: string): string {
+  return `${GOOGLE_MFA_COOKIE}=${challenge}; Path=/; Max-Age=${MFA_LOGIN_CHALLENGE_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function clearGoogleMfaCookie(): string {
+  return `${GOOGLE_MFA_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function googleMfaChallenge(request: Request): string {
+  return parseCookieHeader(request.headers.get("cookie")).get(GOOGLE_MFA_COOKIE) ?? "";
 }
 
 function googleStateMatches(request: Request, state: string): boolean {
@@ -349,7 +362,13 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
 
-  const challengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
+  const googleMfaRequested = body.googleMfa === true;
+  const bodyChallengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
+  const cookieChallengeToken = googleMfaRequested ? googleMfaChallenge(request) : "";
+  if (googleMfaRequested && !cookieChallengeToken) {
+    return jsonError("That verification attempt expired or could not be completed.", 401);
+  }
+  const challengeToken = googleMfaRequested ? cookieChallengeToken : bodyChallengeToken;
   if (challengeToken) {
     const hasCode = body.code !== undefined;
     const hasRecoveryCode = body.recoveryCode !== undefined;
@@ -378,7 +397,9 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
           sessionDigest: digestKovaToken(sessionToken),
           sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
         });
-        return sessionResponse(principal, sessionToken);
+        const response = sessionResponse(principal, sessionToken);
+        if (googleMfaRequested) response.headers.append("Set-Cookie", clearGoogleMfaCookie());
+        return response;
       } catch (error) {
         console.error("[KovaAuth] MFA login failed", {
           error: error instanceof Error ? error.name : "unknown_error",
@@ -401,7 +422,9 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
         sessionDigest: digestKovaToken(sessionToken),
         sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
       });
-      return sessionResponse(principal, sessionToken);
+      const response = sessionResponse(principal, sessionToken);
+      if (googleMfaRequested) response.headers.append("Set-Cookie", clearGoogleMfaCookie());
+      return response;
     } catch (error) {
       console.error("[KovaAuth] MFA recovery login failed", {
         error: error instanceof Error ? error.name : "unknown_error",
@@ -1149,16 +1172,33 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
     if (url.origin !== configuredPublicOrigin) return jsonError("Not found", 404);
     const handoff = url.searchParams.get("handoff") ?? "";
     const sessionToken = generateKovaToken();
-    const principal = await consumeHandoff({
+    const challengeToken = generateKovaToken();
+    const exchanged = await exchangeGoogleHandoff({
       handoffDigest: digestKovaToken(handoff),
       sessionDigest: digestKovaToken(sessionToken),
       sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+      challengeDigest: digestKovaToken(challengeToken),
+      challengeExpiresAt: futureIso(MFA_LOGIN_CHALLENGE_SECONDS),
     });
     const returnTo = safeRelativeRedirect(
       url.searchParams.get("return_to"),
       configuredPublicOrigin,
       "/api/auth/google",
     );
+    if (exchanged.mfaRequired) {
+      const target = new URL("/auth", configuredPublicOrigin);
+      target.searchParams.set("email", exchanged.email);
+      target.searchParams.set("mode", "sign-in");
+      target.searchParams.set("google_mfa", "1");
+      target.searchParams.set("return_to", returnTo);
+      return new Response(null, {
+        status: 303,
+        headers: noStoreHeaders({
+          Location: target.toString(),
+          "Set-Cookie": googleMfaCookie(challengeToken),
+        }),
+      });
+    }
     return new Response(null, {
       status: 303,
       headers: noStoreHeaders({
