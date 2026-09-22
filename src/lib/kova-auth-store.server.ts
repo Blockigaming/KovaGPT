@@ -22,11 +22,15 @@ type CandidateResult = {
 
 type MfaChallenge = {
   accountId: string;
-  credentialId: string;
-  credentialRevision: number;
+  credentialId: string | null;
+  credentialRevision: number | null;
   factorId: string;
   secretEnvelope: string;
 };
+
+type GoogleHandoffExchange =
+  | { mfaRequired: true; email: string; challengeExpiresAt: string }
+  | { mfaRequired: false; principal: KovaPrincipal };
 
 type SupabaseRpcError = { code?: string; message?: string };
 
@@ -212,8 +216,9 @@ export async function createPasswordSession(input: {
 function mfaChallengeFromRow(row: Record<string, unknown>): MfaChallenge {
   if (
     typeof row.account_id !== "string" ||
-    typeof row.credential_id !== "string" ||
-    typeof row.credential_revision !== "number" ||
+    (row.credential_id !== null && typeof row.credential_id !== "string") ||
+    (row.credential_revision !== null && typeof row.credential_revision !== "number") ||
+    (row.credential_id === null) !== (row.credential_revision === null) ||
     typeof row.factor_id !== "string" ||
     typeof row.secret_envelope !== "string"
   ) {
@@ -562,6 +567,32 @@ export async function finishGoogle(input: {
     throw new KovaAuthStoreError("kova_auth_finish_google");
   }
   return { accountId: row.account_id, candidateUsed: row.candidate_used };
+}
+
+export async function exchangeGoogleHandoff(input: {
+  handoffDigest: string;
+  sessionDigest: string;
+  sessionExpiresAt: string;
+  challengeDigest: string;
+  challengeExpiresAt: string;
+}): Promise<GoogleHandoffExchange> {
+  const operation = "kova_auth_consume_handoff_with_mfa";
+  const value = await rpc<unknown>(operation, {
+    p_handoff_digest_hex: input.handoffDigest,
+    p_session_digest_hex: input.sessionDigest,
+    p_session_expires_at: input.sessionExpiresAt,
+    p_challenge_digest_hex: input.challengeDigest,
+    p_challenge_expires_at: input.challengeExpiresAt,
+  });
+  const row = firstRow<Record<string, unknown>>(value, operation);
+  if (row.mfa_required === true) {
+    if (typeof row.email !== "string" || typeof row.expires_at !== "string") {
+      throw new KovaAuthStoreError(operation);
+    }
+    return { mfaRequired: true, email: row.email, challengeExpiresAt: row.expires_at };
+  }
+  if (row.mfa_required !== false) throw new KovaAuthStoreError(operation);
+  return { mfaRequired: false, principal: principalFromRow(row) };
 }
 
 export async function consumeHandoff(input: {
