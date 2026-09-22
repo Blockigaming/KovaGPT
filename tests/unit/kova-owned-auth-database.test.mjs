@@ -60,6 +60,7 @@ async function database({ legacyRecoveryAbi = false } = {}) {
     create role anon;
     create role authenticated;
     create role service_role;
+    create role authenticator;
     create schema auth;
     create table auth.users (
       id uuid primary key,
@@ -111,6 +112,15 @@ async function database({ legacyRecoveryAbi = false } = {}) {
   await db.exec(
     await readFile(
       new URL("../../supabase/migrations/20260921180400_kova_owned_passkeys.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../supabase/migrations/20260922001355_kova_owned_compatibility_revocation.sql",
+        import.meta.url,
+      ),
       "utf8",
     ),
   );

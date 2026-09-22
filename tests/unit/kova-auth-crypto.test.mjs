@@ -107,6 +107,7 @@ test("compatibility JWTs are ES256, short-lived, and stable-UUID bound", () => {
   assert.deepEqual(header, { alg: "ES256", typ: "JWT", kid: "staging-kova-1" });
   assert.equal(payload.sub, "10000000-0000-4000-8000-000000000001");
   assert.equal(payload.role, "authenticated");
+  assert.equal(payload.kova_auth, 1);
   assert.equal(payload.exp - payload.iat, 300);
   assert.equal(
     verify(

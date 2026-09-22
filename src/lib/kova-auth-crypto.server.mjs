@@ -325,6 +325,7 @@ export function signKovaCompatibilityJwt(principal, env = process.env, now = Dat
     email_verified: principal.emailVerified === true,
     aal: principal.assuranceLevel,
     session_id: principal.sessionId,
+    kova_auth: 1,
     iat: issuedAt,
     nbf: issuedAt - 5,
     exp: issuedAt + 300,

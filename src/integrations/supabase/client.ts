@@ -11,6 +11,7 @@ import {
   setKovaSessionActive,
 } from "@/lib/kova-auth-browser";
 import type { Session, User } from "@supabase/supabase-js";
+import { createKovaDataFetch } from "@/lib/kova-auth-data-fetch";
 
 export function getSupabaseClientConfigStatus() {
   const { url, publishableKey } = SUPABASE_BROWSER_CONFIG;
@@ -42,6 +43,7 @@ function createSupabaseClient(kind: "legacy" | "kova") {
     // browser credential stays in the HttpOnly Kova session cookie.
     return createClient<Database>(url, publishableKey, {
       accessToken: getKovaCompatibilityToken,
+      global: { fetch: createKovaDataFetch(url) },
       auth: {
         storage: undefined,
         persistSession: false,

@@ -7,6 +7,7 @@ on:
       - .github/workflows/kova-owned-auth-source.yml
       - src/lib/kova-auth*
       - src/lib/kova-session*
+      - src/integrations/supabase/client.ts
       - src/components/MfaPanel.tsx
       - src/components/KovaPasswordPanel.tsx
       - src/components/KovaPasskeyPanel.tsx
@@ -19,6 +20,7 @@ on:
       - tests/unit/kova-session*
       - tests/integration/auth-account-security-source.test.mjs
       - tests/helpers/kova-auth*.mjs
+      - scripts/release/kova-auth-revocation-proof.sql
       - package.json
       - package-lock.json
 

@@ -146,10 +146,9 @@ principal. Unexpected database dependencies block the migration rather than
 being removed with `CASCADE`.
 
 The browser invalidates cached principals and compatibility tokens after these
-changes, including responses already in flight. This does **not** revoke an
-already issued five-minute compatibility JWT at the PostgREST/RLS boundary.
-Eliminating that residual authorization window remains a cutover gate, along
-with deployed multi-device rehearsal and legacy retirement.
+changes, including responses already in flight. The signed-token request guard
+described below additionally checks current session state at the Data API/RLS
+boundary. Deployed multi-device rehearsal and legacy retirement remain gates.
 Local regression tests execute the PostgreSQL transitions and the actual
 handler/store path with synthetic data; component tests drive the actual UI
 callbacks. These are not evidence of a deployed staging or production cutover.
@@ -207,8 +206,62 @@ statement timeouts. Both new tables use private-schema RLS and deny browser
 access. Local tests include real synthetic P-256 signatures through the actual
 HTTP/store/PostgreSQL path, negative security cases, and UI callback tests.
 They do not prove physical-device interoperability, browser-native biometrics,
-deployed staging readiness or production cutover. The five-minute compatibility
-JWT revocation window and hosted-auth retirement are still open gates.
+deployed staging readiness or production cutover. Hosted-auth retirement and
+deployed verification of the request guard below are still open gates.
+
+## Compatibility-token revocation enforcement
+
+Every newly issued Kova compatibility JWT includes the signed top-level
+`kova_auth: 1` marker. `kova_auth_guard.session_is_active()` takes no arguments
+and checks only the gateway-verified caller claims against the current owned
+session and account. Revocation, expired/deleted sessions, epoch mismatch,
+suspension/deletion, changed/unverified email, subject/session mismatch and
+insufficient MFA assurance all reject a marked token even before JWT expiry.
+Malformed or unknown marker versions fail closed; user-editable metadata does
+not select the authority. JWT signatures remain the gateway's responsibility.
+
+The migration adds a restrictive policy (both USING and WITH CHECK) to each
+existing RLS-enabled public table, `storage.buckets`, `storage.objects`, and
+`realtime.messages`. Storage service-internal tables, including vector and
+multipart metadata, are not modified. Existing
+ownership policies are preserved and must also pass. It changes neither private
+auth-table privileges nor RLS-disabled tables, including `integration_providers`.
+The helper is in a dedicated **non-exposed** guard schema; its only executable
+functions return a boolean or a generic authentication failure and accept no
+account/session selector. Browser roles still cannot access `kova_private`.
+
+The database-scoped PostgREST pre-request hook also rejects marked invalid
+tokens before owner-executed views or SECURITY DEFINER RPCs, which can bypass
+RLS. Installation refuses to overwrite an unrelated existing hook. The guard
+schema must never be added to exposed API schemas. No signing key is imported,
+no application is enabled, and no hosted auth authority is retired by this work.
+
+The owned data client clears rejected cached JWTs on a 401 response. Only GET
+and HEAD may retry once with a newly obtained Kova token, and only against the
+configured data origin. POST/PUT/PATCH/DELETE are never automatically replayed.
+A revoked cookie cannot obtain a new token or fall back to hosted credentials.
+
+Run `scripts/release/kova-auth-revocation-proof.sql` in a REPEATABLE READ,
+READ ONLY transaction before any Kova data-plane enablement and after schema
+changes. It returns aggregate metadata counts only; every violation count must
+be zero. Later RLS tables need the same restrictive policy. The proof detects
+missing policies, weakened expressions, missing hooks and invalid grants; it
+does not establish that the external PostgREST service reloaded its config.
+
+On September 21, 2026 (America/New_York), the Auth Rehearsal database passed
+this aggregate proof for all 119 scoped tables with zero violation counts.
+Both advisors were checked; private auth access remained denied and the
+unrelated `integration_providers` RLS finding was left unchanged.
+
+Unmarked hosted/service/anonymous tokens intentionally retain their existing
+rules during dual mode. **Pre-marker Kova JWTs must expire before cutover**;
+deployments must not alternate old/new signers after guard acceptance. Legacy
+credential retirement is still separate. New statement snapshots see committed
+revocation, but transactions already in flight are not forcibly cancelled.
+Existing Realtime channel permissions and already-issued signed Storage URLs
+are not retroactively cancelled by this SQL. Deployed tests must verify hook
+activation, channel reauthorization/teardown and signed-URL lifetimes before
+claiming end-to-end immediate revocation or a complete migration.
 
 ## Configuration contract
 

@@ -8,13 +8,14 @@ export const expiry = "2026-10-01T12:00:00Z";
 export const owner = "10000000-0000-4000-8000-000000000001";
 export const other = "20000000-0000-4000-8000-000000000002";
 
-export async function authDatabase() {
+export async function authDatabase({ beforeMigrations = "" } = {}) {
   const db = new PGlite();
   try {
     await db.exec(`
       create role anon;
       create role authenticated;
       create role service_role;
+      create role authenticator;
       create schema auth;
       create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz,
         deleted_at timestamptz, created_at timestamptz default now());
@@ -25,6 +26,7 @@ export async function authDatabase() {
       language sql as $$ insert into public.test_email_queue(queue_name,payload)
         values(queue_name,payload) returning id $$;
     `);
+    if (beforeMigrations) await db.exec(beforeMigrations);
     const directory = new URL("../../supabase/migrations/", import.meta.url);
     const names = (await readdir(directory))
       .filter((name) =>
