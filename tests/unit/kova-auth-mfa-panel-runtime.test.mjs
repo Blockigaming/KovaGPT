@@ -86,7 +86,7 @@ function fixture(options = {}) {
     "@/components/KovaPasswordPanel": { KovaPasswordPanel: "owned-password" },
     "@/components/KovaPasskeyPanel": { KovaPasskeyPanel: "owned-passkeys" },
     "@/lib/kova-auth-browser": {
-      browserKovaAuthEnabled: () => options.owned !== false,
+      isKovaSessionActive: () => options.owned !== false,
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
       async kovaAuthJson(path, body) {
         calls.push(["owned", path, plain(body)]);
