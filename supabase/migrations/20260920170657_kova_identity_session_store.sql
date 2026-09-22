@@ -733,6 +733,136 @@ begin
 end
 $$;
 
+-- Keep collaboration and directory lookups keyed to the verified Kova email,
+-- while retaining the hosted auth.users row only as a compatibility principal.
+create or replace function kova_private.verified_auth_user_for_email(p_email text)
+returns uuid language sql stable security definer set search_path = '' as $
+  with requested as (
+    select lower(btrim(p_email)) as email
+  ), candidates as (
+    select a.id
+      from kova_private.auth_accounts a, requested r
+     where a.primary_email = r.email
+       and a.email_verified_at is not null
+       and a.deleted_at is null
+    union
+    select u.id
+      from auth.users u, requested r
+     where lower(btrim(u.email)) = r.email
+       and u.email_confirmed_at is not null
+       and u.deleted_at is null
+  )
+  select case when count(*) = 1 then max(id::text)::uuid else null end
+    from candidates
+$;
+
+create or replace function kova_private.accept_project_invite(_invite_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $
+declare
+  caller_id uuid := auth.uid();
+  invite_project_id uuid;
+  invite_email text;
+  invite_role public.project_role;
+  invite_status text;
+begin
+  if caller_id is null then
+    raise exception 'authentication_required' using errcode = '42501';
+  end if;
+
+  select i.project_id, lower(i.email), i.role, i.status
+    into invite_project_id, invite_email, invite_role, invite_status
+  from public.project_invites i
+  where i.id = _invite_id
+  for update;
+
+  if not found then raise exception 'invite_not_found' using errcode = 'P0002'; end if;
+  if invite_status <> 'pending' then
+    raise exception 'invite_not_pending' using errcode = '22023';
+  end if;
+  if kova_private.verified_auth_user_for_email(invite_email) is distinct from caller_id then
+    raise exception 'invite_recipient_mismatch' using errcode = '42501';
+  end if;
+
+  insert into public.project_members(project_id, user_id, role)
+  values (invite_project_id, caller_id, invite_role)
+  on conflict (project_id, user_id) do nothing;
+
+  update public.project_invites
+     set status = 'accepted', accepted_at = coalesce(accepted_at, now())
+   where id = _invite_id;
+  return invite_project_id;
+end;
+$;
+
+create or replace function kova_private.decline_project_invite(_invite_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $
+declare
+  caller_id uuid := auth.uid();
+  invite_email text;
+  invite_status text;
+begin
+  if caller_id is null then
+    raise exception 'authentication_required' using errcode = '42501';
+  end if;
+
+  select lower(i.email), i.status
+    into invite_email, invite_status
+  from public.project_invites i
+  where i.id = _invite_id
+  for update;
+
+  if not found then raise exception 'invite_not_found' using errcode = 'P0002'; end if;
+  if invite_status <> 'pending' then
+    raise exception 'invite_not_pending' using errcode = '22023';
+  end if;
+  if kova_private.verified_auth_user_for_email(invite_email) is distinct from caller_id then
+    raise exception 'invite_recipient_mismatch' using errcode = '42501';
+  end if;
+
+  update public.project_invites set status = 'revoked', accepted_at = null where id = _invite_id;
+  return true;
+end;
+$;
+
+create function public.kova_auth_directory_email(p_account_id uuid)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = ''
+set statement_timeout = '5s'
+as $
+declare
+  v_account kova_private.auth_accounts;
+  v_email text;
+begin
+  select * into v_account from kova_private.auth_accounts where id = p_account_id;
+  if v_account.id is not null then
+    if v_account.deleted_at is null and v_account.email_verified_at is not null then
+      return v_account.primary_email;
+    end if;
+    return null;
+  end if;
+  select lower(btrim(u.email)) into v_email
+    from auth.users u
+   where u.id = p_account_id and u.email_confirmed_at is not null and u.deleted_at is null;
+  return v_email;
+end
+$;
+
+revoke all on function kova_private.verified_auth_user_for_email(text) from public, anon, authenticated;
+grant execute on function kova_private.verified_auth_user_for_email(text) to service_role;
+revoke all on function public.kova_auth_directory_email(uuid) from public, anon, authenticated;
+grant execute on function public.kova_auth_directory_email(uuid) to service_role;
+
 revoke all on function kova_private.require_digest(text) from public, anon, authenticated;
 revoke all on function kova_private.audit(uuid, uuid, text, text, jsonb, timestamptz)
   from public, anon, authenticated;
