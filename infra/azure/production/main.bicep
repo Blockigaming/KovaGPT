@@ -287,19 +287,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
     managedEnvironmentId: environment.id
     configuration: {
       activeRevisionsMode: 'Single'
-      ingress: {
-        external: true
-        allowInsecure: false
-        clientCertificateMode: 'require'
-        targetPort: 3000
-        transport: 'auto'
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
-      }
+      // No ingress during migration: HTTP traffic must not wake a replica.
       registries: [
         {
           server: acr.properties.loginServer
@@ -491,16 +479,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
       scale: {
         minReplicas: minReplicas
         maxReplicas: maxReplicas
-        rules: [
-          {
-            name: 'http'
-            http: {
-              metadata: {
-                concurrentRequests: '20'
-              }
-            }
-          }
-        ]
+        rules: []
       }
     }
   }
