@@ -76,6 +76,7 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     "production must remain hard-frozen at zero replicas during migration",
   );
   assert.doesNotMatch(bicep, /param minReplicas int = 1/u);
+  assert.ok(bicep.includes("output containerAppFqdn string = ''"));
 
   const exampleEnv = read(".env.example");
   assert.match(exampleEnv, /^KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS=$/mu);
