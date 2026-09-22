@@ -415,14 +415,14 @@ export const listMembers = createServerFn({ method: "GET" })
       console.error("[listMembers]", error.message);
       return [];
     }
-    // Fetch emails via admin (RLS blocks other users' emails)
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Resolve the verified Kova primary email first; the hosted auth.users
+    // compatibility row can intentionally use a non-user-facing shadow address.
+    const { compatibilityDirectoryEmail } = await import("@/lib/kova-auth-store.server");
     const withEmail: ProjectMember[] = [];
     for (const r of rows ?? []) {
       let email: string | null = null;
       try {
-        const { data: u } = await supabaseAdmin.auth.admin.getUserById(r.user_id);
-        email = u.user?.email ?? null;
+        email = await compatibilityDirectoryEmail(r.user_id);
       } catch {
         /* ignore */
       }
