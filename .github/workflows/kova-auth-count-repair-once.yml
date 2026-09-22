@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
 concurrency:
   group: kova-auth-count-repair-once
   cancel-in-progress: false
@@ -28,7 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD^)" = 675b3545dc007c3a953d1829ada856b276ebcd10
+          test "$(git rev-parse HEAD^)" = 65e5f50eac161447ad45ba40b249ac2521bb5a53
           test -z "$(git status --porcelain)"
           test "$(git diff --name-only HEAD^ HEAD)" = .github/workflows/kova-auth-count-repair-once.yml
           python3 - <<'PATCH'
@@ -100,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD^)" = 675b3545dc007c3a953d1829ada856b276ebcd10
+          test "$(git rev-parse HEAD^)" = 65e5f50eac161447ad45ba40b249ac2521bb5a53
           test -z "$(git status --porcelain)"
           test "$(git diff --name-only HEAD^ HEAD)" = .github/workflows/kova-auth-count-repair-once.yml
           python3 - <<'PATCH'
