@@ -63,6 +63,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import {
   browserKovaAuthMode,
   fetchKovaSession,
+  isKovaSessionRejectedError,
   setKovaSessionActive,
   type KovaBrowserPrincipal,
 } from "@/lib/kova-auth-browser";
@@ -160,6 +161,15 @@ function KovaClerkProvider({
         setIsLoaded(true);
       } catch (error) {
         if (cancelled) return;
+        if (isKovaSessionRejectedError(error)) {
+          purgeOwnerlessStateFor(null);
+          setKovaSessionActive(true);
+          setUseLegacy(false);
+          setSession(null);
+          setAuthIssue(null);
+          setIsLoaded(true);
+          return;
+        }
         console.error("[KovaAuth] Kova session restore failed", {
           error: error instanceof Error ? error.name : "unknown_error",
         });
