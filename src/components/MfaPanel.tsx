@@ -39,6 +39,7 @@ export function MfaPanel() {
     uri: string;
   }>(null);
   const [code, setCode] = useState("");
+  const [enrollmentPassword, setEnrollmentPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -117,12 +118,20 @@ export function MfaPanel() {
     setRecoveryCodes([]);
     try {
       if (useKovaAuth) {
-        const response = await kovaAuthJson("/api/auth/mfa/enroll", {});
+        const response = await kovaAuthJson("/api/auth/mfa/enroll", {
+          ...(enrollmentPassword ? { currentPassword: enrollmentPassword } : {}),
+        });
         const data = (await response.json()) as {
           factorId?: string;
           secret?: string;
           uri?: string;
         };
+        if (response.status === 403) {
+          toast.error(
+            "Confirm your password, or sign in again with Google or a passkey, then retry authenticator setup.",
+          );
+          return;
+        }
         if (!response.ok || !data.factorId || !data.secret || !data.uri) throw new Error("enroll");
         setEnrolling({ factorId: data.factorId, qr: "", secret: data.secret, uri: data.uri });
       } else {
@@ -141,6 +150,7 @@ export function MfaPanel() {
       });
       toast.error("Authenticator setup could not start. Please try again.");
     } finally {
+      setEnrollmentPassword("");
       endMutation();
     }
   }
@@ -367,10 +377,33 @@ export function MfaPanel() {
             </div>
           </div>
         ) : (
-          <Button onClick={startEnroll} disabled={busy} size="sm">
-            <KeyRound className="w-4 h-4 mr-2" />
-            Set up authenticator app
-          </Button>
+          <div className="space-y-3">
+            {useKovaAuth ? (
+              <div className="space-y-2">
+                <label htmlFor="mfa-enrollment-password" className="text-sm font-medium">
+                  Current password
+                </label>
+                <Input
+                  id="mfa-enrollment-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={enrollmentPassword}
+                  onChange={(event) => setEnrollmentPassword(event.target.value)}
+                  disabled={busy}
+                  aria-describedby="mfa-enrollment-reauth-help"
+                />
+                <p id="mfa-enrollment-reauth-help" className="text-xs text-muted-foreground">
+                  Confirm your password before adding an authenticator. For Google or passkey
+                  accounts, sign in again with that method and return here within five minutes; no
+                  password is needed.
+                </p>
+              </div>
+            ) : null}
+            <Button onClick={startEnroll} disabled={busy} size="sm">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Set up authenticator app
+            </Button>
+          </div>
         )}
       </div>
 

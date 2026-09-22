@@ -8,7 +8,7 @@ export const expiry = "2026-10-01T12:00:00Z";
 export const owner = "10000000-0000-4000-8000-000000000001";
 export const other = "20000000-0000-4000-8000-000000000002";
 
-export async function authDatabase({ beforeMigrations = "" } = {}) {
+export async function authDatabase({ beforeMigrations = "", beforeMigration } = {}) {
   const db = new PGlite();
   try {
     await db.exec(`
@@ -33,7 +33,10 @@ export async function authDatabase({ beforeMigrations = "" } = {}) {
         /_kova_(?:identity_session_store|auth_foreign_key_indexes|owned_.*)\.sql$/u.test(name),
       )
       .sort();
-    for (const name of names) await db.exec(await readFile(new URL(name, directory), "utf8"));
+    for (const name of names) {
+      if (beforeMigration) await beforeMigration(name, db);
+      await db.exec(await readFile(new URL(name, directory), "utf8"));
+    }
     return db;
   } catch (error) {
     await db.close();
@@ -79,12 +82,25 @@ export async function passwordAccount(
 }
 
 export async function pendingFactor(db, token = "session", at = now) {
+  const credential = (
+    await db.query(
+      `select c.id, c.revision from kova_private.auth_credentials c
+    join kova_private.auth_sessions s on s.account_id = c.account_id
+    where s.token_digest = decode($1,'hex') and c.activated_at is not null and c.disabled_at is null`,
+      [digest(token)],
+    )
+  ).rows[0];
   const row = (
-    await db.query(`select * from public.kova_auth_begin_totp_enrollment($1,$2,'Fixture',$3)`, [
-      digest(token),
-      "v1.test-only.encrypted.secret.envelope",
-      at,
-    ])
+    await db.query(
+      `select * from public.kova_auth_begin_totp_enrollment_reauthenticated($1,$2,'Fixture',$3,$4,$5)`,
+      [
+        digest(token),
+        "v1.test-only.encrypted.secret.envelope",
+        credential?.id ?? null,
+        credential?.revision ?? null,
+        at,
+      ],
+    )
   ).rows[0];
   return row.factor_id;
 }

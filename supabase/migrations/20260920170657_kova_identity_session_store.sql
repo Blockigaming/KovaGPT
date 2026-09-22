@@ -302,7 +302,7 @@ begin
     where c.account_id = v_account_id and c.credential_type = 'password'
       and c.activated_at is null and c.disabled_at is null) into v_existing_pending;
   if v_existing_pending then
-    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'accepted', '{}', p_now);
+    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'rejected', '{}', p_now);
     return query select v_account_id, v_account_id = p_candidate_account_id, false;
     return;
   end if;
@@ -312,7 +312,7 @@ begin
   ) values (v_account_id, 'password', p_password_hash, 'scrypt-v1', null, p_now, p_now)
   on conflict (account_id) where credential_type = 'password' and disabled_at is null do nothing;
   if not found then
-    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'accepted', '{}', p_now);
+    perform kova_private.audit(v_account_id, null, 'signup_pending_account', 'rejected', '{}', p_now);
     return query select v_account_id, v_account_id = p_candidate_account_id, false;
     return;
   end if;
@@ -736,7 +736,7 @@ $$;
 -- Keep collaboration and directory lookups keyed to the verified Kova email,
 -- while retaining the hosted auth.users row only as a compatibility principal.
 create or replace function kova_private.verified_auth_user_for_email(p_email text)
-returns uuid language sql stable security definer set search_path = '' as $
+returns uuid language sql stable security definer set search_path = '' as $$
   with requested as (
     select lower(btrim(p_email)) as email
   ), candidates as (
@@ -754,7 +754,7 @@ returns uuid language sql stable security definer set search_path = '' as $
   )
   select case when count(*) = 1 then max(id::text)::uuid else null end
     from candidates
-$;
+$$;
 
 -- Full installs already have the private project invite implementations by this
 -- timestamp. Isolated auth-schema tests intentionally do not, so parse the
@@ -769,7 +769,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = pg_catalog
-as $
+as $$
 declare
   caller_id uuid := auth.uid();
   invite_project_id uuid;
@@ -804,7 +804,7 @@ begin
    where id = _invite_id;
   return invite_project_id;
 end;
-$;
+$$;
 $accept$;
     execute $decline$
 create or replace function kova_private.decline_project_invite(_invite_id uuid)
@@ -812,7 +812,7 @@ returns boolean
 language plpgsql
 security definer
 set search_path = pg_catalog
-as $
+as $$
 declare
   caller_id uuid := auth.uid();
   invite_email text;
@@ -839,7 +839,7 @@ begin
   update public.project_invites set status = 'revoked', accepted_at = null where id = _invite_id;
   return true;
 end;
-$;
+$$;
 $decline$;
   end if;
 end
@@ -852,7 +852,7 @@ stable
 security definer
 set search_path = ''
 set statement_timeout = '5s'
-as $
+as $$
 declare
   v_account kova_private.auth_accounts;
   v_email text;
@@ -869,7 +869,7 @@ begin
    where u.id = p_account_id and u.email_confirmed_at is not null and u.deleted_at is null;
   return v_email;
 end
-$;
+$$;
 
 revoke all on function kova_private.verified_auth_user_for_email(text) from public, anon, authenticated;
 grant execute on function kova_private.verified_auth_user_for_email(text) to service_role;

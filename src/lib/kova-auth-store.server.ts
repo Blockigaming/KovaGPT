@@ -295,15 +295,22 @@ export async function beginTotpEnrollment(input: {
   sessionDigest: string;
   secretEnvelope: string;
   friendlyName: string;
+  credentialId?: string;
+  credentialRevision?: number;
 }): Promise<{ factorId: string; email: string }> {
-  const value = await rpc<unknown>("kova_auth_begin_totp_enrollment", {
+  const value = await rpc<unknown>("kova_auth_begin_totp_enrollment_reauthenticated", {
     p_session_digest_hex: input.sessionDigest,
     p_secret_envelope: input.secretEnvelope,
     p_friendly_name: input.friendlyName,
+    p_credential_id: input.credentialId ?? null,
+    p_credential_revision: input.credentialRevision ?? null,
   });
-  const row = firstRow<Record<string, unknown>>(value, "kova_auth_begin_totp_enrollment");
+  const row = firstRow<Record<string, unknown>>(
+    value,
+    "kova_auth_begin_totp_enrollment_reauthenticated",
+  );
   if (typeof row.factor_id !== "string" || typeof row.email !== "string") {
-    throw new KovaAuthStoreError("kova_auth_begin_totp_enrollment");
+    throw new KovaAuthStoreError("kova_auth_begin_totp_enrollment_reauthenticated");
   }
   return { factorId: row.factor_id, email: row.email };
 }

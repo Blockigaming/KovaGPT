@@ -490,6 +490,8 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
 export async function handleKovaLogout(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const credential = readKovaSessionToken(request);
   if (credential?.ok) {
     try {
@@ -566,25 +568,64 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
   if (sessionDigest instanceof Response) return sessionDigest;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  if (
+    Object.keys(body).some((key) => !["friendlyName", "currentPassword"].includes(key)) ||
+    (body.friendlyName !== undefined && typeof body.friendlyName !== "string") ||
+    (body.currentPassword !== undefined && typeof body.currentPassword !== "string")
+  )
+    return jsonError("Invalid enrollment request.", 400);
   const friendlyName =
     typeof body.friendlyName === "string" && body.friendlyName.trim()
       ? body.friendlyName.trim().slice(0, 120)
       : "Authenticator app";
   try {
     const principal = await resolveSession(sessionDigest);
-    if (!principal) return jsonError("Invalid or expired session.", 401);
+    if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    const accountLimit = await rateLimit(
+      request,
+      "kova_auth_mfa_enroll_account",
+      5,
+      900,
+      `account:${principal.accountId}`,
+    );
+    if (accountLimit) return accountLimit;
+    let credential: Awaited<ReturnType<typeof lookupPassword>> = null;
+    if (typeof body.currentPassword === "string") {
+      credential = await lookupPassword(principal.email);
+      const valid = await verifyKovaPassword(
+        body.currentPassword,
+        credential?.passwordHash ?? DUMMY_PASSWORD_HASH,
+      );
+      if (!valid || !credential || credential.accountId !== principal.accountId) {
+        return jsonError("Your current credentials could not be verified.", 401);
+      }
+    }
     const enrollment = generateKovaTotpEnrollment(principal.email);
     const created = await beginTotpEnrollment({
       sessionDigest,
       secretEnvelope: encryptKovaSecret(enrollment.secret),
       friendlyName,
+      credentialId: credential?.credentialId,
+      credentialRevision: credential?.credentialRevision,
     });
+    if (created.email !== principal.email)
+      throw new KovaAuthStoreError("mfa_enrollment_account_mismatch");
     return json({
       factorId: created.factorId,
       secret: enrollment.secret,
       uri: enrollment.uri,
     });
   } catch (error) {
+    if (error instanceof KovaAuthStoreError && error.databaseCode === "42501") {
+      return json(
+        {
+          code: "reauthentication_required",
+          error:
+            "Confirm your current password, or sign in again with Google or a passkey before setting up an authenticator.",
+        },
+        { status: 403 },
+      );
+    }
     console.error("[KovaAuth] MFA enrollment failed", {
       error: error instanceof Error ? error.name : "unknown_error",
     });

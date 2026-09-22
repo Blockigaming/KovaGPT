@@ -135,7 +135,7 @@ create function public.kova_auth_consume_handoff_with_mfa(
   mfa_required boolean, account_id uuid, session_id uuid, email text,
   email_verified boolean, assurance_level text, expires_at timestamptz
 )
-language plpgsql security definer set search_path = '' set statement_timeout = '5s' as $
+language plpgsql security definer set search_path = '' set statement_timeout = '5s' as $$
 #variable_conflict use_column
 declare
   v_handoff kova_private.auth_session_handoffs;
@@ -196,7 +196,7 @@ begin
   return query select false, v_account.id, v_session_id, v_account.primary_email,
     true, v_handoff.assurance_level, p_session_expires_at;
 end
-$;
+$$;
 
 revoke all on function public.kova_auth_consume_handoff_with_mfa(
   text, text, timestamptz, text, timestamptz, timestamptz

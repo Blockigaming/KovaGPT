@@ -124,6 +124,24 @@ async function database({ legacyRecoveryAbi = false } = {}) {
       "utf8",
     ),
   );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../supabase/migrations/20260922211210_kova_owned_google_mfa_review_fixes.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../../supabase/migrations/20260922211527_kova_owned_mfa_enrollment_step_up.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   return db;
 }
 
@@ -179,7 +197,11 @@ async function ownedMfaFixture(db) {
     sessionDigest: digest("4"),
   });
   const started = await db.query(
-    `select * from public.kova_auth_begin_totp_enrollment($1, $2, $3, $4)`,
+    `select * from public.kova_auth_begin_totp_enrollment_reauthenticated($1, $2, $3,
+      (select c.id from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null),
+      (select c.revision from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null), $4)`,
     [digest("2"), "v1.encrypted.secret.envelope", "Primary authenticator", now],
   );
   const factorId = started.rows[0].factor_id;
@@ -587,7 +609,11 @@ test("owned TOTP enrollment activates MFA, stores eight digests, and revokes oth
     ]);
     await createVerifiedPasswordAccount(db);
     const started = await db.query(
-      `select * from public.kova_auth_begin_totp_enrollment($1, $2, $3, $4)`,
+      `select * from public.kova_auth_begin_totp_enrollment_reauthenticated($1, $2, $3,
+      (select c.id from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null),
+      (select c.revision from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null), $4)`,
       [digest("2"), "v1.encrypted.secret.envelope", "Primary authenticator", now],
     );
     assert.equal(started.rows[0].email, "owner@example.com");
@@ -1541,18 +1567,15 @@ test("Google-only accounts continue through owned TOTP and recovery MFA", async 
         "unused-candidate@invalid.kovagpt.com",
       ],
     );
-    await db.query(
-      `select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`,
-      [
-        firstAccount,
-        "google-mfa-subject",
-        "google-mfa@example.com",
-        "Google MFA",
-        digest("a"),
-        verificationExpiry,
-        now,
-      ],
-    );
+    await db.query(`select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`, [
+      firstAccount,
+      "google-mfa-subject",
+      "google-mfa@example.com",
+      "Google MFA",
+      digest("a"),
+      verificationExpiry,
+      now,
+    ]);
     await db.query(`select * from public.kova_auth_consume_handoff($1,$2,$3,$4)`, [
       digest("a"),
       digest("b"),
@@ -1560,7 +1583,11 @@ test("Google-only accounts continue through owned TOTP and recovery MFA", async 
       now,
     ]);
     const enrolled = await db.query(
-      `select * from public.kova_auth_begin_totp_enrollment($1,$2,$3,$4)`,
+      `select * from public.kova_auth_begin_totp_enrollment_reauthenticated($1, $2, $3,
+      (select c.id from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null),
+      (select c.revision from kova_private.auth_credentials c join kova_private.auth_sessions s on s.account_id=c.account_id
+        where s.token_digest=decode($1,'hex') and c.activated_at is not null and c.disabled_at is null), $4)`,
       [digest("b"), "v1.google.mfa.secret.envelope", "Google authenticator", now],
     );
     const factorId = enrolled.rows[0].factor_id;
@@ -1575,18 +1602,15 @@ test("Google-only accounts continue through owned TOTP and recovery MFA", async 
     ]);
 
     const beginGoogleChallenge = async (handoffDigest, challengeDigest, unusedSessionDigest) => {
-      await db.query(
-        `select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`,
-        [
-          secondAccount,
-          "google-mfa-subject",
-          "google-mfa@example.com",
-          "Google MFA",
-          handoffDigest,
-          verificationExpiry,
-          now,
-        ],
-      );
+      await db.query(`select * from public.kova_auth_finish_google($1,$2,$3,true,$4,$5,$6,$7)`, [
+        secondAccount,
+        "google-mfa-subject",
+        "google-mfa@example.com",
+        "Google MFA",
+        handoffDigest,
+        verificationExpiry,
+        now,
+      ]);
       const exchange = await db.query(
         `select * from public.kova_auth_consume_handoff_with_mfa($1,$2,$3,$4,$5,$6)`,
         [
@@ -1618,10 +1642,12 @@ test("Google-only accounts continue through owned TOTP and recovery MFA", async 
     };
 
     await beginGoogleChallenge(digest("c"), namedDigest("google-totp-challenge"), digest("d"));
-    const totp = await db.query(
-      `select * from public.kova_auth_finish_mfa_login($1,$2,$3,$4)`,
-      [namedDigest("google-totp-challenge"), namedDigest("google-totp-session"), sessionExpiry, now],
-    );
+    const totp = await db.query(`select * from public.kova_auth_finish_mfa_login($1,$2,$3,$4)`, [
+      namedDigest("google-totp-challenge"),
+      namedDigest("google-totp-session"),
+      sessionExpiry,
+      now,
+    ]);
     assert.equal(totp.rows[0].account_id, firstAccount);
     assert.equal(totp.rows[0].assurance_level, "aal2");
 

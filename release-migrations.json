@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 167,
-  "latest": "20260922001355_kova_owned_compatibility_revocation.sql",
+  "count": 169,
+  "latest": "20260922211527_kova_owned_mfa_enrollment_step_up.sql",
   "migrations": [
     {
       "order": 1,
@@ -3355,7 +3355,7 @@
       "order": 158,
       "filename": "20260920170657_kova_identity_session_store.sql",
       "timestamp": "20260920170657",
-      "sha256": "a71ff2034dfe83eb6e4718dab45da75c2015767fc09a05bc43582e5475238579",
+      "sha256": "c87e97ed30a8e0942cf3b61b447cf8da01c7cea770b571d57399998f3fdedb91",
       "tables": [
         "kova_private",
         "kova_private",
@@ -3386,7 +3386,11 @@
         "kova_auth_create_oauth_state",
         "kova_auth_consume_oauth_state",
         "kova_auth_finish_google",
-        "kova_auth_consume_handoff"
+        "kova_auth_consume_handoff",
+        "verified_auth_user_for_email",
+        "accept_project_invite",
+        "decline_project_invite",
+        "kova_auth_directory_email"
       ],
       "destructive": false,
       "dataBackfill": true,
@@ -3426,12 +3430,13 @@
       "order": 160,
       "filename": "20260921002928_kova_owned_totp_login_challenges.sql",
       "timestamp": "20260921002928",
-      "sha256": "ebf1f75bb7524c566e5adbf118334acd832cd54e1050077cdbaa48c756436682",
+      "sha256": "0711a4c8714ac115191e46400db5f74c95302eb5a75d75dc6d24c36424373dd3",
       "tables": ["kova_private"],
       "functions": [
         "kova_auth_begin_mfa_login",
         "kova_auth_read_mfa_login_challenge",
-        "kova_auth_finish_mfa_login"
+        "kova_auth_finish_mfa_login",
+        "kova_auth_consume_handoff_with_mfa"
       ],
       "destructive": false,
       "dataBackfill": true,
@@ -3481,7 +3486,7 @@
       "order": 163,
       "filename": "20260921023426_kova_owned_mfa_recovery_login.sql",
       "timestamp": "20260921023426",
-      "sha256": "279c7589fc5b6d8f29101457858c892fbda054bd6efe0d918f6393bff4f761b8",
+      "sha256": "e4424a162998a3fa03c9e3200512117e127c23d54a058f986a3ad75f1b23246a",
       "tables": [],
       "functions": ["kova_auth_finish_mfa_recovery_login"],
       "destructive": false,
@@ -3573,6 +3578,46 @@
       "rls": [],
       "policies": ["kova_owned_session_guard"],
       "indexes": []
+    },
+    {
+      "order": 168,
+      "filename": "20260922211210_kova_owned_google_mfa_review_fixes.sql",
+      "timestamp": "20260922211210",
+      "sha256": "cda82909e8877d166d8892e87920271f1627c3447689277ce9fd295d01a60567",
+      "tables": [],
+      "functions": [
+        "bind_primary_auth_challenge",
+        "kova_auth_create_password_account",
+        "kova_auth_finish_google",
+        "kova_auth_consume_handoff",
+        "kova_auth_consume_handoff_with_mfa",
+        "kova_auth_finish_mfa_login",
+        "kova_auth_finish_mfa_recovery_login"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["auth_mfa_challenge_google_identity_idx", "auth_handoff_google_identity_idx"]
+    },
+    {
+      "order": 169,
+      "filename": "20260922211527_kova_owned_mfa_enrollment_step_up.sql",
+      "timestamp": "20260922211527",
+      "sha256": "da950975ad119e78448117f337045fbfb67988f4baa5799448e1054de1565638",
+      "tables": [],
+      "functions": [
+        "kova_auth_begin_totp_enrollment_reauthenticated",
+        "kova_auth_read_totp_enrollment",
+        "kova_auth_activate_totp_with_session"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["auth_mfa_enrollment_session_idx", "auth_mfa_enrollment_credential_idx"]
     }
   ]
 }

@@ -94,6 +94,15 @@ function fixture(options = {}) {
         if (options.reject) throw Error(`transport failed ${codes[0]}`);
         if (options.failure)
           return Response.json({ error: `raw provider secret ${codes[0]}` }, { status: 503 });
+        if (path.endsWith("/mfa/enroll")) {
+          if (options.reauthenticationRequired)
+            return Response.json({ code: "reauthentication_required" }, { status: 403 });
+          return Response.json({
+            factorId: "fixture-factor",
+            secret: "A".repeat(32),
+            uri: "otpauth://totp/KovaGPT:fixture?secret=" + "A".repeat(32),
+          });
+        }
         if (path.includes("recovery/regenerate")) {
           remaining = 8;
           return Response.json({
@@ -139,7 +148,9 @@ function fixture(options = {}) {
     fetch: async (path) => {
       calls.push(["fetch", path]);
       return Response.json({
-        factors: [{ id: "factor", friendlyName: "Fixture", recoveryCodesRemaining: remaining }],
+        factors: options.noFactors
+          ? []
+          : [{ id: "factor", friendlyName: "Fixture", recoveryCodesRemaining: remaining }],
       });
     },
   });
@@ -277,4 +288,44 @@ test("owned device revocation uses its real route and cannot fall back to Supaba
     [["legacy-signout", { scope: "others" }]],
   );
   assert.ok(!legacy.calls.some(([kind]) => kind === "owned"));
+});
+
+test("first MFA prompts for a password and clears it after a rejected enrollment", async () => {
+  const f = fixture({ noFactors: true, reauthenticationRequired: true });
+  await f.flush();
+  const password = () =>
+    f.nodes().find((node) => node.type === "input" && node.props.id === "mfa-enrollment-password");
+  assert.equal(password().props.type, "password");
+  assert.equal(password().props.autoComplete, "current-password");
+  password().props.onChange({ target: { value: "fixture primary password" } });
+  await f.flush();
+  await f.click("Set up authenticator app");
+  assert.deepEqual(
+    f.calls.filter(([kind]) => kind === "owned"),
+    [["owned", "/api/auth/mfa/enroll", { currentPassword: "fixture primary password" }]],
+  );
+  assert.equal(password().props.value, "");
+  assert.ok(
+    f.messages.some(([kind, message]) => kind === "error" && message.includes("sign in again")),
+  );
+  assert.ok(!JSON.stringify(f.logs).includes("fixture primary password"));
+  assert.ok(!JSON.stringify(f.messages).includes("fixture primary password"));
+});
+
+test("fresh Google/passkey enrollment can omit a password and cancelling removes its secret", async () => {
+  const f = fixture({ noFactors: true });
+  await f.flush();
+  assert.ok(f.text().includes("no password is needed"));
+  await f.click("Set up authenticator app");
+  assert.deepEqual(
+    f.calls.filter(([kind]) => kind === "owned"),
+    [["owned", "/api/auth/mfa/enroll", {}]],
+  );
+  assert.ok(f.text().includes("A".repeat(32)));
+  await f.click("Cancel");
+  assert.ok(!f.text().includes("A".repeat(32)));
+  const password = f
+    .nodes()
+    .find((node) => node.type === "input" && node.props.id === "mfa-enrollment-password");
+  assert.equal(password.props.value, "");
 });
