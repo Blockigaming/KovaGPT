@@ -154,7 +154,12 @@ test("the real token HTTP/store path produces a signed, session-bound Kova marke
   assert.deepEqual(http.logs, []);
 });
 
-for (const table of ["public.guard_fixture", "storage.objects", "storage.buckets", "realtime.messages"]) {
+for (const table of [
+  "public.guard_fixture",
+  "storage.objects",
+  "storage.buckets",
+  "realtime.messages",
+]) {
   test(`${table}: owner RLS is preserved and a revoked JWT cannot read or write`, async () => {
     const owner = await account(),
       other = await account();

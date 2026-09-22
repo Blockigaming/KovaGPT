@@ -49,9 +49,18 @@ test("session validation binds the exact account and fails closed", () => {
   });
   assert.equal(evaluateKovaSession({ ...session, account_id: "other" }, account, now).ok, false);
   assert.equal(evaluateKovaSession({ ...session, expires_at: "invalid" }, account, now).ok, false);
-  assert.equal(evaluateKovaSession({ ...session, expires_at: "2026-09-20T16:00:00Z" }, account, now).ok, false);
-  assert.equal(evaluateKovaSession({ ...session, revoked_at: "2026-09-20" }, account, now).ok, false);
-  assert.equal(evaluateKovaSession(session, { ...account, deleted_at: "2026-09-20" }, now).ok, false);
+  assert.equal(
+    evaluateKovaSession({ ...session, expires_at: "2026-09-20T16:00:00Z" }, account, now).ok,
+    false,
+  );
+  assert.equal(
+    evaluateKovaSession({ ...session, revoked_at: "2026-09-20" }, account, now).ok,
+    false,
+  );
+  assert.equal(
+    evaluateKovaSession(session, { ...account, deleted_at: "2026-09-20" }, now).ok,
+    false,
+  );
 });
 
 test("suspension and MFA policy are enforced by the authoritative account", () => {
@@ -76,11 +85,7 @@ test("suspension and MFA policy are enforced by the authoritative account", () =
     code: "account_suspended",
   });
   assert.deepEqual(
-    evaluateKovaSession(
-      session,
-      { ...account, suspended_until: null, mfa_required: true },
-      now,
-    ),
+    evaluateKovaSession(session, { ...account, suspended_until: null, mfa_required: true }, now),
     { ok: false, status: 403, code: "mfa_required" },
   );
   assert.equal(

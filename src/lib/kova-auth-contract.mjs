@@ -18,9 +18,7 @@ export function resolveKovaAuthMode(env = process.env) {
   const raw = env?.[KOVA_AUTH_MODE_ENV];
   if (raw == null || raw === "") return "supabase";
   if (KOVA_AUTH_MODES.includes(raw)) return raw;
-  throw new Error(
-    `${KOVA_AUTH_MODE_ENV} must be one of: ${KOVA_AUTH_MODES.join(", ")}`,
-  );
+  throw new Error(`${KOVA_AUTH_MODE_ENV} must be one of: ${KOVA_AUTH_MODES.join(", ")}`);
 }
 
 export function kovaAuthEnabled(mode) {
