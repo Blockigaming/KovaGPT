@@ -7,6 +7,7 @@ const supabaseBrowserConfig = await readFile("src/integrations/supabase/config.t
 const supabaseAdminClient = await readFile("src/integrations/supabase/client.server.ts", "utf8");
 const clerkSafe = await readFile("src/components/auth/ClerkSafe.tsx", "utf8");
 const authMiddleware = await readFile("src/integrations/supabase/auth-middleware.ts", "utf8");
+const apiAuth = await readFile("src/lib/api-auth.server.ts", "utf8");
 const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 const packageJson = await readFile("package.json", "utf8");
@@ -30,8 +31,9 @@ test("Supabase browser config is feature-scoped and cannot crash public boot", (
 });
 
 test("anonymous server functions fail closed before reading Supabase configuration", () => {
-  const credentialCheck = authMiddleware.indexOf('request.headers.get("authorization")');
-  const configurationRead = authMiddleware.indexOf("process.env.SUPABASE_URL");
+  assert.match(authMiddleware, /await optionalUser\(request\)/);
+  const credentialCheck = apiAuth.indexOf("selectAuthCredential(request, resolveKovaAuthMode())");
+  const configurationRead = apiAuth.indexOf("process.env.SUPABASE_URL");
   assert.ok(credentialCheck >= 0);
   assert.ok(configurationRead > credentialCheck);
   assert.match(authMiddleware, /failAuthentication\(401, "Unauthorized"\)/);
