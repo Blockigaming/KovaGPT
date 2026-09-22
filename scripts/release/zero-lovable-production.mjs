@@ -169,15 +169,15 @@ function discoverAssets(source, parent, origin, rejectedDataUrls = new Set()) {
 
   for (const match of source.matchAll(WORKER_IMPORT_SCRIPTS)) {
     for (const reference of match[1].matchAll(STRING_REFERENCE)) {
-      addAssetReference(assets, reference[1], parent, origin, { allowAny: true });
+      addAssetReference(assets, reference[1], parent, origin, { allowAny: true, rejectedDataUrls });
     }
   }
   for (const match of source.matchAll(CACHE_ADD)) {
-    addAssetReference(assets, match[1], parent, origin, { allowAny: true });
+    addAssetReference(assets, match[1], parent, origin, { allowAny: true, rejectedDataUrls });
   }
   for (const match of source.matchAll(CACHE_ADD_ALL)) {
     for (const reference of match[1].matchAll(STRING_REFERENCE)) {
-      addAssetReference(assets, reference[1], parent, origin, { allowAny: true });
+      addAssetReference(assets, reference[1], parent, origin, { allowAny: true, rejectedDataUrls });
     }
   }
 
@@ -277,15 +277,78 @@ function isTextAsset(kind, contentType = "") {
   );
 }
 
-function responseCookies(response) {
-  const values = response.headers.getSetCookie?.() ?? [];
-  if (!values.length) {
-    const combined = response.headers.get("set-cookie");
-    if (combined) values.push(combined);
-  }
-  return values
-    .map((value) => value.split(";", 1)[0]?.trim())
-    .filter((value) => value?.includes("="));
+function createCookieJar(origin) {
+  const cookies = new Map();
+  let sequence = 0;
+  const matchesPath = (requestPath, cookiePath) =>
+    requestPath === cookiePath ||
+    (requestPath.startsWith(cookiePath) &&
+      (cookiePath.endsWith("/") || requestPath[cookiePath.length] === "/"));
+  return {
+    update(response, requestUrl) {
+      const url = new URL(response.url || requestUrl);
+      if (url.origin !== origin) return;
+      const values = response.headers.getSetCookie?.() ?? [];
+      if (!values.length && response.headers.has("set-cookie"))
+        values.push(response.headers.get("set-cookie"));
+      for (const value of values) {
+        const [pair, ...parts] = value.split(";");
+        const separator = pair.indexOf("=");
+        if (separator <= 0) continue;
+        const name = pair.slice(0, separator).trim();
+        const content = pair.slice(separator + 1).trim();
+        if (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u.test(name)) continue;
+        const attributes = new Map(
+          parts.map((part) => {
+            const position = part.indexOf("=");
+            return position === -1
+              ? [part.trim().toLowerCase(), ""]
+              : [part.slice(0, position).trim().toLowerCase(), part.slice(position + 1).trim()];
+          }),
+        );
+        const domain = (attributes.get("domain") ?? url.hostname).toLowerCase().replace(/^\./u, "");
+        if (domain !== url.hostname && !url.hostname.endsWith(`.${domain}`)) continue;
+        const slash = url.pathname.lastIndexOf("/");
+        const defaultPath = slash <= 0 ? "/" : url.pathname.slice(0, slash);
+        const requestedPath = attributes.get("path") ?? "";
+        const path = requestedPath.startsWith("/") ? requestedPath : defaultPath;
+        if (name.startsWith("__Secure-") && !attributes.has("secure")) continue;
+        if (
+          name.startsWith("__Host-") &&
+          (!attributes.has("secure") || attributes.has("domain") || path !== "/")
+        )
+          continue;
+        const key = JSON.stringify([name, domain, path]);
+        let expires = Date.parse(attributes.get("expires") ?? "");
+        const maxAge = attributes.get("max-age");
+        if (/^-?\d+$/u.test(maxAge ?? "")) expires = Date.now() + Number(maxAge) * 1000;
+        if (Number.isFinite(expires) && expires <= Date.now()) {
+          cookies.delete(key);
+          continue;
+        }
+        cookies.set(key, {
+          name,
+          content,
+          path,
+          expires,
+          sequence: cookies.get(key)?.sequence ?? sequence++,
+        });
+      }
+    },
+    header(requestUrl) {
+      const url = new URL(requestUrl);
+      if (url.origin !== origin) return "";
+      return [...cookies.values()]
+        .filter(
+          (cookie) =>
+            (!Number.isFinite(cookie.expires) || cookie.expires > Date.now()) &&
+            matchesPath(url.pathname, cookie.path),
+        )
+        .sort((a, b) => b.path.length - a.path.length || a.sequence - b.sequence)
+        .map((cookie) => `${cookie.name}=${cookie.content}`)
+        .join("; ");
+    },
+  };
 }
 
 async function readBoundedText(response, limits) {
@@ -333,18 +396,23 @@ async function request(url, { redirect = "follow", method = "GET", cookie } = {}
   const remainingMs = limits.deadline - Date.now();
   if (remainingMs <= 0) return deadlineResult(url, method);
   let response;
+  const signal = AbortSignal.timeout(Math.min(15_000, remainingMs));
   try {
     response = await fetch(url, {
       method,
       redirect,
-      signal: AbortSignal.timeout(Math.min(15_000, remainingMs)),
+      signal,
       headers: {
         "user-agent": "KovaGPT-read-only-zero-lovable-evidence/1",
         ...(cookie ? { cookie } : {}),
       },
     });
   } catch (error) {
-    if (Date.now() >= limits.deadline || error?.name === "TimeoutError")
+    if (
+      signal.aborted ||
+      Date.now() >= limits.deadline ||
+      ["AbortError", "TimeoutError"].includes(error?.name)
+    )
       return deadlineResult(url, method);
     throw error;
   }
@@ -355,6 +423,12 @@ async function request(url, { redirect = "follow", method = "GET", cookie } = {}
   try {
     ({ body, bytes, invalidUtf8 } = await readBoundedText(response, limits));
   } catch (error) {
+    if (
+      signal.aborted ||
+      Date.now() >= limits.deadline ||
+      ["AbortError", "TimeoutError"].includes(error?.name)
+    )
+      return deadlineResult(url, method);
     if (!["response_body_limit_exceeded", "aggregate_body_limit_exceeded"].includes(error?.code))
       throw error;
     readFailure = error.code;
@@ -499,7 +573,8 @@ export async function collectZeroLovableProductionEvidence({
   const rootBuildShas = [...liveRootBody.matchAll(BUILD_META)].map((match) => match[1]);
   const rootBuildSha = rootBuildShas.length === 1 ? rootBuildShas[0] : null;
   if (rootBuildSha !== expectedSha) failures.push("root_build_sha_mismatch");
-  const assetCookie = responseCookies(rootResult.response).join("; ");
+  const cookieJar = createCookieJar(base.origin);
+  cookieJar.update(rootResult.response, rootFinalUrl);
   const rejectedDataUrls = new Set();
 
   const pending = [
@@ -525,11 +600,12 @@ export async function collectZeroLovableProductionEvidence({
       failures.push(`lovable_asset_name:${requestedDisplayUrl}`);
     const result = await request(
       url,
-      { redirect: "manual", cookie: requestedUrl.origin === base.origin ? assetCookie : "" },
+      { redirect: "manual", cookie: cookieJar.header(requestedUrl) },
       limits,
     );
     assets.push(result.record);
     const finalUrl = new URL(result.response.url || url);
+    cookieJar.update(result.response, requestedUrl);
     const displayUrl = result.record.url;
     const redirected =
       result.response.redirected ||

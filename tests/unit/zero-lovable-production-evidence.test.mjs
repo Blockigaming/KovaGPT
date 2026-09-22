@@ -859,3 +859,162 @@ test("production evidence bounds total wall-clock runtime", async () => {
     evidence.failures.some((failure) => failure.startsWith("collection_deadline_exceeded")),
   );
 });
+
+test("production evidence updates cookies set by recursive asset responses", async () => {
+  const calls = [];
+  const evidence = await withFetch(
+    async (input, options) => {
+      const url = new URL(input);
+      const cookie = new Headers(options.headers).get("cookie") ?? "";
+      calls.push([url.pathname, cookie]);
+      if (url.pathname === "/api/version")
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.pathname === "/")
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+          { headers: { "set-cookie": "variant=old; Path=/; Secure" } },
+        );
+      if (url.pathname === "/app.js")
+        return javascriptResponse(`export const buildSha="${sha}"; import("/nested/chunk.js");`, {
+          headers: { "set-cookie": "variant=new; Path=/; Secure" },
+        });
+      if (url.pathname === "/nested/chunk.js")
+        return javascriptResponse(
+          cookie === "variant=new" ? "globalThis.Lovable=true" : "export const clean=true;",
+        );
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.pass, false);
+  assert.deepEqual(
+    calls.find(([path]) => path === "/app.js"),
+    ["/app.js", "variant=old"],
+  );
+  assert.deepEqual(
+    calls.find(([path]) => path === "/nested/chunk.js"),
+    ["/nested/chunk.js", "variant=new"],
+  );
+  assert.ok(evidence.failures.some((failure) => failure.startsWith("lovable_asset_content:")));
+});
+
+test("production evidence removes expired cookies and scopes asset cookies by path", async () => {
+  const calls = [];
+  const evidence = await withFetch(
+    async (input, options) => {
+      const url = new URL(input);
+      const cookie = new Headers(options.headers).get("cookie") ?? "";
+      calls.push([url.pathname, cookie]);
+      if (url.pathname === "/api/version")
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.pathname === "/")
+        return response(
+          `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+          { headers: { "set-cookie": "variant=old; Path=/; Secure" } },
+        );
+      if (url.pathname === "/app.js") {
+        const result = javascriptResponse(
+          `const buildSha="${sha}"; import("/nested/chunk.js"); import("/outside.js");`,
+        );
+        result.headers.append("set-cookie", "variant=gone; Max-Age=0; Path=/; Secure");
+        result.headers.append("set-cookie", "scoped=active; Path=/nested; Secure");
+        result.headers.append("set-cookie", "foreign=ignored; Domain=elsewhere.example; Path=/");
+        return result;
+      }
+      if (["/nested/chunk.js", "/outside.js"].includes(url.pathname))
+        return javascriptResponse("export {};");
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.pass, true);
+  assert.deepEqual(
+    calls.find(([path]) => path === "/nested/chunk.js"),
+    ["/nested/chunk.js", "scoped=active"],
+  );
+  assert.deepEqual(
+    calls.find(([path]) => path === "/outside.js"),
+    ["/outside.js", ""],
+  );
+});
+
+test("production evidence returns failed JSON when an asset body is aborted", async () => {
+  const evidence = await withFetch(
+    async (input) => {
+      const url = new URL(input);
+      if (url.pathname === "/api/version")
+        return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+      if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+      if (url.pathname === "/")
+        return response(`<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`);
+      if (url.pathname === "/app.js")
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new DOMException("body timed out", "AbortError"));
+            },
+          }),
+          { headers: { "content-type": "application/javascript" } },
+        );
+      throw new Error(`unexpected URL ${url}`);
+    },
+    () =>
+      collectZeroLovableProductionEvidence({
+        baseUrl: "https://kovagpt.example",
+        expectedSha: sha,
+      }),
+  );
+  assert.equal(evidence.pass, false);
+  assert.ok(
+    evidence.failures.some((failure) => failure.startsWith("collection_deadline_exceeded:")),
+  );
+  assert.doesNotThrow(() => JSON.stringify(evidence));
+});
+
+test("production evidence rejects data URLs in every worker dependency form", async () => {
+  for (const dependency of [
+    'importScripts("data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true")',
+    'cache.add("data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true")',
+    'cache.addAll(["data:text/javascript,globalThis.%4c%6f%76%61%62%6c%65=true"])',
+  ]) {
+    const evidence = await withFetch(
+      async (input) => {
+        const url = new URL(input);
+        if (url.pathname === "/api/version")
+          return response(JSON.stringify({ sha }), { headers: { "x-kova-build": sha } });
+        if (url.pathname.includes("lovable")) return response("missing", { status: 404 });
+        if (url.pathname === "/")
+          return response(
+            `<meta name="kova-build" content="${sha}"><script src="/app.js"></script>`,
+          );
+        if (url.pathname === "/app.js")
+          return javascriptResponse(
+            `const buildSha="${sha}"; navigator.serviceWorker.register("/worker.js");`,
+          );
+        if (url.pathname === "/worker.js") return javascriptResponse(dependency);
+        throw new Error(`unexpected URL ${url}`);
+      },
+      () =>
+        collectZeroLovableProductionEvidence({
+          baseUrl: "https://kovagpt.example",
+          expectedSha: sha,
+        }),
+    );
+    assert.equal(evidence.pass, false, dependency);
+    assert.ok(
+      evidence.failures.some((failure) => failure.startsWith("data_url_asset_rejected:")),
+      dependency,
+    );
+    assert.equal(JSON.stringify(evidence).includes("%4c%6f%76"), false);
+  }
+});
