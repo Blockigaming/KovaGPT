@@ -1,0 +1,192 @@
+name: Kova Auth Reviewed Repair Once
+
+# A bounded source-only continuation, not an application deployment.
+# The payload is the already prepared 17-file repair; no caller inputs exist.
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/kova-auth-reviewed-repair-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kova-auth-reviewed-repair-once
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Apply only the checksum-pinned, exact-tree repair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_base=954fdda54c6d4d248cc860dd91a19dcc79c3e785
+          bootstrap=.github/workflows/kova-auth-reviewed-repair-once.yml
+          test "$GITHUB_REPOSITORY" = Blockigaming/KovaGPT
+          test "$GITHUB_REF" = refs/heads/codex/kova-owned-auth-foundation
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^)" = "$expected_base"
+          test -z "$(git status --porcelain)"
+          test "$(git diff --name-only "$expected_base" HEAD)" = "$bootstrap"
+          archive="$RUNNER_TEMP/auth-reviewed.patch.xz"
+          : > "$archive"
+          for blob in a96e14f5ab3ef2deb7e468b2f782b97d83aa132e df193076ba89a872c794d161e5f20206ad0c3ea0 e71a14893ed01d7e0c4a27babc0c02a42219785a 8cd92f4dc05b06d6e4462f2298092705ac7cbdf5; do
+            gh api "repos/Blockigaming/KovaGPT/git/blobs/$blob" --jq .content | base64 --decode >> "$archive"
+          done
+          printf '%s  %s\n' e883c66315bb53081d7131dd771ad3a08bd6ae168705b476a7a1bdd99adc17e3 "$archive" | sha256sum --check --strict
+          xz --decompress --stdout "$archive" > "$RUNNER_TEMP/auth-reviewed.patch"
+          printf '%s  %s\n' d92463b340d0129aabf676e7446b7efd31362d5273965291af6c5e97accaed75 "$RUNNER_TEMP/auth-reviewed.patch" | sha256sum --check --strict
+          git apply --check --index "$RUNNER_TEMP/auth-reviewed.patch"
+          git apply --index "$RUNNER_TEMP/auth-reviewed.patch"
+          test "$(git diff --cached --name-only | wc -l)" -eq 17
+          # Checking the entire normalized tree rejects any changed/missing/extra path.
+          index="$RUNNER_TEMP/auth-reviewed.index"
+          cp "$(git rev-parse --git-path index)" "$index"
+          GIT_INDEX_FILE="$index" git rm --cached --quiet -- "$bootstrap"
+          test "$(GIT_INDEX_FILE="$index" git write-tree)" = 69e2a8f15bbc8df3edc35c3b0f5578390b7dafb8
+          rm "$index"
+          git diff --exit-code
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install exact lockfile, without package lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Authentication, passkey, database and security regressions
+        run: >-
+          node --test --test-concurrency=2 tests/unit/kova-auth*.test.mjs
+          tests/unit/kova-owned-auth-database.test.mjs
+          tests/unit/kova-session.server.test.mjs
+          tests/integration/auth-account-security-source.test.mjs
+      - name: Verify migration inventory
+        run: npm run release:migrations
+      - name: Typecheck and lint
+        run: npm run typecheck && npm run lint
+      - name: Check changed-file formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --cached --name-only -z -- '*.mjs' '*.ts' '*.tsx' '*.json' | xargs -0 npx --no-install prettier --check
+      - name: Build without deploying
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072 --max-semi-space-size=8
+        run: npm run build
+      - name: Install browser for local-only integration tests
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Full integration tests against built local artifacts
+        run: node --test --test-concurrency=2 tests/integration/*.test.mjs
+      - name: Validate generated contracts and release bundle
+        run: npm run release:manifest && npm run release:schema && npm run release:bundle
+      - name: Confirm tests did not modify the reviewed tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+          index="$RUNNER_TEMP/auth-reviewed-final.index"
+          cp "$(git rev-parse --git-path index)" "$index"
+          GIT_INDEX_FILE="$index" git rm --cached --quiet -- .github/workflows/kova-auth-reviewed-repair-once.yml
+          test "$(GIT_INDEX_FILE="$index" git write-tree)" = 69e2a8f15bbc8df3edc35c3b0f5578390b7dafb8
+          rm "$index"
+      - name: Preserve verified source for recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -c core.hooksPath=/dev/null -c user.name='KovaGPT Source Validation' -c user.email='source-validation@users.noreply.github.com' commit -m 'fix(auth): verify Google MFA and first-factor reauthentication repairs'
+          mkdir -p "$RUNNER_TEMP/auth-verified-source"
+          git bundle create "$RUNNER_TEMP/auth-verified-source/source.bundle" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/auth-verified-source/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/auth-verified-source/tree.txt"
+          cd "$RUNNER_TEMP/auth-verified-source"
+          sha256sum source.bundle commit.txt tree.txt > SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: kova-auth-verified-repair-${{ github.sha }}
+          path: ${{ runner.temp }}/auth-verified-source/
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0
+
+  publish:
+    needs: verify
+    if: needs.verify.result == 'success' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Apply only the checksum-pinned, exact-tree repair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_base=954fdda54c6d4d248cc860dd91a19dcc79c3e785
+          bootstrap=.github/workflows/kova-auth-reviewed-repair-once.yml
+          test "$GITHUB_REPOSITORY" = Blockigaming/KovaGPT
+          test "$GITHUB_REF" = refs/heads/codex/kova-owned-auth-foundation
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^)" = "$expected_base"
+          test -z "$(git status --porcelain)"
+          test "$(git diff --name-only "$expected_base" HEAD)" = "$bootstrap"
+          archive="$RUNNER_TEMP/auth-reviewed.patch.xz"
+          : > "$archive"
+          for blob in a96e14f5ab3ef2deb7e468b2f782b97d83aa132e df193076ba89a872c794d161e5f20206ad0c3ea0 e71a14893ed01d7e0c4a27babc0c02a42219785a 8cd92f4dc05b06d6e4462f2298092705ac7cbdf5; do
+            gh api "repos/Blockigaming/KovaGPT/git/blobs/$blob" --jq .content | base64 --decode >> "$archive"
+          done
+          printf '%s  %s\n' e883c66315bb53081d7131dd771ad3a08bd6ae168705b476a7a1bdd99adc17e3 "$archive" | sha256sum --check --strict
+          xz --decompress --stdout "$archive" > "$RUNNER_TEMP/auth-reviewed.patch"
+          printf '%s  %s\n' d92463b340d0129aabf676e7446b7efd31362d5273965291af6c5e97accaed75 "$RUNNER_TEMP/auth-reviewed.patch" | sha256sum --check --strict
+          git apply --check --index "$RUNNER_TEMP/auth-reviewed.patch"
+          git apply --index "$RUNNER_TEMP/auth-reviewed.patch"
+          test "$(git diff --cached --name-only | wc -l)" -eq 17
+          # Checking the entire normalized tree rejects any changed/missing/extra path.
+          index="$RUNNER_TEMP/auth-reviewed.index"
+          cp "$(git rev-parse --git-path index)" "$index"
+          GIT_INDEX_FILE="$index" git rm --cached --quiet -- "$bootstrap"
+          test "$(GIT_INDEX_FILE="$index" git write-tree)" = 69e2a8f15bbc8df3edc35c3b0f5578390b7dafb8
+          rm "$index"
+          git diff --exit-code
+      # No dependency installation, repository scripts, or auth secrets run in
+      # this write-capable job. Only the exact verified tree may be published.
+      - name: Publish only if the authorized PR head is still unchanged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/Blockigaming/KovaGPT/pulls/394 > "$RUNNER_TEMP/auth-pr.json"
+          python3 - <<'CHECK'
+          import json, os
+          from pathlib import Path
+          pr = json.loads((Path(os.environ['RUNNER_TEMP']) / 'auth-pr.json').read_text())
+          assert pr['state'] == 'open' and not pr['merged']
+          assert pr['head']['sha'] == os.environ['GITHUB_SHA']
+          assert pr['head']['ref'] == 'codex/kova-owned-auth-foundation'
+          assert pr['head']['repo']['full_name'] == 'Blockigaming/KovaGPT'
+          assert pr['base']['ref'] == 'main'
+          CHECK
+          git -c core.hooksPath=/dev/null -c user.name='KovaGPT Source Validation' -c user.email='source-validation@users.noreply.github.com' commit -m 'fix(auth): close Google MFA and enrollment review regressions'
+          askpass="$RUNNER_TEMP/auth-reviewed-askpass.sh"
+          trap 'rm -f "$askpass"' EXIT
+          printf '%s\n' '#!/usr/bin/env bash' 'case "$1" in *Username*) printf "%s\n" x-access-token ;; *Password*) printf "%s\n" "$GH_TOKEN" ;; *) exit 1 ;; esac' > "$askpass"
+          chmod 700 "$askpass"
+          GIT_TERMINAL_PROMPT=0 GIT_ASKPASS="$askpass" git -c core.hooksPath=/dev/null push https://github.com/Blockigaming/KovaGPT.git HEAD:refs/heads/codex/kova-owned-auth-foundation
+          printf 'Published source commit: %s\n' "$(git rev-parse HEAD)"
