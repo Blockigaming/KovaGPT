@@ -184,6 +184,11 @@ jobs:
           if (document.parameters.acrName?.value !== process.env.ACR_NAME) {
             throw new Error("The Bicep ACR name does not match the approved production registry");
           }
+          if (document.parameters.minReplicas?.value !== 0) {
+            throw new Error(
+              "Production minReplicas must remain 0 while the Azure migration cost freeze is active",
+            );
+          }
           const expectedUrl = `https://${process.env.KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co`;
           if (document.parameters.supabaseUrl?.value !== expectedUrl) {
             throw new Error("The Bicep Supabase URL does not match the approved production project");
