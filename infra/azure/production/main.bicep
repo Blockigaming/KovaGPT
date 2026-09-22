@@ -527,7 +527,8 @@ resource budget 'Microsoft.Consumption/budgets@2024-08-01' = if (deployBudget) {
 }
 
 output containerAppName string = webApp.name
-output containerAppFqdn string = webApp.properties.configuration.ingress.fqdn
+// No public hostname exists while migration ingress is disabled.
+output containerAppFqdn string = ''
 output managedEnvironmentName string = environment.name
 output managedIdentityResourceId string = identity.id
 output managedIdentityClientId string = identity.properties.clientId
