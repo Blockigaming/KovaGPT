@@ -11,6 +11,17 @@ export type KovaBrowserPrincipal = {
 type TokenCache = { token: string; refreshAt: number } | null;
 type PrincipalCache = { principal: KovaBrowserPrincipal | null; refreshAt: number } | null;
 
+export class KovaSessionRejectedError extends Error {
+  constructor() {
+    super("kova_session_rejected");
+    this.name = "KovaSessionRejectedError";
+  }
+}
+
+export function isKovaSessionRejectedError(value: unknown): value is KovaSessionRejectedError {
+  return value instanceof KovaSessionRejectedError;
+}
+
 let tokenCache: TokenCache = null;
 let principalCache: PrincipalCache = null;
 let cacheGeneration = 0;
@@ -63,11 +74,15 @@ export async function fetchKovaSession(): Promise<KovaBrowserPrincipal | null> {
     credentials: "same-origin",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error(`kova_session_${response.status}`);
-  const payload = (await response.json()) as { session?: unknown };
   // A response started before a credential change must not restore the old
   // principal after the MFA/device control has invalidated the cache.
   if (generation !== cacheGeneration) throw new Error("kova_session_changed");
+  if (response.status === 401) {
+    principalCache = { principal: null, refreshAt: Date.now() + 5_000 };
+    throw new KovaSessionRejectedError();
+  }
+  if (!response.ok) throw new Error(`kova_session_${response.status}`);
+  const payload = (await response.json()) as { session?: unknown };
   if (payload.session === null) {
     principalCache = { principal: null, refreshAt: Date.now() + 5_000 };
     return null;
