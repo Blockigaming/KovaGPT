@@ -59,7 +59,8 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(azureProduction, /param imageReference string/u);
   assert.match(azureProduction, /image: imageReference/u);
   assert.match(azureProduction, /activeRevisionsMode: 'Single'/u);
-  assert.match(azureProduction, /clientCertificateMode: 'require'/u);
+  assert.doesNotMatch(azureProduction, /^\\s*ingress:\\s*\\{/mu);
+  assert.match(azureProduction, /rules:\\s*\\[\\s*\\]/u);
   assert.match(azureProduction, /param cloudflareClientCertificateSha256Fingerprints array/u);
   assert.match(azureProduction, /name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'/u);
   assert.equal((azureProduction.match(/tcpSocket:/gu) ?? []).length, 3);
