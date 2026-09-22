@@ -24,11 +24,16 @@ begin
   select * into v_account from kova_private.auth_accounts where id = v_challenge.account_id for update;
   if v_account.id is null or v_account.deleted_at is not null or v_account.email_verified_at is null
     or (v_account.suspended_until is not null and v_account.suspended_until > p_now)
-    or not exists (
-      select 1 from kova_private.auth_credentials c where c.id = v_challenge.credential_id
-        and c.account_id = v_challenge.account_id and c.revision = v_challenge.credential_revision
-        and c.activated_at is not null and c.disabled_at is null
-    ) then raise exception 'kova_auth_account_unavailable'; end if;
+    or (
+      v_challenge.challenge_source = 'password'
+      and not exists (
+        select 1 from kova_private.auth_credentials c where c.id = v_challenge.credential_id
+          and c.account_id = v_challenge.account_id and c.revision = v_challenge.credential_revision
+          and c.activated_at is not null and c.disabled_at is null
+      )
+    )
+    or v_challenge.challenge_source not in ('password', 'google')
+    then raise exception 'kova_auth_account_unavailable'; end if;
   update kova_private.auth_mfa_recovery_codes set consumed_at = p_now where id = v_recovery.id;
   update kova_private.auth_mfa_login_challenges set consumed_at = p_now where id = v_challenge.id;
   insert into kova_private.auth_sessions(
