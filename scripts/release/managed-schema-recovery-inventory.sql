@@ -8,11 +8,13 @@ WITH managed_relations AS (
   SELECT
     count(*) FILTER (WHERE n.nspname = 'auth')::int AS auth_relations,
     count(*) FILTER (WHERE n.nspname = 'storage')::int AS storage_relations,
+    count(*) FILTER (WHERE n.nspname = 'auth' AND c.relkind = 'S')::int AS auth_sequences,
+    count(*) FILTER (WHERE n.nspname = 'storage' AND c.relkind = 'S')::int AS storage_sequences,
     count(*) FILTER (WHERE n.nspname = 'auth' AND pg_get_userbyid(c.relowner) <> 'supabase_auth_admin')::int AS auth_owner_anomalies,
     count(*) FILTER (WHERE n.nspname = 'storage' AND pg_get_userbyid(c.relowner) <> 'supabase_storage_admin')::int AS storage_owner_anomalies
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname IN ('auth', 'storage') AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+  WHERE n.nspname IN ('auth', 'storage') AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
 ),
 managed_functions AS (
   SELECT
@@ -62,6 +64,8 @@ SELECT jsonb_build_object(
   'catalog', jsonb_build_object(
     'authRelations', r.auth_relations,
     'storageRelations', r.storage_relations,
+    'authSequences', r.auth_sequences,
+    'storageSequences', r.storage_sequences,
     'authRelationOwnerAnomalies', r.auth_owner_anomalies,
     'storageRelationOwnerAnomalies', r.storage_owner_anomalies,
     'authFunctions', f.auth_functions,
