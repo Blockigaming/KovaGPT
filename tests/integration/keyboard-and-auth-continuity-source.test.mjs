@@ -42,7 +42,10 @@ test("email, password, magic-link, and OAuth entry preserve a validated return r
   assert.match(dialog, /emailRedirectTo: getEmailAuthRedirectUri\(\)/);
   assert.match(auth, /emailRedirectTo: getEmailAuthRedirectUri\(\)/);
   assert.ok((auth.match(/getSafePostAuthRedirect\(/g) ?? []).length >= 2);
-  assert.match(auth, /getSafePostAuthRedirect\(search\.googleMfa \? search\.returnTo : undefined\)/u);
+  assert.match(
+    auth,
+    /getSafePostAuthRedirect\(search\.googleMfa \? search\.returnTo : undefined\)/u,
+  );
 
   assert.match(session, /POST_AUTH_REDIRECT_PARAM = "return_to"/);
   assert.match(session, /safeRelativeRedirect\([\s\S]{0,180}OAUTH_CALLBACK_PATH/);
