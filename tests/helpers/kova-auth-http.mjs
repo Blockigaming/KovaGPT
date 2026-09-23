@@ -59,6 +59,14 @@ export function authHttp(options = {}) {
       Response,
       Headers,
       URL,
+      URLSearchParams,
+      AbortSignal,
+      TextDecoder,
+      fetch:
+        options.fetch ??
+        (() => {
+          throw new Error("Unexpected external request");
+        }),
       Buffer,
       Error,
       TypeError,

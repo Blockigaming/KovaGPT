@@ -54,7 +54,7 @@ export function reactFixture(path, select, options = {}) {
       const i = cursor++;
       if (!hooks[i] || deps.some((x, j) => !Object.is(x, hooks[i].deps[j]))) {
         hooks[i]?.cleanup?.();
-        hooks[i] = { deps };
+        hooks[i] = { deps, run };
         effects.push(() => {
           hooks[i].cleanup = run();
         });
@@ -141,6 +141,13 @@ export function reactFixture(path, select, options = {}) {
     nodes: () => nodes(tree),
     text: () => text(tree),
     unmount: () => hooks.forEach((h) => h.cleanup?.()),
+    replayEffects: () =>
+      hooks.forEach((h) => {
+        if (h.run) {
+          h.cleanup?.();
+          h.cleanup = h.run();
+        }
+      }),
     submit: () => find("form").props.onSubmit({ preventDefault() {} }),
     get tree() {
       return tree;

@@ -39,7 +39,6 @@ import {
   createPasswordSession,
   createRecovery,
   deleteCompatibilityPrincipal,
-  disableLegacyPassword,
   finishGoogle,
   finishMfaLogin,
   finishMfaRecoveryLogin,
@@ -70,6 +69,7 @@ const MAX_AUTH_BODY_BYTES = 8 * 1024;
 const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_STATE_COOKIE = "__Host-kova_oauth_state";
+const GOOGLE_BROWSER_COOKIE = "__Host-kova_oauth_browser";
 const GOOGLE_MFA_COOKIE = "__Host-kova_google_mfa";
 const DUMMY_PASSWORD_HASH =
   "scrypt-v1$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -144,6 +144,68 @@ function googleStateCookie(state: string): string {
 
 function clearGoogleStateCookie(): string {
   return `${GOOGLE_STATE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function googleBrowserCookie(value: string): string {
+  return `${GOOGLE_BROWSER_COOKIE}=${value}; Path=/; Max-Age=${value ? 600 : 0}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+type GoogleBrowserBinding = {
+  kind: "google-init" | "google-state" | "google-handoff";
+  browserDigest: string;
+  publicOrigin: string;
+  authOrigin: string;
+  issuedAt: number;
+  expiresAt: number;
+  verifier?: string;
+  handoffDigest?: string;
+  returnTo?: string;
+};
+
+function sealGoogleBinding(
+  kind: GoogleBrowserBinding["kind"],
+  browserDigest: string,
+  extra: Pick<GoogleBrowserBinding, "verifier" | "handoffDigest" | "returnTo"> = {},
+): string {
+  const issuedAt = Date.now();
+  return encryptKovaSecret(
+    JSON.stringify({
+      ...extra,
+      kind,
+      browserDigest,
+      publicOrigin: publicOrigin(),
+      authOrigin: authOrigin(),
+      issuedAt,
+      expiresAt: issuedAt + (kind === "google-handoff" ? KOVA_AUTH_HANDOFF_SECONDS : 600) * 1000,
+    }),
+  );
+}
+
+function readGoogleBinding(
+  envelope: string,
+  kind: GoogleBrowserBinding["kind"],
+): GoogleBrowserBinding {
+  if (!envelope || envelope.length > 4096) throw new Error("google_browser_binding_invalid");
+  const value = JSON.parse(decryptKovaSecret(envelope)) as GoogleBrowserBinding;
+  const now = Date.now();
+  if (
+    !value ||
+    value.kind !== kind ||
+    value.publicOrigin !== publicOrigin() ||
+    value.authOrigin !== authOrigin() ||
+    typeof value.browserDigest !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(value.browserDigest) ||
+    !Number.isSafeInteger(value.issuedAt) ||
+    !Number.isSafeInteger(value.expiresAt) ||
+    value.issuedAt > now ||
+    value.expiresAt <= now ||
+    value.expiresAt <= value.issuedAt ||
+    value.expiresAt - value.issuedAt >
+      (kind === "google-handoff" ? KOVA_AUTH_HANDOFF_SECONDS : 600) * 1000
+  ) {
+    throw new Error("google_browser_binding_invalid");
+  }
+  return value;
 }
 
 function googleMfaCookie(challenge: string): string {
@@ -316,7 +378,6 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
 
   const verificationToken = generateKovaToken();
   const verificationDigest = digestKovaToken(verificationToken);
-  let candidateAccountId: string | null = null;
   try {
     const origin = publicOrigin();
     const link = new URL("/api/auth/verify", origin);
@@ -327,7 +388,7 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       link: link.toString(),
       tokenDigest: verificationDigest,
     });
-    candidateAccountId = await createCompatibilityPrincipal();
+    const candidateAccountId = await createCompatibilityPrincipal();
     const created = await createPasswordAccount({
       candidateAccountId,
       email,
@@ -339,14 +400,14 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
     });
     if (!created.candidateUsed) {
       await cleanupCandidate(candidateAccountId);
-      candidateAccountId = null;
     }
     return json(
       { accepted: true, message: "If this address can be registered, check your inbox." },
       { status: 202 },
     );
   } catch (error) {
-    if (candidateAccountId) await cleanupCandidate(candidateAccountId);
+    // A lost RPC response does not prove rollback. Keep a possibly adopted
+    // account; cleanup requires a positively acknowledged unused candidate.
     console.error("[KovaAuth] Signup failed", {
       error: error instanceof Error ? error.name : "unknown_error",
     });
@@ -996,7 +1057,7 @@ export async function handleKovaRecoveryRequest(request: Request): Promise<Respo
     const recoveryToken = generateKovaToken();
     const recoveryDigest = digestKovaToken(recoveryToken);
     const link = new URL("/reset-password", publicOrigin());
-    link.searchParams.set("token", recoveryToken);
+    link.hash = new URLSearchParams({ token: recoveryToken }).toString();
     await createRecovery({
       email,
       recoveryDigest,
@@ -1043,10 +1104,8 @@ export async function handleKovaRecoveryReset(request: Request): Promise<Respons
         409,
       );
     }
-    // Disable the hosted-auth password before consuming the one-time recovery
-    // token. If the database transaction fails, the Kova token remains usable
-    // for a safe retry and the legacy password cannot regain access.
-    await disableLegacyPassword(accountId);
+    // The owned database transaction retires the old password and hosted
+    // refresh sessions atomically with consumption of this mailbox proof.
     const sessionToken = generateKovaToken();
     const principal = await consumeRecovery({
       recoveryDigest,
@@ -1070,14 +1129,56 @@ export async function handleKovaGoogleStart(request: Request): Promise<Response>
   if (limited) return limited;
   try {
     const configuredAuthOrigin = authOrigin();
-    if (new URL(request.url).origin !== configuredAuthOrigin) return jsonError("Not found", 404);
+    const configuredPublicOrigin = publicOrigin();
+    const url = new URL(request.url);
+    if (![configuredAuthOrigin, configuredPublicOrigin].includes(url.origin))
+      return jsonError("Not found", 404);
     const clientId = process.env.KOVA_GOOGLE_CLIENT_ID;
     if (!clientId) throw new Error("Google OAuth is not configured");
-    const returnTo = safeRelativeRedirect(
-      new URL(request.url).searchParams.get("return_to"),
-      publicOrigin(),
-      "/api/auth/google",
-    );
+    const headers = noStoreHeaders();
+    let browserDigest: string;
+    let returnTo: string;
+    if (url.origin === configuredPublicOrigin) {
+      // The eventual session host must set its own host-only proof. Never
+      // accept a caller-supplied browser binding at this public entry point.
+      if (url.searchParams.has("init")) return jsonError("Invalid Google sign in.", 400);
+      const browser = generateKovaToken();
+      browserDigest = digestKovaToken(browser);
+      returnTo = safeRelativeRedirect(
+        url.searchParams.get("return_to"),
+        configuredPublicOrigin,
+        "/api/auth/google",
+      );
+      headers.append("Set-Cookie", googleBrowserCookie(browser));
+      if (configuredPublicOrigin !== configuredAuthOrigin) {
+        const target = new URL("/api/auth/google/start", configuredAuthOrigin);
+        target.searchParams.set(
+          "init",
+          sealGoogleBinding("google-init", browserDigest, { returnTo }),
+        );
+        headers.set("Location", target.toString());
+        return new Response(null, { status: 303, headers });
+      }
+    } else {
+      if (!url.searchParams.has("init")) {
+        const target = new URL("/api/auth/google/start", configuredPublicOrigin);
+        target.searchParams.set(
+          "return_to",
+          safeRelativeRedirect(
+            url.searchParams.get("return_to"),
+            configuredPublicOrigin,
+            "/api/auth/google",
+          ),
+        );
+        headers.set("Location", target.toString());
+        return new Response(null, { status: 303, headers });
+      }
+      if (url.searchParams.getAll("init").length !== 1)
+        return jsonError("Invalid Google sign in.", 400);
+      const binding = readGoogleBinding(url.searchParams.get("init")!, "google-init");
+      browserDigest = binding.browserDigest;
+      returnTo = safeRelativeRedirect(binding.returnTo, configuredPublicOrigin, "/api/auth/google");
+    }
     const state = generateKovaToken();
     const nonce = generateKovaToken();
     const verifier = generateKovaToken(48);
@@ -1085,7 +1186,7 @@ export async function handleKovaGoogleStart(request: Request): Promise<Response>
     await createOAuthState({
       stateDigest: digestKovaToken(state),
       nonceDigest: createHash("sha256").update(nonce, "utf8").digest("hex"),
-      pkceVerifierCiphertext: encryptKovaSecret(verifier),
+      pkceVerifierCiphertext: sealGoogleBinding("google-state", browserDigest, { verifier }),
       returnTo,
       expiresAt: futureIso(600),
     });
@@ -1100,13 +1201,9 @@ export async function handleKovaGoogleStart(request: Request): Promise<Response>
     authorization.searchParams.set("code_challenge", challenge);
     authorization.searchParams.set("code_challenge_method", "S256");
     authorization.searchParams.set("prompt", "select_account");
-    return new Response(null, {
-      status: 302,
-      headers: noStoreHeaders({
-        Location: authorization.toString(),
-        "Set-Cookie": googleStateCookie(state),
-      }),
-    });
+    headers.set("Location", authorization.toString());
+    headers.append("Set-Cookie", googleStateCookie(state));
+    return new Response(null, { status: 302, headers });
   } catch (error) {
     console.error("[KovaAuth] Google start failed", {
       error: error instanceof Error ? error.name : "unknown_error",
@@ -1130,7 +1227,6 @@ function googleFailureRedirect(code: string): Response {
 export async function handleKovaGoogleCallback(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  let candidateAccountId: string | null = null;
   try {
     const configuredAuthOrigin = authOrigin();
     if (new URL(request.url).origin !== configuredAuthOrigin) return jsonError("Not found", 404);
@@ -1141,6 +1237,13 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
     const state = url.searchParams.get("state") ?? "";
     if (!googleStateMatches(request, state)) return googleFailureRedirect("google_invalid_state");
     const stateRecord = await consumeOAuthState(digestKovaToken(state));
+    const binding = readGoogleBinding(stateRecord.pkceVerifierCiphertext, "google-state");
+    if (
+      typeof binding.verifier !== "string" ||
+      !/^[A-Za-z0-9_-]{43,128}$/u.test(binding.verifier)
+    ) {
+      return googleFailureRedirect("google_invalid_state");
+    }
     if (url.searchParams.has("error")) return googleFailureRedirect("google_denied");
     const code = url.searchParams.get("code");
     if (!code || code.length > 4096) return googleFailureRedirect("google_invalid_callback");
@@ -1154,7 +1257,7 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
         client_secret: clientSecret,
         redirect_uri: `${configuredAuthOrigin}/api/auth/google/callback`,
         grant_type: "authorization_code",
-        code_verifier: decryptKovaSecret(stateRecord.pkceVerifierCiphertext),
+        code_verifier: binding.verifier,
       }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -1171,7 +1274,7 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       expectedNonceDigest: stateRecord.nonceDigest,
     });
 
-    candidateAccountId = await createCompatibilityPrincipal();
+    const candidateAccountId = await createCompatibilityPrincipal();
     const handoff = generateKovaToken();
     const result = await finishGoogle({
       candidateAccountId,
@@ -1183,10 +1286,16 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
     });
     if (!result.candidateUsed) {
       await cleanupCandidate(candidateAccountId);
-      candidateAccountId = null;
     }
     const target = new URL("/api/auth/google/exchange", publicOrigin());
     target.searchParams.set("handoff", handoff);
+    target.searchParams.set(
+      "binding",
+      sealGoogleBinding("google-handoff", binding.browserDigest, {
+        handoffDigest: digestKovaToken(handoff),
+        returnTo: stateRecord.returnTo,
+      }),
+    );
     target.searchParams.set("return_to", stateRecord.returnTo);
     return new Response(null, {
       status: 303,
@@ -1196,7 +1305,7 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       }),
     });
   } catch (error) {
-    if (candidateAccountId) await cleanupCandidate(candidateAccountId);
+    // Preserve a possibly committed account after an ambiguous response.
     console.error("[KovaAuth] Google callback failed", {
       error: error instanceof Error ? error.name : "unknown_error",
     });
@@ -1211,7 +1320,26 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
     const configuredPublicOrigin = publicOrigin();
     const url = new URL(request.url);
     if (url.origin !== configuredPublicOrigin) return jsonError("Not found", 404);
+    if (
+      url.searchParams.getAll("handoff").length !== 1 ||
+      url.searchParams.getAll("binding").length !== 1
+    ) {
+      return googleFailureRedirect("google_handoff_invalid");
+    }
     const handoff = url.searchParams.get("handoff") ?? "";
+    const binding = readGoogleBinding(url.searchParams.get("binding")!, "google-handoff");
+    const browser =
+      parseCookieHeader(request.headers.get("cookie")).get(GOOGLE_BROWSER_COOKIE) ?? "";
+    // Authenticate both proofs BEFORE consuming the handoff, issuing MFA
+    // authority, or replacing a session. A transferred link has neither right.
+    if (
+      binding.handoffDigest !== digestKovaToken(handoff) ||
+      !timingSafeEqual(
+        Buffer.from(binding.browserDigest, "hex"),
+        Buffer.from(digestKovaToken(browser), "hex"),
+      )
+    )
+      return googleFailureRedirect("google_handoff_invalid");
     const sessionToken = generateKovaToken();
     const challengeToken = generateKovaToken();
     const exchanged = await exchangeGoogleHandoff({
@@ -1222,7 +1350,7 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
       challengeExpiresAt: futureIso(MFA_LOGIN_CHALLENGE_SECONDS),
     });
     const returnTo = safeRelativeRedirect(
-      url.searchParams.get("return_to"),
+      binding.returnTo,
       configuredPublicOrigin,
       "/api/auth/google",
     );
@@ -1232,23 +1360,24 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
       target.searchParams.set("mode", "sign-in");
       target.searchParams.set("google_mfa", "1");
       target.searchParams.set("return_to", returnTo);
+      const headers = noStoreHeaders({
+        Location: target.toString(),
+        "Set-Cookie": googleMfaCookie(challengeToken),
+      });
+      headers.append("Set-Cookie", googleBrowserCookie(""));
       return new Response(null, {
         status: 303,
-        headers: noStoreHeaders({
-          Location: target.toString(),
-          "Set-Cookie": googleMfaCookie(challengeToken),
-        }),
+        headers,
       });
     }
-    return new Response(null, {
-      status: 303,
-      headers: noStoreHeaders({
-        Location: new URL(returnTo, configuredPublicOrigin).toString(),
-        "Set-Cookie": serializeKovaSessionCookie(sessionToken, {
-          maxAge: KOVA_AUTH_SESSION_SECONDS,
-        }),
+    const headers = noStoreHeaders({
+      Location: new URL(returnTo, configuredPublicOrigin).toString(),
+      "Set-Cookie": serializeKovaSessionCookie(sessionToken, {
+        maxAge: KOVA_AUTH_SESSION_SECONDS,
       }),
     });
+    headers.append("Set-Cookie", googleBrowserCookie(""));
+    return new Response(null, { status: 303, headers });
   } catch {
     return googleFailureRedirect("google_handoff_invalid");
   }

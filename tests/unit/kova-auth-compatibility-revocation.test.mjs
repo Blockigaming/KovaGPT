@@ -384,8 +384,12 @@ test("malformed and incomplete Kova claims fail closed, including null/unknown m
     assert.equal(await active(value), false, JSON.stringify(value).slice(0, 80));
 });
 
-test("unmarked hosted/anonymous/service claims retain existing authority and RLS rules", async () => {
-  const owner = await account();
+test("unretired hosted/anonymous/service claims retain authority; an adopted password cannot bypass retirement", async () => {
+  const owner = { account_id: randomUUID() };
+  await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())", [
+    owner.account_id,
+    `${owner.account_id}@legacy.example.invalid`,
+  ]);
   for (const claims of [
     { role: "anon" },
     { role: "service_role" },
@@ -398,6 +402,8 @@ test("unmarked hosted/anonymous/service claims retain existing authority and RLS
   ]) {
     assert.equal(await active(claims), true);
   }
+  const adopted = await account();
+  assert.equal(await active({ role: "authenticated", sub: adopted.account_id }), false);
   assert.equal(
     (await asCaller({ role: "anon" }, "select * from public.guard_fixture", [], "anon")).rows
       .length,
@@ -512,5 +518,20 @@ test("the aggregate release proof rejects later unguarded tables and weakened po
     }),
     (error) => error === rollback,
   );
+  assert.deepEqual(await proof(), original);
+  for (const target of [
+    "kova_private.legacy_principal_permitted",
+    "public.kova_auth_legacy_session_allowed",
+  ]) {
+    await assert.rejects(
+      db.transaction(async (tx) => {
+        await tx.exec(`create or replace function ${target}(p_account_id uuid) returns boolean
+        language sql stable security definer set search_path='' set statement_timeout='5s' as $$ select true $$`);
+        assert.equal(Number((await tx.query(sql)).rows[0].invalid_guard_functions), 1);
+        throw rollback;
+      }),
+      (error) => error === rollback,
+    );
+  }
   assert.deepEqual(await proof(), original);
 });

@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { getHostedCallbackAuth } from "@/integrations/supabase/client";
 import { safeRelativeRedirect } from "@/lib/auth-security.mjs";
 
 export const OAUTH_CALLBACK_PATH = "/~oauth/callback";
@@ -178,12 +178,19 @@ export function clearOAuthResponseFromUrl() {
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
 }
 
-async function waitForStoredSession(candidate: Session | null): Promise<Session | null> {
+type HostedCallback = Awaited<ReturnType<typeof getHostedCallbackAuth>>;
+
+async function waitForStoredSession(
+  candidate: Session | null,
+  lease: HostedCallback,
+): Promise<Session | null> {
+  lease.assertCurrent();
   if (candidate?.access_token && candidate.refresh_token) {
-    const { error } = await supabase.auth.setSession({
+    const { error } = await lease.auth.setSession({
       access_token: candidate.access_token,
       refresh_token: candidate.refresh_token,
     });
+    lease.assertCurrent();
     if (error) {
       console.error("[KovaAuth] Session persistence failed after OAuth.", {
         error: authErrorKind(error),
@@ -193,7 +200,9 @@ async function waitForStoredSession(candidate: Session | null): Promise<Session 
   }
 
   for (let i = 0; i < 20; i += 1) {
-    const { data, error } = await supabase.auth.getSession();
+    lease.assertCurrent();
+    const { data, error } = await lease.auth.getSession();
+    lease.assertCurrent();
     if (error) {
       console.error("[KovaAuth] Session read failed after OAuth.", {
         error: authErrorKind(error),
@@ -201,7 +210,8 @@ async function waitForStoredSession(candidate: Session | null): Promise<Session 
       throw error;
     }
     if (data.session?.access_token) {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await lease.auth.getUser();
+      lease.assertCurrent();
       if (userError || !userData.user) {
         console.error("[KovaAuth] Current user check failed after OAuth.", {
           error: authErrorKind(userError),
@@ -220,6 +230,11 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
   const url = getCurrentUrl();
   if (!url) return null;
 
+  // Snapshot credentials once, then remove them before asynchronous work.
+  clearOAuthResponseFromUrl();
+  const lease = await getHostedCallbackAuth();
+  lease.assertCurrent();
+
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
     console.error(`[KovaAuth] OAuth callback error from ${source}.`, {
@@ -235,37 +250,40 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
   const accessToken = hash.get("access_token");
   const refreshToken = hash.get("refresh_token");
   if (accessToken && refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
+    const { data, error } = await lease.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
+    lease.assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth token session save failed from ${source}.`, {
         error: authErrorKind(error),
       });
       throw error;
     }
-    return waitForStoredSession(data.session ?? null);
+    return waitForStoredSession(data.session ?? null, lease);
   }
 
   const code = url.searchParams.get("code");
   if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await lease.auth.exchangeCodeForSession(code);
+    lease.assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth code exchange failed from ${source}.`, {
         error: authErrorKind(error),
       });
       throw error;
     }
-    return waitForStoredSession(data.session ?? null);
+    return waitForStoredSession(data.session ?? null, lease);
   }
 
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await lease.auth.getSession();
+  lease.assertCurrent();
   if (error) {
     console.error(`[KovaAuth] Session lookup failed from ${source}.`, {
       error: authErrorKind(error),
     });
     throw error;
   }
-  return waitForStoredSession(data.session ?? null);
+  return waitForStoredSession(data.session ?? null, lease);
 }

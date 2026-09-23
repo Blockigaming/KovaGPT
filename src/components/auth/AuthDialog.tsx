@@ -17,7 +17,7 @@ import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { cn } from "@/lib/utils";
-import { browserKovaAuthEnabled, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled } from "@/lib/kova-auth-browser";
 
 type Mode = "sign-in" | "sign-up";
 type Step = "identify" | "magic-sent";
@@ -120,7 +120,7 @@ export function AuthDialog({
     try {
       rememberPostAuthRedirect();
       if (useKovaAuth) {
-        const start = new URL("/api/auth/google/start", browserKovaAuthOrigin());
+        const start = new URL("/api/auth/google/start", window.location.origin);
         start.searchParams.set(
           "return_to",
           `${window.location.pathname}${window.location.search}${window.location.hash}`,

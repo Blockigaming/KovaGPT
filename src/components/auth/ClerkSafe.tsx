@@ -63,6 +63,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import {
   browserKovaAuthMode,
   fetchKovaSession,
+  resolveKovaSessionAuthority,
   isKovaSessionRejectedError,
   setKovaSessionActive,
   type KovaBrowserPrincipal,
@@ -147,7 +148,7 @@ function KovaClerkProvider({
     let cancelled = false;
     void (async () => {
       try {
-        const principal = await fetchKovaSession();
+        const principal = await resolveKovaSessionAuthority();
         if (cancelled) return;
         if (!principal && allowLegacyFallback) {
           setKovaSessionActive(false);

@@ -95,6 +95,66 @@ test("requests started before an MFA change cannot restore stale tokens or princ
   assert.equal((await f.api.getCachedKovaSession()).sessionId, "session-2");
 });
 
+for (const mode of ["kova", "dual"]) {
+  test(`${mode}: rejected cookies invalidate cached and in-flight data tokens while retaining owned authority`, async () => {
+    const exports = {};
+    let held = false;
+    let release;
+    let tokenCalls = 0;
+    vm.runInNewContext(browserSource, {
+      exports,
+      Response,
+      URL,
+      Error,
+      TEST_ENV: { VITE_KOVA_AUTH_MODE: mode },
+      fetch: async (path) => {
+        assert.ok(path === "/api/auth/session" || path === "/api/auth/token");
+        if (path.endsWith("session")) return new Response(null, { status: 401 });
+        tokenCalls++;
+        if (held)
+          await new Promise((resolve) => {
+            release = resolve;
+          });
+        return Response.json({ accessToken: `token-${tokenCalls}`, expiresIn: 300 });
+      },
+    });
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-1");
+    await assert.rejects(exports.fetchKovaSession(), exports.isKovaSessionRejectedError);
+    assert.equal(exports.isKovaSessionActive(), true);
+    assert.equal(await exports.getCachedKovaSession(), null);
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-2");
+    exports.clearKovaAuthCache();
+    held = true;
+    const delayed = exports.getKovaCompatibilityToken();
+    await assert.rejects(exports.fetchKovaSession(), exports.isKovaSessionRejectedError);
+    release();
+    assert.equal(await delayed, null);
+    assert.equal(exports.isKovaSessionActive(), true);
+  });
+}
+
+test("a session response body delayed across credential invalidation cannot restore the old principal", async () => {
+  const exports = {};
+  let release;
+  const body = new Promise((resolve) => {
+    release = resolve;
+  });
+  vm.runInNewContext(browserSource, {
+    exports,
+    Response,
+    URL,
+    Error,
+    TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
+    fetch: async () => ({ ok: true, status: 200, json: () => body }),
+  });
+  const delayed = exports.fetchKovaSession();
+  const rejected = assert.rejects(delayed, /kova_session_changed/u);
+  await Promise.resolve();
+  exports.clearKovaAuthCache();
+  release({ session: principal("old-body") });
+  await rejected;
+});
+
 test("provider-neutral function middleware forwards only an authoritative principal and propagates denial without a legacy fallback", async () => {
   const source = transpile(readFileSync("src/integrations/supabase/auth-middleware.ts", "utf8"));
   for (const result of [
@@ -208,11 +268,99 @@ test("a preferred owned credential never reaches Supabase Auth or creates an adm
     });
     const result = await exports.optionalUser(request);
     if (behavior === "valid") {
+      assert.equal(result.authProvider, "kova");
       assert.equal(result.userId, "owner");
       assert.deepEqual(calls, ["owned-authority", "publishable", "admin"]);
     } else {
       assert.equal(result.status, behavior === "denied" ? 401 : 503);
       assert.deepEqual(calls, ["owned-authority"]);
     }
+  }
+});
+
+test("dual-mode bearer admission rechecks owned retirement after hosted verification and fails closed on every unavailable result", async () => {
+  const source = transpile(readFileSync("src/lib/api-auth.server.ts", "utf8"));
+  const owner = "10000000-0000-4000-8000-000000000001";
+  for (const scenario of ["allowed", "retired", "malformed", "error", "thrown", "invalid-hosted"]) {
+    const calls = [];
+    const exports = {};
+    const modules = {
+      "@supabase/supabase-js": {
+        createClient: (_url, key) => {
+          calls.push(key);
+          if (key === "admin")
+            return {
+              rpc: async (name, args) => {
+                calls.push("retirement");
+                assert.equal(name, "kova_auth_legacy_session_allowed");
+                assert.equal(args.p_account_id, owner);
+                if (scenario === "thrown") throw Error("private upstream diagnostic");
+                if (scenario === "error")
+                  return { error: { message: "private upstream diagnostic" } };
+                return {
+                  data: scenario === "allowed" ? true : scenario === "malformed" ? "true" : false,
+                };
+              },
+            };
+          return {
+            auth: {
+              getUser: async () => {
+                calls.push("verified-user");
+                return scenario === "invalid-hosted"
+                  ? { error: {} }
+                  : {
+                      data: { user: { id: owner, email_confirmed_at: "2026-01-01T00:00:00Z" } },
+                    };
+              },
+              getClaims: async () => {
+                calls.push("verified-claims");
+                return { data: { claims: { sub: owner, aal: "aal1" } } };
+              },
+            },
+          };
+        },
+      },
+      "@/lib/billing-entitlement.server": {},
+      "@/lib/auth-security.mjs": security,
+      "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "dual" },
+      "@/lib/kova-auth-crypto.server.mjs": {},
+      "@/lib/kova-auth-store.server": { resolveSession: () => assert.fail("not an owned cookie") },
+    };
+    vm.runInNewContext(source, {
+      exports,
+      Response,
+      Error,
+      process: {
+        env: {
+          SUPABASE_URL: "https://fixture.invalid",
+          SUPABASE_PUBLISHABLE_KEY: "publishable",
+          SUPABASE_SERVICE_ROLE_KEY: "admin",
+        },
+      },
+      console: { error: () => assert.fail("no private errors in logs") },
+      require: (name) => {
+        assert.ok(Object.hasOwn(modules, name));
+        return modules[name];
+      },
+    });
+    const result = await exports.optionalUser(
+      new Request("https://kova.test/api/private", {
+        headers: { Authorization: "Bearer verified-hosted-fixture" },
+      }),
+    );
+    if (scenario === "allowed") {
+      assert.equal(result.userId, owner);
+      assert.equal(result.authProvider, "supabase");
+    } else {
+      assert.equal(result.status, ["error", "thrown"].includes(scenario) ? 503 : 401, scenario);
+      assert.equal(result.headers.get("Cache-Control"), "no-store");
+      assert.ok(!(await result.text()).includes("private upstream"));
+    }
+    assert.deepEqual(
+      calls,
+      scenario === "invalid-hosted"
+        ? ["publishable", "verified-user", "verified-claims"]
+        : ["publishable", "verified-user", "verified-claims", "admin", "retirement"],
+    );
   }
 });

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,8 @@ import {
   hasRecentPasswordRecoveryFlow,
   markPasswordRecoveryFlow,
 } from "@/lib/oauth-session";
-import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled, browserKovaAuthMode, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { readKovaRecoveryLink, type KovaRecoveryLink } from "@/lib/kova-recovery-link.mjs";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -36,18 +37,27 @@ function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
+  const recoveryLink = useRef<KovaRecoveryLink | null>(null);
   const useKovaRecovery = browserKovaAuthEnabled() && recoveryToken !== null;
 
   useEffect(() => {
-    const kovaToken = new URLSearchParams(window.location.search).get("token");
-    if (browserKovaAuthEnabled() && kovaToken) {
-      setRecoveryToken(kovaToken);
-      setReady(true);
-      if (!/^[A-Za-z0-9_-]{43,128}$/.test(kovaToken)) {
-        setError(
-          "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
-        );
+    // Capture once across StrictMode effect replay; retain only in component
+    // memory and scrub before making the password form available.
+    recoveryLink.current ??= readKovaRecoveryLink(window.location.href, browserKovaAuthMode());
+    const captured = recoveryLink.current;
+    if (captured.owned) {
+      try {
+        window.history.replaceState({}, document.title, captured.cleanPath ?? "/reset-password");
+      } catch {
+        captured.token = null;
       }
+      setRecoveryToken(captured.token);
+      setError(
+        captured.token
+          ? null
+          : "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
+      );
+      setReady(true);
       return;
     }
     if (!getSupabaseClientConfigStatus().configured) {
@@ -121,6 +131,7 @@ function ResetPassword() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ready || error || loading) return;
     const minimumLength = useKovaRecovery ? 12 : 6;
     if (password.length < minimumLength) {
       toast.error(`Password must be at least ${minimumLength} characters.`);

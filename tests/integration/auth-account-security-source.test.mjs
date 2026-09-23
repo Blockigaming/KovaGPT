@@ -32,7 +32,7 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
   assert.doesNotMatch(middleware, /createClient/);
   const authoritativeUserCheck = apiAuth.indexOf("verifier.auth.getUser(token)");
   const privilegedClient = apiAuth.indexOf(
-    "supabaseAdmin: createAdminClient()",
+    "const admin = createAdminClient()",
     authoritativeUserCheck,
   );
   assert.ok(authoritativeUserCheck >= 0);

@@ -14,11 +14,16 @@ export const DAILY_CHAT_LIMIT = 50;
 export const DAILY_UPLOAD_LIMIT = 2;
 export type AuthedCaller = {
   userId: string;
+  // Internal, separately authenticated service actors also reuse this data
+  // context. Only an HTTP session principal must carry a browser authority.
+  authProvider?: "kova" | "supabase";
   supabaseUser: SupabaseClient<Database>;
   supabaseAdmin: SupabaseClient<Database>;
   emailVerified: boolean;
   claims?: Record<string, unknown>;
 };
+
+export type HttpAuthedCaller = AuthedCaller & { authProvider: "kova" | "supabase" };
 
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
@@ -38,7 +43,7 @@ export function tooMany(message = "Daily limit reached") {
   return jsonError(message, 429);
 }
 
-export async function requireUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireUser(request: Request): Promise<HttpAuthedCaller | Response> {
   const result = await optionalUser(request);
   if (!result) return unauthorized();
   if (result instanceof Response) return result;
@@ -50,7 +55,7 @@ export async function requireUser(request: Request): Promise<AuthedCaller | Resp
  * `null` if the request is anonymous (no token at all), or a Response when
  * the token is present but invalid/expired.
  */
-export async function optionalUser(request: Request): Promise<AuthedCaller | null | Response> {
+export async function optionalUser(request: Request): Promise<HttpAuthedCaller | null | Response> {
   // Anonymous requests do not need an auth client. Check the credential first
   // so protected routes return a truthful 401 even when a deployment is
   // missing auth configuration, rather than exposing configuration state as a
@@ -109,6 +114,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
       };
       return {
         userId: principal.accountId,
+        authProvider: "kova",
         supabaseUser: verifier,
         supabaseAdmin: createAdminClient(),
         emailVerified: principal.emailVerified,
@@ -156,12 +162,29 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     return unauthorized("Invalid or expired session");
   }
 
+  const admin = createAdminClient();
+  if (resolveKovaAuthMode() === "dual") {
+    // Hosted JWT signatures do not prove that the account still accepts that
+    // authority after a Kova password change or recovery. No fallback on error.
+    try {
+      const { data, error } = await admin.rpc(
+        "kova_auth_legacy_session_allowed" as never,
+        { p_account_id: access.userId } as never,
+      );
+      if (error) return jsonError("Authentication is temporarily unavailable.", 503);
+      if (data !== true) return unauthorized("Invalid or expired session");
+    } catch {
+      return jsonError("Authentication is temporarily unavailable.", 503);
+    }
+  }
+
   return {
     userId: access.userId,
+    authProvider: "supabase",
     // This client carries the verified caller's JWT and is therefore subject
     // to RLS. Use it for authorization lookups before service-role writes.
     supabaseUser: verifier,
-    supabaseAdmin: createAdminClient(),
+    supabaseAdmin: admin,
     emailVerified: access.emailVerified,
     claims: claimsData.claims as Record<string, unknown>,
   };
@@ -171,7 +194,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
  * Like requireUser, but additionally requires a verified email address.
  * Use for high-cost / abuse-prone actions (image generation and uploads).
  */
-export async function requireVerifiedUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireVerifiedUser(request: Request): Promise<HttpAuthedCaller | Response> {
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   if (!auth.emailVerified) {

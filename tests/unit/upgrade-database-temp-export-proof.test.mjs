@@ -321,8 +321,8 @@ test("temporary export: real source plan captures both checkpoints and writes li
   const bytes = readFileSync(join(data.root, "artifacts/release", TEMP_EXPORT_PROOF_FILE));
   const record = JSON.parse(bytes);
   assert.equal(record.baseline.capture.ledgerVersionCount, 98);
-  assert.equal(record.upgraded.capture.ledgerVersionCount, 192);
-  assert.equal(result.forwardMigrations.length, 94);
+  assert.equal(record.upgraded.capture.ledgerVersionCount, 195);
+  assert.equal(result.forwardMigrations.length, 97);
   assert.equal(result.temporaryExportProof.sha256, hash(bytes));
   assert.equal(result.temporaryExportProof.querySha256, record.querySha256);
   assert.equal(result.sourceCommit, record.sourceCommit);

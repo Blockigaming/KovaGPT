@@ -5,6 +5,8 @@ import type { Database } from "./types";
 import { SUPABASE_BROWSER_CONFIG } from "./config";
 import {
   browserKovaAuthMode,
+  getKovaAuthGeneration,
+  resolveKovaSessionAuthority,
   getCachedKovaSession,
   getKovaCompatibilityToken,
   isKovaSessionActive,
@@ -68,6 +70,27 @@ function createSupabaseClient(kind: "legacy" | "kova") {
 
 let _legacySupabase: ReturnType<typeof createSupabaseClient> | undefined;
 let _kovaSupabase: ReturnType<typeof createSupabaseClient> | undefined;
+
+export async function getHostedCallbackAuth() {
+  if (browserKovaAuthMode() === "kova") throw new Error("hosted_callback_disabled");
+  if (browserKovaAuthMode() === "dual" && (await resolveKovaSessionAuthority())) {
+    throw new Error("hosted_callback_conflicts_with_kova");
+  }
+  // 401/unavailable cookie probes throw rather than grant legacy fallback.
+  const generation = getKovaAuthGeneration();
+  const assertCurrent = () => {
+    if (
+      browserKovaAuthMode() === "kova" ||
+      generation !== getKovaAuthGeneration() ||
+      (browserKovaAuthMode() === "dual" && isKovaSessionActive())
+    ) {
+      throw new Error("hosted_callback_authority_changed");
+    }
+  };
+  assertCurrent();
+  if (!_legacySupabase) _legacySupabase = createSupabaseClient("legacy");
+  return { auth: _legacySupabase.auth, assertCurrent };
+}
 
 export async function signOutLegacySupabaseSession() {
   if (!_legacySupabase) _legacySupabase = createSupabaseClient("legacy");

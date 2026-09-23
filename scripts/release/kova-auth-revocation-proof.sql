@@ -16,24 +16,26 @@ with targets as (
     and (select array_agg(role_id order by role_id) from unnest(p.polroles) role_id)=(select ids from expected_roles)
     and regexp_replace(pg_catalog.pg_get_expr(p.polqual,p.polrelid),'\s','','g')='(SELECTkova_auth_guard.session_is_active()ASsession_is_active)'
     and regexp_replace(pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid),'\s','','g')='(SELECTkova_auth_guard.session_is_active()ASsession_is_active)'
-), expected_functions(name,definer,body_sha256) as (
-  values ('session_is_active',true,'9af8752e28bb22fe416a752d2a99fcfdf7bd58b0b6b60a4487c1b278a7618e60'),
-    ('check_request',false,'c8aa8a9974380dddf33a52ae229f5a645581494da4570c74b8fececb189853a9')
+), expected_functions(schema_name,name,args,definer,config,execute_roles,body_sha256) as (
+  values ('kova_auth_guard','session_is_active',''::oidvector,true,array['search_path=""'],array['anon','authenticated','service_role'],'2e3b09bd213f3916b5509b8cf787a86605a101cfd0efc07d3b79782286ab47ab'),
+    ('kova_auth_guard','check_request',''::oidvector,false,array['search_path=""'],array['anon','authenticated','service_role'],'c8aa8a9974380dddf33a52ae229f5a645581494da4570c74b8fececb189853a9'),
+    ('kova_private','legacy_principal_permitted','2950'::oidvector,true,array['search_path=""','statement_timeout=5s'],array[]::text[],'8396a0ba4de039db3304c45bedd3cbc9d571cdb38aa446bad795f556859b3b37'),
+    ('public','kova_auth_legacy_session_allowed','2950'::oidvector,true,array['search_path=""','statement_timeout=5s'],array['service_role'],'9c9fbcd225bfccd557d5fdf057ec8043d44e42843602d93041cd1080cb0545af')
 )
 select
   (select count(*) from targets) as scoped_rls_tables,
   (select count(*) from targets t where not exists(select 1 from guarded g where g.polrelid=t.oid)) as unguarded_rls_tables,
   (select count(*) from expected_functions e where not exists(
     select 1 from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='kova_auth_guard' and p.proname=e.name and p.pronargs=0
-      and p.prosecdef=e.definer and p.provolatile='s' and p.proconfig=array['search_path=""']
+    where n.nspname=e.schema_name and p.proname=e.name and p.proargtypes=e.args
+      and p.prosecdef=e.definer and p.provolatile='s' and p.proconfig=e.config
       and encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')=e.body_sha256
-      and has_function_privilege('anon',p.oid,'execute')
-      and has_function_privilege('authenticated',p.oid,'execute')
-      and has_function_privilege('service_role',p.oid,'execute')
+      and has_function_privilege('anon',p.oid,'execute')=('anon'=any(e.execute_roles))
+      and has_function_privilege('authenticated',p.oid,'execute')=('authenticated'=any(e.execute_roles))
+      and has_function_privilege('service_role',p.oid,'execute')=('service_role'=any(e.execute_roles))
       and not exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
         where a.privilege_type='EXECUTE' and a.grantee<>p.proowner
-          and a.grantee not in(select oid from pg_catalog.pg_roles where rolname in('anon','authenticated','service_role')))
+          and a.grantee not in(select oid from pg_catalog.pg_roles where rolname=any(e.execute_roles)))
   )) as invalid_guard_functions,
   (select count(*) from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
     where n.nspname='kova_private' and c.relkind in('r','p') and

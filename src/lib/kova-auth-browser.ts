@@ -25,6 +25,7 @@ export function isKovaSessionRejectedError(value: unknown): value is KovaSession
 let tokenCache: TokenCache = null;
 let principalCache: PrincipalCache = null;
 let cacheGeneration = 0;
+let authorityProbe: Promise<KovaBrowserPrincipal | null> | null = null;
 // In dual mode, hold direct Supabase access on the Kova path until the
 // HttpOnly-cookie probe proves that the browser has no Kova session. This
 // prevents a stale legacy localStorage token from briefly loading a different
@@ -52,10 +53,30 @@ export function browserKovaAuthOrigin(currentOrigin = window.location.origin): s
 }
 
 export function setKovaSessionActive(active: boolean): void {
+  if (kovaSessionActive === active) return;
   kovaSessionActive = active;
   if (!active) {
     clearKovaAuthCache();
   }
+}
+
+export function getKovaAuthGeneration(): number {
+  return cacheGeneration;
+}
+
+// The provider and an OAuth callback can mount together. Share the initial
+// cookie decision so neither guesses from the provisional dual-mode flag.
+export function resolveKovaSessionAuthority(): Promise<KovaBrowserPrincipal | null> {
+  if (authorityProbe) return authorityProbe;
+  authorityProbe = fetchKovaSession()
+    .then((principal) => {
+      setKovaSessionActive(Boolean(principal) || browserKovaAuthMode() === "kova");
+      return principal;
+    })
+    .finally(() => {
+      authorityProbe = null;
+    });
+  return authorityProbe;
 }
 
 export function clearKovaAuthCache(): void {
@@ -78,11 +99,16 @@ export async function fetchKovaSession(): Promise<KovaBrowserPrincipal | null> {
   // principal after the MFA/device control has invalidated the cache.
   if (generation !== cacheGeneration) throw new Error("kova_session_changed");
   if (response.status === 401) {
+    // Also invalidate compatibility tokens and requests already in flight. The
+    // provider keeps Kova authority selected so rejection cannot reveal a stale
+    // hosted login, while still making the ordinary sign-in controls usable.
+    clearKovaAuthCache();
     principalCache = { principal: null, refreshAt: Date.now() + 5_000 };
     throw new KovaSessionRejectedError();
   }
   if (!response.ok) throw new Error(`kova_session_${response.status}`);
   const payload = (await response.json()) as { session?: unknown };
+  if (generation !== cacheGeneration) throw new Error("kova_session_changed");
   if (payload.session === null) {
     principalCache = { principal: null, refreshAt: Date.now() + 5_000 };
     return null;

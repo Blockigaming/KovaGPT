@@ -1,6 +1,4 @@
-import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { generateKovaToken } from "@/lib/kova-auth-crypto.server.mjs";
 import type { KovaPrincipal } from "@/lib/kova-auth-crypto.server.mjs";
 
 type JsonObject = Record<string, unknown>;
@@ -88,17 +86,11 @@ function principalFromRow(row: Record<string, unknown>): KovaPrincipal {
 export const kovaAuthStore = { rpc, firstRow, principalFromRow };
 
 export async function createCompatibilityPrincipal(): Promise<string> {
-  const marker = randomUUID();
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    email: `shadow+${marker}@auth.invalid.kovagpt.com`,
-    password: generateKovaToken(48),
-    email_confirm: true,
-    app_metadata: { provider: "kova_shadow", providers: ["kova_shadow"] },
-    user_metadata: { kova_shadow: true },
-  });
-  if (error || !data.user?.id)
-    throw new KovaAuthStoreError("create_compatibility_principal", error);
-  return data.user.id;
+  const value = await rpc<unknown>("kova_auth_create_compatibility_principal", {});
+  if (typeof value !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu.test(value)) {
+    throw new KovaAuthStoreError("create_compatibility_principal");
+  }
+  return value;
 }
 
 export async function compatibilityDirectoryEmail(accountId: string): Promise<string | null> {
@@ -107,21 +99,29 @@ export async function compatibilityDirectoryEmail(accountId: string): Promise<st
 }
 
 export async function deleteCompatibilityPrincipal(accountId: string): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(accountId, false);
-  if (error) throw new KovaAuthStoreError("delete_compatibility_principal", error);
-}
-
-export async function disableLegacyPassword(accountId: string): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(accountId, {
-    password: generateKovaToken(48),
+  const value = await rpc<unknown>("kova_auth_delete_unused_compatibility_principal", {
+    p_account_id: accountId,
   });
-  if (error) throw new KovaAuthStoreError("disable_legacy_password", error);
+  if (value !== true) throw new KovaAuthStoreError("delete_compatibility_principal");
 }
 
 export async function hasVerifiedLegacyMfa(accountId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin.auth.admin.mfa.listFactors({ userId: accountId });
-  if (error) throw new KovaAuthStoreError("list_legacy_mfa", error);
-  return data.factors.some((factor) => factor.status === "verified");
+  const value = await rpc<unknown>("kova_auth_has_verified_legacy_mfa", {
+    p_account_id: accountId,
+  });
+  if (typeof value !== "boolean") throw new KovaAuthStoreError("list_legacy_mfa");
+  return value;
+}
+
+export async function finalizeOwnedAccountDeletion(
+  accountId: string,
+  sessionId: string,
+): Promise<void> {
+  const value = await rpc<unknown>("kova_auth_finalize_account_deletion", {
+    p_account_id: accountId,
+    p_session_id: sessionId,
+  });
+  if (value !== true) throw new KovaAuthStoreError("finalize_owned_account_deletion");
 }
 
 export async function createPasswordAccount(input: {
@@ -145,7 +145,9 @@ export async function createPasswordAccount(input: {
   const row = firstRow<Record<string, unknown>>(value, "kova_auth_create_password_account");
   if (
     typeof row.account_id !== "string" ||
+    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(row.account_id) ||
     typeof row.candidate_used !== "boolean" ||
+    row.candidate_used !== (row.account_id === input.candidateAccountId) ||
     typeof row.verification_created !== "boolean"
   ) {
     throw new KovaAuthStoreError("kova_auth_create_password_account");
@@ -570,7 +572,12 @@ export async function finishGoogle(input: {
     p_handoff_expires_at: input.handoffExpiresAt,
   });
   const row = firstRow<Record<string, unknown>>(value, "kova_auth_finish_google");
-  if (typeof row.account_id !== "string" || typeof row.candidate_used !== "boolean") {
+  if (
+    typeof row.account_id !== "string" ||
+    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(row.account_id) ||
+    typeof row.candidate_used !== "boolean" ||
+    row.candidate_used !== (row.account_id === input.candidateAccountId)
+  ) {
     throw new KovaAuthStoreError("kova_auth_finish_google");
   }
   return { accountId: row.account_id, candidateUsed: row.candidate_used };

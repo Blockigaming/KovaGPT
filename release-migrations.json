@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 169,
-  "latest": "20260922211527_kova_owned_mfa_enrollment_step_up.sql",
+  "count": 172,
+  "latest": "20260923013148_kova_owned_legacy_security_retirement.sql",
   "migrations": [
     {
       "order": 1,
@@ -3618,6 +3618,79 @@
       "rls": [],
       "policies": [],
       "indexes": ["auth_mfa_enrollment_session_idx", "auth_mfa_enrollment_credential_idx"]
+    },
+    {
+      "order": 170,
+      "filename": "20260923001500_kova_owned_directory_authority.sql",
+      "timestamp": "20260923001500",
+      "sha256": "9702af271877d7d0f69b77cc72078b2c2392e7af3da14e0a23cae1f5010ef2a2",
+      "tables": [],
+      "functions": [
+        "kova_auth_directory_email",
+        "verified_auth_user_for_email",
+        "auth_account_available",
+        "organization_scim_actor_current",
+        "custom_kova_principal_current",
+        "web_push_identity_current",
+        "chat_history_principal_current",
+        "workflow_skill_principal_current",
+        "mcp_owner_current",
+        "site_principal_current"
+      ],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 171,
+      "filename": "20260923001600_kova_owned_compatibility_lifecycle.sql",
+      "timestamp": "20260923001600",
+      "sha256": "e2e4116af47f48efc5fdb504b33eff5a608e36323685d685692162b426dc6bba",
+      "tables": ["kova_private"],
+      "functions": [
+        "kova_auth_create_compatibility_principal",
+        "adopt_compatibility_candidate",
+        "kova_auth_delete_unused_compatibility_principal",
+        "kova_auth_has_verified_legacy_mfa",
+        "bind_recovery_account_authority",
+        "kova_auth_consume_recovery",
+        "kova_auth_finalize_account_deletion"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 172,
+      "filename": "20260923013148_kova_owned_legacy_security_retirement.sql",
+      "timestamp": "20260923013148",
+      "sha256": "2a9952087157b384a8db9e585cc1dbb02792581dd1f9496683a5cb3c713f3dc1",
+      "tables": ["kova_private"],
+      "functions": [
+        "legacy_principal_permitted",
+        "guard_legacy_adoption",
+        "retire_legacy_auth",
+        "retire_password_authority",
+        "kova_auth_legacy_session_allowed",
+        "session_is_active",
+        "kova_auth_resolve_session",
+        "kova_auth_finish_google",
+        "guard_session_legacy_principal",
+        "lock_auth_session",
+        "kova_auth_export_identity"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

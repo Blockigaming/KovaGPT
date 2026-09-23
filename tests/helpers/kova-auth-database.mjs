@@ -18,7 +18,11 @@ export async function authDatabase({ beforeMigrations = "", beforeMigration } = 
       create role authenticator;
       create schema auth;
       create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz,
-        deleted_at timestamptz, created_at timestamptz default now());
+        deleted_at timestamptz, created_at timestamptz default now(), updated_at timestamptz,
+        encrypted_password text, banned_until timestamptz, is_anonymous boolean default false,
+        raw_app_meta_data jsonb default '{}', raw_user_meta_data jsonb default '{}');
+      create table auth.identities(id uuid primary key, user_id uuid references auth.users(id) on delete cascade);
+      create table auth.sessions(id uuid primary key, user_id uuid references auth.users(id) on delete cascade);
       create table auth.mfa_factors (id uuid primary key, user_id uuid not null, status text not null);
       create table public.test_email_queue (id bigint generated always as identity primary key,
         queue_name text, payload jsonb);

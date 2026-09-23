@@ -7,17 +7,28 @@ on:
       - .github/workflows/kova-owned-auth-source.yml
       - src/lib/kova-auth*
       - src/lib/kova-session*
+      - src/lib/api-auth.server.ts
+      - src/lib/account-export*.mjs
+      - src/lib/account-export*.mts
+      - src/lib/account-export.server.ts
+      - src/lib/kova-recovery-link.*
+      - src/lib/oauth-session.ts
+      - src/lib/projects.functions.ts
+      - src/routes/api/account.ts
       - src/integrations/supabase/client.ts
       - src/components/MfaPanel.tsx
       - src/components/KovaPasswordPanel.tsx
       - src/components/KovaPasskeyPanel.tsx
       - src/components/auth/AuthDialog.tsx
+      - src/components/auth/ClerkSafe.tsx
       - src/routes/auth.tsx
+      - src/routes/reset-password.tsx
       - src/routes/api/auth/**
       - supabase/migrations/**
       - tests/unit/kova-auth*
       - tests/unit/kova-owned-auth*
       - tests/unit/kova-session*
+      - tests/unit/account-delete-ordering.test.mjs
       - tests/unit/upgrade-database-scheduled-catalog.test.mjs
       - tests/unit/upgrade-database-scheduled-tables.test.mjs
       - tests/unit/upgrade-database-temp-export-proof.test.mjs
@@ -125,9 +136,10 @@ jobs:
 
       - name: Owned-auth and account-security regression tests
         run: >-
-          node --test tests/unit/kova-auth*.test.mjs
+          node --test --test-concurrency=2 tests/unit/kova-auth*.test.mjs
           tests/unit/kova-owned-auth-database.test.mjs
           tests/unit/kova-session.server.test.mjs
+          tests/unit/account-delete-ordering.test.mjs
           tests/integration/auth-account-security-source.test.mjs
           tests/unit/upgrade-database-scheduled-catalog.test.mjs
           tests/unit/upgrade-database-scheduled-tables.test.mjs

@@ -545,17 +545,8 @@ export const inviteMember = createServerFn({ method: "POST" })
     const callerEmail = (context.claims as { email?: string } | undefined)?.email?.toLowerCase();
     if (callerEmail === email) throw new Error("You can't invite yourself.");
 
-    // Auto-accept if the invited email already belongs to a user
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let existingUserId: string | null = null;
-    try {
-      const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const found = list.users.find((u) => u.email?.toLowerCase() === email);
-      existingUserId = found?.id ?? null;
-    } catch (e) {
-      console.error("[inviteMember] lookup", e);
-    }
-
+    // Invitations remain pending until the verified recipient accepts. Do not
+    // enumerate hosted users or use administrator authority to grant membership.
     const { data: row, error } = await context.supabase
       .from("project_invites")
       .upsert(
@@ -564,8 +555,8 @@ export const inviteMember = createServerFn({ method: "POST" })
           email,
           role: data.role,
           invited_by: context.userId,
-          status: existingUserId ? "accepted" : "pending",
-          accepted_at: existingUserId ? new Date().toISOString() : null,
+          status: "pending",
+          accepted_at: null,
         },
         { onConflict: "project_id,email" },
       )
@@ -576,16 +567,7 @@ export const inviteMember = createServerFn({ method: "POST" })
       throw new Error("Failed to invite");
     }
 
-    if (existingUserId) {
-      const { error: mErr } = await supabaseAdmin
-        .from("project_members")
-        .upsert(
-          { project_id: data.project_id, user_id: existingUserId, role: data.role },
-          { onConflict: "project_id,user_id" },
-        );
-      if (mErr) console.error("[inviteMember] add member", mErr.message);
-    }
-    return { id: row.id, auto_accepted: !!existingUserId };
+    return { id: row.id, auto_accepted: false };
   });
 
 export const revokeInvite = createServerFn({ method: "POST" })
