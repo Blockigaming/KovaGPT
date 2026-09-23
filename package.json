@@ -43,6 +43,7 @@
     "release:zero-lovable": "node scripts/release/zero-lovable.mjs",
     "release:zero-lovable:strict": "node scripts/release/zero-lovable.mjs --strict-lock",
     "release:zero-lovable:built": "node scripts/release/zero-lovable.mjs --strict-lock --require-build",
+    "release:zero-lovable:production": "node scripts/release/zero-lovable-production.mjs",
     "release:auth-provider": "node scripts/release/auth-provider-contract.mjs",
     "release:auth-provider:strict": "node scripts/release/auth-provider-contract.mjs --strict-lock",
     "release:security-source": "node scripts/release/apply-security-source.mjs --check",
