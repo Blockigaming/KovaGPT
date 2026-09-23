@@ -32,8 +32,9 @@ It must supply `KOVAGPTPROD_AZURE_CLIENT_ID`, `KOVAGPTPROD_AZURE_TENANT_ID`, `KO
 
 Grant the OIDC identity only the read and deployment-validation permissions needed for ACR pull, Bicep validation, and resource-group what-if. Do not grant a production apply role while this workflow is plan-only.
 
-The plan now requires `containerAppName` in the protected Bicep parameters to equal
-`KOVA_PRODUCTION_CONTAINER_APP_NAME`. Before template validation it reads the
+The exact inventoried production Container App name is supplied as
+`containerAppName` in the protected Bicep parameters and must equal
+`KOVA_PRODUCTION_CONTAINER_APP_NAME`. Before template validation the plan reads the
 existing app's resource identity with `az resource show`, then requires its type,
 name, resource group, and subscription to match the protected name and signed-in
 subscription. This read-only check prevents a prefix-derived new app target; it
