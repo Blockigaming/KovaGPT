@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ledgerMetadataHash } from "./upgrade-database-current-history.mjs";
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -10,8 +13,17 @@ const baselinePath = "tests/fixtures/production-migration-history-20260904/manif
 const supplementPath =
   "tests/fixtures/production-migration-history-20260904/current-supplement-20260918.json";
 const decisionPath = "docs/release-reconciliation/canonical-history-actions-20260923.json";
+const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 
 export function buildCanonicalHistoryDecision() {
+  const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+  if (
+    execFileSync("git", ["rev-parse", "HEAD:supabase/migrations"], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    }).trim() !== migrationTree
+  )
+    throw new Error("canonical_history_migration_tree_changed");
   const source = read(sourcePath);
   const lineage = read(lineagePath);
   const baseline = read(baselinePath);
@@ -123,7 +135,7 @@ export function buildCanonicalHistoryDecision() {
     status: "proposed_only_no_history_repair_or_production_action",
     targetProjectRef: supplement.projectRef,
     sourceCheckpointCommit: "5734b9e3d96224b06cdf2bc6f824078738b86ce1",
-    sourceMigrationTree: "4af43abcf92f5a024ab33274d08855c6efbf3b15",
+    sourceMigrationTree: migrationTree,
     sourceManifestSha256: sha256(readFileSync(sourcePath)),
     lineageSha256: sha256(readFileSync(lineagePath)),
     historicalFixtureManifestSha256: sha256(readFileSync(baselinePath)),
