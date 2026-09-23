@@ -11,103 +11,131 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify and upload final review source blobs without ref or tree writes
+      - name: Upload exact hash-bound source blobs and tree without changing any ref
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           python3 - <<'PY_SOURCE'
-          import base64, hashlib, json, os, urllib.request, urllib.error, zlib
+          import base64, concurrent.futures, hashlib, json, os, re, time, urllib.error, urllib.request, zlib
+
           REPO = 'Blockigaming/KovaGPT'
           BRANCH = 'refs/heads/codex/kova-owned-auth-foundation'
-          PARENT = '97791e8e4781359fd827826f5a5b9a9efddd3e76'
-          BASE = 'd59182881e9e619a98b766c06fc41fc2ae467679'
-          SOURCE_TREE = '66eed2be85fd8e11eaa9a62e1942e7c02701484c'
-          FINAL_TREE = '1052e834ef08d1e4b009e4081fface0be998e86e'
-          DELTA = 'a96945c749c1e9e0da7b1e354d28d6874826419f'
-          SCOPE = 'c46578effbc024833ee7e9ff14e9e3fe2633da02'
+          BASE = 'd637b8860930d7bedb26c8b562a5db2ccc58a1df'
+          BASE_TREE = 'a22505c61d06f59ef6cfc509bd4f4c24bf56f6dc'
+          TARGET = '5b7f5cde117998d4e410fa06a965aecc29048e14'
+          MANIFEST_SHA = '107d6311a3285a4f8a3674257dcce62abf26aa933157fa225204f6a7bd4a4c8d'
+          WORKFLOW = '.github/workflows/kova-auth-directory-objects-once.yml'
+          CHUNKS = [[0, 12000, "84dca7f4b0996d3891f8c77f3ed49ff03ae45ddf"], [1, 4000, "a40a978cb7963d365c345ee127f489e87f0ccda0"], [2, 4000, "701d93b3c81247161c8ac598c832df13efaa5e06"], [3, 4000, "bb72e21e109766da836befdb2e6f4b328b1c9093"], [4, 4000, "1e2399829afc7996dd686ddce86010dab3891027"], [5, 4000, "93dcb7f9ed37f0c84ee7598fd86ac58c052810b1"], [6, 4000, "6b0d2f7536f513cf7bd1ec2ebd70013a01aa7609"], [7, 4000, "74c58aab077753b63316b46123c3fcb9f177924c"], [8, 4000, "da023ea479c98e732a3344bd5d3a2fd2332fd9a0"], [9, 4000, "e5e3d973b9c43d351d165d04dd5396b61132fa0f"], [10, 4000, "7f6289e21e15daa6535150e9efc9901944bf464d"], [11, 4000, "d919fef2c4c0dca57c0d60bdf64076315d5190e3"], [12, 3628, "132bb2fc8a83eb66cb448416db32a4cb82b6a8f7"]]
+          DEADLINE = time.monotonic() + 240
+
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, *args, **kwargs):
                   raise RuntimeError('unexpected_redirect')
+
           def api(method, path, body=None):
-              if method not in ('GET', 'POST') or (method == 'POST' and path != '/git/blobs'):
+              if method not in ('GET', 'POST') or not path.startswith('/') or (method == 'POST' and path not in ('/git/blobs', '/git/trees')):
                   raise RuntimeError('unapproved_operation')
-              request = urllib.request.Request('https://api.github.com/repos/' + REPO + path,
-                  method=method, data=None if body is None else json.dumps(body).encode(),
-                  headers={'Authorization':'Bearer ' + os.environ['GH_TOKEN'],
-                      'Accept':'application/vnd.github+json','Content-Type':'application/json',
-                      'X-GitHub-Api-Version':'2022-11-28'})
+              remaining = DEADLINE - time.monotonic()
+              if remaining <= 0:
+                  raise RuntimeError('deadline')
+              req = urllib.request.Request('https://api.github.com/repos/' + REPO + path,
+                  method=method, data=None if body is None else json.dumps(body).encode(), headers={
+                      'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json',
+                      'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'})
               try:
-                  with urllib.request.build_opener(NoRedirect).open(request, timeout=20) as response:
+                  with urllib.request.build_opener(NoRedirect).open(req, timeout=min(20, remaining)) as response:
                       data = response.read(2_000_001)
-                      if len(data) > 2_000_000:
-                          raise RuntimeError('response_limit')
-                      return json.loads(data)
+                  if len(data) > 2_000_000:
+                      raise RuntimeError('response_limit')
+                  return json.loads(data)
               except urllib.error.HTTPError as error:
                   raise RuntimeError('github_http_' + str(error.code)) from None
+
           def sha(data):
               return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+
           def read_blob(expected):
+              if not re.fullmatch('[0-9a-f]{40}', expected):
+                  raise RuntimeError('invalid_blob_id')
               row = api('GET', '/git/blobs/' + expected)
               if row['encoding'] != 'base64':
-                  raise RuntimeError('blob_encoding')
+                  raise RuntimeError('invalid_encoding')
               data = base64.b64decode(''.join(row['content'].split()), validate=True)
               if sha(data) != expected:
-                  raise RuntimeError('blob_hash')
+                  raise RuntimeError('blob_hash_mismatch')
               return data
-          def edited(before, item):
-              if item['before'] is not None and sha(before) != item['before']:
-                  raise RuntimeError('before_hash')
+
+          def decode_manifest():
+              chunks = []
+              for _, size, expected in CHUNKS:
+                  data = read_blob(expected)
+                  if len(data) != size:
+                      raise RuntimeError('chunk_size')
+                  chunks.append(data)
+              decoder = zlib.decompressobj()
+              raw = decoder.decompress(base64.b64decode(b''.join(chunks), validate=True), 197852)
+              if len(raw) != 197851 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail or hashlib.sha256(raw).hexdigest() != MANIFEST_SHA:
+                  raise RuntimeError('manifest_integrity')
+              manifest = json.loads(raw)
+              if (manifest['base'], manifest['base_tree'], manifest['tree']) != (BASE, BASE_TREE, TARGET) or len(manifest['files']) != 46:
+                  raise RuntimeError('manifest_scope')
+              names = set()
+              for item in manifest['files']:
+                  path = item['path']
+                  if not isinstance(path, str) or path in names or '\\' in path or any(p in ('', '.', '..') for p in path.split('/')):
+                      raise RuntimeError('invalid_path')
+                  if not (path.startswith(('src/', 'tests/', 'supabase/migrations/')) or path in (WORKFLOW, '.github/workflows/kova-owned-auth-source.yml', 'database-contract.json', 'release-migrations.json', 'scripts/release/kova-auth-revocation-proof.sql')):
+                      raise RuntimeError('unapproved_path')
+                  names.add(path)
+                  if item['after'] is None and path != WORKFLOW:
+                      raise RuntimeError('unapproved_deletion')
+              return manifest
+
+          def upload(item):
+              before = b'' if item['before'] is None else read_blob(item['before'])
+              if item['after'] is None:
+                  return {'path': item['path'], 'mode': '100644', 'type': 'blob', 'sha': None}
               last = 0
               for start, end, replacement in item['edits']:
                   if type(start) is not int or type(end) is not int or not last <= start <= end <= len(before) or not isinstance(replacement, str):
                       raise RuntimeError('edit_bounds')
                   last = end
               for start, end, replacement in reversed(item['edits']):
-                  before = before[:start] + replacement.encode() + before[end:]
-              if sha(before) != item['after']:
-                  raise RuntimeError('after_hash')
-              return before
-          if os.environ['GITHUB_REPOSITORY'] != REPO or os.environ['GITHUB_REF'] != BRANCH:
-              raise RuntimeError('wrong_scope')
-          head = os.environ['GITHUB_SHA']
-          if [p['sha'] for p in api('GET', '/git/commits/' + head)['parents']] != [PARENT]:
-              raise RuntimeError('wrong_parent')
-          comparison = api('GET', '/compare/' + BASE + '...' + head)
-          if comparison['total_commits'] != 3 or [(f['filename'],f['status']) for f in comparison['files']] != [('.github/workflows/kova-auth-directory-objects-once.yml','added')]:
-              raise RuntimeError('source_advanced')
-          if api('GET', '/git/ref/heads/codex/kova-owned-auth-foundation')['object']['sha'] != head:
-              raise RuntimeError('branch_advanced')
-          packed = read_blob(DELTA)
-          if len(packed) != 10548:
-              raise RuntimeError('delta_size')
-          decoder = zlib.decompressobj()
-          raw = decoder.decompress(base64.b64decode(packed, validate=True), 32769)
-          if len(raw) != 25511 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail or hashlib.sha256(raw).hexdigest() != '950d2c12685c314e6434f33af296ed4d8a776868c9ae86270a7d6d024e6c95e2':
-              raise RuntimeError('delta_integrity')
-          manifest = json.loads(raw)
-          if manifest['base_tree'] != SOURCE_TREE or manifest['tree'] != 'b32d5e075096f81b77c33fb525fac7d2a6a8c4f3' or len(manifest['files']) != 13:
-              raise RuntimeError('wrong_manifest')
-          results = {}
-          for item in manifest['files']:
-              path = item['path']
-              if path in results or not path.startswith(('src/', 'tests/')) or '\\' in path or any(p in ('', '.', '..') for p in path.split('/')):
-                  raise RuntimeError('unapproved_path')
-              results[path] = edited(b'' if item['before'] is None else read_blob(item['before']), item)
-          scope_raw = read_blob(SCOPE)
-          if len(scope_raw) != 398:
-              raise RuntimeError('scope_size')
-          scope = json.loads(scope_raw)
-          if scope['path'] != 'src/lib/kova-auth-http.server.ts':
-              raise RuntimeError('scope_path')
-          results[scope['path']] = edited(results[scope['path']], scope)
-          if sum(map(len, results.values())) > 200000:
-              raise RuntimeError('source_limit')
-          entries = []
-          for path, data in results.items():
-              result = api('POST', '/git/blobs', {'encoding':'utf-8','content':data.decode('utf-8')})
-              if result['sha'] != sha(data):
-                  raise RuntimeError('uploaded_hash_mismatch')
-              entries.append({'path':path,'sha':result['sha'],'mode':'100644','type':'blob'})
-          print(json.dumps({'verified_blobs':entries,'base_tree':SOURCE_TREE,'expected_final_tree':FINAL_TREE,'ref_updated':False,'tree_written':False}, sort_keys=True))
+                  before = before[:start] + replacement.encode('utf-8') + before[end:]
+              if len(before) > 1_000_000 or sha(before) != item['after']:
+                  raise RuntimeError('target_blob_mismatch')
+              result = api('POST', '/git/blobs', {'encoding': 'utf-8', 'content': before.decode('utf-8')})
+              if result['sha'] != item['after']:
+                  raise RuntimeError('uploaded_blob_mismatch')
+              return {'path': item['path'], 'mode': '100644', 'type': 'blob', 'sha': result['sha']}
+
+          def main():
+              if os.environ['GITHUB_REPOSITORY'] != REPO or os.environ['GITHUB_REF'] != BRANCH:
+                  raise RuntimeError('wrong_scope')
+              head = os.environ['GITHUB_SHA']
+              if not re.fullmatch('[0-9a-f]{40}', head) or [p['sha'] for p in api('GET', '/git/commits/' + head)['parents']] != [BASE]:
+                  raise RuntimeError('wrong_parent')
+              comparison = api('GET', '/compare/' + BASE + '...' + head)
+              if comparison['total_commits'] != 1 or [(f['filename'], f['status']) for f in comparison['files']] != [(WORKFLOW, 'modified')]:
+                  raise RuntimeError('source_advanced')
+              if api('GET', '/git/ref/heads/codex/kova-owned-auth-foundation')['object']['sha'] != head:
+                  raise RuntimeError('branch_advanced')
+              if api('GET', '/git/commits/' + BASE)['tree']['sha'] != BASE_TREE:
+                  raise RuntimeError('base_tree_mismatch')
+              manifest = decode_manifest()
+              with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+                  entries = list(pool.map(upload, manifest['files']))
+              tree = api('POST', '/git/trees', {'base_tree': BASE_TREE, 'tree': entries})
+              if tree['sha'] != TARGET:
+                  raise RuntimeError('target_tree_mismatch')
+              if api('GET', '/git/ref/heads/codex/kova-owned-auth-foundation')['object']['sha'] != head:
+                  raise RuntimeError('branch_advanced_after_objects')
+              receipt = {'verified_tree': TARGET, 'verified_files': len(entries), 'workflow_head': head, 'source_base': BASE, 'manifest_sha256': MANIFEST_SHA, 'ref_updated': False, 'deployment': False}
+              print(json.dumps(receipt, sort_keys=True))
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as output:
+                  output.write('Verified source-object receipt; branch publication remains a separate guarded operation.\n\n```json\n' + json.dumps(receipt, indent=2) + '\n```\n')
+
+          if __name__ == '__main__':
+              main()
           PY_SOURCE
