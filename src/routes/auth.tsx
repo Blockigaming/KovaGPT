@@ -293,6 +293,22 @@ function AuthPage() {
     }
   };
 
+  const resendVerification = async () => {
+    if (!emailValid || cooldown > 0 || !guard()) return;
+    try {
+      const response = await kovaAuthJson("/api/auth/verify/resend", {
+        email: email.trim().toLowerCase(),
+      });
+      if (!response.ok) throw new Error("verification_unavailable");
+      setCooldown(60);
+      toast.success("If verification is available for this address, check your inbox.");
+    } catch {
+      toast.error("Verification could not be requested. Please try again.");
+    } finally {
+      release();
+    }
+  };
+
   return (
     <div className="kova-auth-page min-h-screen bg-background">
       <header className="flex h-14 items-center px-4">
@@ -554,6 +570,16 @@ function AuthPage() {
               Continue
             </Button>
 
+            {useKovaAuth ? (
+              <button
+                type="button"
+                onClick={() => void resendVerification()}
+                disabled={loading || !emailValid || cooldown > 0}
+                className="h-12 w-full rounded-full text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend verification email"}
+              </button>
+            ) : null}
             {!useKovaAuth ? (
               <button
                 type="button"

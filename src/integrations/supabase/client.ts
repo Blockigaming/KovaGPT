@@ -5,12 +5,14 @@ import type { Database } from "./types";
 import { SUPABASE_BROWSER_CONFIG } from "./config";
 import {
   browserKovaAuthMode,
-  getKovaAuthGeneration,
-  resolveKovaSessionAuthority,
   getCachedKovaSession,
   getKovaCompatibilityToken,
   isKovaSessionActive,
   setKovaSessionActive,
+  kovaAuthGeneration,
+  resolveKovaSessionAuthority,
+  kovaAuthJson,
+  announceKovaAuthChange,
 } from "@/lib/kova-auth-browser";
 import type { Session, User } from "@supabase/supabase-js";
 import { createKovaDataFetch } from "@/lib/kova-auth-data-fetch";
@@ -61,6 +63,9 @@ function createSupabaseClient(kind: "legacy" | "kova") {
       storage: typeof window === "undefined" ? undefined : window.localStorage,
       persistSession: true,
       autoRefreshToken: true,
+      // The callback handler owns the single exchange after authority selection.
+      // Do not let SDK initialization race it or consume a returning URL early.
+      detectSessionInUrl: false,
       // Required by supabase-js for the experimental WebAuthn passkey API.
       // The UI still verifies /auth/v1/settings before advertising support.
       experimental: { passkey: true },
@@ -71,20 +76,21 @@ function createSupabaseClient(kind: "legacy" | "kova") {
 let _legacySupabase: ReturnType<typeof createSupabaseClient> | undefined;
 let _kovaSupabase: ReturnType<typeof createSupabaseClient> | undefined;
 
-export async function getHostedCallbackAuth() {
-  if (browserKovaAuthMode() === "kova") throw new Error("hosted_callback_disabled");
-  if (browserKovaAuthMode() === "dual" && (await resolveKovaSessionAuthority())) {
-    throw new Error("hosted_callback_conflicts_with_kova");
+export async function resolveLegacyAuthContext() {
+  const mode = browserKovaAuthMode();
+  if (mode === "kova") throw new Error("hosted_auth_unavailable");
+  if (mode === "dual") {
+    const principal = await resolveKovaSessionAuthority();
+    if (principal || isKovaSessionActive()) throw new Error("hosted_auth_unavailable");
   }
-  // 401/unavailable cookie probes throw rather than grant legacy fallback.
-  const generation = getKovaAuthGeneration();
+  const generation = kovaAuthGeneration();
   const assertCurrent = () => {
     if (
-      browserKovaAuthMode() === "kova" ||
-      generation !== getKovaAuthGeneration() ||
-      (browserKovaAuthMode() === "dual" && isKovaSessionActive())
+      browserKovaAuthMode() !== mode ||
+      isKovaSessionActive() ||
+      kovaAuthGeneration() !== generation
     ) {
-      throw new Error("hosted_callback_authority_changed");
+      throw new Error("auth_authority_changed");
     }
   };
   assertCurrent();
@@ -175,6 +181,7 @@ const kovaAuth = {
     // Clear the short-lived compatibility-token cache even in pure Kova mode.
     setKovaSessionActive(false);
     if (browserKovaAuthMode() === "kova") setKovaSessionActive(true);
+    announceKovaAuthChange();
     return { error: null };
   },
   setSession: unsupportedKovaAuth,
@@ -185,7 +192,15 @@ const kovaAuth = {
   signInWithOtp: unsupportedKovaAuth,
   signInWithOAuth: unsupportedKovaAuth,
   signInWithPasskey: unsupportedKovaAuth,
-  resend: unsupportedKovaAuth,
+  resend: async (input: { type?: string; email?: string }) => {
+    if (input?.type !== "signup" || typeof input.email !== "string") return unsupportedKovaAuth();
+    try {
+      const response = await kovaAuthJson("/api/auth/verify/resend", { email: input.email });
+      return { data: null, error: response.ok ? null : new Error("Verification request failed") };
+    } catch {
+      return { data: null, error: new Error("Verification request failed") };
+    }
+  },
   mfa: {
     getAuthenticatorAssuranceLevel: async () => ({
       data: { currentLevel: "aal1", nextLevel: "aal1", currentAuthenticationMethods: [] },

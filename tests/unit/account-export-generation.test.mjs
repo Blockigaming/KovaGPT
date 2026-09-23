@@ -303,7 +303,12 @@ test("the real worker registers before upload and a resumed stale worker preserv
     });
     const admin = {
       auth: {
-        admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) },
+        admin: {
+          getUserById: async () => ({
+            data: { user: { id: userId, email: "fixture@example.invalid" } },
+            error: null,
+          }),
+        },
       },
       from(table) {
         const filters = [];
@@ -433,7 +438,14 @@ test("exports retain reservation metadata but embed only ready or legacy Project
   }));
   const downloads = [];
   const admin = {
-    auth: { admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) } },
+    auth: {
+      admin: {
+        getUserById: async () => ({
+          data: { user: { id: userId, email: "fixture@example.invalid" } },
+          error: null,
+        }),
+      },
+    },
     from(table) {
       const query = {
         select() {
@@ -514,7 +526,14 @@ test("personal organization exports include both invitation/audit roles without 
   };
   const ordered = new Set();
   const admin = {
-    auth: { admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) } },
+    auth: {
+      admin: {
+        getUserById: async () => ({
+          data: { user: { id: userId, email: "fixture@example.invalid" } },
+          error: null,
+        }),
+      },
+    },
     from(table) {
       let rows = data[table] ?? [];
       const query = {
@@ -604,7 +623,14 @@ test("Canvas export keeps private and owned Project content without widening col
     collaboration_presence: [{ id: "ephemeral", user_id: userId }],
   };
   const admin = {
-    auth: { admin: { getUserById: async () => ({ data: { user: { id: userId } }, error: null }) } },
+    auth: {
+      admin: {
+        getUserById: async () => ({
+          data: { user: { id: userId, email: "fixture@example.invalid" } },
+          error: null,
+        }),
+      },
+    },
     from(table) {
       let rows = data[table] ?? [];
       const query = {

@@ -14,6 +14,10 @@ export function readKovaRecoveryLink(href, mode) {
   const queryToken = url.searchParams.has("token");
   const owned = queryToken || fragment.has("token") || mode === "kova";
   if (!owned) return { owned: false, token: null, cleanPath: null };
+  if (
+    ["code", "access_token", "refresh_token", "token_hash"].some((key) => url.searchParams.has(key))
+  )
+    return invalid;
   const tokens = fragment.getAll("token");
   const token =
     (mode === "kova" || mode === "dual") &&

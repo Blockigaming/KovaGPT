@@ -25,7 +25,13 @@ export function isKovaSessionRejectedError(value: unknown): value is KovaSession
 let tokenCache: TokenCache = null;
 let principalCache: PrincipalCache = null;
 let cacheGeneration = 0;
-let authorityProbe: Promise<KovaBrowserPrincipal | null> | null = null;
+const authorityListeners = new Set<() => void>();
+export function subscribeKovaAuthChanges(listener: () => void): () => void {
+  authorityListeners.add(listener);
+  return () => {
+    authorityListeners.delete(listener);
+  };
+}
 // In dual mode, hold direct Supabase access on the Kova path until the
 // HttpOnly-cookie probe proves that the browser has no Kova session. This
 // prevents a stale legacy localStorage token from briefly loading a different
@@ -53,36 +59,52 @@ export function browserKovaAuthOrigin(currentOrigin = window.location.origin): s
 }
 
 export function setKovaSessionActive(active: boolean): void {
-  if (kovaSessionActive === active) return;
+  if (active === kovaSessionActive) return;
   kovaSessionActive = active;
-  if (!active) {
-    clearKovaAuthCache();
-  }
+  clearKovaAuthCache();
 }
 
-export function getKovaAuthGeneration(): number {
+export function kovaAuthGeneration(): number {
   return cacheGeneration;
 }
 
-// The provider and an OAuth callback can mount together. Share the initial
-// cookie decision so neither guesses from the provisional dual-mode flag.
+let authorityProbe: { generation: number; promise: Promise<KovaBrowserPrincipal | null> } | null =
+  null;
+
+// Share the initial cookie probe between the provider and a returning hosted
+// callback. Neither may temporarily choose legacy authority before it finishes.
 export function resolveKovaSessionAuthority(): Promise<KovaBrowserPrincipal | null> {
-  if (authorityProbe) return authorityProbe;
-  authorityProbe = fetchKovaSession()
-    .then((principal) => {
-      setKovaSessionActive(Boolean(principal) || browserKovaAuthMode() === "kova");
-      return principal;
-    })
-    .finally(() => {
-      authorityProbe = null;
-    });
-  return authorityProbe;
+  if (authorityProbe?.generation === cacheGeneration) return authorityProbe.promise;
+  const generation = cacheGeneration;
+  const promise = fetchKovaSession().then((principal) => {
+    if (generation !== cacheGeneration) throw new Error("kova_session_changed");
+    setKovaSessionActive(Boolean(principal) || browserKovaAuthMode() === "kova");
+    return principal;
+  });
+  const probe = { generation, promise };
+  authorityProbe = probe;
+  void promise.then(
+    () => {
+      if (authorityProbe === probe) authorityProbe = null;
+    },
+    () => {
+      if (authorityProbe === probe) authorityProbe = null;
+    },
+  );
+  return promise;
 }
 
 export function clearKovaAuthCache(): void {
   cacheGeneration++;
   tokenCache = null;
   principalCache = null;
+  for (const listener of authorityListeners) {
+    try {
+      listener();
+    } catch {
+      /* A view callback cannot prevent credential invalidation. */
+    }
+  }
 }
 
 export function isKovaSessionActive(): boolean {
@@ -172,10 +194,25 @@ export async function getKovaCompatibilityToken(): Promise<string | null> {
 }
 
 export async function kovaAuthJson(path: string, body: Record<string, unknown>): Promise<Response> {
-  return fetch(path, {
+  const response = await fetch(path, {
     method: "POST",
     credentials: "same-origin",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  // This is an invalidation hint only, never an identity or authorization claim.
+  // Other tabs must re-read the HttpOnly cookie through the session endpoint.
+  if (response.ok) announceKovaAuthChange();
+  return response;
+}
+
+export const KOVA_AUTH_CHANGE_KEY = "kova:auth-change";
+
+export function announceKovaAuthChange(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KOVA_AUTH_CHANGE_KEY, `${Date.now()}:${Math.random()}`);
+  } catch {
+    // Focus/pageshow/visibility probes remain active when storage is unavailable.
+  }
 }

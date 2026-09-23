@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as recovery from "../../src/lib/kova-recovery-link.mjs";
+import * as landing from "../../src/lib/kova-recovery-landing.mjs";
 import { authHttp, authRequest } from "../helpers/kova-auth-http.mjs";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
@@ -98,12 +99,15 @@ function page(suffix, mode = "kova", scrubFails = false) {
       },
       "@/lib/oauth-session": {},
       "@/lib/kova-recovery-link.mjs": recovery,
+      "@/lib/kova-recovery-landing.mjs": landing,
       "@/lib/kova-auth-browser": {
         browserKovaAuthEnabled: () => mode !== "supabase",
         browserKovaAuthMode: () => mode,
         kovaAuthJson: async (path, body) => {
           events.push(["submit", path, body]);
-          return Response.json({});
+          return Response.json({
+            session: { accountId: "10000000-0000-4000-8000-000000000001", emailVerified: true },
+          });
         },
       },
     },
@@ -124,7 +128,9 @@ test("the real reset form strips the fragment before enabling fields and sends i
   f.replayEffects();
   await f.flush();
   assert.equal(location.href, base);
-  assert.deepEqual(events.pop(), ["scrub", "/reset-password"]);
+  // Effect replay must retain the captured in-memory proof, not parse a second
+  // credential or repeat an already-completed history mutation.
+  assert.deepEqual(events, [["scrub", "/reset-password"]]);
   assert.equal(f.find("input", (node) => node.props.id === "new-pw").props.minLength, 12);
   await f.input("new-pw", "a strong new password");
   await f.input("confirm-pw", "a strong new password");

@@ -51,6 +51,7 @@ import {
   regenerateMfaRecoveryCodes,
   removeTotpFactor,
   recoveryTarget,
+  resendVerification,
   resolveSession,
   revokeOtherSessions,
   revokeSession,
@@ -351,6 +352,13 @@ export async function resolveKovaRequestPrincipal(request: Request): Promise<Kov
 export async function handleKovaSignup(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed", 405);
+  if (
+    isCrossSiteMutation(request) ||
+    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
+  ) {
+    return jsonError("Cross-origin request rejected", 403);
+  }
   const limited = await rateLimit(request, "kova_auth_signup", 5, 3600);
   if (limited) return limited;
   const body = await readJsonObject(request);
@@ -412,6 +420,63 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       error: error instanceof Error ? error.name : "unknown_error",
     });
     return jsonError("Sign up is temporarily unavailable.", 503);
+  }
+}
+
+export async function handleKovaVerificationResend(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed", 405);
+  if (
+    isCrossSiteMutation(request) ||
+    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
+  ) {
+    return jsonError("Cross-origin request rejected", 403);
+  }
+  const limited = await rateLimit(request, "kova_auth_verify_resend", 5, 3600);
+  if (limited) return limited;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  if (Object.keys(body).some((key) => key !== "email")) return jsonError("Invalid request.", 400);
+  let email: string;
+  try {
+    email = normalizeKovaEmail(typeof body.email === "string" ? body.email : "");
+  } catch {
+    return jsonError("Enter a valid email address.", 400);
+  }
+  const emailLimit = await rateLimit(
+    request,
+    "kova_auth_verify_resend_email",
+    4,
+    3600,
+    `email:${email}`,
+  );
+  if (emailLimit) return emailLimit;
+  try {
+    const token = generateKovaToken();
+    const verificationDigest = digestKovaToken(token);
+    const link = new URL("/api/auth/verify", publicOrigin());
+    link.searchParams.set("token", token);
+    await resendVerification({
+      email,
+      verificationDigest,
+      verificationExpiresAt: futureIso(KOVA_AUTH_CHALLENGE_SECONDS),
+      emailPayload: emailPayload({
+        to: email,
+        label: "kova-auth-verification",
+        link: link.toString(),
+        tokenDigest: verificationDigest,
+      }),
+    });
+    return json(
+      {
+        accepted: true,
+        message: "If verification is available for this address, check your inbox.",
+      },
+      { status: 202 },
+    );
+  } catch {
+    return jsonError("Email verification is temporarily unavailable.", 503);
   }
 }
 

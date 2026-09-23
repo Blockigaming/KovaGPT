@@ -6,15 +6,24 @@ on:
     paths:
       - .github/workflows/kova-owned-auth-source.yml
       - src/lib/kova-auth*
+      - src/lib/kova-recovery-landing*
+      - src/lib/account-identity.server.*
+      - src/lib/account-export.server.ts
+      - src/lib/oauth-session.ts
+      - src/lib/pricing/developer-platform.server.ts
       - src/lib/kova-session*
       - src/lib/api-auth.server.ts
       - src/lib/account-export*.mjs
       - src/lib/account-export*.mts
-      - src/lib/account-export.server.ts
       - src/lib/kova-recovery-link.*
-      - src/lib/oauth-session.ts
       - src/lib/projects.functions.ts
       - src/routes/api/account.ts
+      - src/routes/api/chat.ts
+      - src/routes/api/internal/work-browser.ts
+      - src/routes/api/internal/work-execution.ts
+      - src/routes/oauth.consent.tsx
+      - src/routes/reset-password.tsx
+      - src/routes/~oauth.callback.tsx
       - src/integrations/supabase/client.ts
       - src/components/MfaPanel.tsx
       - src/components/KovaPasswordPanel.tsx
@@ -22,7 +31,6 @@ on:
       - src/components/auth/AuthDialog.tsx
       - src/components/auth/ClerkSafe.tsx
       - src/routes/auth.tsx
-      - src/routes/reset-password.tsx
       - src/routes/api/auth/**
       - supabase/migrations/**
       - tests/unit/kova-auth*

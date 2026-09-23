@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 172,
-  "latest": "20260923013148_kova_owned_legacy_security_retirement.sql",
+  "count": 175,
+  "latest": "20260923132813_kova_owned_verification_resend_review.sql",
   "migrations": [
     {
       "order": 1,
@@ -3668,6 +3668,24 @@
     },
     {
       "order": 172,
+      "filename": "20260923012655_kova_owned_review_retirement_guards.sql",
+      "timestamp": "20260923012655",
+      "sha256": "f30e85be6cd01a758e66454d2053d630463a3bce702f100af8b7296267b81eab",
+      "tables": [],
+      "functions": [
+        "guard_legacy_account_adoption",
+        "retire_legacy_password_on_owned_change",
+        "kova_auth_account_snapshot"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 173,
       "filename": "20260923013148_kova_owned_legacy_security_retirement.sql",
       "timestamp": "20260923013148",
       "sha256": "2a9952087157b384a8db9e585cc1dbb02792581dd1f9496683a5cb3c713f3dc1",
@@ -3686,6 +3704,42 @@
         "kova_auth_export_identity"
       ],
       "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 174,
+      "filename": "20260923131141_kova_owned_sites_session_authority.sql",
+      "timestamp": "20260923131141",
+      "sha256": "cf50935611def591874265240e1b1030c5729c07bf1546d9be1721d4817076d3",
+      "tables": [],
+      "functions": [
+        "site_authorized_session",
+        "check_kova_owned_site_auth_session",
+        "issue_site_ticket_authorized",
+        "issue_kova_site_ticket",
+        "issue_kova_owned_site_ticket",
+        "redeem_kova_site_ticket",
+        "read_kova_site_asset"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 175,
+      "filename": "20260923132813_kova_owned_verification_resend_review.sql",
+      "timestamp": "20260923132813",
+      "sha256": "7998d10f99577a0990036191afc9c4bb842462573b00c22cd946daaf63e8c4ad",
+      "tables": [],
+      "functions": ["kova_auth_resend_verification", "kova_auth_create_password_account"],
+      "destructive": false,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

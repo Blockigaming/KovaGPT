@@ -118,8 +118,16 @@ test("recovery and OAuth flows avoid open redirects, query-token consumption, an
   assert.match(oauth, /safeRelativeRedirect/);
   assert.match(oauth, /const accessToken = hash\.get\("access_token"\)/);
   assert.doesNotMatch(oauth, /const accessToken = getOAuthParam/);
-  assert.match(reset, /event === "PASSWORD_RECOVERY" && session/);
-  assert.match(reset, /hasRecentPasswordRecoveryFlow\(data\.session\.user\.id\)/);
+  assert.match(
+    reset,
+    /completeOAuthSessionFromUrl\("password recovery", controller\.signal,\s*\{\s*recoveryOnly: true/,
+  );
+  assert.match(oauth, /options\.recoveryOnly && redirectType !== "recovery"/);
+  assert.match(
+    oauth,
+    /options\.recoveryOnly && \(!restored \|\| !hasRecentPasswordRecoveryFlow\(restored\.user\.id\)\)/,
+  );
+  assert.match(reset, /current\.data\.session\?\.user\.id !== boundary\.userId/);
   assert.doesNotMatch(reset, /recoveryExpected\s*=\s*hasOAuthResponseInUrl/);
   assert.match(reset, /signOut\(\{\s*scope: "others"/);
   assert.doesNotMatch(callback, /setError\(message\)/);

@@ -4,7 +4,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { BillingTier } from "@/lib/billing-plans";
 import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
-import { evaluateAuthenticatedUser, parseBearerToken } from "@/lib/auth-security.mjs";
+import {
+  evaluateAuthenticatedUser,
+  isCrossSiteMutation,
+  parseBearerToken,
+} from "@/lib/auth-security.mjs";
 import { resolveKovaAuthMode, selectAuthCredential } from "@/lib/kova-auth-contract.mjs";
 import { digestKovaToken, signKovaCompatibilityJwt } from "@/lib/kova-auth-crypto.server.mjs";
 import { resolveSession } from "@/lib/kova-auth-store.server";
@@ -68,6 +72,16 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
   }
   if (credential.kind === "anonymous") return null;
   if (credential.kind === "invalid") return unauthorized("Invalid or expired session");
+  // Cookie authority is ambient. Existing bearer-only callers did not all need
+  // an origin check, so enforce this once before any owned-auth/database work.
+  if (
+    credential.provider === "kova" &&
+    !["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase()) &&
+    (isCrossSiteMutation(request) ||
+      (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin"))
+  ) {
+    return jsonError("Cross-origin request rejected", 403);
+  }
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;

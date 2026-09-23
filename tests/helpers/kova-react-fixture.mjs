@@ -29,6 +29,14 @@ export function reactFixture(path, select, options = {}) {
     tree;
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const react = {
+    createContext: (value) => ({ Provider: "context-provider", value }),
+    useContext: (context) => context.value,
+    useMemo(run, deps) {
+      const i = cursor++;
+      if (!hooks[i] || deps.some((x, j) => !Object.is(x, hooks[i].deps[j])))
+        hooks[i] = { value: run(), deps };
+      return hooks[i].value;
+    },
     useState(initial) {
       const i = cursor++;
       hooks[i] ??= { value: typeof initial === "function" ? initial() : initial };
@@ -77,7 +85,8 @@ export function reactFixture(path, select, options = {}) {
     ...options.modules,
   };
   const compiled = ts.transpileModule(
-    readFileSync(path, "utf8").replaceAll("import.meta.env", "__env"),
+    readFileSync(path, "utf8").replaceAll("import.meta.env", "__env") +
+      (options.sourceSuffix ?? ""),
     {
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,

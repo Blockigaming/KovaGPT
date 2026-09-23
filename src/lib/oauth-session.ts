@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { getHostedCallbackAuth } from "@/integrations/supabase/client";
+import { resolveLegacyAuthContext } from "@/integrations/supabase/client";
 import { safeRelativeRedirect } from "@/lib/auth-security.mjs";
 
 export const OAUTH_CALLBACK_PATH = "/~oauth/callback";
@@ -110,7 +110,7 @@ export function markPasswordRecoveryFlow(userId: string) {
       JSON.stringify({ userId, startedAt: Date.now() }),
     );
   } catch {
-    // The reset route also listens for Supabase's PASSWORD_RECOVERY event.
+    // The explicit recovery callback remains usable within the current view.
   }
 }
 
@@ -178,19 +178,18 @@ export function clearOAuthResponseFromUrl() {
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
 }
 
-type HostedCallback = Awaited<ReturnType<typeof getHostedCallbackAuth>>;
-
 async function waitForStoredSession(
   candidate: Session | null,
-  lease: HostedCallback,
+  context: Awaited<ReturnType<typeof resolveLegacyAuthContext>>,
+  assertCurrent: () => void,
 ): Promise<Session | null> {
-  lease.assertCurrent();
+  assertCurrent();
   if (candidate?.access_token && candidate.refresh_token) {
-    const { error } = await lease.auth.setSession({
+    const { error } = await context.auth.setSession({
       access_token: candidate.access_token,
       refresh_token: candidate.refresh_token,
     });
-    lease.assertCurrent();
+    assertCurrent();
     if (error) {
       console.error("[KovaAuth] Session persistence failed after OAuth.", {
         error: authErrorKind(error),
@@ -200,9 +199,9 @@ async function waitForStoredSession(
   }
 
   for (let i = 0; i < 20; i += 1) {
-    lease.assertCurrent();
-    const { data, error } = await lease.auth.getSession();
-    lease.assertCurrent();
+    assertCurrent();
+    const { data, error } = await context.auth.getSession();
+    assertCurrent();
     if (error) {
       console.error("[KovaAuth] Session read failed after OAuth.", {
         error: authErrorKind(error),
@@ -210,9 +209,14 @@ async function waitForStoredSession(
       throw error;
     }
     if (data.session?.access_token) {
-      const { data: userData, error: userError } = await lease.auth.getUser();
-      lease.assertCurrent();
-      if (userError || !userData.user) {
+      const { data: userData, error: userError } = await context.auth.getUser();
+      assertCurrent();
+      if (
+        userError ||
+        !userData.user ||
+        userData.user.id !== data.session.user.id ||
+        (candidate && data.session.user.id !== candidate.user.id)
+      ) {
         console.error("[KovaAuth] Current user check failed after OAuth.", {
           error: authErrorKind(userError),
         });
@@ -226,14 +230,22 @@ async function waitForStoredSession(
   return null;
 }
 
-export async function completeOAuthSessionFromUrl(source: string): Promise<Session | null> {
+export async function completeOAuthSessionFromUrl(
+  source: string,
+  signal?: AbortSignal,
+  options: { recoveryOnly?: boolean } = {},
+): Promise<Session | null> {
   const url = getCurrentUrl();
   if (!url) return null;
-
-  // Snapshot credentials once, then remove them before asynchronous work.
+  // Clear before any network operation, including failed or forbidden callbacks.
   clearOAuthResponseFromUrl();
-  const lease = await getHostedCallbackAuth();
-  lease.assertCurrent();
+  signal?.throwIfAborted();
+  const context = await resolveLegacyAuthContext();
+  const assertCurrent = () => {
+    signal?.throwIfAborted();
+    context.assertCurrent();
+  };
+  assertCurrent();
 
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
@@ -250,40 +262,58 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
   const accessToken = hash.get("access_token");
   const refreshToken = hash.get("refresh_token");
   if (accessToken && refreshToken) {
-    const { data, error } = await lease.auth.setSession({
+    if (options.recoveryOnly && hash.get("type") !== "recovery")
+      throw new Error("password_recovery_proof_required");
+    const { data, error } = await context.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-    lease.assertCurrent();
+    assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth token session save failed from ${source}.`, {
         error: authErrorKind(error),
       });
       throw error;
     }
-    return waitForStoredSession(data.session ?? null, lease);
+    const restored = await waitForStoredSession(data.session ?? null, context, assertCurrent);
+    assertCurrent();
+    if (restored && hash.get("type") === "recovery") markPasswordRecoveryFlow(restored.user.id);
+    return restored;
   }
 
   const code = url.searchParams.get("code");
   if (code) {
-    const { data, error } = await lease.auth.exchangeCodeForSession(code);
-    lease.assertCurrent();
+    const { data, error } = await context.auth.exchangeCodeForSession(code);
+    assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth code exchange failed from ${source}.`, {
         error: authErrorKind(error),
       });
       throw error;
     }
-    return waitForStoredSession(data.session ?? null, lease);
+    // auth-js binds redirectType to its stored PKCE verifier, not a query flag.
+    // The pinned SDK returns this field at runtime but omits it from its public
+    // AuthTokenResponse type. Treat an absent/changed field as no recovery proof.
+    const redirectType = (data as typeof data & { redirectType?: unknown }).redirectType;
+    if (options.recoveryOnly && redirectType !== "recovery")
+      throw new Error("password_recovery_proof_required");
+    const restored = await waitForStoredSession(data.session ?? null, context, assertCurrent);
+    assertCurrent();
+    if (restored && redirectType === "recovery") markPasswordRecoveryFlow(restored.user.id);
+    return restored;
   }
 
-  const { data, error } = await lease.auth.getSession();
-  lease.assertCurrent();
+  const { data, error } = await context.auth.getSession();
+  assertCurrent();
   if (error) {
     console.error(`[KovaAuth] Session lookup failed from ${source}.`, {
       error: authErrorKind(error),
     });
     throw error;
   }
-  return waitForStoredSession(data.session ?? null, lease);
+  const restored = await waitForStoredSession(data.session ?? null, context, assertCurrent);
+  assertCurrent();
+  if (options.recoveryOnly && (!restored || !hasRecentPasswordRecoveryFlow(restored.user.id)))
+    throw new Error("password_recovery_proof_required");
+  return restored;
 }

@@ -27,6 +27,8 @@ test("the sign-in dialog only enables Google once the deployment confirms it", (
     /googleUnavailable = useKovaAuth\s+\? !googleAvailable\s+: providers\.resolved && !providers\.google/,
   );
   assert.match(dialog, /disabled=\{loading \|\| !googleAvailable\}/);
+  // The configured entrypoint returns to the canonical public origin to set its
+  // browser cookie before beginning OAuth; aliases must not invent an auth host.
   assert.match(dialog, /new URL\("\/api\/auth\/google\/start", browserKovaAuthOrigin\(\)\)/);
 });
 

@@ -159,6 +159,21 @@ export async function createPasswordAccount(input: {
   };
 }
 
+export async function resendVerification(input: {
+  email: string;
+  verificationDigest: string;
+  verificationExpiresAt: string;
+  emailPayload: JsonObject;
+}): Promise<void> {
+  const value = await rpc<unknown>("kova_auth_resend_verification", {
+    p_email: input.email,
+    p_verification_digest_hex: input.verificationDigest,
+    p_expires_at: input.verificationExpiresAt,
+    p_email_payload: input.emailPayload,
+  });
+  if (typeof value !== "boolean") throw new KovaAuthStoreError("resend_verification");
+}
+
 export async function consumeVerification(input: {
   verificationDigest: string;
   sessionDigest: string;

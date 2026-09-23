@@ -49,10 +49,26 @@ function fixture(count, { size = 3, missing = false, corrupt = false, account = 
   return { admin, rows, calls, content };
 }
 
-async function accountWorker(client) {
+async function accountWorker(client, identity) {
   const admin = {
     from: client.from.bind(client),
-    auth: { admin: { getUserById: async () => ({ data: { user: { id: OWNER } }, error: null }) } },
+    auth: {
+      admin: {
+        getUserById: async () => {
+          assert.equal(identity, undefined, "an owned export must not contact hosted Auth");
+          return { data: { user: { id: OWNER, email: "owner@example.invalid" } }, error: null };
+        },
+      },
+    },
+    rpc: async (name, args) => {
+      assert.equal(name, "kova_auth_account_snapshot");
+      assert.deepEqual(args, {
+        p_account_id: OWNER,
+        p_allow_legacy: false,
+        p_require_verified: false,
+      });
+      return { data: identity, error: null };
+    },
   };
   let source = await readFile(
     new URL("../../src/lib/account-export.server.ts", import.meta.url),
@@ -121,6 +137,54 @@ test("all metadata pages reserve the remaining account budget before exact singl
     [true, true],
   );
   assert.equal(f.calls.slice(2).filter((call) => !call.metadata).length, 65);
+});
+
+test("the actual owned account export includes the real verified email with no hosted Auth call or credential fields", async () => {
+  const previous = process.env.KOVA_AUTH_MODE;
+  process.env.KOVA_AUTH_MODE = "kova";
+  try {
+    const f = fixture(2, { account: true });
+    const worker = await accountWorker(f.admin, {
+      id: OWNER,
+      email: "real@example.invalid",
+      email_confirmed_at: "2026-01-01T00:00:00Z",
+      app_metadata: { provider: "kova", secret: "must-not-export" },
+      encrypted_password: "must-not-export",
+      user_metadata: { full_name: "Real Person", token: "must-not-export" },
+    });
+    const artifact = await worker.buildAccountExport(OWNER, VERSION);
+    const exported = JSON.parse(artifact.text);
+    assert.equal(exported.account.email, "real@example.invalid");
+    assert.equal(exported.account.id, OWNER);
+    assert.equal(exported.account.app_metadata.provider, "kova");
+    assert.doesNotMatch(artifact.text, /must-not-export|shadow\+|encrypted_password/u);
+  } finally {
+    if (previous === undefined) delete process.env.KOVA_AUTH_MODE;
+    else process.env.KOVA_AUTH_MODE = previous;
+  }
+});
+
+test("identity-store outages preserve the account worker retry class before any private data read", async () => {
+  const previous = process.env.KOVA_AUTH_MODE;
+  process.env.KOVA_AUTH_MODE = "kova";
+  try {
+    const calls = [];
+    const worker = await accountWorker({
+      rpc: async () => ({ data: null, error: { message: "private provider detail" } }),
+      from() {
+        calls.push("records");
+        throw new Error("must not read");
+      },
+    });
+    await assert.rejects(
+      worker.buildAccountExport(OWNER, VERSION),
+      /^AccountExportError: account_export_database_unavailable$/u,
+    );
+    assert.deepEqual(calls, []);
+  } finally {
+    if (previous === undefined) delete process.env.KOVA_AUTH_MODE;
+    else process.env.KOVA_AUTH_MODE = previous;
+  }
 });
 
 test("retirement or changed file bytes between metadata and body reads fails the entire export", async () => {

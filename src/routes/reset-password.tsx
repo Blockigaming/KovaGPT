@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
+import {
+  getSupabaseClientConfigStatus,
+  resolveLegacyAuthContext,
+} from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,11 +12,12 @@ import { Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import {
   clearPasswordRecoveryFlow,
-  hasRecentPasswordRecoveryFlow,
   markPasswordRecoveryFlow,
+  completeOAuthSessionFromUrl,
+  clearOAuthResponseFromUrl,
 } from "@/lib/oauth-session";
 import { browserKovaAuthEnabled, browserKovaAuthMode, kovaAuthJson } from "@/lib/kova-auth-browser";
-import { readKovaRecoveryLink, type KovaRecoveryLink } from "@/lib/kova-recovery-link.mjs";
+import { readKovaRecoveryLanding } from "@/lib/kova-recovery-landing.mjs";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -25,6 +29,7 @@ export const Route = createFileRoute("/reset-password")({
         content: "Set a new password for your KovaGPT account.",
       },
       { name: "robots", content: "noindex" },
+      { name: "referrer", content: "no-referrer" },
     ],
   }),
 });
@@ -37,27 +42,46 @@ function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
-  const recoveryLink = useRef<KovaRecoveryLink | null>(null);
+  const recoveryLanding = useRef<ReturnType<typeof readKovaRecoveryLanding> | null>(null);
+  const legacyContext = useRef<{
+    context: Awaited<ReturnType<typeof resolveLegacyAuthContext>>;
+    userId: string;
+  } | null>(null);
+  const submitting = useRef(false);
+  const mounted = useRef(false);
   const useKovaRecovery = browserKovaAuthEnabled() && recoveryToken !== null;
 
   useEffect(() => {
-    // Capture once across StrictMode effect replay; retain only in component
-    // memory and scrub before making the password form available.
-    recoveryLink.current ??= readKovaRecoveryLink(window.location.href, browserKovaAuthMode());
-    const captured = recoveryLink.current;
-    if (captured.owned) {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Capture only in memory and remove the credential before showing any form.
+    // The ref also survives React's development effect replay after URL cleanup.
+    if (!recoveryLanding.current) {
       try {
-        window.history.replaceState({}, document.title, captured.cleanPath ?? "/reset-password");
+        const landing = readKovaRecoveryLanding(window.location.href, browserKovaAuthMode());
+        if (landing.cleanUrl !== null)
+          window.history.replaceState(null, document.title, landing.cleanUrl);
+        recoveryLanding.current = landing;
       } catch {
-        captured.token = null;
+        // A credential that cannot be removed from the URL never enables reset.
+        recoveryLanding.current = { owned: true, token: null, cleanUrl: null };
       }
-      setRecoveryToken(captured.token);
-      setError(
-        captured.token
-          ? null
-          : "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
-      );
+    }
+    const landing = recoveryLanding.current;
+    if (landing.owned || browserKovaAuthMode() === "kova") {
+      if (!landing.owned) clearOAuthResponseFromUrl();
+      setRecoveryToken(landing.token);
       setReady(true);
+      if (!browserKovaAuthEnabled() || !landing.token) {
+        setError(
+          "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
+        );
+      }
       return;
     }
     if (!getSupabaseClientConfigStatus().configured) {
@@ -65,11 +89,11 @@ function ResetPassword() {
       setError("Account recovery is temporarily unavailable. Please try again later.");
       return;
     }
-    // Supabase may need a network round-trip to exchange a recovery code. Listen
-    // before checking the current session so a slow exchange is not mislabeled
-    // as an expired link.
+    // One explicit callback exchange owns recovery. Neither SDK initialization
+    // nor the app bootstrap may race this route and consume its code first.
     let cancelled = false;
     let settled = false;
+    const controller = new AbortController();
     const finish = (sessionReady: boolean) => {
       if (cancelled || settled) return;
       settled = true;
@@ -80,58 +104,45 @@ function ResetPassword() {
           : "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
       );
     };
-    const params = new URLSearchParams(window.location.search);
-    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    // Supabase may consume the recovery URL (and fire PASSWORD_RECOVERY) before
-    // this listener attaches. Treat a recovery-shaped landing URL as proof the
-    // visitor arrived from a reset email.
-    const arrivedFromResetLink =
-      params.get("type") === "recovery" ||
-      hash.get("type") === "recovery" ||
-      params.has("code") ||
-      params.has("token_hash") ||
-      hash.has("access_token");
-    if (params.get("error") || hash.get("error")) {
-      clearPasswordRecoveryFlow();
-      finish(false);
-    }
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" && session) {
+    const check = async () => {
+      try {
+        const session = await completeOAuthSessionFromUrl("password recovery", controller.signal, {
+          recoveryOnly: true,
+        });
+        if (cancelled) return;
+        if (!session) {
+          finish(false);
+          return;
+        }
+        const context = await resolveLegacyAuthContext();
+        if (cancelled) return;
+        context.assertCurrent();
+        legacyContext.current = { context, userId: session.user.id };
         markPasswordRecoveryFlow(session.user.id);
         finish(true);
-        return;
-      }
-      if (session && (arrivedFromResetLink || hasRecentPasswordRecoveryFlow(session.user.id))) {
-        if (arrivedFromResetLink) markPasswordRecoveryFlow(session.user.id);
-        finish(true);
-      }
-    });
-    const check = async () => {
-      const { data, error: sessionError } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (
-        data.session &&
-        (arrivedFromResetLink || hasRecentPasswordRecoveryFlow(data.session.user.id))
-      ) {
-        if (arrivedFromResetLink) markPasswordRecoveryFlow(data.session.user.id);
-        finish(true);
-      } else if (sessionError) {
+      } catch {
         clearPasswordRecoveryFlow();
         finish(false);
       }
     };
     void check();
-    const t = window.setTimeout(() => finish(false), 15_000);
+    const t = window.setTimeout(() => {
+      if (settled) return;
+      finish(false);
+      cancelled = true;
+      controller.abort();
+    }, 15_000);
     return () => {
       cancelled = true;
+      controller.abort();
+      legacyContext.current = null;
       window.clearTimeout(t);
-      sub.subscription.unsubscribe();
     };
   }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ready || error || loading) return;
+    if (submitting.current || !ready || error) return;
     const minimumLength = useKovaRecovery ? 12 : 6;
     if (password.length < minimumLength) {
       toast.error(`Password must be at least ${minimumLength} characters.`);
@@ -142,26 +153,48 @@ function ResetPassword() {
       return;
     }
     setLoading(true);
+    submitting.current = true;
     try {
       if (useKovaRecovery && recoveryToken) {
         const response = await kovaAuthJson("/api/auth/recovery/reset", {
           token: recoveryToken,
           password,
         });
-        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
-        if (!response.ok) {
-          throw new Error(typeof payload.error === "string" ? payload.error : "Recovery failed");
-        }
+        const payload = (await response.json().catch(() => null)) as {
+          session?: { accountId?: unknown; emailVerified?: unknown };
+          error?: unknown;
+        } | null;
+        if (
+          !response.ok ||
+          typeof payload?.session?.accountId !== "string" ||
+          payload.session.emailVerified !== true
+        )
+          throw new Error("recovery_response_unconfirmed");
+        if (!mounted.current) return;
+        recoveryLanding.current = null;
+        setRecoveryToken(null);
         window.history.replaceState({}, document.title, "/reset-password");
         toast.success("Password updated and other sessions signed out.");
         window.location.replace("/");
         return;
       }
-      const { error: updateErr } = await supabase.auth.updateUser({ password });
+      const boundary = legacyContext.current;
+      if (!boundary) throw new Error("recovery_session_unavailable");
+      boundary.context.assertCurrent();
+      const current = await boundary.context.auth.getSession();
+      if (!mounted.current) return;
+      boundary.context.assertCurrent();
+      if (current.error || current.data.session?.user.id !== boundary.userId)
+        throw new Error("recovery_session_changed");
+      const { error: updateErr } = await boundary.context.auth.updateUser({ password });
+      boundary.context.assertCurrent();
+      if (!mounted.current) return;
       if (updateErr) throw updateErr;
-      const { error: signOutError } = await supabase.auth.signOut({
+      const { error: signOutError } = await boundary.context.auth.signOut({
         scope: "others",
       });
+      boundary.context.assertCurrent();
+      if (!mounted.current) return;
       clearPasswordRecoveryFlow();
       if (signOutError) {
         toast.warning(
@@ -175,9 +208,13 @@ function ResetPassword() {
       console.error("[KovaAuth] Password update failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("Your password could not be updated. Request a new reset link and try again.");
+      if (mounted.current)
+        toast.error("Your password could not be updated. Request a new reset link and try again.");
     } finally {
+      setPassword("");
+      setConfirm("");
       setLoading(false);
+      submitting.current = false;
     }
   };
 

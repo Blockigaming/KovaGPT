@@ -10,12 +10,14 @@ import * as projectPolicy from "../../src/lib/project-file-storage-policy.mjs";
 import * as sitesExport from "../../src/lib/account-export-sites.mjs";
 import * as exportPagination from "../../src/lib/account-export-pagination.mjs";
 import * as cleanupPolicy from "../../src/lib/account-export-cleanup-policy.mjs";
+import * as accountIdentity from "../../src/lib/account-identity.server.mjs";
 const owner = "11111111-1111-4111-8111-111111111111",
   gen = "22222222-2222-4222-8222-222222222222";
 function loader() {
   const calls = [],
     original = "%PDF-1.7 exact original bytes";
   const modules = {
+    "@/lib/account-identity.server.mjs": accountIdentity,
     "./library-original-policy.mjs": policy,
     "node:buffer": buffer,
     "node:crypto": crypto,

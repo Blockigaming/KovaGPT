@@ -383,3 +383,59 @@ test("dual-mode bearer admission rechecks owned retirement after hosted verifica
     );
   }
 });
+
+test("all cookie-authenticated mutations reject cross-origin or unproven browser origin before creating any client", async (t) => {
+  const source = transpile(readFileSync("src/lib/api-auth.server.ts", "utf8"));
+  for (const mode of ["dual", "kova"]) {
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      for (const [label, headers] of [
+        ["sibling", { Origin: "https://untrusted.kova.test", "Sec-Fetch-Site": "same-site" }],
+        ["foreign", { Origin: "https://attacker.invalid" }],
+        ["opaque", { Origin: "null" }],
+        ["missing", {}],
+        ["contradictory", { Origin: "https://attacker.invalid", "Sec-Fetch-Site": "same-origin" }],
+      ]) {
+        await t.test(`${mode} ${method} ${label}`, async () => {
+          const exports = {};
+          const modules = {
+            "@supabase/supabase-js": {
+              createClient: () => assert.fail("no clients before origin proof"),
+            },
+            "@/lib/billing-entitlement.server": {},
+            "@/lib/auth-security.mjs": security,
+            "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => mode },
+            "@/lib/kova-auth-crypto.server.mjs": {
+              digestKovaToken: () => assert.fail("no credential use"),
+            },
+            "@/lib/kova-auth-store.server": {
+              resolveSession: () => assert.fail("no database use"),
+            },
+          };
+          vm.runInNewContext(source, {
+            exports,
+            Response,
+            Error,
+            process: { env: {} },
+            require: (name) => {
+              assert.ok(Object.hasOwn(modules, name));
+              return modules[name];
+            },
+          });
+          const response = await exports.requireUser(
+            new Request("https://kova.test/api/security/lockdown", {
+              method,
+              headers: {
+                ...headers,
+                Cookie: `__Host-kova_session=${"K".repeat(43)}`,
+                "Content-Type": "text/plain",
+              },
+              body: JSON.stringify({ enabled: false }),
+            }),
+          );
+          assert.equal(response.status, 403);
+          assert.equal(response.headers.get("Cache-Control"), "no-store");
+        });
+      }
+    }
+  }
+});

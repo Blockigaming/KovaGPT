@@ -62,7 +62,9 @@ import {
 import { LogOut, User as UserIcon } from "lucide-react";
 import {
   browserKovaAuthMode,
-  fetchKovaSession,
+  announceKovaAuthChange,
+  clearKovaAuthCache,
+  KOVA_AUTH_CHANGE_KEY,
   resolveKovaSessionAuthority,
   isKovaSessionRejectedError,
   setKovaSessionActive,
@@ -146,10 +148,21 @@ function KovaClerkProvider({
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    let running = false;
+    let repeat = false;
+    let initial = true;
+    const refresh = async () => {
+      if (cancelled) return;
+      if (running) {
+        repeat = true;
+        return;
+      }
+      running = true;
       try {
         const principal = await resolveKovaSessionAuthority();
-        if (cancelled) return;
+        if (cancelled || repeat) return;
+        if (initial) announceKovaAuthChange();
+        initial = false;
         if (!principal && allowLegacyFallback) {
           setKovaSessionActive(false);
           setUseLegacy(true);
@@ -157,11 +170,12 @@ function KovaClerkProvider({
         }
         purgeOwnerlessStateFor(principal?.accountId ?? null);
         setKovaSessionActive(Boolean(principal) || !allowLegacyFallback);
+        setUseLegacy(false);
         setSession(principal ? toSession(principal) : null);
         setAuthIssue(null);
         setIsLoaded(true);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled || repeat) return;
         if (isKovaSessionRejectedError(error)) {
           purgeOwnerlessStateFor(null);
           setKovaSessionActive(true);
@@ -177,10 +191,41 @@ function KovaClerkProvider({
         setSession(null);
         setAuthIssue("temporarily_unavailable");
         setIsLoaded(false);
+      } finally {
+        running = false;
+        if (!cancelled && repeat) {
+          repeat = false;
+          void refresh();
+        }
       }
-    })();
+    };
+    const invalidate = () => {
+      // Disable the legacy data client synchronously, before React commits the
+      // replacement provider or starts any asynchronous cookie validation.
+      setKovaSessionActive(true);
+      clearKovaAuthCache();
+      setUseLegacy(false);
+      setSession(null);
+      setIsLoaded(false);
+      void refresh();
+    };
+    const visible = () => {
+      if (document.visibilityState === "visible") invalidate();
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key === KOVA_AUTH_CHANGE_KEY && event.newValue !== event.oldValue) invalidate();
+    };
+    window.addEventListener("focus", invalidate);
+    window.addEventListener("pageshow", invalidate);
+    window.addEventListener("storage", storage);
+    document.addEventListener("visibilitychange", visible);
+    void refresh();
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", invalidate);
+      window.removeEventListener("pageshow", invalidate);
+      window.removeEventListener("storage", storage);
+      document.removeEventListener("visibilitychange", visible);
     };
   }, [allowLegacyFallback, purgeOwnerlessStateFor, toSession]);
 
@@ -231,6 +276,7 @@ function KovaClerkProvider({
     if (!allowLegacyFallback) setKovaSessionActive(true);
     setSession(null);
     setIsLoaded(true);
+    announceKovaAuthChange();
     window.location.assign("/");
   }, [allowLegacyFallback, session]);
 
@@ -249,7 +295,7 @@ function KovaClerkProvider({
   if (useLegacy) return <SupabaseClerkProvider>{children}</SupabaseClerkProvider>;
 
   return (
-    <Ctx.Provider value={value}>
+    <Ctx.Provider key={isLoaded ? (session?.user.id ?? "guest") : "unresolved"} value={value}>
       {children}
       {authIssue ? (
         <div
@@ -504,6 +550,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
     // config must not take down the public homepage; auth becomes unavailable
     // until deployment config is repaired.
     let cancelled = false;
+    const callbackController = new AbortController();
     const config = getSupabaseClientConfigStatus();
     if (!config.configured) {
       console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
@@ -539,10 +586,17 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
     async function hydrateSession() {
       const hydrationValidation = sessionValidationRef.current;
       try {
-        if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
+        if (
+          hasOAuthResponseInUrl() &&
+          window.location.pathname !== OAUTH_CALLBACK_PATH &&
+          window.location.pathname !== "/reset-password"
+        ) {
           // Clear the OAuth params from the URL up-front so a StrictMode
           // double-invoke / reload can't re-trigger exchange.
-          const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
+          const oauthSession = await completeOAuthSessionFromUrl(
+            "app bootstrap",
+            callbackController.signal,
+          );
           clearOAuthResponseFromUrl();
           if (
             !isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
@@ -606,6 +660,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      callbackController.abort();
       sub.subscription.unsubscribe();
     };
   }, [acceptSession, clearBrowserStateFor, markRetryableAuthFailure, purgeOwnerlessStateFor]);

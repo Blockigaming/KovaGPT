@@ -64,7 +64,7 @@ export function authHttp(options = {}) {
       TextDecoder,
       fetch:
         options.fetch ??
-        (() => {
+        (async () => {
           throw new Error("Unexpected external request");
         }),
       Buffer,

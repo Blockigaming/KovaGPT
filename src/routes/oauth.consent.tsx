@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { resolveLegacyAuthContext } from "@/integrations/supabase/client";
+import { subscribeKovaAuthChanges } from "@/lib/kova-auth-browser";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Loader2 } from "lucide-react";
@@ -23,18 +24,26 @@ type OAuthApi = {
   getAuthorizationDetails: (
     id: string,
   ) => Promise<{ data: AuthorizationDetails | null; error: { message: string } | null }>;
-  approveAuthorization: (id: string) => Promise<{
+  approveAuthorization: (
+    id: string,
+    options: { skipBrowserRedirect: true },
+  ) => Promise<{
     data: { redirect_url?: string; redirect_to?: string } | null;
     error: { message: string } | null;
   }>;
-  denyAuthorization: (id: string) => Promise<{
+  denyAuthorization: (
+    id: string,
+    options: { skipBrowserRedirect: true },
+  ) => Promise<{
     data: { redirect_url?: string; redirect_to?: string } | null;
     error: { message: string } | null;
   }>;
 };
 
-function oauthApi(): OAuthApi | null {
-  const auth = supabase.auth as unknown as { oauth?: OAuthApi };
+type LegacyContext = Awaited<ReturnType<typeof resolveLegacyAuthContext>>;
+function oauthApi(context: LegacyContext): OAuthApi | null {
+  context.assertCurrent();
+  const auth = context.auth as unknown as { oauth?: OAuthApi };
   return auth.oauth ?? null;
 }
 
@@ -54,12 +63,61 @@ export const Route = createFileRoute("/oauth/consent")({
 });
 
 function ConsentRoute() {
+  const [context, setContext] = useState<LegacyContext | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    let current: LegacyContext | null = null;
+    const unsubscribe = subscribeKovaAuthChanges(() => {
+      if (!current) return;
+      try {
+        current.assertCurrent();
+      } catch {
+        if (mounted) {
+          setContext(null);
+          setUnavailable(true);
+        }
+      }
+    });
+    void resolveLegacyAuthContext()
+      .then((value) => {
+        if (!mounted) return;
+        value.assertCurrent();
+        current = value;
+        setContext(value);
+      })
+      .catch(() => {
+        if (mounted) setUnavailable(true);
+      });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+  if (unavailable)
+    return (
+      <Message
+        title="Authorization unavailable"
+        body="This legacy app-authorization flow is unavailable for Kova-owned accounts. No access was granted."
+      />
+    );
+  if (!context)
+    return (
+      <Message title="Checking account" body="Verifying which account system owns this request." />
+    );
+  return <LegacyConsentRoute context={context} />;
+}
+
+function LegacyConsentRoute({ context }: { context: LegacyContext }) {
   const { authorization_id } = Route.useSearch();
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [details, setDetails] = useState<AuthorizationDetails | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+  const sessionRef = useRef<Session | null>(null);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [authDialog, setAuthDialog] = useState<{ open: boolean; mode: "sign-in" | "sign-up" }>({
     open: false,
@@ -68,25 +126,52 @@ function ConsentRoute() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    mountedRef.current = true;
+    context.assertCurrent();
+    context.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        context.assertCurrent();
+        if (error) throw new Error("session_unavailable");
+        sessionRef.current = data.session;
+        setSession(data.session);
+        setSessionLoaded(true);
+      })
+      .catch(() => {
+        if (mounted) {
+          setLoadError("Your session could not be verified.");
+          setSessionLoaded(true);
+        }
+      });
+    const { data: subscription } = context.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
-      setSession(data.session);
-      setSessionLoaded(true);
-    });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) return;
+      try {
+        context.assertCurrent();
+      } catch {
+        nextSession = null;
+      }
+      sessionRef.current = nextSession;
+      setDetails(null);
       setSession(nextSession);
       setSessionLoaded(true);
     });
     return () => {
       mounted = false;
+      mountedRef.current = false;
       subscription.subscription.unsubscribe();
     };
-  }, []);
+  }, [context]);
 
   useEffect(() => {
     if (!session || !authorization_id) return;
-    const api = oauthApi();
+    let api: OAuthApi | null;
+    try {
+      api = oauthApi(context);
+    } catch {
+      setLoadError("Your account session changed. Start again.");
+      return;
+    }
     if (!api) {
       setLoadError("OAuth is not available on this project.");
       return;
@@ -96,45 +181,79 @@ function ConsentRoute() {
       .getAuthorizationDetails(authorization_id)
       .then(({ data, error }) => {
         if (cancelled) return;
+        context.assertCurrent();
+        if (sessionRef.current?.user.id !== session.user.id) return;
         if (error) {
-          setLoadError(error.message);
+          setLoadError("The authorization request could not be verified.");
           return;
         }
         const immediate = data?.redirect_url ?? data?.redirect_to;
         if (immediate && !data?.client) {
-          window.location.href = immediate;
+          setLoadError("This authorization request is already complete or no longer available.");
           return;
         }
         setDetails(data);
       })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
+      .catch(() => {
+        if (!cancelled) setLoadError("The authorization request could not be verified.");
       });
     return () => {
       cancelled = true;
     };
-  }, [session, authorization_id]);
+  }, [session, authorization_id, context]);
 
   async function decide(approve: boolean) {
-    const api = oauthApi();
-    if (!api) return;
+    if (busyRef.current || !session || !details?.client) return;
+    busyRef.current = true;
     setBusy(true);
     setDecisionError(null);
-    const { data, error } = approve
-      ? await api.approveAuthorization(authorization_id)
-      : await api.denyAuthorization(authorization_id);
-    if (error) {
-      setBusy(false);
-      setDecisionError(error.message);
-      return;
+    const captured = session.user.id;
+    const assertCurrent = () => {
+      context.assertCurrent();
+      if (!mountedRef.current || sessionRef.current?.user.id !== captured)
+        throw new Error("session_changed");
+    };
+    try {
+      assertCurrent();
+      const current = await context.auth.getSession();
+      assertCurrent();
+      if (current.error || current.data.session?.user.id !== captured)
+        throw new Error("session_changed");
+      const api = oauthApi(context);
+      if (!api) throw new Error("oauth_unavailable");
+      const { data, error } = approve
+        ? await api.approveAuthorization(authorization_id, { skipBrowserRedirect: true })
+        : await api.denyAuthorization(authorization_id, { skipBrowserRedirect: true });
+      assertCurrent();
+      if (error) throw new Error("oauth_decision_failed");
+      const target = data?.redirect_url ?? data?.redirect_to;
+      const expected =
+        details.client.redirect_uri ??
+        (details.client.redirect_uris?.length === 1 ? details.client.redirect_uris[0] : null);
+      if (!target || !expected) throw new Error("redirect_unavailable");
+      const next = new URL(target),
+        approved = new URL(expected);
+      if (
+        next.protocol !== "https:" ||
+        next.username ||
+        next.password ||
+        next.hash ||
+        next.origin !== approved.origin ||
+        next.pathname !== approved.pathname ||
+        [...approved.searchParams].some(
+          ([key, value]) =>
+            next.searchParams.getAll(key).length !== 1 || next.searchParams.get(key) !== value,
+        )
+      )
+        throw new Error("redirect_invalid");
+      window.location.href = next.href;
+    } catch {
+      if (mountedRef.current)
+        setDecisionError("The connection was not confirmed. Start again from the requesting app.");
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
-    const target = data?.redirect_url ?? data?.redirect_to;
-    if (!target) {
-      setBusy(false);
-      setDecisionError("No redirect returned by the authorization server.");
-      return;
-    }
-    window.location.href = target;
   }
 
   if (!authorization_id) {
@@ -152,6 +271,7 @@ function ConsentRoute() {
   }
 
   if (!session) {
+    if (loadError) return <Message title="Could not verify your session" body={loadError} />;
     return (
       <Shell>
         <div className="flex flex-col items-center text-center">
