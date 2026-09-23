@@ -42,6 +42,16 @@ prove which rows a role can access. The recurrence helper is a separate function
 from the service-only claim/recovery/settlement routines. The six mutating
 routine ACLs and their effective API-role privileges match the baseline.
 
+The table `effectiveChanges` field compares only `has_table_privilege` for the
+captured API roles. The collector does not capture `has_column_privilege`, so
+column-level effective access cannot be inferred from an empty
+`effectiveChanges` array. Table deltas explicitly say
+`columnEffectiveAccess: "not_captured"`; their `columnAcl` fields show explicit
+column grants only. For source-final comparisons, column ACL storage is compared
+only between columns with the same name. Added or removed columns appear in the
+separate schema change report, not as ACL storage drift. Added routine scopes
+include their live grants and effective EXECUTE privileges.
+
 The recorded source migration for `scheduled_tasks`
 (`20260627210732`) grants authenticated DML and full service access. The source
 creation of `scheduled_task_runs` (`20260722123000`) has no equivalent explicit

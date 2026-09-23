@@ -54,6 +54,7 @@ test("table drift retains explicit and effective grants as separate evidence", (
     },
   ]);
   assert.equal(delta.columnAclStorageChanged, false);
+  assert.equal(delta.columnEffectiveAccess, "not_captured");
 });
 
 test("routine drift does not misreport an explicit grant as new effective access", () => {
@@ -80,9 +81,34 @@ test("deleted grants, column grants and ACL storage changes stay visible", () =>
     { column: "id", ...grant("authenticated", "SELECT") },
   ]);
   assert.equal(delta.columnAclStorageChanged, true);
+  assert.deepEqual(delta.effectiveChanges, []);
+  assert.equal(delta.columnEffectiveAccess, "not_captured");
 });
 
-test("identical snapshots have no drift; missing scopes remain visible", () => {
+test("new columns do not imply ACL storage drift on shared columns", () => {
+  const original = table();
+  const live = structuredClone(original);
+  live.columns.push({ name: "additional", aclIsNull: true });
+  assert.deepEqual(scheduledGrantDeltas({ tables: [original] }, { tables: [live] }, "tables"), []);
+  const reverse = scheduledGrantDeltas({ tables: [live] }, { tables: [original] }, "tables");
+  assert.deepEqual(reverse, []);
+});
+
+test("new routine scope exposes its grants and effective access", () => {
+  const added = routine();
+  added.name = "new_routine";
+  added.acl.unshift(grant("anon", "EXECUTE"));
+  const [delta] = scheduledGrantDeltas({ routines: [] }, { routines: [added] }, "routines");
+  assert.equal(delta.kind, "added_scope");
+  assert.deepEqual(delta.explicitGrants.acl.liveOnly, added.acl);
+  assert.deepEqual(delta.effectiveChanges[0], {
+    role: "anon",
+    source: null,
+    live: added.effectivePrivileges[0],
+  });
+});
+
+test("identical snapshots have no drift; removed scopes retain grants", () => {
   const original = routine();
   assert.deepEqual(
     scheduledGrantDeltas(
@@ -92,11 +118,17 @@ test("identical snapshots have no drift; missing scopes remain visible", () => {
     ),
     [],
   );
-  assert.deepEqual(scheduledGrantDeltas({ routines: [original] }, { routines: [] }, "routines"), [
-    {
-      identity: JSON.stringify([original.schema, original.name, original.identityArguments]),
-      kind: "removed_scope",
-    },
-  ]);
+  const [removed] = scheduledGrantDeltas({ routines: [original] }, { routines: [] }, "routines");
+  assert.equal(
+    removed.identity,
+    JSON.stringify([original.schema, original.name, original.identityArguments]),
+  );
+  assert.equal(removed.kind, "removed_scope");
+  assert.deepEqual(removed.explicitGrants.acl.sourceOnly, original.acl);
+  assert.deepEqual(removed.effectiveChanges[0], {
+    role: "anon",
+    source: original.effectivePrivileges[0],
+    live: null,
+  });
   assert.throws(() => scheduledGrantDeltas({}, {}, "unknown"), /grant_scope_invalid/u);
 });

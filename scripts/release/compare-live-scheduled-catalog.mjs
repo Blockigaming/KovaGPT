@@ -81,19 +81,35 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
     );
   const byIdentity = new Map(before.map((row) => [identity(row), row]));
   const liveIds = new Set(live.map(identity));
+  const grantProperties = kind === "tables" ? ["acl", "columnAcl"] : ["acl"];
+  const singleScope = (row, scopeKind) => ({
+    identity: identity(row),
+    kind: scopeKind,
+    explicitGrants: Object.fromEntries(
+      grantProperties.map((property) => [
+        property,
+        {
+          sourceOnly: scopeKind === "removed_scope" ? row[property] : [],
+          liveOnly: scopeKind === "added_scope" ? row[property] : [],
+        },
+      ]),
+    ),
+    effectiveChanges: row.effectivePrivileges.map((privileges) => ({
+      role: privileges.role,
+      source: scopeKind === "removed_scope" ? privileges : null,
+      live: scopeKind === "added_scope" ? privileges : null,
+    })),
+    ...(kind === "tables" ? { columnEffectiveAccess: "not_captured" } : {}),
+  });
   return [
     ...before
       .filter((row) => !liveIds.has(identity(row)))
-      .map((row) => ({
-        identity: identity(row),
-        kind: "removed_scope",
-      })),
+      .map((row) => singleScope(row, "removed_scope")),
     ...live.flatMap((row) => {
       const original = byIdentity.get(identity(row));
-      if (!original) return [{ identity: identity(row), kind: "added_scope" }];
-      const properties = kind === "tables" ? ["acl", "columnAcl"] : ["acl"];
+      if (!original) return [singleScope(row, "added_scope")];
       const explicitGrants = Object.fromEntries(
-        properties.map((property) => {
+        grantProperties.map((property) => {
           const old = new Set(original[property].map(identityKey));
           const newer = new Set(row[property].map(identityKey));
           return [
@@ -112,9 +128,9 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
       });
       const columnAclStorageChanged =
         kind === "tables" &&
-        original.columns.some((column, index) => {
-          const current = row.columns[index];
-          return current?.name !== column.name || current.aclIsNull !== column.aclIsNull;
+        original.columns.some((column) => {
+          const current = row.columns.find(({ name }) => name === column.name);
+          return current !== undefined && current.aclIsNull !== column.aclIsNull;
         });
       if (
         original.aclIsNull === row.aclIsNull &&
@@ -132,6 +148,7 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
             ? {
                 aclIsNull: { source: original.aclIsNull, live: row.aclIsNull },
                 columnAclStorageChanged,
+                columnEffectiveAccess: "not_captured",
               }
             : {}),
           explicitGrants,
