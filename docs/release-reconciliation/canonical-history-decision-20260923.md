@@ -1,9 +1,13 @@
 # Canonical migration history: proposed reconciliation decision
 
 Status: **proposed for independent review; no production action approved**. This
-decision uses the 98-version captured ledger and the 157-file source checkpoint
-in `release-migration-lineage.json`. Refresh both before accepting an execution
-plan. A source timestamp absent from production is not an execution instruction.
+decision uses the 97-version captured fixture in
+`tests/fixtures/production-migration-history-20260904/manifest.json`, its
+98th-row `current-supplement-20260918.json` in the same directory, and the
+157-version source set in `release-migrations.json`. The 24 remote-only mappings
+and blocked proof states are in `release-migration-lineage.json`. Refresh the
+actual ledger and source manifest before accepting an execution plan. A source
+timestamp absent from production is not an execution instruction.
 
 ## Exact inventory and disposition
 
