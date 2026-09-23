@@ -90,10 +90,12 @@ node scripts/release/compare-live-scheduled-catalog.mjs \
 
 The comparator verifies the receipt's artifact byte hashes, exact collector
 query hashes, source commit/tree consistency, complete ledger sets, capture
-shapes, chronology, and recomputed fingerprints. It emits only field names and
-hashes, with every promotion/readiness flag false. The selected live project
-identity is an operator-side fact: the catalog JSON does not independently
-attest its Supabase project ref. Do not use this scoped comparison as the v2
-full-schema proof for either mapping; later-writer scope, dependency closure,
-synthetic behavior, independent review and production-history reconciliation
-remain separate gates.
+shapes, chronology, and recomputed fingerprints. Its output includes bounded
+schema changes and grant deltas: grantor and grantee role names, privilege type,
+grantability, and effective API-role privilege values. It never emits
+application rows or raw function bodies. Every promotion/readiness flag is
+false. The selected live project identity is an operator-side fact: the catalog
+JSON does not independently attest its Supabase project ref. Do not use this
+scoped comparison as the v2 full-schema proof for either mapping; later-writer
+scope, dependency closure, synthetic behavior, independent review and
+production-history reconciliation remain separate gates.

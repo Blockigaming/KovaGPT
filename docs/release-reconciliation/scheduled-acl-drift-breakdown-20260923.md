@@ -37,10 +37,12 @@ none of these listed grants is present in the isolated baseline:
 
 No scoped column grants or per-column ACL storage changes explain the table
 differences. These are genuine grant differences, not a serialization-order
-artifact. RLS still controls individual table rows; the catalog alone does not
-prove which rows a role can access. The recurrence helper is a separate function
-from the service-only claim/recovery/settlement routines. The six mutating
-routine ACLs and their effective API-role privileges match the baseline.
+artifact. RLS policies constrain `anon` and `authenticated` rows, but the
+captured `service_role` has `BYPASSRLS`; its newly effective table DML is not
+filtered by those policies. The catalog alone cannot establish which rows
+the client roles can access. The recurrence helper is a separate function from
+the service-only claim/recovery/settlement routines. The six mutating routine
+ACLs and their effective API-role privileges match the baseline.
 
 The table `effectiveChanges` field compares only `has_table_privilege` for the
 captured API roles. The collector does not capture `has_column_privilege`, so
