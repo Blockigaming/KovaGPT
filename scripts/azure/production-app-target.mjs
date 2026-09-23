@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const APP_NAME = /^[a-z](?:[a-z0-9]|-(?!-)){0,29}[a-z0-9]$/u;
+const APP_NAME = /^[a-z](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$/u;
 const GROUP_NAME = /^[-._()A-Za-z0-9]{1,90}$/u;
 const SUBSCRIPTION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu;
 

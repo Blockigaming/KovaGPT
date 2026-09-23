@@ -74,7 +74,7 @@ jobs:
             echo "::error::The production resource group name is invalid."
             exit 1
           fi
-          if [[ ! "$CONTAINER_APP_NAME" =~ ^[a-z][a-z0-9-]{0,29}[a-z0-9]$ || "$CONTAINER_APP_NAME" == *--* ]]; then
+          if [[ ! "$CONTAINER_APP_NAME" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ || "$CONTAINER_APP_NAME" == *--* ]]; then
             echo "::error::The protected production Container App name is invalid."
             exit 1
           fi

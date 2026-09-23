@@ -17,6 +17,15 @@ const input = () => ({
 
 test("production PLAN binds protected target to an existing app in the signed-in subscription", () => {
   assert.equal(validateProductionAppTarget(input()).name, "ca-kovagpt-prod");
+  const maximumLength = input();
+  maximumLength.approvedName = "a".repeat(32);
+  maximumLength.parameters.containerAppName.value = maximumLength.approvedName;
+  maximumLength.observed.name = maximumLength.approvedName;
+  maximumLength.observed.id = maximumLength.observed.id.replace(
+    "ca-kovagpt-prod",
+    maximumLength.approvedName,
+  );
+  assert.equal(validateProductionAppTarget(maximumLength).name.length, 32);
   for (const mutation of [
     (value) => (value.parameters.containerAppName.value = "other-prod"),
     (value) => (value.parameters.containerAppName = undefined),
@@ -37,7 +46,7 @@ test("production PLAN binds protected target to an existing app in the signed-in
 });
 
 test("production PLAN rejects invalid or absent protected identities", () => {
-  for (const name of ["", "Other-App", "ca--prod", "ca-prod/other", "1-prod", "a".repeat(32)]) {
+  for (const name of ["", "Other-App", "ca--prod", "ca-prod/other", "1-prod", "a".repeat(33)]) {
     const value = input();
     value.approvedName = name;
     assert.throws(() => validateProductionAppTarget(value));
