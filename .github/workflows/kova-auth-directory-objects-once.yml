@@ -1,0 +1,22 @@
+name: Kova Auth Verified Source Objects (once)
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/kova-auth-directory-objects-once.yml]
+permissions:
+  contents: write
+jobs:
+  objects:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Upload only hash-verified source objects without updating any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_DELTA: eNrtfYty20ay6K8gKt0jMgEpvAnIq028jnPWu3mV7WRPXUslD4CBhDVfS5B2tIr+/XT3PDADghRlJ7tbt64roUhgHj09Pf2anp67o5w1/OjsqIwzPw3S1OcZT/yMZWk+SZLCS6oi8qsiYDxKJskkO3KpxtV6xbFalaYTlnqTapL7RRayPGLZJPOK1IfHZRRayyPGLZJPOK1IfHZRRay
+        shell: bash
+        run: |
+          python3 - <<'PY_SOURCE'
+          raise SystemExit('Source-object upload disabled: no application or branch changes permitted by this bootstrap')
+          PY_SOURCE
