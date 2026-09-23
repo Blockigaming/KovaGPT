@@ -10,6 +10,10 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const liveAudit = await readFile(
+  new URL("../../scripts/release/privilege-live-violation-counts.sql", import.meta.url),
+  "utf8",
+);
 const owner = "11111111-1111-4111-8111-111111111111";
 const other = "22222222-2222-4222-8222-222222222222";
 const lockedTables = [
@@ -67,6 +71,8 @@ async function fixture() {
     create role service_role bypassrls;
     create schema auth;
     create schema kova_private;
+    create schema supabase_migrations;
+    create table supabase_migrations.schema_migrations(version text);
     grant usage on schema auth, kova_private to authenticated, service_role;
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -109,9 +115,78 @@ async function fixture() {
   for (const name of triggerNames) {
     await db.exec(`create function public.${name}() returns trigger language plpgsql
       security definer as $$ begin return new; end $$;`);
+    await db.exec(`create trigger ${name}_fixture before insert on public.family_groups
+      for each row execute function public.${name}();`);
   }
   return db;
 }
+
+async function aggregateAudit(db) {
+  const statements = await db.exec(liveAudit);
+  const report = statements
+    .flatMap((statement) => statement.rows ?? [])
+    .find((row) => row.aggregate_counts);
+  assert.ok(report, "catalog audit must return the aggregate receipt");
+  return report.aggregate_counts;
+}
+
+test("read-only aggregate audit finds historical drift and verifies candidate convergence", async () => {
+  const db = await fixture();
+  try {
+    const before = await aggregateAudit(db);
+    assert.equal(before.serverTableRestrictiveDenyMissing, lockedTables.length);
+    assert.equal(before.triggerCandidateSearchPathMismatch, triggerNames.length);
+    assert.ok(before.globalFunctionPublicExecute > 0);
+    assert.ok(before.schemaTableClientGrants > 0);
+    assert.ok(before.schemaSequenceClientGrants > 0);
+
+    await db.exec(migration);
+    const after = await aggregateAudit(db);
+    for (const key of [
+      "tableDdlClientGrantViolations",
+      "sequenceUpdateClientGrantViolations",
+      "serverTableMissing",
+      "serverTableRlsMissing",
+      "serverTableRestrictiveDenyMissing",
+      "serverTableHistoricalPermissiveDeny",
+      "serverTableClientGrantViolations",
+      "serverTableClientColumnGrantViolations",
+      "serverTableServiceGrantMissing",
+      "connectorTableMissing",
+      "connectorAuthenticatedGrantMismatch",
+      "connectorAnonGrantViolations",
+      "connectorClientColumnGrantViolations",
+      "connectorServiceGrantMissing",
+      "triggerRoutineMissing",
+      "triggerReturnTypeMismatch",
+      "triggerPostgresOwnerMismatch",
+      "triggerCandidateSearchPathMismatch",
+      "triggerClientExecuteViolations",
+      "triggerUnboundRoutineCount",
+      "globalFunctionPublicExecute",
+      "globalFunctionClientExecute",
+      "schemaFunctionClientExecute",
+      "schemaTableClientGrants",
+      "schemaSequenceClientGrants",
+    ]) {
+      assert.equal(after[key], 0, `${key} must converge in the isolated source fixture`);
+    }
+    assert.equal(after.schemaFunctionServiceExecute, 1);
+
+    await db.exec(`
+      grant select on public.agent_workers to authenticated;
+      drop policy agent_workers_deny_clients on public.agent_workers;
+      create policy agent_workers_deny_clients on public.agent_workers
+        as permissive for all to anon, authenticated using (false) with check (false);
+    `);
+    const regressed = await aggregateAudit(db);
+    assert.equal(regressed.serverTableClientGrantViolations, 1);
+    assert.equal(regressed.serverTableRestrictiveDenyMissing, 1);
+    assert.equal(regressed.serverTableHistoricalPermissiveDeny, 1);
+  } finally {
+    await db.close();
+  }
+});
 
 async function identify(db, role, id) {
   await db.exec(`set role ${role}`);
