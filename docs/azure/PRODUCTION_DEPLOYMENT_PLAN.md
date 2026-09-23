@@ -40,6 +40,10 @@ name, resource group, and subscription to match the protected name and signed-in
 subscription. This read-only check prevents a prefix-derived new app target; it
 does not approve the template's other resource changes. The app name and resource
 group still need owner confirmation against the actual production origin.
+The PLAN checks Azure CLI version 2.76.0 or later and uses `ProviderNoRbac` for
+both validation and what-if, requesting provider validation with read permissions
+instead of a deploy-capable PLAN identity. The actual protected OIDC role must
+still pass a live read-only validation run before relying on this contract.
 
 The protected plan accepts the `acr-git` source context emitted by the repository Dockerfile. Its `cancel-in-progress: false` policy prevents a running plan from being canceled. GitHub concurrency retains at most one running and one pending run per group and does not guarantee FIFO ordering, so this serializes eligible plans but is not a durable queue.
 

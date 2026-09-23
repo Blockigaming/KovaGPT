@@ -71,5 +71,7 @@ test("production PLAN source remains read-only and Bicep requires an exact app n
   );
   assert.match(workflow, /az resource show/u);
   assert.match(workflow, /scripts\/azure\/production-app-target\.mjs/u);
+  assert.match(workflow, /Azure CLI 2\.76\.0 or later is required/u);
+  assert.equal((workflow.match(/--validation-level ProviderNoRbac/gu) ?? []).length, 2);
   assert.doesNotMatch(workflow, /az deployment group create|az containerapp update/u);
 });

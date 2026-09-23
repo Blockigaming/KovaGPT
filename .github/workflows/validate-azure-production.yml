@@ -78,6 +78,17 @@ jobs:
             echo "::error::The protected production Container App name is invalid."
             exit 1
           fi
+          azure_cli_version="$(az version --query '"azure-cli"' --output tsv)"
+          if [[ ! "$azure_cli_version" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
+            echo "::error::An identifiable Azure CLI version is required for read-only PLAN validation."
+            exit 1
+          fi
+          azure_cli_major="${BASH_REMATCH[1]}"
+          azure_cli_minor="${BASH_REMATCH[2]}"
+          if (( azure_cli_major < 2 || (azure_cli_major == 2 && azure_cli_minor < 76) )); then
+            echo "::error::Azure CLI 2.76.0 or later is required for ProviderNoRbac validation."
+            exit 1
+          fi
 
           expected_prefix="${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}@sha256:"
           if [[ "$IMAGE_REFERENCE" != "$expected_prefix"* ]]; then
@@ -257,6 +268,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/azure/production/main.bicep \
             --parameters "@${{ steps.parameters.outputs.path }}" \
+            --validation-level ProviderNoRbac \
             --only-show-errors \
             --output none
 
@@ -269,6 +281,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/azure/production/main.bicep \
             --parameters "@${{ steps.parameters.outputs.path }}" \
+            --validation-level ProviderNoRbac \
             --no-pretty-print \
             --result-format ResourceIdOnly \
             --only-show-errors \
