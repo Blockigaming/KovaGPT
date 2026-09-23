@@ -13,10 +13,7 @@ import {
   CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
   buildChatWorkspaceCatalogEvidence,
 } from "./upgrade-database-chat-workspace-routines.mjs";
-import {
-  DAY15_CHAT_DATA_QUERY_SHA256,
-  validateDay15ChatDataViolations,
-} from "./day15-chat-data-violations.mjs";
+import { validateDay15ChatDataEvidence } from "./day15-chat-data-violations.mjs";
 
 const SHA40 = /^[a-f0-9]{40}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
@@ -167,17 +164,20 @@ export function compareLiveChatWorkspaceCatalog({
     liveData = readJson(liveDataPath);
   if (
     JSON.stringify(liveTable.data.ledgerVersions) !==
-      JSON.stringify(liveRoutine.data.ledgerVersions) ||
-    liveData.data.querySha256 !== DAY15_CHAT_DATA_QUERY_SHA256
+    JSON.stringify(liveRoutine.data.ledgerVersions)
   )
     fail("live_checkpoint_mismatch");
-  const counts = validateDay15ChatDataViolations(liveData.data.counts);
+  const counts = validateDay15ChatDataEvidence(liveData.data, liveTable.data.ledgerVersions);
   if (
-    liveData.data.observedViolationCount !== counts.observedViolationCount ||
-    liveData.data.schemaProofPromoted !== false ||
-    liveData.data.productionReleaseReady !== false
+    Date.parse(liveData.data.capturedAt) <
+    Math.max(
+      Date.parse(liveTable.data.capturedAt),
+      Date.parse(liveRoutine.data.capturedAt),
+      Date.parse(tables.data.upgraded.capture.capturedAt),
+      Date.parse(routines.data.upgraded.capture.capturedAt),
+    )
   )
-    fail("live_data_invalid");
+    fail("live_checkpoint_mismatch");
   return {
     schemaVersion: 1,
     captureKind: "chat-workspace-live-catalog-comparison",
@@ -189,6 +189,7 @@ export function compareLiveChatWorkspaceCatalog({
     liveData: {
       querySha256: counts.querySha256,
       captureSha256: liveData.sha256,
+      capturedAt: liveData.data.capturedAt,
       observedViolationCount: counts.observedViolationCount,
     },
     liveCatalogCompared: true,
@@ -197,6 +198,7 @@ export function compareLiveChatWorkspaceCatalog({
     productionReleaseReady: false,
     limitations: [
       "The source replay is isolated; these live reads and data counts occurred separately. Concurrent changes between captures cannot be excluded.",
+      "The count query returns only aggregate counts. Its client-recorded time/project and catalog-ledger association do not independently attest database settings, provenance, or an atomic snapshot.",
       "Table metadata and selected routine-name families are covered. Other dependencies, views and executable behavior need their own scope and synthetic tests.",
       "No mapping is promoted; a current checkpoint, later-writer review, full scope, independent acceptance and restore evidence are required.",
     ],

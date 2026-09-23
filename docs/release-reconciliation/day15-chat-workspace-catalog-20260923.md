@@ -12,11 +12,11 @@ mapping.
 Four separate PostgreSQL `REPEATABLE READ, READ ONLY` transactions on
 project `mfbycmbjygcfkrsuepxf` returned:
 
-| Capture                                                                                                            | Observed state                                                                                                                                                                                   | Exact capture file SHA-256                                         |
-| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| [Four table catalogs](./evidence/day15-live-chat-table-catalog-20260923.json), 2026-09-23 21:28:43.102 UTC         | 98 migration versions; the four scoped tables have 13/7/14/9 columns, 10/5/12/8 constraints, 5/2/5/4 indexes, four policies each, 2/1/1/1 triggers, and RLS enabled                              | `e17f1358d0fc1fc1161a109742bf68ea27d49c7ae4efcff0468732b6eeb75c45` |
-| [Selected routine families](./evidence/day15-live-chat-routine-catalog-20260923.json), 2026-09-23 21:32:51.515 UTC | 98 migration versions; 19 matching routines across the 22 selected name families, none marked SECURITY DEFINER and none effectively executable by `anon`                                         | `bd5c452488da5ff7a55a8072887f8ffbbaa81ae179756f6f1091614d32af71ce` |
-| [Four table data compatibility counts](./evidence/day15-live-chat-data-counts-20260923.json)                       | All four [table row totals](./evidence/day15-live-chat-row-totals-20260923.json) were zero in a separate read-only count transaction; 24 named violation counts were zero in a later transaction | `b09c422b7d7ffa23a0a8dc89895495f32ae1bf2352b8a28b8c0f7360a60eee1d` |
+| Capture                                                                                                                   | Observed state                                                                                                                                                                                                                                                                                                     | Exact capture file SHA-256                                         |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [Four table catalogs](./evidence/day15-live-chat-table-catalog-20260923.json), 2026-09-23 21:28:43.102 UTC                | 98 migration versions; the four scoped tables have 13/7/14/9 columns, 10/5/12/8 constraints, 5/2/5/4 indexes, four policies each, 2/1/1/1 triggers, and RLS enabled                                                                                                                                                | `e17f1358d0fc1fc1161a109742bf68ea27d49c7ae4efcff0468732b6eeb75c45` |
+| [Selected routine families](./evidence/day15-live-chat-routine-catalog-20260923.json), 2026-09-23 21:32:51.515 UTC        | 98 migration versions; 19 matching routines across the 22 selected name families, none marked SECURITY DEFINER and none effectively executable by `anon`                                                                                                                                                           | `bd5c452488da5ff7a55a8072887f8ffbbaa81ae179756f6f1091614d32af71ce` |
+| [Four table data compatibility counts](./evidence/day15-live-chat-data-counts-20260923.json), 2026-09-23 21:52:25.748 UTC | All four [table row totals](./evidence/day15-live-chat-row-totals-20260923.json) were zero in a separate read-only count transaction; 24 named violation counts were zero in a later transaction. The revised branch-array check uses total `cardinality(message_ids) > 512` to match the final source constraint. | `23e57b81385d47d87ff5350310c07027716d46f57064bfcbf77eca729d450db0` |
 
 The row-total file SHA-256 is `f1f75298d3c779316168b3e88d5e7085ae92246d078a6d8a1ecf3e39f4c18c0d`. The checked-in snapshots are observational records of read-only tool responses. Their SHA-256 values bind their bytes but do not independently authenticate their origin. The catalog outputs contain PostgreSQL metadata (column names and types,
 constraint/index and policy definition hashes, grants and effective role
@@ -55,7 +55,16 @@ The CI `database-upgrade-evidence` artifact already uploads
 the existing application assertions run before these final captures.
 
 After obtaining a fresh live capture **later** than the hosted final
-snapshot, use:
+snapshot, use the same fixed aggregate SQL for a fresh count capture. Package
+its result in an exact-key JSON envelope containing `schemaVersion: 1`,
+`captureKind: "chat-workspace-aggregate-violations"`,
+`projectId: "mfbycmbjygcfkrsuepxf"`, the client-recorded UTC `capturedAt`,
+`catalogLedgerSha256` (SHA-256 of the live catalog's ordered versions joined
+with newlines), `querySha256`, `counts`, `observedViolationCount`, and false
+`schemaProofPromoted`/`productionReleaseReady` markers. The count SQL still
+returns aggregate counts only. The checked-in September 23 count record has
+this envelope, but it precedes the exact-head hosted rehearsal, so a later
+fresh capture is still required for the comparison. Then use:
 
 ```bash
 node scripts/release/compare-live-chat-workspace-catalog.mjs \
@@ -68,9 +77,12 @@ node scripts/release/compare-live-chat-workspace-catalog.mjs \
 ```
 
 The comparator fails closed on a changed receipt, artifact bytes, query,
-ledger, isolation/read-only flag, chronology, catalog shape, or data-count
-shape. It reports baseline-to-live and final-source-to-live differences in
-each scope, and never changes the schema-proof status.
+ledger, catalog isolation/read-only flag, chronology, catalog shape, or
+data-count envelope/shape. It reports baseline-to-live and final-source-to-live
+differences in each scope, and never changes the schema-proof status. The
+client-recorded count timestamp, project, and catalog-ledger digest associate
+separately observed transactions; they cannot independently attest query
+provenance, database transaction flags, or atomicity.
 
 ## Remaining acceptance work
 

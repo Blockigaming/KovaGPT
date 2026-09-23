@@ -1,5 +1,10 @@
 {
-  "querySha256": "5e74ea07e8bba0243b16dadd1ab6e272f862171aeef4c25bcab7ab79da2d8718",
+  "schemaVersion": 1,
+  "captureKind": "chat-workspace-aggregate-violations",
+  "projectId": "mfbycmbjygcfkrsuepxf",
+  "capturedAt": "2026-09-23T21:52:25.748Z",
+  "catalogLedgerSha256": "c9bf4a75ebb8c28fd33e965060505558aa8b6d05e06b854b4b01635c527e5eef",
+  "querySha256": "2c4d62919fae56192644d4f104605da4e6b0a0e998e5edc5cad61838dc15f947",
   "counts": {
     "chat_branches": {
       "bad_chat_id": 0,

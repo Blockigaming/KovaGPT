@@ -11,7 +11,7 @@ with branch_counts as (
   select count(*) filter (where b.chat_id is null or char_length(b.chat_id) not between 1 and 256)::integer as bad_chat_id,
     count(*) filter (where b.conversation_id is null or char_length(b.conversation_id) not between 1 and 256)::integer as bad_conversation_id,
     count(*) filter (where b.branch_from_message_index < 0)::integer as negative_message_index,
-    count(*) filter (where coalesce(array_length(b.message_ids, 1), 0) > 2000)::integer as oversized_message_id_array,
+    count(*) filter (where cardinality(b.message_ids) > 512)::integer as oversized_message_id_array,
     count(*) filter (where b.parent_branch_id = b.id)::integer as self_parent,
     count(*) filter (where b.parent_branch_id is not null
       and (parent.id is null or parent.owner_id is distinct from b.owner_id
@@ -72,6 +72,7 @@ commit;`;
 export const DAY15_CHAT_DATA_QUERY_SHA256 = createHash("sha256")
   .update(DAY15_CHAT_DATA_SQL)
   .digest("hex");
+export const DAY15_CHAT_PROJECT_ID = "mfbycmbjygcfkrsuepxf";
 
 const REQUIRED = {
   chat_branches: [
@@ -134,4 +135,49 @@ export function validateDay15ChatDataViolations(counts) {
     limitation:
       "Snapshot counts cover only listed predicates in four tables. Zero rows make conversion checks vacuous; source/live catalogs, full routines, UTF-16 bounds, later writers, executable RLS and synthetic concurrency are separate.",
   };
+}
+
+// The outer fields are recorded by the read-only capture client, not returned
+// by the count SQL. The digest associates this separate observation with the
+// catalog inventory; it does not make the transactions an atomic snapshot.
+export function validateDay15ChatDataEvidence(evidence, ledgerVersions) {
+  const fields = [
+    "schemaVersion",
+    "captureKind",
+    "projectId",
+    "capturedAt",
+    "catalogLedgerSha256",
+    "querySha256",
+    "counts",
+    "observedViolationCount",
+    "schemaProofPromoted",
+    "productionReleaseReady",
+  ];
+  if (
+    !evidence ||
+    typeof evidence !== "object" ||
+    Array.isArray(evidence) ||
+    Object.getPrototypeOf(evidence) !== Object.prototype ||
+    Reflect.ownKeys(evidence).length !== fields.length ||
+    fields.some((field) => !Object.hasOwn(evidence, field)) ||
+    evidence.schemaVersion !== 1 ||
+    evidence.captureKind !== "chat-workspace-aggregate-violations" ||
+    evidence.projectId !== DAY15_CHAT_PROJECT_ID ||
+    typeof evidence.capturedAt !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(evidence.capturedAt) ||
+    !Number.isFinite(Date.parse(evidence.capturedAt)) ||
+    new Date(evidence.capturedAt).toISOString() !== evidence.capturedAt ||
+    !Array.isArray(ledgerVersions) ||
+    ledgerVersions.some((v) => typeof v !== "string" || !/^\d{14}$/u.test(v)) ||
+    evidence.catalogLedgerSha256 !==
+      createHash("sha256").update(ledgerVersions.join("\n")).digest("hex") ||
+    evidence.querySha256 !== DAY15_CHAT_DATA_QUERY_SHA256 ||
+    evidence.schemaProofPromoted !== false ||
+    evidence.productionReleaseReady !== false
+  )
+    throw new Error("day15_chat_data_evidence_invalid");
+  const result = validateDay15ChatDataViolations(evidence.counts);
+  if (evidence.observedViolationCount !== result.observedViolationCount)
+    throw new Error("day15_chat_data_evidence_invalid");
+  return result;
 }

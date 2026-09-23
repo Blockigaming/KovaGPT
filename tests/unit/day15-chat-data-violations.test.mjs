@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -50,6 +51,19 @@ test("Day-15 compatibility query returns only aggregate counts in one read-only 
   );
   assert.match(DAY15_CHAT_DATA_SQL, /count\(\*\) filter/u);
   assert.match(DAY15_CHAT_DATA_SQL, /from public\.chat_branches/u);
+  const targetMigration = readFileSync(
+    new URL(
+      "../../supabase/migrations/20260904230332_canonical_chat_workspace_lineage_reconciliation.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(targetMigration, /check \(cardinality\(message_ids\) <= 512\)/u);
+  assert.match(
+    DAY15_CHAT_DATA_SQL,
+    /cardinality\(b\.message_ids\) > 512\)::integer as oversized_message_id_array/u,
+  );
+  assert.doesNotMatch(DAY15_CHAT_DATA_SQL, /array_length\(b\.message_ids, 1\)/u);
   assert.match(DAY15_CHAT_DATA_SQL, /from public\.chat_custom_rules/u);
   assert.match(DAY15_CHAT_DATA_SQL, /from public\.chat_message_versions/u);
   assert.match(DAY15_CHAT_DATA_SQL, /from public\.chat_pinned_files/u);

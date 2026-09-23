@@ -204,6 +204,11 @@ function fixture(t) {
     capture("routine", BASE, "2026-09-23T12:00:00.000Z"),
   );
   const liveData = file("live-data.json", {
+    schemaVersion: 1,
+    captureKind: "chat-workspace-aggregate-violations",
+    projectId: "mfbycmbjygcfkrsuepxf",
+    capturedAt: "2026-09-23T12:01:00.000Z",
+    catalogLedgerSha256: digest(BASE.join("\n")),
     querySha256: DAY15_CHAT_DATA_QUERY_SHA256,
     counts: zeroCounts,
     observedViolationCount: 0,
@@ -259,5 +264,17 @@ test("Day-15 live comparison rejects artifact, ledger, chronology and data tampe
   });
   mutate(paths.liveDataPath, (a) => {
     a.counts.customer_id = "private";
+  });
+  mutate(paths.liveDataPath, (a) => {
+    a.customerContent = "must reject additional top-level data";
+  });
+  mutate(paths.liveDataPath, (a) => {
+    a.capturedAt = "2026-09-23T11:00:00.000Z";
+  });
+  mutate(paths.liveDataPath, (a) => {
+    a.projectId = "wrong-project";
+  });
+  mutate(paths.liveDataPath, (a) => {
+    a.catalogLedgerSha256 = HASH;
   });
 });
