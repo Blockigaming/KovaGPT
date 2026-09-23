@@ -7,11 +7,13 @@
 begin isolation level repeatable read read only;
 
 with
-public_tables as (
+public_relations as (
   select c.oid, c.relname, c.relrowsecurity
   from pg_catalog.pg_class c
   join pg_catalog.pg_namespace n on n.oid = c.relnamespace
-  where n.nspname = 'public' and c.relkind in ('r', 'p')
+  -- GRANT/REVOKE ON ALL TABLES IN SCHEMA also covers views, materialized
+  -- views, and foreign tables, so the effective-privilege audit must too.
+  where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'f')
 ),
 public_sequences as (
   select c.oid
@@ -59,13 +61,20 @@ server_tables as (
       select 1 from pg_catalog.pg_attribute a
       cross join lateral pg_catalog.aclexplode(a.attacl) grant_row
       where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped
-        and grant_row.grantee in (
-          0,
-          (select oid from pg_catalog.pg_roles where rolname = 'anon'),
-          (select oid from pg_catalog.pg_roles where rolname = 'authenticated')
-        ) and grant_row.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
+        and grant_row.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
+        and (
+          case when grant_row.grantee = 0 then true else
+            pg_catalog.pg_has_role('anon', grant_row.grantee, 'USAGE')
+            or pg_catalog.pg_has_role('authenticated', grant_row.grantee, 'USAGE') end
+        )
+        and (
+          pg_catalog.has_column_privilege('anon', t.oid, a.attnum, grant_row.privilege_type)
+          or pg_catalog.has_column_privilege(
+            'authenticated', t.oid, a.attnum, grant_row.privilege_type
+          )
+        )
     ) client_column_grant
-  from server_names n left join public_tables t on t.relname = n.name
+  from server_names n left join public_relations t on t.relname = n.name
 ),
 connector_names as (
   select key name, value operations from jsonb_each(
@@ -78,13 +87,20 @@ connector_tables as (
       select 1 from pg_catalog.pg_attribute a
       cross join lateral pg_catalog.aclexplode(a.attacl) grant_row
       where a.attrelid = t.oid and a.attnum > 0 and not a.attisdropped
-        and grant_row.grantee in (
-          0,
-          (select oid from pg_catalog.pg_roles where rolname = 'anon'),
-          (select oid from pg_catalog.pg_roles where rolname = 'authenticated')
-        ) and grant_row.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
+        and grant_row.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
+        and (
+          case when grant_row.grantee = 0 then true else
+            pg_catalog.pg_has_role('anon', grant_row.grantee, 'USAGE')
+            or pg_catalog.pg_has_role('authenticated', grant_row.grantee, 'USAGE') end
+        )
+        and (
+          pg_catalog.has_column_privilege('anon', t.oid, a.attnum, grant_row.privilege_type)
+          or pg_catalog.has_column_privilege(
+            'authenticated', t.oid, a.attnum, grant_row.privilege_type
+          )
+        )
     ) client_column_grant
-  from connector_names n left join public_tables t on t.relname = n.name
+  from connector_names n left join public_relations t on t.relname = n.name
 ),
 trigger_names as (
   select unnest(array[
@@ -109,7 +125,8 @@ default_acl as (
       else d.defaclacl end acl
   from (values
     ('f'::"char", 'global'), ('f'::"char", 'public'),
-    ('r'::"char", 'public'), ('S'::"char", 'public')
+    ('r'::"char", 'global'), ('r'::"char", 'public'),
+    ('S'::"char", 'global'), ('S'::"char", 'public')
   ) expectation(object_type, location)
   left join pg_catalog.pg_default_acl d on d.defaclrole = (select oid from owner_role)
     and d.defaclobjtype = expectation.object_type
@@ -117,15 +134,20 @@ default_acl as (
       else 'public'::regnamespace::oid end
 ),
 default_grants as (
-  select d.object_type, d.location, grant_row.grantee, grant_row.privilege_type
+  select d.object_type, d.location, grant_row.grantee, grant_row.privilege_type,
+    case when grant_row.grantee = 0 then true
+      when grant_row.grantee is not null then
+        pg_catalog.pg_has_role('anon', grant_row.grantee, 'USAGE')
+        or pg_catalog.pg_has_role('authenticated', grant_row.grantee, 'USAGE')
+      else false end client_effective
   from default_acl d left join lateral pg_catalog.aclexplode(d.acl) grant_row on true
 )
 select jsonb_build_object(
   'serverVersionNum', current_setting('server_version_num')::integer,
   'observedMigrationCount', (select count(*) from supabase_migrations.schema_migrations),
-  'publicTableCount', (select count(*) from public_tables),
+  'publicRelationCount', (select count(*) from public_relations),
   'tableDdlClientGrantViolations', (
-    select count(*) from public_tables t
+    select count(*) from public_relations t
     join table_operations o on o.op in ('TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN')
     where pg_catalog.has_table_privilege('anon', t.oid, o.op)
        or pg_catalog.has_table_privilege('authenticated', t.oid, o.op)
@@ -208,13 +230,12 @@ select jsonb_build_object(
   'globalFunctionClientExecute', (
     select count(*) from default_grants where object_type = 'f'
       and location = 'global' and privilege_type = 'EXECUTE'
-      and grantee in (select oid from pg_catalog.pg_roles where rolname in ('anon', 'authenticated'))
+      and grantee <> 0 and client_effective
   ),
   'schemaFunctionClientExecute', (
     select count(*) from default_grants where object_type = 'f'
       and location = 'public' and privilege_type = 'EXECUTE'
-      and grantee in (0, (select oid from pg_catalog.pg_roles where rolname = 'anon'),
-        (select oid from pg_catalog.pg_roles where rolname = 'authenticated'))
+      and client_effective
   ),
   'schemaFunctionServiceExecute', (
     select count(*) from default_grants where object_type = 'f'
@@ -223,13 +244,19 @@ select jsonb_build_object(
   ),
   'schemaTableClientGrants', (
     select count(*) from default_grants where object_type = 'r' and location = 'public'
-      and grantee in (0, (select oid from pg_catalog.pg_roles where rolname = 'anon'),
-        (select oid from pg_catalog.pg_roles where rolname = 'authenticated'))
+      and client_effective
   ),
   'schemaSequenceClientGrants', (
     select count(*) from default_grants where object_type = 'S' and location = 'public'
-      and grantee in (0, (select oid from pg_catalog.pg_roles where rolname = 'anon'),
-        (select oid from pg_catalog.pg_roles where rolname = 'authenticated'))
+      and client_effective
+  ),
+  'globalTableClientGrants', (
+    select count(*) from default_grants where object_type = 'r' and location = 'global'
+      and client_effective
+  ),
+  'globalSequenceClientGrants', (
+    select count(*) from default_grants where object_type = 'S' and location = 'global'
+      and client_effective
   )
 ) as aggregate_counts;
 

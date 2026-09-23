@@ -165,6 +165,8 @@ test("read-only aggregate audit finds historical drift and verifies candidate co
       "triggerUnboundRoutineCount",
       "globalFunctionPublicExecute",
       "globalFunctionClientExecute",
+      "globalTableClientGrants",
+      "globalSequenceClientGrants",
       "schemaFunctionClientExecute",
       "schemaTableClientGrants",
       "schemaSequenceClientGrants",
@@ -183,6 +185,32 @@ test("read-only aggregate audit finds historical drift and verifies candidate co
     assert.equal(regressed.serverTableClientGrantViolations, 1);
     assert.equal(regressed.serverTableRestrictiveDenyMissing, 1);
     assert.equal(regressed.serverTableHistoricalPermissiveDeny, 1);
+
+    // Direct-grantee filtering misses inherited column ACLs. Also detect a
+    // redundant column ACL even when a permitted table grant exists.
+    await db.exec(`
+      create role inherited_column_reader;
+      grant inherited_column_reader to authenticated;
+      grant select (id) on public.api_emergency_controls to inherited_column_reader;
+      grant update (id) on public.google_oauth_tokens to inherited_column_reader;
+      grant select (id) on public.connected_accounts to inherited_column_reader;
+      alter default privileges for role postgres
+        grant select on tables to inherited_column_reader;
+      alter default privileges for role postgres
+        grant usage on sequences to inherited_column_reader;
+      create view public.audit_view as select id from public.family_groups;
+      grant trigger on public.audit_view to authenticated;
+      create materialized view public.audit_materialized as
+        select id from public.family_groups;
+      grant maintain on public.audit_materialized to authenticated;
+    `);
+    const hiddenGrants = await aggregateAudit(db);
+    assert.equal(hiddenGrants.serverTableClientColumnGrantViolations, 1);
+    assert.equal(hiddenGrants.connectorClientColumnGrantViolations, 2);
+    assert.equal(hiddenGrants.globalTableClientGrants, 1);
+    assert.equal(hiddenGrants.globalSequenceClientGrants, 1);
+    assert.equal(hiddenGrants.publicRelationCount, regressed.publicRelationCount + 2);
+    assert.equal(hiddenGrants.tableDdlClientGrantViolations, 2);
   } finally {
     await db.close();
   }
