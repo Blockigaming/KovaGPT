@@ -27,7 +27,9 @@ export function validateCanonicalHistoryCapture(lineage, baseline, supplement, b
     supplement.supplement?.length !== 1 ||
     supplement.readOnly !== true ||
     supplement.statementTextReturned !== false ||
-    supplement.customerRowsReturned !== false
+    supplement.customerRowsReturned !== false ||
+    typeof supplement.capturedAt !== "string" ||
+    !Number.isFinite(Date.parse(supplement.capturedAt))
   )
     throw new Error("canonical_history_capture_invalid");
   if (supplement.historicalManifestSha256 !== baselineSha256)

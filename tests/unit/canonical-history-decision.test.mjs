@@ -87,6 +87,18 @@ test("capture validation rejects historical statement drift and wrong projects",
       ),
     /canonical_history_target_mismatch/u,
   );
+  for (const capturedAt of [undefined, "not-a-timestamp", 123]) {
+    assert.throws(
+      () =>
+        validateCanonicalHistoryCapture(
+          lineage,
+          baseline,
+          { ...supplement, capturedAt },
+          baselineSha,
+        ),
+      /canonical_history_capture_invalid/u,
+    );
+  }
 });
 
 test("checked-out migration validation rejects edited and additional SQL files", () => {
