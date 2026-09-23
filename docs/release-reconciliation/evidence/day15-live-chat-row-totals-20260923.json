@@ -1,0 +1,8 @@
+{
+  "readOnly": true,
+  "isolation": "repeatable read",
+  "chat_branches": 0,
+  "chat_custom_rules": 0,
+  "chat_message_versions": 0,
+  "chat_pinned_files": 0
+}
