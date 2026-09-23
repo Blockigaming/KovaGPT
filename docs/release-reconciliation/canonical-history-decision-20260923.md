@@ -26,8 +26,9 @@ All other 19 remote-only versions remain blocked by the lineage file. Their
 candidate sequences and required object scopes are enumerated in
 `remote-only-migrations-20260915.md`; a matching routine name or a successful
 forward rehearsal cannot replace schema, ACL, RLS, function, data, and later
-writer review. The September 23 scoped live comparisons of scheduled objects
-and the temporary export routine are partial observations, not 19 accepted
+writer review. The retained September 20 live catalog comparison is partial
+evidence. Separate September 23 read-only comparisons are proposed in PR #399
+and are not part of this branch's base; neither set constitutes 19 accepted
 proofs.
 
 ## Decision gates before an executable plan can be accepted
@@ -49,10 +50,11 @@ proofs.
    without rerunning its body. Do not invent an applied timestamp or rely on
    the disposable rehearsal's 180 rows as a production target.
 4. Rehearse that exact proposed history operation in an isolated copy with
-   synthetic data, then with an authorized actual-backup restore; demonstrate
-   unchanged customer data, full 19-scope catalog contracts, precise before/after
-   ledger sets, and cleanup. The current CI replay does not implement a
-   production history repair.
+   synthetic data, then with an authorized actual-backup restore; validate
+   each migration's expected data transformations against a reviewed
+   before/after contract, absence of unintended data loss, full 19-scope
+   catalog contracts, precise before/after ledger sets, and cleanup. The
+   current CI replay does not implement a production history repair.
 5. Obtain separate approval for the precise production history/application
    operation after recovery, Storage, provider/key, Azure rollback, and release
    candidate gates. Apply only with a fresh pre-operation ledger readback and
