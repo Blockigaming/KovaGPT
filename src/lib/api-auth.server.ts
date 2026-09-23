@@ -148,6 +148,14 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
     return unauthorized("Invalid or expired session");
   }
 
+  // Compatibility JWTs authorize guarded data-plane requests, not the hosted
+  // API bearer branch. Kova application requests must supply the owned cookie
+  // so its live session is resolved above. Check only signature-verified claims,
+  // and reject malformed marker values rather than treating them as legacy.
+  if (Object.prototype.hasOwnProperty.call(claimsData.claims, "kova_auth")) {
+    return unauthorized("Invalid or expired session");
+  }
+
   const access = evaluateAuthenticatedUser(userData.user, claimsData.claims);
   if (!access.ok) {
     if (access.code === "account_suspended") {

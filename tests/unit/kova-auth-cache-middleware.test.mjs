@@ -281,7 +281,18 @@ test("a preferred owned credential never reaches Supabase Auth or creates an adm
 test("dual-mode bearer admission rechecks owned retirement after hosted verification and fails closed on every unavailable result", async () => {
   const source = transpile(readFileSync("src/lib/api-auth.server.ts", "utf8"));
   const owner = "10000000-0000-4000-8000-000000000001";
-  for (const scenario of ["allowed", "retired", "malformed", "error", "thrown", "invalid-hosted"]) {
+  for (const scenario of [
+    "allowed",
+    "retired",
+    "malformed",
+    "error",
+    "thrown",
+    "invalid-hosted",
+    "kova-marked",
+    "kova-zero",
+    "kova-null",
+    "kova-string",
+  ]) {
     const calls = [];
     const exports = {};
     const modules = {
@@ -314,7 +325,15 @@ test("dual-mode bearer admission rechecks owned retirement after hosted verifica
               },
               getClaims: async () => {
                 calls.push("verified-claims");
-                return { data: { claims: { sub: owner, aal: "aal1" } } };
+                const claims = { sub: owner, aal: "aal1" };
+                if (scenario.startsWith("kova-"))
+                  claims.kova_auth = {
+                    "kova-marked": 1,
+                    "kova-zero": 0,
+                    "kova-null": null,
+                    "kova-string": "1",
+                  }[scenario];
+                return { data: { claims } };
               },
             },
           };
@@ -358,7 +377,7 @@ test("dual-mode bearer admission rechecks owned retirement after hosted verifica
     }
     assert.deepEqual(
       calls,
-      scenario === "invalid-hosted"
+      scenario === "invalid-hosted" || scenario.startsWith("kova-")
         ? ["publishable", "verified-user", "verified-claims"]
         : ["publishable", "verified-user", "verified-claims", "admin", "retirement"],
     );
