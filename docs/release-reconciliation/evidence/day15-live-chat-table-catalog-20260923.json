@@ -1,0 +1,1972 @@
+{
+  "tables": [
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "chat_branches",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "eea9a3e7c2abe43835e2a6fdf92a7d1e6f145ad6dfbfd243fc5d395e5b390a33"
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "chat_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "parent_branch_id",
+          "type": "uuid",
+          "notNull": false,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "branch_from_message_id",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "branch_from_parent_message_id",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "notNull": true,
+          "ordinal": 8,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 9,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 10,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "conversation_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 11,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "branch_from_message_index",
+          "type": "integer",
+          "notNull": false,
+          "ordinal": 12,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "message_ids",
+          "type": "text[]",
+          "notNull": true,
+          "ordinal": 13,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 1,
+          "defaultSha256": "de9b902a0abb75d50771c319ee6d6a50d3963e3d28ce30e76b96e3c382b0c4ab"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_branches_one_active_per_chat",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "f7159f9ce3263913a8d7b4a88d88dcb7396cf78405d7686155cc336aaf8b6d33",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_branches_owner_chat_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "da60636b6fe621ef30ec23f9b360b1d3a6d5083d8a477515e64ddbe145873701",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_branches_owner_root_conversation_uidx",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "74e76e3d48d0148b2e5d6e8b1da81c73ddd2e492cb3d193d02bc1a7f1ab9d182",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_branches_parent_branch_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "22c469c359034b22a7c92c4eb387e29e174a521a72b68778bffd216a90cde148",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_branches_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "b7fcf36f58f3a018d170c76126521a7c20db6264a30b990bb1ad1737bbceb6ad",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "chat_branches_owner_delete",
+          "roles": ["authenticated"],
+          "command": "d",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_branches_owner_insert",
+          "roles": ["authenticated"],
+          "command": "a",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": null
+        },
+        {
+          "name": "chat_branches_owner_select",
+          "roles": ["authenticated"],
+          "command": "r",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_branches_owner_update",
+          "roles": ["authenticated"],
+          "command": "w",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "chat_branches_touch_updated_at",
+          "enabled": "O",
+          "function": "public.touch_updated_at()",
+          "functionOwner": "postgres",
+          "definitionSha256": "fff226e7c8276ded07ed19677b3a7373384b01e33dddf9b356c10f001b4cec41",
+          "functionDefinitionSha256": "5d4726fc97eed40f28018474f093ac398a5fb1d1755b9828aabb5d5fd6e38aba"
+        },
+        {
+          "name": "trg_validate_chat_branch_lineage",
+          "enabled": "O",
+          "function": "public.validate_chat_branch_lineage()",
+          "functionOwner": "postgres",
+          "definitionSha256": "c9872fbc4a2885809385ecd272d3a71de0be98ec694fdd7c09167c2b3c2a164a",
+          "functionDefinitionSha256": "1e45d9e28473d7091bea5ac053f43d717c94d2243772adfaaa46a1ba4c3f7f28"
+        }
+      ],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "chat_branches_chat_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a0938aa788260585ee7a01cfe13ee077f654abb986581e990b76995d1268e54d",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_conversation_id_length",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "22c848d3a8099bf27c3bfcd8c385995808a2bcca5864232ae9c8e505a1ac1384",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_label_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "f552e85c3e04d301a2e7cfc8babd122f2a4a19ca611e23f7b451d11014ea078c",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_message_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "b18604f1c70f1e695389435d7a8fb6258579cad1bcfcb86959942b45d00a76fc",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_message_ids_bound",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "695fb6a83afd9d56cd56443422adf32b706b88c8def190e2fa5f20b2126ed481",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_message_index_nonnegative",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "60fc2dee3437ad62acaafd8b7090f50e65d098ece810e5c4587aa5f7dd8ee3a9",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_branches_owner_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "9374d3dbe9cf82e10e4a4a259d2207ae054eb650798ea19702d45b8fd56e7147",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_branches_parent_branch_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "907301dce0c62a8bd257308c33a7bcd4f088a20e9afb8713e462164f50ad74bf",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_branches_parent_message_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "754b85fa4bba7764a96a8b2c63cafd06b99c971a350aecd0927bb76a443bd56e",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "p",
+          "name": "chat_branches_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 13,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [
+        {
+          "name": "chat_branches_parent_branch_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "sourceTable": "public.chat_branches",
+          "definitionSha256": "907301dce0c62a8bd257308c33a7bcd4f088a20e9afb8713e462164f50ad74bf",
+          "initiallyDeferred": false
+        },
+        {
+          "name": "chat_message_versions_branch_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "sourceTable": "public.chat_message_versions",
+          "definitionSha256": "f3651911868afc46379894d4c4738ac20c9d50dc2331b10bd8d75ccf45a93f76",
+          "initiallyDeferred": false
+        }
+      ],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": [],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "chat_custom_rules",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "eea9a3e7c2abe43835e2a6fdf92a7d1e6f145ad6dfbfd243fc5d395e5b390a33"
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "chat_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "instructions",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "676219f025870b893c0df8670464cfdae5f5cc073c6c44841e35f1805c6b81ce"
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "notNull": true,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_custom_rules_owner_id_chat_id_key",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "27be1211e90d64962734ecdd3477100c45ddb3005cd5a572dd1869f778437623",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_custom_rules_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "4fa8ff43e699bccf1bdef0f788c537a16e1748139ab116156db6fb8a8ce299b5",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "chat_custom_rules_owner_delete",
+          "roles": ["authenticated"],
+          "command": "d",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_custom_rules_owner_insert",
+          "roles": ["authenticated"],
+          "command": "a",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": null
+        },
+        {
+          "name": "chat_custom_rules_owner_select",
+          "roles": ["authenticated"],
+          "command": "r",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_custom_rules_owner_update",
+          "roles": ["authenticated"],
+          "command": "w",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "chat_custom_rules_touch_updated_at",
+          "enabled": "O",
+          "function": "public.touch_updated_at()",
+          "functionOwner": "postgres",
+          "definitionSha256": "40ef4f897c3efb1cf3ce3a01a72b88475bdaa8f9d500973d55c31d3594cd2c07",
+          "functionDefinitionSha256": "5d4726fc97eed40f28018474f093ac398a5fb1d1755b9828aabb5d5fd6e38aba"
+        }
+      ],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "chat_custom_rules_chat_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a0938aa788260585ee7a01cfe13ee077f654abb986581e990b76995d1268e54d",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_custom_rules_instructions_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "12483919d0908524822a0d756ce08b14a67483b6b6109853b7ebb2465d92cccb",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "u",
+          "name": "chat_custom_rules_owner_id_chat_id_key",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "87e97fc3160cfb332a41dffadd0553c0db3392dfd1917759fb03a1731f70a034",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_custom_rules_owner_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "9374d3dbe9cf82e10e4a4a259d2207ae054eb650798ea19702d45b8fd56e7147",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "p",
+          "name": "chat_custom_rules_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 7,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": [],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "chat_message_versions",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "eea9a3e7c2abe43835e2a6fdf92a7d1e6f145ad6dfbfd243fc5d395e5b390a33"
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "chat_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "message_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "branch_id",
+          "type": "uuid",
+          "notNull": false,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "notNull": true,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "72b944c76e868ea083d161f8d3fca3a865fd95dca9d890ef54c526bb4e25d6e3"
+        },
+        {
+          "name": "instruction",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 8,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 9,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "original_content",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 10,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "accepted",
+          "type": "boolean",
+          "notNull": true,
+          "ordinal": 11,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 12,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "selection_start",
+          "type": "integer",
+          "notNull": false,
+          "ordinal": 13,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "selection_end",
+          "type": "integer",
+          "notNull": false,
+          "ordinal": 14,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_message_versions_branch_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "f2aaed683f6ae0733e5b9cf0aae5361a45a1403a0300302de681957d5b1ca032",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_message_versions_lookup_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "dfd344b857688a82d7ef8898f90abbbd54d529b6ddf7d202af024bfed4227949",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_message_versions_one_accepted",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "36d4c216fda1ecfa2235b7f1afec56a6433d684948bb073c0e9875b3dfe4987b",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_message_versions_owner_id_chat_id_message_id_version_key",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "e3b8bd29dc7d61bad19633d2c12de826c2f933be24308555ed93386ee637f38f",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_message_versions_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "1345be0d53815286c53c7fd7a0e862595831c341297d0cc5e39cf5e217641383",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "chat_message_versions_owner_delete",
+          "roles": ["authenticated"],
+          "command": "d",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_message_versions_owner_insert",
+          "roles": ["authenticated"],
+          "command": "a",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": null
+        },
+        {
+          "name": "chat_message_versions_owner_select",
+          "roles": ["authenticated"],
+          "command": "r",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_message_versions_owner_update",
+          "roles": ["authenticated"],
+          "command": "w",
+          "permissive": true,
+          "checkSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7",
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_validate_chat_message_version_branch",
+          "enabled": "O",
+          "function": "public.validate_chat_message_version_branch()",
+          "functionOwner": "postgres",
+          "definitionSha256": "ba39684433d5ba5d7948fc0b769471a1cee1a4ff0592ed5e36b19cb3c7598294",
+          "functionDefinitionSha256": "1b9fa2fea112e9bdf1cbca9ec05ffc2ace6b395de8490ede7140dc95a2ccf56c"
+        }
+      ],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "f",
+          "name": "chat_message_versions_branch_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "f3651911868afc46379894d4c4738ac20c9d50dc2331b10bd8d75ccf45a93f76",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_chat_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a0938aa788260585ee7a01cfe13ee077f654abb986581e990b76995d1268e54d",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_content_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "865aba27ea2bcaec63d3c09633bc7e9167c30f81bcae2eb6c8556dea0f6c2860",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_instruction_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a19f352d1ab743e5fdd496b3c2ae119f8bceb4c784035bd5c6f6a0d4c6c4b2eb",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_message_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "cab0428f692b77ba36155ec53447d09b72340e573f506b4e3d377eeb9694ee64",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_original_content_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "808c9db222b03187605bbe6c5bd1a2849194711e5161761a274f4ce0637545c7",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "u",
+          "name": "chat_message_versions_owner_id_chat_id_message_id_version_key",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "c2e153d2940420c144cc64a1bea3a0b4374c26a8ec9c8a35f9f20513d5d17ca6",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_message_versions_owner_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "9374d3dbe9cf82e10e4a4a259d2207ae054eb650798ea19702d45b8fd56e7147",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "p",
+          "name": "chat_message_versions_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_selection_range",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "938a55b75b010c5cd2b7b9d4ff3517bec2e640c8d420d2b9f14142d35b78baf6",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_source",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "17709af5af04477bd0a6be03690ceb41bec923bc2f26ec1f2be5bd188cf2b3c4",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_message_versions_version_positive",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "9ec2418d02ad8d3aff3555ed426b71befbc4fcb332f1c4d461ec8efcec1151e9",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 14,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": [],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "chat_pinned_files",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "eea9a3e7c2abe43835e2a6fdf92a7d1e6f145ad6dfbfd243fc5d395e5b390a33"
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "chat_id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "source_type",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "source_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "notNull": false,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "bc587d16fe04f2dc435392330ab3f1d862259110e3f739541615410e35793930"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 8,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 9,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "chat_pinned_files_owner_chat_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "79a1dc8aa51bca528b689bf4684aa949987d8161d6ba3e1bf37c9c2f9c1b3892",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_pinned_files_owner_id_chat_id_source_type_source_id_key",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "4b51a69783906f7370ebccf39746894bc2157d1ef804082aab9b697663aac1c2",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_pinned_files_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "e2e8e26e787f7715c3a13e66e39503627a70d3c846ad0594bec71785548c3d8e",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "chat_pinned_files_project_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "3cd59d19001d99606e5012f4391e8ca574424aca27ae7fa5402101c582cdd7cc",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "chat_pinned_files_owner_delete",
+          "roles": ["authenticated"],
+          "command": "d",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_pinned_files_owner_insert",
+          "roles": ["authenticated"],
+          "command": "a",
+          "permissive": true,
+          "checkSha256": "3b75fc3f6e6b965ef1f1c58c9b98ba6000fb3323591911a17ff8019518d5a9f7",
+          "usingSha256": null
+        },
+        {
+          "name": "chat_pinned_files_owner_select",
+          "roles": ["authenticated"],
+          "command": "r",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        },
+        {
+          "name": "chat_pinned_files_owner_update",
+          "roles": ["authenticated"],
+          "command": "w",
+          "permissive": true,
+          "checkSha256": "3b75fc3f6e6b965ef1f1c58c9b98ba6000fb3323591911a17ff8019518d5a9f7",
+          "usingSha256": "2ae6fc398933c6ad67ff4c8ff0a4b11df76dba486cd79c5727ef690d9a6043a7"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "chat_pinned_files_touch_updated_at",
+          "enabled": "O",
+          "function": "public.touch_updated_at()",
+          "functionOwner": "postgres",
+          "definitionSha256": "cbc95fa58e1178783853ec6b9d375497f3ecb9acb20b28633dd795562a71674f",
+          "functionDefinitionSha256": "5d4726fc97eed40f28018474f093ac398a5fb1d1755b9828aabb5d5fd6e38aba"
+        }
+      ],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "chat_pinned_files_chat_id_len",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a0938aa788260585ee7a01cfe13ee077f654abb986581e990b76995d1268e54d",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "u",
+          "name": "chat_pinned_files_owner_id_chat_id_source_type_source_id_key",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "bd1af1bf01639b95952ac46f5c24104802b2388e8f035a0539de9079e937edeb",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_pinned_files_owner_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "9374d3dbe9cf82e10e4a4a259d2207ae054eb650798ea19702d45b8fd56e7147",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "p",
+          "name": "chat_pinned_files_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "chat_pinned_files_project_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a20e655b1b8d408e39c94353848d280f7dc61043880bb9bb83617d80b98d7dc1",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_pinned_files_source_project_coherence",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "24d194c028bffb58ce590d886e22aa5cbc208e99e7a58a3b14aaae05745397e0",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_pinned_files_source_type",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "026d79b37056fdf799720a6863eed0e0a8da70fada379b54b3bf6bbd00f29ca9",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "chat_pinned_files_status",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "79244c9922e5b22de3a517ef55aa142a98da781c6ac2d36480bcd94c2aa92892",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 9,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": [],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    }
+  ],
+  "readOnly": true,
+  "isolation": "repeatable read",
+  "capturedAt": "2026-09-23T21:28:43.102Z",
+  "tableCount": 4,
+  "captureKind": "chat-workspace-table-catalog",
+  "databaseName": "postgres",
+  "schemaVersion": 1,
+  "ledgerVersions": [
+    "20260622225346",
+    "20260623005558",
+    "20260623005610",
+    "20260623145549",
+    "20260623154814",
+    "20260623154832",
+    "20260623155803",
+    "20260623161227",
+    "20260623161519",
+    "20260623194741",
+    "20260623195646",
+    "20260623201628",
+    "20260624124535",
+    "20260624124557",
+    "20260624230040",
+    "20260625132920",
+    "20260625135417",
+    "20260627004905",
+    "20260627210732",
+    "20260702142256",
+    "20260702161114",
+    "20260702163905",
+    "20260702163922",
+    "20260704033129",
+    "20260707004617",
+    "20260707005030",
+    "20260712011732",
+    "20260712013949",
+    "20260713010018",
+    "20260718151609",
+    "20260718152250",
+    "20260718154259",
+    "20260721211500",
+    "20260722123000",
+    "20260722130000",
+    "20260727090000",
+    "20260727120000",
+    "20260727150000",
+    "20260727210000",
+    "20260727230000",
+    "20260728090000",
+    "20260728120000",
+    "20260728150000",
+    "20260728180000",
+    "20260728200000",
+    "20260728220000",
+    "20260731120000",
+    "20260801120000",
+    "20260801123000",
+    "20260801235959",
+    "20260802003000",
+    "20260802120000",
+    "20260802130000",
+    "20260802131000",
+    "20260802132000",
+    "20260803100000",
+    "20260803101000",
+    "20260803110000",
+    "20260803120000",
+    "20260803121000",
+    "20260803122000",
+    "20260803123000",
+    "20260803130000",
+    "20260803143000",
+    "20260803184741",
+    "20260803184803",
+    "20260803200951",
+    "20260803202921",
+    "20260804004928",
+    "20260804015247",
+    "20260805123909",
+    "20260815213024",
+    "20260816213000",
+    "20260820220000",
+    "20260823092042",
+    "20260823092107",
+    "20260823092405",
+    "20260823092450",
+    "20260823100156",
+    "20260823120804",
+    "20260823151901",
+    "20260823151927",
+    "20260823214802",
+    "20260823215044",
+    "20260823215132",
+    "20260823215222",
+    "20260823215259",
+    "20260823215454",
+    "20260823215619",
+    "20260823215848",
+    "20260824081357",
+    "20260824081812",
+    "20260824081926",
+    "20260824082127",
+    "20260824084005",
+    "20260824085042",
+    "20260824085444",
+    "20260906024459"
+  ],
+  "ledgerVersionCount": 98,
+  "postgresVersionNum": 170006,
+  "publicSchemaPresent": true,
+  "catalogSentinelPresent": true
+}
