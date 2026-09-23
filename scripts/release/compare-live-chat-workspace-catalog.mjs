@@ -13,7 +13,10 @@ import {
   CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
   buildChatWorkspaceCatalogEvidence,
 } from "./upgrade-database-chat-workspace-routines.mjs";
-import { validateDay15ChatDataEvidence } from "./day15-chat-data-violations.mjs";
+import {
+  DAY15_CHAT_PROJECT_ID,
+  validateDay15ChatDataEvidence,
+} from "./day15-chat-data-violations.mjs";
 
 const SHA40 = /^[a-f0-9]{40}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
@@ -35,6 +38,33 @@ function readJson(path) {
   } catch {
     fail("json_invalid");
   }
+}
+
+// PostgreSQL identifies these databases generically as `postgres`. Record
+// the selected Supabase project in the capture-client envelope and verify the
+// connector request separately; the wrapper alone cannot attest its origin.
+function readLiveCatalog(path, kind, querySha256) {
+  const artifact = readJson(path);
+  const envelope = artifact.data;
+  if (
+    !envelope ||
+    typeof envelope !== "object" ||
+    Array.isArray(envelope) ||
+    Object.getPrototypeOf(envelope) !== Object.prototype ||
+    Reflect.ownKeys(envelope).length !== 5 ||
+    !["schemaVersion", "captureKind", "projectId", "querySha256", "capture"].every((k) =>
+      Object.hasOwn(envelope, k),
+    ) ||
+    envelope.schemaVersion !== 1 ||
+    envelope.captureKind !== kind ||
+    envelope.projectId !== DAY15_CHAT_PROJECT_ID ||
+    envelope.querySha256 !== querySha256 ||
+    !envelope.capture ||
+    typeof envelope.capture !== "object" ||
+    Array.isArray(envelope.capture)
+  )
+    fail("live_catalog_envelope_invalid");
+  return { data: envelope.capture, sha256: artifact.sha256 };
 }
 
 function checkedArtifact(receipt, key, path, file, querySha256, kind, build) {
@@ -129,6 +159,7 @@ export function compareLiveChatWorkspaceCatalog({
     receipt.passed !== true ||
     receipt.executed !== true ||
     !SHA40.test(receipt.sourceCommit ?? "") ||
+    receipt.currentHistory?.projectRef !== DAY15_CHAT_PROJECT_ID ||
     receipt.currentHistory?.requiresCanonicalHistoryReconciliation !== true ||
     receipt.currentHistory?.productionReleaseReady !== false
   )
@@ -159,8 +190,16 @@ export function compareLiveChatWorkspaceCatalog({
       JSON.stringify(routines.data.upgraded.capture.ledgerVersions)
   )
     fail("source_checkpoint_mismatch");
-  const liveTable = readJson(liveTablePath),
-    liveRoutine = readJson(liveRoutinePath),
+  const liveTable = readLiveCatalog(
+      liveTablePath,
+      "chat-workspace-live-table-catalog",
+      CHAT_WORKSPACE_TABLE_QUERY_SHA256,
+    ),
+    liveRoutine = readLiveCatalog(
+      liveRoutinePath,
+      "chat-workspace-live-routine-catalog",
+      CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
+    ),
     liveData = readJson(liveDataPath);
   if (
     JSON.stringify(liveTable.data.ledgerVersions) !==
@@ -199,6 +238,7 @@ export function compareLiveChatWorkspaceCatalog({
     limitations: [
       "The source replay is isolated; these live reads and data counts occurred separately. Concurrent changes between captures cannot be excluded.",
       "The count query returns only aggregate counts. Its client-recorded time/project and catalog-ledger association do not independently attest database settings, provenance, or an atomic snapshot.",
+      "The catalog envelopes record the Supabase project selected by the client; generic PostgreSQL database names and client-recorded project fields cannot authenticate origin without independent review of the connector calls.",
       "Table metadata and selected routine-name families are covered. Other dependencies, views and executable behavior need their own scope and synthetic tests.",
       "No mapping is promoted; a current checkpoint, later-writer review, full scope, independent acceptance and restore evidence are required.",
     ],

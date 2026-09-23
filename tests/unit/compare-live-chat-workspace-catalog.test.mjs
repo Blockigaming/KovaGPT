@@ -186,7 +186,11 @@ function fixture(t) {
     executed: true,
     sourceCommit: SOURCE_COMMIT,
     baselineVersions: BASE.length,
-    currentHistory: { requiresCanonicalHistoryReconciliation: true, productionReleaseReady: false },
+    currentHistory: {
+      projectRef: "mfbycmbjygcfkrsuepxf",
+      requiresCanonicalHistoryReconciliation: true,
+      productionReleaseReady: false,
+    },
     chatWorkspaceTables: {
       file: CHAT_WORKSPACE_TABLE_FILE,
       sha256: tableArtifact.sha256,
@@ -198,11 +202,20 @@ function fixture(t) {
       querySha256: CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
     },
   });
-  const liveTable = file("live-tables.json", capture("table", BASE, "2026-09-23T12:00:00.000Z"));
-  const liveRoutine = file(
-    "live-routines.json",
-    capture("routine", BASE, "2026-09-23T12:00:00.000Z"),
-  );
+  const liveTable = file("live-tables.json", {
+    schemaVersion: 1,
+    captureKind: "chat-workspace-live-table-catalog",
+    projectId: "mfbycmbjygcfkrsuepxf",
+    querySha256: CHAT_WORKSPACE_TABLE_QUERY_SHA256,
+    capture: capture("table", BASE, "2026-09-23T12:00:00.000Z"),
+  });
+  const liveRoutine = file("live-routines.json", {
+    schemaVersion: 1,
+    captureKind: "chat-workspace-live-routine-catalog",
+    projectId: "mfbycmbjygcfkrsuepxf",
+    querySha256: CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
+    capture: capture("routine", BASE, "2026-09-23T12:00:00.000Z"),
+  });
   const liveData = file("live-data.json", {
     schemaVersion: 1,
     captureKind: "chat-workspace-aggregate-violations",
@@ -256,11 +269,26 @@ test("Day-15 live comparison rejects artifact, ledger, chronology and data tampe
     a.upgraded.fingerprint.aclSha256 = HASH;
   });
   mutate(paths.liveTablePath, (a) => {
-    a.ledgerVersions.pop();
-    a.ledgerVersionCount--;
+    a.capture.ledgerVersions.pop();
+    a.capture.ledgerVersionCount--;
   });
   mutate(paths.liveRoutinePath, (a) => {
-    a.capturedAt = "2026-09-23T09:00:00.000Z";
+    a.capture.capturedAt = "2026-09-23T09:00:00.000Z";
+  });
+  mutate(paths.liveTablePath, (a) => {
+    a.projectId = "staging-project";
+  });
+  mutate(paths.liveRoutinePath, (a) => {
+    a.projectId = "staging-project";
+  });
+  mutate(paths.liveTablePath, (a) => {
+    a.querySha256 = HASH;
+  });
+  mutate(paths.liveRoutinePath, (a) => {
+    a.messageContent = "must reject unrelated payload";
+  });
+  mutate(paths.receiptPath, (a) => {
+    a.currentHistory.projectRef = "staging-project";
   });
   mutate(paths.liveDataPath, (a) => {
     a.counts.customer_id = "private";

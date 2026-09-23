@@ -55,7 +55,14 @@ The CI `database-upgrade-evidence` artifact already uploads
 the existing application assertions run before these final captures.
 
 After obtaining a fresh live capture **later** than the hosted final
-snapshot, use the same fixed aggregate SQL for a fresh count capture. Package
+snapshot, wrap each raw catalog response in an exact-key JSON envelope with
+`schemaVersion: 1`, `projectId: "mfbycmbjygcfkrsuepxf"`, `capture` set to
+the raw SQL `capture`, the matching source `querySha256`, and `captureKind`
+set respectively to `"chat-workspace-live-table-catalog"` or
+`"chat-workspace-live-routine-catalog"`. Independently verify both capture
+requests selected that project; the client-written project field cannot
+authenticate itself. The checked-in catalogs are earlier raw observations,
+not these fresh envelopes. Use the same fixed aggregate SQL for a fresh count capture. Package
 its result in an exact-key JSON envelope containing `schemaVersion: 1`,
 `captureKind: "chat-workspace-aggregate-violations"`,
 `projectId: "mfbycmbjygcfkrsuepxf"`, the client-recorded UTC `capturedAt`,
@@ -82,7 +89,8 @@ data-count envelope/shape. It reports baseline-to-live and final-source-to-live
 differences in each scope, and never changes the schema-proof status. The
 client-recorded count timestamp, project, and catalog-ledger digest associate
 separately observed transactions; they cannot independently attest query
-provenance, database transaction flags, or atomicity.
+provenance, database transaction flags, or atomicity. The catalog envelopes
+likewise require independent verification against the connector request.
 
 ## Remaining acceptance work
 
