@@ -404,8 +404,8 @@ test("scheduled catalog: real plan binds two checkpoints, actual history and art
   const bytes = readFileSync(join(data.root, "artifacts/release", SCHEDULED_CATALOG_FILE));
   const receipt = JSON.parse(bytes);
   assert.equal(receipt.baseline.capture.ledgerVersionCount, 98);
-  assert.equal(receipt.upgraded.capture.ledgerVersionCount, 190);
-  assert.equal(result.forwardMigrations.length, 92);
+  assert.equal(receipt.upgraded.capture.ledgerVersionCount, 192);
+  assert.equal(result.forwardMigrations.length, 94);
   assert.equal(result.scheduledCatalog.sha256, sha256(bytes));
   assert.equal(result.scheduledCatalog.querySha256, receipt.querySha256);
   assert.equal(result.sourceCommit, receipt.sourceCommit);
