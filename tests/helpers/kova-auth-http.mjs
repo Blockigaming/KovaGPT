@@ -119,7 +119,9 @@ export function postgresTransport(db, names) {
         `select * from public.${name}(${keys.map((key, i) => `${key} => $${i + 1}`).join(",")})`,
         Object.values(args),
       );
-      return { data: result.rows };
+      // Model the actual PostgREST JSON wire boundary: PostgreSQL timestamp
+      // values are ISO strings, not in-process PGlite Date objects.
+      return { data: plain(result.rows) };
     } catch (error) {
       return { error: { code: error.code, message: error.message } };
     }

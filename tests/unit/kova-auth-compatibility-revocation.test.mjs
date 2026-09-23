@@ -136,6 +136,13 @@ test("the real token HTTP/store path produces a signed, session-bound Kova marke
   assert.match(response.headers.get("Cache-Control"), /no-store/u);
   const body = await response.json();
   const claims = verifiedClaims(body.accessToken);
+  assert.equal(body.session.accountId, claims.sub);
+  assert.equal(body.session.sessionId, claims.session_id);
+  assert.equal(body.session.email, claims.email);
+  assert.equal(body.session.assuranceLevel, claims.aal);
+  assert.equal(body.session.emailVerified, true);
+  assert.equal(Number.isFinite(Date.parse(body.session.expiresAt)), true);
+  assert.equal(body.expiresIn, 300);
   assert.equal(claims.kova_auth, 1);
   assert.equal(claims.session_id, owner.session_id);
   assert.equal(await active(claims), true);

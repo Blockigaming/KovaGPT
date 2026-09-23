@@ -3,6 +3,13 @@ import { z } from "zod";
 import { supabase, getSupabaseClientConfigStatus } from "@/integrations/supabase/client";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 import {
+  isKovaSessionActive,
+  kovaAuthGeneration,
+  subscribeKovaAuthChanges,
+} from "./kova-auth-browser";
+import { subscribeOwnedRealtime } from "./kova-auth-realtime";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import {
   createCollaborationClient,
   createCollaborationLifecycle,
   CollaborationError,
@@ -81,6 +88,8 @@ export function useCollaborationPresence({
 }) {
   const [status, setStatus] = useState<"connected" | "reconnecting" | "unavailable">("unavailable");
   const [peers, setPeers] = useState(0);
+  const [authGeneration, setAuthGeneration] = useState(kovaAuthGeneration);
+  useEffect(() => subscribeKovaAuthChanges(() => setAuthGeneration(kovaAuthGeneration())), []);
   const refreshRef = useRef(onRefresh);
   refreshRef.current = onRefresh;
   const deniedRef = useRef(onDenied);
@@ -111,7 +120,7 @@ export function useCollaborationPresence({
       subscribe: (invalidate, onStatus) => {
         // Only table changes with per-record RLS. No public Broadcast/Presence
         // payloads, channel claims, names or email addresses are trusted.
-        const channel = supabase.channel(`kova-collaboration:${kind}:${id}:${sessionId}`);
+        const topic = `kova-collaboration:${kind}:${id}:${sessionId}`;
         const targets =
           kind === "canvas"
             ? [
@@ -123,13 +132,33 @@ export function useCollaborationPresence({
                 ["project_comments", `project_id=eq.${id}`],
               ];
         targets.push(["collaboration_presence", `resource_id=eq.${id}`]);
-        for (const [table, filter] of targets)
-          for (const event of ["INSERT", "UPDATE"] as const)
-            channel.on("postgres_changes", { event, schema: "public", table, filter }, invalidate);
-        channel.subscribe(onStatus);
-        return () => {
-          void supabase.removeChannel(channel);
+        const bind = (channel: RealtimeChannel, onChange: () => void) => {
+          for (const [table, filter] of targets)
+            for (const event of ["INSERT", "UPDATE"] as const)
+              channel.on("postgres_changes", { event, schema: "public", table, filter }, onChange);
         };
+        if (isKovaSessionActive())
+          return subscribeOwnedRealtime({ ownerId: userId, topic, bind, invalidate, onStatus });
+        // Capture the real legacy socket, not the provider-selecting facade:
+        // cleanup must remove the channel from the client that created it.
+        const realtime = supabase.realtime;
+        const channel = realtime.channel(topic);
+        let active = true;
+        let removeObserver = () => {};
+        const stop = () => {
+          if (!active) return;
+          active = false;
+          removeObserver();
+          void realtime.removeChannel(channel).catch(() => {});
+        };
+        removeObserver = subscribeKovaAuthChanges(stop);
+        bind(channel, () => {
+          if (active) invalidate();
+        });
+        channel.subscribe((state) => {
+          if (active) onStatus(state);
+        });
+        return stop;
       },
       onStatus: setStatus,
       onPeers: setPeers,
@@ -138,6 +167,6 @@ export function useCollaborationPresence({
         deniedRef.current?.();
       },
     });
-  }, [kind, id, userId]);
+  }, [kind, id, userId, authGeneration]);
   return { status, peers };
 }

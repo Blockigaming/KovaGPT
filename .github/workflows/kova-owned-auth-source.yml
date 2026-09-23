@@ -9,6 +9,8 @@ on:
       - src/lib/kova-recovery-landing*
       - src/lib/account-identity.server.*
       - src/lib/account-export.server.ts
+      - src/lib/collaboration.ts
+      - src/lib/collaboration-client.mjs
       - src/lib/oauth-session.ts
       - src/lib/pricing/developer-platform.server.ts
       - src/lib/kova-session*
@@ -46,6 +48,10 @@ on:
       - tests/unit/kova-owned-auth*
       - tests/unit/kova-session*
       - tests/unit/account-delete-ordering.test.mjs
+      - tests/unit/account-export-sites.test.mjs
+      - tests/unit/library-original-export.test.mjs
+      - tests/unit/collaboration-client.test.mjs
+      - tests/unit/project-canvas-collaboration.test.mjs
       - tests/unit/upgrade-database-scheduled-catalog.test.mjs
       - tests/unit/upgrade-database-scheduled-tables.test.mjs
       - tests/unit/upgrade-database-temp-export-proof.test.mjs
@@ -164,6 +170,10 @@ jobs:
           tests/unit/upgrade-source-provenance.test.mjs
           tests/unit/image*.test.mjs
           tests/unit/library-original-api-client.test.mjs
+          tests/unit/account-export-sites.test.mjs
+          tests/unit/library-original-export.test.mjs
+          tests/unit/collaboration-client.test.mjs
+          tests/unit/project-canvas-collaboration.test.mjs
 
       - name: Verify committed migration inventory
         run: npm run release:migrations

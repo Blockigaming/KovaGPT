@@ -656,7 +656,11 @@ export async function handleKovaToken(request: Request): Promise<Response> {
   try {
     const principal = await resolveKovaRequestPrincipal(request);
     if (!principal) return jsonError("Invalid or expired session.", 401);
-    return json({ accessToken: signKovaCompatibilityJwt(principal), expiresIn: 300 });
+    return json({
+      accessToken: signKovaCompatibilityJwt(principal),
+      expiresIn: 300,
+      session: publicPrincipal(principal),
+    });
   } catch (error) {
     console.error("[KovaAuth] Compatibility token issue failed", {
       error: error instanceof Error ? error.name : "unknown_error",
@@ -1040,6 +1044,12 @@ export async function handleKovaRevokeOtherSessions(request: Request): Promise<R
 export async function handleKovaRefresh(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  if (
+    isCrossSiteMutation(request) ||
+    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
+  )
+    return jsonError("Forbidden.", 403);
   const credential = readKovaSessionToken(request);
   if (!credential?.ok) return jsonError("Invalid or expired session.", 401);
   const nextToken = generateKovaToken();

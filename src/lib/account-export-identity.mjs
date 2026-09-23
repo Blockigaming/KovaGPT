@@ -3,11 +3,27 @@ import { resolveKovaAuthMode } from "./kova-auth-contract.mjs";
 const shadowEmail = (value) =>
   typeof value === "string" && value.toLowerCase().endsWith("@auth.invalid.kovagpt.com");
 
+const identityLookupError = (error) => {
+  // Missing/revoked ownership is terminal; transport/database outages retain the
+  // worker's existing bounded retry classification without exposing SQL text.
+  if (["P0001", "42501", "PT401", "PT403"].includes(error?.code))
+    return new Error("account_export_user_unavailable");
+  const unavailable = new Error("account_export_database_unavailable");
+  unavailable.name = "AccountExportError";
+  return unavailable;
+};
+
 export async function readAccountExportIdentity(admin, userId) {
   const mode = resolveKovaAuthMode();
   if (mode !== "supabase") {
-    const result = await admin.rpc("kova_auth_export_identity", { p_account_id: userId });
-    if (result?.error || !result || !Object.hasOwn(result, "data")) {
+    let result;
+    try {
+      result = await admin.rpc("kova_auth_export_identity", { p_account_id: userId });
+    } catch (error) {
+      throw identityLookupError(error);
+    }
+    if (result?.error) throw identityLookupError(result.error);
+    if (!result || !Object.hasOwn(result, "data")) {
       throw new Error("account_export_user_unavailable");
     }
     if (result.data !== null) {

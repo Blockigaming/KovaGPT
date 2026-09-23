@@ -61,12 +61,9 @@ async function accountWorker(client, identity) {
       },
     },
     rpc: async (name, args) => {
-      assert.equal(name, "kova_auth_account_snapshot");
-      assert.deepEqual(args, {
-        p_account_id: OWNER,
-        p_allow_legacy: false,
-        p_require_verified: false,
-      });
+      assert.equal(name, "kova_auth_export_identity");
+      assert.deepEqual(args, { p_account_id: OWNER });
+      if (identity === undefined) return client.rpc(name, args);
       return { data: identity, error: null };
     },
   };
@@ -148,6 +145,9 @@ test("the actual owned account export includes the real verified email with no h
       id: OWNER,
       email: "real@example.invalid",
       email_confirmed_at: "2026-01-01T00:00:00Z",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      identities: [],
       app_metadata: { provider: "kova", secret: "must-not-export" },
       encrypted_password: "must-not-export",
       user_metadata: { full_name: "Real Person", token: "must-not-export" },

@@ -186,7 +186,7 @@ for (const mode of ["dual", "kova"])
       );
       await assert.rejects(
         w.buildAccountExport(owner, "20000000-0000-4000-8000-000000000002"),
-        /account_unavailable/,
+        /account_export_user_unavailable/,
       );
     } finally {
       if (previous === undefined) delete process.env.KOVA_AUTH_MODE;
@@ -206,7 +206,6 @@ test("malformed or missing owned export authority never falls back to hosted Aut
       { data: null },
       { data: [] },
       { data: { id: owner, email: realEmail } },
-      { data: null, error: { code: "outage" } },
     ]) {
       await assert.rejects(
         readAccountExportIdentity(
@@ -241,6 +240,43 @@ test("malformed or missing owned export authority never falls back to hosted Aut
       owner,
     );
     assert.ok(!JSON.stringify(projected).includes("omitted"));
+  } finally {
+    if (old === undefined) delete process.env.KOVA_AUTH_MODE;
+    else process.env.KOVA_AUTH_MODE = old;
+  }
+});
+
+test("owned export identity outages stay retryable while authorization rejection remains terminal", async () => {
+  const { readAccountExportIdentity } = await import("../../src/lib/account-export-identity.mjs");
+  const old = process.env.KOVA_AUTH_MODE;
+  try {
+    for (const mode of ["dual", "kova"]) {
+      process.env.KOVA_AUTH_MODE = mode;
+      for (const [code, expected] of [
+        ["outage", "account_export_database_unavailable"],
+        ["08006", "account_export_database_unavailable"],
+        ["P0001", "account_export_user_unavailable"],
+        ["42501", "account_export_user_unavailable"],
+      ]) {
+        for (const throws of [false, true]) {
+          const admin = {
+            get auth() {
+              assert.fail("owned rejection must not fall back to hosted Auth");
+            },
+            rpc: async () => {
+              const error = { code, message: "private SQL detail" };
+              if (throws) throw error;
+              return { data: null, error };
+            },
+          };
+          await assert.rejects(readAccountExportIdentity(admin, owner), (error) => {
+            assert.equal(error.message, expected);
+            if (expected.includes("database")) assert.equal(error.name, "AccountExportError");
+            return true;
+          });
+        }
+      }
+    }
   } finally {
     if (old === undefined) delete process.env.KOVA_AUTH_MODE;
     else process.env.KOVA_AUTH_MODE = old;
