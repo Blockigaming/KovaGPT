@@ -80,8 +80,8 @@ export function buildCanonicalHistoryDecision() {
         capturedStatementCount: entry.statementCount,
         capturedStatementsSha256: entry.capturedStatementsSha256,
         capturedStatementsMd5: entry.capturedStatementsMd5,
-        structuralFixturePath: entry.path,
-        structuralFixtureSha256: entry.sha256,
+        evidencePath: entry.path,
+        evidenceSha256: entry.sha256,
         provenance: entry.provenance,
         mappedSourceVersion: mapping?.sourceVersion ?? null,
         candidateSourceVersions: mapping?.candidateSourceVersions ?? [],
@@ -114,7 +114,7 @@ export function buildCanonicalHistoryDecision() {
   for (const entry of remoteOnly) {
     if (
       entry.provenance === "historical_fixture" &&
-      sha256(readFileSync(entry.structuralFixturePath)) !== entry.structuralFixtureSha256
+      sha256(readFileSync(entry.evidencePath)) !== entry.evidenceSha256
     )
       throw new Error("canonical_history_fixture_hash_changed");
   }

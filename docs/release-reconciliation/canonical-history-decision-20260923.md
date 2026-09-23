@@ -24,8 +24,8 @@ versions and the retain decision for each of the 24 remote-only versions is in
 without a database connection using
 `node scripts/release/canonical-history-decision.mjs --check`. It pins the
 157-version source manifest, source migration Git tree, all source-file hashes,
-the 97-row historical fixture manifest, the 98th-row supplement, all 24 remote
-fixture identities and hashes, and the captured ledger metadata digest. The
+the 97-row historical fixture manifest, the 98th-row supplement, 23 remote
+structural fixture hashes, the supplement hash, and the captured ledger metadata digest. The
 capture in that file is dated September 18; it must be refreshed before any
 operation on the current production target.
 
