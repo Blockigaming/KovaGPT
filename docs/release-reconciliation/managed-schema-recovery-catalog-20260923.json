@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "kind": "kova-supabase-managed-schema-catalog-observation",
+  "capturedAt": "2026-09-23T21:30:14.712Z",
+  "projectRef": "mfbycmbjygcfkrsuepxf",
+  "database": {
+    "postgresVersion": "17.6.1.155",
+    "region": "us-west-2",
+    "authRelations": 27,
+    "authFunctions": 4,
+    "authNoninternalTriggers": 0,
+    "authRelationOwnerAnomalies": 0,
+    "storageRelations": 8,
+    "storageFunctions": 17,
+    "storageNoninternalTriggers": 4,
+    "storageRelationOwnerAnomalies": 0,
+    "storageObjectPolicies": 9,
+    "storageBuckets": 2,
+    "storageObjects": 1
+  },
+  "extensions": [
+    {
+      "name": "pg_cron",
+      "version": "1.6.4",
+      "schema": "pg_catalog"
+    },
+    {
+      "name": "pg_net",
+      "version": "0.20.4",
+      "schema": "extensions"
+    },
+    {
+      "name": "pg_stat_statements",
+      "version": "1.11",
+      "schema": "extensions"
+    },
+    {
+      "name": "pgcrypto",
+      "version": "1.3",
+      "schema": "extensions"
+    },
+    {
+      "name": "pgmq",
+      "version": "1.5.1",
+      "schema": "pgmq"
+    },
+    {
+      "name": "plpgsql",
+      "version": "1.0",
+      "schema": "pg_catalog"
+    },
+    {
+      "name": "supabase_vault",
+      "version": "0.3.1",
+      "schema": "vault"
+    },
+    {
+      "name": "uuid-ossp",
+      "version": "1.1",
+      "schema": "extensions"
+    },
+    {
+      "name": "vector",
+      "version": "0.8.2",
+      "schema": "extensions"
+    }
+  ],
+  "storageObjectPolicies": [
+    {
+      "check": null,
+      "roles": ["PUBLIC"],
+      "table": "objects",
+      "using": "((bucket_id = 'agent-evidence'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "policy": "Owners read agent evidence",
+      "schema": "storage",
+      "command": "r",
+      "permissive": true
+    },
+    {
+      "check": null,
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'library-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+      "policy": "Users delete own library images",
+      "schema": "storage",
+      "command": "d",
+      "permissive": true
+    },
+    {
+      "check": null,
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'library-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+      "policy": "Users read own library images",
+      "schema": "storage",
+      "command": "r",
+      "permissive": true
+    },
+    {
+      "check": "((bucket_id = 'library-images'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": null,
+      "policy": "Users upload to own library folder",
+      "schema": "storage",
+      "command": "a",
+      "permissive": true
+    },
+    {
+      "check": null,
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'agent-evidence'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))",
+      "policy": "agent evidence owner read",
+      "schema": "storage",
+      "command": "r",
+      "permissive": true
+    },
+    {
+      "check": null,
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'project-files'::text) AND kova_private.can_edit_project(((storage.foldername(name))[1])::uuid, auth.uid()))",
+      "policy": "project_files_delete",
+      "schema": "storage",
+      "command": "d",
+      "permissive": true
+    },
+    {
+      "check": null,
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'project-files'::text) AND kova_private.is_project_member(((storage.foldername(name))[1])::uuid, auth.uid()))",
+      "policy": "project_files_read",
+      "schema": "storage",
+      "command": "r",
+      "permissive": true
+    },
+    {
+      "check": "((bucket_id = 'project-files'::text) AND kova_private.can_edit_project(((storage.foldername(name))[1])::uuid, auth.uid()))",
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": "((bucket_id = 'project-files'::text) AND kova_private.can_edit_project(((storage.foldername(name))[1])::uuid, auth.uid()))",
+      "policy": "project_files_update",
+      "schema": "storage",
+      "command": "w",
+      "permissive": true
+    },
+    {
+      "check": "((bucket_id = 'project-files'::text) AND kova_private.can_edit_project(((storage.foldername(name))[1])::uuid, auth.uid()))",
+      "roles": ["authenticated"],
+      "table": "objects",
+      "using": null,
+      "policy": "project_files_write",
+      "schema": "storage",
+      "command": "a",
+      "permissive": true
+    }
+  ],
+  "storageNoninternalTriggers": [
+    {
+      "table": "buckets",
+      "name": "enforce_bucket_name_length_trigger",
+      "definitionSha256": "580a7c83d8d39b8d3a8e6d12cc2e8074fc35c08434cfe0b30c74a435396fa3db"
+    },
+    {
+      "table": "buckets",
+      "name": "protect_buckets_delete",
+      "definitionSha256": "9177b20f0ce99604e60dbeef1f9f05ff05dfc8df075fea756e18b91fa5e8c494"
+    },
+    {
+      "table": "objects",
+      "name": "protect_objects_delete",
+      "definitionSha256": "b6dfbee7d5d339f311f34633772872a6474e88b17450da06310aadad83531d9a"
+    },
+    {
+      "table": "objects",
+      "name": "update_objects_updated_at",
+      "definitionSha256": "95588c3979662033900b6913b10e0aab15cf1f8ab0d1ccc477fec1aef79ca393"
+    }
+  ],
+  "excludedFromThisCatalog": [
+    "managed table data",
+    "Auth provider settings",
+    "Auth templates",
+    "JWT/API/SMTP/OAuth credentials",
+    "Storage object bytes",
+    "complete managed relation DDL",
+    "all nonpolicy privileges"
+  ],
+  "managedSchemaCustomizationRecoveryVerified": false,
+  "providerConfigurationVerified": false,
+  "keyRecoveryVerified": false,
+  "actualRestoreExercised": false
+}
