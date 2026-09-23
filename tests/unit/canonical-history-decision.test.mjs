@@ -87,7 +87,17 @@ test("capture validation rejects historical statement drift and wrong projects",
       ),
     /canonical_history_target_mismatch/u,
   );
-  for (const capturedAt of [undefined, "not-a-timestamp", 123]) {
+  for (const capturedAt of [
+    undefined,
+    "not-a-timestamp",
+    123,
+    "0",
+    "2026-09-18",
+    "2026-09-18T16:22:53",
+    "2026/09/18",
+    "2026-02-30T16:22:53Z",
+    "2026-09-18T24:00:00Z",
+  ]) {
     assert.throws(
       () =>
         validateCanonicalHistoryCapture(

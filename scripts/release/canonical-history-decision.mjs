@@ -15,6 +15,28 @@ const supplementPath =
 const decisionPath = "docs/release-reconciliation/canonical-history-actions-20260923.json";
 const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
+const capturedAtPattern =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
+
+function validCapturedAt(value) {
+  if (typeof value !== "string") return false;
+  const parts = capturedAtPattern.exec(value);
+  if (!parts) return false;
+  const [, year, month, day, hour, minute, second, offsetHour, offsetMinute] = parts;
+  if (
+    Number(hour) > 23 ||
+    Number(minute) > 59 ||
+    Number(second) > 59 ||
+    (offsetHour !== undefined && (Number(offsetHour) > 23 || Number(offsetMinute) > 59))
+  )
+    return false;
+  const calendarDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  return (
+    Number.isFinite(calendarDate.getTime()) &&
+    calendarDate.toISOString().slice(0, 10) === `${year}-${month}-${day}` &&
+    Number.isFinite(Date.parse(value))
+  );
+}
 
 export function validateCanonicalHistoryCapture(lineage, baseline, supplement, baselineSha256) {
   if (lineage.targetProjectRef !== targetProjectRef || supplement.projectRef !== targetProjectRef)
@@ -28,8 +50,7 @@ export function validateCanonicalHistoryCapture(lineage, baseline, supplement, b
     supplement.readOnly !== true ||
     supplement.statementTextReturned !== false ||
     supplement.customerRowsReturned !== false ||
-    typeof supplement.capturedAt !== "string" ||
-    !Number.isFinite(Date.parse(supplement.capturedAt))
+    !validCapturedAt(supplement.capturedAt)
   )
     throw new Error("canonical_history_capture_invalid");
   if (supplement.historicalManifestSha256 !== baselineSha256)
