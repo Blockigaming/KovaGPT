@@ -121,10 +121,11 @@ param cloudflareClientCertificateSha256Fingerprints array
 @description('Enable production AI generation only after production provider verification.')
 param generationEnabled bool = false
 
-@description('Minimum production web replicas.')
-@minValue(0)
-@maxValue(1)
-param minReplicas int = 1
+@description('Migration cost freeze: production must remain scaled to zero until a separately reviewed Azure activation change.')
+@allowed([
+  0
+])
+param minReplicas int = 0
 
 @description('Maximum production web replicas.')
 @minValue(1)
@@ -286,19 +287,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
     managedEnvironmentId: environment.id
     configuration: {
       activeRevisionsMode: 'Single'
-      ingress: {
-        external: true
-        allowInsecure: false
-        clientCertificateMode: 'require'
-        targetPort: 3000
-        transport: 'auto'
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
-      }
+      // No ingress during migration: HTTP traffic must not wake a replica.
       registries: [
         {
           server: acr.properties.loginServer
@@ -490,16 +479,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
       scale: {
         minReplicas: minReplicas
         maxReplicas: maxReplicas
-        rules: [
-          {
-            name: 'http'
-            http: {
-              metadata: {
-                concurrentRequests: '20'
-              }
-            }
-          }
-        ]
+        rules: []
       }
     }
   }
@@ -547,7 +527,8 @@ resource budget 'Microsoft.Consumption/budgets@2024-08-01' = if (deployBudget) {
 }
 
 output containerAppName string = webApp.name
-output containerAppFqdn string = webApp.properties.configuration.ingress.fqdn
+// No public hostname exists while migration ingress is disabled.
+output containerAppFqdn string = ''
 output managedEnvironmentName string = environment.name
 output managedIdentityResourceId string = identity.id
 output managedIdentityClientId string = identity.properties.clientId

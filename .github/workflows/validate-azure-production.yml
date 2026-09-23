@@ -184,6 +184,11 @@ jobs:
           if (document.parameters.acrName?.value !== process.env.ACR_NAME) {
             throw new Error("The Bicep ACR name does not match the approved production registry");
           }
+          if (document.parameters.minReplicas?.value !== 0) {
+            throw new Error(
+              "Production minReplicas must remain 0 while the Azure migration cost freeze is active",
+            );
+          }
           const expectedUrl = `https://${process.env.KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co`;
           if (document.parameters.supabaseUrl?.value !== expectedUrl) {
             throw new Error("The Bicep Supabase URL does not match the approved production project");
@@ -227,6 +232,26 @@ jobs:
           az bicep build \
             --file infra/azure/production/main.bicep \
             --outfile "$RUNNER_TEMP/kova-production-plan.template.json"
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const template = JSON.parse(
+            fs.readFileSync(`${process.env.RUNNER_TEMP}/kova-production-plan.template.json`, "utf8"),
+          );
+          const apps = template.resources.filter(
+            resource => resource.type.toLowerCase() === "microsoft.app/containerapps",
+          );
+          if (apps.length !== 1) throw new Error("Expected exactly one production Container App");
+          const app = apps[0];
+          if (Object.hasOwn(app.properties.configuration, "ingress")) {
+            throw new Error("Frozen production Container App must have ingress disabled");
+          }
+          if (
+            !Array.isArray(app.properties.template.scale.rules) ||
+            app.properties.template.scale.rules.length !== 0
+          ) {
+            throw new Error("Frozen production Container App must have no scaling rules");
+          }
+          NODE
           az deployment group validate \
             --name "kova-production-plan-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             --resource-group "$RESOURCE_GROUP" \
