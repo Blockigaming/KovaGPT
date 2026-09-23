@@ -18,6 +18,32 @@ timestamp absent from production is not an execution instruction.
 | Source-only timestamps                       |    83 | Preserve as the raw gap. The isolated 98-version rehearsal executes 82; the remaining security body was executed once under its equivalent remote timestamp. This replay exception does not create its canonical history row. |
 | Isolated final ledger                        |   180 | 98 existing + 82 forward executions. This is a disposable database result, not current production history.                                                                                                                    |
 
+The full, machine-checked **proposed** action for each of the 83 source-only
+versions and the retain decision for each of the 24 remote-only versions is in
+`canonical-history-actions-20260923.json`. Generate and verify that inventory
+without a database connection using
+`node scripts/release/canonical-history-decision.mjs --check`. It pins the
+157-version source manifest, source migration Git tree, all source-file hashes,
+the 97-row historical fixture manifest, the 98th-row supplement, all 24 remote
+fixture identities and hashes, and the captured ledger metadata digest. The
+capture in that file is dated September 18; it must be refreshed before any
+operation on the current production target.
+
+Three source-only versions (`20260822122000`, `20260823113000`, and
+`20260903145843`) are **proposed** as history-only canonical records after
+verification of their equivalent remote effects, without executing their SQL
+again. The other 80 are **proposed** for execution and recording only after
+their individual pre-state, data transformation, and schema contracts are
+reviewed. The 98-row synthetic rehearsal executed 82 source bodies (including
+the earlier two equivalent goals/settlement files) and skipped only the
+security body, so it does **not** validate the proposed 80-body execution
+sequence. A complete canonical ledger would contain 181 versions (98 existing
+plus 83 canonical versions) if all these proposed actions were separately
+accepted and applied. Neither the 180-row rehearsal nor the 181-row projection
+is a claim about current production. Every source action in the inventory
+remains blocked pending its per-version effect review and a rehearsal of the
+exact proposed sequence.
+
 The five equivalent remote entries map to three distinct source versions:
 
 | Remote version(s)                                    | Canonical source version | Evidence/decision                                                                                                                                                                       |
@@ -46,13 +72,14 @@ proofs.
    target. Preserve any unexplained privilege or function difference as a
    blocker. Promote entries only through the reviewed proof contract and
    independent approval.
-3. Specify a **per-source-version history action** for all 83 absent source
-   timestamps. For each, distinguish an already executed equivalent body from
-   a version to execute; pin source SHA, expected prior state, target ledger
-   change, validation, and rollback/recovery gate. In particular, explicitly
-   decide how the absent `20260903145843` canonical row will be represented
-   without rerunning its body. Do not invent an applied timestamp or rely on
-   the disposable rehearsal's 180 rows as a production target.
+3. Review the **proposed per-source-version action** for all 83 absent source
+   timestamps in the checked inventory. For each, approve or revise its
+   already-executed-equivalent versus forward-execution disposition, pin the
+   expected prior state and intended row transformations, then demonstrate the
+   exact target ledger change and recovery gate. Choose and rehearse the
+   history-recording mechanism, especially for `20260903145843`, without
+   rerunning its body. Do not invent an applied timestamp or rely on the
+   disposable rehearsal's 180 rows as a production target.
 4. Rehearse that exact proposed history operation in an isolated copy with
    synthetic data, then with an authorized actual-backup restore; validate
    each migration's expected data transformations against a reviewed
@@ -64,9 +91,11 @@ proofs.
    candidate gates. Apply only with a fresh pre-operation ledger readback and
    stop on drift. Record the resulting ledger and scoped catalog independently.
 
-**Decision still needed:** the production treatment of all absent canonical
-timestamps, especially the equivalent security migration, has not been
-selected or reviewed. Accordingly this is a concrete inventory and review
-sequence, not accepted M13 reconciliation or authorization for M20. No
+**Decision still needed:** the proposed production treatment of all absent
+canonical timestamps, especially the equivalent security migration, has not
+been independently accepted or exercised as an exact sequence. The history
+recording mechanism remains unchosen. Accordingly this is an explicit proposed
+action inventory and review sequence, not accepted M13 reconciliation or
+authorization for M20. No
 production SQL, history repair, restore, deployment, or mapping promotion was
 performed to prepare it.
