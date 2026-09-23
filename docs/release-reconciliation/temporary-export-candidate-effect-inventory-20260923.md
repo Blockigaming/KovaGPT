@@ -68,6 +68,26 @@ not yet a PostgreSQL dependency-closure proof or a search of application code.
 | `20260905000905_project_canvas_collaboration.sql` — `5b6ae37ebf0edf38aca1f8c89cba1ccb8beaaf090c8494aa04996a0f47314a34`                    | Replaces `chat_message_versions_content_length` with a larger content check (lines 76–80), introduces canvas routines that read/write message versions, and adds an insert/update trigger on that table (line 339).                                                                                                                                                                                          |
 | `20260910210000_workflow_skill_packages.sql` — `15fb94556a7fe60a86b91798540012a4fa01ee8d0829f09bb70ae55017846751`                         | Lists the four workspace table names in a data-export ownership registry (lines 221–228); a later consumer of their owner columns, not direct DDL on those tables.                                                                                                                                                                                                                                           |
 
+## Known application call surface
+
+A literal-name scan of `src/` at the pinned checkout found these files. The
+table describes direct uses and typed contracts, not a complete runtime call
+graph. The adapter takes RPC names as arguments, so a name-only search of that
+file alone would miss its effect on the calls in `chat-workspace.functions.ts`.
+
+| Path and SHA-256                                                                                                | Observed relationship                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/chat-workspace.functions.ts` — `c239739d6494778854cc6b959d501c31ccf0d66e5faed22f76a86a2c0fff4500`      | Authenticated server functions directly read the four workspace tables and call canonical mutation RPCs. They fall back to the candidate's `kova_*` version/branch routines only if the canonical signature is missing (for example lines 222, 262–376, 396–671). |
+| `src/lib/chat-workspace-rpc.ts` — `653d5406f6b801f1a1e7e4944c06a759e659884ba1878c059f4d27cc2eae17a9`            | `callWorkspaceRpc` retries the supplied legacy name on missing-function error codes, not on arbitrary RPC failure. This is the dispatch path for the caller above.                                                                                                |
+| `src/lib/chat-workspace-context.server.ts` — `d2bf0e989c2ba31e10bbe691c2ba52e26c80d11eb9631b111215c2cfa68736fe` | Reads custom rules and pinned-file context by table name (lines 102 and 170).                                                                                                                                                                                     |
+| `src/lib/account-export-policy.mjs` — `b10a5c7166a7a2ae7ed4acc6256edf1b3e08c9675644d730343ec7d755aa52c3`        | Lists all four workspace tables with their `owner_id` export scope (lines 44–51).                                                                                                                                                                                 |
+| `src/integrations/supabase/types.ts` — `c31e7ad6297af48181ab8000aeab2c44c9d7557d8a2613e16e5492edb99c690e`       | Generated type definitions name the four tables, their foreign keys and the five `kova_*` RPC signatures; a contract snapshot, not proof of live schema or a runtime caller.                                                                                      |
+
+This static list excludes computed SQL/RPC names, non-`src/` clients,
+extensions and runtime integrations. The historical temporary export's absence
+does not certify these application contracts against the candidate's larger
+workspace reconciliation.
+
 ## Missing acceptance evidence
 
 1. Freeze an agreed historical and final comparison boundary for this single
