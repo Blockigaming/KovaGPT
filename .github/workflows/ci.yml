@@ -123,12 +123,6 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run release:bundle
 
-      - name: Browser preview build
-        if: steps.scope.outputs.run_ci == 'true'
-        env:
-          KOVA_BROWSER_PREVIEW: node
-        run: npm run build
-
       - name: Install Playwright browsers
         if: steps.scope.outputs.run_ci == 'true'
         run: npx playwright install --with-deps chromium firefox webkit
@@ -170,6 +164,14 @@ jobs:
           path: artifacts/ui-audit/deployed-baseline
           if-no-files-found: warn
           retention-days: 7
+
+      # Preserve the Cloudflare artifact through integration tests, then build
+      # a Node artifact for the prebuilt Playwright preview used below.
+      - name: Browser preview build
+        if: steps.scope.outputs.run_ci == 'true'
+        env:
+          KOVA_BROWSER_PREVIEW: node
+        run: npm run build
 
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'

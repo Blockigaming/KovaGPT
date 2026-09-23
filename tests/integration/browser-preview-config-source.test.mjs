@@ -29,18 +29,26 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(viteConfig, /preset: useNodeBrowserPreview \? "node-server" : "cloudflare-module"/);
   assert.match(viteConfig, /cloudflare: \{ nodeCompat: true, deployConfig: true \}/);
 
-  assert.doesNotMatch(verifyJob, /KOVA_BROWSER_PREVIEW/);
   assert.match(verifyJob, /- name: Production build(?:\s+if:[^\n]+)?\s+run: npm run build/);
   assert.match(verifyJob, /- name: Bundle budget(?:\s+if:[^\n]+)?\s+run: npm run release:bundle/);
+  assert.match(
+    verifyJob,
+    /- name: Browser preview build\s+if: steps\.scope\.outputs\.run_ci == 'true'\s+env:\s+KOVA_BROWSER_PREVIEW: node\s+run: npm run build/,
+  );
   assert.match(verifyJob, /- name: Release checks(?:\s+if:[^\n]+)?\s+run: npm run test:release/);
 
-  // Inspect the production artifact before runtime tests are allowed to replace or remove dist.
+  // Inspect the production artifact before the browser build replaces dist.
   const productionBuildIndex = verifyJob.indexOf("      - name: Production build");
   const bundleBudgetIndex = verifyJob.indexOf("      - name: Bundle budget");
   const integrationIndex = verifyJob.indexOf("      - name: Integration tests");
+  const previewBuildIndex = verifyJob.indexOf("      - name: Browser preview build");
+  const accessibilityIndex = verifyJob.indexOf("      - name: Accessibility checks");
   assert.ok(productionBuildIndex >= 0);
   assert.ok(bundleBudgetIndex > productionBuildIndex);
   assert.ok(integrationIndex > bundleBudgetIndex);
+  assert.ok(previewBuildIndex > integrationIndex);
+  assert.ok(accessibilityIndex > previewBuildIndex);
+  assert.doesNotMatch(verifyJob.slice(0, previewBuildIndex), /KOVA_BROWSER_PREVIEW/);
 
   assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(
