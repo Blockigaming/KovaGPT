@@ -13,6 +13,8 @@ Status on 2026-09-23: **M17 and M18 remain open.** This document describes evide
 
 The backup workflow expressly records `storageObjectBytesBackedUp: false`, `authStorageManagedSchemaCustomizationBackupComplete: false`, and `restoreExercised: false`. Its successful upload cannot flip these facts. See [production-backup-export.md](production-backup-export.md).
 
+The catalog query was executed with the Supabase connector explicitly targeting project `mfbycmbjygcfkrsuepxf`; the JSON's project reference records that invocation. The SQL output by itself does not authenticate its target. Recheck the connector target whenever repeating it.
+
 ## M17 acceptance inputs still needed
 
 1. **Managed schemas:** capture complete live custom Auth/Storage DDL, policies, owners, default/table/function privileges, triggers, dependent functions, Storage bucket settings, and relevant installed extension versions. Compare with a version-matched clean Supabase baseline and the 98-version production history. Confirm the nine captured policies and any source-only differences explicitly. Verify a reviewed export can recreate the customizations in an isolated environment.
