@@ -181,6 +181,36 @@
       "definitionSha256": "95588c3979662033900b6913b10e0aab15cf1f8ab0d1ccc477fec1aef79ca393"
     }
   ],
+  "knownSourceLiveDifferences": [
+    {
+      "kind": "source-only-auth-users-deletion-trigger",
+      "name": "reject_unsettled_customer_auth_deletion",
+      "sourceMigration": "20260904231210_stripe_customer_identity_and_completion.sql:270",
+      "livePresent": false,
+      "replayAuthorized": false
+    },
+    {
+      "kind": "source-only-auth-users-deletion-trigger",
+      "name": "guard_organization_owner_auth_deletion",
+      "sourceMigration": "20260905001454_organization_administration_foundation.sql:345",
+      "livePresent": false,
+      "replayAuthorized": false
+    },
+    {
+      "kind": "live-only-storage-objects-policy",
+      "name": "Users upload to own library folder",
+      "sourceMigration": "20260905033500_library_image_storage_quota.sql:35",
+      "livePresent": true,
+      "replayAuthorized": false
+    },
+    {
+      "kind": "live-only-storage-objects-policy",
+      "name": "Users delete own library images",
+      "sourceMigration": "20260905033500_library_image_storage_quota.sql:36",
+      "livePresent": true,
+      "replayAuthorized": false
+    }
+  ],
   "excludedFromThisCatalog": [
     "managed table data",
     "Auth provider settings",
