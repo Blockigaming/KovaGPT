@@ -1,8 +1,9 @@
 -- Catalog-only snapshot for the August 23 remote-only privilege lineage.
 -- Produces one aggregate JSON object. It does not read application tables,
 -- identify customer rows, call application functions, or apply schema changes.
--- The expected state is the final source candidate 20260904230329, not the
--- historical effect of each separate remote migration.
+-- The comparison checkpoint is source candidate 20260904230329, not the
+-- historical effect of each separate remote migration. A later source writer
+-- changes enforce_family_member_cap again and must be compared separately.
 begin isolation level repeatable read read only;
 
 with
