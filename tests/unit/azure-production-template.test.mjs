@@ -17,12 +17,14 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     "supabaseUrl",
     "supabasePublishableKey",
     "cloudflareClientCertificateSha256Fingerprints",
+    "containerAppName",
   ]) {
     assert.ok(Object.hasOwn(parameters, name), `missing production parameter: ${name}`);
   }
 
   for (const name of [
     "managedEnvironmentName",
+    "containerAppName",
     "managedIdentityName",
     "logAnalyticsWorkspaceName",
     "acrName",
