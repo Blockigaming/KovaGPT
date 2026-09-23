@@ -37,11 +37,23 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
   );
   assert.ok(authoritativeUserCheck >= 0);
   assert.ok(privilegedClient > authoritativeUserCheck);
-  const ownedSessionCheck = apiAuth.indexOf(
-    "await resolveSession(digestKovaToken(credential.token))",
+  const ownedSessionDigest = apiAuth.indexOf(
+    "const sessionDigest = digestKovaToken(credential.token)",
   );
-  assert.ok(ownedSessionCheck >= 0);
-  assert.ok(apiAuth.indexOf("supabaseAdmin: createAdminClient()") > ownedSessionCheck);
+  const ownedSessionCheck = apiAuth.indexOf(
+    "const principal = await resolveSession(sessionDigest)",
+  );
+  const ownedRejection = apiAuth.indexOf("if (!principal) return unauthorized(", ownedSessionCheck);
+  const ownedToken = apiAuth.indexOf("signKovaCompatibilityJwt(principal)", ownedRejection);
+  assert.ok(ownedSessionDigest >= 0);
+  assert.ok(ownedSessionCheck > ownedSessionDigest);
+  assert.ok(ownedRejection > ownedSessionCheck);
+  assert.ok(ownedToken > ownedRejection);
+  assert.ok(apiAuth.indexOf("supabaseAdmin: createAdminClient()") > ownedToken);
+  assert.match(
+    apiAuth,
+    /revalidateSession: async \(\) => \{\s*const current = await resolveSession\(sessionDigest\)/,
+  );
   assert.doesNotMatch(middleware, /Missing Supabase environment variable\(s\).*throw new Error/s);
   assert.ok(
     middleware.indexOf("const auth = await optionalUser(request)") <
