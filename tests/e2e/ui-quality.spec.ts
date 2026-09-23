@@ -225,6 +225,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
     await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
+    // The guest starter grid is lazy loaded after hydration. Capture its rendered
+    // state, not Suspense's same-height placeholder during a slower chunk request.
+    await expect(page.getByRole("button", { name: "Start with Brainstorm ideas" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
     const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
     await expect(greetingMark).toBeHidden();
     await expect(greetingMark).toHaveAttribute("aria-hidden", "true");

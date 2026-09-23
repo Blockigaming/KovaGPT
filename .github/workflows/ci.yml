@@ -123,6 +123,12 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run release:bundle
 
+      - name: Browser preview build
+        if: steps.scope.outputs.run_ci == 'true'
+        env:
+          KOVA_BROWSER_PREVIEW: node
+        run: npm run build
+
       - name: Install Playwright browsers
         if: steps.scope.outputs.run_ci == 'true'
         run: npx playwright install --with-deps chromium firefox webkit
