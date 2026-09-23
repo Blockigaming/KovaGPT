@@ -1,0 +1,40 @@
+{
+  "querySha256": "5e74ea07e8bba0243b16dadd1ab6e272f862171aeef4c25bcab7ab79da2d8718",
+  "counts": {
+    "chat_branches": {
+      "bad_chat_id": 0,
+      "self_parent": 0,
+      "multiple_active": 0,
+      "wrong_parent_scope": 0,
+      "bad_conversation_id": 0,
+      "negative_message_index": 0,
+      "oversized_message_id_array": 0
+    },
+    "chat_custom_rules": {
+      "bad_chat_id": 0,
+      "missing_owner": 0,
+      "bad_instruction": 0
+    },
+    "chat_pinned_files": {
+      "bad_status": 0,
+      "bad_chat_id": 0,
+      "missing_owner": 0,
+      "retired_ready": 0,
+      "bad_source_project": 0
+    },
+    "chat_message_versions": {
+      "bad_source": 0,
+      "bad_chat_id": 0,
+      "bad_message_id": 0,
+      "multiple_accepted": 0,
+      "bad_selection_pair": 0,
+      "wrong_branch_scope": 0,
+      "retired_regeneration": 0,
+      "oversized_instruction": 0,
+      "oversized_or_missing_content": 0
+    }
+  },
+  "observedViolationCount": 0,
+  "schemaProofPromoted": false,
+  "productionReleaseReady": false
+}
