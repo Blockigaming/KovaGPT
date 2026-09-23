@@ -935,6 +935,8 @@ function FilesTab({
   canEdit: boolean;
   kind: "file" | "image";
 }) {
+  const { user } = useUser();
+  const fileOwnerId = user?.id;
   const fnList = useServerFn(listFiles);
   const [items, setItems] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -967,12 +969,17 @@ function FilesTab({
   async function projectFileRequest(input: RequestInit, search = ""): Promise<Response> {
     const { data, error } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (error || !token) throw new Error("Your session expired. Sign in again and retry.");
+    if (error || !token || !fileOwnerId || data.session?.user.id !== fileOwnerId)
+      throw new Error("Your session expired or account changed. Sign in again and retry.");
     const headers = new Headers(input.headers);
     headers.set("Authorization", `Bearer ${token}`);
+    headers.set("X-Kova-Owner", fileOwnerId);
     return fetch(`/api/project-files${search}`, {
       ...input,
       headers,
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
     });
   }
 

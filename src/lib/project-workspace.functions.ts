@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { ownedPrivateFileLink, PRIVATE_PROJECT_COLUMNS } from "./kova-auth-private-download.mjs";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
@@ -299,7 +300,7 @@ export const listFiles = createServerFn({ method: "GET" })
 
     let q = context.supabase
       .from("project_files")
-      .select("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at")
+      .select(`${PRIVATE_PROJECT_COLUMNS},created_at`)
       .eq("project_id", data.project_id)
       .eq("status", "ready")
       .order("created_at", { ascending: false });
@@ -319,6 +320,11 @@ export const listFiles = createServerFn({ method: "GET" })
           created_at: item.created_at,
         };
         if (item.kind === "agent-deliverable") return { ...base, signed_url: null };
+        if (context.authProvider === "kova")
+          return {
+            ...base,
+            signed_url: await ownedPrivateFileLink("project", context.userId, item),
+          };
         const { data: signed } = await context.supabase.storage
           .from("project-files")
           .createSignedUrl(item.storage_path, 60);

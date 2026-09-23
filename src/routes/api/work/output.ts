@@ -3,6 +3,10 @@ import { workExecutionDatabase } from "@/lib/work-execution-database.server";
 import { requireUser } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { workUuid } from "@/lib/work-execution-protocol.mjs";
+import {
+  ownedPrivateFileLink,
+  PRIVATE_PROJECT_COLUMNS,
+} from "@/lib/kova-auth-private-download.mjs";
 
 export const Route = createFileRoute("/api/work/output")({
   server: {
@@ -39,7 +43,7 @@ export const Route = createFileRoute("/api/work/output")({
         // writable Library metadata and previously signed URLs never grant access.
         const file = await auth.supabaseUser
           .from("project_files")
-          .select("id,storage_path,status,content_sha256,size_bytes,mime_type")
+          .select(PRIVATE_PROJECT_COLUMNS)
           .eq("id", binding.data.project_file_id)
           .eq("status", "ready")
           .maybeSingle();
@@ -51,6 +55,17 @@ export const Route = createFileRoute("/api/work/output")({
           file.data.mime_type !== binding.data.mime_type
         )
           return json({ error: "work_output_not_found" }, 404);
+        if (auth.authProvider === "kova") {
+          try {
+            return json({
+              url: await ownedPrivateFileLink("project", auth.userId, file.data),
+              expiresIn: 0,
+              requiresSession: true,
+            });
+          } catch {
+            return json({ error: "work_output_not_found" }, 404);
+          }
+        }
         const signed = await auth.supabaseUser.storage
           .from("project-files")
           .createSignedUrl(file.data.storage_path, 60);

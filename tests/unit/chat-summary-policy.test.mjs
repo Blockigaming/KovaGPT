@@ -212,7 +212,10 @@ test("delayed browser snapshots never move to another account's access token", a
   });
   assert.equal(calls.length, 2);
   for (const [, init] of calls) {
-    assert.equal(init.headers.Authorization, "Bearer original-token");
-    assert.equal(init.credentials, "omit");
+    assert.equal(init.headers.get("Authorization"), "Bearer original-token");
+    assert.equal(init.headers.get("X-Kova-Owner"), id);
+    assert.equal(init.credentials, "same-origin");
+    assert.equal(init.mode, "same-origin");
+    assert.equal(init.redirect, "error");
   }
 });

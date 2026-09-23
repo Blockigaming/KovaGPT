@@ -43,7 +43,7 @@ function lifecycle(overrides = {}) {
       denied: 0,
       unsubscribed: 0,
     };
-  let invalidate, status;
+  let invalidate, status, rejectLease;
   const stop = createCollaborationLifecycle({
     schedule: c.schedule,
     unschedule: c.unschedule,
@@ -57,9 +57,10 @@ function lifecycle(overrides = {}) {
     leave: async (sequence) => {
       events.leave.push(sequence);
     },
-    subscribe: (i, s) => {
+    subscribe: (i, s, rejected) => {
       invalidate = i;
       status = s;
+      rejectLease = rejected;
       return () => events.unsubscribed++;
     },
     onStatus: (value) => events.status.push(value),
@@ -67,8 +68,31 @@ function lifecycle(overrides = {}) {
     onDenied: () => events.denied++,
     ...overrides,
   });
-  return { c, events, stop, invalidate: () => invalidate(), status: (value) => status(value) };
+  return {
+    c,
+    events,
+    stop,
+    invalidate: () => invalidate(),
+    status: (value) => status(value),
+    rejectLease: () => rejectLease(),
+  };
 }
+test("a revoked owned Realtime lease stops polling and presence before any later callback", async () => {
+  const l = lifecycle();
+  await flush();
+  l.rejectLease();
+  const reads = l.events.refresh;
+  assert.equal(l.events.denied, 1);
+  assert.equal(l.events.unsubscribed, 1);
+  assert.equal(l.c.tasks.size, 0);
+  l.invalidate();
+  l.status("SUBSCRIBED");
+  l.rejectLease();
+  await flush();
+  assert.equal(l.events.refresh, reads);
+  assert.equal(l.events.denied, 1);
+  assert.equal(l.c.tasks.size, 0);
+});
 test("requests pin the verified actor token and refuse switched or expired sessions", async () => {
   let calls = 0,
     headers;

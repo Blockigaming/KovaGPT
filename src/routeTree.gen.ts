@@ -79,6 +79,7 @@ import { Route as ApiKovasRouteImport } from './routes/api/kovas'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
+import { Route as ApiPrivateFilesRouteImport } from './routes/api/private-files'
 import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
@@ -565,6 +566,11 @@ const ApiMemoryRoute = ApiMemoryRouteImport.update({
 const ApiOrganizationsRoute = ApiOrganizationsRouteImport.update({
   id: '/api/organizations',
   path: '/api/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPrivateFilesRoute = ApiPrivateFilesRouteImport.update({
+  id: '/api/private-files',
+  path: '/api/private-files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
@@ -1339,6 +1345,7 @@ export interface FileRoutesByFullPath {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1545,6 +1552,7 @@ export interface FileRoutesByTo {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1752,6 +1760,7 @@ export interface FileRoutesById {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1960,6 +1969,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -2166,6 +2176,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -2372,6 +2383,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -2579,6 +2591,7 @@ export interface RootRouteChildren {
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiOrganizationsRoute: typeof ApiOrganizationsRouteWithChildren
+  ApiPrivateFilesRoute: typeof ApiPrivateFilesRoute
   ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
@@ -3195,6 +3208,13 @@ declare module '@tanstack/react-router' {
       path: '/api/organizations'
       fullPath: '/api/organizations'
       preLoaderRoute: typeof ApiOrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/private-files': {
+      id: '/api/private-files'
+      path: '/api/private-files'
+      fullPath: '/api/private-files'
+      preLoaderRoute: typeof ApiPrivateFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/project-files': {
@@ -4317,6 +4337,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiOrganizationsRoute: ApiOrganizationsRouteWithChildren,
+  ApiPrivateFilesRoute: ApiPrivateFilesRoute,
   ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,

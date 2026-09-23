@@ -155,7 +155,9 @@ export async function pushApi(
     deadline.aborted ||
     activeOwner !== ownerId ||
     epoch !== generation ||
-    session.data.session?.user.id !== ownerId
+    session.error ||
+    session.data.session?.user.id !== ownerId ||
+    !session.data.session.access_token
   )
     throw new Error("Your account changed.");
   const response = await fetch(
@@ -164,9 +166,12 @@ export async function pushApi(
       method: body ? "POST" : "GET",
       headers: {
         Authorization: `Bearer ${session.data.session.access_token}`,
+        "X-Kova-Owner": ownerId,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
-      credentials: "omit",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
       cache: "no-store",
       signal: deadline,
       ...(body ? { body: JSON.stringify({ ...body, expectedUserId: ownerId }) } : {}),

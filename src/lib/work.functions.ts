@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  ownedPrivateFileLink,
+  PRIVATE_DELIVERABLE_COLUMNS,
+} from "./kova-auth-private-download.mjs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase generated types are updated after migrations are applied. */
 
@@ -152,7 +156,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
     const [events, deliverables, approvals, tasks, edges, preference] = await Promise.all([
       client
         .from("agent_job_events")
-        .select("id,event_type,payload,created_at")
+        .select("id,job_id,event_type,payload,created_at")
         .eq("job_id", data.id)
         .order("created_at", { ascending: true })
         .limit(1000),
@@ -193,10 +197,14 @@ export const getWorkRun = createServerFn({ method: "GET" })
         let previewUrl: string | null = null;
         const storagePath = event.payload?.storage_path;
         if (typeof storagePath === "string" && storagePath) {
-          const signed = await client.storage
-            .from("agent-evidence")
-            .createSignedUrl(storagePath, 300);
-          if (!signed.error) previewUrl = signed.data.signedUrl;
+          if (context.authProvider === "kova") {
+            previewUrl = await ownedPrivateFileLink("evidence", context.userId, event);
+          } else {
+            const signed = await client.storage
+              .from("agent-evidence")
+              .createSignedUrl(storagePath, 300);
+            if (!signed.error) previewUrl = signed.data.signedUrl;
+          }
         }
         return {
           id: event.id,
@@ -419,12 +427,14 @@ export const downloadDeliverable = createServerFn({ method: "POST" })
     const client = db(context.supabase);
     const row = await client
       .from("agent_deliverables")
-      .select("storage_reference")
+      .select(context.authProvider === "kova" ? PRIVATE_DELIVERABLE_COLUMNS : "storage_reference")
       .eq("id", data.id)
       .eq("owner_id", context.userId)
       .neq("status", "deleted")
       .single();
     if (row.error) throw new Error("Deliverable not found");
+    if (context.authProvider === "kova")
+      return { url: await ownedPrivateFileLink("deliverable", context.userId, row.data) };
     const [bucket, ...parts] = String(row.data.storage_reference).split(":");
     if (!bucket || !parts.length) throw new Error("Invalid storage reference");
     const signed = await client.storage.from(bucket).createSignedUrl(parts.join(":"), 60);

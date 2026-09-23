@@ -117,7 +117,7 @@ export function useCollaborationPresence({
       },
       leave: (sequence) =>
         collaborationRequest(userId, "leave", { kind, resourceId: id, sessionId, sequence }),
-      subscribe: (invalidate, onStatus) => {
+      subscribe: (invalidate, onStatus, onDenied) => {
         // Only table changes with per-record RLS. No public Broadcast/Presence
         // payloads, channel claims, names or email addresses are trusted.
         const topic = `kova-collaboration:${kind}:${id}:${sessionId}`;
@@ -138,7 +138,14 @@ export function useCollaborationPresence({
               channel.on("postgres_changes", { event, schema: "public", table, filter }, onChange);
         };
         if (isKovaSessionActive())
-          return subscribeOwnedRealtime({ ownerId: userId, topic, bind, invalidate, onStatus });
+          return subscribeOwnedRealtime({
+            ownerId: userId,
+            topic,
+            bind,
+            invalidate,
+            onStatus,
+            onDenied,
+          });
         // Capture the real legacy socket, not the provider-selecting facade:
         // cleanup must remove the channel from the client that created it.
         const realtime = supabase.realtime;

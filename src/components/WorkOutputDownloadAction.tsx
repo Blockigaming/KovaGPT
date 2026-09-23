@@ -28,8 +28,21 @@ export function WorkOutputDownloadAction({ id }: { id: string }) {
             if (signal.aborted) return;
             const result = value as { url?: unknown };
             if (typeof result.url !== "string") throw new Error("unavailable");
-            const url = new URL(result.url);
-            if (url.protocol !== "https:" || url.username || url.password)
+            const url = new URL(result.url, window.location.origin);
+            const owned = result.url.startsWith("/");
+            const localOwned =
+              owned &&
+              url.origin === window.location.origin &&
+              url.protocol === "http:" &&
+              ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+            if (
+              (!localOwned && url.protocol !== "https:") ||
+              url.username ||
+              url.password ||
+              url.hash ||
+              (owned &&
+                (url.origin !== window.location.origin || url.pathname !== "/api/private-files"))
+            )
               throw new Error("invalid_url");
             window.open(url.toString(), "_blank", "noopener,noreferrer");
           })

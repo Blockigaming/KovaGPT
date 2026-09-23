@@ -40,18 +40,20 @@ export async function requestDiscovery({
     c.signal.removeEventListener("abort", sessionAbort);
     const session = result?.data?.session;
     if (c.signal.aborted) throw c.signal.reason;
-    if (session?.user?.id !== owner || !session.access_token)
+    if (result.error || session?.user?.id !== owner || !session.access_token)
       throw new Error("Your account changed. Please try again.");
     const response = await fetchImpl("/api/discovery", {
       method: body === undefined ? "GET" : "POST",
       headers: {
         Authorization: `Bearer ${session.access_token}`,
+        "X-Kova-Owner": owner,
         "X-Kova-Expected-User": owner,
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: c.signal,
-      credentials: "omit",
+      credentials: "same-origin",
+      mode: "same-origin",
       redirect: "error",
       cache: "no-store",
     });

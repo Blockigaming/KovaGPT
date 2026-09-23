@@ -653,9 +653,17 @@ export async function handleKovaSession(request: Request): Promise<Response> {
 export async function handleKovaToken(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "GET") return jsonError("Method not allowed.", 405);
   try {
     const principal = await resolveKovaRequestPrincipal(request);
     if (!principal) return jsonError("Invalid or expired session.", 401);
+    const owner = request.headers.get("X-Kova-Owner");
+    const session = request.headers.get("X-Kova-Session");
+    if (
+      (owner !== null && owner !== principal.accountId) ||
+      (session !== null && session !== principal.sessionId)
+    )
+      return jsonError("Session changed.", 409);
     return json({
       accessToken: signKovaCompatibilityJwt(principal),
       expiresIn: 300,

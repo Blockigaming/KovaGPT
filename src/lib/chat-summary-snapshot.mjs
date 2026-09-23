@@ -103,9 +103,28 @@ async function sessionFor(principal, dependencies) {
       if (!getSupabaseClientConfigStatus().configured) return { data: { session: null } };
       return supabase.auth.getSession();
     });
-  const { data } = await getSession();
+  const signal = dependencies.signal;
+  signal?.throwIfAborted();
+  let abort, timer;
+  const canceled = new Promise((_, reject) => {
+    abort = () => reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+    signal?.addEventListener("abort", abort, { once: true });
+    timer = setTimeout(
+      () => reject(new DOMException("Session lookup timed out", "TimeoutError")),
+      15000,
+    );
+  });
+  let result;
+  try {
+    result = await Promise.race([getSession(), canceled]);
+    signal?.throwIfAborted();
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
+  }
+  const { data, error } = result;
   const session = data?.session;
-  return session?.user?.id === principal && session.access_token ? session : null;
+  return !error && session?.user?.id === principal && session.access_token ? session : null;
 }
 
 async function descriptorFor(chatId, session, dependencies, timeoutMs = 5000) {
@@ -113,13 +132,13 @@ async function descriptorFor(chatId, session, dependencies, timeoutMs = 5000) {
     return { enabled: false, descriptor: null };
   const deadline = AbortSignal.timeout(timeoutMs);
   const signal = dependencies.signal ? AbortSignal.any([dependencies.signal, deadline]) : deadline;
-  const response = await (dependencies.fetchImpl ?? fetch)(
+  const response = await fetchForPrincipal(
+    session.user.id,
     `/api/memory?contextChatId=${encodeURIComponent(chatId)}`,
     {
-      credentials: "omit",
-      headers: { Authorization: `Bearer ${session.access_token}` },
       signal,
     },
+    dependencies,
   );
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
@@ -146,19 +165,20 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
   const needsMore = state.enabled && Boolean(snapshot) && !failed;
   if (unchanged) payload.contextSummary = null;
   if (dependencies.contextOnly && !payload.contextSummary) return { continue: needsMore };
-  const response = await (dependencies.fetchImpl ?? fetch)("/api/memory", {
-    method: "POST",
-    credentials: "omit",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+  const response = await fetchForPrincipal(
+    principal,
+    "/api/memory",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        ...(dependencies.contextOnly ? { contextOnly: true } : {}),
+      }),
+      signal: dependencies.signal,
     },
-    body: JSON.stringify({
-      ...payload,
-      ...(dependencies.contextOnly ? { contextOnly: true } : {}),
-    }),
-    signal: dependencies.signal,
-  });
+    dependencies,
+  );
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
     throw new Error("memory_write_failed");
@@ -223,14 +243,44 @@ export function scheduleMemoryWrites(active, principal, signal) {
 }
 
 export async function fetchForPrincipal(principal, input, init = {}, dependencies = {}) {
-  const headers = new Headers(init.headers);
+  // This transport is for these application APIs only, never external providers
+  // or arbitrary URLs supplied by an imported document or custom Kova.
+  const request = input instanceof Request ? input : null;
+  const raw = request ? request.url : String(input);
+  const origin = typeof window === "undefined" ? null : window.location.origin;
+  if ((!origin && !raw.startsWith("/api/")) || raw.includes("\\"))
+    throw new Error("Invalid application request destination.");
+  const target = new URL(raw, origin ?? "https://kova.invalid");
+  if (
+    target.origin !== (origin ?? "https://kova.invalid") ||
+    target.username ||
+    target.password ||
+    target.hash ||
+    !/^\/api\/(?:chat|memory|kovas(?:\/directory)?|admin\/kovas)$/u.test(target.pathname)
+  )
+    throw new Error("Invalid application request destination.");
+  const signal = init.signal ?? request?.signal ?? dependencies.signal;
+  signal?.throwIfAborted();
+  const headers = new Headers(init.headers ?? request?.headers);
   headers.delete("Authorization");
+  headers.delete("X-Kova-Owner");
   if (principal) {
-    const session = await sessionFor(principal, dependencies);
+    const session = await sessionFor(principal, { ...dependencies, signal });
     if (!session) throw new DOMException("Account changed before request", "AbortError");
     headers.set("Authorization", `Bearer ${session.access_token}`);
+    // The server compares this with the authoritative cookie account before
+    // minting a data token. A newly set cookie cannot retarget an old request.
+    headers.set("X-Kova-Owner", principal);
   }
-  return (dependencies.fetchImpl ?? fetch)(input, { ...init, credentials: "omit", headers });
+  signal?.throwIfAborted();
+  return (dependencies.fetchImpl ?? fetch)(input, {
+    ...init,
+    signal,
+    credentials: principal ? "same-origin" : "omit",
+    mode: "same-origin",
+    redirect: "error",
+    headers,
+  });
 }
 
 /** Preserve the archive; only the bounded transport window is shortened. */

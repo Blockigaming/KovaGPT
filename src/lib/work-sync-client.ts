@@ -71,6 +71,11 @@ export async function requestWorkSync(
   signal: AbortSignal,
   body?: unknown,
 ) {
+  if (
+    typeof path !== "string" ||
+    !/^\/api\/(?:work\/(?:sync|execution|browser|output)|chat\/history)(?:\?[^#\\]*)?$/u.test(path)
+  )
+    throw new Error("work_sync_destination_invalid");
   const timeout = AbortSignal.timeout(15_000);
   const combined = AbortSignal.any([signal, timeout]);
   const sessionResult = await Promise.race([
@@ -84,14 +89,23 @@ export async function requestWorkSync(
     }),
   ]);
   const session = sessionResult.data.session;
-  if (combined.aborted || session?.user.id !== ownerId || !session.access_token)
+  if (
+    combined.aborted ||
+    sessionResult.error ||
+    session?.user.id !== ownerId ||
+    !session.access_token
+  )
     throw new Error("work_sync_identity_changed");
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
     signal: combined,
     cache: "no-store",
+    credentials: "same-origin",
+    mode: "same-origin",
+    redirect: "error",
     headers: {
       Authorization: `Bearer ${session.access_token}`,
+      "X-Kova-Owner": ownerId,
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),

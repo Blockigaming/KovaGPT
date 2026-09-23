@@ -21,6 +21,7 @@ type Subscription = {
   bind: (channel: RealtimeChannel, invalidate: () => void) => void;
   invalidate: () => void;
   onStatus: (status: string) => void;
+  onDenied?: () => void;
 };
 
 /** A dedicated socket cannot carry another account's channels after a switch. */
@@ -60,7 +61,10 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     } finally {
       if (client) void client.disconnect().catch(() => {});
     }
-    if (denied) options.onStatus("CHANNEL_ERROR");
+    if (denied) {
+      options.onStatus("CHANNEL_ERROR");
+      options.onDenied?.();
+    }
   };
   const admitted = () => {
     if (!current() || performance.now() >= deadline || Date.now() >= expiresAt) {
@@ -94,9 +98,14 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       const response = await fetch("/api/auth/token", {
         method: "GET",
         credentials: "same-origin",
+        mode: "same-origin",
         cache: "no-store",
         redirect: "error",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "X-Kova-Owner": options.ownerId,
+          ...(principal ? { "X-Kova-Session": principal.sessionId } : {}),
+        },
         signal: controller.signal,
       });
       if (controller.signal.aborted || !response.ok) {

@@ -54,6 +54,7 @@ function fixture({ response, active = true } = {}) {
     tornDown: 0,
     disconnected: 0,
     invalidate: 0,
+    denied: 0,
     status: [],
   };
   const channel = {
@@ -123,6 +124,8 @@ function fixture({ response, active = true } = {}) {
     fetch: async (path, init) => {
       assert.equal(path, "/api/auth/token");
       assert.equal(init.credentials, "same-origin");
+      assert.equal(init.mode, "same-origin");
+      assert.equal(init.headers["X-Kova-Owner"], owner);
       assert.equal(init.cache, "no-store");
       assert.equal(init.redirect, "error");
       assert.equal(init.method, "GET");
@@ -156,6 +159,7 @@ function fixture({ response, active = true } = {}) {
     bind: (c, callback) => c.on("postgres_changes", {}, callback),
     invalidate: () => events.invalidate++,
     onStatus: (status) => events.status.push(status),
+    onDenied: () => events.denied++,
   });
   return {
     events,
@@ -205,6 +209,7 @@ test("owned subscriptions obtain fresh cookie-backed authority before creating a
   assert.equal(f.events.subscribed, 0);
   await flush();
   assert.equal(f.events.fetch.length, 1);
+  assert.equal(f.events.fetch[0].headers["X-Kova-Session"], undefined);
   assert.equal(f.events.created, 1);
   assert.equal(f.events.subscribed, 1);
   f.status();
@@ -226,6 +231,7 @@ test("live authority is renewed at fifteen seconds, without reconnecting or usin
   f.replies.push(Response.json(reply({ accessToken: "renewed.payload.signature" })));
   await f.advance(15000);
   assert.equal(f.events.fetch.length, 2);
+  assert.equal(f.events.fetch[1].headers["X-Kova-Session"], session);
   assert.equal(f.socket.token, "renewed.payload.signature");
   assert.equal(f.events.created, 1);
   await f.advance(15000);
@@ -233,6 +239,20 @@ test("live authority is renewed at fifteen seconds, without reconnecting or usin
   f.frame();
   assert.equal(f.events.invalidate, 1);
   f.stop();
+});
+
+test("owned lease rejection notifies the enclosing lifecycle exactly once", async () => {
+  const f = fixture();
+  await flush();
+  f.replies.push(Response.json({ error: "revoked" }, { status: 401 }));
+  await f.advance(15000);
+  assert.equal(f.events.denied, 1);
+  assert.equal(f.tasks.size, 0);
+  f.frame();
+  f.revoke();
+  f.stop();
+  assert.equal(f.events.denied, 1);
+  assert.equal(f.events.invalidate, 0);
 });
 
 for (const [name, mutate] of [

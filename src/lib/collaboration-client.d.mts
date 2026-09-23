@@ -18,7 +18,11 @@ export function createCollaborationLifecycle(input: {
   refresh: (signal: AbortSignal) => Promise<void>;
   heartbeat: (sequence: number, signal: AbortSignal) => Promise<{ peers: number }>;
   leave: (sequence: number) => Promise<unknown>;
-  subscribe: (invalidate: () => void, status: (state: string) => void) => () => void;
+  subscribe: (
+    invalidate: () => void,
+    status: (state: string) => void,
+    denied: () => void,
+  ) => () => void;
   onStatus: (state: "connected" | "reconnecting") => void;
   onPeers: (peers: number) => void;
   onDenied: () => void;

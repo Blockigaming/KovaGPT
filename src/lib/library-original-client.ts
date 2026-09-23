@@ -22,7 +22,7 @@ export async function originalLibraryHeaders(owner: string, signal: AbortSignal)
   );
   const session = result.data.session;
   signal.throwIfAborted();
-  if (!session?.access_token || session.user.id !== owner)
+  if (result.error || !session?.access_token || session.user.id !== owner)
     throw new Error("Your account changed. Please try again.");
   return { Authorization: `Bearer ${session.access_token}`, "X-Kova-Owner": owner };
 }

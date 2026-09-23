@@ -40,15 +40,24 @@ export async function libraryItemsRequest(
   signal: AbortSignal,
   body?: Record<string, unknown>,
 ) {
+  // Only a query suffix is accepted; a path cannot redirect owner credentials
+  // into another API or an external destination.
+  if (path !== "" && (!path.startsWith("?") || path.includes("#")))
+    throw new Error("Invalid Library request destination.");
   const current = AbortSignal.any([signal, AbortSignal.timeout(25000)]);
+  current.throwIfAborted();
+  const headers = await originalLibraryHeaders(owner, current);
+  current.throwIfAborted();
   const response = await fetch(`/api/library/items${path}`, {
     method: body ? "POST" : "GET",
     headers: {
-      ...(await originalLibraryHeaders(owner, current)),
+      ...headers,
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
-    credentials: "omit",
+    credentials: "same-origin",
+    mode: "same-origin",
+    redirect: "error",
     cache: "no-store",
     signal: current,
   });

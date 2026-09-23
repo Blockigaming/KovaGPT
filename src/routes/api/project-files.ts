@@ -26,6 +26,10 @@ import {
 } from "@/lib/project-file-maintenance.server";
 import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 import {
+  ownedPrivateFileLink,
+  PRIVATE_PROJECT_COLUMNS,
+} from "@/lib/kova-auth-private-download.mjs";
+import {
   reserveAccountStorageArtifact,
   retireAccountStorageArtifact,
 } from "@/lib/account-storage-artifacts.server";
@@ -798,12 +802,24 @@ async function sign(request: Request): Promise<Response> {
 
   const { data: file, error } = await auth.supabaseUser
     .from("project_files")
-    .select("id,storage_path,status")
+    .select(PRIVATE_PROJECT_COLUMNS)
     .eq("id", fileId)
     .eq("status", "ready")
     .maybeSingle();
   if (error) return json({ error: "project_file_sign_unavailable" }, 503);
   if (!file) return json({ error: "project_file_not_found" }, 404);
+
+  if (auth.authProvider === "kova") {
+    try {
+      return json({
+        url: await ownedPrivateFileLink("project", auth.userId, file),
+        expiresIn: 0,
+        requiresSession: true,
+      });
+    } catch {
+      return json({ error: "project_file_not_found" }, 404);
+    }
+  }
 
   const { data: signed, error: signError } = await auth.supabaseUser.storage
     .from("project-files")

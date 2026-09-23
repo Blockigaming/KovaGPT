@@ -152,11 +152,19 @@ export function createCollaborationLifecycle({
       void update();
     }, 500);
   };
-  stopSubscription = subscribe(invalidate, (state) => {
-    if (!active) return;
-    onStatus(state === "SUBSCRIBED" ? "connected" : "reconnecting");
-    if (state === "SUBSCRIBED") invalidate();
-  });
+  stopSubscription = subscribe(
+    invalidate,
+    (state) => {
+      if (!active) return;
+      onStatus(state === "SUBSCRIBED" ? "connected" : "reconnecting");
+      if (state === "SUBSCRIBED") invalidate();
+    },
+    () => {
+      if (!active) return;
+      stop();
+      onDenied();
+    },
+  );
   if (!active) stopSubscription();
   poll();
   return stop;

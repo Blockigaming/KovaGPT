@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ownedPrivateFileLink } from "@/lib/kova-auth-private-download.mjs";
 import { requireUser, requireVerifiedUser, type AuthedCaller } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
@@ -119,6 +120,21 @@ export const Route = createFileRoute("/api/account/export")({
         if (url.searchParams.get("download") !== "1") return json({ job });
         if (!job.downloadable || typeof result.data.storage_path !== "string") {
           return json({ error: "account_export_not_ready", job }, 409);
+        }
+        if (auth.authProvider === "kova") {
+          try {
+            return json({
+              job,
+              downloadUrl: await ownedPrivateFileLink("export", auth.userId, {
+                ...result.data,
+                user_id: auth.userId,
+              }),
+              downloadExpiresInSeconds: 0,
+              requiresSession: true,
+            });
+          } catch {
+            return json({ error: "account_export_download_unavailable" }, 503);
+          }
         }
         const signed = await adminFor(auth)
           .storage.from(BUCKET)
