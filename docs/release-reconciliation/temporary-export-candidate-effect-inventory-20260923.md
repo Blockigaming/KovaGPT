@@ -27,6 +27,14 @@ the SQL visibly changes four tables and rewrites five privileged routines. The
 introductory comment describes the migration as additive, but it also drops
 function overloads and constraints and replaces their definitions. Review the
 actual SQL and catalog effects rather than inferring safety from either label.
+The generator's `tables` field matches `CREATE TABLE`, its `rls` field matches
+`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, and `functions` matches
+`CREATE FUNCTION`. It does not parse modified tables, policies, routine
+authority, or dynamic SQL. The current `release-migrations.json` byte SHA-256 is
+`0f62d18eb8934d01aa66458d11d3c345564dc75b5735575ca821a04695ad5428`.
+Changing these generated field definitions would change the release-manifest
+hash embedded in new release-candidate receipts; it should be separately
+versioned and checked rather than silently treated as a complete scope proof.
 
 ## Candidate's direct effects
 
