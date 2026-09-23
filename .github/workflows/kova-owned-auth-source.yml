@@ -18,6 +18,10 @@ on:
       - tests/unit/kova-auth*
       - tests/unit/kova-owned-auth*
       - tests/unit/kova-session*
+      - tests/unit/upgrade-database-scheduled-catalog.test.mjs
+      - tests/unit/upgrade-database-scheduled-tables.test.mjs
+      - tests/unit/upgrade-database-temp-export-proof.test.mjs
+      - tests/unit/upgrade-source-provenance.test.mjs
       - tests/integration/auth-account-security-source.test.mjs
       - tests/helpers/kova-auth*.mjs
       - scripts/release/kova-auth-revocation-proof.sql
@@ -125,6 +129,10 @@ jobs:
           tests/unit/kova-owned-auth-database.test.mjs
           tests/unit/kova-session.server.test.mjs
           tests/integration/auth-account-security-source.test.mjs
+          tests/unit/upgrade-database-scheduled-catalog.test.mjs
+          tests/unit/upgrade-database-scheduled-tables.test.mjs
+          tests/unit/upgrade-database-temp-export-proof.test.mjs
+          tests/unit/upgrade-source-provenance.test.mjs
 
       - name: Verify committed migration inventory
         run: npm run release:migrations
