@@ -27,7 +27,11 @@ without a database connection using
 the 97-row historical fixture manifest, the 98th-row supplement, 23 remote
 structural fixture hashes, the supplement hash, and the captured ledger metadata digest. The
 capture in that file is dated September 18; it must be refreshed before any
-operation on the current production target.
+operation on the current production target. The checker validates the 97-row
+historical manifest and ledger digest inside the supplement, the exact intended
+project reference in both the supplement and lineage, and every checked-out
+migration SQL file and filename against the source manifest. Dirty or new SQL
+files fail the check even when the committed Git tree remains unchanged.
 
 Three source-only versions (`20260822122000`, `20260823113000`, and
 `20260903145843`) are **proposed** as history-only canonical records after

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ledgerMetadataHash } from "./upgrade-database-current-history.mjs";
 
@@ -14,6 +14,73 @@ const supplementPath =
   "tests/fixtures/production-migration-history-20260904/current-supplement-20260918.json";
 const decisionPath = "docs/release-reconciliation/canonical-history-actions-20260923.json";
 const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
+const targetProjectRef = "mfbycmbjygcfkrsuepxf";
+
+export function validateCanonicalHistoryCapture(lineage, baseline, supplement, baselineSha256) {
+  if (lineage.targetProjectRef !== targetProjectRef || supplement.projectRef !== targetProjectRef)
+    throw new Error("canonical_history_target_mismatch");
+  if (
+    baseline.productionVersionCount !== 97 ||
+    baseline.migrations?.length !== supplement.historicalVersionCount ||
+    baseline.migrations.length !== 97 ||
+    supplement.currentVersionCount !== 98 ||
+    supplement.supplement?.length !== 1 ||
+    supplement.readOnly !== true ||
+    supplement.statementTextReturned !== false ||
+    supplement.customerRowsReturned !== false
+  )
+    throw new Error("canonical_history_capture_invalid");
+  if (supplement.historicalManifestSha256 !== baselineSha256)
+    throw new Error("canonical_history_historical_manifest_drift");
+  if (supplement.historicalLedgerSha256 !== ledgerMetadataHash(baseline.migrations))
+    throw new Error("canonical_history_historical_ledger_drift");
+  if (
+    baseline.migrations.reduce((sum, item) => sum + item.statementCount, 0) !==
+      supplement.historicalStatementCount ||
+    supplement.supplement[0].statementCount + supplement.historicalStatementCount !==
+      supplement.currentStatementCount ||
+    supplement.supplement[0].remoteVersion <= baseline.migrations.at(-1).version
+  )
+    throw new Error("canonical_history_capture_counts_mismatch");
+}
+
+export function validateCheckedOutMigrationSet(migrations, filenames, readBytes) {
+  const expected = migrations.map((entry) => entry.filename);
+  const actual = filenames.filter((name) => name.endsWith(".sql"));
+  if (
+    new Set(expected).size !== expected.length ||
+    expected.length !== actual.length ||
+    expected.some((name) => !actual.includes(name))
+  )
+    throw new Error("canonical_history_checked_out_migration_set_changed");
+  for (const entry of migrations) {
+    if (
+      !/^\d{14}_.+\.sql$/u.test(entry.filename) ||
+      entry.timestamp !== entry.filename.slice(0, 14) ||
+      sha256(readBytes(entry.filename)) !== entry.sha256
+    )
+      throw new Error("canonical_history_checked_out_migration_content_changed");
+  }
+}
+
+export function validateEquivalentSupplement(supplement, sourceMigration, sourceBytes) {
+  const entry = supplement.supplement[0];
+  if (
+    !sourceMigration ||
+    sourceMigration.timestamp !== "20260903145843" ||
+    entry.remoteVersion !== "20260906024459" ||
+    entry.sourceVersion !== sourceMigration.timestamp ||
+    entry.sourcePath !== `supabase/migrations/${sourceMigration.filename}` ||
+    entry.name !== "remediate_security_advisor_warnings" ||
+    entry.comparison !== "exact-content-single-statement" ||
+    entry.statementCount !== 1 ||
+    entry.statementBytes !== sourceBytes.length ||
+    entry.capturedStatementsSha256 !== sourceMigration.sha256 ||
+    entry.capturedStatementsSha256 !== sha256(sourceBytes) ||
+    entry.capturedStatementsMd5 !== createHash("md5").update(sourceBytes).digest("hex")
+  )
+    throw new Error("canonical_history_supplement_equivalence_changed");
+}
 
 export function buildCanonicalHistoryDecision() {
   const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -28,6 +95,24 @@ export function buildCanonicalHistoryDecision() {
   const lineage = read(lineagePath);
   const baseline = read(baselinePath);
   const supplement = read(supplementPath);
+  validateCanonicalHistoryCapture(
+    lineage,
+    baseline,
+    supplement,
+    sha256(readFileSync(baselinePath)),
+  );
+  validateCheckedOutMigrationSet(
+    source.migrations,
+    readdirSync(join(repositoryRoot, "supabase/migrations")),
+    (filename) => readFileSync(join(repositoryRoot, "supabase/migrations", filename)),
+  );
+  const securitySource = source.migrations.find((entry) => entry.timestamp === "20260903145843");
+  if (!securitySource) throw new Error("canonical_history_security_source_missing");
+  validateEquivalentSupplement(
+    supplement,
+    securitySource,
+    readFileSync(join(repositoryRoot, "supabase/migrations", securitySource.filename)),
+  );
   const sourceVersions = new Set(source.migrations.map((entry) => entry.timestamp));
   const remote = [
     ...baseline.migrations.map((entry) => ({ ...entry, provenance: "historical_fixture" })),
@@ -119,10 +204,6 @@ export function buildCanonicalHistoryDecision() {
     remoteOnly.some((entry) => !entry.name || !entry.mappingStatus)
   )
     throw new Error("canonical_history_inventory_changed");
-  for (const entry of sourceOnly) {
-    if (sha256(readFileSync(entry.path)) !== entry.sha256)
-      throw new Error("canonical_history_source_hash_changed");
-  }
   for (const entry of remoteOnly) {
     if (
       entry.provenance === "historical_fixture" &&
