@@ -61,6 +61,87 @@ function checkedArtifact(receipt, key, path, expectedName, expectedQuery, expect
   return { data, sha256: digest(bytes) };
 }
 
+// The catalog collectors validate and deterministically order every grant and
+// effective privilege before these are passed here. Keep explicit grants
+// separate from effective access: PUBLIC grants and role inheritance can make
+// the two inventories differ without changing a function definition or RLS.
+export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
+  if (!["tables", "routines"].includes(kind)) fail("grant_scope_invalid");
+  const before = beforeCapture[kind];
+  const live = liveCapture[kind];
+  const identity =
+    kind === "tables"
+      ? (row) => `${row.schema}.${row.name}`
+      : (row) => JSON.stringify([row.schema, row.name, row.identityArguments]);
+  const identityKey = (grant) =>
+    JSON.stringify(
+      kind === "tables"
+        ? [grant.column ?? null, grant.grantee, grant.grantor, grant.privilege, grant.grantable]
+        : [grant.grantee, grant.grantor, grant.privilege, grant.grantable],
+    );
+  const byIdentity = new Map(before.map((row) => [identity(row), row]));
+  const liveIds = new Set(live.map(identity));
+  return [
+    ...before
+      .filter((row) => !liveIds.has(identity(row)))
+      .map((row) => ({
+        identity: identity(row),
+        kind: "removed_scope",
+      })),
+    ...live.flatMap((row) => {
+      const original = byIdentity.get(identity(row));
+      if (!original) return [{ identity: identity(row), kind: "added_scope" }];
+      const properties = kind === "tables" ? ["acl", "columnAcl"] : ["acl"];
+      const explicitGrants = Object.fromEntries(
+        properties.map((property) => {
+          const old = new Set(original[property].map(identityKey));
+          const newer = new Set(row[property].map(identityKey));
+          return [
+            property,
+            {
+              sourceOnly: original[property].filter((grant) => !newer.has(identityKey(grant))),
+              liveOnly: row[property].filter((grant) => !old.has(identityKey(grant))),
+            },
+          ];
+        }),
+      );
+      const effectiveChanges = row.effectivePrivileges.flatMap((current, index) => {
+        const previous = original.effectivePrivileges[index];
+        if (JSON.stringify(previous) === JSON.stringify(current)) return [];
+        return [{ role: current.role, source: previous, live: current }];
+      });
+      const columnAclStorageChanged =
+        kind === "tables" &&
+        original.columns.some((column, index) => {
+          const current = row.columns[index];
+          return current?.name !== column.name || current.aclIsNull !== column.aclIsNull;
+        });
+      if (
+        original.aclIsNull === row.aclIsNull &&
+        !columnAclStorageChanged &&
+        !effectiveChanges.length &&
+        Object.values(explicitGrants).every(
+          (delta) => !delta.sourceOnly.length && !delta.liveOnly.length,
+        )
+      )
+        return [];
+      return [
+        {
+          identity: identity(row),
+          ...(kind === "tables"
+            ? {
+                aclIsNull: { source: original.aclIsNull, live: row.aclIsNull },
+                columnAclStorageChanged,
+              }
+            : {}),
+          explicitGrants,
+          effectiveChanges,
+        },
+      ];
+    }),
+  ];
+}
+
 function compareOne(artifact, live, build, key) {
   if (
     Date.parse(live.data.capturedAt) < Date.parse(artifact.data.baseline.capture.capturedAt) ||
@@ -103,8 +184,24 @@ function compareOne(artifact, live, build, key) {
     liveCaptureSha256: live.sha256,
     capturedAt: live.data.capturedAt,
     liveLedgerVersionCount: live.data.ledgerVersionCount,
-    baseline: { fingerprint: baseline.baseline.fingerprint, changes: baseline.changes },
-    sourceFinal: { fingerprint: sourceFinal.baseline.fingerprint, changes: sourceFinal.changes },
+    baseline: {
+      fingerprint: baseline.baseline.fingerprint,
+      changes: baseline.changes,
+      grantDeltas: scheduledGrantDeltas(
+        baseline.baseline.capture,
+        baseline.upgraded.capture,
+        key === "tableCatalogMatch" ? "tables" : "routines",
+      ),
+    },
+    sourceFinal: {
+      fingerprint: sourceFinal.baseline.fingerprint,
+      changes: sourceFinal.changes,
+      grantDeltas: scheduledGrantDeltas(
+        sourceFinal.baseline.capture,
+        sourceFinal.upgraded.capture,
+        key === "tableCatalogMatch" ? "tables" : "routines",
+      ),
+    },
     liveFingerprint: baseline.upgraded.fingerprint,
     [key]: baseline.changes.length === 0,
   };
