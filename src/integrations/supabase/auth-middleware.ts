@@ -35,6 +35,7 @@ export const requireSupabaseAuth = createMiddleware({
     context: {
       supabase: auth.supabaseUser,
       userId: auth.userId,
+      authProvider: auth.authProvider,
       claims: auth.claims ?? {},
     },
   });

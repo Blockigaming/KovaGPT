@@ -25,6 +25,9 @@ export type AuthedCaller = {
   supabaseAdmin: SupabaseClient<Database>;
   emailVerified: boolean;
   claims?: Record<string, unknown>;
+  // Server-only closure bound to the original cookie. Never serialized or
+  // supplied by the browser; long operations use it before exposing results.
+  revalidateSession?: () => Promise<boolean>;
 };
 
 export type HttpAuthedCaller = AuthedCaller & { authProvider: "kova" | "supabase" };
@@ -107,8 +110,12 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
 
   if (credential.provider === "kova") {
     try {
-      const principal = await resolveSession(digestKovaToken(credential.token));
+      const sessionDigest = digestKovaToken(credential.token);
+      const principal = await resolveSession(sessionDigest);
       if (!principal) return unauthorized("Invalid or expired session");
+      const expectedOwner = request.headers.get("x-kova-owner");
+      if (expectedOwner !== null && expectedOwner !== principal.accountId)
+        return jsonError("Your account changed. Please try again.", 409);
       const compatibilityToken = signKovaCompatibilityJwt(principal);
       const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: { headers: { Authorization: `Bearer ${compatibilityToken}` } },
@@ -133,6 +140,17 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
         supabaseAdmin: createAdminClient(),
         emailVerified: principal.emailVerified,
         claims,
+        revalidateSession: async () => {
+          const current = await resolveSession(sessionDigest);
+          return (
+            current !== null &&
+            current.accountId === principal.accountId &&
+            current.sessionId === principal.sessionId &&
+            current.email === principal.email &&
+            current.emailVerified &&
+            current.assuranceLevel === principal.assuranceLevel
+          );
+        },
       };
     } catch (error) {
       console.error("[auth] Kova session validation failed", {
@@ -184,6 +202,9 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
     return unauthorized("Invalid or expired session");
   }
 
+  const expectedOwner = request.headers.get("x-kova-owner");
+  if (expectedOwner !== null && expectedOwner !== access.userId)
+    return jsonError("Your account changed. Please try again.", 409);
   const admin = createAdminClient();
   if (resolveKovaAuthMode() === "dual") {
     // Hosted JWT signatures do not prove that the account still accepts that

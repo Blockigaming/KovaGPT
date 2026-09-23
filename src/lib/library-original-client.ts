@@ -59,7 +59,8 @@ export async function saveOriginalLibraryFile(
       headers: await originalLibraryHeaders(owner, current),
       body: form,
       signal: current,
-      credentials: "omit",
+      credentials: "same-origin",
+      redirect: "error",
       cache: "no-store",
     },
   );
@@ -85,7 +86,8 @@ export async function readOriginalLibraryFile(
     {
       headers: await originalLibraryHeaders(owner, current),
       signal: current,
-      credentials: "omit",
+      credentials: "same-origin",
+      redirect: "error",
       cache: "no-store",
     },
   );

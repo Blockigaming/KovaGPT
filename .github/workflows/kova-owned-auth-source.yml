@@ -13,6 +13,13 @@ on:
       - src/lib/pricing/developer-platform.server.ts
       - src/lib/kova-session*
       - src/lib/api-auth.server.ts
+      - src/lib/image-api-client.ts
+      - src/lib/library-images.functions.ts
+      - src/lib/library-original-client.ts
+      - src/lib/library-private-delivery.server.ts
+      - src/lib/multimodal/image-source.server.mjs
+      - src/routes/api/library/files.ts
+      - src/integrations/supabase/auth-middleware.ts
       - src/lib/account-export*.mjs
       - src/lib/account-export*.mts
       - src/lib/kova-recovery-link.*
@@ -34,6 +41,8 @@ on:
       - src/routes/api/auth/**
       - supabase/migrations/**
       - tests/unit/kova-auth*
+      - tests/unit/image*.test.mjs
+      - tests/unit/library-original-api-client.test.mjs
       - tests/unit/kova-owned-auth*
       - tests/unit/kova-session*
       - tests/unit/account-delete-ordering.test.mjs
@@ -153,6 +162,8 @@ jobs:
           tests/unit/upgrade-database-scheduled-tables.test.mjs
           tests/unit/upgrade-database-temp-export-proof.test.mjs
           tests/unit/upgrade-source-provenance.test.mjs
+          tests/unit/image*.test.mjs
+          tests/unit/library-original-api-client.test.mjs
 
       - name: Verify committed migration inventory
         run: npm run release:migrations

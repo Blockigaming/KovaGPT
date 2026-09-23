@@ -44,7 +44,9 @@ test("image browser transport pins the bearer token to the initiating account", 
     async (_path, init) => {
       calls++;
       assert.equal(init.headers.Authorization, "Bearer secret");
-      assert.equal(init.credentials, "omit");
+      assert.equal(init.credentials, "same-origin");
+      assert.equal(init.redirect, "error");
+      assert.equal(init.headers["X-Kova-Owner"], owner);
       return Response.json({ editingEnabled: false });
     },
   );
@@ -124,4 +126,36 @@ test("saving an image rejects a changed account before reading private bytes or 
     }),
     /account changed/,
   );
+});
+
+test("image transport cannot attach cookies or a bearer to external or unrelated endpoints", async () => {
+  let calls = 0;
+  const api = load("src/lib/image-api-client.ts", {
+    "@/integrations/supabase/client": {
+      supabase: {
+        auth: {
+          getSession: () => {
+            calls++;
+            assert.fail("No auth lookup for an invalid path");
+          },
+        },
+      },
+    },
+    "@/lib/endpoint-reliability.mjs": reliability,
+  });
+  for (const path of [
+    "https://attacker.test/api/generate-image",
+    "//attacker.test/api/generate-image",
+    "/api/generate-image/../account",
+    "/api/account",
+    "/api/generate-image#fragment",
+    "/api/generate-image?x=\\evil",
+    "/api/generate-image?x=\n",
+  ]) {
+    await assert.rejects(
+      api.imageApiRequest(owner, path, new AbortController().signal),
+      /Invalid image service endpoint/u,
+    );
+  }
+  assert.equal(calls, 0);
 });
