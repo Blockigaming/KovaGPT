@@ -1,0 +1,127 @@
+# Temporary exact-tree transfer; final source commit removes this helper.
+name: Kova Auth Verified Source Objects
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths: [.github/workflows/kova-auth-verified-source-objects.yml]
+permissions:
+  contents: read
+jobs:
+  objects:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation' && github.actor == 'Blockigaming'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out exact temporary source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Transfer only source objects matching the verified tree
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_SOURCE_OBJECTS'
+          import os, json, base64, lzma, hashlib, subprocess, pathlib, urllib.request
+          BASE = "ba19fa3fca44b9f16f656dcf5f4a79701e7713ea"
+          BASE_TREE = "5cf54b93e3fdcd6c2f83748a8e176e59dbc87200"
+          INTERMEDIATE = "e6f8679e6b6dd7e19631cba6ecf759921c5e90db"
+          TARGET = "da3600d3e07c999828eb8930eeb4a4e455833719"
+          PARTS = ["9531e5bc5a42c302f34f3522375080446b741ba0", "4bb129368ba3907314aa6f3b36d3b6b6e9a05487", "fa0d31ca8c91d38a171a5933cbaed7b69b77f3f4", "8c77485edcff54ffbfe04e6fdfabb953b4cfb345"]
+          FOLLOWUPS = [("207717074ece3c8eb73ad8e8c0a28a20cc68f530", 1366, "c77057c58bad9cd42482fecfabcf0fb1870b0d79d25e2b08997856c010e0edd3"), ("1ba7e7a73851db917f46c8cb2b42ccae0d773661", 1862, "892fff4b941a4ad6eb1d6ef7caaa7acd1d6d12acd6aabde24ee0b0da35fe290c")]
+          PATCH_HASH = "992ea3675ddc52941a2a8416b12a0e70781be8ff184868ed8a8ee525fb9d2b35"
+          HELPER = ".github/workflows/kova-auth-verified-source-objects.yml"
+          def git(*args):
+              return subprocess.check_output(["git", *args]).strip()
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  raise RuntimeError("Redirect refused")
+          def api(method, endpoint, body=None):
+              allowed = {("GET", "git/blobs/" + sha) for sha in PARTS + [p[0] for p in FOLLOWUPS]}
+              allowed.add(("POST", "git/trees"))
+              assert (method, endpoint) in allowed
+              data = None if body is None else json.dumps(body).encode("utf-8")
+              assert data is None or len(data) < 3000000
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/Blockigaming/KovaGPT/" + endpoint,
+                  data=data, method=method, headers={
+                      "Authorization": "Bearer " + os.environ["GITHUB_TOKEN"],
+                      "Accept": "application/vnd.github+json", "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28"})
+              with urllib.request.build_opener(NoRedirect()).open(request, timeout=60) as response:
+                  assert response.status == (200 if method == "GET" else 201)
+                  raw = response.read(3000001)
+                  assert len(raw) <= 3000000
+                  return json.loads(raw)
+          def blob(sha, size):
+              value = api("GET", "git/blobs/" + sha)
+              assert value["sha"] == sha and value["encoding"] == "base64" and value["size"] == size
+              raw = base64.b64decode("".join(value["content"].split()), validate=True)
+              assert len(raw) == size
+              assert hashlib.sha1(b"blob " + str(size).encode() + b"\0" + raw).hexdigest() == sha
+              return raw
+          assert os.environ.get("PYTHONOPTIMIZE", "") in ("", "0") and __debug__
+          assert os.environ["GITHUB_REPOSITORY"] == "Blockigaming/KovaGPT"
+          assert os.environ["GITHUB_REF"] == "refs/heads/codex/kova-owned-auth-foundation"
+          head = os.environ["GITHUB_SHA"]
+          assert git("rev-parse", "HEAD").decode() == head
+          assert git("rev-parse", "HEAD^").decode() == BASE
+          assert git("diff", "--name-only", BASE, "HEAD").decode() == HELPER
+          assert not git("status", "--porcelain")
+          compressed = b"".join(blob(sha, 7353) for sha in PARTS)
+          assert len(compressed) == 29412
+          assert hashlib.sha1(b"blob 29412\0" + compressed).hexdigest() == "30221eae92adce7bfe1afd8cdfd3c69286fd13f7"
+          decoder = lzma.LZMADecompressor(memlimit=134217728)
+          patch = decoder.decompress(compressed, max_length=2000000)
+          assert decoder.eof and not decoder.unused_data and len(patch) == 138965
+          assert hashlib.sha256(patch).hexdigest() == PATCH_HASH
+          subprocess.run(["git", "checkout", "--detach", BASE], check=True)
+          assert git("rev-parse", "HEAD^{tree}").decode() == BASE_TREE
+          assert not git("status", "--porcelain")
+          for options, payload in [(["--unidiff-zero"], patch)]:
+              subprocess.run(["git", "apply", "--check", "--index", *options], input=payload, check=True)
+              subprocess.run(["git", "apply", "--index", *options], input=payload, check=True)
+          assert git("write-tree").decode() == INTERMEDIATE
+          for sha, size, digest in FOLLOWUPS:
+              payload = blob(sha, size)
+              assert hashlib.sha256(payload).hexdigest() == digest
+              subprocess.run(["git", "apply", "--check", "--index"], input=payload, check=True)
+              subprocess.run(["git", "apply", "--index"], input=payload, check=True)
+          assert git("write-tree").decode() == TARGET
+          paths = git("diff", "--cached", "--name-only", "-z").decode().rstrip("\0").split("\0")
+          assert len(paths) == 42 and len(set(paths)) == 42
+          special = {".gitignore", "package.json", ".github/workflows/kova-owned-auth-source.yml", "scripts/release/kova-auth-cutover-readiness.mjs", "scripts/release/kova-auth-retirement-inventory.mjs", "scripts/release/kova-auth-runtime-boundaries.json"}
+          entries = []
+          for path in paths:
+              assert path.startswith(("src/", "tests/", "docs/")) or path in special
+              assert all(p not in ("", ".", "..") for p in path.split("/"))
+              mode, expected, stage_and_path = git("ls-files", "--stage", "--", path).decode().split(" ", 2)
+              assert mode == "100644" and stage_and_path == "0\t" + path
+              content = subprocess.check_output(["git", "show", ":" + path])
+              assert len(content) < 1000000
+              digest = hashlib.sha1(b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest()
+              assert digest == expected
+              entries.append({"path": path, "mode": mode, "type": "blob", "content": content.decode("utf-8")})
+          # Transfer Git objects only; no branch updates, deployments, databases or secrets.
+          value = api("POST", "git/trees", {"base_tree": BASE_TREE, "tree": entries})
+          assert value["sha"] == TARGET
+          receipt = {"sourceBase": BASE, "sourceTree": TARGET, "patchSha256": PATCH_HASH,
+                     "followupSha256": [p[2] for p in FOLLOWUPS], "changedFiles": len(entries),
+                     "workflowCommit": head, "refUpdated": False, "deployed": False}
+          folder = pathlib.Path(os.environ["RUNNER_TEMP"]) / "kova-auth-object-receipt"
+          folder.mkdir()
+          (folder / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          print(json.dumps(receipt, sort_keys=True))
+          PY_SOURCE_OBJECTS
+      - name: Preserve exact-tree receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: kova-auth-object-receipt-${{ github.sha }}
+          path: ${{ runner.temp }}/kova-auth-object-receipt/receipt.json
+          if-no-files-found: error
+          retention-days: 1
