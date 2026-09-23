@@ -1,5 +1,7 @@
 -- Read-only, single-snapshot metadata inventory for M17. No customer table data
--- or secret values are returned. The catalog alone is not a full recovery proof.
+-- or secret values are returned. Bind the project identity in the connection or
+-- Supabase execute_sql project_id; this SQL cannot authenticate its own target.
+-- The catalog alone is not a full recovery proof.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
 WITH managed_relations AS (
@@ -57,7 +59,6 @@ managed_policies AS (
 )
 SELECT jsonb_build_object(
   'schemaVersion', 1,
-  'projectRef', 'mfbycmbjygcfkrsuepxf',
   'catalog', jsonb_build_object(
     'authRelations', r.auth_relations,
     'storageRelations', r.storage_relations,
