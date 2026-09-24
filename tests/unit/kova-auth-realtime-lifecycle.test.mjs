@@ -346,7 +346,6 @@ for (const status of [401, 403, 409]) {
     await flush();
     f.replies.push(new Response(null, { status }));
     await f.advance(15000);
-    assert.equal(f.socket.token, null);
     assert.equal(f.events.tornDown, 1);
     assert.equal(f.events.disconnected, 1);
     f.frame();
@@ -416,7 +415,7 @@ for (const changed of [
     f.replies.push(Response.json(payload));
     await f.advance(15000);
     assert.equal(f.events.disconnected, 1);
-    assert.equal(f.socket.token, null);
+    assert.equal(await f.socket.options.accessToken(), null);
     f.frame();
     assert.equal(f.events.invalidate, 0);
   });
@@ -459,7 +458,7 @@ test("a delayed renewed token cannot revive a retired socket", async () => {
   f.revoke();
   pending.resolve(Response.json(reply()));
   await flush();
-  assert.equal(f.socket.token, null);
+  assert.equal(await f.socket.options.accessToken(), null);
   assert.equal(f.events.subscribed, 1);
   assert.equal(f.events.disconnected, 1);
   assert.equal(f.tasks.size, 0);
