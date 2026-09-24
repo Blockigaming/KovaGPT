@@ -150,15 +150,23 @@ export const Route = createFileRoute("/api/trusted-contacts")({
         try {
           if (command.action === "invite") {
             // Resolve the verified current sender from Auth, never a caller-supplied label.
-            const identity = caller.authProvider === "kova"
-              ? await readAccountIdentity(caller.supabaseAdmin, caller.userId)
-              : null;
+            const identity =
+              caller.authProvider === "kova"
+                ? await readAccountIdentity(caller.supabaseAdmin, caller.userId)
+                : null;
             const token = parseBearerToken(request.headers.get("authorization") ?? "");
-            const hosted = caller.authProvider === "kova" ? null
-              : await caller.supabaseUser.auth.getUser(token ?? undefined);
+            const hosted =
+              caller.authProvider === "kova"
+                ? null
+                : await caller.supabaseUser.auth.getUser(token ?? undefined);
             const sender = caller.authProvider === "kova" ? identity : hosted?.data.user;
-            if (hosted?.error || sender?.id !== caller.userId ||
-                !sender.email || !sender.email_confirmed_at) throw new Error();
+            if (
+              hosted?.error ||
+              sender?.id !== caller.userId ||
+              !sender.email ||
+              !sender.email_confirmed_at
+            )
+              throw new Error();
             const result = await rpc(
               caller.supabaseAdmin,
               "create_trusted_contact_invitation",
