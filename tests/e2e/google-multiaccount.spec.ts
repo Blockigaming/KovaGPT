@@ -136,6 +136,7 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
   };
   let captureWorkflowReload = false;
   let workflowListUrl: string | undefined;
+  const initialGetUrls = new Set<string>();
   let staleMode = false;
   let staleListCalls = 0;
   let releaseInitial: (() => Promise<void>) | undefined;
@@ -151,12 +152,14 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
       return;
     }
 
-    if (captureWorkflowReload && !workflowListUrl) {
+    if (captureWorkflowReload && !workflowListUrl && initialGetUrls.has(request.url())) {
       workflowListUrl = request.url();
       captureWorkflowReload = false;
       await route.fulfill({ json: { result: [skill], context: {} } });
       return;
     }
+
+    if (!captureWorkflowReload && !workflowListUrl) initialGetUrls.add(request.url());
 
     if (staleMode && request.url() === workflowListUrl) {
       staleListCalls += 1;

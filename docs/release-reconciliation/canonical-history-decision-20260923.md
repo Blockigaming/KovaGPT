@@ -103,3 +103,24 @@ action inventory and review sequence, not accepted M13 reconciliation or
 authorization for M20. No
 production SQL, history repair, restore, deployment, or mapping promotion was
 performed to prepare it.
+
+## Separate local rehearsal of the proposed 80+3 action sequence
+
+Run `node scripts/release/upgrade-database.mjs --canonical-history --dry-run`
+to verify the pinned inventory without starting a database. The full command
+without `--dry-run` targets only a newly generated local Docker/Supabase
+project. It first checks the 98 historical rows, then invokes the pinned CLI
+with `migration repair --local --status applied` for exactly the three
+content-equivalent canonical versions. It checks that 101-row ledger, inserts
+synthetic two-user data, applies only the other 80 source migration bodies with
+`migration up --local --include-all`, and requires exactly 181 rows before
+cleaning up. The proposed result is written separately to
+`artifacts/release/upgrade-canonical-history.json`; the 82-body control
+rehearsal stays in `upgrade-database.json`. CI runs both and uploads both
+receipts. A failed repair or changed inventory fails before the 80 bodies.
+
+The repair mechanism is demonstrated **only against disposable local history**.
+The pinned September 18 production capture, remote-only structural gaps,
+actual production rows, managed Auth/Storage configuration, and recovery
+package still require separate verification. Even a passing local 181-row
+receipt does not accept this canonical decision or authorize production repair.
