@@ -78,6 +78,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     if (!active) return;
     active = false;
     clearTimeout(retryTimer);
+    retryTimer = undefined;
     removeObserver();
     lifetime.abort();
     closeTransport();
@@ -87,7 +88,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     }
   };
   const scheduleRetry = () => {
-    if (!active) return;
+    if (!active || retryTimer !== undefined) return;
     if (!current()) {
       stop();
       return;
@@ -100,8 +101,8 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     }
     const delay = RETRY_BASE_MS * 2 ** retryCount;
     retryCount += 1;
-    clearTimeout(retryTimer);
     retryTimer = setTimeout(() => {
+      retryTimer = undefined;
       if (!current()) {
         stop();
         return;
