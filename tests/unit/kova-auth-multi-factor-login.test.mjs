@@ -106,7 +106,19 @@ test("factor binding cannot cross accounts and challenge reads increment attempt
     const first = await passwordAccount(db);
     const primary = await enableMfa(db);
     await passwordAccount(db, { id: other, token: "other-session" });
-    const otherMfa = await enableMfa(db, "other-session", "other-mfa-session");
+    const otherFactorId = await pendingFactor(db, "other-session", now);
+    await db.query(
+      "select * from public.kova_auth_activate_totp_with_session($1,$2,$3,$4,$5,$6)",
+      [
+        digest("other-session"),
+        otherFactorId,
+        codeDigests("other"),
+        digest("other-mfa-session"),
+        expiry,
+        now,
+      ],
+    );
+    const otherMfa = { factorId: otherFactorId };
 
     await db.query(
       "select * from public.kova_auth_begin_mfa_login($1,$2,$3,$4,$5,$6)",
