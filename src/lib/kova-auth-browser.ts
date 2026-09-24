@@ -196,12 +196,24 @@ export async function getKovaCompatibilityToken(): Promise<string | null> {
 }
 
 export async function kovaAuthJson(path: string, body: Record<string, unknown>): Promise<Response> {
+  const captured = await getCachedKovaSession();
+  if (!captured) throw new KovaSessionRejectedError();
   const response = await fetch(path, {
     method: "POST",
     credentials: "same-origin",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    mode: "same-origin",
+    redirect: "error",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Kova-Owner": captured.accountId,
+      "X-Kova-Session": captured.sessionId,
+    },
     body: JSON.stringify(body),
   });
+  // A 401/409 means the ambient cookie no longer matches the principal captured
+  // for this UI action. Invalidate local authority before any retry/re-render.
+  if (response.status === 401 || response.status === 409) clearKovaAuthCache();
   // This is an invalidation hint only, never an identity or authorization claim.
   // Other tabs must re-read the HttpOnly cookie through the session endpoint.
   if (response.ok) announceKovaAuthChange();
