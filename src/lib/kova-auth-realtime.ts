@@ -13,7 +13,15 @@ const LEASE_MS = 30_000;
 const RECHECK_MS = 15_000;
 const REQUEST_MS = 5_000;
 const MAX_REPLY_BYTES = 16_384;
+const MAX_RETRIES = 3;
+const RETRY_BASE_MS = 1_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+class LeaseFailure extends Error {
+  constructor(readonly denied: boolean) {
+    super("realtime_lease_unavailable");
+  }
+}
 
 type Subscription = {
   ownerId: string;
@@ -38,42 +46,92 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
   let renewal: Promise<string | null> | null = null;
   let leaseTimer: ReturnType<typeof setTimeout> | undefined;
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let retryCount = 0;
+  let everAdmitted = false;
   let removeObserver = () => {};
   const lifetime = new AbortController();
   const current = () => active && isKovaSessionActive() && generation === kovaAuthGeneration();
 
+  const closeTransport = () => {
+    token = null;
+    deadline = 0;
+    refreshAt = 0;
+    expiresAt = 0;
+    clearTimeout(leaseTimer);
+    clearTimeout(refreshTimer);
+    const closingChannel = channel;
+    const closingClient = client;
+    channel = undefined;
+    client = undefined;
+    try {
+      if (closingChannel) {
+        void closingChannel.unsubscribe(1000).catch(() => {});
+        closingChannel.teardown();
+      }
+    } finally {
+      if (closingClient) void closingClient.disconnect().catch(() => {});
+    }
+  };
   const stop = (denied = false) => {
     if (!active) return;
     active = false;
-    token = null;
-    deadline = 0;
-    clearTimeout(leaseTimer);
-    clearTimeout(refreshTimer);
+    clearTimeout(retryTimer);
     removeObserver();
     lifetime.abort();
-    // Do not wait for the server to acknowledge unsubscribe before stopping
-    // delivery or disconnecting. Teardown also clears channel rejoin timers.
-    try {
-      if (channel) {
-        void channel.unsubscribe(1000).catch(() => {});
-        channel.teardown();
-      }
-    } finally {
-      if (client) void client.disconnect().catch(() => {});
-    }
+    closeTransport();
     if (denied) {
       options.onStatus("CHANNEL_ERROR");
       options.onDenied?.();
     }
   };
-  const admitted = () => {
-    if (!current() || performance.now() >= deadline || Date.now() >= expiresAt) {
+  const scheduleRetry = () => {
+    if (!active) return;
+    if (!current()) {
+      stop();
+      return;
+    }
+    closeTransport();
+    options.onStatus("CHANNEL_ERROR");
+    if (retryCount >= MAX_RETRIES) {
+      stop();
+      return;
+    }
+    const delay = RETRY_BASE_MS * 2 ** retryCount;
+    retryCount += 1;
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => {
+      if (!current()) {
+        stop();
+        return;
+      }
+      void connect();
+    }, delay);
+  };
+  const handleFailure = (error: unknown) => {
+    if (error instanceof LeaseFailure && error.denied) {
       stop(true);
+      return;
+    }
+    if (everAdmitted) scheduleRetry();
+    else {
+      options.onStatus("CHANNEL_ERROR");
+      stop();
+    }
+  };
+  const admitted = () => {
+    if (!current()) {
+      stop();
+      return false;
+    }
+    if (performance.now() >= deadline || Date.now() >= expiresAt) {
+      if (everAdmitted) scheduleRetry();
+      else stop();
       return false;
     }
     return true;
   };
-  removeObserver = subscribeKovaAuthChanges(() => stop(true));
+  removeObserver = subscribeKovaAuthChanges(() => stop());
 
   const refresh = async (): Promise<string | null> => {
     if (!current()) {
@@ -108,12 +166,16 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         },
         signal: controller.signal,
       });
-      if (controller.signal.aborted || !response.ok) {
+      if (controller.signal.aborted) {
         void response.body?.cancel().catch(() => {});
-        throw new Error("realtime_lease_unavailable");
+        throw new LeaseFailure(false);
+      }
+      if (!response.ok) {
+        void response.body?.cancel().catch(() => {});
+        throw new LeaseFailure([401, 403, 409].includes(response.status));
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("realtime_lease_unavailable");
+      if (!reader) throw new LeaseFailure(false);
       const chunks: Uint8Array[] = [];
       let size = 0;
       const cancelReader = () => {
@@ -146,9 +208,17 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       const next = payload?.session as KovaBrowserPrincipal | undefined;
       const expiry = typeof next?.expiresAt === "string" ? Date.parse(next.expiresAt) : NaN;
       if (
+        next &&
+        (next.accountId !== options.ownerId ||
+          (principal &&
+            (next.sessionId !== principal.sessionId ||
+              next.email !== principal.email ||
+              next.assuranceLevel !== principal.assuranceLevel)))
+      )
+        throw new LeaseFailure(true);
+      if (
         !next ||
         !UUID.test(options.ownerId) ||
-        next.accountId !== options.ownerId ||
         typeof next.sessionId !== "string" ||
         !UUID.test(next.sessionId) ||
         next.emailVerified !== true ||
@@ -162,13 +232,9 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(payload.accessToken) ||
         !Number.isSafeInteger(payload.expiresIn) ||
         payload.expiresIn < 60 ||
-        payload.expiresIn > 300 ||
-        (principal &&
-          (next.sessionId !== principal.sessionId ||
-            next.email !== principal.email ||
-            next.assuranceLevel !== principal.assuranceLevel))
+        payload.expiresIn > 300
       )
-        throw new Error("realtime_lease_unavailable");
+        throw new LeaseFailure(false);
       // Both the token and the public principal are made from the same live
       // session by the same-origin endpoint. No browser-supplied claim is used.
       return { next, expiry, accessToken: payload.accessToken as string };
@@ -187,23 +253,16 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         refreshAt = Math.min(started + RECHECK_MS, deadline);
         clearTimeout(leaseTimer);
         clearTimeout(refreshTimer);
-        leaseTimer = setTimeout(() => stop(true), Math.max(0, deadline - performance.now()));
-        refreshTimer = setTimeout(
+        retryCount = 0;
+        leaseTimer = setTimeout(
           () => {
-            if (!current()) {
-              stop(true);
-              return;
-            }
-            void client?.setAuth().catch(() => stop(true));
+            if (everAdmitted) scheduleRetry();
+            else stop();
           },
-          Math.max(0, refreshAt - performance.now()),
+          Math.max(0, deadline - performance.now()),
         );
+        refreshTimer = setTimeout(() => void renew(), Math.max(0, refreshAt - performance.now()));
         return token;
-      } catch {
-        // The SDK retains its previous token when its callback throws. Return
-        // null and tear down instead, so a rejected lease cannot reuse it.
-        stop(true);
-        return null;
       } finally {
         clearTimeout(timeout);
         lifetime.signal.removeEventListener("abort", abort);
@@ -213,18 +272,39 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     return renewal;
   };
 
-  void (async () => {
+  async function renew() {
+    try {
+      const next = await refresh();
+      if (!next || !current()) return;
+      await client?.setAuth(next);
+    } catch (error) {
+      handleFailure(error);
+    }
+  }
+
+  async function connect() {
+    if (!current()) {
+      stop();
+      return;
+    }
     try {
       const firstToken = await refresh();
       if (!firstToken || !admitted()) return;
       const { url, publishableKey } = SUPABASE_BROWSER_CONFIG;
       if (!url || !publishableKey) {
-        stop(true);
+        stop();
         return;
       }
       client = new RealtimeClient(`${url.replace(/\/$/u, "")}/realtime/v1`, {
         params: { apikey: publishableKey },
-        accessToken: refresh,
+        accessToken: async () => {
+          try {
+            return await refresh();
+          } catch (error) {
+            handleFailure(error);
+            throw error;
+          }
+        },
         heartbeatIntervalMs: RECHECK_MS,
       });
       await client.setAuth(firstToken);
@@ -236,9 +316,13 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       channel.subscribe((status) => {
         if (admitted()) options.onStatus(status);
       });
-    } catch {
-      stop(true);
+      everAdmitted = true;
+      retryCount = 0;
+    } catch (error) {
+      handleFailure(error);
     }
-  })();
+  }
+
+  void connect();
   return () => stop();
 }
