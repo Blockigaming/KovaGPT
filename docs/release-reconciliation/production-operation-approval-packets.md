@@ -36,6 +36,11 @@ app ID observed was
 Both web apps were **stopped**. Production showed one active, stopped revision
 `kovagpt-prod-web--price80-675bccd3` at zero replicas (`minReplicas=0`,
 `maxReplicas=4`) with a configured 100% allocation, plus 19 inactive revisions.
+The protected PLAN must set `KOVA_PRODUCTION_ACR_RESOURCE_GROUP` to the
+independently confirmed registry group and match the Bicep parameter; its
+read-only registry lookup must confirm the exact resource ID in the signed-in
+subscription and the protected login server. This is a deliberate exception
+for the existing registry, not permission to target a dev Key Vault or app.
 Neither the configured allocation nor the inactive list proves a healthy
 previous digest or an actual rollback. The `kovagpt-scheduled-execution` job in
 `rg-kovagpt-prod` had a Manual trigger; it was not run.

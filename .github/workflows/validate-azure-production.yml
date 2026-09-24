@@ -24,6 +24,7 @@ env:
   AZURE_CORE_OUTPUT: none
   ACR_NAME: ${{ vars.KOVA_PRODUCTION_ACR_NAME }}
   ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
+  ACR_RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_ACR_RESOURCE_GROUP }}
   IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
   IMAGE_REFERENCE: ${{ inputs.image_reference }}
   KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
@@ -48,7 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ACR_NAME ACR_LOGIN_SERVER IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP CONTAINER_APP_NAME; do
+          for name in ACR_NAME ACR_LOGIN_SERVER ACR_RESOURCE_GROUP IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP CONTAINER_APP_NAME; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::Required protected production setting ${name} is missing."
               exit 1
@@ -72,6 +73,10 @@ jobs:
           fi
           if [[ ! "$RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ ]]; then
             echo "::error::The production resource group name is invalid."
+            exit 1
+          fi
+          if [[ ! "$ACR_RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ || "$ACR_RESOURCE_GROUP" == *. ]]; then
+            echo "::error::The protected ACR resource group name is invalid."
             exit 1
           fi
           if [[ ! "$CONTAINER_APP_NAME" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ || "$CONTAINER_APP_NAME" == *--* ]]; then
@@ -186,6 +191,7 @@ jobs:
           import { createHash } from "node:crypto";
           import fs from "node:fs";
           import { validateProductionBillingParameters } from "./scripts/azure/production-billing-parameters.mjs";
+          import { validateProductionParameterTargets } from "./scripts/azure/production-plan-parameters.mjs";
           const raw = process.env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON;
           if (!raw) throw new Error("KOVA_PRODUCTION_BICEP_PARAMETERS_JSON is required");
           const document = JSON.parse(raw);
@@ -193,10 +199,9 @@ jobs:
             throw new Error("The protected production parameters document is invalid");
           }
           document.parameters.imageReference = { value: process.env.IMAGE_REFERENCE };
-          const serialized = JSON.stringify(document);
-          if (/REPLACE_WITH|SYNTHETIC_STAGING|rg-kovagpt-dev/iu.test(serialized)) {
-            throw new Error("The protected production parameters still contain a placeholder or non-production target");
-          }
+          validateProductionParameterTargets(document, {
+            acrResourceGroup: process.env.ACR_RESOURCE_GROUP,
+          });
           if (document.parameters.acrName?.value !== process.env.ACR_NAME) {
             throw new Error("The Bicep ACR name does not match the approved production registry");
           }
@@ -241,7 +246,7 @@ jobs:
           NODE
           echo "path=$parameters_path" >> "$GITHUB_OUTPUT"
 
-      - name: Verify the existing production Container App target
+      - name: Verify the existing production Container App and registry targets
         shell: bash
         run: |
           set -euo pipefail
@@ -260,6 +265,24 @@ jobs:
             "$CONTAINER_APP_NAME" \
             "$RESOURCE_GROUP" \
             "$subscription_id"
+          acr_observed_path="$RUNNER_TEMP/kova-production-acr-target.json"
+          az acr show \
+            --resource-group "$ACR_RESOURCE_GROUP" \
+            --name "$ACR_NAME" \
+            --query '{id:id,name:name,type:type,loginServer:loginServer}' \
+            --only-show-errors \
+            --output json > "$acr_observed_path"
+          ACR_OBSERVED_PATH="$acr_observed_path" SUBSCRIPTION_ID="$subscription_id" node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import { validateObservedProductionAcr } from "./scripts/azure/production-plan-parameters.mjs";
+          validateObservedProductionAcr({
+            observed: JSON.parse(readFileSync(process.env.ACR_OBSERVED_PATH, "utf8")),
+            acrName: process.env.ACR_NAME,
+            acrResourceGroup: process.env.ACR_RESOURCE_GROUP,
+            acrLoginServer: process.env.ACR_LOGIN_SERVER,
+            subscriptionId: process.env.SUBSCRIPTION_ID,
+          });
+          NODE
 
       - name: Compile and validate the production Bicep deployment
         shell: bash
@@ -320,6 +343,7 @@ jobs:
             "$RUNNER_TEMP/kova-production-plan.parameters.json" \
             "$RUNNER_TEMP/kova-production-plan.template.json" \
             "$RUNNER_TEMP/kova-production-app-target.json" \
+            "$RUNNER_TEMP/kova-production-acr-target.json" \
             "$RUNNER_TEMP/browser-config-provenance.json"
 
       - name: Record the non-deployment boundary

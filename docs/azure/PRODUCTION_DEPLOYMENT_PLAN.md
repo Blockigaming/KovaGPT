@@ -25,6 +25,7 @@ The environment must supply these non-secret variables:
 
 - `KOVA_PRODUCTION_ACR_NAME`
 - `KOVA_PRODUCTION_ACR_LOGIN_SERVER`
+- `KOVA_PRODUCTION_ACR_RESOURCE_GROUP`
 - `KOVA_PRODUCTION_IMAGE_REPOSITORY`
 - `KOVA_PRODUCTION_RESOURCE_GROUP`
 - `KOVA_PRODUCTION_CONTAINER_APP_NAME`
@@ -33,6 +34,15 @@ The environment must supply these non-secret variables:
 It must supply `KOVAGPTPROD_AZURE_CLIENT_ID`, `KOVAGPTPROD_AZURE_TENANT_ID`, `KOVAGPTPROD_AZURE_SUBSCRIPTION_ID`, and `KOVA_PRODUCTION_BICEP_PARAMETERS_JSON` as protected settings. The last value uses the shape in `infra/azure/production/main.parameters.example.json`; the workflow replaces `imageReference` with the reviewed digest and rejects placeholders or a mismatched ACR/Supabase target.
 
 Grant the OIDC identity only the read and deployment-validation permissions needed for ACR pull, Bicep validation, and resource-group what-if. Do not grant a production apply role while this workflow is plan-only.
+
+The existing Standard registry `kovagptacr` is in `rg-kovagpt-dev`, a group
+whose name alone must not disqualify it. The protected
+`KOVA_PRODUCTION_ACR_RESOURCE_GROUP` must match the Bicep
+`acrResourceGroupName` exactly; the plan independently reads that registry's
+ID, type and login server in the signed-in subscription. Only this verified
+registry field can carry the dev-named group. Placeholders and development
+targets in other parameters remain rejected. The PLAN identity therefore needs
+read access to the existing registry in that group, with no apply role.
 
 The exact inventoried production Container App name is supplied as
 `containerAppName` in the protected Bicep parameters and must equal
