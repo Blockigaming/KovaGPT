@@ -8,6 +8,9 @@ param location string = resourceGroup().location
 @maxLength(24)
 param namePrefix string = 'kovagpt-prod'
 
+@description('Exact name of the inventoried existing production Container App. Never derive a deployment target from namePrefix.')
+param containerAppName string
+
 @description('Existing production Container Apps managed environment.')
 param managedEnvironmentName string = 'cae-kovagpt-prod'
 
@@ -198,7 +201,6 @@ var stripeSecretEnvironment = [for setting in configuredStripeSecrets: {
   secretRef: setting.name
 }]
 
-var webAppName = '${namePrefix}-web'
 var appInsightsName = '${namePrefix}-insights'
 var budgetName = '${namePrefix}-monthly-budget'
 var useDedicatedAzureOpenAiImage = !empty(azureOpenAiImageAccountName)
@@ -274,7 +276,7 @@ resource environment 'Microsoft.App/managedEnvironments@2025-01-01' existing = {
 }
 
 resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
-  name: webAppName
+  name: containerAppName
   location: location
   tags: tags
   identity: {

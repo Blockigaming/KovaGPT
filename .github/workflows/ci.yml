@@ -177,6 +177,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # Preserve the Cloudflare artifact through integration tests, then build
+      # a Node artifact for the prebuilt Playwright preview used below.
+      - name: Browser preview build
+        if: steps.scope.outputs.run_ci == 'true'
+        env:
+          KOVA_BROWSER_PREVIEW: node
+        run: npm run build
+
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'
         env:

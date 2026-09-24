@@ -25,13 +25,37 @@ The environment must supply these non-secret variables:
 
 - `KOVA_PRODUCTION_ACR_NAME`
 - `KOVA_PRODUCTION_ACR_LOGIN_SERVER`
+- `KOVA_PRODUCTION_ACR_RESOURCE_GROUP`
 - `KOVA_PRODUCTION_IMAGE_REPOSITORY`
 - `KOVA_PRODUCTION_RESOURCE_GROUP`
+- `KOVA_PRODUCTION_CONTAINER_APP_NAME`
 - `KOVA_PRODUCTION_SUPABASE_PROJECT_REF`
 
 It must supply `KOVAGPTPROD_AZURE_CLIENT_ID`, `KOVAGPTPROD_AZURE_TENANT_ID`, `KOVAGPTPROD_AZURE_SUBSCRIPTION_ID`, and `KOVA_PRODUCTION_BICEP_PARAMETERS_JSON` as protected settings. The last value uses the shape in `infra/azure/production/main.parameters.example.json`; the workflow replaces `imageReference` with the reviewed digest and rejects placeholders or a mismatched ACR/Supabase target.
 
 Grant the OIDC identity only the read and deployment-validation permissions needed for ACR pull, Bicep validation, and resource-group what-if. Do not grant a production apply role while this workflow is plan-only.
+
+The existing Standard registry `kovagptacr` is in `rg-kovagpt-dev`, a group
+whose name alone must not disqualify it. The protected
+`KOVA_PRODUCTION_ACR_RESOURCE_GROUP` must match the Bicep
+`acrResourceGroupName` exactly; the plan independently reads that registry's
+ID, type and login server in the signed-in subscription. Only this verified
+registry field can carry the dev-named group. Placeholders and development
+targets in other parameters remain rejected. The PLAN identity therefore needs
+read access to the existing registry in that group, with no apply role.
+
+The exact inventoried production Container App name is supplied as
+`containerAppName` in the protected Bicep parameters and must equal
+`KOVA_PRODUCTION_CONTAINER_APP_NAME`. Before template validation the plan reads the
+existing app's resource identity with `az resource show`, then requires its type,
+name, resource group, and subscription to match the protected name and signed-in
+subscription. This read-only check prevents a prefix-derived new app target; it
+does not approve the template's other resource changes. The app name and resource
+group still need owner confirmation against the actual production origin.
+The PLAN checks Azure CLI version 2.76.0 or later and uses `ProviderNoRbac` for
+both validation and what-if, requesting provider validation with read permissions
+instead of a deploy-capable PLAN identity. The actual protected OIDC role must
+still pass a live read-only validation run before relying on this contract.
 
 The protected plan accepts the `acr-git` source context emitted by the repository Dockerfile. Its `cancel-in-progress: false` policy prevents a running plan from being canceled. GitHub concurrency retains at most one running and one pending run per group and does not guarantee FIFO ordering, so this serializes eligible plans but is not a durable queue.
 
@@ -39,7 +63,6 @@ The protected plan accepts the `acr-git` source context emitted by the repositor
 
 Do not add `az deployment group create`, `az containerapp update`, an automatic trigger, or a traffic-shift step until every item below has a reviewed resolution:
 
-- `main.bicep` derives `${namePrefix}-web` instead of requiring the exact inventoried production Container App name. A mistaken prefix could create a second app rather than update the intended origin.
 - The template replaces the complete Container App environment list but currently models only core Supabase and Azure AI settings. Stripe, payment webhooks, Google/connector OAuth, search, email, quota, and other enabled production settings need explicit Key Vault-backed representation or a proved preservation design.
 - A production candidate needs a trusted, production-specific builder record. Staging images contain staging browser configuration and cannot be promoted; image labels and an embedded provenance file alone do not authenticate who built the image.
 - ACR Pull, Key Vault Secrets User, and primary Azure OpenAI User role identifiers are declared but no production assignments or fail-closed assignment preflight is encoded for those existing dependencies. The optional dedicated image account has one conditional resource-scoped Azure OpenAI User assignment, deployed through a module at that account's resource-group scope so cross-resource-group configurations compile without broadening the role.
