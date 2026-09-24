@@ -278,9 +278,7 @@ export async function readMfaLoginChallenge(challengeDigest: string): Promise<Mf
   if (!Array.isArray(value) || value.length < 1 || value.length > 10) {
     throw new KovaAuthStoreError("kova_auth_read_mfa_login_challenge");
   }
-  return value.map((row) =>
-    mfaChallengeFromRow(row as Record<string, unknown>),
-  );
+  return value.map((row) => mfaChallengeFromRow(row as Record<string, unknown>));
 }
 
 export async function bindMfaLoginFactor(input: {
