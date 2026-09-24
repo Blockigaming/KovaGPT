@@ -1,0 +1,1205 @@
+{
+  "readOnly": true,
+  "routines": [
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "accept_chat_message_version",
+      "owner": "postgres",
+      "result": "public.chat_message_versions",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1078,
+      "leakproof": false,
+      "bodySha256": "14a5527a8f0447aadc6b5954443e3f881ca450009063b1c6bbbbc0f9eea47243",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "3ed590c8b0443f684816f992e07f5a0b55b0a858388618ab3d719973527c45c5",
+      "identityArguments": "p_version_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "activate_chat_branch",
+      "owner": "postgres",
+      "result": "public.chat_branches",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 932,
+      "leakproof": false,
+      "bodySha256": "d84d59db41a49b24b0a3713ef99da5ebbec0114bf4bdf79eca1d9a661c9b1c68",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "31c0a394627309d76b151c37a92e4f2090e0ff01257ed6a49e6743fcb1d44d1b",
+      "identityArguments": "p_branch_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "create_chat_branch",
+      "owner": "postgres",
+      "result": "public.chat_branches",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1364,
+      "leakproof": false,
+      "bodySha256": "040dd6fb6e66440f440009ed2e07b42cadfffb615e698213c62790d5e74d2327",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "39326d796aaecbdbb8cdda81fa906165008528873fc6e589e87e88cfc3961009",
+      "identityArguments": "p_chat_id text, p_parent_branch_id uuid, p_branch_from_message_id text, p_branch_from_parent_message_id text, p_label text, p_activate boolean",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 5
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "create_chat_message_version",
+      "owner": "postgres",
+      "result": "public.chat_message_versions",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 3169,
+      "leakproof": false,
+      "bodySha256": "4023c31fa364e1b16d1b1b94fb16ed51811682cb1379278f931c654a68a242a7",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "79dfe47523e845cea83832c24a2f8478a86d7b21b4e6afa1b0b4dd5d5b5a5ea4",
+      "identityArguments": "p_chat_id text, p_message_id text, p_content text, p_original_content text, p_instruction text, p_source text, p_branch_id uuid, p_selection_start integer, p_selection_end integer, p_accept boolean",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 7
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "delete_chat_custom_rules",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 277,
+      "leakproof": false,
+      "bodySha256": "2146e8b11038ca808dd3460290fef97b0a3b59e8e58ce976fa809178741f0ea7",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "f0e70e31c0afe408ce2bdb9abbcab8c065e006090f23b6f563508960218b48b8",
+      "identityArguments": "p_chat_id text",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "get_chat_context_bundle",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 4545,
+      "leakproof": false,
+      "bodySha256": "94bb971f9257b91d96a43b1219faf53d0d819ac72e364ba9faf42470badcd10e",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "s",
+      "securityDefiner": false,
+      "definitionSha256": "2d84cfed1d6e235d960f0a3fe45aa49bbb8f7af7b640dc4d97f7e4a099b2b1c6",
+      "identityArguments": "p_chat_id text, p_project_id uuid, p_max_chars integer",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 2
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "get_chat_workspace_state",
+      "owner": "postgres",
+      "result": "jsonb",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 4585,
+      "leakproof": false,
+      "bodySha256": "8cc585aa5d43538a6f27cbf216772e85e3d121548eb9cfa80ac121c44b7dd4cf",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "s",
+      "securityDefiner": false,
+      "definitionSha256": "7e4ae188dc7e77762a4bc8ad2b6977f12df28deb31952cb172203320c5086823",
+      "identityArguments": "p_chat_id text, p_message_id text",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 1
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "kova_accept_message_version",
+      "owner": "postgres",
+      "result": "public.chat_message_versions",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1266,
+      "leakproof": false,
+      "bodySha256": "510f9d3ae0ced1e91c097f6771b8bd63d026f82a2235faa97062b3b3e612a0ea",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "df84a2781824d7d69639244752fa7dd9638442a9a1be8fb1dbb32467f3f4a2eb",
+      "identityArguments": "p_version_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "kova_activate_chat_branch",
+      "owner": "postgres",
+      "result": "public.chat_branches",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 973,
+      "leakproof": false,
+      "bodySha256": "9fb2df8e520d8c575f0759711b1f2c89c409c6f18bf4bdee1c07841f74236985",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "f7e2cb96fcde149012a112c77b1c52cd16e45de642e048e1a3e7fea6a1529199",
+      "identityArguments": "p_chat_id text, p_branch_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "kova_create_chat_branch",
+      "owner": "postgres",
+      "result": "public.chat_branches",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 3532,
+      "leakproof": false,
+      "bodySha256": "642ad10acf5541d4f2a5f4128f996c8f8f44bcfa5da2d2e3a512b0a6a7220739",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "54883841653e1ae8ecde9566480e2010ad1f7cb6de82300ab40511467caa687a",
+      "identityArguments": "p_chat_id text, p_conversation_id text, p_parent_branch_id uuid, p_branch_from_parent_message_id text, p_branch_from_message_id text, p_branch_from_message_index integer, p_message_ids text[], p_label text, p_activate boolean, p_max_branches integer",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 8
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "kova_record_message_version",
+      "owner": "postgres",
+      "result": "public.chat_message_versions",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 3514,
+      "leakproof": false,
+      "bodySha256": "2529c9d178afb7de45b377ab9b5a131caf7f5252e0d9d5be6f97f98f995af0c1",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "cb89ee1538c90c7d934012d80ab810e29cfc9fe55a3028a6053e7af1b4d7fb78",
+      "identityArguments": "p_chat_id text, p_message_id text, p_source text, p_content text, p_branch_id uuid, p_instruction text, p_original_content text, p_accepted boolean, p_selection_start integer, p_selection_end integer, p_max_versions integer",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 7
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "kova_update_chat_branch_messages",
+      "owner": "postgres",
+      "result": "public.chat_branches",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1246,
+      "leakproof": false,
+      "bodySha256": "3e84be03289a53eb2fbc4c97a574d66313c7161167e5ad3f65b33f1f0c1604da",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "dc80ef83ec7c002de3f422f8b1a78f6a75d3c1cc5dcf7b32d34f057db9f02a71",
+      "identityArguments": "p_branch_id uuid, p_message_ids text[], p_label text",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 1
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "pin_chat_source",
+      "owner": "postgres",
+      "result": "public.chat_pinned_files",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 2483,
+      "leakproof": false,
+      "bodySha256": "e2f0683ac414a84f2f87188c8cfb99eb0ccecfe09a5441d4d719781aa1996651",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "8dc5df8302852d5e791f9bbede5eb2c75ac0d5aae404da8c03a1eaa881c0ee79",
+      "identityArguments": "p_chat_id text, p_source_type text, p_source_id uuid, p_project_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 1
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "save_chat_custom_rules",
+      "owner": "postgres",
+      "result": "public.chat_custom_rules",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 847,
+      "leakproof": false,
+      "bodySha256": "8a8a110ae36299e81bea5cf77e151291f76d14bb48179238d4e2743ec178b22e",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "d132900884736cb47402db1d10f75c95964a981d5a3b9f426b67437f8dfaeac0",
+      "identityArguments": "p_chat_id text, p_instructions text, p_enabled boolean",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 1
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "set_active_chat_branch",
+      "owner": "postgres",
+      "result": "void",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 444,
+      "leakproof": false,
+      "bodySha256": "4cc351c8c83224076104119d26f2cef338ba19cec19e2056d9c434bd7032f257",
+      "returnsSet": false,
+      "searchPath": ["search_path=public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "744b7a9e8726fe2313fa05616f11d62d9d711c30a9c60d9f222dbe91a24d4dee",
+      "identityArguments": "p_chat_id text, p_branch_id uuid",
+      "configurationSha256": "e89e8d29b71e586476d7816f01afa8dcddeb1baee32536eba5c2988f2b025b76",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "unpin_chat_source",
+      "owner": "postgres",
+      "result": "boolean",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 264,
+      "leakproof": false,
+      "bodySha256": "9c52a88fdbe4bdd187913b0e4a4e7f0035328c20fab6ead8cff0150135a6e816",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "8625e9c293bd58378672dd533c4bd4f973e0540f0c3e30f4c1457e8befd303e9",
+      "identityArguments": "p_pin_id uuid",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "utf16_code_unit_length",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "public",
+      "strict": true,
+      "language": "sql",
+      "parallel": "s",
+      "bodyBytes": 169,
+      "leakproof": false,
+      "bodySha256": "57a72823d89b5b4b7bc964910388757404e8eab7ba2ced3ec7913d28d4026aa5",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, pg_temp"],
+      "volatility": "i",
+      "securityDefiner": false,
+      "definitionSha256": "8315c6b5a0e2a9103485fe733d46eca115dcd40021bf54f10ff4bf7d8a44849a",
+      "identityArguments": "p_text text",
+      "configurationSha256": "dcce988ad33e7ed00a93452f1fc0d39aff8dab3806caa8738bf8d0b4246e2958",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "validate_chat_branch_lineage",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1058,
+      "leakproof": false,
+      "bodySha256": "adac3ab0eaf59785358ce8d859376a8ea1cece5aad68f49e719dc50ef776c421",
+      "returnsSet": false,
+      "searchPath": ["search_path=public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "1e45d9e28473d7091bea5ac053f43d717c94d2243772adfaaa46a1ba4c3f7f28",
+      "identityArguments": "",
+      "configurationSha256": "e89e8d29b71e586476d7816f01afa8dcddeb1baee32536eba5c2988f2b025b76",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "validate_chat_message_version_branch",
+      "owner": "postgres",
+      "result": "trigger",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 378,
+      "leakproof": false,
+      "bodySha256": "f1b2958d6b0dde24303ada85cce63acdac66b5bb67c91d6c06c04598af435523",
+      "returnsSet": false,
+      "searchPath": ["search_path=pg_catalog, public, pg_temp"],
+      "volatility": "v",
+      "securityDefiner": false,
+      "definitionSha256": "1b9fa2fea112e9bdf1cbca9ec05ffc2ace6b395de8490ede7140dc95a2ccf56c",
+      "identityArguments": "",
+      "configurationSha256": "5cdd5dfe59b72e5d859f4f61728360952eb372447829194dfbbb627a0bb3dde4",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    }
+  ],
+  "isolation": "repeatable read",
+  "capturedAt": "2026-09-23T21:32:51.515Z",
+  "captureKind": "chat-workspace-routine-catalog",
+  "databaseName": "postgres",
+  "routineCount": 19,
+  "schemaVersion": 1,
+  "ledgerVersions": [
+    "20260622225346",
+    "20260623005558",
+    "20260623005610",
+    "20260623145549",
+    "20260623154814",
+    "20260623154832",
+    "20260623155803",
+    "20260623161227",
+    "20260623161519",
+    "20260623194741",
+    "20260623195646",
+    "20260623201628",
+    "20260624124535",
+    "20260624124557",
+    "20260624230040",
+    "20260625132920",
+    "20260625135417",
+    "20260627004905",
+    "20260627210732",
+    "20260702142256",
+    "20260702161114",
+    "20260702163905",
+    "20260702163922",
+    "20260704033129",
+    "20260707004617",
+    "20260707005030",
+    "20260712011732",
+    "20260712013949",
+    "20260713010018",
+    "20260718151609",
+    "20260718152250",
+    "20260718154259",
+    "20260721211500",
+    "20260722123000",
+    "20260722130000",
+    "20260727090000",
+    "20260727120000",
+    "20260727150000",
+    "20260727210000",
+    "20260727230000",
+    "20260728090000",
+    "20260728120000",
+    "20260728150000",
+    "20260728180000",
+    "20260728200000",
+    "20260728220000",
+    "20260731120000",
+    "20260801120000",
+    "20260801123000",
+    "20260801235959",
+    "20260802003000",
+    "20260802120000",
+    "20260802130000",
+    "20260802131000",
+    "20260802132000",
+    "20260803100000",
+    "20260803101000",
+    "20260803110000",
+    "20260803120000",
+    "20260803121000",
+    "20260803122000",
+    "20260803123000",
+    "20260803130000",
+    "20260803143000",
+    "20260803184741",
+    "20260803184803",
+    "20260803200951",
+    "20260803202921",
+    "20260804004928",
+    "20260804015247",
+    "20260805123909",
+    "20260815213024",
+    "20260816213000",
+    "20260820220000",
+    "20260823092042",
+    "20260823092107",
+    "20260823092405",
+    "20260823092450",
+    "20260823100156",
+    "20260823120804",
+    "20260823151901",
+    "20260823151927",
+    "20260823214802",
+    "20260823215044",
+    "20260823215132",
+    "20260823215222",
+    "20260823215259",
+    "20260823215454",
+    "20260823215619",
+    "20260823215848",
+    "20260824081357",
+    "20260824081812",
+    "20260824081926",
+    "20260824082127",
+    "20260824084005",
+    "20260824085042",
+    "20260824085444",
+    "20260906024459"
+  ],
+  "ledgerVersionCount": 98,
+  "postgresVersionNum": 170006,
+  "publicSchemaPresent": true,
+  "catalogSentinelPresent": true
+}

@@ -291,6 +291,8 @@ test("current snapshot core: CLI defaults to 98 with explicit historical opt-out
     "upgrade-database-scheduled-catalog.mjs",
     "upgrade-source-provenance.mjs",
     "upgrade-database-scheduled-tables.mjs",
+    "upgrade-database-chat-workspace-tables.mjs",
+    "upgrade-database-chat-workspace-routines.mjs",
     "migration-schema-fingerprint.mjs",
   ])
     writeFileSync(
