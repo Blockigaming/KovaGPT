@@ -1,5 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import {
+  kovaCompatibilityJwtHasMarker,
+  verifyKovaCompatibilityJwt,
+} from "@/lib/kova-auth-crypto.server.mjs";
+import {
+  kovaAuthEnabled,
+  resolveKovaAuthMode,
+  supabaseAuthEnabled,
+} from "@/lib/kova-auth-contract.mjs";
+import { validateCompatibilitySession } from "@/lib/kova-auth-store.server";
 
 export type ToolContext = {
   token: string | null;
@@ -25,7 +35,36 @@ type ToolDefinition<Input extends z.ZodRawShape> = {
 };
 
 async function userIdFromToken(token: string | null): Promise<string | null> {
-  if (!token) return null;
+  if (!token || token.length > 16_384) return null;
+  let mode: ReturnType<typeof resolveKovaAuthMode>;
+  try {
+    mode = resolveKovaAuthMode();
+  } catch {
+    return null;
+  }
+
+  if (kovaCompatibilityJwtHasMarker(token)) {
+    if (!kovaAuthEnabled(mode)) return null;
+    try {
+      const claims = verifyKovaCompatibilityJwt(token);
+      if (
+        !(await validateCompatibilitySession({
+          accountId: claims.accountId,
+          sessionId: claims.sessionId,
+          email: claims.email,
+          assuranceLevel: claims.assuranceLevel,
+          issuedAt: claims.issuedAt,
+        }))
+      ) {
+        return null;
+      }
+      return claims.accountId;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!supabaseAuthEnabled(mode)) return null;
   const supabaseUrl = process.env.SUPABASE_URL;
   const authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !authKey) return null;
