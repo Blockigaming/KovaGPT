@@ -57,7 +57,10 @@ export async function handleOwnedPrivateDownload(request: Request): Promise<Resp
       origin = request.headers.get("origin");
     if ((site && !["same-origin", "none"].includes(site)) || (origin && origin !== url.origin))
       return denied(403);
-    const auth = await bounded(requireVerifiedUser(request));
+    const authHeaders = new Headers(request.headers);
+    authHeaders.set("X-Kova-Owner", owner);
+    const authRequest = new Request(request, { headers: authHeaders });
+    const auth = await bounded(requireVerifiedUser(authRequest));
     if (auth instanceof Response) return auth;
     if (
       auth.authProvider !== "kova" ||
