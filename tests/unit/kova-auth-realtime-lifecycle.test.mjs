@@ -324,8 +324,8 @@ for (const [name, mutate] of [
   });
 }
 
-for (const status of [401, 403, 503]) {
-  test(`renewal HTTP ${status} tears down the socket and cannot fall back to the cached token`, async () => {
+for (const status of [401, 403, 409]) {
+  test(`renewal HTTP ${status} permanently denies the socket and cannot fall back to the cached token`, async () => {
     const f = fixture();
     await flush();
     f.replies.push(new Response(null, { status }));
@@ -337,11 +337,55 @@ for (const status of [401, 403, 503]) {
     f.status();
     assert.equal(f.events.invalidate, 0);
     assert.deepEqual(f.events.status, ["CHANNEL_ERROR"]);
+    assert.equal(f.events.denied, 1);
     assert.equal(f.tasks.size, 0);
     assert.equal(await f.socket.options.accessToken(), null);
     assert.equal(f.events.fetch.length, 2);
   });
 }
+
+test("an established subscription retries a transient 503 with bounded fail-closed re-admission", async () => {
+  const f = fixture();
+  await flush();
+  f.replies.push(new Response(null, { status: 503 }));
+  await f.advance(15000);
+  assert.equal(f.events.denied, 0);
+  assert.equal(f.events.tornDown, 1);
+  assert.equal(f.events.disconnected, 1);
+  f.frame();
+  assert.equal(f.events.invalidate, 0);
+  assert.deepEqual(f.events.status, ["CHANNEL_ERROR"]);
+  assert.equal(f.tasks.size, 1);
+  await f.advance(1000);
+  assert.equal(f.events.fetch.length, 3);
+  assert.equal(f.events.created, 2);
+  assert.equal(f.events.subscribed, 2);
+  assert.equal(f.events.denied, 0);
+  f.status();
+  f.frame();
+  assert.equal(f.events.invalidate, 1);
+  f.stop();
+});
+
+test("transient renewal retries are bounded and never become an access denial", async () => {
+  const f = fixture();
+  await flush();
+  f.replies.push(
+    new Response(null, { status: 503 }),
+    new Response(null, { status: 503 }),
+    new Response(null, { status: 503 }),
+    new Response(null, { status: 503 }),
+  );
+  await f.advance(15000);
+  await f.advance(1000);
+  await f.advance(2000);
+  await f.advance(4000);
+  assert.equal(f.events.fetch.length, 5);
+  assert.equal(f.events.denied, 0);
+  assert.equal(f.tasks.size, 0);
+  assert.ok(f.events.status.every((value) => value === "CHANNEL_ERROR"));
+  f.stop();
+});
 
 for (const changed of [
   { sessionId: other },
@@ -374,6 +418,7 @@ test("local revocation synchronously removes listeners, timers and delivery even
   assert.equal(f.events.tornDown, 1);
   assert.equal(f.events.disconnected, 1);
   assert.equal(f.events.unsubscribed, 1);
+  assert.equal(f.events.denied, 0);
   assert.equal(f.tasks.size, 0);
   assert.equal(f.observers.size, 0);
 });
