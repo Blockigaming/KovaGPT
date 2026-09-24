@@ -158,6 +158,29 @@ export async function resolveLegacyHostedMfaProof(accessToken: string): Promise<
   return { accountId: user.id, email, assuranceLevel: "aal2" };
 }
 
+export async function validateCompatibilitySession(input: {
+  accountId: string;
+  sessionId: string;
+  email: string;
+  assuranceLevel: "aal1" | "aal2";
+  issuedAt: number;
+}): Promise<boolean> {
+  if (!Number.isSafeInteger(input.issuedAt)) {
+    throw new KovaAuthStoreError("kova_auth_validate_compatibility_session");
+  }
+  const value = await rpc<unknown>("kova_auth_validate_compatibility_session", {
+    p_account_id: input.accountId,
+    p_session_id: input.sessionId,
+    p_email: input.email,
+    p_assurance_level: input.assuranceLevel,
+    p_issued_at_epoch: input.issuedAt,
+  });
+  if (typeof value !== "boolean") {
+    throw new KovaAuthStoreError("kova_auth_validate_compatibility_session");
+  }
+  return value;
+}
+
 export async function finalizeOwnedAccountDeletion(
   accountId: string,
   sessionId: string,
