@@ -246,6 +246,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         typeof payload.accessToken !== "string" ||
         payload.accessToken.length > MAX_REPLY_BYTES ||
         !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(payload.accessToken) ||
+        typeof payload.expiresIn !== "number" ||
         !Number.isSafeInteger(payload.expiresIn) ||
         payload.expiresIn < 60 ||
         payload.expiresIn > 300
