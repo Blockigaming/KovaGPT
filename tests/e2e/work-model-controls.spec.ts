@@ -147,7 +147,15 @@ test("current option revocation and principal reset clear Work choices without s
   modelOptions = choices.map((item) =>
     item.mode === "thinking" ? { ...item, reasoningEfforts: ["low"] } : item,
   );
-  await panel.getByRole("button", { name: "Refresh execution status" }).click();
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/work/execution") &&
+        response.request().method() === "GET" &&
+        response.ok(),
+    ),
+    panel.getByRole("button", { name: "Refresh execution status" }).click(),
+  ]);
   await expect(
     panel.getByText("This reasoning choice is no longer available.", { exact: false }),
   ).toBeVisible();
