@@ -293,7 +293,9 @@ export function MfaPanel() {
       setEnrolling(null);
       setCode("");
       toast.success(
-        migrated ? "Two-factor authentication moved to KovaGPT" : "Two-factor authentication enabled",
+        migrated
+          ? "Two-factor authentication moved to KovaGPT"
+          : "Two-factor authentication enabled",
       );
       if (!migrated) void load();
     } catch (error) {
