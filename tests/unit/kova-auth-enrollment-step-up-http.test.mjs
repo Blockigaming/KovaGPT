@@ -31,6 +31,16 @@ const password = {
   email: current.email,
   mfa_required: false,
 };
+function enrollmentRequest(body, options = {}) {
+  return authRequest(body, {
+    ...options,
+    headers: {
+      "X-Kova-Owner": current.account_id,
+      "X-Kova-Session": current.session_id,
+      ...options.headers,
+    },
+  });
+}
 function fixture(options = {}) {
   return authHttp({
     ...options,
@@ -53,7 +63,7 @@ function fixture(options = {}) {
 
 test("first MFA checks the actual password, sends only its verified credential binding, and never returns a session upgrade", async () => {
   const f = fixture();
-  const response = await f.handleKovaMfaEnroll(authRequest({ currentPassword }));
+  const response = await f.handleKovaMfaEnroll(enrollmentRequest({ currentPassword }));
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.factorId, factorId);
@@ -73,6 +83,39 @@ test("first MFA checks the actual password, sends only its verified credential b
   assert.equal(f.limits[1].identity, `account:${owner}`);
 });
 
+test("TOTP enrollment rejects missing or changed captured authority before issuing a secret", async () => {
+  for (const headers of [
+    { "X-Kova-Owner": "" },
+    { "X-Kova-Session": "" },
+    { "X-Kova-Owner": other },
+    { "X-Kova-Session": "60000000-0000-4000-8000-000000000006" },
+  ]) {
+    const f = fixture();
+    const response = await f.handleKovaMfaEnroll(
+      enrollmentRequest({ currentPassword }, { headers }),
+    );
+    assert.equal(response.status, 409);
+    assert.ok(
+      !f.calls.some(([name]) => name === "kova_auth_begin_totp_enrollment_reauthenticated"),
+    );
+    assert.doesNotMatch(await response.text(), /otpauth|secret/iu);
+  }
+  const changed = fixture({
+    current: {
+      account_id: other,
+      session_id: "60000000-0000-4000-8000-000000000006",
+      email: "other@example.invalid",
+    },
+  });
+  assert.equal(
+    (await changed.handleKovaMfaEnroll(enrollmentRequest({ currentPassword }))).status,
+    409,
+  );
+  assert.ok(
+    !changed.calls.some(([name]) => name === "kova_auth_begin_totp_enrollment_reauthenticated"),
+  );
+});
+
 test("wrong, missing, cross-account or unverified password proof cannot request enrollment", async (t) => {
   for (const [label, body, options] of [
     ["wrong password", { currentPassword: "wrong password" }, {}],
@@ -83,7 +126,7 @@ test("wrong, missing, cross-account or unverified password proof cannot request 
   ])
     await t.test(label, async () => {
       const f = fixture(options);
-      const response = await f.handleKovaMfaEnroll(authRequest(body));
+      const response = await f.handleKovaMfaEnroll(enrollmentRequest(body));
       assert.equal(response.status, 401);
       assert.ok(
         !f.calls.some(([name]) => name === "kova_auth_begin_totp_enrollment_reauthenticated"),
@@ -95,23 +138,27 @@ test("wrong, missing, cross-account or unverified password proof cannot request 
 
 test("MFA enrollment rejects forged authority fields, malformed input and cross-origin requests before database access", async (t) => {
   for (const [label, request, status] of [
-    ["caller credential binding", authRequest({ currentPassword, credentialId }), 400],
-    ["caller authority", authRequest({ currentPassword, accountId: other }), 400],
-    ["caller reauthentication timestamp", authRequest({ reauthenticatedAt: Date.now() }), 400],
-    ["password wrong type", authRequest({ currentPassword: [] }), 400],
-    ["name wrong type", authRequest({ friendlyName: {} }), 400],
-    ["malformed JSON", authRequest({}, { raw: "{" }), 400],
+    ["caller credential binding", enrollmentRequest({ currentPassword, credentialId }), 400],
+    ["caller authority", enrollmentRequest({ currentPassword, accountId: other }), 400],
+    [
+      "caller reauthentication timestamp",
+      enrollmentRequest({ reauthenticatedAt: Date.now() }),
+      400,
+    ],
+    ["password wrong type", enrollmentRequest({ currentPassword: [] }), 400],
+    ["name wrong type", enrollmentRequest({ friendlyName: {} }), 400],
+    ["malformed JSON", enrollmentRequest({}, { raw: "{" }), 400],
     [
       "cross-site",
-      authRequest({ currentPassword }, { headers: { Origin: "https://evil.invalid" } }),
+      enrollmentRequest({ currentPassword }, { headers: { Origin: "https://evil.invalid" } }),
       403,
     ],
     [
       "sibling origin",
-      authRequest({ currentPassword }, { headers: { Origin: "https://evil.kova.test" } }),
+      enrollmentRequest({ currentPassword }, { headers: { Origin: "https://evil.kova.test" } }),
       403,
     ],
-    ["GET", authRequest({}, { method: "GET" }), 405],
+    ["GET", enrollmentRequest({}, { method: "GET" }), 405],
   ])
     await t.test(label, async () => {
       const f = fixture();
@@ -122,7 +169,7 @@ test("MFA enrollment rejects forged authority fields, malformed input and cross-
 
 test("Google/passkey primary proof is decided by the database, not a client boolean or AAL1 cookie", async () => {
   const f = fixture({ error: { code: "42501", message: "private database detail" } });
-  const response = await f.handleKovaMfaEnroll(authRequest({}));
+  const response = await f.handleKovaMfaEnroll(enrollmentRequest({}));
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, "reauthentication_required");
   assert.equal(f.calls.at(-1)[1].p_credential_id, null);
@@ -152,7 +199,7 @@ test("account throttling, changed credential revision, unavailable storage and w
   ])
     await t.test(label, async () => {
       const f = fixture(options);
-      const response = await f.handleKovaMfaEnroll(authRequest({ currentPassword }));
+      const response = await f.handleKovaMfaEnroll(enrollmentRequest({ currentPassword }));
       assert.equal(response.status, status);
       const text = await response.text();
       assert.ok(!text.includes("secret"));
@@ -179,21 +226,21 @@ test("actual handler, password crypto, store and PostgreSQL reject stale cookies
         "kova_auth_begin_totp_enrollment_reauthenticated",
       ]),
     });
-    const noProof = await f.handleKovaMfaEnroll(authRequest({}, { token }));
+    const bound = (body) =>
+      enrollmentRequest(body, { token, headers: { "X-Kova-Session": row.session_id } });
+    const noProof = await f.handleKovaMfaEnroll(bound({}));
     assert.equal(noProof.status, 403);
     assert.equal(
       (await db.query("select count(*)::int as n from kova_private.auth_mfa_factors")).rows[0].n,
       0,
     );
-    const wrong = await f.handleKovaMfaEnroll(
-      authRequest({ currentPassword: "not correct" }, { token }),
-    );
+    const wrong = await f.handleKovaMfaEnroll(bound({ currentPassword: "not correct" }));
     assert.equal(wrong.status, 401);
     assert.equal(
       (await db.query("select count(*)::int as n from kova_private.auth_mfa_factors")).rows[0].n,
       0,
     );
-    const response = await f.handleKovaMfaEnroll(authRequest({ currentPassword }, { token }));
+    const response = await f.handleKovaMfaEnroll(bound({ currentPassword }));
     assert.equal(response.status, 200);
     const body = await response.json();
     const factor = (

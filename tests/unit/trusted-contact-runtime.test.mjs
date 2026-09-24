@@ -74,7 +74,24 @@ function fixture(options = {}) {
       requireUser: async () =>
         options.unauthorized
           ? new Response("Unauthorized", { status: 401 })
-          : { userId: actor, supabaseUser: client, supabaseAdmin: admin },
+          : {
+              userId: actor,
+              supabaseUser: client,
+              supabaseAdmin: admin,
+              authProvider: options.authProvider ?? "supabase",
+            },
+    },
+    "@/lib/account-identity.server.mjs": {
+      readAccountIdentity: async (_admin, accountId) => {
+        calls.push({ event: "identity", accountId });
+        return (
+          options.identity ?? {
+            id: actor,
+            email: "verified@kova.test",
+            email_confirmed_at: "2026-09-05",
+          }
+        );
+      },
     },
     "@/lib/runtime-env.server": {
       runtimeEnv: (key) =>
@@ -169,6 +186,28 @@ test("invitation attempts are charged before lookup and use the authenticated ve
       false,
     );
   }
+});
+
+test("owned-auth invitations use the verified owned identity", async () => {
+  const { handlers, calls } = fixture({ authProvider: "kova" });
+  const response = await handlers.POST({ request: request(invite) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    calls.map((call) => call.event),
+    ["rate", "identity", "rpc"],
+  );
+  assert.equal(calls[1].accountId, actor);
+  assert.equal(calls[2].args.p_actor_email, "verified@kova.test");
+
+  const mismatched = fixture({
+    authProvider: "kova",
+    identity: { id, email: "x@kova.test", email_confirmed_at: "2026-09-05" },
+  });
+  assert.equal((await mismatched.handlers.POST({ request: request(invite) })).status, 409);
+  assert.equal(
+    mismatched.calls.some((call) => call.event === "rpc"),
+    false,
+  );
 });
 
 test("review returns an in-memory token once while RPCs receive only its digest and caller identity", async () => {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 179,
+  "migrationCount": 180,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -572,6 +572,7 @@
     "kova_auth_revoke_session",
     "kova_auth_rotate_session",
     "kova_auth_rotate_session",
+    "kova_auth_validate_compatibility_session",
     "kova_auth_validate_compatibility_session",
     "kova_can_pin_source",
     "kova_can_pin_source",
@@ -2130,6 +2131,7 @@
     "execute on function public.kova_auth_resend_verification(text,text,timestamptz,jsonb,timestamptz)\n to service_role",
     "execute on function public.kova_auth_revoke_other_sessions(text,timestamptz)\n  to service_role",
     "execute on function public.kova_auth_validate_compatibility_session(\n  uuid,uuid,text,text,bigint,timestamptz\n) to service_role",
+    "execute on function public.kova_auth_validate_compatibility_session(\n  uuid,uuid,text,text,bigint,timestamptz\n) to service_role",
     "execute on function public.kova_can_pin_source(text, uuid, uuid) to authenticated",
     "execute on function public.kova_can_pin_source(text, uuid, uuid) to authenticated",
     "execute on function public.kova_can_pin_source(text, uuid, uuid) to service_role",
@@ -2724,6 +2726,7 @@
     "all on function public.kova_auth_resend_verification(text,text,timestamptz,jsonb,timestamptz)\n from public, anon, authenticated",
     "all on function public.kova_auth_revoke_other_sessions(text,timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_validate_compatibility_session(\n  uuid,uuid,text,text,bigint,timestamptz\n) from public, anon, authenticated",
+    "all on function public.kova_auth_validate_compatibility_session(\n  uuid,uuid,text,text,bigint,timestamptz\n) from public, anon, authenticated",
     "all on function public.kova_can_pin_source(text, uuid, uuid) from anon",
     "all on function public.kova_can_pin_source(text, uuid, uuid) from anon",
     "all on function public.kova_can_pin_source(text, uuid, uuid) from public",
@@ -2968,5 +2971,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "18359c58c9a68510e203e55aaee86427200f745abcbeeb479c18a19f1d226239"
+  "sha256": "9d5a72c91ca5596e7f6f2fb8dce33a26a7f40fca36d34e11dc4d532140742f8f"
 }

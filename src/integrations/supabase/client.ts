@@ -115,7 +115,7 @@ function activeSupabaseClient() {
 async function kovaSession(): Promise<Session | null> {
   const principal = await getCachedKovaSession();
   if (!principal) return null;
-  const accessToken = await getKovaCompatibilityToken();
+  const accessToken = await getKovaCompatibilityToken(principal);
   if (!accessToken) return null;
   const confirmedAt = principal.emailVerified ? new Date().toISOString() : undefined;
   const user = {

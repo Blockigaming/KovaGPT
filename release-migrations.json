@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 179,
-  "latest": "20260924125525_kova_owned_mcp_session_authority.sql",
+  "count": 180,
+  "latest": "20260924130000_kova_owned_mcp_legacy_mfa_claims.sql",
   "migrations": [
     {
       "order": 1,
@@ -3799,6 +3799,20 @@
       "filename": "20260924125525_kova_owned_mcp_session_authority.sql",
       "timestamp": "20260924125525",
       "sha256": "0da5854dd0f2c631610da39bfed4a978495760c7ea4456d5bbc8333498c1af4c",
+      "tables": [],
+      "functions": ["kova_auth_validate_compatibility_session"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 180,
+      "filename": "20260924130000_kova_owned_mcp_legacy_mfa_claims.sql",
+      "timestamp": "20260924130000",
+      "sha256": "a87cd4326e01b3a3db0f05a346517158872fa7965fc6747088d9ce6f430e754a",
       "tables": [],
       "functions": ["kova_auth_validate_compatibility_session"],
       "destructive": false,

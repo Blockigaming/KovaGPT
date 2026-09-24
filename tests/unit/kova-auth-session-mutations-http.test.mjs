@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { authHttp, authRequest, postgresTransport } from "../helpers/kova-auth-http.mjs";
+import {
+  authHttp,
+  authRequest as requestWithCookie,
+  postgresTransport,
+} from "../helpers/kova-auth-http.mjs";
 import { authDatabase, passwordAccount, owner, other } from "../helpers/kova-auth-database.mjs";
 import * as crypto from "../../src/lib/kova-auth-crypto.server.mjs";
 
@@ -27,6 +31,16 @@ const credentialRow = {
   mfa_required: true,
 };
 const resultRow = { ...currentRow, session_id: "60000000-0000-4000-8000-000000000006" };
+function authRequest(body, options = {}) {
+  return requestWithCookie(body, {
+    ...options,
+    headers: {
+      "X-Kova-Owner": currentRow.account_id,
+      "X-Kova-Session": currentRow.session_id,
+      ...options.headers,
+    },
+  });
+}
 
 function fixture(options = {}) {
   return authHttp({
@@ -73,6 +87,19 @@ test("owned password change reauthenticates, hashes on the server and returns on
     assert.ok(!serialized.includes(secret));
   assert.equal(f.limits.length, 2);
   assert.equal(f.limits[1].identity, `account:${owner}`);
+});
+
+test("password and factor mutations reject a changed ambient session before touching secrets", async () => {
+  const switched = fixture({ current: { account_id: other } });
+  const changed = await switched.handleKovaPasswordChange(
+    authRequest({ currentPassword, newPassword }),
+  );
+  assert.equal(changed.status, 409);
+  assert.ok(!switched.calls.some(([name]) => name === "kova_auth_password_lookup"));
+
+  const factor = await switched.handleKovaMfaRemove(authRequest({ factorId }));
+  assert.equal(factor.status, 409);
+  assert.ok(!switched.calls.some(([name]) => name === "kova_auth_remove_totp_with_session"));
 });
 
 test("password mutations reject CSRF, unknown fields, malformed bodies and wrong methods before database access", async () => {
@@ -198,7 +225,17 @@ test("MFA enable/remove handlers enforce CSRF and rotate cookies through the new
       verifyKovaTotp: (code, value) => crypto.verifyKovaTotp(code, value, 59000),
     },
   });
-  const enabled = await f.handleKovaMfaVerify(authRequest({ factorId, code: "287082" }));
+  const enabled = await f.handleKovaMfaVerify(
+    authRequest(
+      { factorId, code: "287082" },
+      {
+        headers: {
+          "X-Kova-Owner": currentRow.account_id,
+          "X-Kova-Session": currentRow.session_id,
+        },
+      },
+    ),
+  );
   assert.equal(enabled.status, 200);
   assert.match(enabled.headers.get("set-cookie"), /__Host-kova_session=/u);
   const payload = await enabled.json();
@@ -206,6 +243,15 @@ test("MFA enable/remove handlers enforce CSRF and rotate cookies through the new
   assert.equal(payload.session.assuranceLevel, "aal2");
   assert.ok(f.calls.some(([name]) => name === "kova_auth_activate_totp_with_session"));
   assert.ok(!f.calls.some(([name]) => name === "kova_auth_activate_totp"));
+  const switched = fixture({ current: { account_id: other } });
+  const denied = await switched.handleKovaMfaVerify(
+    authRequest(
+      { factorId, code: "287082" },
+      { headers: { "X-Kova-Owner": owner, "X-Kova-Session": currentRow.session_id } },
+    ),
+  );
+  assert.equal(denied.status, 409);
+  assert.ok(!switched.calls.some(([name]) => name === "kova_auth_read_totp_enrollment"));
   const removed = await f.handleKovaMfaRemove(authRequest({ factorId }));
   assert.equal(removed.status, 200);
   assert.match(removed.headers.get("set-cookie"), /__Host-kova_session=/u);
@@ -241,7 +287,7 @@ test("real HTTP/store/PostgreSQL password change rejects the old password and bo
     const token = crypto.generateKovaToken();
     const at = new Date().toISOString(),
       expiresAt = new Date(Date.now() + 86400000).toISOString();
-    await passwordAccount(db, { token, passwordHash, at, expiresAt });
+    const row = await passwordAccount(db, { token, passwordHash, at, expiresAt });
     const f = authHttp({
       rpc: postgresTransport(db, [
         "kova_auth_resolve_session",
@@ -250,7 +296,10 @@ test("real HTTP/store/PostgreSQL password change rejects the old password and bo
       ]),
     });
     const response = await f.handleKovaPasswordChange(
-      authRequest({ currentPassword, newPassword }, { token }),
+      authRequest(
+        { currentPassword, newPassword },
+        { token, headers: { "X-Kova-Session": row.session_id } },
+      ),
     );
     assert.equal(response.status, 200);
     const nextToken = response.headers.get("set-cookie").split(";")[0].split("=")[1];
@@ -262,8 +311,14 @@ test("real HTTP/store/PostgreSQL password change rejects the old password and bo
     assert.equal(await crypto.verifyKovaPassword(newPassword, stored), true);
     assert.equal(await crypto.verifyKovaPassword(currentPassword, stored), false);
     assert.equal(
-      (await f.handleKovaPasswordChange(authRequest({ currentPassword, newPassword }, { token })))
-        .status,
+      (
+        await f.handleKovaPasswordChange(
+          authRequest(
+            { currentPassword, newPassword },
+            { token, headers: { "X-Kova-Session": row.session_id } },
+          ),
+        )
+      ).status,
       401,
     );
     assert.equal(
@@ -271,7 +326,10 @@ test("real HTTP/store/PostgreSQL password change rejects the old password and bo
         await f.handleKovaPasswordChange(
           authRequest(
             { currentPassword, newPassword: "another safe password" },
-            { token: nextToken },
+            {
+              token: nextToken,
+              headers: { "X-Kova-Session": (await response.json()).session.sessionId },
+            },
           ),
         )
       ).status,

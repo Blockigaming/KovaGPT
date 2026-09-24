@@ -93,6 +93,40 @@ test("MCP compatibility-session proof follows live revocation and account state"
   }
 });
 
+test("hosted MFA factors invalidate an existing AAL1 compatibility session", async () => {
+  const db = await authDatabase();
+  try {
+    const session = await passwordAccount(db, {
+      email: "owner@example.invalid",
+      token: "pre-mfa-mcp-session",
+      at: now,
+    });
+    const linked = await db.query(
+      "select legacy_supabase_user_id from kova_private.auth_accounts where id = $1",
+      [session.account_id],
+    );
+    assert.equal(linked.rows[0].legacy_supabase_user_id, session.account_id);
+    const issued = Math.floor(Date.parse(now) / 1000);
+    const validate = () =>
+      db.query("select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6) as ok", [
+        session.account_id,
+        session.session_id,
+        session.email,
+        "aal1",
+        issued,
+        now,
+      ]);
+    assert.equal((await validate()).rows[0].ok, true);
+    await db.query("insert into auth.mfa_factors(id,user_id,status) values($1,$2,'verified')", [
+      "40000000-0000-4000-8000-000000000004",
+      session.account_id,
+    ]);
+    assert.equal((await validate()).rows[0].ok, false);
+  } finally {
+    await db.close();
+  }
+});
+
 test("compatibility-session validation rejects mismatched identity and remains service-role only", async () => {
   const db = await authDatabase();
   try {

@@ -26,6 +26,7 @@ const browserSource = transpile(
 
 function browserFixture() {
   const calls = [];
+  const requests = [];
   const exports = {};
   let version = 1;
   let hold;
@@ -35,13 +36,18 @@ function browserFixture() {
     URL,
     Error,
     TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
-    fetch: async (path) => {
+    fetch: async (path, options) => {
       const captured = version;
       calls.push(path);
+      requests.push({ path, options });
       if (hold) await hold;
       return Response.json(
         path.endsWith("token")
-          ? { accessToken: `token-${captured}`, expiresIn: 300 }
+          ? {
+              accessToken: `token-${captured}`,
+              expiresIn: 300,
+              session: principal(`session-${captured}`),
+            }
           : { session: principal(`session-${captured}`) },
       );
     },
@@ -49,6 +55,7 @@ function browserFixture() {
   return {
     api: exports,
     calls,
+    requests,
     next: () => {
       version++;
     },
@@ -125,23 +132,73 @@ test("signed-out public authentication dispatches without a principal; owner mut
 
 test("MFA cache invalidation discards prior compatibility tokens and cached principals", async () => {
   const f = browserFixture();
-  assert.equal(await f.api.getKovaCompatibilityToken(), "token-1");
+  assert.equal(await f.api.getKovaCompatibilityToken(), null);
   assert.equal((await f.api.getCachedKovaSession()).sessionId, "session-1");
+  assert.equal(
+    await f.api.getKovaCompatibilityToken({ accountId: "other", sessionId: "session-B" }),
+    null,
+  );
+  assert.equal(await f.api.getKovaCompatibilityToken(), "token-1");
+  assert.deepEqual(JSON.parse(JSON.stringify(f.api.getKovaTokenBinding("token-1"))), {
+    accountId: "owner",
+    sessionId: "session-1",
+  });
+  assert.equal(f.requests.at(-1).options.headers["X-Kova-Owner"], "owner");
+  assert.equal(f.requests.at(-1).options.headers["X-Kova-Session"], "session-1");
   f.next();
   assert.equal(await f.api.getKovaCompatibilityToken(), "token-1");
   assert.equal(f.calls.length, 2);
   f.api.clearKovaAuthCache();
-  assert.equal(await f.api.getKovaCompatibilityToken(), "token-2");
+  assert.equal(f.api.getKovaTokenBinding("token-1"), null);
+  assert.equal(await f.api.getKovaCompatibilityToken(), null);
   assert.equal((await f.api.getCachedKovaSession()).sessionId, "session-2");
+  assert.equal(await f.api.getKovaCompatibilityToken(), "token-2");
   f.api.setKovaSessionActive(false);
   assert.equal(await f.api.getKovaCompatibilityToken(), null);
 });
 
+test("a stale tab cannot receive a new owner's compatibility token", async () => {
+  for (const switchedResponse of [
+    () => Response.json({ error: "Session changed" }, { status: 409 }),
+    () =>
+      Response.json({
+        accessToken: "other-owner-token",
+        expiresIn: 300,
+        session: { ...principal("session-B"), accountId: "other" },
+      }),
+  ]) {
+    const exports = {};
+    const requests = [];
+    vm.runInNewContext(browserSource, {
+      exports,
+      Response,
+      URL,
+      Error,
+      TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
+      fetch: async (path, options) => {
+        requests.push({ path, options });
+        return path.endsWith("session")
+          ? Response.json({ session: principal("session-A") })
+          : switchedResponse();
+      },
+    });
+    assert.equal(await exports.getKovaCompatibilityToken(), null);
+    assert.equal(requests.length, 0);
+    await exports.fetchKovaSession();
+    assert.equal(await exports.getKovaCompatibilityToken(), null);
+    assert.equal(requests[1].options.headers["X-Kova-Owner"], "owner");
+    assert.equal(requests[1].options.headers["X-Kova-Session"], "session-A");
+    assert.equal(await exports.getKovaCompatibilityToken(), null);
+    assert.equal(requests.length, 2);
+  }
+});
+
 test("requests started before an MFA change cannot restore stale tokens or principals after cache invalidation", async () => {
   const f = browserFixture();
+  await f.api.getCachedKovaSession();
   const release = f.delay();
   const oldToken = f.api.getKovaCompatibilityToken();
-  const oldPrincipal = f.api.getCachedKovaSession();
+  const oldPrincipal = f.api.fetchKovaSession();
   // Attach the rejection handler before the deferred response is released.
   const principalRejected = assert.rejects(oldPrincipal, /kova_session_changed/u);
   f.next();
@@ -149,8 +206,9 @@ test("requests started before an MFA change cannot restore stale tokens or princ
   release();
   assert.equal(await oldToken, null);
   await principalRejected;
-  assert.equal(await f.api.getKovaCompatibilityToken(), "token-2");
+  assert.equal(await f.api.getKovaCompatibilityToken(), null);
   assert.equal((await f.api.getCachedKovaSession()).sessionId, "session-2");
+  assert.equal(await f.api.getKovaCompatibilityToken(), "token-2");
 });
 
 for (const mode of ["kova", "dual"]) {
@@ -159,6 +217,7 @@ for (const mode of ["kova", "dual"]) {
     let held = false;
     let release;
     let tokenCalls = 0;
+    let rejectSession = false;
     vm.runInNewContext(browserSource, {
       exports,
       Response,
@@ -167,23 +226,37 @@ for (const mode of ["kova", "dual"]) {
       TEST_ENV: { VITE_KOVA_AUTH_MODE: mode },
       fetch: async (path) => {
         assert.ok(path === "/api/auth/session" || path === "/api/auth/token");
-        if (path.endsWith("session")) return new Response(null, { status: 401 });
+        if (path.endsWith("session"))
+          return rejectSession
+            ? new Response(null, { status: 401 })
+            : Response.json({ session: principal("session-1") });
         tokenCalls++;
         if (held)
           await new Promise((resolve) => {
             release = resolve;
           });
-        return Response.json({ accessToken: `token-${tokenCalls}`, expiresIn: 300 });
+        return Response.json({
+          accessToken: `token-${tokenCalls}`,
+          expiresIn: 300,
+          session: principal("session-1"),
+        });
       },
     });
+    assert.equal((await exports.fetchKovaSession()).sessionId, "session-1");
     assert.equal(await exports.getKovaCompatibilityToken(), "token-1");
+    rejectSession = true;
     await assert.rejects(exports.fetchKovaSession(), exports.isKovaSessionRejectedError);
     assert.equal(exports.isKovaSessionActive(), true);
     assert.equal(await exports.getCachedKovaSession(), null);
+    assert.equal(await exports.getKovaCompatibilityToken(), null);
+    rejectSession = false;
+    await exports.fetchKovaSession();
     assert.equal(await exports.getKovaCompatibilityToken(), "token-2");
     exports.clearKovaAuthCache();
+    await exports.fetchKovaSession();
     held = true;
     const delayed = exports.getKovaCompatibilityToken();
+    rejectSession = true;
     await assert.rejects(exports.fetchKovaSession(), exports.isKovaSessionRejectedError);
     release();
     assert.equal(await delayed, null);

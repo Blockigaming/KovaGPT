@@ -740,6 +740,13 @@ function requireSessionDigest(request: Request): string | Response {
   return digestKovaToken(credential.token);
 }
 
+function matchesCapturedPrincipal(request: Request, principal: KovaPrincipal): boolean {
+  return (
+    request.headers.get("X-Kova-Owner") === principal.accountId &&
+    request.headers.get("X-Kova-Session") === principal.sessionId
+  );
+}
+
 export async function handleKovaMfaFactors(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
@@ -843,6 +850,8 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
   try {
     const principal = await resolveSession(sessionDigest);
     if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, principal))
+      return jsonError("Your account changed. Please try again.", 409);
     const accountLimit = await rateLimit(
       request,
       "kova_auth_mfa_enroll_account",
@@ -968,6 +977,8 @@ export async function handleKovaMfaVerify(request: Request): Promise<Response> {
   try {
     const current = await resolveSession(sessionDigest);
     if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, current))
+      return jsonError("Your account changed. Please try again.", 409);
     const accountLimit = await rateLimit(
       request,
       "kova_auth_mfa_verify_account",
@@ -1027,6 +1038,8 @@ export async function handleKovaMfaRemove(request: Request): Promise<Response> {
     if (!current?.emailVerified || current.assuranceLevel !== "aal2") {
       return jsonError("Two-factor authentication is required.", 403);
     }
+    if (!matchesCapturedPrincipal(request, current))
+      return jsonError("Your account changed. Please try again.", 409);
     const nextToken = generateKovaToken();
     const principal = await removeTotpFactor({
       sessionDigest,
@@ -1089,6 +1102,8 @@ export async function handleKovaPasswordChange(request: Request): Promise<Respon
   try {
     const current = await resolveSession(sessionDigest);
     if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, current))
+      return jsonError("Your account changed. Please try again.", 409);
     const accountLimit = await rateLimit(
       request,
       "kova_auth_password_change_account",
@@ -1170,9 +1185,7 @@ export async function handleKovaMfaRecoveryRegenerate(request: Request): Promise
         403,
       );
     }
-    const expectedOwner = request.headers.get("x-kova-owner");
-    const expectedSession = request.headers.get("x-kova-session");
-    if (expectedOwner !== current.accountId || expectedSession !== current.sessionId) {
+    if (!matchesCapturedPrincipal(request, current)) {
       return jsonError("Your account changed. Please try again.", 409);
     }
     const accountLimit = await rateLimit(
@@ -1219,6 +1232,10 @@ export async function handleKovaRevokeOtherSessions(request: Request): Promise<R
   if (body instanceof Response) return body;
   if (Object.keys(body).length !== 0) return jsonError("Invalid request.", 400);
   try {
+    const current = await resolveSession(sessionDigest);
+    if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, current))
+      return jsonError("Your account changed. Please try again.", 409);
     return json({ revokedCount: await revokeOtherSessions(sessionDigest) });
   } catch (error) {
     return jsonError(

@@ -253,12 +253,13 @@ test("owned other-device revocation uses only the cookie principal and never rep
     const response = await f.handleKovaRevokeOtherSessions(request({}));
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { revokedCount: count });
-    assert.deepEqual(f.calls, [
-      [
-        "kova_auth_revoke_other_sessions",
-        { p_session_digest_hex: crypto.digestKovaToken(cookieToken) },
-      ],
-    ]);
+    assert.deepEqual(
+      f.calls.map(([name]) => name),
+      ["kova_auth_resolve_session", "kova_auth_revoke_other_sessions"],
+    );
+    assert.deepEqual(f.calls[1][1], {
+      p_session_digest_hex: crypto.digestKovaToken(cookieToken),
+    });
     assert.equal(response.headers.get("set-cookie"), null);
   }
   for (const count of [false, "2", -1, 1.5, {}, []]) {
@@ -275,6 +276,9 @@ test("owned other-device revocation uses only the cookie principal and never rep
   }
   const rejected = fixture({ error: { code: "P0001", message: "not-for-client" } });
   assert.equal((await rejected.handleKovaRevokeOtherSessions(request({}))).status, 401);
+  const changed = fixture({ current: { account_id: "30000000-0000-4000-8000-000000000003" } });
+  assert.equal((await changed.handleKovaRevokeOtherSessions(request({}))).status, 409);
+  assert.ok(!changed.calls.some(([name]) => name === "kova_auth_revoke_other_sessions"));
 });
 
 test("real handler/store/PostgreSQL path regenerates codes, rotates the browser session, and rejects a replay", async () => {
@@ -350,7 +354,7 @@ test("real handler/store/PostgreSQL path regenerates codes, rotates the browser 
     assert.equal((await f.handleKovaMfaRecoveryRegenerate(request())).status, 403);
     const nextCookie = response.headers.get("set-cookie").split(";", 1)[0];
     const signedOut = await f.handleKovaRevokeOtherSessions(
-      request({}, { headers: { Cookie: nextCookie } }),
+      request({}, { headers: { Cookie: nextCookie, "X-Kova-Session": payload.session.sessionId } }),
     );
     assert.equal(signedOut.status, 200);
     const audit = await db.query(

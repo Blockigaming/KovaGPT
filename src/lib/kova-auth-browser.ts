@@ -8,7 +8,12 @@ export type KovaBrowserPrincipal = {
   expiresAt: string;
 };
 
-type TokenCache = { token: string; refreshAt: number } | null;
+type TokenCache = {
+  token: string;
+  refreshAt: number;
+  accountId: string;
+  sessionId: string;
+} | null;
 type PrincipalCache = { principal: KovaBrowserPrincipal | null; refreshAt: number } | null;
 
 export class KovaSessionRejectedError extends Error {
@@ -167,20 +172,71 @@ export async function getCachedKovaSession(): Promise<KovaBrowserPrincipal | nul
   return fetchKovaSession();
 }
 
-export async function getKovaCompatibilityToken(): Promise<string | null> {
+export function getKovaTokenBinding(
+  token: string,
+): Pick<KovaBrowserPrincipal, "accountId" | "sessionId"> | null {
+  const current = principalCache?.principal;
+  if (
+    !current ||
+    !tokenCache ||
+    tokenCache.token !== token ||
+    tokenCache.accountId !== current.accountId ||
+    tokenCache.sessionId !== current.sessionId
+  )
+    return null;
+  return { accountId: current.accountId, sessionId: current.sessionId };
+}
+
+export async function getKovaCompatibilityToken(
+  expected?: Pick<KovaBrowserPrincipal, "accountId" | "sessionId">,
+): Promise<string | null> {
   if (!kovaSessionActive) return null;
-  if (tokenCache && tokenCache.refreshAt > Date.now()) return tokenCache.token;
+  // An accessToken callback can run before the auth provider has resolved its
+  // displayed account. Never discover a new owner through this data request.
+  const captured = principalCache?.principal;
+  if (!captured) return null;
+  if (
+    expected &&
+    (expected.accountId !== captured.accountId || expected.sessionId !== captured.sessionId)
+  )
+    return null;
+  if (tokenCache && tokenCache.refreshAt > Date.now()) {
+    if (tokenCache.accountId === captured.accountId && tokenCache.sessionId === captured.sessionId)
+      return tokenCache.token;
+    clearKovaAuthCache();
+    return null;
+  }
   const generation = cacheGeneration;
   const response = await fetch("/api/auth/token", {
     credentials: "same-origin",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      "X-Kova-Owner": captured.accountId,
+      "X-Kova-Session": captured.sessionId,
+    },
   });
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 409) {
+    clearKovaAuthCache();
     return null;
   }
   if (!response.ok) throw new Error(`kova_token_${response.status}`);
-  const payload = (await response.json()) as { accessToken?: unknown; expiresIn?: unknown };
+  const payload = (await response.json()) as {
+    accessToken?: unknown;
+    expiresIn?: unknown;
+    session?: Partial<KovaBrowserPrincipal>;
+  };
   if (generation !== cacheGeneration || !kovaSessionActive) return null;
+  const current = principalCache?.principal;
+  if (
+    !current ||
+    current.accountId !== captured.accountId ||
+    current.sessionId !== captured.sessionId ||
+    payload.session?.accountId !== captured.accountId ||
+    payload.session?.sessionId !== captured.sessionId
+  ) {
+    clearKovaAuthCache();
+    return null;
+  }
   if (
     typeof payload.accessToken !== "string" ||
     typeof payload.expiresIn !== "number" ||
@@ -191,6 +247,8 @@ export async function getKovaCompatibilityToken(): Promise<string | null> {
   tokenCache = {
     token: payload.accessToken,
     refreshAt: Date.now() + Math.max(30, payload.expiresIn - 60) * 1000,
+    accountId: captured.accountId,
+    sessionId: captured.sessionId,
   };
   return tokenCache.token;
 }

@@ -323,3 +323,57 @@ control—not the SQL editor—and must also live in the application environment
 secret store. The private signing key, service-role key, encryption key,
 passwords, raw challenges, and raw session tokens must never be placed in the
 browser bundle, repository, SQL text, or logs.
+
+## Auth Rehearsal evidence and cutover receipt
+
+The September 24 Rehearsal database has the MFA binding, multiple-factor
+login, legacy MFA bridge, MCP session authority, and explicit hosted-ID mapping
+migrations installed. A read-only check returned zero legacy MFA gaps, 119
+scoped RLS tables, and zero violations in all five revocation-proof counts.
+The bridge table has RLS enabled and denies browser-role reads; its five RPCs
+and the MCP authority RPC are service-role-only with empty search paths and
+bounded statement timeouts. The bridge has no rows yet. These checks establish
+database state, not a deployed application rehearsal.
+
+`scripts/release/kova-auth-cutover-gate.mjs` accepts a JSON receipt outside the
+source tree and compares it with a clean checked-out commit. Run it with
+`--evidence <receipt.json> --environment <name> --project-ref <ref>
+--config-sha256 <audited-config-fingerprint>`. The receipt must contain the
+exact `sourceSha` and `appBuildSha`, environment, project ref, `ACTIVE_HEALTHY`
+status, HTTPS deployment origin, `kova` mode, config fingerprint, and a capture
+time no more than fifteen minutes old. It requires all five named migrations,
+`legacyMfaGapCount: 0`, the six fields from
+`kova-auth-revocation-proof.sql`, service-only ACL/search-path/timeout evidence
+for the four security-sensitive RPCs, every named deployed check exported by
+the script, and expiration times for the last pre-marker JWT and last historic
+signed Storage URL that precede capture. JSON field names are defined by the
+validator and exercised in `tests/unit/kova-auth-cutover-gate.test.mjs`.
+
+Capture the database counts and ACLs with read-only queries on the project
+identified in the receipt. Capture the browser, device, email, OAuth, Storage,
+Realtime, MCP, and rollback checks from the _deployed_ build. The validator
+checks consistency and freshness; a JSON file alone does not authenticate
+where its observations came from. Review the original observations and live
+configuration before any cutover authorization. No complete deployed receipt
+exists while app deployment, signing-key configuration, and device rehearsal
+remain unapproved.
+
+### Hosted-auth retirement inventory
+
+The source still contains hosted Auth SDK calls in login/MFA panels, the
+Supabase client and auth attacher, Google connection helpers, account and
+trusted-contact routes, MCP bearer fallback, and data clients that obtain
+compatibility sessions. Pure Kova routing and owner-bound requests are covered
+by source tests; dormant hosted calls are not evidence that every deployed
+surface has exercised its pure path. Before retirement, capture a runtime
+inventory from the deployed build and check each bearer, password, refresh,
+logout, passkey, recovery, email, invitation, signed URL, and Realtime path
+under `kova` mode. Prove that no old hosted credential revives authority after
+owned revocation. Existing `auth.users` rows remain inert compatibility rows
+until the separate retirement decision; no destructive deletion is implied.
+
+OAuth consent remains fail closed when the owned principal cannot be resolved.
+Its redirect URI and client must be checked against the deployed authority,
+and any dormant hosted fallback must be removed only after the runtime
+inventory and the owner-approved staging transition. Production cutover,
+merging this PR, and changing signing keys remain separate decisions.

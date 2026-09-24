@@ -7,10 +7,15 @@ import ts from "typescript";
 const code = ts.transpileModule(readFileSync("src/lib/kova-auth-data-fetch.ts", "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-function fixture({ token = "fresh-jwt", status = 401, active = true, afterFirst } = {}) {
+function fixture({ token = "fresh-jwt", status = 401, active = true, afterFirst, session } = {}) {
   const exports = {};
   const calls = [],
-    state = { cleared: 0, refreshed: 0, active };
+    state = {
+      cleared: 0,
+      refreshed: 0,
+      active,
+      session: session === undefined ? { accountId: "owner", sessionId: "session-A" } : session,
+    };
   vm.runInNewContext(code, {
     exports,
     Request,
@@ -23,7 +28,12 @@ function fixture({ token = "fresh-jwt", status = 401, active = true, afterFirst 
         clearKovaAuthCache: () => {
           state.cleared++;
         },
-        getKovaCompatibilityToken: async () => {
+        getKovaTokenBinding: (value) =>
+          value === "rejected-jwt" ? { accountId: "owner", sessionId: "session-A" } : null,
+        fetchKovaSession: async () => state.session,
+        getKovaCompatibilityToken: async (expected) => {
+          assert.equal(expected.accountId, "owner");
+          assert.equal(expected.sessionId, "session-A");
           state.refreshed++;
           return token;
         },
@@ -73,10 +83,21 @@ for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
 }
 
 test("an expired/revoked cookie never falls back to hosted auth or replays a read anonymously", async () => {
-  const f = fixture({ token: null });
+  const f = fixture({ session: null });
   assert.equal((await f.dataFetch(endpoint, { headers })).status, 401);
   assert.equal(f.calls.length, 1);
-  assert.equal(f.state.refreshed, 1);
+  assert.equal(f.state.refreshed, 0);
+});
+
+test("a changed cookie after the original request cannot retry under another owner", async () => {
+  const f = fixture({
+    afterFirst: (state) => {
+      state.session = { accountId: "other", sessionId: "session-B" };
+    },
+  });
+  assert.equal((await f.dataFetch(endpoint, { headers })).status, 401);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.state.refreshed, 0);
 });
 
 test("401 handling never attaches a new bearer to other hosts or unrelated endpoint families", async () => {
