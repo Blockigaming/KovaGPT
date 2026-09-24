@@ -57,13 +57,17 @@ import {
   removeTotpFactor,
   recoveryTarget,
   resendVerification,
+  resolveLegacyHostedMfaProof,
   resolveSession,
   revokeOtherSessions,
   revokeSession,
   rotateSession,
 } from "@/lib/kova-auth-store.server";
-import { isCrossSiteMutation, safeRelativeRedirect } from "@/lib/auth-security.mjs";
-import { requireUser, type HttpAuthedCaller } from "@/lib/api-auth.server";
+import {
+  isCrossSiteMutation,
+  parseBearerToken,
+  safeRelativeRedirect,
+} from "@/lib/auth-security.mjs";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import {
@@ -697,7 +701,7 @@ export async function handleKovaToken(request: Request): Promise<Response> {
 
 async function requireLegacyMfaMigrationCaller(
   request: Request,
-): Promise<HttpAuthedCaller | Response> {
+): Promise<{ userId: string; email: string } | Response> {
   let mode: ReturnType<typeof resolveKovaAuthMode>;
   try {
     mode = resolveKovaAuthMode();
@@ -705,23 +709,26 @@ async function requireLegacyMfaMigrationCaller(
     return jsonError("Authentication is temporarily unavailable.", 503);
   }
   if (mode !== "dual") return jsonError("Not found", 404);
-  const caller = await requireUser(request);
-  if (caller instanceof Response) return caller;
-  if (
-    caller.authProvider !== "supabase" ||
-    !caller.emailVerified ||
-    caller.claims?.aal !== "aal2"
-  ) {
+  const token = parseBearerToken(request.headers.get("authorization") ?? "");
+  const expectedOwner = request.headers.get("x-kova-owner");
+  if (!token || !expectedOwner) {
     return jsonError("Complete your existing two-factor verification before migrating it.", 403);
   }
   try {
-    if (!(await hasVerifiedLegacyMfa(caller.userId))) {
+    const caller = await resolveLegacyHostedMfaProof(token);
+    if (caller.accountId !== expectedOwner) {
+      return jsonError("Your account changed. Please try again.", 409);
+    }
+    if (!(await hasVerifiedLegacyMfa(caller.accountId))) {
       return jsonError("No legacy two-factor migration is required.", 409);
     }
-  } catch {
+    return { userId: caller.accountId, email: caller.email };
+  } catch (error) {
+    if (error instanceof KovaAuthStoreError) {
+      return jsonError("Complete your existing two-factor verification before migrating it.", 403);
+    }
     return jsonError("Security settings are temporarily unavailable.", 503);
   }
-  return caller;
 }
 
 function requireSessionDigest(request: Request): string | Response {
