@@ -252,7 +252,10 @@ test("ordinary cookie rotation rejects the previous JWT before its five-minute e
 test("sign out other devices invalidates sibling JWTs without invalidating the current device", async () => {
   const owner = await account();
   const hostedSessionId = randomUUID();
-  await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [hostedSessionId, owner.account_id]);
+  await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [
+    hostedSessionId,
+    owner.account_id,
+  ]);
   const sibling = (
     await db.query("select * from public.kova_auth_create_session($1,$2,$3,$4,'aal1',$5)", [
       owner.account_id,
@@ -267,8 +270,20 @@ test("sign out other devices invalidates sibling JWTs without invalidating the c
   await db.query("select public.kova_auth_revoke_other_sessions($1)", [owner.digest]);
   assert.equal(await active(siblingClaims), false);
   assert.equal(await active(owner.claims), true);
-  assert.equal((await db.query("select count(*)::int as n from auth.sessions where id=$1", [hostedSessionId])).rows[0].n, 0);
-  assert.equal((await db.query("select count(*)::int as n from kova_private.auth_legacy_retirements where account_id=$1", [owner.account_id])).rows[0].n, 1);
+  assert.equal(
+    (await db.query("select count(*)::int as n from auth.sessions where id=$1", [hostedSessionId]))
+      .rows[0].n,
+    0,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "select count(*)::int as n from kova_private.auth_legacy_retirements where account_id=$1",
+        [owner.account_id],
+      )
+    ).rows[0].n,
+    1,
+  );
 });
 
 test("MFA activation, recovery-code regeneration and MFA removal each invalidate old JWTs", async () => {
