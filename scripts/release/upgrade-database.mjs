@@ -17,7 +17,10 @@ import {
   CURRENT_HISTORY_SNAPSHOT,
   extendCurrentHistory,
 } from "./upgrade-database-current-history.mjs";
-import { extendProposedCanonicalHistory } from "./upgrade-database-canonical-history.mjs";
+import {
+  extendProposedCanonicalHistory,
+  HISTORY_ONLY_SENTINEL,
+} from "./upgrade-database-canonical-history.mjs";
 
 import {
   TEMP_EXPORT_CATALOG_SQL,
@@ -402,6 +405,14 @@ export function rehearseUpgrade({
         baselineVersions,
       );
     if (recordOnlyVersions.length) {
+      // The local CLI requires a matching migration filename before repairing
+      // history. A disposable failing sentinel guarantees that a repaired
+      // version never silently executes its already-equivalent source body.
+      for (const version of recordOnlyVersions) {
+        const row = plan.forward.find((migration) => migration.version === version);
+        if (!row) throw new Error("upgrade_canonical_history_record_only_source_missing");
+        writeFileSync(join(migrationsDir, row.name), HISTORY_ONLY_SENTINEL);
+      }
       supabase(["migration", "repair", "--local", "--status", "applied", ...recordOnlyVersions]);
       sql(historyAssertion([...baselineVersions, ...recordOnlyVersions], "repaired"));
     }

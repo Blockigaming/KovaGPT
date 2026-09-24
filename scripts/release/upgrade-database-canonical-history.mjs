@@ -9,6 +9,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DECISION = "docs/release-reconciliation/canonical-history-actions-20260923.json";
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const RECORD_ONLY = ["20260822122000", "20260823113000", "20260903145843"];
+export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
+  raise exception 'upgrade_history_only_source_body_was_executed';
+end $kova_history_only$;\n`;
 
 // A separate, explicitly selected synthetic rehearsal of the proposed 80+3
 // inventory. This function cannot repair a remote ledger or accept the plan.
@@ -78,6 +81,7 @@ export function extendProposedCanonicalHistory(plan, root = ROOT) {
       capturedLedgerMetadataSha256: decision.capturedLedgerMetadataSha256,
       sourceMigrationTree: decision.sourceMigrationTree,
       recordOnlyVersions: recordOnly,
+      historyOnlySentinelSha256: sha256(HISTORY_ONLY_SENTINEL),
       forwardVersions: executionForward.map((row) => row.version),
       expectedFinalLedgerCount: 181,
       productionReleaseReady: false,

@@ -4,7 +4,10 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { extendProposedCanonicalHistory } from "../../scripts/release/upgrade-database-canonical-history.mjs";
+import {
+  extendProposedCanonicalHistory,
+  HISTORY_ONLY_SENTINEL,
+} from "../../scripts/release/upgrade-database-canonical-history.mjs";
 import {
   extendCurrentHistory,
   CURRENT_HISTORY_SNAPSHOT,
@@ -50,6 +53,7 @@ test("canonical history proposal rejects a changed body before local commands", 
 
 test("canonical history mock confines three repairs to local project and checks both ledgers", () => {
   const calls = [];
+  const recordOnlyNames = planUpgrade().forward.filter((row) => REPAIRED.includes(row.version));
   let project;
   const result = rehearseUpgrade({
     canonicalHistory: true,
@@ -62,6 +66,15 @@ test("canonical history mock confines three repairs to local project and checks 
       assert.equal(options.env.DOCKER_HOST, "unix:///var/run/docker.sock");
       assert.equal(options.env.SUPABASE_ACCESS_TOKEN, undefined);
       assert.ok(!args.includes("--linked") && !args.includes("--db-url"));
+      if (args[0] === "migration") {
+        for (const row of recordOnlyNames)
+          assert.equal(
+            readFileSync(join(project, "supabase/migrations", row.name), "utf8"),
+            HISTORY_ONLY_SENTINEL,
+          );
+        if (args[1] === "up")
+          assert.equal(readdirSync(join(project, "supabase/migrations")).length, 181);
+      }
       return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
     },
   });
@@ -84,6 +97,7 @@ test("canonical history mock confines three repairs to local project and checks 
   assert.match(sql.at(-1).input, /upgrade_final_history_mismatch/u);
   assert.match(sql.at(-1).input, /20260903145843/u);
   assert.equal(result.canonicalHistoryProposal.productionRowsRestored, false);
+  assert.match(result.canonicalHistoryProposal.historyOnlySentinelSha256, /^[a-f0-9]{64}$/u);
   assert.equal(existsSync(join(ROOT, "artifacts/release/upgrade-canonical-history.json")), true);
   assert.equal(existsSync(project), false);
 });

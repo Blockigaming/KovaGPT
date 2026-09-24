@@ -111,7 +111,11 @@ to verify the pinned inventory without starting a database. The full command
 without `--dry-run` targets only a newly generated local Docker/Supabase
 project. It first checks the 98 historical rows, then invokes the pinned CLI
 with `migration repair --local --status applied` for exactly the three
-content-equivalent canonical versions. It checks that 101-row ledger, inserts
+content-equivalent canonical versions. The CLI requires local files for those
+three timestamps, so only the disposable project receives matching filenames
+whose SQL deliberately raises an error if run. Source files stay unchanged;
+an unexpected replay fails instead of re-executing equivalent bodies. It checks
+that 101-row ledger, inserts
 synthetic two-user data, applies only the other 80 source migration bodies with
 `migration up --local --include-all`, and requires exactly 181 rows before
 cleaning up. The proposed result is written separately to
