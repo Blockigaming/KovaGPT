@@ -68,6 +68,23 @@ revision exists.
 | M23 production apply and cutover | After the source template models **all** current environment settings/secret references, roles, budget controls, protected origin and a tested multi-revision rollback, publish and review a distinct apply PR. Present the literal reviewed `az deployment group create` or dedicated workflow invocation, exact resource IDs and what-if diff, prior digest, initial zero-traffic revision, health evidence, then the separately approved Cloudflare/traffic steps.                                                                                                                                                                                                                                                                                                                                                       | The current repository has **no authorized production apply path**; its Bicep uses single-revision mode and the PLAN workflow has no deploy step. Never run a guessed `create` command. Stop on any unplanned resource change, automatic traffic shift, missing previous revision, origin-auth failure or unexpected cost.                                                                                               |
 | M24 acceptance                   | Observe the exact Azure revision/digest, `/api/livez`, `/api/readyz`, `/api/version` source SHA, Cloudflare canonical host, raw-origin denial, auth and isolation, streaming/uploads, provider and billing gates, cost telemetry and rollback evidence during the approved window.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Sign off only after actual live behavior and full evidence from the exact deployed SHA. Restore prior traffic by the separately approved rollback operation on failure; database restore is an additional incident decision.                                                                                                                                                                                             |
 
+**M20 order hazard:** `scripts/release/supabase-db-push.mjs` links the hosted
+project and immediately runs `supabase db push --linked`. Against the present
+98-row remote ledger it would select **all 83** absent source timestamps, while
+the proposed sequence requires **three history-only records first**, followed
+by only **80** executable bodies. In the isolated test, re-executing the
+already-applied security body `20260903145843` failed with SQLSTATE `42723`.
+The passing `--canonical-history` command repairs **local** history only and
+does not make `db:migrate` safe against production. Independently review and
+separately approve a protected production recording mechanism for the three
+equivalent versions, verify their recorded statements and exactly **101**
+remote ledger rows at the same approved checkpoint, then run an
+**approved read-only** `npm run db:migrate -- --dry-run` against that exact
+linked target and verify it selects exactly the remaining **80** source
+versions in approved order. Review every pre-state contract before presenting
+a runnable production push. Reject a raw `db:migrate` invocation against a
+98-row ledger; a failed push could leave partial production changes.
+
 The M19 command is **not runnable under the current single-revision production
 template**. Multi-revision strategy, prior healthy image, maintenance window, and
 specific approval must precede it. The current staging template is also
