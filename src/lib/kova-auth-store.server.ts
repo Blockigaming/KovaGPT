@@ -113,6 +113,51 @@ export async function hasVerifiedLegacyMfa(accountId: string): Promise<boolean> 
   return value;
 }
 
+export async function resolveLegacyHostedMfaProof(accessToken: string): Promise<{
+  accountId: string;
+  email: string;
+  assuranceLevel: "aal2";
+}> {
+  if (
+    typeof accessToken !== "string" ||
+    accessToken.length < 32 ||
+    accessToken.length > 16_384 ||
+    accessToken.split(".").length !== 3
+  ) {
+    throw new KovaAuthStoreError("legacy_mfa_hosted_proof");
+  }
+  const [{ data: userData, error: userError }, { data: claimsData, error: claimsError }] =
+    await Promise.all([
+      supabaseAdmin.auth.getUser(accessToken),
+      supabaseAdmin.auth.getClaims(accessToken),
+    ]);
+  const user = userData?.user;
+  const claims = claimsData?.claims as Record<string, unknown> | undefined;
+  const email =
+    typeof user?.email === "string" && /^[^\s@]+@[^\s@]+$/u.test(user.email) ? user.email : null;
+  const confirmedAt = user?.email_confirmed_at ?? user?.confirmed_at;
+  const bannedUntil =
+    typeof user?.banned_until === "string" ? Date.parse(user.banned_until) : Number.NaN;
+  if (
+    userError ||
+    claimsError ||
+    !user ||
+    !claims ||
+    typeof user.id !== "string" ||
+    !email ||
+    !confirmedAt ||
+    user.deleted_at ||
+    (user.banned_until && (!Number.isFinite(bannedUntil) || bannedUntil > Date.now())) ||
+    claims.sub !== user.id ||
+    claims.role !== "authenticated" ||
+    claims.aal !== "aal2" ||
+    Object.prototype.hasOwnProperty.call(claims, "kova_auth")
+  ) {
+    throw new KovaAuthStoreError("legacy_mfa_hosted_proof");
+  }
+  return { accountId: user.id, email, assuranceLevel: "aal2" };
+}
+
 export async function finalizeOwnedAccountDeletion(
   accountId: string,
   sessionId: string,
