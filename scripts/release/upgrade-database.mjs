@@ -38,6 +38,11 @@ import {
   captureCleanUpgradeSource,
   assertUpgradeSourceUnchanged,
 } from "./upgrade-source-provenance.mjs";
+import {
+  MIGRATION_PROOF_CATALOG_SQL,
+  MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+  parseMigrationProofCatalog,
+} from "./migration-proof-catalog.mjs";
 
 import {
   SCHEDULED_TABLE_FILE,
@@ -135,6 +140,7 @@ export function rehearseUpgrade({
   captureScheduledTables = false,
   captureChatWorkspaceTables = false,
   captureChatWorkspaceRoutines = false,
+  captureProofCatalog = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
@@ -151,6 +157,7 @@ export function rehearseUpgrade({
       SCHEDULED_TABLE_FILE,
       CHAT_WORKSPACE_TABLE_FILE,
       CHAT_WORKSPACE_CATALOG_FILE,
+      "upgrade-migration-proof-catalog.json",
     ])
       rmSync(join(outputDir, file), { force: true });
   }
@@ -169,6 +176,8 @@ export function rehearseUpgrade({
       throw new Error("upgrade_scheduled_catalog_current_history_required");
     if (captureTemporaryExport && !currentHistory)
       throw new Error("upgrade_temp_export_current_history_required");
+    if (captureProofCatalog && !currentHistory)
+      throw new Error("upgrade_proof_catalog_current_history_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -209,6 +218,12 @@ export function rehearseUpgrade({
         ? {
             temporaryExportProofPlanned: true,
             temporaryExportQuerySha256: TEMP_EXPORT_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureProofCatalog
+        ? {
+            proofCatalogPlanned: true,
+            proofCatalogQuerySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
           }
         : {}),
       ...(captureScheduledCatalog
@@ -341,6 +356,8 @@ export function rehearseUpgrade({
   let chatTableBytes;
   let chatRoutineBaseline;
   let chatRoutineBytes;
+  let proofCatalogBaseline;
+  let proofCatalogBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -372,6 +389,11 @@ export function rehearseUpgrade({
         sql(CHAT_WORKSPACE_CATALOG_SQL, true),
         baselineVersions,
       );
+    if (captureProofCatalog)
+      proofCatalogBaseline = parseMigrationProofCatalog(
+        sql(MIGRATION_PROOF_CATALOG_SQL, true),
+        baselineVersions,
+      );
     sql(seed);
     for (const migration of executionForward)
       writeFileSync(join(migrationsDir, migration.name), migration.content);
@@ -399,13 +421,17 @@ export function rehearseUpgrade({
     const chatRoutineUpgraded = captureChatWorkspaceRoutines
       ? parseChatWorkspaceCatalogCapture(sql(CHAT_WORKSPACE_CATALOG_SQL, true), finalVersions)
       : null;
+    const proofCatalog = captureProofCatalog
+      ? parseMigrationProofCatalog(sql(MIGRATION_PROOF_CATALOG_SQL, true), finalVersions)
+      : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
       captureTemporaryExport ||
       captureScheduledCatalog ||
       captureScheduledTables ||
       captureChatWorkspaceTables ||
-      captureChatWorkspaceRoutines
+      captureChatWorkspaceRoutines ||
+      captureProofCatalog
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
     if (
@@ -484,6 +510,22 @@ export function rehearseUpgrade({
           2,
         ) + "\n";
     }
+    if (proofCatalog)
+      proofCatalogBytes =
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            artifactKind: "source-final-object-digest-inventory-not-schema-proof",
+            sourceCommit,
+            sourceTree,
+            querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+            baseline: proofCatalogBaseline,
+            upgraded: proofCatalog,
+            acceptedProofs: 0,
+          },
+          null,
+          2,
+        ) + "\n";
     result = {
       schemaVersion: 1,
       passed: true,
@@ -541,6 +583,16 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(proofCatalogBytes
+        ? {
+            proofCatalog: {
+              file: "upgrade-migration-proof-catalog.json",
+              sha256: sha256(proofCatalogBytes),
+              querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
     };
   } catch (error) {
@@ -571,6 +623,8 @@ export function rehearseUpgrade({
   if (chatTableBytes) writeFileSync(join(outputDir, CHAT_WORKSPACE_TABLE_FILE), chatTableBytes);
   if (chatRoutineBytes)
     writeFileSync(join(outputDir, CHAT_WORKSPACE_CATALOG_FILE), chatRoutineBytes);
+  if (proofCatalogBytes)
+    writeFileSync(join(outputDir, "upgrade-migration-proof-catalog.json"), proofCatalogBytes);
   writeFileSync(join(outputDir, "upgrade-database.json"), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -595,6 +649,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           captureScheduledTables: !process.argv.includes("--historical-baseline"),
           captureChatWorkspaceTables: !process.argv.includes("--historical-baseline"),
           captureChatWorkspaceRoutines: !process.argv.includes("--historical-baseline"),
+          captureProofCatalog: !process.argv.includes("--historical-baseline"),
         }),
         null,
         2,
