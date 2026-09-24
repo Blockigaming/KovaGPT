@@ -9,7 +9,11 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   if (getSupabaseClientConfigStatus().configured) {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const owner = data.session?.user?.id;
+    if (token && owner) {
+      headers.set("Authorization", `Bearer ${token}`);
+      headers.set("X-Kova-Owner", owner);
+    }
   }
 
   return fetch(input, { ...init, headers });

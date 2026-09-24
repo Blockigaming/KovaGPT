@@ -41,7 +41,9 @@ let kovaSessionActive =
 
 export function browserKovaAuthMode(): "supabase" | "dual" | "kova" {
   const value = import.meta.env.VITE_KOVA_AUTH_MODE;
-  return value === "dual" || value === "kova" ? value : "supabase";
+  if (!value || value === "supabase") return "supabase";
+  if (value === "dual" || value === "kova") return value;
+  throw new Error("Invalid VITE_KOVA_AUTH_MODE");
 }
 
 export function browserKovaAuthEnabled(): boolean {

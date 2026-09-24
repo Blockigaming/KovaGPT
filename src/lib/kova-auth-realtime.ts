@@ -48,7 +48,6 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let retryCount = 0;
-  let everAdmitted = false;
   let removeObserver = () => {};
   const lifetime = new AbortController();
   const current = () => active && isKovaSessionActive() && generation === kovaAuthGeneration();
@@ -113,11 +112,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       stop(true);
       return;
     }
-    if (everAdmitted) scheduleRetry();
-    else {
-      options.onStatus("CHANNEL_ERROR");
-      stop();
-    }
+    scheduleRetry();
   };
   const admitted = () => {
     if (!current()) {
@@ -125,8 +120,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       return false;
     }
     if (performance.now() >= deadline || Date.now() >= expiresAt) {
-      if (everAdmitted) scheduleRetry();
-      else stop();
+      scheduleRetry();
       return false;
     }
     return true;
@@ -256,8 +250,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         retryCount = 0;
         leaseTimer = setTimeout(
           () => {
-            if (everAdmitted) scheduleRetry();
-            else stop();
+            scheduleRetry();
           },
           Math.max(0, deadline - performance.now()),
         );
@@ -316,7 +309,6 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       channel.subscribe((status) => {
         if (admitted()) options.onStatus(status);
       });
-      everAdmitted = true;
       retryCount = 0;
     } catch (error) {
       handleFailure(error);

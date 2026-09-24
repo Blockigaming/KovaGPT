@@ -1221,6 +1221,20 @@ export async function handleKovaRecoveryReset(request: Request): Promise<Respons
 export async function handleKovaGoogleStart(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  const requestOrigin = new URL(request.url).origin;
+  if (requestOrigin !== publicOrigin() && requestOrigin !== authOrigin())
+    return jsonError("Not found", 404);
+  if (requestOrigin === publicOrigin() &&
+      (request.headers.get("sec-fetch-site") !== "same-origin" ||
+       (request.headers.has("origin") && request.headers.get("origin") !== requestOrigin)))
+    return jsonError("Cross-origin request rejected", 403);
+  if (requestOrigin === authOrigin() && requestOrigin !== publicOrigin() &&
+      !new URL(request.url).searchParams.has("init")) {
+    const target = new URL("/api/auth/google/start", publicOrigin());
+    target.searchParams.set("return_to", safeRelativeRedirect(
+      new URL(request.url).searchParams.get("return_to"), publicOrigin(), "/api/auth/google"));
+    return new Response(null, { status: 303, headers: { Location: target.toString(), "Cache-Control": "no-store" } });
+  }
   const limited = await rateLimit(request, "kova_auth_google_start", 20, 3600);
   if (limited) return limited;
   try {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 175,
-  "latest": "20260923132813_kova_owned_verification_resend_review.sql",
+  "count": 176,
+  "latest": "20260924010000_kova_owned_mfa_binding_and_global_signout.sql",
   "migrations": [
     {
       "order": 1,
@@ -3740,6 +3740,20 @@
       "tables": [],
       "functions": ["kova_auth_resend_verification", "kova_auth_create_password_account"],
       "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 176,
+      "filename": "20260924010000_kova_owned_mfa_binding_and_global_signout.sql",
+      "timestamp": "20260924010000",
+      "sha256": "4dfa1699b8c79b4cdf05830153c4162664ea49d03ffe40b7411f9f7cb57346b2",
+      "tables": [],
+      "functions": ["kova_auth_bind_mfa_login_factor", "kova_auth_revoke_other_sessions"],
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],
