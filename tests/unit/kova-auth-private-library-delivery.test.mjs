@@ -465,7 +465,9 @@ for (const options of [
 ]) {
   test(`image operations recheck the actual owned-session closure without hosted Auth: ${JSON.stringify(options)}`, async () => {
     const f = fixture(options);
-    const auth = await f.api.requireVerifiedUser(f.request());
+    const auth = await f.api.requireVerifiedUser(
+      f.request({ headers: { ...cookie, "X-Kova-Owner": owner } }),
+    );
     assert.equal(auth.authProvider, "kova");
     if (Object.keys(options).length)
       await assert.rejects(assertImagePrincipal(auth), /no longer available/u);
@@ -481,14 +483,18 @@ test("image operations cannot replace a live-session check with missing, boolean
     () => Promise.resolve(null),
   ]) {
     const f = fixture(),
-      auth = await f.api.requireVerifiedUser(f.request());
+      auth = await f.api.requireVerifiedUser(
+        f.request({ headers: { ...cookie, "X-Kova-Owner": owner } }),
+      );
     auth.revalidateSession = proof;
     await assert.rejects(assertImagePrincipal(auth), /no longer available/u);
   }
 });
 test("cancellation terminates an owned image recheck even if its backend ignores the signal", async () => {
   const f = fixture(),
-    auth = await f.api.requireVerifiedUser(f.request()),
+    auth = await f.api.requireVerifiedUser(
+      f.request({ headers: { ...cookie, "X-Kova-Owner": owner } }),
+    ),
     controller = new AbortController();
   auth.revalidateSession = () => new Promise(() => {});
   const pending = assertImagePrincipal(auth, controller.signal);
