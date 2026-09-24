@@ -8,7 +8,8 @@ export const PRIVATE_PROJECT_COLUMNS =
   "id,project_id,name,storage_path,mime_type,size_bytes,kind,status,content_sha256";
 export const PRIVATE_DELIVERABLE_COLUMNS =
   "id,owner_id,title,storage_reference,mime_type,status,revision,integrity_hash";
-export const PRIVATE_EXPORT_COLUMNS = "id,user_id,status,expires_at,size_bytes,storage_path";
+export const PRIVATE_EXPORT_COLUMNS =
+  "id,user_id,status,expires_at,size_bytes,storage_path,content_sha256";
 export const PRIVATE_EVIDENCE_COLUMNS = "id,job_id,event_type,payload";
 const invalid = () => {
   throw new Error("private_file_unavailable");
@@ -102,15 +103,27 @@ export function privateFileDescriptor(kind, owner, row, now = Date.now()) {
     if (!UUID.test(row.job_id ?? "")) invalid();
     const storagePath = path(row.payload?.storage_path);
     if (!storagePath.startsWith(`${owner}/`)) invalid();
+    const lower = storagePath.toLowerCase();
+    const evidenceType =
+      lower.endsWith(".png")
+        ? { name: `evidence-${row.id}.png`, mime: "image/png", image: true }
+        : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+          ? { name: `evidence-${row.id}.jpg`, mime: "image/jpeg", image: true }
+          : lower.endsWith(".json")
+            ? { name: `evidence-${row.id}.json`, mime: "application/json", image: false }
+            : lower.endsWith(".txt")
+              ? { name: `evidence-${row.id}.txt`, mime: "text/plain", image: false }
+              : null;
+    if (!evidenceType) invalid();
     descriptor = {
       bucket: "agent-evidence",
       path: storagePath,
-      name: `evidence-${row.id}`,
-      mime: null,
+      name: evidenceType.name,
+      mime: evidenceType.mime,
       size: null,
       sha256: null,
       maxBytes: 10 * 1024 * 1024,
-      image: true,
+      image: evidenceType.image,
       scope: row.job_id,
       revision: null,
       expiresAt: null,
@@ -119,6 +132,7 @@ export function privateFileDescriptor(kind, owner, row, now = Date.now()) {
     if (
       row.user_id !== owner ||
       row.status !== "complete" ||
+      !HASH.test(row.content_sha256 ?? "") ||
       typeof row.expires_at !== "string" ||
       !Number.isFinite(Date.parse(row.expires_at)) ||
       Date.parse(row.expires_at) <= now
@@ -140,7 +154,7 @@ export function privateFileDescriptor(kind, owner, row, now = Date.now()) {
       name: "kovagpt-account-export.json",
       mime: "application/json",
       size: size(row.size_bytes, 50 * 1024 * 1024),
-      sha256: null,
+      sha256: row.content_sha256,
       maxBytes: 50 * 1024 * 1024,
       image: false,
       scope: owner,
