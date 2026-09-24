@@ -28,6 +28,7 @@ env:
   IMAGE_REFERENCE: ${{ inputs.image_reference }}
   KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
   RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_RESOURCE_GROUP }}
+  CONTAINER_APP_NAME: ${{ vars.KOVA_PRODUCTION_CONTAINER_APP_NAME }}
 
 jobs:
   plan-only:
@@ -47,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ACR_NAME ACR_LOGIN_SERVER IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP; do
+          for name in ACR_NAME ACR_LOGIN_SERVER IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP CONTAINER_APP_NAME; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::Required protected production setting ${name} is missing."
               exit 1
@@ -71,6 +72,21 @@ jobs:
           fi
           if [[ ! "$RESOURCE_GROUP" =~ ^[-._()A-Za-z0-9]{1,90}$ ]]; then
             echo "::error::The production resource group name is invalid."
+            exit 1
+          fi
+          if [[ ! "$CONTAINER_APP_NAME" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ || "$CONTAINER_APP_NAME" == *--* ]]; then
+            echo "::error::The protected production Container App name is invalid."
+            exit 1
+          fi
+          azure_cli_version="$(az version --query '"azure-cli"' --output tsv)"
+          if [[ ! "$azure_cli_version" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
+            echo "::error::An identifiable Azure CLI version is required for read-only PLAN validation."
+            exit 1
+          fi
+          azure_cli_major="${BASH_REMATCH[1]}"
+          azure_cli_minor="${BASH_REMATCH[2]}"
+          if (( azure_cli_major < 2 || (azure_cli_major == 2 && azure_cli_minor < 76) )); then
+            echo "::error::Azure CLI 2.76.0 or later is required for ProviderNoRbac validation."
             exit 1
           fi
 
@@ -225,6 +241,26 @@ jobs:
           NODE
           echo "path=$parameters_path" >> "$GITHUB_OUTPUT"
 
+      - name: Verify the existing production Container App target
+        shell: bash
+        run: |
+          set -euo pipefail
+          observed_path="$RUNNER_TEMP/kova-production-app-target.json"
+          az resource show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-type Microsoft.App/containerApps \
+            --query '{id:id,name:name,type:type}' \
+            --only-show-errors \
+            --output json > "$observed_path"
+          subscription_id="$(az account show --query id --output tsv --only-show-errors)"
+          node scripts/azure/production-app-target.mjs \
+            "${{ steps.parameters.outputs.path }}" \
+            "$observed_path" \
+            "$CONTAINER_APP_NAME" \
+            "$RESOURCE_GROUP" \
+            "$subscription_id"
+
       - name: Compile and validate the production Bicep deployment
         shell: bash
         run: |
@@ -257,6 +293,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/azure/production/main.bicep \
             --parameters "@${{ steps.parameters.outputs.path }}" \
+            --validation-level ProviderNoRbac \
             --only-show-errors \
             --output none
 
@@ -269,6 +306,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/azure/production/main.bicep \
             --parameters "@${{ steps.parameters.outputs.path }}" \
+            --validation-level ProviderNoRbac \
             --no-pretty-print \
             --result-format ResourceIdOnly \
             --only-show-errors \
@@ -281,6 +319,7 @@ jobs:
           rm -f \
             "$RUNNER_TEMP/kova-production-plan.parameters.json" \
             "$RUNNER_TEMP/kova-production-plan.template.json" \
+            "$RUNNER_TEMP/kova-production-app-target.json" \
             "$RUNNER_TEMP/browser-config-provenance.json"
 
       - name: Record the non-deployment boundary
