@@ -152,13 +152,17 @@ before usage), and a **$0/month** new-project quote with no free-slot guarantee.
 The September 24 read-only organization lookup found `Blockigaming's Org`
 (`uwioudpaooagmhtdmokx`) on the Free plan, with no isolated branch. The
 current [Supabase pricing page](https://supabase.com/pricing) lists branching
-as unavailable on Free. A further read-only inventory found two active projects
-in that organization. The existing `KovaGPT Auth Rehearsal` project
+as unavailable on Free. [Supabase billing documentation](https://supabase.com/docs/guides/platform/billing-on-supabase)
+allows two active Free projects across organizations where the user is an
+owner or administrator. A further read-only inventory found both Free slots
+occupied by active projects in this organization. The existing `KovaGPT Auth Rehearsal` project
 (`oztdrjtdglkizlewnulh`) has 103 recorded migrations, 118 public relations,
 one Auth user and identity, and one Storage bucket. It is **not** the empty
-isolated restore target and must not be reset or overwritten. A new project
-slot and its actual cost must be confirmed, or another isolated PG17 target
-identified and quoted, before seeking paid-project or restore approval. The
+isolated restore target and must not be reset, paused or overwritten. A third
+Supabase project requires a separately approved paid plan or a different
+verified entitlement; the public Pro baseline is $25/month plus applicable
+usage, not an account quote or approval ceiling. Alternatively identify and
+quote another isolated PG17 target. The
 cost connector requires an explicit owner organization selection for a new
 quote; none was received in this continuation. Neither historical amount
 authorizes a clock-billed branch or a restore.
