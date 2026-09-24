@@ -1169,10 +1169,7 @@ export async function handleKovaMfaRecoveryRegenerate(request: Request): Promise
     }
     const expectedOwner = request.headers.get("x-kova-owner");
     const expectedSession = request.headers.get("x-kova-session");
-    if (
-      expectedOwner !== current.accountId ||
-      expectedSession !== current.sessionId
-    ) {
+    if (expectedOwner !== current.accountId || expectedSession !== current.sessionId) {
       return jsonError("Your account changed. Please try again.", 409);
     }
     const accountLimit = await rateLimit(
