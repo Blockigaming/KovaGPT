@@ -26,6 +26,8 @@ import {
 import type { KovaPrincipal } from "@/lib/kova-auth-crypto.server.mjs";
 import {
   exchangeGoogleHandoff,
+  activateLegacyMfaMigration,
+  beginLegacyMfaMigration,
   consumeOAuthState,
   consumeRecovery,
   consumeVerification,
@@ -45,8 +47,10 @@ import {
   finishMfaRecoveryLogin,
   KovaAuthStoreError,
   hasVerifiedLegacyMfa,
+  legacyMfaMigrationStatus,
   lookupPassword,
   listTotpFactors,
+  readLegacyMfaMigration,
   readMfaLoginChallenge,
   readTotpEnrollment,
   regenerateMfaRecoveryCodes,
@@ -59,6 +63,7 @@ import {
   rotateSession,
 } from "@/lib/kova-auth-store.server";
 import { isCrossSiteMutation, safeRelativeRedirect } from "@/lib/auth-security.mjs";
+import { requireUser, type HttpAuthedCaller } from "@/lib/api-auth.server";
 import { resolveAnonymousClientKey } from "@/lib/chat-ingress.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import {
@@ -690,6 +695,35 @@ export async function handleKovaToken(request: Request): Promise<Response> {
   }
 }
 
+async function requireLegacyMfaMigrationCaller(
+  request: Request,
+): Promise<HttpAuthedCaller | Response> {
+  let mode: ReturnType<typeof resolveKovaAuthMode>;
+  try {
+    mode = resolveKovaAuthMode();
+  } catch {
+    return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+  if (mode !== "dual") return jsonError("Not found", 404);
+  const caller = await requireUser(request);
+  if (caller instanceof Response) return caller;
+  if (
+    caller.authProvider !== "supabase" ||
+    !caller.emailVerified ||
+    caller.claims?.aal !== "aal2"
+  ) {
+    return jsonError("Complete your existing two-factor verification before migrating it.", 403);
+  }
+  try {
+    if (!(await hasVerifiedLegacyMfa(caller.userId))) {
+      return jsonError("No legacy two-factor migration is required.", 409);
+    }
+  } catch {
+    return jsonError("Security settings are temporarily unavailable.", 503);
+  }
+  return caller;
+}
+
 function requireSessionDigest(request: Request): string | Response {
   const credential = readKovaSessionToken(request);
   if (!credential?.ok) return jsonError("Invalid or expired session.", 401);
@@ -715,20 +749,87 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_enroll", 10, 900);
   if (limited) return limited;
-  const sessionDigest = requireSessionDigest(request);
-  if (sessionDigest instanceof Response) return sessionDigest;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const legacyMigration = body.legacyMigration === true;
+  const friendlyName =
+    typeof body.friendlyName === "string" && body.friendlyName.trim()
+      ? body.friendlyName.trim().slice(0, 120)
+      : "Authenticator app";
+
+  if (legacyMigration) {
+    if (
+      Object.keys(body).some(
+        (key) => !["legacyMigration", "friendlyName", "newPassword"].includes(key),
+      ) ||
+      (body.friendlyName !== undefined && typeof body.friendlyName !== "string") ||
+      (body.newPassword !== undefined && typeof body.newPassword !== "string")
+    ) {
+      return jsonError("Invalid migration request.", 400);
+    }
+    const caller = await requireLegacyMfaMigrationCaller(request);
+    if (caller instanceof Response) return caller;
+    try {
+      const status = await legacyMfaMigrationStatus(caller.userId);
+      if (!status.legacyMfa) return jsonError("No legacy two-factor migration is required.", 409);
+      let passwordHash: string | undefined;
+      if (!status.primaryReady) {
+        if (typeof body.newPassword !== "string" || !body.newPassword) {
+          return json(
+            {
+              code: "kova_password_required",
+              error:
+                "Choose a new KovaGPT password before moving this account's two-factor authentication.",
+            },
+            { status: 409 },
+          );
+        }
+        try {
+          passwordHash = await hashKovaPassword(body.newPassword);
+        } catch {
+          return jsonError("Choose a stronger valid password.", 400);
+        }
+      }
+      const accountLimit = await rateLimit(
+        request,
+        "kova_auth_legacy_mfa_migrate_account",
+        5,
+        900,
+        `account:${caller.userId}`,
+      );
+      if (accountLimit) return accountLimit;
+      const enrollment = generateKovaTotpEnrollment(status.email);
+      const created = await beginLegacyMfaMigration({
+        accountId: caller.userId,
+        secretEnvelope: encryptKovaSecret(enrollment.secret),
+        friendlyName,
+        passwordHash,
+      });
+      if (created.email !== status.email)
+        throw new KovaAuthStoreError("legacy_mfa_migration_account_mismatch");
+      return json({
+        legacyMigration: true,
+        factorId: created.factorId,
+        secret: enrollment.secret,
+        uri: enrollment.uri,
+        expiresAt: created.expiresAt,
+      });
+    } catch (error) {
+      console.error("[KovaAuth] Legacy MFA migration start failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return jsonError("Two-factor migration could not start.", 503);
+    }
+  }
+
   if (
     Object.keys(body).some((key) => !["friendlyName", "currentPassword"].includes(key)) ||
     (body.friendlyName !== undefined && typeof body.friendlyName !== "string") ||
     (body.currentPassword !== undefined && typeof body.currentPassword !== "string")
   )
     return jsonError("Invalid enrollment request.", 400);
-  const friendlyName =
-    typeof body.friendlyName === "string" && body.friendlyName.trim()
-      ? body.friendlyName.trim().slice(0, 120)
-      : "Authenticator app";
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
   try {
     const principal = await resolveSession(sessionDigest);
     if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
@@ -791,19 +892,69 @@ export async function handleKovaMfaVerify(request: Request): Promise<Response> {
   if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_verify", 10, 900);
   if (limited) return limited;
-  const sessionDigest = requireSessionDigest(request);
-  if (sessionDigest instanceof Response) return sessionDigest;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
   const factorId = typeof body.factorId === "string" ? body.factorId : "";
   const code = typeof body.code === "string" ? body.code : "";
+  const legacyMigration = body.legacyMigration === true;
   if (
     !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(factorId) ||
     !/^\d{6}$/u.test(code) ||
-    Object.keys(body).length !== 2
+    Object.keys(body).length !== (legacyMigration ? 3 : 2) ||
+    (legacyMigration && !Object.hasOwn(body, "legacyMigration"))
   ) {
     return jsonError("Invalid verification request.", 400);
   }
+
+  if (legacyMigration) {
+    const caller = await requireLegacyMfaMigrationCaller(request);
+    if (caller instanceof Response) return caller;
+    try {
+      const accountLimit = await rateLimit(
+        request,
+        "kova_auth_legacy_mfa_verify_account",
+        10,
+        900,
+        `account:${caller.userId}`,
+      );
+      if (accountLimit) return accountLimit;
+      const envelope = await readLegacyMfaMigration({
+        accountId: caller.userId,
+        factorId,
+      });
+      if (!verifyKovaTotp(code, decryptKovaSecret(envelope))) {
+        return jsonError("That code was not accepted.", 401);
+      }
+      const recoveryCodes = Array.from({ length: 8 }, () => generateKovaToken());
+      const nextToken = generateKovaToken();
+      const principal = await activateLegacyMfaMigration({
+        accountId: caller.userId,
+        factorId,
+        recoveryDigests: recoveryCodes.map(digestKovaToken),
+        sessionDigest: digestKovaToken(nextToken),
+        sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
+      });
+      if (principal.accountId !== caller.userId) {
+        throw new KovaAuthStoreError("legacy_mfa_activation_account_mismatch");
+      }
+      return json(
+        {
+          migrated: true,
+          recoveryCodes,
+          session: publicPrincipal(principal),
+        },
+        { headers: sessionResponse(principal, nextToken).headers },
+      );
+    } catch (error) {
+      console.error("[KovaAuth] Legacy MFA migration verification failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return jsonError("Two-factor migration could not be completed.", 401);
+    }
+  }
+
+  const sessionDigest = requireSessionDigest(request);
+  if (sessionDigest instanceof Response) return sessionDigest;
   try {
     const current = await resolveSession(sessionDigest);
     if (!current?.emailVerified) return jsonError("Invalid or expired session.", 401);
