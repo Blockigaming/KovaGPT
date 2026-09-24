@@ -132,7 +132,10 @@ export async function handlePrivateLibraryImage(request: Request): Promise<Respo
       origin = request.headers.get("origin");
     if ((site && !["same-origin", "none"].includes(site)) || (origin && origin !== url.origin))
       return unavailable(403);
-    const auth = await bounded(requireVerifiedUser(request));
+    const authHeaders = new Headers(request.headers);
+    authHeaders.set("X-Kova-Owner", owner);
+    const authRequest = new Request(request, { headers: authHeaders });
+    const auth = await bounded(requireVerifiedUser(authRequest));
     if (auth instanceof Response) return auth;
     if (
       auth.authProvider !== "kova" ||
@@ -218,7 +221,7 @@ export async function handlePrivateLibraryImage(request: Request): Promise<Respo
       if (digest !== row.sha256) return unavailable(502);
     }
     if (fingerprint(await read()) !== fingerprint(row)) return unavailable();
-    const rejected = await reauthorizeLibraryDelivery(request, auth, deadline.signal);
+    const rejected = await reauthorizeLibraryDelivery(authRequest, auth, deadline.signal);
     if (rejected) return rejected;
     deadline.signal.throwIfAborted();
     return new Response(bytes as BodyInit, {
