@@ -46,18 +46,22 @@ test("hosted MFA migrates to a fresh owned factor before hosted authority is ret
     assert.equal(status.legacy_mfa, true);
 
     const started = (
-      await db.query(
-        "select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)",
-        [owner, envelope, "Migrated authenticator", null, now],
-      )
+      await db.query("select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)", [
+        owner,
+        envelope,
+        "Migrated authenticator",
+        null,
+        now,
+      ])
     ).rows[0];
     assert.equal(started.email, `${owner}@example.invalid`);
 
     const secret = (
-      await db.query(
-        "select * from public.kova_auth_read_legacy_mfa_migration($1,$2,$3)",
-        [owner, started.factor_id, now],
-      )
+      await db.query("select * from public.kova_auth_read_legacy_mfa_migration($1,$2,$3)", [
+        owner,
+        started.factor_id,
+        now,
+      ])
     ).rows[0];
     assert.equal(secret.secret_envelope, envelope);
 
@@ -78,8 +82,8 @@ test("hosted MFA migrates to a fresh owned factor before hosted authority is ret
     assert.equal(migrated.assurance_level, "aal2");
     assert.equal(await gapCount(db), 0);
     assert.equal(
-      (await db.query("select count(*)::int n from auth.sessions where user_id=$1", [owner])).rows[0]
-        .n,
+      (await db.query("select count(*)::int n from auth.sessions where user_id=$1", [owner]))
+        .rows[0].n,
       0,
     );
     assert.equal(
@@ -102,10 +106,9 @@ test("hosted MFA migrates to a fresh owned factor before hosted authority is ret
     );
     assert.equal(
       (
-        await db.query(
-          "select state from kova_private.auth_mfa_factors where id=$1",
-          [started.factor_id],
-        )
+        await db.query("select state from kova_private.auth_mfa_factors where id=$1", [
+          started.factor_id,
+        ])
       ).rows[0].state,
       "active",
     );
@@ -149,18 +152,24 @@ test("legacy password-only MFA stages a new Kova password until the fresh factor
     ).rows[0];
     assert.equal(status.primary_ready, false);
     await assert.rejects(
-      db.query(
-        "select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)",
-        [owner, envelope, "Migrated authenticator", null, now],
-      ),
+      db.query("select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)", [
+        owner,
+        envelope,
+        "Migrated authenticator",
+        null,
+        now,
+      ]),
       /kova_auth_primary_migration_required/u,
     );
 
     const started = (
-      await db.query(
-        "select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)",
-        [owner, envelope, "Migrated authenticator", stagedHash, now],
-      )
+      await db.query("select * from public.kova_auth_begin_legacy_mfa_migration($1,$2,$3,$4,$5)", [
+        owner,
+        envelope,
+        "Migrated authenticator",
+        stagedHash,
+        now,
+      ])
     ).rows[0];
     await db.query("select * from public.kova_auth_read_legacy_mfa_migration($1,$2,$3)", [
       owner,
