@@ -30,6 +30,20 @@ it does not promote the mapping.
   No application rows, messages, customer identifiers, raw routine bodies, or
   secrets were returned; the capture includes migration ledger versions.
 
+**Historical evidence limit:** the repository does not retain the capture bytes
+matching that September 23 digest. That historical result cannot be reproduced
+or independently audited from this repository, and is not accepted proof.
+A new metadata-only capture and comparison are checked in at
+[`evidence/temp-export-live-capture-20260924.json`](./evidence/temp-export-live-capture-20260924.json)
+and [`evidence/temp-export-live-comparison-20260924.json`](./evidence/temp-export-live-comparison-20260924.json).
+The new read-only capture is dated `2026-09-24T01:46:18.014Z`, has SHA-256
+`a26459dc6426d6c4dc3c56a65d055112aa90241fcba6de981e03c556b9767e22`,
+and contains 98 ledger versions and zero scoped routine/dependency/reference
+counts. Its selected project and SQL execution were observed in the read-only
+collection call; the bare JSON does not cryptographically attest that origin or
+the executed SQL. The comparator now labels its query hash as the **rehearsal**
+query and reports `liveQueryIdentityVerified: false`.
+
 The live capture matches both isolated checkpoints within the collector's
 scope: the exact `public._kova_temp_export_day15(text)` signature is absent;
 the case-insensitive routine family, inbound dependencies, and literal stored
@@ -41,21 +55,24 @@ shape, data backfill, constraints, policies, dependencies, or later writers.
 ## Reproduce
 
 Download the hosted ZIP, verify its byte digest, and extract
-`upgrade-database.json` and `upgrade-temp-export-proof.json`. Run the exported
-`TEMP_EXPORT_CATALOG_SQL` from
-`scripts/release/upgrade-database-temp-export-proof.mjs` through the verified
-read-only connection and save its single `capture` object as JSON. Then run:
+`upgrade-database.json` and `upgrade-temp-export-proof.json`. Verify their
+receipt hashes. The new September 24 capture is retained at the path above;
+re-run the exported `TEMP_EXPORT_CATALOG_SQL` from
+`scripts/release/upgrade-database-temp-export-proof.mjs` through a verified
+read-only connection to refresh that file only when new evidence is intended.
+To replay the saved comparison, run:
 
 ```bash
 node scripts/release/compare-live-temp-export-catalog.mjs \
   upgrade-database.json \
   upgrade-temp-export-proof.json \
-  live-temp-export.json
+  docs/release-reconciliation/evidence/temp-export-live-capture-20260924.json
 ```
 
-The comparator rejects mismatched receipt/artifact bytes, collector hashes,
+The comparator rejects mismatched receipt/artifact bytes, rehearsal collector hashes,
 source commit, ledger, chronology, catalog shapes, or recomputed isolated
-fingerprints. Its `scopedCatalogMatch: true` is only an absence finding.
+fingerprints. It does not verify the SQL identity of the live capture. Its
+`scopedCatalogMatch: true` is only an absence finding.
 `schemaProofPromoted`, `canonicalHistoryReconciled`, and
 `productionReleaseReady` remain false. Complete schema evidence, a reviewed
 dependency and later-writer scope, data compatibility, an actual backup

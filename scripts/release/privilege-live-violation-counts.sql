@@ -8,7 +8,7 @@ begin isolation level repeatable read read only;
 
 with
 public_relations as (
-  select c.oid, c.relname, c.relrowsecurity
+  select c.oid, c.relname, c.relkind, c.relrowsecurity
   from pg_catalog.pg_class c
   join pg_catalog.pg_namespace n on n.oid = c.relnamespace
   -- GRANT/REVOKE ON ALL TABLES IN SCHEMA also covers views, materialized
@@ -74,7 +74,8 @@ server_tables as (
           )
         )
     ) client_column_grant
-  from server_names n left join public_relations t on t.relname = n.name
+  from server_names n left join public_relations t
+    on t.relname = n.name and t.relkind in ('r', 'p')
 ),
 connector_names as (
   select key name, value operations from jsonb_each(
@@ -100,7 +101,8 @@ connector_tables as (
           )
         )
     ) client_column_grant
-  from connector_names n left join public_relations t on t.relname = n.name
+  from connector_names n left join public_relations t
+    on t.relname = n.name and t.relkind in ('r', 'p')
 ),
 trigger_names as (
   select unnest(array[

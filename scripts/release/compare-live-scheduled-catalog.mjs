@@ -36,7 +36,49 @@ function readJson(path) {
   }
 }
 
-function checkedArtifact(receipt, key, path, expectedName, expectedQuery, expectedKind) {
+export function validateScheduledRehearsal(receipt, data, build, matchKey) {
+  const replay = receipt.replayPendingVersions;
+  const baseline = data.baseline.capture;
+  const upgraded = data.upgraded.capture;
+  const finalVersions = Array.isArray(replay)
+    ? [...new Set([...baseline.ledgerVersions, ...replay])].sort()
+    : [];
+  if (
+    !Array.isArray(replay) ||
+    replay.length === 0 ||
+    finalVersions.length !== baseline.ledgerVersions.length + replay.length ||
+    JSON.stringify(finalVersions) !== JSON.stringify(upgraded.ledgerVersions) ||
+    Date.parse(upgraded.capturedAt) < Date.parse(baseline.capturedAt)
+  )
+    fail("artifact_checkpoint_mismatch");
+  const rebuilt = build({
+    baseline,
+    upgraded,
+    baselineVersions: baseline.ledgerVersions,
+    finalVersions,
+    sourceCommit: data.sourceCommit,
+    sourceTree: data.sourceTree,
+  });
+  if (
+    JSON.stringify(rebuilt.baseline.fingerprint) !== JSON.stringify(data.baseline.fingerprint) ||
+    JSON.stringify(rebuilt.upgraded.fingerprint) !== JSON.stringify(data.upgraded.fingerprint) ||
+    JSON.stringify(rebuilt.changes) !== JSON.stringify(data.changes) ||
+    rebuilt[matchKey] !== data[matchKey] ||
+    rebuilt.querySha256 !== data.querySha256
+  )
+    fail("artifact_fingerprint_mismatch");
+}
+
+function checkedArtifact(
+  receipt,
+  key,
+  path,
+  expectedName,
+  expectedQuery,
+  expectedKind,
+  build,
+  matchKey,
+) {
   const pointer = receipt[key];
   if (
     !pointer ||
@@ -58,13 +100,14 @@ function checkedArtifact(receipt, key, path, expectedName, expectedQuery, expect
     data.baseline?.capture?.ledgerVersionCount !== receipt.baselineVersions
   )
     fail("artifact_invalid");
+  validateScheduledRehearsal(receipt, data, build, matchKey);
   return { data, sha256: digest(bytes) };
 }
 
-// The catalog collectors validate and deterministically order every grant and
-// effective privilege before these are passed here. Keep explicit grants
-// separate from effective access: PUBLIC grants and role inheritance can make
-// the two inventories differ without changing a function definition or RLS.
+// The collectors order ACL entries and effective privileges. A routine with
+// NULL proacl reports PostgreSQL's synthesized defaults in its acl array, so
+// these entries cannot be called explicit grants without the raw ACL state.
+// Keep reported entries separate from effective access and label their origin.
 export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
   if (!["tables", "routines"].includes(kind)) fail("grant_scope_invalid");
   const before = beforeCapture[kind];
@@ -85,7 +128,9 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
   const singleScope = (row, scopeKind) => ({
     identity: identity(row),
     kind: scopeKind,
-    explicitGrants: Object.fromEntries(
+    aclEntryOrigin: kind === "routines" ? "stored_or_synthesized_default" : "see_aclIsNull",
+    ...(kind === "tables" ? { aclIsNull: row.aclIsNull } : {}),
+    aclEntryDeltas: Object.fromEntries(
       grantProperties.map((property) => [
         property,
         {
@@ -108,7 +153,7 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
     ...live.flatMap((row) => {
       const original = byIdentity.get(identity(row));
       if (!original) return [singleScope(row, "added_scope")];
-      const explicitGrants = Object.fromEntries(
+      const aclEntryDeltas = Object.fromEntries(
         grantProperties.map((property) => {
           const old = new Set(original[property].map(identityKey));
           const newer = new Set(row[property].map(identityKey));
@@ -136,7 +181,7 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
         original.aclIsNull === row.aclIsNull &&
         !columnAclStorageChanged &&
         !effectiveChanges.length &&
-        Object.values(explicitGrants).every(
+        Object.values(aclEntryDeltas).every(
           (delta) => !delta.sourceOnly.length && !delta.liveOnly.length,
         )
       )
@@ -151,7 +196,8 @@ export function scheduledGrantDeltas(beforeCapture, liveCapture, kind) {
                 columnEffectiveAccess: "not_captured",
               }
             : {}),
-          explicitGrants,
+          aclEntryOrigin: kind === "routines" ? "stored_or_synthesized_default" : "see_aclIsNull",
+          aclEntryDeltas,
           effectiveChanges,
         },
       ];
@@ -196,7 +242,8 @@ function compareOne(artifact, live, build, key) {
   )
     fail("live_ledger_mismatch");
   return {
-    querySha256: artifact.data.querySha256,
+    rehearsalQuerySha256: artifact.data.querySha256,
+    liveQueryIdentityVerified: false,
     artifactSha256: artifact.sha256,
     liveCaptureSha256: live.sha256,
     capturedAt: live.data.capturedAt,
@@ -247,6 +294,8 @@ export function compareLiveScheduledCatalog({
     SCHEDULED_TABLE_FILE,
     SCHEDULED_TABLE_QUERY_SHA256,
     "scheduled-table-checkpoints",
+    buildScheduledTableEvidence,
+    "tableCatalogMatch",
   );
   const routine = checkedArtifact(
     receipt,
@@ -255,6 +304,8 @@ export function compareLiveScheduledCatalog({
     SCHEDULED_CATALOG_FILE,
     SCHEDULED_CATALOG_QUERY_SHA256,
     "scheduled-execution-routine-checkpoints",
+    buildScheduledCatalogEvidence,
+    "routineCatalogMatch",
   );
   if (
     table.data.sourceTree !== routine.data.sourceTree ||

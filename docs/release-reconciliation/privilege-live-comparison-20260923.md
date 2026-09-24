@@ -8,9 +8,13 @@ output is bounded catalog metadata and aggregate violation counts.
 
 The reproducible queries are
 [`scripts/release/privilege-live-violation-counts.sql`](../../scripts/release/privilege-live-violation-counts.sql)
-(SHA-256 `9bed2bdf36bdff8db229a890455a1e8d00a67536b4198c0bbb87cefb42b2c561`)
+(current source SHA-256 `aa4471fa29191ea6f6a43536f2888529ae9927a04af276928ab942a3a2f965a8`)
 and [`scripts/release/rls-helper-live-aggregate.sql`](../../scripts/release/rls-helper-live-aggregate.sql)
 (SHA-256 `8ed14a40925b85e24ef52a524da42e48237f2bb06084c677d00125bcdec1a16c`).
+The original September 23 privilege capture used its then-current query SHA-256
+`9bed2bdf36bdff8db229a890455a1e8d00a67536b4198c0bbb87cefb42b2c561`;
+the reviewed source query was hardened afterward. Do not attribute the
+September 23 result to its later bytes.
 These are **independent catalog snapshots**. The revised privilege query ran in
 its own read-only transaction at 21:56 UTC; the helper/policy query ran at 21:27
 UTC. Both observed a 98-version ledger, which does not prove the catalog stayed
@@ -63,3 +67,9 @@ object-by-object comparison including dependencies, later writers and grant
 options; synthetic two-user/RLS behavior; backup/restore verification; and
 independent review under the proof-v2 contract. Do not repair remote history,
 apply P to production, or promote any mapping from these counts alone.
+
+The subsequent [September 24 single-checkpoint observation](privilege-single-checkpoint-20260924.md)
+binds the hardened privilege and helper aggregates to one live read-only
+transaction and an ordered 98-version statement-digest ledger. It confirms
+the listed material policy, routine and default-grant differences. It still
+does not supply a normalized isolated-source comparison or promote a proof.

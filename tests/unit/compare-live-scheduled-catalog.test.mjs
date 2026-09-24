@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { scheduledGrantDeltas } from "../../scripts/release/compare-live-scheduled-catalog.mjs";
+import {
+  scheduledGrantDeltas,
+  validateScheduledRehearsal,
+} from "../../scripts/release/compare-live-scheduled-catalog.mjs";
 
 const roles = ["anon", "authenticated", "service_role"];
 const grant = (grantee, privilege) => ({
@@ -42,7 +45,7 @@ test("table drift retains explicit and effective grants as separate evidence", (
   live.effectivePrivileges[0].privileges.push("SELECT");
   const [delta] = scheduledGrantDeltas({ tables: [original] }, { tables: [live] }, "tables");
   assert.equal(delta.identity, "public.scheduled_tasks");
-  assert.deepEqual(delta.explicitGrants.acl, {
+  assert.deepEqual(delta.aclEntryDeltas.acl, {
     sourceOnly: [],
     liveOnly: [grant("anon", "SELECT")],
   });
@@ -62,7 +65,7 @@ test("routine drift does not misreport an explicit grant as new effective access
   const live = structuredClone(original);
   live.acl.splice(1, 0, grant("anon", "EXECUTE"));
   const [delta] = scheduledGrantDeltas({ routines: [original] }, { routines: [live] }, "routines");
-  assert.deepEqual(delta.explicitGrants.acl, {
+  assert.deepEqual(delta.aclEntryDeltas.acl, {
     sourceOnly: [],
     liveOnly: [grant("anon", "EXECUTE")],
   });
@@ -76,8 +79,8 @@ test("deleted grants, column grants and ACL storage changes stay visible", () =>
   live.columnAcl = [{ column: "id", ...grant("authenticated", "SELECT") }];
   live.columns[0].aclIsNull = false;
   const [delta] = scheduledGrantDeltas({ tables: [original] }, { tables: [live] }, "tables");
-  assert.deepEqual(delta.explicitGrants.acl.sourceOnly, [grant("postgres", "SELECT")]);
-  assert.deepEqual(delta.explicitGrants.columnAcl.liveOnly, [
+  assert.deepEqual(delta.aclEntryDeltas.acl.sourceOnly, [grant("postgres", "SELECT")]);
+  assert.deepEqual(delta.aclEntryDeltas.columnAcl.liveOnly, [
     { column: "id", ...grant("authenticated", "SELECT") },
   ]);
   assert.equal(delta.columnAclStorageChanged, true);
@@ -100,7 +103,9 @@ test("new routine scope exposes its grants and effective access", () => {
   added.acl.unshift(grant("anon", "EXECUTE"));
   const [delta] = scheduledGrantDeltas({ routines: [] }, { routines: [added] }, "routines");
   assert.equal(delta.kind, "added_scope");
-  assert.deepEqual(delta.explicitGrants.acl.liveOnly, added.acl);
+  assert.deepEqual(delta.aclEntryDeltas.acl.liveOnly, added.acl);
+  assert.equal(delta.aclEntryOrigin, "stored_or_synthesized_default");
+  assert.equal(Object.hasOwn(delta, "explicitGrants"), false);
   assert.deepEqual(delta.effectiveChanges[0], {
     role: "anon",
     source: null,
@@ -124,11 +129,79 @@ test("identical snapshots have no drift; removed scopes retain grants", () => {
     JSON.stringify([original.schema, original.name, original.identityArguments]),
   );
   assert.equal(removed.kind, "removed_scope");
-  assert.deepEqual(removed.explicitGrants.acl.sourceOnly, original.acl);
+  assert.deepEqual(removed.aclEntryDeltas.acl.sourceOnly, original.acl);
+  assert.equal(removed.aclEntryOrigin, "stored_or_synthesized_default");
   assert.deepEqual(removed.effectiveChanges[0], {
     role: "anon",
     source: original.effectivePrivileges[0],
     live: null,
   });
   assert.throws(() => scheduledGrantDeltas({}, {}, "unknown"), /grant_scope_invalid/u);
+});
+
+test("new and removed routines never label synthesized NULL-proacl defaults as explicit", () => {
+  const defaultAclRoutine = routine();
+  // The collector expands coalesce(proacl, acldefault(...)); a NULL proacl
+  // produces these owner and PUBLIC entries with no explicit ACL storage.
+  for (const [source, live] of [
+    [{ routines: [] }, { routines: [defaultAclRoutine] }],
+    [{ routines: [defaultAclRoutine] }, { routines: [] }],
+  ]) {
+    const [delta] = scheduledGrantDeltas(source, live, "routines");
+    assert.equal(delta.aclEntryOrigin, "stored_or_synthesized_default");
+    assert.equal(Object.hasOwn(delta, "explicitGrants"), false);
+    assert.deepEqual(
+      delta.aclEntryDeltas.acl[delta.kind === "added_scope" ? "liveOnly" : "sourceOnly"],
+      defaultAclRoutine.acl,
+    );
+  }
+});
+
+test("scheduled source-final evidence rejects partial replay, reversed checkpoints and stale summaries", () => {
+  const baseline = { capturedAt: "2026-09-23T10:00:00.000Z", ledgerVersions: ["20260823092107"] };
+  const upgraded = {
+    capturedAt: "2026-09-23T10:01:00.000Z",
+    ledgerVersions: ["20260823092107", "20260823092450"],
+  };
+  const data = {
+    sourceCommit: "a".repeat(40),
+    sourceTree: "b".repeat(40),
+    querySha256: "c".repeat(64),
+    baseline: { capture: baseline, fingerprint: "before" },
+    upgraded: { capture: upgraded, fingerprint: "after" },
+    changes: [{ table: "public.scheduled_tasks", fields: ["acl"] }],
+    tableCatalogMatch: false,
+  };
+  const receipt = { replayPendingVersions: ["20260823092450"] };
+  const rebuild = () => ({
+    baseline: { fingerprint: "before" },
+    upgraded: { fingerprint: "after" },
+    changes: [{ table: "public.scheduled_tasks", fields: ["acl"] }],
+    tableCatalogMatch: false,
+    querySha256: data.querySha256,
+  });
+  assert.doesNotThrow(() =>
+    validateScheduledRehearsal(receipt, data, rebuild, "tableCatalogMatch"),
+  );
+  for (const replayPendingVersions of [[], ["20260823092450", "20260901000000"]])
+    assert.throws(
+      () =>
+        validateScheduledRehearsal({ replayPendingVersions }, data, rebuild, "tableCatalogMatch"),
+      /artifact_checkpoint_mismatch/u,
+    );
+  const reversed = structuredClone(data);
+  reversed.upgraded.capture.capturedAt = "2026-09-23T09:59:00.000Z";
+  assert.throws(
+    () => validateScheduledRehearsal(receipt, reversed, rebuild, "tableCatalogMatch"),
+    /artifact_checkpoint_mismatch/u,
+  );
+  for (const tampered of [
+    { ...data, changes: [] },
+    { ...data, tableCatalogMatch: true },
+    { ...data, upgraded: { ...data.upgraded, fingerprint: "forged" } },
+  ])
+    assert.throws(
+      () => validateScheduledRehearsal(receipt, tampered, rebuild, "tableCatalogMatch"),
+      /artifact_fingerprint_mismatch/u,
+    );
 });

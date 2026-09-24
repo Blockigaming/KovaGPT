@@ -1,0 +1,634 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "single-checkpoint-live-privilege-catalog-and-ledger",
+  "projectRef": "mfbycmbjygcfkrsuepxf",
+  "collectorSourceCommit": "5977becee97477a8266a317e55f598ccd1c72d7b",
+  "collectorSourceTree": "c29c21ca9d14722898f1359926cc0ff0f9425da9",
+  "querySha256": "800ef2c8b1552c4872a17bff246c6dfa5d9be22b7c41d02ee27c8a874fd7b472",
+  "queryProvenanceBasis": "operator-asserted reconstructed SQL; no independently signed connector request receipt",
+  "liveQueryIdentityVerified": false,
+  "liveProjectIdentityVerified": false,
+  "privilegeCollectorSha256": "aa4471fa29191ea6f6a43536f2888529ae9927a04af276928ab942a3a2f965a8",
+  "helperCollectorSha256": "8ed14a40925b85e24ef52a524da42e48237f2bb06084c677d00125bcdec1a16c",
+  "customerRowsReturned": false,
+  "migrationStatementTextReturned": false,
+  "proofV2Accepted": false,
+  "evidence": {
+    "ledger": {
+      "rows": [
+        {
+          "version": "20260622225346",
+          "statementCount": 5,
+          "capturedStatementsSha256": "08652001e2871b6a09f9a637a497c3dab7fb4fce0170b56b4d1362523f66ba99"
+        },
+        {
+          "version": "20260623005558",
+          "statementCount": 8,
+          "capturedStatementsSha256": "8a0663aa5d397910742ddfbe6e9fb6dae2765bf13dc9cefb03aea76f2bbab3e4"
+        },
+        {
+          "version": "20260623005610",
+          "statementCount": 2,
+          "capturedStatementsSha256": "2ca9bac1196c2d2dc32a53a9a7e1946797387678acf7f6e589426e142ad6abc4"
+        },
+        {
+          "version": "20260623145549",
+          "statementCount": 1,
+          "capturedStatementsSha256": "4bdb2fc654fc35919a3ec69daaba01b5cf26895bfaddcce738a71532669fd4f2"
+        },
+        {
+          "version": "20260623154814",
+          "statementCount": 4,
+          "capturedStatementsSha256": "da2d03c3ceb85ec014b5c731d035eda8a473784c1126235a17c591753845203f"
+        },
+        {
+          "version": "20260623154832",
+          "statementCount": 1,
+          "capturedStatementsSha256": "b2159901c144afc3a7cccd051d86a0f1a4d25a2b22c481ab7b6b6a8152366902"
+        },
+        {
+          "version": "20260623155803",
+          "statementCount": 1,
+          "capturedStatementsSha256": "e1fb8fc9c18e8d923d8f4e9f3d50bcb39ed07cef60049f62e900cc0df4b5a67c"
+        },
+        {
+          "version": "20260623161227",
+          "statementCount": 9,
+          "capturedStatementsSha256": "3ba8986f1774f423c6e3fa63cf69d1f8462633d2fd0b4ff2728667fca8d3cde4"
+        },
+        {
+          "version": "20260623161519",
+          "statementCount": 4,
+          "capturedStatementsSha256": "a752de8a149b6497bef5544c36f79278f628b9612ef2b3c09e6892a6c9b6f27c"
+        },
+        {
+          "version": "20260623194741",
+          "statementCount": 55,
+          "capturedStatementsSha256": "ee8bd0752685ac8550161a1f5f7157a191b5994c3989f257b4f27f24c0506cb3"
+        },
+        {
+          "version": "20260623195646",
+          "statementCount": 55,
+          "capturedStatementsSha256": "ee8bd0752685ac8550161a1f5f7157a191b5994c3989f257b4f27f24c0506cb3"
+        },
+        {
+          "version": "20260623201628",
+          "statementCount": 12,
+          "capturedStatementsSha256": "8f6eca2f389e794b10ada0a8b07c8b699f24202389c0d262eb84474b1cee7d60"
+        },
+        {
+          "version": "20260624124535",
+          "statementCount": 9,
+          "capturedStatementsSha256": "15237c479365379f0b8418ab9ddfd565a1f59b0d49949446558382c15a3557d4"
+        },
+        {
+          "version": "20260624124557",
+          "statementCount": 4,
+          "capturedStatementsSha256": "8ce0410e61b4bb587c21ab151703dc61573677bbb8a2213f76eca0c61eb37e40"
+        },
+        {
+          "version": "20260624230040",
+          "statementCount": 9,
+          "capturedStatementsSha256": "0773633f26ed8db7ca9af105194970678fcb0e74706624b60523794ba49c4d34"
+        },
+        {
+          "version": "20260625132920",
+          "statementCount": 36,
+          "capturedStatementsSha256": "1f82d46cf14b3af9ffe98605d633c9bb06f4c884d7224032057b44df43001e7b"
+        },
+        {
+          "version": "20260625135417",
+          "statementCount": 3,
+          "capturedStatementsSha256": "e3d4f64a84e67232a4c9b07cd202b1691019e1c209cd5f3134621432dc6147c5"
+        },
+        {
+          "version": "20260627004905",
+          "statementCount": 2,
+          "capturedStatementsSha256": "fef40495705f02a9f33fb02b2bf4977b53a5073e5b61e77bc7083e13db2cf1b6"
+        },
+        {
+          "version": "20260627210732",
+          "statementCount": 7,
+          "capturedStatementsSha256": "5a86339c4425241e4265d2814117b4fb2c1975f03538247e7bd3ccae5b768239"
+        },
+        {
+          "version": "20260702142256",
+          "statementCount": 1,
+          "capturedStatementsSha256": "3aeaa02ae747b01c3ee03340733c5a8dec024faff0973451aa03bf3df9cba12e"
+        },
+        {
+          "version": "20260702161114",
+          "statementCount": 1,
+          "capturedStatementsSha256": "8bd9fe3c5a8e8c671d9371de4841b56ab50f39f099898a52e96eafb09668ade7"
+        },
+        {
+          "version": "20260702163905",
+          "statementCount": 32,
+          "capturedStatementsSha256": "af191e69b113fe19aca9ce597f14c685aa2049de1c856978eaf5d4e1d9d07619"
+        },
+        {
+          "version": "20260702163922",
+          "statementCount": 4,
+          "capturedStatementsSha256": "e243bf918efebf452618cf349e1c32f8084b08a93ddf26327a306a3a8ecfd5b2"
+        },
+        {
+          "version": "20260704033129",
+          "statementCount": 16,
+          "capturedStatementsSha256": "31acf84db6496e27fe6b3c0b6d2747c3855d8685cb939f6e391e01120c57fc65"
+        },
+        {
+          "version": "20260707004617",
+          "statementCount": 3,
+          "capturedStatementsSha256": "53396a256b76eecf1abe78787fb5157986bd5f265564d942ee4bdb611e2b109b"
+        },
+        {
+          "version": "20260707005030",
+          "statementCount": 5,
+          "capturedStatementsSha256": "e9da02c9d7d0a96a559d0948d8bcd231e82d0d9a9535d0332228de723422a316"
+        },
+        {
+          "version": "20260712011732",
+          "statementCount": 45,
+          "capturedStatementsSha256": "2141333dbabbe2847a3fc1d20b97f25acfabe6fec5b611675450c21a0d943533"
+        },
+        {
+          "version": "20260712013949",
+          "statementCount": 10,
+          "capturedStatementsSha256": "4f769beacf357f6792e28addb92aa636ce3331edc78bab2e6d55e1e31ad453c2"
+        },
+        {
+          "version": "20260713010018",
+          "statementCount": 44,
+          "capturedStatementsSha256": "b0e342ae3dce5fabb007e00ff3696e102b7297a1e2a392f85f9f923fa2a5ce57"
+        },
+        {
+          "version": "20260718151609",
+          "statementCount": 4,
+          "capturedStatementsSha256": "69c9ae310dafdcdf815e426f9396a35ff9979d133267ae70a28da04efb2cefed"
+        },
+        {
+          "version": "20260718152250",
+          "statementCount": 12,
+          "capturedStatementsSha256": "8ec90a92292c8b76a9469e7d6277991a879119066c8677b0d8a21567a00b6f3c"
+        },
+        {
+          "version": "20260718154259",
+          "statementCount": 4,
+          "capturedStatementsSha256": "eb8b8ac67214c60e22644e85ff3f22c1558cfdd07d1a572d69da4e15e8048f5f"
+        },
+        {
+          "version": "20260721211500",
+          "statementCount": 20,
+          "capturedStatementsSha256": "edb2b325b062c1be803c8aaa4fb74ad1bda872e918a93350a4ea465196f265cb"
+        },
+        {
+          "version": "20260722123000",
+          "statementCount": 31,
+          "capturedStatementsSha256": "5b0b3acfc999fb573b2eeb866bf85e5a6e01799a3446d338a8189c9aff0b6d2f"
+        },
+        {
+          "version": "20260722130000",
+          "statementCount": 36,
+          "capturedStatementsSha256": "681eb011b67af640933d517268f9af7634af9759ad94861bdd2864babd0fbac1"
+        },
+        {
+          "version": "20260727090000",
+          "statementCount": 7,
+          "capturedStatementsSha256": "b8b08134cceda09bc2f18acfc51b312363eadf49c6364be056d1a70581d7f981"
+        },
+        {
+          "version": "20260727120000",
+          "statementCount": 14,
+          "capturedStatementsSha256": "f8e25c122acc99b1e26e20ced660609c687badde8a882585410eb3263db5d1b4"
+        },
+        {
+          "version": "20260727150000",
+          "statementCount": 10,
+          "capturedStatementsSha256": "5187ba757f9a207726118aeaa63c431b8763d501e280ef4a63bcaf4d4e5f9736"
+        },
+        {
+          "version": "20260727210000",
+          "statementCount": 43,
+          "capturedStatementsSha256": "1d0dad7a364a0917029c8fa166e3a57c6f0448239ce45be8ad18a7c024a9d34c"
+        },
+        {
+          "version": "20260727230000",
+          "statementCount": 7,
+          "capturedStatementsSha256": "f9427238c74d8cf827020eb8dcbf1d10283ee3d8aac6ddf4f613fa100190e315"
+        },
+        {
+          "version": "20260728090000",
+          "statementCount": 52,
+          "capturedStatementsSha256": "a822d3b082023c1feb27b0440e8296fb219620a698a48d8bb60598b92d774973"
+        },
+        {
+          "version": "20260728120000",
+          "statementCount": 16,
+          "capturedStatementsSha256": "e916cb13d2e44d2bfb775f8089461e87da43e69233871c06986263472edd97a5"
+        },
+        {
+          "version": "20260728150000",
+          "statementCount": 15,
+          "capturedStatementsSha256": "b0503efd4048a30f8a1a29e3cfdfc51960d84868b564694472dd0c50ac8120bd"
+        },
+        {
+          "version": "20260728180000",
+          "statementCount": 20,
+          "capturedStatementsSha256": "a92a9ada062eda8287f1e21323c2a83a8b7a3d26f19a13f5d9cdd0bbe3b3cd43"
+        },
+        {
+          "version": "20260728200000",
+          "statementCount": 3,
+          "capturedStatementsSha256": "1f55966fab5096ab5760c423220d2ef85d470ef936d8d34497bfdd82b6f53ca9"
+        },
+        {
+          "version": "20260728220000",
+          "statementCount": 9,
+          "capturedStatementsSha256": "460fc3951cae33fc7252217d97fa4e2e2a9dfa0aa76db4721540e77c616fa529"
+        },
+        {
+          "version": "20260731120000",
+          "statementCount": 27,
+          "capturedStatementsSha256": "2e59a46fa0175ef7352449e277f8c81cd552735e5ba227b01c776ab9d758739c"
+        },
+        {
+          "version": "20260801120000",
+          "statementCount": 15,
+          "capturedStatementsSha256": "e69ae7639aa6d702b7cca6a7f2c8d703b2718d1abbc8de213716242eda6cfce3"
+        },
+        {
+          "version": "20260801123000",
+          "statementCount": 6,
+          "capturedStatementsSha256": "7ad47e653def28400dc4164bf0c85f70b2c4808bc5126a3c46bb8326e0d8a959"
+        },
+        {
+          "version": "20260801235959",
+          "statementCount": 34,
+          "capturedStatementsSha256": "ced271924215952d12d27c5d71ff86713e0dcc431c06cc8cc6aa0ad6df59fbe0"
+        },
+        {
+          "version": "20260802003000",
+          "statementCount": 4,
+          "capturedStatementsSha256": "d7bcbb97c7270fa6b7f734b8fb3f9492a9363f5d4aa643ef5262507fabd3f1fd"
+        },
+        {
+          "version": "20260802120000",
+          "statementCount": 12,
+          "capturedStatementsSha256": "5d2936e3638b0c8b59288540ace56e248eedd886ac17f9dba404e6904a4a7c38"
+        },
+        {
+          "version": "20260802130000",
+          "statementCount": 7,
+          "capturedStatementsSha256": "53aa363ed4d2f9d7dcc66b5ea3b83b75de279e1f4c40615ff6c5065663ab904f"
+        },
+        {
+          "version": "20260802131000",
+          "statementCount": 5,
+          "capturedStatementsSha256": "5776055aaddd0769dc469ec3366b99db346e150c1066a3141dcefd19ac634c1e"
+        },
+        {
+          "version": "20260802132000",
+          "statementCount": 9,
+          "capturedStatementsSha256": "6db00897343930627849f36ffef1a8d2017701a31c90638daac44f16d3c2a139"
+        },
+        {
+          "version": "20260803100000",
+          "statementCount": 7,
+          "capturedStatementsSha256": "d2e77cf46131a7d9f623f43f843e3c3c40b8b983d9f3ec300b641af9a25cf1bc"
+        },
+        {
+          "version": "20260803101000",
+          "statementCount": 3,
+          "capturedStatementsSha256": "a013f1254ae24609a1a416d5d42584c679e3dd7f4e031506766a0aa2e7af6923"
+        },
+        {
+          "version": "20260803110000",
+          "statementCount": 12,
+          "capturedStatementsSha256": "6b2c9cf6142afdae04db8122305934364449fea1cc4ef14e600e519e8ae22daa"
+        },
+        {
+          "version": "20260803120000",
+          "statementCount": 8,
+          "capturedStatementsSha256": "821adc8167fae1346f7307230f3cfaf6c4e1016e3eccb17eb497855b70ec1919"
+        },
+        {
+          "version": "20260803121000",
+          "statementCount": 7,
+          "capturedStatementsSha256": "58ac30aadd701972d1f11818dbcb392e319a1bb0acfaa44960db6aa2a03b3aad"
+        },
+        {
+          "version": "20260803122000",
+          "statementCount": 6,
+          "capturedStatementsSha256": "21157b31e33e0ee931426137cabfa1cb4fa2d0e1a90c510f14ed918735e62603"
+        },
+        {
+          "version": "20260803123000",
+          "statementCount": 8,
+          "capturedStatementsSha256": "d22ef57179c89be0e3c16f00a396ea75a8f7fa4c880dc42dc960f8c1fbf75c03"
+        },
+        {
+          "version": "20260803130000",
+          "statementCount": 17,
+          "capturedStatementsSha256": "cd12384a29b4471a7cfa1f68859cdc99e76d588c97c6c3dd0315e4d86c023633"
+        },
+        {
+          "version": "20260803143000",
+          "statementCount": 25,
+          "capturedStatementsSha256": "1b44e0a7884852f06f49ce962df54b1db8f5b5af3d1d453505a2c9b975d0554a"
+        },
+        {
+          "version": "20260803184741",
+          "statementCount": 16,
+          "capturedStatementsSha256": "23c889a9eb56af8d059f2bb331f8c7c4b7ef078106d6455e5b636eeb242b6329"
+        },
+        {
+          "version": "20260803184803",
+          "statementCount": 1,
+          "capturedStatementsSha256": "ee762035d13390def5f23a466ab34ec52be784835fdfda16cc9e14e4df4b42ec"
+        },
+        {
+          "version": "20260803200951",
+          "statementCount": 6,
+          "capturedStatementsSha256": "62d90a64028eaca206ff93cdf0bd2f816af9ce39b3e652bc940547cc5b76b931"
+        },
+        {
+          "version": "20260803202921",
+          "statementCount": 12,
+          "capturedStatementsSha256": "979580d4a4c68ef8207c25c0c70f0c1910686571cf3dbe141684520aaaf101f3"
+        },
+        {
+          "version": "20260804004928",
+          "statementCount": 27,
+          "capturedStatementsSha256": "7087083ccda59fe48f117a73ec9cc91d0251e797238377b11ef0a2a861e91119"
+        },
+        {
+          "version": "20260804015247",
+          "statementCount": 24,
+          "capturedStatementsSha256": "8c10870b19a9c93a3cf5e1124bc16163ca575beb6b4b706ebb664f0dded5fc12"
+        },
+        {
+          "version": "20260805123909",
+          "statementCount": 17,
+          "capturedStatementsSha256": "bb6b7c2a9ce2b413fdf84baccb8e9adbec62a006939869a0ded941c2268dbbb5"
+        },
+        {
+          "version": "20260815213024",
+          "statementCount": 1,
+          "capturedStatementsSha256": "8171901afa9286b09156983c60814df89ea359b91bc7beb13f282fa06cdc2ef8"
+        },
+        {
+          "version": "20260816213000",
+          "statementCount": 6,
+          "capturedStatementsSha256": "d6b56318c1d494f9f803e34a7d3ad18027275fb2e48d04842886906d0c3de50b"
+        },
+        {
+          "version": "20260820220000",
+          "statementCount": 6,
+          "capturedStatementsSha256": "5aba23509398b4a51a55b78eef17e442c2b76b8a5e4bce0ddd6a66c34fb28c99"
+        },
+        {
+          "version": "20260823092042",
+          "statementCount": 1,
+          "capturedStatementsSha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e"
+        },
+        {
+          "version": "20260823092107",
+          "statementCount": 1,
+          "capturedStatementsSha256": "36c62ee32dad94f2940361030de17d29a7d32a2650e2462aee506b6b97530441"
+        },
+        {
+          "version": "20260823092405",
+          "statementCount": 1,
+          "capturedStatementsSha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e"
+        },
+        {
+          "version": "20260823092450",
+          "statementCount": 1,
+          "capturedStatementsSha256": "822e5dbc631673be4127994af60abc265f778ccb7ab703a4b02741bbb47f6190"
+        },
+        {
+          "version": "20260823100156",
+          "statementCount": 1,
+          "capturedStatementsSha256": "d1139a595307ab9f2ea6b65dc50b85b72d62f14e1766a871089495d7975596e4"
+        },
+        {
+          "version": "20260823120804",
+          "statementCount": 1,
+          "capturedStatementsSha256": "1377b9c5089e09f3d72c02d10ce74780f495421ba34b5b0d86f643c7e49b40a9"
+        },
+        {
+          "version": "20260823151901",
+          "statementCount": 1,
+          "capturedStatementsSha256": "ffa2c5b7e7f0ad4fb68ff48f6fe090632decabf134363927dc2b4ce22dd8dfc9"
+        },
+        {
+          "version": "20260823151927",
+          "statementCount": 1,
+          "capturedStatementsSha256": "99cdee12dfc0f13bd570b7948c2445735449ddbdc0fbc90636a076a06bb50471"
+        },
+        {
+          "version": "20260823214802",
+          "statementCount": 1,
+          "capturedStatementsSha256": "661700131a3db745909839019e15e931af4aad664c548c0d2b97a42915c72de1"
+        },
+        {
+          "version": "20260823215044",
+          "statementCount": 1,
+          "capturedStatementsSha256": "7a89ea038ab65a2cc8ea1030e72bd9159b84c3a8874b54f8b0a030c6aff1c74c"
+        },
+        {
+          "version": "20260823215132",
+          "statementCount": 1,
+          "capturedStatementsSha256": "c09cb3ace4c7776f7bb4b33ed9af77d90023b3e5584777210d1e56db2c07c9a5"
+        },
+        {
+          "version": "20260823215222",
+          "statementCount": 1,
+          "capturedStatementsSha256": "b96db42c4115fcf7c2421f122d16f95b610fbde2ec53bb0c28ff46332795c66f"
+        },
+        {
+          "version": "20260823215259",
+          "statementCount": 1,
+          "capturedStatementsSha256": "7f718f776882c3afc2f6642501b387084a67b42109671bef18cad9218217ea0e"
+        },
+        {
+          "version": "20260823215454",
+          "statementCount": 1,
+          "capturedStatementsSha256": "62cebd2389b592a9812b876b99c0c86d4870c7775fe38f16444cdc43cd55ad34"
+        },
+        {
+          "version": "20260823215619",
+          "statementCount": 1,
+          "capturedStatementsSha256": "0dce095ece471203c780730dce134dd1f8d57fea9eacddaeb1e5380b9451b8d6"
+        },
+        {
+          "version": "20260823215848",
+          "statementCount": 1,
+          "capturedStatementsSha256": "c65592d245c71578af5459b057671bad86a6d708bef3331ab6915327674ba376"
+        },
+        {
+          "version": "20260824081357",
+          "statementCount": 1,
+          "capturedStatementsSha256": "dc16efc156839085d9b17b982b76be69cb7a9d5075044f2d3f502418d5cc1cb6"
+        },
+        {
+          "version": "20260824081812",
+          "statementCount": 1,
+          "capturedStatementsSha256": "8a81cbf7bc91da0004b72e45bdcb591b9d938a79bea801f61f2ae5fc55fc3ec3"
+        },
+        {
+          "version": "20260824081926",
+          "statementCount": 1,
+          "capturedStatementsSha256": "8224c5731ff5288f5779c317b583ce90c59f92aa00148c7f96943e2d8f4cc585"
+        },
+        {
+          "version": "20260824082127",
+          "statementCount": 1,
+          "capturedStatementsSha256": "7039b722bcbcfa24190545629a788329865380fc700e1bfaa76f363f833304c4"
+        },
+        {
+          "version": "20260824084005",
+          "statementCount": 1,
+          "capturedStatementsSha256": "44691c49a91ae31634a678d463eb6f464390dd0eda2c59d39e2fd61be2a6fd62"
+        },
+        {
+          "version": "20260824085042",
+          "statementCount": 1,
+          "capturedStatementsSha256": "e113ac2c9c4b5eca16e51862500a362a7dd128741797d6c02514a8d2c5caad11"
+        },
+        {
+          "version": "20260824085444",
+          "statementCount": 1,
+          "capturedStatementsSha256": "55510083f55465b9aa5f1160eb964cda89776095bcffc8453265b9801ff2c841"
+        },
+        {
+          "version": "20260906024459",
+          "statementCount": 1,
+          "capturedStatementsSha256": "7f479d52a2fddc859d1603932c8b59dbe8b481bcd77e3062b3b94427a631689d"
+        }
+      ],
+      "migration_count": 98,
+      "statement_count": 1043
+    },
+    "helpers": {
+      "captured_at": "2026-09-24T11:31:14.635672+00:00",
+      "migration_count": 98,
+      "server_version_num": "170006",
+      "transaction_isolation": "repeatable read",
+      "transaction_read_only": "on",
+      "last_migration_version": "20260906024459",
+      "public_policy_aggregate": {
+        "jwt_policy_count": 2,
+        "uid_policy_count": 168,
+        "role_policy_count": 9,
+        "public_policy_count": 209,
+        "policy_catalog_sha256": "85ee85d9eb297f7e67fbaaa39a5e8544a3470f4bb5c09df2fb160347b5173c81",
+        "direct_auth_policy_count": 0,
+        "user_plan_reference_count": 0,
+        "family_owner_reference_count": 0
+      },
+      "scoped_function_metadata": [
+        {
+          "settings": ["search_path=pg_catalog, public, pg_temp"],
+          "owner_role": "postgres",
+          "volatility": "s",
+          "result_type": "uuid",
+          "schema_name": "kova_private",
+          "anon_execute": false,
+          "explicit_acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+          "function_name": "family_owner_of",
+          "service_execute": true,
+          "security_definer": true,
+          "anon_schema_usage": false,
+          "definition_sha256": "997135dc9419147f7f40ba62cc54608f3f9ae6814a5474dc92ebb895a6a11d11",
+          "mentions_auth_uid": true,
+          "identity_arguments": "_user_id uuid",
+          "mentions_auth_role": true,
+          "authenticated_execute": true,
+          "mentions_scope_denial": true,
+          "authenticated_schema_usage": true
+        },
+        {
+          "settings": ["search_path=pg_catalog"],
+          "owner_role": "postgres",
+          "volatility": "s",
+          "result_type": "uuid",
+          "schema_name": "public",
+          "anon_execute": false,
+          "explicit_acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+          "function_name": "family_owner_of",
+          "service_execute": true,
+          "security_definer": false,
+          "anon_schema_usage": true,
+          "definition_sha256": "f58e56c209880cb0d1ed75c39574012c08693738ccaa897723f84c47b947f2d7",
+          "mentions_auth_uid": false,
+          "identity_arguments": "_user_id uuid",
+          "mentions_auth_role": false,
+          "authenticated_execute": true,
+          "mentions_scope_denial": false,
+          "authenticated_schema_usage": true
+        },
+        {
+          "settings": ["search_path=public, pg_temp"],
+          "owner_role": "postgres",
+          "volatility": "s",
+          "result_type": "text",
+          "schema_name": "public",
+          "anon_execute": false,
+          "explicit_acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "function_name": "user_plan_tier",
+          "service_execute": true,
+          "security_definer": false,
+          "anon_schema_usage": true,
+          "definition_sha256": "0e52072d010b7c4ee53a969bc3874238c518ce2a05955ddc2432d6e8a5655d1c",
+          "mentions_auth_uid": true,
+          "identity_arguments": "_user_id uuid",
+          "mentions_auth_role": true,
+          "authenticated_execute": true,
+          "mentions_scope_denial": true,
+          "authenticated_schema_usage": true
+        }
+      ]
+    },
+    "readOnly": "on",
+    "isolation": "repeatable read",
+    "privilege": {
+      "serverVersionNum": 170006,
+      "serverTableMissing": 0,
+      "publicRelationCount": 118,
+      "postgresOwnerMissing": false,
+      "connectorTableMissing": 0,
+      "serverTableRlsMissing": 0,
+      "triggerRoutineMissing": 0,
+      "observedMigrationCount": 98,
+      "globalTableClientGrants": 0,
+      "schemaTableClientGrants": 8,
+      "triggerReturnTypeMismatch": 0,
+      "globalSequenceClientGrants": 0,
+      "schemaSequenceClientGrants": 4,
+      "triggerUnboundRoutineCount": 0,
+      "globalFunctionClientExecute": 0,
+      "globalFunctionPublicExecute": 1,
+      "schemaFunctionClientExecute": 0,
+      "connectorAnonGrantViolations": 0,
+      "connectorServiceGrantMissing": 0,
+      "schemaFunctionServiceExecute": 1,
+      "triggerPostgresOwnerMismatch": 0,
+      "tableDdlClientGrantViolations": 0,
+      "serverTableServiceGrantMissing": 0,
+      "triggerClientExecuteViolations": 0,
+      "serverTableClientGrantViolations": 0,
+      "triggerHistoricalSearchPathMatch": 6,
+      "serverTableRestrictiveDenyMissing": 16,
+      "triggerCandidateSearchPathMismatch": 7,
+      "connectorAuthenticatedGrantMismatch": 0,
+      "sequenceUpdateClientGrantViolations": 0,
+      "serverTableHistoricalPermissiveDeny": 16,
+      "connectorClientColumnGrantViolations": 0,
+      "serverTableClientColumnGrantViolations": 0
+    },
+    "capturedAt": "2026-09-24T11:31:14.635672+00:00",
+    "databaseName": "postgres",
+    "serverVersionNum": "170006"
+  }
+}

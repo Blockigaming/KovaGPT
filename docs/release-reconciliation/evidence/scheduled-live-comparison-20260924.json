@@ -1,0 +1,721 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "scheduled-live-catalog-comparison",
+  "sourceCommit": "6642e8c109ca7fce346fa3a760976d5a09aaae2f",
+  "sourceTree": "fb265d07798304b1bbb71a7b4169f055f90a97e7",
+  "tables": {
+    "rehearsalQuerySha256": "6bb88798ba36bf178a6057a4a14fb4c4941e6925384511c59f7f168257dd46d0",
+    "liveQueryIdentityVerified": false,
+    "artifactSha256": "9825656b54a579cb1bcddea619acd6f6f2b742c1ceb388ea35a7125bb4a162c3",
+    "liveCaptureSha256": "d77bfeb32bf24dd5d7de0d8b3c3918f59cc71ed097938d41ebcb2ccd0b07d3f4",
+    "capturedAt": "2026-09-24T01:47:37.767Z",
+    "liveLedgerVersionCount": 98,
+    "baseline": {
+      "fingerprint": {
+        "schema": "2b668f2de0cb96ef32ce54745d4e629cb56ef2eea7a5de556c3556f9a1bdced1",
+        "acl": "4f1e4bc6bb34afd3cd5ab7776cc0aac6ceebddaa73f8e041951d5b77f459e7d6",
+        "rls": "0b43bd9e65a9b121854b8870b1fcd0409180f5f6652c24643c20539310b5e5af",
+        "trigger": "2c3524d432315005a1e0333ad1b13519b63fc69890af12aa33d58bc912965c80"
+      },
+      "changes": [
+        {
+          "table": "public.scheduled_task_runs",
+          "fields": ["acl", "effectivePrivileges"]
+        },
+        {
+          "table": "public.scheduled_tasks",
+          "fields": ["acl", "effectivePrivileges"]
+        }
+      ],
+      "grantDeltas": [
+        {
+          "identity": "public.scheduled_task_runs",
+          "aclIsNull": {
+            "source": false,
+            "live": false
+          },
+          "columnAclStorageChanged": false,
+          "columnEffectiveAccess": "not_captured",
+          "aclEntryOrigin": "see_aclIsNull",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                }
+              ]
+            },
+            "columnAcl": {
+              "sourceOnly": [],
+              "liveOnly": []
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "anon",
+              "source": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            },
+            {
+              "role": "authenticated",
+              "source": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            },
+            {
+              "role": "service_role",
+              "source": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "privileges": ["MAINTAIN", "REFERENCES", "TRIGGER", "TRUNCATE"]
+              },
+              "live": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "privileges": [
+                  "DELETE",
+                  "INSERT",
+                  "MAINTAIN",
+                  "REFERENCES",
+                  "SELECT",
+                  "TRIGGER",
+                  "TRUNCATE",
+                  "UPDATE"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "identity": "public.scheduled_tasks",
+          "aclIsNull": {
+            "source": false,
+            "live": false
+          },
+          "columnAclStorageChanged": false,
+          "columnEffectiveAccess": "not_captured",
+          "aclEntryOrigin": "see_aclIsNull",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                }
+              ]
+            },
+            "columnAcl": {
+              "sourceOnly": [],
+              "liveOnly": []
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "anon",
+              "source": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sourceFinal": {
+      "fingerprint": {
+        "schema": "283f143ea57207ebc05e644302633be642e8152c806baa1199590fc4908d77ac",
+        "acl": "8d2139ab49ad466c47fc9b7881ebca4df6ec85cfc2b3f9a70fbf3d01612b6723",
+        "rls": "d846973b2485c6683f87ea082961882f65d597dba06eb3c5a2120556cf1f1bcf",
+        "trigger": "bdc20d15063905650af72816486c6c6ce6f0e458c17104c35746db7b54b2a50e"
+      },
+      "changes": [
+        {
+          "table": "public.scheduled_task_runs",
+          "fields": ["acl", "effectivePrivileges", "policies"]
+        },
+        {
+          "table": "public.scheduled_tasks",
+          "fields": [
+            "attributeSlots",
+            "columns",
+            "constraints",
+            "inboundForeignKeys",
+            "acl",
+            "effectivePrivileges",
+            "policies",
+            "triggers"
+          ]
+        }
+      ],
+      "grantDeltas": [
+        {
+          "identity": "public.scheduled_task_runs",
+          "aclIsNull": {
+            "source": false,
+            "live": false
+          },
+          "columnAclStorageChanged": false,
+          "columnEffectiveAccess": "not_captured",
+          "aclEntryOrigin": "see_aclIsNull",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                }
+              ]
+            },
+            "columnAcl": {
+              "sourceOnly": [],
+              "liveOnly": []
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "anon",
+              "source": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            },
+            {
+              "role": "authenticated",
+              "source": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            },
+            {
+              "role": "service_role",
+              "source": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "privileges": ["MAINTAIN", "REFERENCES", "TRIGGER", "TRUNCATE"]
+              },
+              "live": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "privileges": [
+                  "DELETE",
+                  "INSERT",
+                  "MAINTAIN",
+                  "REFERENCES",
+                  "SELECT",
+                  "TRIGGER",
+                  "TRUNCATE",
+                  "UPDATE"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "identity": "public.scheduled_tasks",
+          "aclIsNull": {
+            "source": false,
+            "live": false
+          },
+          "columnAclStorageChanged": false,
+          "columnEffectiveAccess": "not_captured",
+          "aclEntryOrigin": "see_aclIsNull",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "SELECT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "DELETE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "INSERT",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "UPDATE",
+                  "grantable": false
+                }
+              ]
+            },
+            "columnAcl": {
+              "sourceOnly": [],
+              "liveOnly": []
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "anon",
+              "source": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": []
+              },
+              "live": {
+                "role": "anon",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            },
+            {
+              "role": "authenticated",
+              "source": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": ["SELECT"]
+              },
+              "live": {
+                "role": "authenticated",
+                "schemaUsage": true,
+                "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "liveFingerprint": {
+      "schema": "2b668f2de0cb96ef32ce54745d4e629cb56ef2eea7a5de556c3556f9a1bdced1",
+      "acl": "2cfc66cb6ee054889ff381aca3f926d966c2a80844456ca637a02d069c322967",
+      "rls": "0b43bd9e65a9b121854b8870b1fcd0409180f5f6652c24643c20539310b5e5af",
+      "trigger": "2c3524d432315005a1e0333ad1b13519b63fc69890af12aa33d58bc912965c80"
+    },
+    "tableCatalogMatch": false
+  },
+  "routines": {
+    "rehearsalQuerySha256": "f29d28e93527edd4437c1be74ecadeecd4c8b74c13a70a0e025a1b36da90aeae",
+    "liveQueryIdentityVerified": false,
+    "artifactSha256": "e2103fd336d8cadd58094b1d8a2708b28f687ced1c0c17d81e08a6adee9efc0d",
+    "liveCaptureSha256": "cb1b00fc44242f44ca14a4753281b2bcad31ed4f75ecc4257bdbfe3abdb0e4f7",
+    "capturedAt": "2026-09-24T01:47:39.221Z",
+    "liveLedgerVersionCount": 98,
+    "baseline": {
+      "fingerprint": {
+        "routineSha256": "415c9964c7f49b7ce5a4d74ed6198fb28a0331d1199892618ee7eb3558d0f682",
+        "aclSha256": "647b776d3b15bc77b4f375260425db21c19c42a0cfd982f289df7f14067d2da0"
+      },
+      "changes": [
+        {
+          "identity": "[\"public\",\"next_scheduled_task_occurrence\",\"p_previous timestamp with time zone, p_repeat text\"]",
+          "kind": "changed",
+          "fields": ["acl"]
+        }
+      ],
+      "grantDeltas": [
+        {
+          "identity": "[\"public\",\"next_scheduled_task_occurrence\",\"p_previous timestamp with time zone, p_repeat text\"]",
+          "aclEntryOrigin": "stored_or_synthesized_default",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                }
+              ]
+            }
+          },
+          "effectiveChanges": []
+        }
+      ]
+    },
+    "sourceFinal": {
+      "fingerprint": {
+        "routineSha256": "f57eb638f50fea20be3992f3fec626fdfb9c7341a9dfb0a25c2a74468404f100",
+        "aclSha256": "cbd3bfd4ed20253608fe41643c8a69d04656872cf1575087f89f081b027314a3"
+      },
+      "changes": [
+        {
+          "identity": "[\"public\",\"claim_due_scheduled_tasks\",\"p_worker_id text, p_limit integer, p_lease_seconds integer\"]",
+          "kind": "changed",
+          "fields": [
+            "securityDefiner",
+            "bodyBytes",
+            "bodySha256",
+            "definitionSha256",
+            "searchPath",
+            "configurationSha256"
+          ]
+        },
+        {
+          "identity": "[\"public\",\"complete_scheduled_task_execution\",\"p_task_id uuid, p_worker_id text, p_scheduled_for timestamp with time zone, p_result text\"]",
+          "kind": "changed",
+          "fields": ["acl", "effectivePrivileges"]
+        },
+        {
+          "identity": "[\"public\",\"fail_scheduled_task_execution\",\"p_task_id uuid, p_worker_id text, p_failure_type text, p_safe_error text, p_retryable boolean\"]",
+          "kind": "changed",
+          "fields": ["acl", "effectivePrivileges"]
+        },
+        {
+          "identity": "[\"public\",\"next_scheduled_task_occurrence\",\"p_previous timestamp with time zone, p_repeat text\"]",
+          "kind": "changed",
+          "fields": ["acl"]
+        },
+        {
+          "identity": "[\"public\",\"recover_expired_scheduled_task_leases\",\"\"]",
+          "kind": "changed",
+          "fields": [
+            "securityDefiner",
+            "bodyBytes",
+            "bodySha256",
+            "definitionSha256",
+            "searchPath",
+            "configurationSha256"
+          ]
+        },
+        {
+          "identity": "[\"public\",\"settle_scheduled_task_failure\",\"p_task_id uuid, p_worker_id text, p_run_id text, p_failure_type text, p_safe_error text, p_retryable boolean\"]",
+          "kind": "changed",
+          "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+        },
+        {
+          "identity": "[\"public\",\"settle_scheduled_task_success\",\"p_task_id uuid, p_worker_id text, p_scheduled_for timestamp with time zone, p_run_id text, p_result text\"]",
+          "kind": "changed",
+          "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+        }
+      ],
+      "grantDeltas": [
+        {
+          "identity": "[\"public\",\"complete_scheduled_task_execution\",\"p_task_id uuid, p_worker_id text, p_scheduled_for timestamp with time zone, p_result text\"]",
+          "aclEntryOrigin": "stored_or_synthesized_default",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                }
+              ]
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "service_role",
+              "source": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "execute": false
+              },
+              "live": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "execute": true
+              }
+            }
+          ]
+        },
+        {
+          "identity": "[\"public\",\"fail_scheduled_task_execution\",\"p_task_id uuid, p_worker_id text, p_failure_type text, p_safe_error text, p_retryable boolean\"]",
+          "aclEntryOrigin": "stored_or_synthesized_default",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                }
+              ]
+            }
+          },
+          "effectiveChanges": [
+            {
+              "role": "service_role",
+              "source": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "execute": false
+              },
+              "live": {
+                "role": "service_role",
+                "schemaUsage": true,
+                "execute": true
+              }
+            }
+          ]
+        },
+        {
+          "identity": "[\"public\",\"next_scheduled_task_occurrence\",\"p_previous timestamp with time zone, p_repeat text\"]",
+          "aclEntryOrigin": "stored_or_synthesized_default",
+          "aclEntryDeltas": {
+            "acl": {
+              "sourceOnly": [],
+              "liveOnly": [
+                {
+                  "grantor": "postgres",
+                  "grantee": "anon",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "authenticated",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                },
+                {
+                  "grantor": "postgres",
+                  "grantee": "service_role",
+                  "privilege": "EXECUTE",
+                  "grantable": false
+                }
+              ]
+            }
+          },
+          "effectiveChanges": []
+        }
+      ]
+    },
+    "liveFingerprint": {
+      "routineSha256": "415c9964c7f49b7ce5a4d74ed6198fb28a0331d1199892618ee7eb3558d0f682",
+      "aclSha256": "b8070ce8f8bd0e0af9f90b52e1b14a63e8502fd41cf20e8abd0e80ac731544c5"
+    },
+    "routineCatalogMatch": false
+  },
+  "schemaProofPromoted": false,
+  "canonicalHistoryReconciled": false,
+  "productionReleaseReady": false
+}
