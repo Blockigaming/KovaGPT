@@ -104,16 +104,15 @@ export function privateFileDescriptor(kind, owner, row, now = Date.now()) {
     const storagePath = path(row.payload?.storage_path);
     if (!storagePath.startsWith(`${owner}/`)) invalid();
     const lower = storagePath.toLowerCase();
-    const evidenceType =
-      lower.endsWith(".png")
-        ? { name: `evidence-${row.id}.png`, mime: "image/png", image: true }
-        : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-          ? { name: `evidence-${row.id}.jpg`, mime: "image/jpeg", image: true }
-          : lower.endsWith(".json")
-            ? { name: `evidence-${row.id}.json`, mime: "application/json", image: false }
-            : lower.endsWith(".txt")
-              ? { name: `evidence-${row.id}.txt`, mime: "text/plain", image: false }
-              : null;
+    const evidenceType = lower.endsWith(".png")
+      ? { name: `evidence-${row.id}.png`, mime: "image/png", image: true }
+      : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+        ? { name: `evidence-${row.id}.jpg`, mime: "image/jpeg", image: true }
+        : lower.endsWith(".json")
+          ? { name: `evidence-${row.id}.json`, mime: "application/json", image: false }
+          : lower.endsWith(".txt")
+            ? { name: `evidence-${row.id}.txt`, mime: "text/plain", image: false }
+            : null;
     if (!evidenceType) invalid();
     descriptor = {
       bucket: "agent-evidence",
