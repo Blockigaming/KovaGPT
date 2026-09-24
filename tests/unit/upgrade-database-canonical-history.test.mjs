@@ -51,6 +51,36 @@ test("canonical history proposal rejects a changed body before local commands", 
   );
 });
 
+test("canonical rehearsal reads the decision and all manifests through its captured reader", () => {
+  const plan = extendCurrentHistory(
+    planUpgrade(),
+    readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
+  );
+  const files = new Set();
+  const directories = new Set();
+  const result = extendProposedCanonicalHistory(
+    plan,
+    ROOT,
+    (filename) => {
+      files.add(filename);
+      return readFileSync(filename);
+    },
+    (directory) => {
+      directories.add(directory);
+      return readdirSync(directory);
+    },
+  );
+  for (const filename of [
+    "docs/release-reconciliation/canonical-history-actions-20260923.json",
+    "release-migrations.json",
+    "release-migration-lineage.json",
+  ]) {
+    assert.ok(files.has(join(ROOT, filename)), `captured reader missed ${filename}`);
+  }
+  assert.ok(directories.has(join(ROOT, "supabase/migrations")));
+  assert.equal(result.executionForward.length, 80);
+});
+
 test("canonical history mock confines three repairs to local project and checks both ledgers", () => {
   const calls = [];
   const recordOnlyNames = planUpgrade().forward.filter((row) => REPAIRED.includes(row.version));

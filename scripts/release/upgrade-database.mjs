@@ -202,7 +202,8 @@ export function rehearseUpgrade({
     plan = currentHistory
       ? extendCurrentHistory(historical, readSource(join(root, CURRENT_HISTORY_SNAPSHOT)))
       : historical;
-    if (canonicalHistory) plan = extendProposedCanonicalHistory(plan, root);
+    if (canonicalHistory)
+      plan = extendProposedCanonicalHistory(plan, root, readSource, readDirectory);
   } catch (error) {
     if (!dryRun) {
       // Parser and filesystem errors may contain input bytes or local paths.

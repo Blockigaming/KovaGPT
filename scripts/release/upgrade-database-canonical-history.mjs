@@ -15,11 +15,16 @@ end $kova_history_only$;\n`;
 
 // A separate, explicitly selected synthetic rehearsal of the proposed 80+3
 // inventory. This function cannot repair a remote ledger or accept the plan.
-export function extendProposedCanonicalHistory(plan, root = ROOT) {
+export function extendProposedCanonicalHistory(
+  plan,
+  root = ROOT,
+  readFile = readFileSync,
+  readDirectory,
+) {
   if (resolve(root) !== ROOT || plan.baseline.length !== 98 || !plan.currentHistory)
     throw new Error("upgrade_canonical_history_checkpoint_invalid");
-  const decisionBytes = readFileSync(join(root, DECISION));
-  const decision = buildCanonicalHistoryDecision();
+  const decisionBytes = readFile(join(root, DECISION));
+  const decision = buildCanonicalHistoryDecision({ root, readFile, readDirectory });
   if (JSON.stringify(JSON.parse(decisionBytes)) !== JSON.stringify(decision))
     throw new Error("upgrade_canonical_history_inventory_stale");
   if (
