@@ -215,6 +215,7 @@ export function MfaPanel() {
         uri: payload.uri,
         legacyMigration: true,
       });
+      setFactors([]);
       setLegacyPasswordRequired(false);
       setEnrollmentPassword("");
     } catch (error) {
@@ -419,6 +420,39 @@ export function MfaPanel() {
                   </Button>
                 </div>
               ))}
+            {legacyMigrationAvailable ? (
+              <div className="rounded-lg border border-border/70 p-3">
+                <p className="text-sm font-medium">Move two-factor authentication to KovaGPT</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Verify your existing authenticator, then enroll a fresh Kova-owned authenticator.
+                  Hosted session authority is retired only after the new factor succeeds.
+                </p>
+                {legacyPasswordRequired ? (
+                  <div className="mt-3 space-y-2">
+                    <label htmlFor="legacy-mfa-new-password" className="text-xs font-medium">
+                      New KovaGPT password
+                    </label>
+                    <Input
+                      id="legacy-mfa-new-password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={enrollmentPassword}
+                      onChange={(event) => setEnrollmentPassword(event.target.value)}
+                      disabled={busy}
+                    />
+                  </div>
+                ) : null}
+                <Button
+                  className="mt-3"
+                  variant="outline"
+                  size="sm"
+                  onClick={startLegacyMigration}
+                  disabled={busy}
+                >
+                  Move MFA to KovaGPT
+                </Button>
+              </div>
+            ) : null}
           </div>
         ) : enrolling ? (
           <div className="space-y-3">
@@ -437,7 +471,7 @@ export function MfaPanel() {
                   <br />
                   <code className="text-[11px] break-all">{enrolling.secret}</code>
                 </p>
-                {useKovaAuth ? (
+                {useKovaAuth || enrolling.legacyMigration ? (
                   <a href={enrolling.uri} className="text-primary underline">
                     Open in authenticator app
                   </a>
@@ -460,11 +494,13 @@ export function MfaPanel() {
               <Button
                 variant="ghost"
                 onClick={() => {
-                  if (!useKovaAuth) {
+                  if (!useKovaAuth && !enrolling.legacyMigration) {
                     supabase.auth.mfa.unenroll({ factorId: enrolling.factorId }).catch(() => {});
                   }
+                  const wasMigration = enrolling.legacyMigration === true;
                   setEnrolling(null);
                   setCode("");
+                  if (wasMigration) void load();
                 }}
                 disabled={busy}
               >
@@ -560,7 +596,15 @@ export function MfaPanel() {
               </li>
             ))}
           </ul>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => setRecoveryCodes([])}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              setRecoveryCodes([]);
+              if (legacyMigrationCompleted) window.location.reload();
+            }}
+          >
             I saved these codes
           </Button>
         </div>
