@@ -32,6 +32,7 @@ import {
   activateTotp,
   beginMfaLogin,
   beginTotpEnrollment,
+  bindMfaLoginFactor,
   changePassword,
   createCompatibilityPrincipal,
   createOAuthState,
@@ -509,14 +510,26 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
       if (challengeLimit) return challengeLimit;
       try {
         const challengeDigest = digestKovaToken(challengeToken);
-        const challenge = await readMfaLoginChallenge(challengeDigest);
-        const secret = decryptKovaSecret(challenge.secretEnvelope);
-        if (!verifyKovaTotp(code, secret)) {
+        const challenges = await readMfaLoginChallenge(challengeDigest);
+        let matchedFactorId: string | null = null;
+        for (const challenge of challenges) {
+          try {
+            const secret = decryptKovaSecret(challenge.secretEnvelope);
+            if (verifyKovaTotp(code, secret) && matchedFactorId === null) {
+              matchedFactorId = challenge.factorId;
+            }
+          } catch {
+            // A damaged sibling factor cannot turn a valid authenticator into
+            // an account lockout. The final database step rechecks the factor.
+          }
+        }
+        if (!matchedFactorId) {
           return jsonError(
             "That code was not accepted. Check your authenticator and try again.",
             401,
           );
         }
+        await bindMfaLoginFactor({ challengeDigest, factorId: matchedFactorId });
         const sessionToken = generateKovaToken();
         const principal = await finishMfaLogin({
           challengeDigest,
