@@ -80,6 +80,7 @@ export function parseMigrationProofCatalog(
   for (const [key, fields] of [
     ["relations", ["schema_sha256", "acl_sha256", "rls_sha256"]],
     ["functions", ["function_sha256"]],
+    ["types", ["type_sha256"]],
   ]) {
     const entries = capture[key];
     if (

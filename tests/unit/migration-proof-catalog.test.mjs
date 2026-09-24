@@ -34,6 +34,7 @@ test("live catalog binds 19 remote versions and rejects a substituted query or l
   );
   assert.equal(capture.remoteOnlyHistory.length, 19);
   assert.equal(capture.schemas.length, 2);
+  assert.ok(capture.types.length > 0);
   const locallyRecorded = clone(capture);
   locallyRecorded.remoteOnlyHistory[0].statementCount = 0;
   assert.throws(
@@ -102,5 +103,11 @@ test("object digest inventory fails closed on incomplete or duplicated security 
   assert.throws(
     () => parseMigrationProofCatalog(JSON.stringify(missingSchema), capture.ledger.versions),
     /schemas_invalid/u,
+  );
+  const duplicatedType = clone(capture);
+  duplicatedType.types.push(clone(duplicatedType.types[0]));
+  assert.throws(
+    () => parseMigrationProofCatalog(JSON.stringify(duplicatedType), capture.ledger.versions),
+    /types_invalid/u,
   );
 });

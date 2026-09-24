@@ -9,7 +9,7 @@ WITH target_relations AS (
   SELECT c.oid, n.nspname::text AS schema_name, c.relname::text AS object_name,
          c.relkind::text AS kind, c.relowner::regrole::text AS owner_role,
          c.relrowsecurity, c.relforcerowsecurity, c.relacl,
-         c.reloptions, c.relispopulated
+         c.reloptions, c.relispopulated, c.relpersistence
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname IN ('public', 'kova_private')
      AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
@@ -17,11 +17,19 @@ WITH target_relations AS (
   SELECT r.schema_name || '.' || r.object_name AS object_id,
          encode(extensions.digest(convert_to(jsonb_build_object(
            'kind', r.kind, 'owner', r.owner_role,
+           'persistence', r.relpersistence::text,
            'relationOptions', r.reloptions, 'materializedViewPopulated',
              CASE WHEN r.kind = 'm' THEN r.relispopulated ELSE NULL END,
+           'sequence', (SELECT jsonb_build_object(
+             'type', format_type(s.seqtypid, NULL), 'start', s.seqstart,
+             'increment', s.seqincrement, 'minimum', s.seqmin,
+             'maximum', s.seqmax, 'cache', s.seqcache, 'cycle', s.seqcycle)
+             FROM pg_sequence s WHERE s.seqrelid = r.oid),
            'viewDefinition', CASE WHEN r.kind IN ('v', 'm') THEN pg_get_viewdef(r.oid, true) ELSE NULL END,
            'columns', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod),
+             'collation', CASE WHEN a.attcollation = 0 THEN NULL
+               ELSE a.attcollation::regcollation::text END,
              'nullable', NOT a.attnotnull, 'identity', a.attidentity::text,
              'generated', a.attgenerated::text,
              'default', pg_get_expr(d.adbin, d.adrelid)
@@ -41,7 +49,15 @@ WITH target_relations AS (
            'triggers', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'definition', pg_get_triggerdef(t.oid, true), 'enabled', t.tgenabled::text)
              ORDER BY t.tgname), '[]'::jsonb)
-             FROM pg_trigger t WHERE t.tgrelid = r.oid AND NOT t.tgisinternal)
+             FROM pg_trigger t WHERE t.tgrelid = r.oid AND NOT t.tgisinternal),
+           'publications', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'name', pt.pubname, 'columns', pt.attnames, 'rowFilter', pt.rowfilter,
+             'insert', pub.pubinsert, 'update', pub.pubupdate,
+             'delete', pub.pubdelete, 'truncate', pub.pubtruncate,
+             'viaRoot', pub.pubviaroot)
+             ORDER BY pt.pubname), '[]'::jsonb)
+             FROM pg_publication_tables pt JOIN pg_publication pub ON pub.pubname = pt.pubname
+            WHERE pt.schemaname = r.schema_name AND pt.tablename = r.object_name)
          )::text, 'UTF8'), 'sha256'), 'hex') AS schema_sha256,
          encode(extensions.digest(convert_to(jsonb_build_object(
            'explicitAcl', r.relacl::text,
@@ -61,7 +77,17 @@ WITH target_relations AS (
            'columnAcl', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'name', a.attname, 'acl', a.attacl::text,
              'anonSelect', has_column_privilege('anon', r.oid, a.attnum, 'SELECT'),
-             'authenticatedSelect', has_column_privilege('authenticated', r.oid, a.attnum, 'SELECT')
+             'anonInsert', has_column_privilege('anon', r.oid, a.attnum, 'INSERT'),
+             'anonUpdate', has_column_privilege('anon', r.oid, a.attnum, 'UPDATE'),
+             'anonReferences', has_column_privilege('anon', r.oid, a.attnum, 'REFERENCES'),
+             'authenticatedSelect', has_column_privilege('authenticated', r.oid, a.attnum, 'SELECT'),
+             'authenticatedInsert', has_column_privilege('authenticated', r.oid, a.attnum, 'INSERT'),
+             'authenticatedUpdate', has_column_privilege('authenticated', r.oid, a.attnum, 'UPDATE'),
+             'authenticatedReferences', has_column_privilege('authenticated', r.oid, a.attnum, 'REFERENCES'),
+             'serviceSelect', has_column_privilege('service_role', r.oid, a.attnum, 'SELECT'),
+             'serviceInsert', has_column_privilege('service_role', r.oid, a.attnum, 'INSERT'),
+             'serviceUpdate', has_column_privilege('service_role', r.oid, a.attnum, 'UPDATE'),
+             'serviceReferences', has_column_privilege('service_role', r.oid, a.attnum, 'REFERENCES')
            ) ORDER BY a.attnum), '[]'::jsonb)
              FROM pg_attribute a WHERE a.attrelid = r.oid AND a.attnum > 0
                AND NOT a.attisdropped AND r.kind <> 'S')
@@ -113,6 +139,31 @@ WITH target_relations AS (
              FROM (VALUES ('anon'), ('authenticated'), ('service_role')) roles(role_name))
          )::text, 'UTF8'), 'sha256'), 'hex') AS acl_sha256
     FROM pg_namespace n WHERE n.nspname IN ('public', 'kova_private')
+), type_rows AS (
+  SELECT n.nspname || '.' || t.typname AS object_id,
+         encode(extensions.digest(convert_to(jsonb_build_object(
+           'kind', t.typtype::text, 'owner', t.typowner::regrole::text,
+           'baseType', CASE WHEN t.typbasetype = 0 THEN NULL
+             ELSE t.typbasetype::regtype::text END,
+           'notNull', t.typnotnull, 'default', t.typdefault,
+           'collation', CASE WHEN t.typcollation = 0 THEN NULL
+             ELSE t.typcollation::regcollation::text END,
+           'enums', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'label', e.enumlabel, 'sort', e.enumsortorder)
+             ORDER BY e.enumsortorder), '[]'::jsonb)
+             FROM pg_enum e WHERE e.enumtypid = t.oid),
+           'domainConstraints', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'name', c.conname, 'definition', pg_get_constraintdef(c.oid, true),
+             'validated', c.convalidated)
+             ORDER BY c.conname), '[]'::jsonb)
+             FROM pg_constraint c WHERE c.contypid = t.oid),
+           'explicitAcl', t.typacl::text,
+           'anonUsage', has_type_privilege('anon', t.oid, 'USAGE'),
+           'authenticatedUsage', has_type_privilege('authenticated', t.oid, 'USAGE'),
+           'serviceUsage', has_type_privilege('service_role', t.oid, 'USAGE')
+         )::text, 'UTF8'), 'sha256'), 'hex') AS type_sha256
+    FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+   WHERE n.nspname IN ('public', 'kova_private') AND t.typtype IN ('e', 'd')
 ), default_acl_rows AS (
   SELECT coalesce(jsonb_agg(jsonb_build_object(
     'owner', d.defaclrole::regrole::text, 'schema', coalesce(n.nspname, '<global>'),
@@ -149,6 +200,7 @@ SELECT jsonb_build_object(
   'ledger', (SELECT to_jsonb(history) FROM history),
   'remoteOnlyHistory', (SELECT rows FROM remote_only_history),
   'schemas', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM schema_rows x),
+  'types', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM type_rows x),
   'relations', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM relation_rows x),
   'functions', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM function_rows x),
   'defaultAclSha256', (SELECT encode(extensions.digest(convert_to(rows::text, 'UTF8'), 'sha256'), 'hex') FROM default_acl_rows)
