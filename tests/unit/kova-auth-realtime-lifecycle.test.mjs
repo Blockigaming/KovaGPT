@@ -324,6 +324,22 @@ for (const [name, mutate] of [
   });
 }
 
+test("an initial transient 503 retries before first admission and then connects", async () => {
+  const f = fixture({ response: new Response(null, { status: 503 }) });
+  await flush();
+  assert.equal(f.events.created, 0);
+  assert.equal(f.events.denied, 0);
+  assert.deepEqual(f.events.status, ["CHANNEL_ERROR"]);
+  assert.equal(f.tasks.size, 1);
+  f.replies.push(Response.json(reply()));
+  await f.advance(1000);
+  assert.equal(f.events.fetch.length, 2);
+  assert.equal(f.events.created, 1);
+  assert.equal(f.events.subscribed, 1);
+  assert.equal(f.events.denied, 0);
+  f.stop();
+});
+
 for (const status of [401, 403, 409]) {
   test(`renewal HTTP ${status} permanently denies the socket and cannot fall back to the cached token`, async () => {
     const f = fixture();
@@ -476,6 +492,9 @@ test("a hidden-tab timer delay and backward wall-clock jump cannot extend callba
   f.status();
   assert.equal(f.events.invalidate, 0);
   assert.equal(f.events.disconnected, 1);
+  assert.equal(f.events.denied, 0);
+  assert.equal(f.tasks.size, 1);
+  f.stop();
   assert.equal(f.tasks.size, 0);
 });
 
@@ -488,7 +507,7 @@ test("a provider change without its observer event still rejects queued frames",
   assert.equal(f.events.invalidate, 0);
 });
 
-test("hung fetch and hung response bodies are cancelled at five seconds without a socket", async () => {
+test("hung fetch and hung response bodies are cancelled and schedule bounded re-admission", async () => {
   for (const response of [
     () => new Promise(() => {}),
     new Response(new ReadableStream({ start() {} })),
@@ -498,8 +517,11 @@ test("hung fetch and hung response bodies are cancelled at five seconds without 
     await f.advance(5000);
     assert.equal(f.events.created, 0);
     assert.equal(f.events.fetch[0].signal.aborted, true);
-    assert.equal(f.tasks.size, 0);
+    assert.equal(f.events.denied, 0);
+    assert.equal(f.tasks.size, 1);
     assert.deepEqual(f.events.status, ["CHANNEL_ERROR"]);
+    f.stop();
+    assert.equal(f.tasks.size, 0);
   }
 });
 
