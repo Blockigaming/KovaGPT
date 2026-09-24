@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { PasskeyPanel } from "@/components/PasskeyPanel";
 import { KovaPasswordPanel } from "@/components/KovaPasswordPanel";
 import { KovaPasskeyPanel } from "@/components/KovaPasskeyPanel";
-import { clearKovaAuthCache, isKovaSessionActive, kovaAuthJson } from "@/lib/kova-auth-browser";
+import {
+  browserKovaAuthMode,
+  clearKovaAuthCache,
+  isKovaSessionActive,
+  kovaAuthJson,
+} from "@/lib/kova-auth-browser";
+import { authFetch } from "@/lib/auth-fetch";
 
 type Factor = {
   id: string;
@@ -37,6 +43,7 @@ export function MfaPanel() {
     qr: string;
     secret: string;
     uri: string;
+    legacyMigration?: boolean;
   }>(null);
   const [code, setCode] = useState("");
   const [enrollmentPassword, setEnrollmentPassword] = useState("");
@@ -44,8 +51,18 @@ export function MfaPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [confirmRegeneration, setConfirmRegeneration] = useState(false);
+  const [legacyPasswordRequired, setLegacyPasswordRequired] = useState(false);
+  const [legacyMigrationCompleted, setLegacyMigrationCompleted] = useState(false);
   const mutationInFlight = useRef(false);
   const useKovaAuth = isKovaSessionActive();
+  let legacyMigrationAvailable = false;
+  if (!useKovaAuth) {
+    try {
+      legacyMigrationAvailable = browserKovaAuthMode() === "dual";
+    } catch {
+      legacyMigrationAvailable = false;
+    }
+  }
 
   const beginMutation = () => {
     if (mutationInFlight.current) return false;
@@ -155,10 +172,86 @@ export function MfaPanel() {
     }
   }
 
+  async function startLegacyMigration() {
+    if (!legacyMigrationAvailable || !beginMutation()) return;
+    setRecoveryCodes([]);
+    try {
+      const response = await authFetch("/api/auth/mfa/enroll", {
+        method: "POST",
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          legacyMigration: true,
+          friendlyName: "Authenticator app",
+          ...(legacyPasswordRequired && enrollmentPassword
+            ? { newPassword: enrollmentPassword }
+            : {}),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        code?: string;
+        factorId?: string;
+        secret?: string;
+        uri?: string;
+      };
+      if (response.status === 409 && payload.code === "kova_password_required") {
+        setLegacyPasswordRequired(true);
+        toast.error("Choose a new KovaGPT password, then continue the MFA migration.");
+        return;
+      }
+      if (!response.ok || !payload.factorId || !payload.secret || !payload.uri) {
+        if (response.status === 403) {
+          toast.error("Verify your existing authenticator first, then retry the migration.");
+          return;
+        }
+        throw new Error("legacy_mfa_migration_start");
+      }
+      setEnrolling({
+        factorId: payload.factorId,
+        qr: "",
+        secret: payload.secret,
+        uri: payload.uri,
+        legacyMigration: true,
+      });
+      setLegacyPasswordRequired(false);
+      setEnrollmentPassword("");
+    } catch (error) {
+      console.error("[mfa] legacy migration start failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Two-factor migration could not start. Please try again.");
+    } finally {
+      endMutation();
+    }
+  }
+
   async function verify() {
     if (!enrolling || !beginMutation()) return;
     try {
-      if (useKovaAuth) {
+      if (enrolling.legacyMigration) {
+        const response = await authFetch("/api/auth/mfa/verify", {
+          method: "POST",
+          credentials: "same-origin",
+          mode: "same-origin",
+          redirect: "error",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            legacyMigration: true,
+            factorId: enrolling.factorId,
+            code: code.trim(),
+          }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          recoveryCodes?: unknown;
+        };
+        if (!response.ok) throw new Error("legacy_mfa_migration_verify");
+        setRecoveryCodes(verifiedRecoveryCodes(payload.recoveryCodes));
+        setLegacyMigrationCompleted(true);
+        setFactors([]);
+        clearKovaAuthCache();
+      } else if (useKovaAuth) {
         const response = await kovaAuthJson("/api/auth/mfa/verify", {
           factorId: enrolling.factorId,
           code: code.trim(),
@@ -179,10 +272,13 @@ export function MfaPanel() {
         });
         if (error) throw error;
       }
+      const migrated = enrolling.legacyMigration === true;
       setEnrolling(null);
       setCode("");
-      toast.success("Two-factor authentication enabled");
-      load();
+      toast.success(
+        migrated ? "Two-factor authentication moved to KovaGPT" : "Two-factor authentication enabled",
+      );
+      if (!migrated) void load();
     } catch (error) {
       console.error("[mfa] enrollment verification failed", {
         error: error instanceof Error ? error.name : "unknown_error",
