@@ -407,6 +407,36 @@ test("deliverables cannot change owners or bypass their recorded integrity hash"
     assert.notEqual(r.status, 200);
   }
 });
+test("trusted evidence metadata preserves JSON and text while rejecting unsupported extensions", async () => {
+  for (const [storagePath, expectedMime, bytes] of [
+    [`${owner}/${id}.json`, "application/json", text],
+    [`${owner}/${id}.txt`, "text/plain", new TextEncoder().encode("private evidence\n")],
+  ]) {
+    const row = { ...rows.evidence, payload: { storage_path: storagePath } };
+    const descriptor = download.privateFileDescriptor("evidence", owner, row);
+    assert.equal(descriptor.mime, expectedMime);
+    assert.equal(descriptor.image, false);
+    assert.match(descriptor.name, expectedMime === "application/json" ? /\.json$/ : /\.txt$/);
+  }
+  assert.throws(
+    () =>
+      download.privateFileDescriptor("evidence", owner, {
+        ...rows.evidence,
+        payload: { storage_path: `${owner}/${id}.html` },
+      }),
+    /private_file_unavailable/,
+  );
+});
+
+test("account export descriptor carries its recorded digest", async () => {
+  const descriptor = download.privateFileDescriptor("export", owner, rows.export);
+  assert.equal(descriptor.sha256, hash(text));
+  assert.throws(
+    () => download.privateFileDescriptor("export", owner, { ...rows.export, content_sha256: null }),
+    /private_file_unavailable/,
+  );
+});
+
 test("unavailable request protection never starts private Storage work", async () => {
   const f = await fixture("export", { rate: { allowed: false, status: "unavailable" } }),
     r = await f.handler(f.request());
