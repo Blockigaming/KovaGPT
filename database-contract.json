@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 180,
+  "migrationCount": 181,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -546,6 +546,8 @@
     "kova_auth_finish_passkey_login",
     "kova_auth_finish_passkey_registration",
     "kova_auth_has_verified_legacy_mfa",
+    "kova_auth_legacy_adoption_gap_count",
+    "kova_auth_legacy_mfa_gap_count",
     "kova_auth_legacy_mfa_gap_count",
     "kova_auth_legacy_mfa_migration_status",
     "kova_auth_legacy_session_allowed",
@@ -2113,6 +2115,8 @@
     "execute on function public.kova_auth_finish_mfa_recovery_login(text,text,text,timestamptz,timestamptz)\n  to service_role",
     "execute on function public.kova_auth_finish_passkey_login(text,text,uuid,bigint,bigint,bigint,bigint,text,boolean,text,timestamptz,timestamptz) to service_role",
     "execute on function public.kova_auth_finish_passkey_registration(text,text,text,text,text,bigint,boolean,boolean,text[],text,timestamptz,timestamptz) to service_role",
+    "execute on function public.kova_auth_legacy_adoption_gap_count(timestamptz)\n  to service_role",
+    "execute on function public.kova_auth_legacy_mfa_gap_count(timestamptz)\n  to service_role",
     "execute on function public.kova_auth_legacy_mfa_gap_count(timestamptz)\n  to service_role",
     "execute on function public.kova_auth_legacy_mfa_migration_status(uuid,timestamptz)\n  to service_role",
     "execute on function public.kova_auth_legacy_session_allowed(uuid) to service_role",
@@ -2707,6 +2711,8 @@
     "all on function public.kova_auth_finish_mfa_recovery_login(text,text,text,timestamptz,timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_finish_passkey_login(text,text,uuid,bigint,bigint,bigint,bigint,text,boolean,text,timestamptz,timestamptz) from public, anon, authenticated",
     "all on function public.kova_auth_finish_passkey_registration(text,text,text,text,text,bigint,boolean,boolean,text[],text,timestamptz,timestamptz) from public, anon, authenticated",
+    "all on function public.kova_auth_legacy_adoption_gap_count(timestamptz)\n  from public, anon, authenticated",
+    "all on function public.kova_auth_legacy_mfa_gap_count(timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_legacy_mfa_gap_count(timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_legacy_mfa_migration_status(uuid,timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_legacy_session_allowed(uuid) from public, anon, authenticated",
@@ -2971,5 +2977,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "9d5a72c91ca5596e7f6f2fb8dce33a26a7f40fca36d34e11dc4d532140742f8f"
+  "sha256": "bd242fca12cc507322b871dc2a9b89f32ce5cced6b6c370cfdd5de41d3142d57"
 }

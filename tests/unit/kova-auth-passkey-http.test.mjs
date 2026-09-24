@@ -55,7 +55,7 @@ test("actual HTTP/store/PostgreSQL and WebAuthn signatures register, discoverabl
       401,
     );
     const list = await f.handleKovaPasskeyList(
-      request(undefined, { method: "GET", token: registered.token }),
+      await boundRequest(db, undefined, { method: "GET", token: registered.token }),
     );
     assert.equal(list.headers.get("Cache-Control"), "no-store");
     const body = await list.json();
@@ -101,13 +101,13 @@ test("actual HTTP/store/PostgreSQL and WebAuthn signatures register, discoverabl
     assert.equal(
       (
         await f.handleKovaPasskeyRename(
-          request({ passkeyId: keyId, friendlyName: "Renamed device" }, { token }),
+          await boundRequest(db, { passkeyId: keyId, friendlyName: "Renamed device" }, { token }),
         )
       ).status,
       200,
     );
     const removed = await f.handleKovaPasskeyRemove(
-      request({ passkeyId: keyId, confirm: true }, { token }),
+      await boundRequest(db, { passkeyId: keyId, confirm: true }, { token }),
     );
     assert.equal(removed.status, 200, await removed.clone().text());
     assert.equal((await removed.json()).session.assuranceLevel, "aal1");
@@ -153,7 +153,7 @@ test("password reauthentication is mandatory for AAL1 registration, while AAL2 u
     }
     assert.equal(await count(db, "auth_passkey_challenges"), 0);
     const status = await (
-      await f.handleKovaPasskeyList(request(undefined, { method: "GET" }))
+      await f.handleKovaPasskeyList(await boundRequest(db, undefined, { method: "GET" }))
     ).json();
     assert.equal(status.requiresPassword, true);
     assert.equal(status.canRegister, true);
@@ -170,6 +170,60 @@ test("password reauthentication is mandatory for AAL1 registration, while AAL2 u
     assert.equal(args.p_password_credential_id, null);
     assert.equal(args.p_password_revision, null);
     assert.equal(args.p_rp_id, "kova.test");
+  } finally {
+    await db.close();
+  }
+});
+
+test("passkey listing, rename and removal reject a cookie switched to another account", async () => {
+  const db = await authDatabase();
+  try {
+    const f = passkeyHttp(db);
+    const registered = await register(db, f);
+    const original = await f.handleKovaPasskeyList(
+      await boundRequest(db, undefined, { method: "GET", token: registered.token }),
+    );
+    const keyId = (await original.json()).passkeys[0].id;
+    const previousSession = (
+      await db.query(
+        "select id from kova_private.auth_sessions where token_digest=decode($1,'hex')",
+        [digest(registered.token)],
+      )
+    ).rows[0].id;
+    const otherToken = "t".repeat(43);
+    await account(db, other, otherToken);
+    const switched = (body, method = "POST") =>
+      request(body, {
+        method,
+        token: otherToken,
+        headers: { "X-Kova-Owner": owner, "X-Kova-Session": previousSession },
+      });
+    assert.equal((await f.handleKovaPasskeyList(switched(undefined, "GET"))).status, 409);
+    assert.equal(
+      (await f.handleKovaPasskeyRename(switched({ passkeyId: keyId, friendlyName: "Stolen" })))
+        .status,
+      409,
+    );
+    assert.equal(
+      (await f.handleKovaPasskeyRemove(switched({ passkeyId: keyId, confirm: true }))).status,
+      409,
+    );
+    const key = (
+      await db.query(
+        "select friendly_name,disabled_at from kova_private.auth_passkeys where id=$1",
+        [keyId],
+      )
+    ).rows[0];
+    assert.equal(key.friendly_name, "My device");
+    assert.equal(key.disabled_at, null);
+    assert.equal(
+      (
+        await f.handleKovaPasskeyRemove(
+          request({ passkeyId: keyId, confirm: true }, { token: otherToken }),
+        )
+      ).status,
+      409,
+    );
   } finally {
     await db.close();
   }

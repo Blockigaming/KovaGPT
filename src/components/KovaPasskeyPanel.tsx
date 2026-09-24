@@ -10,6 +10,8 @@ import {
   removeKovaPasskey,
 } from "@/lib/kova-auth-passkey-browser";
 import { toast } from "sonner";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { getCapturedKovaPrincipal, type KovaBrowserPrincipal } from "@/lib/kova-auth-browser";
 
 type Passkey = { id: string; friendlyName: string; createdAt: string; lastUsedAt: string | null };
 type Status = {
@@ -17,8 +19,10 @@ type Status = {
   requiresPassword: boolean;
   canRegister: boolean;
   canRemove: boolean;
+  principal: Pick<KovaBrowserPrincipal, "accountId" | "sessionId">;
 };
 export function KovaPasskeyPanel() {
+  const displayedAccount = useUser().user?.id;
   const [status, setStatus] = useState<Status | null>(null);
   const [failed, setFailed] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -36,9 +40,16 @@ export function KovaPasskeyPanel() {
     setFailed(false);
     void (async () => {
       try {
+        const principal = getCapturedKovaPrincipal();
+        if (!principal || principal.accountId !== displayedAccount)
+          throw new Error("kova_passkey_principal_changed");
         const response = await fetch("/api/auth/passkeys", {
           credentials: "same-origin",
-          headers: { Accept: "application/json" },
+          headers: {
+            Accept: "application/json",
+            "X-Kova-Owner": principal.accountId,
+            "X-Kova-Session": principal.sessionId,
+          },
         });
         const data = (await response.json()) as Status;
         if (
@@ -58,7 +69,7 @@ export function KovaPasskeyPanel() {
           )
         )
           throw new Error("invalid_passkey_status");
-        if (active) setStatus(data);
+        if (active) setStatus({ ...data, principal });
       } catch {
         if (active) setFailed(true);
       }
@@ -66,7 +77,7 @@ export function KovaPasskeyPanel() {
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [revision, displayedAccount]);
 
   function clear() {
     setEditing(null);
@@ -102,13 +113,20 @@ export function KovaPasskeyPanel() {
       if (!supported || !status.canRegister || (status.requiresPassword && !password)) return;
       await mutate(
         () =>
-          registerKovaPasskey({
-            friendlyName,
-            ...(status.requiresPassword ? { currentPassword: password } : {}),
-          }),
+          registerKovaPasskey(
+            {
+              friendlyName,
+              ...(status.requiresPassword ? { currentPassword: password } : {}),
+            },
+            status.principal,
+          ),
         "Passkey added. Other devices were signed out.",
       );
-    } else await mutate(() => renameKovaPasskey(editing, friendlyName), "Passkey renamed");
+    } else
+      await mutate(
+        () => renameKovaPasskey(editing, friendlyName, status.principal),
+        "Passkey renamed",
+      );
   }
 
   return (
@@ -168,7 +186,7 @@ export function KovaPasskeyPanel() {
                         disabled={busy || !status.canRemove}
                         onClick={() =>
                           mutate(
-                            () => removeKovaPasskey(key.id),
+                            () => removeKovaPasskey(key.id, status.principal),
                             "Passkey removed. Other devices were signed out.",
                           )
                         }

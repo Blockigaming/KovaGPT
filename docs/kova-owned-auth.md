@@ -327,13 +327,23 @@ browser bundle, repository, SQL text, or logs.
 ## Auth Rehearsal evidence and cutover receipt
 
 The September 24 Rehearsal database has the MFA binding, multiple-factor
-login, legacy MFA bridge, MCP session authority, and explicit hosted-ID mapping
-migrations installed. A read-only check returned zero legacy MFA gaps, 119
-scoped RLS tables, and zero violations in all five revocation-proof counts.
-The bridge table has RLS enabled and denies browser-role reads; its five RPCs
-and the MCP authority RPC are service-role-only with empty search paths and
-bounded statement timeouts. The bridge has no rows yet. These checks establish
-database state, not a deployed application rehearsal.
+login, legacy MFA bridge, MCP session authority, explicit hosted-ID mapping,
+and cutover population guard migrations installed. A read-only check returned
+zero legacy MFA gaps, 119 scoped RLS tables, and zero violations in all five
+revocation-proof counts. The bridge table has RLS enabled and denies
+browser-role reads; its five RPCs, the MCP authority RPC, and the new
+population census RPC are service-role-only with empty search paths and
+bounded statement timeouts. The bridge has no rows yet.
+
+The population census returned **one adoption gap**: one confirmed hosted
+principal has no mapped owned account. Its hosted password is absent and it
+has no verified hosted MFA. No account identifier or personal data was read
+for this result. The gap must be resolved through a verified dual-mode
+adoption or a separately reviewed account disposition before pure `kova`
+mode is eligible; it is not safe to create an owned login by inference from
+an email address. A suspended hosted account also remains in the census, and
+a suspended mapped account with legacy MFA remains in the MFA gap count.
+These checks establish database state, not a deployed application rehearsal.
 
 `scripts/release/kova-auth-cutover-gate.mjs` accepts a JSON receipt outside the
 source tree and compares it with a clean checked-out commit. Run it with
@@ -341,10 +351,10 @@ source tree and compares it with a clean checked-out commit. Run it with
 --config-sha256 <audited-config-fingerprint>`. The receipt must contain the
 exact `sourceSha` and `appBuildSha`, environment, project ref, `ACTIVE_HEALTHY`
 status, HTTPS deployment origin, `kova` mode, config fingerprint, and a capture
-time no more than fifteen minutes old. It requires all five named migrations,
-`legacyMfaGapCount: 0`, the six fields from
+time no more than fifteen minutes old. It requires all six named migrations,
+`legacyMfaGapCount: 0` and `legacyAdoptionGapCount: 0`, the six fields from
 `kova-auth-revocation-proof.sql`, service-only ACL/search-path/timeout evidence
-for the four security-sensitive RPCs, every named deployed check exported by
+for the five security-sensitive RPCs, every named deployed check exported by
 the script, and expiration times for the last pre-marker JWT and last historic
 signed Storage URL that precede capture. JSON field names are defined by the
 validator and exercised in `tests/unit/kova-auth-cutover-gate.test.mjs`.
@@ -355,8 +365,13 @@ Realtime, MCP, and rollback checks from the _deployed_ build. The validator
 checks consistency and freshness; a JSON file alone does not authenticate
 where its observations came from. Review the original observations and live
 configuration before any cutover authorization. No complete deployed receipt
-exists while app deployment, signing-key configuration, and device rehearsal
-remain unapproved.
+exists while the adoption gap is nonzero or app deployment, signing-key
+configuration, and device rehearsal remain unapproved. The census counts all
+nondeleted, nonanonymous hosted users except fully shaped inert Kova UUID
+bridges. Each must have its stable owned UUID, verified owned account, and
+active owned password, verified Google identity, or active owned passkey;
+temporary suspensions do not remove a user from this check. Recheck both counts
+against the current database immediately before creating a receipt.
 
 ### Hosted-auth retirement inventory
 

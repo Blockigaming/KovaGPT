@@ -172,6 +172,11 @@ export async function getCachedKovaSession(): Promise<KovaBrowserPrincipal | nul
   return fetchKovaSession();
 }
 
+/** Keep a rendered security panel bound to the principal it already displayed. */
+export function getCapturedKovaPrincipal(): KovaBrowserPrincipal | null {
+  return principalCache?.principal ?? null;
+}
+
 export function getKovaTokenBinding(
   token: string,
 ): Pick<KovaBrowserPrincipal, "accountId" | "sessionId"> | null {

@@ -29,6 +29,7 @@ const evidence = () => ({
   capturedAt,
   appliedMigrations: [...requiredMigrations],
   legacyMfaGapCount: 0,
+  legacyAdoptionGapCount: 0,
   revocationProof: {
     scoped_rls_tables: 119,
     unguarded_rls_tables: 0,
@@ -41,6 +42,7 @@ const evidence = () => ({
     [
       "kova_auth_revoke_other_sessions",
       "kova_auth_legacy_mfa_gap_count",
+      "kova_auth_legacy_adoption_gap_count",
       "kova_auth_activate_legacy_mfa_migration",
       "kova_auth_validate_compatibility_session",
     ].map((name) => [
@@ -92,6 +94,8 @@ test("cutover receipt fails closed on missing proof, public function access and 
   const mutations = [
     (item) => item.appliedMigrations.pop(),
     (item) => (item.legacyMfaGapCount = 1),
+    (item) => (item.legacyAdoptionGapCount = 1),
+    (item) => delete item.legacyAdoptionGapCount,
     (item) => (item.revocationProof.unguarded_rls_tables = 1),
     (item) => (item.revocationProof.scoped_rls_tables = 0),
     (item) =>

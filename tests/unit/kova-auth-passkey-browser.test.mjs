@@ -8,6 +8,7 @@ const source = ts.transpileModule(readFileSync("src/lib/kova-auth-passkey-browse
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
 const challenge = "c".repeat(43);
+const captured = { accountId: "owner", sessionId: "session" };
 function fixture(options = {}) {
   const calls = [];
   const response = { id: "device-credential", response: { proof: "synthetic browser response" } };
@@ -24,9 +25,8 @@ function fixture(options = {}) {
     ),
     "@/lib/kova-auth-browser": {
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
-      getCachedKovaSession: async () => ({ accountId: "owner", sessionId: "session" }),
-      kovaAuthJson: async (path, body) => {
-        calls.push(["POST", path, JSON.parse(JSON.stringify(body))]);
+      kovaAuthJson: async (path, body, expected) => {
+        calls.push(["POST", path, JSON.parse(JSON.stringify(body)), expected]);
         if (path.endsWith("options"))
           return Response.json({
             challengeToken: challenge,
@@ -40,8 +40,19 @@ function fixture(options = {}) {
           { status: options.failure ? 401 : 200 },
         );
       },
-      kovaPublicAuthJson: async (path, body) =>
-        modules["@/lib/kova-auth-browser"].kovaAuthJson(path, body),
+      kovaPublicAuthJson: async (path, body) => {
+        calls.push(["PUBLIC", path, JSON.parse(JSON.stringify(body))]);
+        if (path.endsWith("options"))
+          return Response.json({
+            challengeToken: challenge,
+            options: { challenge: options.badChallenge ? "mismatch" : challenge },
+          });
+        if (options.throw) throw Error("sensitive server error");
+        return Response.json(
+          options.invalidSession ? {} : { session: { accountId: "owner", assuranceLevel: "aal2" } },
+          { status: options.failure ? 401 : 200 },
+        );
+      },
     },
   };
   const exports = {};
@@ -58,18 +69,23 @@ function fixture(options = {}) {
 
 test("browser registration sends password only to start, invokes WebAuthn, verifies challenge and invalidates caches", async () => {
   const f = fixture();
-  await f.registerKovaPasskey({ friendlyName: "Device", currentPassword: "only at start" });
+  await f.registerKovaPasskey(
+    { friendlyName: "Device", currentPassword: "only at start" },
+    captured,
+  );
   assert.deepEqual(f.calls, [
     [
       "POST",
       "/api/auth/passkeys/register/options",
       { friendlyName: "Device", currentPassword: "only at start" },
+      captured,
     ],
     ["startRegistration", { optionsJSON: { challenge } }],
     [
       "POST",
       "/api/auth/passkeys/register/verify",
       { challengeToken: challenge, response: f.response },
+      captured,
     ],
     ["clear-cache"],
   ]);
@@ -77,10 +93,10 @@ test("browser registration sends password only to start, invokes WebAuthn, verif
 test("browser discovery sends no email or account selector and never falls back to hosted auth", async () => {
   const f = fixture();
   await f.signInWithKovaPasskey();
-  assert.deepEqual(f.calls[0], ["POST", "/api/auth/passkeys/login/options", {}]);
+  assert.deepEqual(f.calls[0], ["PUBLIC", "/api/auth/passkeys/login/options", {}]);
   assert.deepEqual(f.calls[1], ["startAuthentication", { optionsJSON: { challenge } }]);
   assert.deepEqual(f.calls[2], [
-    "POST",
+    "PUBLIC",
     "/api/auth/passkeys/login/verify",
     { challengeToken: challenge, response: f.response },
   ]);
@@ -90,7 +106,7 @@ test("cancellation and malformed option payloads cannot submit an unverified bro
   for (const options of [{ cancel: true }, { badChallenge: true }]) {
     const f = fixture(options);
     await assert.rejects(f.signInWithKovaPasskey());
-    assert.equal(f.calls.filter(([type]) => type === "POST").length, 1);
+    assert.equal(f.calls.filter(([type]) => type === "PUBLIC").length, 1);
     if (options.badChallenge) assert.equal(f.calls.length, 1);
   }
 });
@@ -103,11 +119,12 @@ test("uncertain, rejected or malformed success responses invalidate cache withou
 });
 test("rename and explicit removal carry only key metadata and clear cache across session rotation", async () => {
   const f = fixture();
-  await f.renameKovaPasskey("key", "New name");
-  await f.removeKovaPasskey("key");
+  await f.renameKovaPasskey("key", "New name", captured);
+  await f.removeKovaPasskey("key", captured);
   assert.deepEqual(f.calls, [
-    ["POST", "/api/auth/passkeys/rename", { passkeyId: "key", friendlyName: "New name" }],
-    ["POST", "/api/auth/passkeys/remove", { passkeyId: "key", confirm: true }],
+    ["POST", "/api/auth/passkeys/rename", { passkeyId: "key", friendlyName: "New name" }, captured],
+    ["POST", "/api/auth/passkeys/remove", { passkeyId: "key", confirm: true }, captured],
     ["clear-cache"],
   ]);
+  assert.ok(!f.calls.some(([kind]) => kind === "PUBLIC"));
 });

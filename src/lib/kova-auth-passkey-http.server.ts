@@ -71,7 +71,7 @@ function mutationGuard(request: Request): { origin: string; rpID: string } | Res
   }
 }
 
-async function boundRegistrationSession(
+async function boundPasskeySession(
   request: Request,
   sessionDigest: string,
 ): Promise<NonNullable<Awaited<ReturnType<typeof resolveSession>>> | Response> {
@@ -96,10 +96,11 @@ export async function handleKovaPasskeyList(request: Request): Promise<Response>
   if (unavailable) return unavailable;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
+  const bound = await boundPasskeySession(request, sessionDigest);
+  if (bound instanceof Response) return bound;
   try {
     kovaPasskeyRp(publicOrigin());
-    const principal = await resolveSession(sessionDigest);
-    if (!principal) return jsonError("Invalid or expired session.", 401);
+    const principal = bound;
     const keys = await listPasskeys(sessionDigest);
     const requiresPassword = principal.assuranceLevel !== "aal2";
     const password = requiresPassword ? await lookupPassword(principal.email) : null;
@@ -126,7 +127,7 @@ export async function handleKovaPasskeyRegisterOptions(request: Request): Promis
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
-  const bound = await boundRegistrationSession(request, sessionDigest);
+  const bound = await boundPasskeySession(request, sessionDigest);
   if (bound instanceof Response) return bound;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
@@ -238,7 +239,7 @@ async function verify(
     const result = requireSessionDigest(request);
     if (result instanceof Response) return result;
     sessionDigest = result;
-    const bound = await boundRegistrationSession(request, sessionDigest);
+    const bound = await boundPasskeySession(request, sessionDigest);
     if (bound instanceof Response) return bound;
   }
   try {
@@ -317,6 +318,8 @@ export async function handleKovaPasskeyRename(request: Request): Promise<Respons
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
+  const bound = await boundPasskeySession(request, sessionDigest);
+  if (bound instanceof Response) return bound;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
   const name = friendlyName(body.friendlyName);
@@ -343,6 +346,8 @@ export async function handleKovaPasskeyRemove(request: Request): Promise<Respons
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
+  const bound = await boundPasskeySession(request, sessionDigest);
+  if (bound instanceof Response) return bound;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
   if (

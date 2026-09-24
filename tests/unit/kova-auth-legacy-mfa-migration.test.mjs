@@ -8,6 +8,7 @@ import {
   now,
   expiry,
   owner,
+  other,
   passwordAccount,
 } from "../helpers/kova-auth-database.mjs";
 
@@ -24,6 +25,107 @@ async function installLegacyMfa(db, id = owner) {
 
 const gapCount = async (db) =>
   (await db.query("select public.kova_auth_legacy_mfa_gap_count($1) as n", [now])).rows[0].n;
+const adoptionGapCount = async (db) =>
+  (await db.query("select public.kova_auth_legacy_adoption_gap_count($1) as n", [now])).rows[0].n;
+
+test("a suspended legacy-MFA account still blocks the cutover census", async () => {
+  const db = await authDatabase();
+  try {
+    await passwordAccount(db);
+    await installLegacyMfa(db);
+    await db.query("update kova_private.auth_accounts set suspended_until=$2 where id=$1", [
+      owner,
+      expiry,
+    ]);
+    assert.equal(await gapCount(db), 1);
+    assert.equal(await adoptionGapCount(db), 0);
+    await db.query("update kova_private.auth_accounts set suspended_until=null where id=$1", [
+      owner,
+    ]);
+    assert.equal(await gapCount(db), 1);
+  } finally {
+    await db.close();
+  }
+});
+
+test("cutover census includes untouched hosted users and accounts without a usable owned credential", async () => {
+  const db = await authDatabase();
+  try {
+    assert.equal(await adoptionGapCount(db), 0);
+    await db.query(
+      "insert into auth.users(id,email,email_confirmed_at,encrypted_password) values($1,$2,$3,'legacy-hash')",
+      [owner, `${owner}@example.invalid`, now],
+    );
+    await installLegacyMfa(db);
+    assert.equal(await gapCount(db), 0); // A separate census must catch unmapped MFA users.
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query(
+      `insert into kova_private.auth_accounts(id,legacy_supabase_user_id,primary_email,email_verified_at)
+       values($1,$1,$2,$3)`,
+      [owner, `${owner}@example.invalid`, now],
+    );
+    assert.equal(await gapCount(db), 1);
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query(
+      `insert into kova_private.auth_credentials(account_id,credential_type,secret_hash,algorithm)
+       values($1,'password',$2,'scrypt-v1')`,
+      [owner, stagedHash],
+    );
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query("update kova_private.auth_credentials set activated_at=$2 where account_id=$1", [
+      owner,
+      now,
+    ]);
+    assert.equal(await adoptionGapCount(db), 0);
+    assert.equal(await gapCount(db), 1);
+
+    // An unadopted, suspended hosted user must also remain in the census.
+    await db.query(
+      `insert into auth.users(id,email,email_confirmed_at,banned_until)
+       values($1,$2,$3,$4)`,
+      [other, `${other}@example.invalid`, now, expiry],
+    );
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query("update auth.users set deleted_at=$2 where id=$1", [other, now]);
+    assert.equal(await adoptionGapCount(db), 0);
+
+    // Kova's full inert shadow shape is excluded, but a malformed shadow is not.
+    const shadow = (
+      await db.query("select public.kova_auth_create_compatibility_principal() as id")
+    ).rows[0].id;
+    assert.equal(await adoptionGapCount(db), 0);
+    await db.query("update auth.users set banned_until=null where id=$1", [shadow]);
+    assert.equal(await adoptionGapCount(db), 1);
+  } finally {
+    await db.close();
+  }
+});
+
+test("cutover census accepts a verified owned Google credential for an adopted hosted identity", async () => {
+  const db = await authDatabase();
+  try {
+    const email = `${owner}@example.invalid`;
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)", [
+      owner,
+      email,
+      now,
+    ]);
+    await db.query(
+      `insert into kova_private.auth_accounts(id,legacy_supabase_user_id,primary_email,email_verified_at)
+       values($1,$1,$2,$3)`,
+      [owner, email, now],
+    );
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query(
+      `insert into kova_private.auth_identities(account_id,provider,provider_subject,normalized_email,verified_at)
+       values($1,'google','provider-subject',$2,$3)`,
+      [owner, email, now],
+    );
+    assert.equal(await adoptionGapCount(db), 0);
+  } finally {
+    await db.close();
+  }
+});
 
 test("hosted MFA migrates to a fresh owned factor before hosted authority is retired", async () => {
   const db = await authDatabase();
@@ -215,6 +317,10 @@ test("legacy MFA migration RPCs remain service-role only", async () => {
     await db.exec("set role authenticated");
     await assert.rejects(
       db.query("select * from public.kova_auth_legacy_mfa_migration_status($1,$2)", [owner, now]),
+      /permission denied/u,
+    );
+    await assert.rejects(
+      db.query("select public.kova_auth_legacy_adoption_gap_count($1)", [now]),
       /permission denied/u,
     );
     await db.exec("reset role");

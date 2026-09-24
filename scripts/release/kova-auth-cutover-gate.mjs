@@ -9,6 +9,7 @@ export const requiredMigrations = Object.freeze([
   "kova_owned_legacy_mfa_bridge",
   "kova_owned_mcp_session_authority",
   "kova_owned_mcp_legacy_mfa_claims",
+  "kova_owned_cutover_population_guards",
 ]);
 
 export const requiredDeployedChecks = Object.freeze([
@@ -45,6 +46,7 @@ const violationFields = Object.freeze([
 const serviceOnlyFunctions = Object.freeze([
   "kova_auth_revoke_other_sessions",
   "kova_auth_legacy_mfa_gap_count",
+  "kova_auth_legacy_adoption_gap_count",
   "kova_auth_activate_legacy_mfa_migration",
   "kova_auth_validate_compatibility_session",
 ]);
@@ -96,6 +98,7 @@ export function validateCutoverEvidence(
   )
     fail("migrations");
   if (evidence.legacyMfaGapCount !== 0) fail("legacy_mfa_gap");
+  if (evidence.legacyAdoptionGapCount !== 0) fail("legacy_adoption_gap");
   if (
     !object(evidence.revocationProof) ||
     !Number.isSafeInteger(evidence.revocationProof.scoped_rls_tables) ||

@@ -8,6 +8,7 @@ const key = {
   createdAt: "2026-09-21T12:00Z",
   lastUsedAt: null,
 };
+const captured = { accountId: "owner", sessionId: "session" };
 function panel(options = {}) {
   const calls = [];
   const invoke = async (name, ...args) => {
@@ -24,6 +25,12 @@ function panel(options = {}) {
   };
   const f = reactFixture("src/components/KovaPasskeyPanel.tsx", (exp) => exp.KovaPasskeyPanel, {
     modules: {
+      "@/components/auth/ClerkSafe": {
+        useUser: () => ({ user: { id: options.displayedAccount ?? "owner" } }),
+      },
+      "@/lib/kova-auth-browser": {
+        getCapturedKovaPrincipal: () => options.capturedPrincipal ?? captured,
+      },
       "@/lib/passkey-support": { browserSupportsPasskeys: () => options.supported !== false },
       "@/lib/kova-auth-passkey-browser": {
         registerKovaPasskey: (...a) => invoke("register", ...a),
@@ -32,8 +39,8 @@ function panel(options = {}) {
       },
     },
     globals: {
-      fetch: async (path) => {
-        calls.push(["GET", path]);
+      fetch: async (path, init) => {
+        calls.push(["GET", path, JSON.parse(JSON.stringify(init.headers))]);
         return Response.json(options.badPayload ? {} : status, {
           status: options.loadFailure ? 503 : 200,
         });
@@ -53,7 +60,7 @@ test("owned panel registers with explicit password confirmation and clears plain
     await f.flush();
     assert.deepEqual(
       f.requests.find((c) => c[0] === "register"),
-      ["register", { friendlyName: "Phone", currentPassword: "local test password" }],
+      ["register", { friendlyName: "Phone", currentPassword: "local test password" }, captured],
     );
     assert.equal(f.messages.at(-1)[0], fail ? "error" : "success");
     assert.ok(!JSON.stringify(f.messages).includes("upstream secrets"));
@@ -97,7 +104,7 @@ test("AAL2 panel adds without a password and cannot duplicate an in-flight devic
   await f.flush();
   assert.deepEqual(
     f.requests.find((c) => c[0] === "register"),
-    ["register", { friendlyName: "Passkey" }],
+    ["register", { friendlyName: "Passkey" }, captured],
   );
 });
 test("rename and removal use owned key IDs, require confirmation, and respect server assurance", async () => {
@@ -109,7 +116,7 @@ test("rename and removal use owned key IDs, require confirmation, and respect se
   await f.flush();
   assert.deepEqual(
     f.requests.find((c) => c[0] === "rename"),
-    ["rename", key.id, "New name"],
+    ["rename", key.id, "New name", captured],
   );
   await f.click("Remove Laptop");
   assert.ok(!f.requests.some((c) => c[0] === "remove"));
@@ -119,7 +126,7 @@ test("rename and removal use owned key IDs, require confirmation, and respect se
   await f.click("Confirm removal");
   assert.deepEqual(
     f.requests.find((c) => c[0] === "remove"),
-    ["remove", key.id],
+    ["remove", key.id, captured],
   );
   const weak = panel({ keys: [key] });
   await weak.flush();
@@ -127,6 +134,19 @@ test("rename and removal use owned key IDs, require confirmation, and respect se
     weak.find("button", (n) => n.props["aria-label"] === "Remove Laptop").props.disabled,
     true,
   );
+});
+test("passkey panel never loads another cookie owner into the displayed account", async () => {
+  const wrongOwner = panel({ capturedPrincipal: { ...captured, accountId: "other" } });
+  await wrongOwner.flush();
+  assert.ok(!wrongOwner.requests.some(([kind]) => kind === "GET"));
+  assert.equal(wrongOwner.find("div", (n) => n.props.role === "alert").props.role, "alert");
+  const f = panel({ keys: [key] });
+  await f.flush();
+  assert.deepEqual(f.requests[0], [
+    "GET",
+    "/api/auth/passkeys",
+    { Accept: "application/json", "X-Kova-Owner": "owner", "X-Kova-Session": "session" },
+  ]);
 });
 test("load errors, invalid payloads, limits, unsupported devices and missing reauthentication do not show usable registration", async () => {
   for (const options of [

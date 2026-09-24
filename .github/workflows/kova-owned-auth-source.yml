@@ -59,6 +59,7 @@ on:
       - tests/integration/auth-account-security-source.test.mjs
       - tests/helpers/kova-auth*.mjs
       - scripts/release/kova-auth-revocation-proof.sql
+      - scripts/release/kova-auth-cutover-gate.mjs
       - package.json
       - package-lock.json
 

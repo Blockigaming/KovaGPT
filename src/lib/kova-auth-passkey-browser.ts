@@ -5,12 +5,13 @@ import type {
 } from "@simplewebauthn/browser";
 import {
   clearKovaAuthCache,
-  getCachedKovaSession,
   kovaAuthJson,
   kovaPublicAuthJson,
+  type KovaBrowserPrincipal,
 } from "@/lib/kova-auth-browser";
 
 const ROOT = "/api/auth/passkeys";
+type CapturedPrincipal = Pick<KovaBrowserPrincipal, "accountId" | "sessionId">;
 async function payload(response: Response): Promise<Record<string, unknown>> {
   const data: unknown = await response.json();
   if (!response.ok || !data || typeof data !== "object" || Array.isArray(data))
@@ -34,6 +35,7 @@ async function finish(
   path: string,
   body: Record<string, unknown>,
   request: (path: string, body: Record<string, unknown>) => Promise<Response> = kovaPublicAuthJson,
+  expected?: CapturedPrincipal,
 ): Promise<void> {
   // An uncertain response can follow an already committed cookie rotation.
   try {
@@ -41,7 +43,8 @@ async function finish(
     const session = data.session as { accountId?: unknown; assuranceLevel?: unknown } | undefined;
     if (
       typeof session?.accountId !== "string" ||
-      (session.assuranceLevel !== "aal1" && session.assuranceLevel !== "aal2")
+      (session.assuranceLevel !== "aal1" && session.assuranceLevel !== "aal2") ||
+      (expected && session.accountId !== expected.accountId)
     ) {
       throw new Error("kova_passkey_session_invalid");
     }
@@ -49,12 +52,13 @@ async function finish(
     clearKovaAuthCache();
   }
 }
-export async function registerKovaPasskey(input: {
-  friendlyName: string;
-  currentPassword?: string;
-}): Promise<void> {
-  const captured = await getCachedKovaSession();
-  if (!captured) throw new Error("kova_session_rejected");
+export async function registerKovaPasskey(
+  input: {
+    friendlyName: string;
+    currentPassword?: string;
+  },
+  captured: CapturedPrincipal,
+): Promise<void> {
   const data = options<PublicKeyCredentialCreationOptionsJSON>(
     await payload(await kovaAuthJson(`${ROOT}/register/options`, input, captured)),
   );
@@ -63,6 +67,7 @@ export async function registerKovaPasskey(input: {
     `${ROOT}/register/verify`,
     { challengeToken: data.challengeToken, response },
     (path, body) => kovaAuthJson(path, body, captured),
+    captured,
   );
 }
 export async function signInWithKovaPasskey(): Promise<void> {
@@ -72,10 +77,24 @@ export async function signInWithKovaPasskey(): Promise<void> {
   const response = await startAuthentication({ optionsJSON: data.optionsJSON });
   await finish(`${ROOT}/login/verify`, { challengeToken: data.challengeToken, response });
 }
-export async function renameKovaPasskey(passkeyId: string, friendlyName: string): Promise<void> {
-  const data = await payload(await kovaAuthJson(`${ROOT}/rename`, { passkeyId, friendlyName }));
+export async function renameKovaPasskey(
+  passkeyId: string,
+  friendlyName: string,
+  captured: CapturedPrincipal,
+): Promise<void> {
+  const data = await payload(
+    await kovaAuthJson(`${ROOT}/rename`, { passkeyId, friendlyName }, captured),
+  );
   if (data.renamed !== true) throw new Error("kova_passkey_rename_failed");
 }
-export async function removeKovaPasskey(passkeyId: string): Promise<void> {
-  await finish(`${ROOT}/remove`, { passkeyId, confirm: true });
+export async function removeKovaPasskey(
+  passkeyId: string,
+  captured: CapturedPrincipal,
+): Promise<void> {
+  await finish(
+    `${ROOT}/remove`,
+    { passkeyId, confirm: true },
+    (path, body) => kovaAuthJson(path, body, captured),
+    captured,
+  );
 }
