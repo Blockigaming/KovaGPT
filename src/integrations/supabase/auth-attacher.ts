@@ -10,9 +10,8 @@ export const attachSupabaseAuth = createMiddleware({ type: "function" }).client(
     const token = data.session?.access_token;
     const owner = data.session?.user?.id;
     return next({
-      headers: token && owner
-        ? { Authorization: `Bearer ${token}`, "X-Kova-Owner": owner }
-        : {},
+      headers:
+        token && owner ? { Authorization: `Bearer ${token}`, "X-Kova-Owner": owner } : {},
     });
   },
 );
