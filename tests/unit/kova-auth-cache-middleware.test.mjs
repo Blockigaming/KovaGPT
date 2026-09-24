@@ -117,6 +117,7 @@ test("signed-out public authentication dispatches without a principal; owner mut
   );
   current = principal("session-A");
   exports.clearKovaAuthCache();
+  await exports.fetchKovaSession();
   await exports.kovaAuthJson("/api/auth/mfa/recovery/regenerate", { confirm: true });
   const mutation = calls.at(-1).options;
   assert.equal(mutation.headers["X-Kova-Owner"], current.accountId);
@@ -128,6 +129,33 @@ test("signed-out public authentication dispatches without a principal; owner mut
     { accountId: "owner", sessionId: "session-A" },
   );
   assert.equal(calls.at(-1).options.headers["X-Kova-Session"], "session-A");
+});
+
+test("a panel mutation cannot discover a switched cookie after its principal cache is cleared", async () => {
+  const calls = [];
+  const exports = {};
+  let current = principal("session-A");
+  vm.runInNewContext(browserSource, {
+    exports,
+    Response,
+    URL,
+    Error,
+    TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
+    fetch: async (path) => {
+      calls.push(path);
+      return path === "/api/auth/session"
+        ? Response.json({ session: current })
+        : Response.json({ accepted: true });
+    },
+  });
+  await exports.fetchKovaSession();
+  exports.clearKovaAuthCache();
+  current = { ...principal("session-B"), accountId: "other" };
+  await assert.rejects(
+    exports.kovaAuthJson("/api/auth/mfa/enroll", {}),
+    exports.isKovaSessionRejectedError,
+  );
+  assert.deepEqual(calls, ["/api/auth/session"]);
 });
 
 test("MFA cache invalidation discards prior compatibility tokens and cached principals", async () => {

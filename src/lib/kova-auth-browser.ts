@@ -274,7 +274,9 @@ export async function kovaAuthJson(
   body: Record<string, unknown>,
   expected?: Pick<KovaBrowserPrincipal, "accountId" | "sessionId">,
 ): Promise<Response> {
-  const captured = expected ?? (await getCachedKovaSession());
+  // A stale panel must not discover a new cookie owner while preparing a
+  // mutation. Its captured principal may be old; the server will reject it.
+  const captured = expected ?? principalCache?.principal;
   if (!captured) throw new KovaSessionRejectedError();
   const response = await fetch(path, {
     method: "POST",
