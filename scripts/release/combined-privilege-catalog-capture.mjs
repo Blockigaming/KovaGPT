@@ -36,7 +36,9 @@ ${helpers}
            'version',version::text,
            'statementCount',coalesce(array_length(statements,1),0),
            'capturedStatementsSha256',encode(extensions.digest(
-             convert_to(array_to_string(statements,E'\\n'),'UTF8'),'sha256'),'hex')
+             convert_to(array_to_string(statements,E'\\n'),'UTF8'),'sha256'),'hex'),
+           'statementsJsonSha256',encode(extensions.digest(
+             convert_to(coalesce(to_jsonb(statements)::text,'null'),'UTF8'),'sha256'),'hex')
          ) ORDER BY version::text COLLATE "C") AS rows
   FROM supabase_migrations.schema_migrations
 )
