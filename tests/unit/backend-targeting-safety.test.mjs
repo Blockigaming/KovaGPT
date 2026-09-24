@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -37,6 +38,25 @@ test("remote migrations use the package-local Supabase CLI entrypoint", () => {
   assert.match(migrationWrapper, /spawnSync\(process\.execPath, \[entrypoint, \.\.\.args\]/);
   assert.doesNotMatch(migrationWrapper, /supabase\.cmd/);
   assert.doesNotMatch(migrationWrapper, /npx/);
+});
+
+test("unreconciled production project rejects write commands before linking", () => {
+  for (const args of [[], ["--include-all"], ["--dry-run", "--dry-run=false"]]) {
+    const run = spawnSync(process.execPath, ["scripts/release/supabase-db-push.mjs", ...args], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CI: "",
+        SUPABASE_PROJECT_REF: "mfbycmbjygcfkrsuepxf",
+        SUPABASE_ACCESS_TOKEN: "",
+        SUPABASE_DB_PASSWORD: "",
+      },
+    });
+    assert.equal(run.status, 2);
+    assert.match(run.stderr, /production_history_requires_approved_80_plus_3_plan/u);
+    assert.doesNotMatch(run.stdout, /Linking the Supabase CLI/u);
+  }
 });
 
 test("the release runbook documents every guarded remote migration input", () => {

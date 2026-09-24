@@ -45,6 +45,21 @@ if (forbiddenTargetFlags.length > 0) {
   process.exit(2);
 }
 
+// The captured production ledger has 98 rows and the proposed reconciliation
+// requires three history-only records before pushing the remaining 80 bodies.
+// Until that plan and its recovery prerequisites are independently accepted,
+// even an explicitly linked production target must fail before the CLI runs.
+const unreconciledProductionRef = "mfbycmbjygcfkrsuepxf";
+if (
+  projectRef === unreconciledProductionRef &&
+  (forwardedArgs.length !== 1 || forwardedArgs[0] !== "--dry-run")
+) {
+  console.error(
+    "production_history_requires_approved_80_plus_3_plan: only the exact --dry-run flag is permitted for this production project; no migration push was started.",
+  );
+  process.exit(2);
+}
+
 function resolveLocalSupabaseEntrypoint() {
   const entrypoint = resolve(process.cwd(), "node_modules", "supabase", "dist", "supabase.js");
 

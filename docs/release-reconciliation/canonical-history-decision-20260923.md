@@ -128,3 +128,14 @@ The pinned September 18 production capture, remote-only structural gaps,
 actual production rows, managed Auth/Storage configuration, and recovery
 package still require separate verification. Even a passing local 181-row
 receipt does not accept this canonical decision or authorize production repair.
+
+The linked `db:migrate` wrapper ordinarily pushes every source version absent
+from remote history. On the observed 98-row production ledger that is 83
+versions, including the already-applied security body. This proposal makes
+`scripts/release/supabase-db-push.mjs` reject a write invocation for the exact
+production project **before linking**, while allowing only an exact `--dry-run`
+invocation. There is no environment bypass. A later production write needs
+accepted M12/M13 and real-backup recovery evidence, a separate approval for
+history-only recording, a verified 101-row pre-state, a read-only dry run that
+selects exactly 80 approved bodies, and a new reviewed source change to enable
+the guarded execution. The local rehearsal is not that production mechanism.
