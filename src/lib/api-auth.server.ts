@@ -114,7 +114,7 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
       const principal = await resolveSession(sessionDigest);
       if (!principal) return unauthorized("Invalid or expired session");
       const expectedOwner = request.headers.get("x-kova-owner");
-      if (expectedOwner !== null && expectedOwner !== principal.accountId)
+      if (expectedOwner !== principal.accountId)
         return jsonError("Your account changed. Please try again.", 409);
       const compatibilityToken = signKovaCompatibilityJwt(principal);
       const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
