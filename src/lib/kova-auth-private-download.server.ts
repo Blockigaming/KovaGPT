@@ -189,10 +189,18 @@ export async function handleOwnedPrivateDownload(request: Request): Promise<Resp
     if (descriptor.image) {
       const inspected = inspectProjectFile({
         bytes,
-        fileName: "evidence.png",
+        fileName: descriptor.name,
         requestedKind: "image",
       });
       if (descriptor.mime !== null && descriptor.mime !== inspected.mimeType) return denied(502);
+      mime = inspected.mimeType;
+    } else if (kind === "evidence") {
+      const inspected = inspectProjectFile({
+        bytes,
+        fileName: descriptor.name,
+        requestedKind: "file",
+      });
+      if (descriptor.mime !== inspected.mimeType) return denied(502);
       mime = inspected.mimeType;
     }
     // Recheck both the live object revision/current RLS and the original cookie
