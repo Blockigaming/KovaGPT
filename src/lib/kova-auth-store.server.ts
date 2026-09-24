@@ -271,13 +271,27 @@ export async function beginMfaLogin(input: {
   return { factorId: row.factor_id, secretEnvelope: row.secret_envelope };
 }
 
-export async function readMfaLoginChallenge(challengeDigest: string): Promise<MfaChallenge> {
+export async function readMfaLoginChallenge(challengeDigest: string): Promise<MfaChallenge[]> {
   const value = await rpc<unknown>("kova_auth_read_mfa_login_challenge", {
     p_challenge_digest_hex: challengeDigest,
   });
-  return mfaChallengeFromRow(
-    firstRow<Record<string, unknown>>(value, "kova_auth_read_mfa_login_challenge"),
+  if (!Array.isArray(value) || value.length < 1 || value.length > 10) {
+    throw new KovaAuthStoreError("kova_auth_read_mfa_login_challenge");
+  }
+  return value.map((row) =>
+    mfaChallengeFromRow(row as Record<string, unknown>),
   );
+}
+
+export async function bindMfaLoginFactor(input: {
+  challengeDigest: string;
+  factorId: string;
+}): Promise<void> {
+  const value = await rpc<unknown>("kova_auth_bind_mfa_login_factor", {
+    p_challenge_digest_hex: input.challengeDigest,
+    p_factor_id: input.factorId,
+  });
+  if (value !== true) throw new KovaAuthStoreError("kova_auth_bind_mfa_login_factor");
 }
 
 export async function finishMfaLogin(input: {
