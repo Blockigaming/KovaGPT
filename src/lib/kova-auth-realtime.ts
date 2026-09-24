@@ -17,8 +17,10 @@ const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
+type LeaseFailureKind = "denied" | "transient" | "invalid";
+
 class LeaseFailure extends Error {
-  constructor(readonly denied: boolean) {
+  constructor(readonly kind: LeaseFailureKind) {
     super("realtime_lease_unavailable");
   }
 }
@@ -108,9 +110,16 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     }, delay);
   };
   const handleFailure = (error: unknown) => {
-    if (error instanceof LeaseFailure && error.denied) {
-      stop(true);
-      return;
+    if (error instanceof LeaseFailure) {
+      if (error.kind === "denied") {
+        stop(true);
+        return;
+      }
+      if (error.kind === "invalid") {
+        options.onStatus("CHANNEL_ERROR");
+        stop();
+        return;
+      }
     }
     scheduleRetry();
   };
@@ -129,7 +138,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
 
   const refresh = async (): Promise<string | null> => {
     if (!current()) {
-      stop(true);
+      stop();
       return null;
     }
     if (token && performance.now() < refreshAt && admitted()) return token;
@@ -162,14 +171,17 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       });
       if (controller.signal.aborted) {
         void response.body?.cancel().catch(() => {});
-        throw new LeaseFailure(false);
+        throw new LeaseFailure("transient");
       }
       if (!response.ok) {
         void response.body?.cancel().catch(() => {});
-        throw new LeaseFailure([401, 403, 409].includes(response.status));
+        if ([401, 403, 409].includes(response.status)) throw new LeaseFailure("denied");
+        if (response.status >= 500 || response.status === 408 || response.status === 429)
+          throw new LeaseFailure("transient");
+        throw new LeaseFailure("invalid");
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new LeaseFailure(false);
+      if (!reader) throw new LeaseFailure("invalid");
       const chunks: Uint8Array[] = [];
       let size = 0;
       const cancelReader = () => {
@@ -179,10 +191,10 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (controller.signal.aborted) throw new Error("realtime_lease_unavailable");
+          if (controller.signal.aborted) throw new LeaseFailure("transient");
           if (done) break;
           size += value.byteLength;
-          if (size > MAX_REPLY_BYTES) throw new Error("realtime_lease_unavailable");
+          if (size > MAX_REPLY_BYTES) throw new LeaseFailure("invalid");
           chunks.push(value);
         }
       } catch (error) {
@@ -198,8 +210,17 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         bytes.set(chunk, offset);
         offset += chunk.byteLength;
       }
-      const payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-      const next = payload?.session as KovaBrowserPrincipal | undefined;
+      let payload: {
+        session?: KovaBrowserPrincipal;
+        accessToken?: unknown;
+        expiresIn?: unknown;
+      };
+      try {
+        payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      } catch {
+        throw new LeaseFailure("invalid");
+      }
+      const next = payload?.session;
       const expiry = typeof next?.expiresAt === "string" ? Date.parse(next.expiresAt) : NaN;
       if (
         next &&
@@ -209,7 +230,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
               next.email !== principal.email ||
               next.assuranceLevel !== principal.assuranceLevel)))
       )
-        throw new LeaseFailure(true);
+        throw new LeaseFailure("denied");
       if (
         !next ||
         !UUID.test(options.ownerId) ||
@@ -228,7 +249,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
         payload.expiresIn < 60 ||
         payload.expiresIn > 300
       )
-        throw new LeaseFailure(false);
+        throw new LeaseFailure("invalid");
       // Both the token and the public principal are made from the same live
       // session by the same-origin endpoint. No browser-supplied claim is used.
       return { next, expiry, accessToken: payload.accessToken as string };
@@ -236,9 +257,12 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     renewal = (async () => {
       try {
         const value = await Promise.race([read(), cancelled]);
-        if (!current() || controller.signal.aborted || performance.now() >= started + LEASE_MS) {
-          stop(true);
+        if (!current()) {
+          stop();
           return null;
+        }
+        if (controller.signal.aborted || performance.now() >= started + LEASE_MS) {
+          throw new LeaseFailure("transient");
         }
         principal = value.next;
         expiresAt = value.expiry;
