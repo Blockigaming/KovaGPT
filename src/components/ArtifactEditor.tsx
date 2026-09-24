@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
@@ -72,13 +73,21 @@ type ArtifactEditorProps = {
   chatId?: string | null;
   messageId?: string | null;
   projectId?: string | null;
+  documentId?: string;
+  presentation?: "dialog" | "page";
 };
 export function ArtifactEditor(props: ArtifactEditorProps) {
   const { user } = useUser();
   if (!props.open) return null;
   return (
     <ArtifactEditorSession
-      key={JSON.stringify([user?.id, props.chatId, props.messageId, props.projectId])}
+      key={JSON.stringify([
+        user?.id,
+        props.chatId,
+        props.messageId,
+        props.projectId,
+        props.documentId,
+      ])}
       {...props}
     />
   );
@@ -93,6 +102,8 @@ function ArtifactEditorSession({
   chatId,
   messageId,
   projectId,
+  documentId,
+  presentation = "dialog",
 }: ArtifactEditorProps) {
   const [value, setValue] = useState(initialContent);
   const [copied, setCopied] = useState(false);
@@ -132,6 +143,7 @@ function ArtifactEditorSession({
     messageId,
     projectId,
     initialContent,
+    documentId,
   });
   const saveVersionFn = collaboration.save;
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -489,18 +501,28 @@ function ArtifactEditorSession({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-black/50 p-0 sm:p-4"
-      onClick={onClose}
+      className={
+        presentation === "page"
+          ? "flex h-[100dvh] w-full overflow-hidden"
+          : "fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      }
+      onClick={presentation === "dialog" ? onClose : undefined}
     >
       <div
-        className="bg-background w-full sm:max-w-6xl sm:rounded-xl border border-border shadow-xl flex flex-col h-full sm:h-[90vh]"
+        className={
+          presentation === "page"
+            ? "bg-background flex h-full w-full min-w-0 flex-col"
+            : "bg-background w-full sm:max-w-6xl sm:rounded-xl border border-border shadow-xl flex flex-col h-full sm:h-[90vh]"
+        }
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+        role={presentation === "page" ? "main" : "dialog"}
+        id={presentation === "page" ? "main-content" : undefined}
+        tabIndex={presentation === "page" ? -1 : undefined}
+        aria-modal={presentation === "dialog" ? true : undefined}
         aria-label={`${label} editor`}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
             <CollaborationStatus {...collaboration.presence} />
             <span className="text-[11px] text-muted-foreground">
@@ -547,6 +569,22 @@ function ArtifactEditorSession({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {presentation === "dialog" &&
+              !projectId &&
+              chatId &&
+              remoteSnapshot &&
+              saveState === "saved" &&
+              remoteSnapshot.document.content === value &&
+              pendingAutosavesRef.current === 0 && (
+                <Link
+                  to="/c/$conversationId/canvas/$documentId"
+                  params={{ conversationId: chatId, documentId: remoteSnapshot.document.id }}
+                  search={{ kind }}
+                  className="inline-flex min-h-11 items-center rounded-lg px-3 text-xs hover:bg-accent"
+                >
+                  Open page
+                </Link>
+              )}
             <button
               onClick={() => setOutlineOpen((v) => !v)}
               className="kova-icon-button"
