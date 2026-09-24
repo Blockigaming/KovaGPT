@@ -328,7 +328,7 @@ browser bundle, repository, SQL text, or logs.
 
 The September 24 Rehearsal database has the MFA binding, multiple-factor
 login, legacy MFA bridge, MCP session authority, explicit hosted-ID mapping,
-and cutover population guard migrations installed. A read-only check returned
+cutover population guard, hosted-authority/RP guard, and required-MFA guard migrations installed. A read-only check returned
 zero legacy MFA gaps, 119 scoped RLS tables, and zero violations in all five
 revocation-proof counts. The bridge table has RLS enabled and denies
 browser-role reads; its five RPCs, the MCP authority RPC, and the new
@@ -351,13 +351,27 @@ source tree and compares it with a clean checked-out commit. Run it with
 --config-sha256 <audited-config-fingerprint>`. The receipt must contain the
 exact `sourceSha` and `appBuildSha`, environment, project ref, `ACTIVE_HEALTHY`
 status, HTTPS deployment origin, `kova` mode, config fingerprint, and a capture
-time no more than fifteen minutes old. It requires all six named migrations,
+time no more than fifteen minutes old. It requires all eight named migrations,
 `legacyMfaGapCount: 0` and `legacyAdoptionGapCount: 0`, the six fields from
 `kova-auth-revocation-proof.sql`, service-only ACL/search-path/timeout evidence
 for the five security-sensitive RPCs, every named deployed check exported by
 the script, and expiration times for the last pre-marker JWT and last historic
 signed Storage URL that precede capture. JSON field names are defined by the
 validator and exercised in `tests/unit/kova-auth-cutover-gate.test.mjs`.
+
+The receipt also pins the exact HTTPS `authPublicOrigin` deployed as
+`KOVA_AUTH_PUBLIC_ORIGIN` and a `passkeyRpId` equal to that URL's hostname.
+Call the service-only `kova_auth_legacy_adoption_gap_count` RPC with that
+audited RP ID and capture its zero count in the same fresh database snapshot.
+The earlier one-argument RPC is dropped by the forward migration. The census
+requires a mapped, verified owned account with an active password, verified
+Google identity, or active passkey for the exact deployment RP ID. It also
+requires a hosted-retirement marker, no hosted password, and no hosted refresh
+sessions. The marker rejects issued and newly minted unmarked hosted bearer
+tokens at the database guard; the deployed receipt separately tests rejection.
+The MFA census also counts verified owned accounts whose `mfa_required` flag
+persists after hosted MFA removal and that lack an active verified owned TOTP
+factor. A zero MFA gap must account for these users before cutover.
 
 Capture the database counts and ACLs with read-only queries on the project
 identified in the receipt. Capture the browser, device, email, OAuth, Storage,
@@ -369,7 +383,7 @@ exists while the adoption gap is nonzero or app deployment, signing-key
 configuration, and device rehearsal remain unapproved. The census counts all
 nondeleted, nonanonymous hosted users except fully shaped inert Kova UUID
 bridges. Each must have its stable owned UUID, verified owned account, and
-active owned password, verified Google identity, or active owned passkey;
+active owned password, verified Google identity, or active matching-RP passkey;
 temporary suspensions do not remove a user from this check. Recheck both counts
 against the current database immediately before creating a receipt.
 

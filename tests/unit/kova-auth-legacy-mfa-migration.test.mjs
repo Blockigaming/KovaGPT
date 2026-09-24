@@ -25,8 +25,9 @@ async function installLegacyMfa(db, id = owner) {
 
 const gapCount = async (db) =>
   (await db.query("select public.kova_auth_legacy_mfa_gap_count($1) as n", [now])).rows[0].n;
-const adoptionGapCount = async (db) =>
-  (await db.query("select public.kova_auth_legacy_adoption_gap_count($1) as n", [now])).rows[0].n;
+const adoptionGapCount = async (db, rpId = "kova.test") =>
+  (await db.query("select public.kova_auth_legacy_adoption_gap_count($1,$2) as n", [rpId, now]))
+    .rows[0].n;
 
 test("a suspended legacy-MFA account still blocks the cutover census", async () => {
   const db = await authDatabase();
@@ -38,11 +39,35 @@ test("a suspended legacy-MFA account still blocks the cutover census", async () 
       expiry,
     ]);
     assert.equal(await gapCount(db), 1);
-    assert.equal(await adoptionGapCount(db), 0);
+    assert.equal(await adoptionGapCount(db), 1); // The hosted session has not been retired.
     await db.query("update kova_private.auth_accounts set suspended_until=null where id=$1", [
       owner,
     ]);
     assert.equal(await gapCount(db), 1);
+  } finally {
+    await db.close();
+  }
+});
+
+test("an owned MFA requirement without an active factor blocks cutover after hosted MFA removal", async () => {
+  const db = await authDatabase();
+  try {
+    await passwordAccount(db);
+    assert.equal(await gapCount(db), 0);
+    await db.query(
+      "update kova_private.auth_accounts set mfa_required=true, suspended_until=$2 where id=$1",
+      [owner, expiry],
+    );
+    assert.equal(await gapCount(db), 1);
+    await installLegacyMfa(db);
+    assert.equal(await gapCount(db), 1);
+    await db.query("delete from auth.mfa_factors where user_id=$1", [owner]);
+    assert.equal(await gapCount(db), 1);
+    await db.query("update kova_private.auth_accounts set suspended_until=null where id=$1", [
+      owner,
+    ]);
+    await db.query("update kova_private.auth_accounts set mfa_required=false where id=$1", [owner]);
+    assert.equal(await gapCount(db), 0);
   } finally {
     await db.close();
   }
@@ -76,6 +101,10 @@ test("cutover census includes untouched hosted users and accounts without a usab
       owner,
       now,
     ]);
+    await db.query(
+      "update kova_private.auth_legacy_retirements set retired_at=$2 where account_id=$1",
+      [owner, now],
+    );
     assert.equal(await adoptionGapCount(db), 0);
     assert.equal(await gapCount(db), 1);
 
@@ -121,7 +150,77 @@ test("cutover census accepts a verified owned Google credential for an adopted h
        values($1,'google','provider-subject',$2,$3)`,
       [owner, email, now],
     );
+    assert.equal(await adoptionGapCount(db), 1); // Adoption alone does not retire hosted access.
+    await db.query(
+      "insert into kova_private.auth_legacy_retirements(account_id,retired_at) values($1,$2)",
+      [owner, now],
+    );
     assert.equal(await adoptionGapCount(db), 0);
+    await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query("delete from auth.sessions where user_id=$1", [owner]);
+    assert.equal(await adoptionGapCount(db), 0);
+  } finally {
+    await db.close();
+  }
+});
+
+test("passkey-only adoption needs a key for the audited RP and retired hosted issuance", async () => {
+  const db = await authDatabase();
+  try {
+    const email = `${owner}@example.invalid`;
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)", [
+      owner,
+      email,
+      now,
+    ]);
+    await db.query(
+      `insert into kova_private.auth_accounts(id,legacy_supabase_user_id,primary_email,email_verified_at)
+       values($1,$1,$2,$3)`,
+      [owner, email, now],
+    );
+    await db.query(
+      `insert into kova_private.auth_passkeys(
+        account_id,rp_id,credential_id,public_key,user_handle,sign_count,
+        backup_eligible,backed_up,friendly_name,created_at
+      ) values($1,'old.kova.test','old-credential',decode(repeat('ab',16),'hex'),
+        'owner-handle',0,false,false,'Old domain',$2)`,
+      [owner, now],
+    );
+    await db.query(
+      "insert into kova_private.auth_legacy_retirements(account_id,retired_at) values($1,$2)",
+      [owner, now],
+    );
+    assert.equal(await adoptionGapCount(db), 1);
+    assert.equal(await adoptionGapCount(db, "old.kova.test"), 0);
+    await db.query(
+      `insert into kova_private.auth_passkeys(
+        account_id,rp_id,credential_id,public_key,user_handle,sign_count,
+        backup_eligible,backed_up,friendly_name,created_at
+      ) values($1,'kova.test','current-credential',decode(repeat('ab',16),'hex'),
+        'owner-handle',0,false,false,'Current domain',$2)`,
+      [owner, now],
+    );
+    assert.equal(await adoptionGapCount(db), 0);
+    await db.query("update auth.users set encrypted_password='legacy-hash' where id=$1", [owner]);
+    assert.equal(await adoptionGapCount(db), 1);
+    await db.query("update auth.users set encrypted_password=null where id=$1", [owner]);
+    assert.equal(await adoptionGapCount(db), 0);
+    await assert.rejects(
+      db.query("select public.kova_auth_legacy_adoption_gap_count($1,$2)", [
+        "wrong.example:443",
+        now,
+      ]),
+      /kova_auth_invalid_cutover_configuration/u,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select to_regprocedure('public.kova_auth_legacy_adoption_gap_count(timestamptz)') is null as dropped",
+        )
+      ).rows[0].dropped,
+      true,
+    );
   } finally {
     await db.close();
   }
@@ -320,7 +419,7 @@ test("legacy MFA migration RPCs remain service-role only", async () => {
       /permission denied/u,
     );
     await assert.rejects(
-      db.query("select public.kova_auth_legacy_adoption_gap_count($1)", [now]),
+      db.query("select public.kova_auth_legacy_adoption_gap_count($1,$2)", ["kova.test", now]),
       /permission denied/u,
     );
     await db.exec("reset role");

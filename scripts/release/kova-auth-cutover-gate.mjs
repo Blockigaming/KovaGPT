@@ -10,6 +10,8 @@ export const requiredMigrations = Object.freeze([
   "kova_owned_mcp_session_authority",
   "kova_owned_mcp_legacy_mfa_claims",
   "kova_owned_cutover_population_guards",
+  "kova_owned_cutover_authority_and_rp",
+  "kova_owned_cutover_required_mfa_guard",
 ]);
 
 export const requiredDeployedChecks = Object.freeze([
@@ -32,6 +34,7 @@ export const requiredDeployedChecks = Object.freeze([
   "storage_revocation_and_url_lifetime",
   "realtime_reauthorization",
   "mcp_bearer_revocation",
+  "hosted_bearer_denied_after_retirement",
   "email_delivery",
   "rollback_rehearsal",
 ]);
@@ -53,6 +56,15 @@ const serviceOnlyFunctions = Object.freeze([
 const hex = /^[a-f0-9]{64}$/u;
 const commit = /^[a-f0-9]{40}$/u;
 const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+const httpsOrigin = (value) => {
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.origin === value ? parsed : null;
+  } catch {
+    return null;
+  }
+};
 const fail = (reason) => {
   throw new Error(`kova_auth_cutover_${reason}`);
 };
@@ -83,11 +95,9 @@ export function validateCutoverEvidence(
     evidence.authMode !== "kova"
   )
     fail("deployment_identity");
-  if (
-    typeof evidence.deploymentOrigin !== "string" ||
-    !/^https:\/\/[^/]+$/u.test(evidence.deploymentOrigin)
-  )
-    fail("deployment_origin");
+  if (!httpsOrigin(evidence.deploymentOrigin)) fail("deployment_origin");
+  const publicOrigin = httpsOrigin(evidence.authPublicOrigin);
+  if (!publicOrigin || evidence.passkeyRpId !== publicOrigin.hostname) fail("passkey_rp");
   const captured = timestamp(evidence.capturedAt, "capture_time");
   if (!Number.isFinite(now) || captured > now + 60_000 || now - captured > 15 * 60_000)
     fail("stale_capture");
@@ -117,6 +127,8 @@ export function validateCutoverEvidence(
         !Number.isSafeInteger(fn.timeoutMs) ||
         fn.timeoutMs < 1 ||
         fn.timeoutMs > 10_000 ||
+        (name === "kova_auth_legacy_adoption_gap_count" &&
+          fn.argumentTypes !== "text,timestamptz") ||
         fn.serviceRoleExecute !== true ||
         fn.anonExecute !== false ||
         fn.authenticatedExecute !== false

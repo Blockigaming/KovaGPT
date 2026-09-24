@@ -26,6 +26,8 @@ const evidence = () => ({
   projectStatus: "ACTIVE_HEALTHY",
   authMode: "kova",
   deploymentOrigin: "https://rehearsal.example.invalid",
+  authPublicOrigin: "https://rehearsal.example.invalid",
+  passkeyRpId: "rehearsal.example.invalid",
   capturedAt,
   appliedMigrations: [...requiredMigrations],
   legacyMfaGapCount: 0,
@@ -51,6 +53,9 @@ const evidence = () => ({
         securityDefiner: true,
         searchPath: "",
         timeoutMs: 5000,
+        ...(name === "kova_auth_legacy_adoption_gap_count"
+          ? { argumentTypes: "text,timestamptz" }
+          : {}),
         serviceRoleExecute: true,
         anonExecute: false,
         authenticatedExecute: false,
@@ -79,6 +84,8 @@ test("cutover receipt binds the deployed build, live database and fresh evidence
     ["projectRef", "mfbycmbjygcfkrsuepxf"],
     ["projectStatus", "INACTIVE"],
     ["authMode", "dual"],
+    ["authPublicOrigin", "http://rehearsal.example.invalid"],
+    ["passkeyRpId", "old.rehearsal.example.invalid"],
   ]) {
     const altered = evidence();
     altered[field] = value;
@@ -96,6 +103,10 @@ test("cutover receipt fails closed on missing proof, public function access and 
     (item) => (item.legacyMfaGapCount = 1),
     (item) => (item.legacyAdoptionGapCount = 1),
     (item) => delete item.legacyAdoptionGapCount,
+    (item) => delete item.passkeyRpId,
+    (item) =>
+      (item.serviceOnlyFunctions.kova_auth_legacy_adoption_gap_count.argumentTypes = "timestamptz"),
+    (item) => (item.deployedChecks.hosted_bearer_denied_after_retirement = false),
     (item) => (item.revocationProof.unguarded_rls_tables = 1),
     (item) => (item.revocationProof.scoped_rls_tables = 0),
     (item) =>

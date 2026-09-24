@@ -11,7 +11,12 @@ import {
 } from "@/lib/kova-auth-passkey-browser";
 import { toast } from "sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { getCapturedKovaPrincipal, type KovaBrowserPrincipal } from "@/lib/kova-auth-browser";
+import {
+  clearKovaAuthCache,
+  fetchKovaSession,
+  getCapturedKovaPrincipal,
+  type KovaBrowserPrincipal,
+} from "@/lib/kova-auth-browser";
 
 type Passkey = { id: string; friendlyName: string; createdAt: string; lastUsedAt: string | null };
 type Status = {
@@ -85,15 +90,35 @@ export function KovaPasskeyPanel() {
     setPassword("");
     setName("");
   }
-  async function mutate(operation: () => Promise<void>, message: string) {
+  async function mutate(operation: () => Promise<void>, message: string, rotatesSession = false) {
     if (inFlight.current) return;
+    if (!status || status.principal.accountId !== displayedAccount) return;
     inFlight.current = true;
     setBusy(true);
     try {
       await operation();
+      // Registration and removal rotate the cookie and clear the browser cache.
+      // Re-read it before reloading this panel or enabling data transports.
+      const principal = await fetchKovaSession();
+      if (
+        !principal ||
+        principal.accountId !== status.principal.accountId ||
+        (rotatesSession && principal.sessionId === status.principal.sessionId)
+      ) {
+        clearKovaAuthCache();
+        throw new Error("kova_passkey_principal_changed");
+      }
       clear();
       toast.success(message);
     } catch {
+      // An uncertain response can follow a committed rotation. Recover the
+      // current owner for the panel without granting another account access.
+      try {
+        const principal = await fetchKovaSession();
+        if (!principal || principal.accountId !== status.principal.accountId) clearKovaAuthCache();
+      } catch {
+        clearKovaAuthCache();
+      }
       toast.error(
         "The passkey change was cancelled or could not be confirmed. Sign in again before retrying.",
       );
@@ -121,6 +146,7 @@ export function KovaPasskeyPanel() {
             status.principal,
           ),
         "Passkey added. Other devices were signed out.",
+        true,
       );
     } else
       await mutate(
@@ -188,6 +214,7 @@ export function KovaPasskeyPanel() {
                           mutate(
                             () => removeKovaPasskey(key.id, status.principal),
                             "Passkey removed. Other devices were signed out.",
+                            true,
                           )
                         }
                       >

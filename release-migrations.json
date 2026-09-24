@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 181,
-  "latest": "20260924140000_kova_owned_cutover_population_guards.sql",
+  "count": 183,
+  "latest": "20260924160000_kova_owned_cutover_required_mfa_guard.sql",
   "migrations": [
     {
       "order": 1,
@@ -3829,6 +3829,34 @@
       "sha256": "9155d05612be88eca7c93673c57412de2fb66cf669597dbbbfbe61489821f687",
       "tables": [],
       "functions": ["kova_auth_legacy_mfa_gap_count", "kova_auth_legacy_adoption_gap_count"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 182,
+      "filename": "20260924150000_kova_owned_cutover_authority_and_rp.sql",
+      "timestamp": "20260924150000",
+      "sha256": "b04221df7d0e1aef7d862ea9a06f9ffcde3e6942c9270faf96026e4e44afddcd",
+      "tables": [],
+      "functions": ["kova_auth_legacy_adoption_gap_count"],
+      "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 183,
+      "filename": "20260924160000_kova_owned_cutover_required_mfa_guard.sql",
+      "timestamp": "20260924160000",
+      "sha256": "154953a67562e2724e44478b4148d5e38b3bf819cf71f1eb168f63f31fe6f0d8",
+      "tables": [],
+      "functions": ["kova_auth_legacy_mfa_gap_count"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,

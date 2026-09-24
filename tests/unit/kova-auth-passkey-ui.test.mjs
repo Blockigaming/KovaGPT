@@ -11,10 +11,17 @@ const key = {
 const captured = { accountId: "owner", sessionId: "session" };
 function panel(options = {}) {
   const calls = [];
+  let current = options.capturedPrincipal ?? captured;
+  let sessionRevision = 0;
+  let rotated = false;
   const invoke = async (name, ...args) => {
     calls.push([name, ...JSON.parse(JSON.stringify(args))]);
     if (options.hold) await options.hold;
     if (options.fail) throw Error("upstream secrets");
+    if (name === "register" || name === "remove") {
+      current = null;
+      rotated = true;
+    }
   };
   const status = {
     passkeys: options.keys ?? [],
@@ -29,7 +36,24 @@ function panel(options = {}) {
         useUser: () => ({ user: { id: options.displayedAccount ?? "owner" } }),
       },
       "@/lib/kova-auth-browser": {
-        getCapturedKovaPrincipal: () => options.capturedPrincipal ?? captured,
+        getCapturedKovaPrincipal: () => current,
+        clearKovaAuthCache: () => {
+          current = null;
+        },
+        fetchKovaSession: async () => {
+          calls.push(["SESSION"]);
+          if (rotated) sessionRevision++;
+          current = options.switchOnRefresh
+            ? { accountId: "other", sessionId: `session-other-${sessionRevision}` }
+            : {
+                accountId: "owner",
+                sessionId: rotated
+                  ? `session-rotated-${sessionRevision}`
+                  : (current?.sessionId ?? "session"),
+              };
+          rotated = false;
+          return current;
+        },
       },
       "@/lib/passkey-support": { browserSupportsPasskeys: () => options.supported !== false },
       "@/lib/kova-auth-passkey-browser": {
@@ -147,6 +171,41 @@ test("passkey panel never loads another cookie owner into the displayed account"
     "/api/auth/passkeys",
     { Accept: "application/json", "X-Kova-Owner": "owner", "X-Kova-Session": "session" },
   ]);
+});
+test("a rotating passkey mutation reloads the captured owner before the panel lists keys", async () => {
+  const f = panel({
+    rotate: true,
+    keys: [key],
+    status: { canRemove: true, requiresPassword: false },
+  });
+  await f.flush();
+  await f.click("Add passkey");
+  await f.submit();
+  await f.flush();
+  assert.equal(f.messages.at(-1)[0], "success");
+  assert.ok(!f.nodes().some((node) => node.props.role === "alert"));
+  assert.equal(
+    f.requests.filter(([kind]) => kind === "GET").at(-1)[2]["X-Kova-Session"],
+    "session-rotated-1",
+  );
+  await f.click("Remove Laptop");
+  await f.click("Confirm removal");
+  assert.equal(f.messages.at(-1)[0], "success");
+  assert.equal(
+    f.requests.filter(([kind]) => kind === "GET").at(-1)[2]["X-Kova-Session"],
+    "session-rotated-2",
+  );
+});
+test("a different cookie owner cannot be refreshed into the stale passkey panel", async () => {
+  const f = panel({ switchOnRefresh: true, keys: [key] });
+  await f.flush();
+  await f.click("Rename Laptop");
+  await f.input("kova-passkey-name", "New name");
+  await f.submit();
+  await f.flush();
+  assert.equal(f.messages.at(-1)[0], "error");
+  assert.equal(f.requests.filter(([kind]) => kind === "GET").length, 1);
+  assert.equal(f.find("div", (node) => node.props.role === "alert").props.role, "alert");
 });
 test("load errors, invalid payloads, limits, unsupported devices and missing reauthentication do not show usable registration", async () => {
   for (const options of [
