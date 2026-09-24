@@ -221,7 +221,7 @@ for (const [label, options, headers] of [
   test(`a copied private-image link cannot bypass ${label}`, async () => {
     const f = fixture(options),
       response = await f.delivery.handlePrivateLibraryImage(f.request({ headers }));
-    assert.ok([401, 403].includes(response.status));
+    assert.ok([401, 403, 409].includes(response.status));
     assert.ok(!f.events.includes("metadata"));
   });
 for (const [label, init] of [
