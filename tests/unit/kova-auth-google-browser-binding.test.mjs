@@ -65,8 +65,9 @@ function harness(db, auth = pub) {
 }
 async function journey(h) {
   let response = await h.handleKovaGoogleStart(
-    new Request(`${pub}/api/auth/google/start?return_to=%2Fprojects%2Ffixture`,
-      { headers: { "sec-fetch-site": "same-origin" } }),
+    new Request(`${pub}/api/auth/google/start?return_to=%2Fprojects%2Ffixture`, {
+      headers: { "sec-fetch-site": "same-origin" },
+    }),
   );
   const browser = cookie(response, "__Host-kova_oauth_browser");
   assert.ok(browser);
@@ -117,7 +118,10 @@ test("cross-site Google starts are rejected before OAuth state creation", async 
       );
       assert.equal(response.status, 403);
     }
-    assert.equal((await db.query("select count(*)::int as n from kova_private.auth_oauth_states")).rows[0].n, 0);
+    assert.equal(
+      (await db.query("select count(*)::int as n from kova_private.auth_oauth_states")).rows[0].n,
+      0,
+    );
   } finally {
     await db.close();
   }
