@@ -4,7 +4,7 @@
   "projectRefAsserted": "mfbycmbjygcfkrsuepxf",
   "liveProjectIdentityVerified": false,
   "liveQueryIdentityVerified": false,
-  "querySha256": "392f2b6e20d72532a5d7154a4fffad15ddd348b0df7671fe7a3316fd97f6cb85",
+  "querySha256": "a88458b42360c273f86e32e5008e72173ff38b3e02b9747120e89b60b2deedbe",
   "notes": "Read-only PostgreSQL 17 repeatable-read catalog capture; connection target and query identity asserted by operator, not independently attested. No customer rows, function bodies or credential values stored. Object-level hashes need a same-query isolated source replay and investigation of differences; no migration proof accepted.",
   "capture": {
     "ledger": {
@@ -110,6 +110,16 @@
       ],
       "version_count": 98
     },
+    "schemas": [
+      {
+        "object_id": "kova_private",
+        "acl_sha256": "b2de9f6db82a290441a2fd4484863a3966e0932b2f6282ed2057747fbea51a02"
+      },
+      {
+        "object_id": "public",
+        "acl_sha256": "d0cb107b86cb77a7c149b7099f9697c696b6e6a4c34b24cf5845c23e80407bda"
+      }
+    ],
     "readOnly": true,
     "functions": [
       {
@@ -1176,7 +1186,7 @@
         "schema_sha256": "6e5b5b7fcc48e70a554834b6802695e4f8f37548b9792843767d636050f49819"
       }
     ],
-    "capturedAt": "2026-09-24T18:10:39.669317+00:00",
+    "capturedAt": "2026-09-24T18:23:04.088265+00:00",
     "databaseName": "postgres",
     "schemaVersion": 1,
     "defaultAclSha256": "a579fea0bf74874ce0863e7156df3ae6343a75da302dc51ae6a06b8aff140de0",

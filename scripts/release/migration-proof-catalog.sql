@@ -85,6 +85,19 @@ WITH target_relations AS (
          )::text, 'UTF8'), 'sha256'), 'hex') AS function_sha256
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname IN ('public', 'kova_private')
+), schema_rows AS (
+  SELECT n.nspname::text AS object_id,
+         encode(extensions.digest(convert_to(jsonb_build_object(
+           'owner', n.nspowner::regrole::text,
+           'explicitAcl', n.nspacl::text,
+           'roleMatrix', (SELECT jsonb_agg(jsonb_build_object(
+             'role', roles.role_name,
+             'usage', has_schema_privilege(roles.role_name, n.oid, 'USAGE'),
+             'create', has_schema_privilege(roles.role_name, n.oid, 'CREATE')
+           ) ORDER BY roles.role_name)
+             FROM (VALUES ('anon'), ('authenticated'), ('service_role')) roles(role_name))
+         )::text, 'UTF8'), 'sha256'), 'hex') AS acl_sha256
+    FROM pg_namespace n WHERE n.nspname IN ('public', 'kova_private')
 ), default_acl_rows AS (
   SELECT coalesce(jsonb_agg(jsonb_build_object(
     'owner', d.defaclrole::regrole::text, 'schema', coalesce(n.nspname, '<global>'),
@@ -120,6 +133,7 @@ SELECT jsonb_build_object(
   'postgresVersionNum', current_setting('server_version_num')::int,
   'ledger', (SELECT to_jsonb(history) FROM history),
   'remoteOnlyHistory', (SELECT rows FROM remote_only_history),
+  'schemas', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM schema_rows x),
   'relations', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM relation_rows x),
   'functions', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY object_id), '[]'::jsonb) FROM function_rows x),
   'defaultAclSha256', (SELECT encode(extensions.digest(convert_to(rows::text, 'UTF8'), 'sha256'), 'hex') FROM default_acl_rows)

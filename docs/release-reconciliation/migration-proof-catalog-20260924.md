@@ -8,7 +8,8 @@ production schema change, restore, deployment, or any of the 19 proofs.
 The [live artifact](evidence/migration-proof-live-object-digests-20260924.json) contains the
 asserted project reference `mfbycmbjygcfkrsuepxf`, PostgreSQL 17, 98 ordered ledger versions,
 19 remote-only version/statement-array hashes, 124 relation IDs with separate structure,
-privilege and RLS hashes, 79 routine IDs with definition/security hashes, and a default-ACL hash.
+privilege and RLS hashes, 79 routine IDs with definition/security hashes, two schema-level ACL
+hashes and a default-ACL hash.
 It captures no customer records, SQL function bodies, or credentials. The collector runs in a
 single `REPEATABLE READ READ ONLY` transaction with local timeouts. The source query's SHA-256
 is stored in the live artifact; CI must use that exact query and upload the source baseline and
@@ -20,6 +21,13 @@ ordered ledgers, and the artifact digest in `upgrade-database.json` must be chec
 comparing. The 19 rows in the live capture are asserted as one statement each; a missing row or
 malformed digest fails the collector. The SQL connection target and query identity are operator
 assertions, not independently attested production identity.
+
+The disposable Supabase CLI may record migration statement arrays differently from the hosted
+ledger. The isolated parser requires all 19 ordered historical versions and well-formed hashes,
+but does not assert single-statement equivalence for its locally generated ledger rows. The
+live parser does require all 19 one-statement rows. Historical body equivalence is established
+by the separately validated 98-row fixture manifest and live ledger comparison, not by comparing
+local CLI statement-array hashes to production hashes.
 
 For each mapping, compare the live state with the local 98-version baseline and source-final
 state for all affected objects and dependent objects. Inspect every structural, ACL, RLS and

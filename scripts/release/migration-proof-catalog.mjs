@@ -33,7 +33,11 @@ const REMOTE_ONLY = [
   "20260824085444",
 ];
 
-export function parseMigrationProofCatalog(stdout, expectedVersions) {
+export function parseMigrationProofCatalog(
+  stdout,
+  expectedVersions,
+  { requireSingleStatementHistory = true } = {},
+) {
   if (typeof stdout !== "string" || Buffer.byteLength(stdout, "utf8") > 2 * 1024 * 1024)
     throw new Error("migration_proof_catalog_output_invalid");
   let capture;
@@ -63,7 +67,11 @@ export function parseMigrationProofCatalog(stdout, expectedVersions) {
     JSON.stringify(remoteOnlyHistory.map((entry) => entry?.version)) !==
       JSON.stringify(REMOTE_ONLY) ||
     remoteOnlyHistory.some(
-      (entry) => entry.statementCount !== 1 || !SHA256.test(entry.statementsJsonSha256 ?? ""),
+      (entry) =>
+        !Number.isInteger(entry.statementCount) ||
+        entry.statementCount < 0 ||
+        (requireSingleStatementHistory && entry.statementCount !== 1) ||
+        !SHA256.test(entry.statementsJsonSha256 ?? ""),
     ) ||
     !SHA256.test(capture?.defaultAclSha256 ?? "")
   )
@@ -89,6 +97,13 @@ export function parseMigrationProofCatalog(stdout, expectedVersions) {
     )
       throw new Error(`migration_proof_catalog_${key}_invalid`);
   }
+  if (
+    !Array.isArray(capture.schemas) ||
+    JSON.stringify(capture.schemas.map((entry) => entry.object_id)) !==
+      JSON.stringify(["kova_private", "public"]) ||
+    capture.schemas.some((entry) => !SHA256.test(entry.acl_sha256 ?? ""))
+  )
+    throw new Error("migration_proof_catalog_schemas_invalid");
   if (!capture.relations.some((entry) => entry.object_id === "public.scheduled_tasks"))
     throw new Error("migration_proof_catalog_scheduled_scope_missing");
   return capture;

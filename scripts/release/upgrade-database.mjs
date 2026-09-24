@@ -393,6 +393,7 @@ export function rehearseUpgrade({
       proofCatalogBaseline = parseMigrationProofCatalog(
         sql(MIGRATION_PROOF_CATALOG_SQL, true),
         baselineVersions,
+        { requireSingleStatementHistory: false },
       );
     sql(seed);
     for (const migration of executionForward)
@@ -422,7 +423,9 @@ export function rehearseUpgrade({
       ? parseChatWorkspaceCatalogCapture(sql(CHAT_WORKSPACE_CATALOG_SQL, true), finalVersions)
       : null;
     const proofCatalog = captureProofCatalog
-      ? parseMigrationProofCatalog(sql(MIGRATION_PROOF_CATALOG_SQL, true), finalVersions)
+      ? parseMigrationProofCatalog(sql(MIGRATION_PROOF_CATALOG_SQL, true), finalVersions, {
+          requireSingleStatementHistory: false,
+        })
       : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
@@ -519,6 +522,7 @@ export function rehearseUpgrade({
             sourceCommit,
             sourceTree,
             querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+            historicalBodyHashEquivalenceAsserted: false,
             baseline: proofCatalogBaseline,
             upgraded: proofCatalog,
             acceptedProofs: 0,
@@ -597,6 +601,8 @@ export function rehearseUpgrade({
     };
   } catch (error) {
     failure = error;
+    if (/^migration_proof_catalog_[a-z_]+$/u.test(error?.message ?? ""))
+      writeFileSync(join(outputDir, "upgrade-failure.log"), `${error.message}\n`);
   } finally {
     // A failed start may still have created local containers. The generated
     // project ID ensures cleanup cannot target another project.
