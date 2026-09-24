@@ -227,9 +227,13 @@ export function createProjectTemplateClient({
           const response = await fetcher(`/api/project-templates${path}`, {
             method: operation ? "POST" : "GET",
             cache: "no-store",
+            credentials: "same-origin",
+            mode: "same-origin",
+            redirect: "error",
             signal: controller.signal,
             headers: {
               Authorization: `Bearer ${session.data.session.access_token}`,
+              "X-Kova-Owner": userId,
               ...(operation ? { "Content-Type": "application/json" } : {}),
             },
             ...(operation ? { body: operation.body } : {}),
