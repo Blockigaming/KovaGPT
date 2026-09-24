@@ -9,7 +9,7 @@ WITH target_relations AS (
   SELECT c.oid, n.nspname::text AS schema_name, c.relname::text AS object_name,
          c.relkind::text AS kind, c.relowner::regrole::text AS owner_role,
          c.relrowsecurity, c.relforcerowsecurity, c.relacl,
-         c.reloptions, c.relispopulated, c.relpersistence
+         c.reloptions, c.relispopulated, c.relpersistence, c.relreplident
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname IN ('public', 'kova_private')
      AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
@@ -18,6 +18,7 @@ WITH target_relations AS (
          encode(extensions.digest(convert_to(jsonb_build_object(
            'kind', r.kind, 'owner', r.owner_role,
            'persistence', r.relpersistence::text,
+           'replicaIdentity', r.relreplident::text,
            'relationOptions', r.reloptions, 'materializedViewPopulated',
              CASE WHEN r.kind = 'm' THEN r.relispopulated ELSE NULL END,
            'sequence', (SELECT jsonb_build_object(
@@ -43,13 +44,26 @@ WITH target_relations AS (
              FROM pg_constraint con WHERE con.conrelid = r.oid),
            'indexes', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'definition', pg_get_indexdef(i.indexrelid),
-             'valid', i.indisvalid, 'ready', i.indisready, 'live', i.indislive)
+             'valid', i.indisvalid, 'ready', i.indisready,
+             'live', i.indislive, 'replicaIdentity', i.indisreplident)
              ORDER BY i.indexrelid::regclass::text), '[]'::jsonb)
              FROM pg_index i WHERE i.indrelid = r.oid),
            'triggers', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'definition', pg_get_triggerdef(t.oid, true), 'enabled', t.tgenabled::text)
              ORDER BY t.tgname), '[]'::jsonb)
              FROM pg_trigger t WHERE t.tgrelid = r.oid AND NOT t.tgisinternal),
+           'internalTriggers', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'constraint', c.conname, 'function', t.tgfoid::regprocedure::text,
+             'type', t.tgtype, 'enabled', t.tgenabled::text,
+             'deferrable', t.tgdeferrable, 'initiallyDeferred', t.tginitdeferred)
+             ORDER BY c.conname, t.tgfoid::regprocedure::text, t.tgtype), '[]'::jsonb)
+             FROM pg_trigger t LEFT JOIN pg_constraint c ON c.oid = t.tgconstraint
+            WHERE t.tgrelid = r.oid AND t.tgisinternal),
+           'rewriteRules', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'name', rw.rulename, 'definition', pg_get_ruledef(rw.oid, true),
+             'enabled', rw.ev_enabled::text)
+             ORDER BY rw.rulename), '[]'::jsonb)
+             FROM pg_rewrite rw WHERE rw.ev_class = r.oid AND rw.rulename <> '_RETURN'),
            'publications', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'name', pt.pubname, 'columns', pt.attnames, 'rowFilter', pt.rowfilter,
              'insert', pub.pubinsert, 'update', pub.pubupdate,
@@ -105,6 +119,17 @@ WITH target_relations AS (
                FROM (SELECT CASE WHEN role_oid = 0 THEN 'PUBLIC'
                             ELSE role_oid::regrole::text END AS role_name
                        FROM unnest(p.polroles) role_oid) policy_roles),
+             'apiRoleMembership', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'policyRole', CASE WHEN pr.role_oid = 0 THEN 'PUBLIC'
+                 ELSE pr.role_oid::regrole::text END,
+               'apiRole', api.role_name,
+               'member', CASE WHEN pr.role_oid = 0 THEN true
+                 ELSE pg_has_role(api.role_name, pr.role_oid, 'MEMBER') END,
+               'inherits', CASE WHEN pr.role_oid = 0 THEN true
+                 ELSE pg_has_role(api.role_name, pr.role_oid, 'USAGE') END)
+               ORDER BY pr.role_oid, api.role_name), '[]'::jsonb)
+               FROM unnest(p.polroles) pr(role_oid)
+               CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) api(role_name)),
              'using', pg_get_expr(p.polqual, p.polrelid),
              'check', pg_get_expr(p.polwithcheck, p.polrelid)
            ) ORDER BY p.polname), '[]'::jsonb)
