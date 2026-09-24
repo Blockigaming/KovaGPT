@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
   buildCanonicalHistoryDecision,
@@ -10,6 +14,52 @@ import {
 } from "../../scripts/release/canonical-history-decision.mjs";
 
 const path = "docs/release-reconciliation/canonical-history-actions-20260923.json";
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+test("canonical inputs use the supplied source readers and work outside the checkout", () => {
+  const files = new Set();
+  const directories = new Set();
+  const decision = buildCanonicalHistoryDecision({
+    root: ROOT,
+    readFile(filename) {
+      files.add(filename);
+      return readFileSync(filename);
+    },
+    readDirectory(directory) {
+      directories.add(directory);
+      return readdirSync(directory);
+    },
+  });
+  assert.deepEqual(decision, JSON.parse(readFileSync(join(ROOT, path), "utf8")));
+  for (const filename of [
+    "release-migrations.json",
+    "release-migration-lineage.json",
+    "tests/fixtures/production-migration-history-20260904/manifest.json",
+    "tests/fixtures/production-migration-history-20260904/current-supplement-20260918.json",
+    "supabase/migrations/20260903145843_remediate_security_advisor_warnings.sql",
+    ...decision.remoteOnly
+      .filter((entry) => entry.provenance === "historical_fixture")
+      .map((entry) => entry.evidencePath),
+  ])
+    assert.ok(files.has(join(ROOT, filename)), `source reader missed ${filename}`);
+  assert.ok(directories.has(join(ROOT, "supabase/migrations")));
+  for (const [script, args] of [
+    ["canonical-history-decision.mjs", ["--check"]],
+    ["upgrade-database.mjs", ["--canonical-history", "--dry-run"]],
+  ]) {
+    const run = spawnSync(process.execPath, [join(ROOT, "scripts/release", script), ...args], {
+      cwd: tmpdir(),
+      encoding: "utf8",
+    });
+    assert.equal(run.status, 0, `${script}: ${run.stderr}`);
+    if (args.includes("--dry-run")) {
+      const result = JSON.parse(run.stdout);
+      assert.equal(result.baselineVersions, 98);
+      assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 181);
+      assert.equal(result.executed, false);
+    }
+  }
+});
 
 test("the decision accounts for each source-only and remote-only version at the pinned checkpoint", () => {
   const decision = JSON.parse(readFileSync(path, "utf8"));

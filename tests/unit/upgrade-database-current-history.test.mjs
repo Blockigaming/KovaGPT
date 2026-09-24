@@ -287,6 +287,8 @@ test("current snapshot core: CLI defaults to 98 with explicit historical opt-out
   for (const name of [
     "upgrade-database.mjs",
     "upgrade-database-current-history.mjs",
+    "upgrade-database-canonical-history.mjs",
+    "canonical-history-decision.mjs",
     "upgrade-database-temp-export-proof.mjs",
     "upgrade-database-scheduled-catalog.mjs",
     "upgrade-source-provenance.mjs",

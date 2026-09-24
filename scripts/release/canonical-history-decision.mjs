@@ -7,6 +7,7 @@ import { ledgerMetadataHash } from "./upgrade-database-current-history.mjs";
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const read = (path) => JSON.parse(readFileSync(path, "utf8"));
+const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const sourcePath = "release-migrations.json";
 const lineagePath = "release-migration-lineage.json";
 const baselinePath = "tests/fixtures/production-migration-history-20260904/manifest.json";
@@ -105,8 +106,14 @@ export function validateEquivalentSupplement(supplement, sourceMigration, source
     throw new Error("canonical_history_supplement_equivalence_changed");
 }
 
-export function buildCanonicalHistoryDecision() {
-  const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+export function buildCanonicalHistoryDecision({
+  root = ROOT,
+  readFile = readFileSync,
+  readDirectory = readdirSync,
+} = {}) {
+  const repositoryRoot = resolve(root);
+  const bytes = (path) => readFile(join(repositoryRoot, path));
+  const json = (path) => JSON.parse(bytes(path).toString("utf8"));
   if (
     execFileSync("git", ["rev-parse", "HEAD:supabase/migrations"], {
       cwd: repositoryRoot,
@@ -114,27 +121,22 @@ export function buildCanonicalHistoryDecision() {
     }).trim() !== migrationTree
   )
     throw new Error("canonical_history_migration_tree_changed");
-  const source = read(sourcePath);
-  const lineage = read(lineagePath);
-  const baseline = read(baselinePath);
-  const supplement = read(supplementPath);
-  validateCanonicalHistoryCapture(
-    lineage,
-    baseline,
-    supplement,
-    sha256(readFileSync(baselinePath)),
-  );
+  const source = json(sourcePath);
+  const lineage = json(lineagePath);
+  const baseline = json(baselinePath);
+  const supplement = json(supplementPath);
+  validateCanonicalHistoryCapture(lineage, baseline, supplement, sha256(bytes(baselinePath)));
   validateCheckedOutMigrationSet(
     source.migrations,
-    readdirSync(join(repositoryRoot, "supabase/migrations")),
-    (filename) => readFileSync(join(repositoryRoot, "supabase/migrations", filename)),
+    readDirectory(join(repositoryRoot, "supabase/migrations")),
+    (filename) => bytes(`supabase/migrations/${filename}`),
   );
   const securitySource = source.migrations.find((entry) => entry.timestamp === "20260903145843");
   if (!securitySource) throw new Error("canonical_history_security_source_missing");
   validateEquivalentSupplement(
     supplement,
     securitySource,
-    readFileSync(join(repositoryRoot, "supabase/migrations", securitySource.filename)),
+    bytes(`supabase/migrations/${securitySource.filename}`),
   );
   const sourceVersions = new Set(source.migrations.map((entry) => entry.timestamp));
   const remote = [
@@ -142,7 +144,7 @@ export function buildCanonicalHistoryDecision() {
     ...supplement.supplement.map((entry) => ({
       version: entry.remoteVersion,
       path: supplementPath,
-      sha256: sha256(readFileSync(supplementPath)),
+      sha256: sha256(bytes(supplementPath)),
       capturedStatementsSha256: entry.capturedStatementsSha256,
       capturedStatementsMd5: entry.capturedStatementsMd5,
       statementCount: entry.statementCount,
@@ -230,7 +232,7 @@ export function buildCanonicalHistoryDecision() {
   for (const entry of remoteOnly) {
     if (
       entry.provenance === "historical_fixture" &&
-      sha256(readFileSync(entry.evidencePath)) !== entry.evidenceSha256
+      sha256(bytes(entry.evidencePath)) !== entry.evidenceSha256
     )
       throw new Error("canonical_history_fixture_hash_changed");
   }
@@ -240,10 +242,10 @@ export function buildCanonicalHistoryDecision() {
     targetProjectRef: supplement.projectRef,
     sourceCheckpointCommit: "5734b9e3d96224b06cdf2bc6f824078738b86ce1",
     sourceMigrationTree: migrationTree,
-    sourceManifestSha256: sha256(readFileSync(sourcePath)),
-    lineageSha256: sha256(readFileSync(lineagePath)),
-    historicalFixtureManifestSha256: sha256(readFileSync(baselinePath)),
-    currentSupplementSha256: sha256(readFileSync(supplementPath)),
+    sourceManifestSha256: sha256(bytes(sourcePath)),
+    lineageSha256: sha256(bytes(lineagePath)),
+    historicalFixtureManifestSha256: sha256(bytes(baselinePath)),
+    currentSupplementSha256: sha256(bytes(supplementPath)),
     capturedLedgerMetadataSha256: ledgerMetadataHash(
       remote.map((entry) => ({
         version: entry.version,
@@ -278,9 +280,9 @@ export function buildCanonicalHistoryDecision() {
 
 if (process.argv[1]?.endsWith("canonical-history-decision.mjs")) {
   const expected = `${JSON.stringify(buildCanonicalHistoryDecision(), null, 2)}\n`;
-  if (process.argv.includes("--write")) writeFileSync(decisionPath, expected);
+  if (process.argv.includes("--write")) writeFileSync(join(ROOT, decisionPath), expected);
   else if (process.argv.includes("--check")) {
-    if (JSON.stringify(read(decisionPath)) !== JSON.stringify(JSON.parse(expected)))
+    if (JSON.stringify(read(join(ROOT, decisionPath))) !== JSON.stringify(JSON.parse(expected)))
       throw new Error("canonical_history_decision_stale");
   } else throw new Error("use --check or --write");
 }

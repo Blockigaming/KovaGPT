@@ -442,6 +442,8 @@ jobs:
       - run: npm run release:db:isolated
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade
+      - name: Rehearse proposed 80-body and 3-history-only sequence
+        run: node scripts/release/upgrade-database.mjs --canonical-history
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence
         if: always()
