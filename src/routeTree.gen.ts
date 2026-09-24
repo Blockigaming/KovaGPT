@@ -94,6 +94,7 @@ import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
+import { Route as CConversationIdRouteImport } from './routes/c.$conversationId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as DevelopersIndexRouteImport } from './routes/developers.index'
 import { Route as DevelopersDocSlugRouteImport } from './routes/developers.$docSlug'
@@ -104,6 +105,7 @@ import { Route as DevelopersPricingRouteImport } from './routes/developers.prici
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as ShareShareIdRouteImport } from './routes/share.$shareId'
 import { Route as TranslateIndexRouteImport } from './routes/translate.index'
 import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
 import { Route as WritingIndexRouteImport } from './routes/writing.index'
@@ -183,6 +185,7 @@ import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
+import { Route as CConversationIdCanvasDocumentIdRouteImport } from './routes/c.$conversationId_.canvas.$documentId'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
 import { Route as ApiScimV2OrganizationIdSplatRouteImport } from './routes/api/scim/v2/$organizationId/$'
@@ -617,6 +620,11 @@ const BlogBestAiMarketResearchToolsRoute =
     path: '/blog/best-ai-market-research-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CConversationIdRoute = CConversationIdRouteImport.update({
+  id: '/c/$conversationId',
+  path: '/c/$conversationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
@@ -666,6 +674,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
+} as any)
+const ShareShareIdRoute = ShareShareIdRouteImport.update({
+  id: '/share/$shareId',
+  path: '/share/$shareId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TranslateIndexRoute = TranslateIndexRouteImport.update({
   id: '/translate/',
@@ -1081,6 +1094,12 @@ const ApiTasksEventsProviderRoute = ApiTasksEventsProviderRouteImport.update({
   path: '/api/tasks/events/$provider',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CConversationIdCanvasDocumentIdRoute =
+  CConversationIdCanvasDocumentIdRouteImport.update({
+    id: '/c/$conversationId_/canvas/$documentId',
+    path: '/c/$conversationId/canvas/$documentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProjectsProjectIdChatChatIdRoute =
   ProjectsProjectIdChatChatIdRouteImport.update({
     id: '/chat/$chatId',
@@ -1186,6 +1205,7 @@ export interface FileRoutesByFullPath {
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/c/$conversationId': typeof CConversationIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/developers/authorize': typeof DevelopersAuthorizeRoute
@@ -1195,6 +1215,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/share/$shareId': typeof ShareShareIdRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1275,6 +1296,7 @@ export interface FileRoutesByFullPath {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/c/$conversationId/canvas/$documentId': typeof CConversationIdCanvasDocumentIdRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
@@ -1365,6 +1387,7 @@ export interface FileRoutesByTo {
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/c/$conversationId': typeof CConversationIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/developers/authorize': typeof DevelopersAuthorizeRoute
@@ -1374,6 +1397,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/share/$shareId': typeof ShareShareIdRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1454,6 +1478,7 @@ export interface FileRoutesByTo {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/c/$conversationId/canvas/$documentId': typeof CConversationIdCanvasDocumentIdRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
@@ -1545,6 +1570,7 @@ export interface FileRoutesById {
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/c/$conversationId': typeof CConversationIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/developers/authorize': typeof DevelopersAuthorizeRoute
@@ -1554,6 +1580,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/share/$shareId': typeof ShareShareIdRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1634,6 +1661,7 @@ export interface FileRoutesById {
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
+  '/c/$conversationId_/canvas/$documentId': typeof CConversationIdCanvasDocumentIdRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
@@ -1726,6 +1754,7 @@ export interface FileRouteTypes {
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/c/$conversationId'
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/developers/authorize'
@@ -1735,6 +1764,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/share/$shareId'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -1815,6 +1845,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/c/$conversationId/canvas/$documentId'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
@@ -1905,6 +1936,7 @@ export interface FileRouteTypes {
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/c/$conversationId'
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/developers/authorize'
@@ -1914,6 +1946,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/share/$shareId'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -1994,6 +2027,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/c/$conversationId/canvas/$documentId'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
@@ -2084,6 +2118,7 @@ export interface FileRouteTypes {
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/c/$conversationId'
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/developers/authorize'
@@ -2093,6 +2128,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/share/$shareId'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2173,6 +2209,7 @@ export interface FileRouteTypes {
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
+    | '/c/$conversationId_/canvas/$documentId'
     | '/projects/$projectId/chat/$chatId'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
@@ -2263,6 +2300,7 @@ export interface RootRouteChildren {
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
+  CConversationIdRoute: typeof CConversationIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DevelopersDocSlugRoute: typeof DevelopersDocSlugRoute
   DevelopersAuthorizeRoute: typeof DevelopersAuthorizeRoute
@@ -2271,6 +2309,7 @@ export interface RootRouteChildren {
   DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
+  ShareShareIdRoute: typeof ShareShareIdRoute
   TranslatePairSlugRoute: typeof TranslatePairSlugRoute
   WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
@@ -2345,6 +2384,7 @@ export interface RootRouteChildren {
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  CConversationIdCanvasDocumentIdRoute: typeof CConversationIdCanvasDocumentIdRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
   ApiScimV2OrganizationIdSplatRoute: typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -2946,6 +2986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogBestAiMarketResearchToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$conversationId': {
+      id: '/c/$conversationId'
+      path: '/c/$conversationId'
+      fullPath: '/c/$conversationId'
+      preLoaderRoute: typeof CConversationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/return': {
       id: '/checkout/return'
       path: '/checkout/return'
@@ -3015,6 +3062,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/share/$shareId': {
+      id: '/share/$shareId'
+      path: '/share/$shareId'
+      fullPath: '/share/$shareId'
+      preLoaderRoute: typeof ShareShareIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/translate/': {
       id: '/translate/'
@@ -3569,6 +3623,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventsProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$conversationId_/canvas/$documentId': {
+      id: '/c/$conversationId_/canvas/$documentId'
+      path: '/c/$conversationId/canvas/$documentId'
+      fullPath: '/c/$conversationId/canvas/$documentId'
+      preLoaderRoute: typeof CConversationIdCanvasDocumentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId/chat/$chatId': {
       id: '/projects/$projectId/chat/$chatId'
       path: '/chat/$chatId'
@@ -3774,6 +3835,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
+  CConversationIdRoute: CConversationIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   DevelopersDocSlugRoute: DevelopersDocSlugRoute,
   DevelopersAuthorizeRoute: DevelopersAuthorizeRoute,
@@ -3782,6 +3844,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
+  ShareShareIdRoute: ShareShareIdRoute,
   TranslatePairSlugRoute: TranslatePairSlugRoute,
   WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
@@ -3858,6 +3921,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  CConversationIdCanvasDocumentIdRoute: CConversationIdCanvasDocumentIdRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
   ApiScimV2OrganizationIdSplatRoute: ApiScimV2OrganizationIdSplatRoute,
