@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
@@ -41,7 +43,12 @@ test("remote migrations use the package-local Supabase CLI entrypoint", () => {
 });
 
 test("unreconciled production project rejects write commands before linking", () => {
-  for (const args of [[], ["--include-all"], ["--dry-run", "--dry-run=false"]]) {
+  for (const args of [
+    [],
+    ["--include-all"],
+    ["--dry-run", "--dry-run=false"],
+    ["--include-all", "--dry-run", "--dry-run=false"],
+  ]) {
     const run = spawnSync(process.execPath, ["scripts/release/supabase-db-push.mjs", ...args], {
       cwd: process.cwd(),
       encoding: "utf8",
@@ -56,6 +63,41 @@ test("unreconciled production project rejects write commands before linking", ()
     assert.equal(run.status, 2);
     assert.match(run.stderr, /production_history_requires_approved_80_plus_3_plan/u);
     assert.doesNotMatch(run.stdout, /Linking the Supabase CLI/u);
+  }
+});
+
+test("production preview forwards only the exact all-version dry-run to a local CLI stub", () => {
+  const temporary = mkdtempSync(join(tmpdir(), "kova-preview-cli-"));
+  try {
+    const stub = join(temporary, "node_modules/supabase/dist/supabase.js");
+    mkdirSync(dirname(stub), { recursive: true });
+    writeFileSync(stub, 'process.stdout.write(JSON.stringify(process.argv.slice(2)) + "\\n");\n');
+    const run = spawnSync(
+      process.execPath,
+      [resolve("scripts/release/supabase-db-push.mjs"), "--include-all", "--dry-run"],
+      {
+        cwd: temporary,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CI: "",
+          SUPABASE_PROJECT_REF: "mfbycmbjygcfkrsuepxf",
+          SUPABASE_ACCESS_TOKEN: "",
+          SUPABASE_DB_PASSWORD: "",
+        },
+      },
+    );
+    assert.equal(run.status, 0, run.stderr);
+    const calls = run.stdout.split("\n").filter((line) => line.startsWith("["));
+    assert.deepEqual(
+      calls.map((line) => JSON.parse(line)),
+      [
+        ["link", "--project-ref", "mfbycmbjygcfkrsuepxf"],
+        ["db", "push", "--linked", "--include-all", "--dry-run"],
+      ],
+    );
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
   }
 });
 

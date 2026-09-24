@@ -50,12 +50,14 @@ if (forbiddenTargetFlags.length > 0) {
 // Until that plan and its recovery prerequisites are independently accepted,
 // even an explicitly linked production target must fail before the CLI runs.
 const unreconciledProductionRef = "mfbycmbjygcfkrsuepxf";
-if (
-  projectRef === unreconciledProductionRef &&
-  (forwardedArgs.length !== 1 || forwardedArgs[0] !== "--dry-run")
-) {
+const previewOnly =
+  (forwardedArgs.length === 1 && forwardedArgs[0] === "--dry-run") ||
+  (forwardedArgs.length === 2 &&
+    forwardedArgs[0] === "--include-all" &&
+    forwardedArgs[1] === "--dry-run");
+if (projectRef === unreconciledProductionRef && !previewOnly) {
   console.error(
-    "production_history_requires_approved_80_plus_3_plan: only the exact --dry-run flag is permitted for this production project; no migration push was started.",
+    "production_history_requires_approved_80_plus_3_plan: only exact --dry-run or --include-all --dry-run previews are permitted for this production project; no migration push was started.",
   );
   process.exit(2);
 }
