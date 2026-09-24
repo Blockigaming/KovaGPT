@@ -264,6 +264,7 @@ test("a preferred owned credential never reaches Supabase Auth or creates an adm
       headers: {
         Cookie: `__Host-kova_session=${"K".repeat(43)}`,
         Authorization: "Bearer valid-looking-legacy-token",
+        "X-Kova-Owner": "owner",
       },
     });
     const result = await exports.optionalUser(request);
