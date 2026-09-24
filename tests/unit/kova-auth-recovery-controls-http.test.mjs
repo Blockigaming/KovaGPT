@@ -105,6 +105,8 @@ function request(body = { confirm: true }, options = {}) {
     "Content-Type": "application/json",
     Origin: "https://kova.test",
     Cookie: `__Host-kova_session=${cookieToken}`,
+    "X-Kova-Owner": owner,
+    "X-Kova-Session": sessionId,
     ...options.headers,
   });
   return new Request("https://kova.test/api/auth/mfa/recovery/regenerate", {
@@ -151,6 +153,21 @@ test("recovery regeneration returns eight random codes once, rotates the secure 
       windowSeconds: 900,
     },
   ]);
+});
+
+test("recovery regeneration rejects a stale tab after an account or session switch", async () => {
+  for (const headers of [
+    { "X-Kova-Owner": "30000000-0000-4000-8000-000000000003" },
+    { "X-Kova-Session": "30000000-0000-4000-8000-000000000003" },
+    { "X-Kova-Owner": "" },
+    { "X-Kova-Session": "" },
+  ]) {
+    const f = fixture();
+    const response = await f.handleKovaMfaRecoveryRegenerate(request(undefined, { headers }));
+    assert.equal(response.status, 409);
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.ok(!f.calls.some(([name]) => name === "kova_auth_regenerate_mfa_recovery_codes"));
+  }
 });
 
 test("regeneration rejects CSRF, malformed requests, unconfirmed changes, and client-chosen identities before any auth RPC", async (t) => {
