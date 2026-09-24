@@ -13,7 +13,6 @@ import {
   isKovaSessionActive,
   kovaAuthJson,
 } from "@/lib/kova-auth-browser";
-import { authFetch } from "@/lib/auth-fetch";
 
 type Factor = {
   id: string;
@@ -53,6 +52,7 @@ export function MfaPanel() {
   const [confirmRegeneration, setConfirmRegeneration] = useState(false);
   const [legacyPasswordRequired, setLegacyPasswordRequired] = useState(false);
   const [legacyMigrationCompleted, setLegacyMigrationCompleted] = useState(false);
+  const [legacyOwnerId, setLegacyOwnerId] = useState<string | null>(null);
   const mutationInFlight = useRef(false);
   const useKovaAuth = isKovaSessionActive();
   let legacyMigrationAvailable = false;
@@ -80,6 +80,7 @@ export function MfaPanel() {
     setLoadError(null);
     try {
       if (useKovaAuth) {
+        setLegacyOwnerId(null);
         const response = await fetch("/api/auth/mfa/factors", {
           credentials: "same-origin",
           headers: { Accept: "application/json" },
@@ -112,9 +113,15 @@ export function MfaPanel() {
           })),
         );
       } else {
-        const { data, error } = await supabase.auth.mfa.listFactors();
-        if (error) throw error;
-        setFactors([...(data?.totp ?? [])] as Factor[]);
+        const [
+          { data: factorData, error: factorError },
+          { data: sessionData, error: sessionError },
+        ] = await Promise.all([supabase.auth.mfa.listFactors(), supabase.auth.getSession()]);
+        if (factorError || sessionError || !sessionData.session?.user?.id) {
+          throw factorError ?? sessionError ?? new Error("legacy_session_unavailable");
+        }
+        setLegacyOwnerId(sessionData.session.user.id);
+        setFactors([...(factorData?.totp ?? [])] as Factor[]);
       }
     } catch (error) {
       setFactors([]);
@@ -172,23 +179,39 @@ export function MfaPanel() {
     }
   }
 
+  async function legacyMfaRequest(
+    path: "/api/auth/mfa/enroll" | "/api/auth/mfa/verify",
+    body: Record<string, unknown>,
+  ): Promise<Response> {
+    if (!legacyOwnerId) throw new Error("legacy_mfa_owner_unavailable");
+    const { data, error } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (error || !accessToken) throw error ?? new Error("legacy_session_unavailable");
+    return fetch(path, {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-Kova-Owner": legacyOwnerId,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
   async function startLegacyMigration() {
     if (!legacyMigrationAvailable || !beginMutation()) return;
     setRecoveryCodes([]);
     try {
-      const response = await authFetch("/api/auth/mfa/enroll", {
-        method: "POST",
-        credentials: "same-origin",
-        mode: "same-origin",
-        redirect: "error",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          legacyMigration: true,
-          friendlyName: "Authenticator app",
-          ...(legacyPasswordRequired && enrollmentPassword
-            ? { newPassword: enrollmentPassword }
-            : {}),
-        }),
+      const response = await legacyMfaRequest("/api/auth/mfa/enroll", {
+        legacyMigration: true,
+        friendlyName: "Authenticator app",
+        ...(legacyPasswordRequired && enrollmentPassword
+          ? { newPassword: enrollmentPassword }
+          : {}),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         code?: string;
@@ -232,17 +255,10 @@ export function MfaPanel() {
     if (!enrolling || !beginMutation()) return;
     try {
       if (enrolling.legacyMigration) {
-        const response = await authFetch("/api/auth/mfa/verify", {
-          method: "POST",
-          credentials: "same-origin",
-          mode: "same-origin",
-          redirect: "error",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            legacyMigration: true,
-            factorId: enrolling.factorId,
-            code: code.trim(),
-          }),
+        const response = await legacyMfaRequest("/api/auth/mfa/verify", {
+          legacyMigration: true,
+          factorId: enrolling.factorId,
+          code: code.trim(),
         });
         const payload = (await response.json().catch(() => ({}))) as {
           recoveryCodes?: unknown;
