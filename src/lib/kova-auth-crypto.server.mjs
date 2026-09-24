@@ -300,7 +300,105 @@ function signingConfiguration(env) {
   if (parsedIssuer.protocol !== "https:" || parsedIssuer.href !== issuer) {
     throw new Error("Kova auth issuer must be an exact HTTPS URL");
   }
-  return { privateKey, keyId, issuer };
+  return { privateKey, publicKey, keyId, issuer };
+}
+
+export function kovaCompatibilityJwtHasMarker(token) {
+  if (typeof token !== "string" || token.length < 32 || token.length > 16_384) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const payload = decodeJson(parts[1], "Kova auth token payload");
+    return Boolean(
+      payload &&
+        typeof payload === "object" &&
+        !Array.isArray(payload) &&
+        Object.prototype.hasOwnProperty.call(payload, "kova_auth"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function verifyKovaCompatibilityJwt(token, env = process.env, now = Date.now()) {
+  if (
+    typeof token !== "string" ||
+    token.length < 32 ||
+    token.length > 16_384 ||
+    !Number.isFinite(now)
+  ) {
+    throw new TypeError("Invalid Kova auth compatibility token");
+  }
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new TypeError("Invalid Kova auth compatibility token");
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const header = decodeJson(encodedHeader, "Kova auth token header");
+  const payload = decodeJson(encodedPayload, "Kova auth token payload");
+  const { publicKey, keyId, issuer } = signingConfiguration(env);
+  if (
+    !header ||
+    typeof header !== "object" ||
+    Array.isArray(header) ||
+    header.alg !== "ES256" ||
+    header.typ !== "JWT" ||
+    header.kid !== keyId
+  ) {
+    throw new Error("Kova auth compatibility token header is invalid");
+  }
+  const signature = decodeBase64Url(encodedSignature, "Kova auth token signature");
+  if (
+    signature.length !== 64 ||
+    !verifyBytes(
+      "sha256",
+      Buffer.from(`${encodedHeader}.${encodedPayload}`, "ascii"),
+      { key: publicKey, dsaEncoding: "ieee-p1363" },
+      signature,
+    )
+  ) {
+    throw new Error("Kova auth compatibility token signature is invalid");
+  }
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  const nowSeconds = Math.floor(now / 1000);
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    payload.iss !== issuer ||
+    payload.aud !== "authenticated" ||
+    payload.role !== "authenticated" ||
+    payload.kova_auth !== 1 ||
+    payload.email_verified !== true ||
+    typeof payload.sub !== "string" ||
+    !uuidPattern.test(payload.sub) ||
+    typeof payload.session_id !== "string" ||
+    !uuidPattern.test(payload.session_id) ||
+    typeof payload.email !== "string" ||
+    payload.email.length > 320 ||
+    normalizeKovaEmail(payload.email) !== payload.email ||
+    !["aal1", "aal2"].includes(payload.aal) ||
+    !Number.isSafeInteger(payload.iat) ||
+    !Number.isSafeInteger(payload.nbf) ||
+    !Number.isSafeInteger(payload.exp) ||
+    payload.iat > nowSeconds + 5 ||
+    payload.nbf > nowSeconds + 5 ||
+    payload.nbf > payload.iat ||
+    payload.nbf < payload.iat - 60 ||
+    payload.exp <= nowSeconds ||
+    payload.exp <= payload.iat ||
+    payload.exp > payload.iat + 300
+  ) {
+    throw new Error("Kova auth compatibility token claims are invalid");
+  }
+  return {
+    accountId: payload.sub,
+    sessionId: payload.session_id,
+    email: payload.email,
+    emailVerified: true,
+    assuranceLevel: payload.aal,
+    issuedAt: payload.iat,
+    expiresAt: payload.exp,
+  };
 }
 
 export function signKovaCompatibilityJwt(principal, env = process.env, now = Date.now()) {
