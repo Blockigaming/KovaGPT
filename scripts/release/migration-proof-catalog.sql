@@ -8,7 +8,8 @@ SET LOCAL search_path = pg_catalog;
 WITH target_relations AS (
   SELECT c.oid, n.nspname::text AS schema_name, c.relname::text AS object_name,
          c.relkind::text AS kind, c.relowner::regrole::text AS owner_role,
-         c.relrowsecurity, c.relforcerowsecurity, c.relacl
+         c.relrowsecurity, c.relforcerowsecurity, c.relacl,
+         c.reloptions, c.relispopulated
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname IN ('public', 'kova_private')
      AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
@@ -16,6 +17,9 @@ WITH target_relations AS (
   SELECT r.schema_name || '.' || r.object_name AS object_id,
          encode(extensions.digest(convert_to(jsonb_build_object(
            'kind', r.kind, 'owner', r.owner_role,
+           'relationOptions', r.reloptions, 'materializedViewPopulated',
+             CASE WHEN r.kind = 'm' THEN r.relispopulated ELSE NULL END,
+           'viewDefinition', CASE WHEN r.kind IN ('v', 'm') THEN pg_get_viewdef(r.oid, true) ELSE NULL END,
            'columns', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod),
              'nullable', NOT a.attnotnull, 'identity', a.attidentity::text,
@@ -29,10 +33,13 @@ WITH target_relations AS (
              con.conname || ':' || pg_get_constraintdef(con.oid, true)
              ORDER BY con.conname), '[]'::jsonb)
              FROM pg_constraint con WHERE con.conrelid = r.oid),
-           'indexes', (SELECT coalesce(jsonb_agg(pg_get_indexdef(i.indexrelid)
+           'indexes', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'definition', pg_get_indexdef(i.indexrelid),
+             'valid', i.indisvalid, 'ready', i.indisready, 'live', i.indislive)
              ORDER BY i.indexrelid::regclass::text), '[]'::jsonb)
              FROM pg_index i WHERE i.indrelid = r.oid),
-           'triggers', (SELECT coalesce(jsonb_agg(pg_get_triggerdef(t.oid, true)
+           'triggers', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'definition', pg_get_triggerdef(t.oid, true), 'enabled', t.tgenabled::text)
              ORDER BY t.tgname), '[]'::jsonb)
              FROM pg_trigger t WHERE t.tgrelid = r.oid AND NOT t.tgisinternal)
          )::text, 'UTF8'), 'sha256'), 'hex') AS schema_sha256,
@@ -47,7 +54,8 @@ WITH target_relations AS (
              'usage', CASE WHEN r.kind = 'S' THEN has_sequence_privilege(roles.role_name, r.oid, 'USAGE') ELSE NULL END,
              'truncate', CASE WHEN r.kind = 'S' THEN NULL ELSE has_table_privilege(roles.role_name, r.oid, 'TRUNCATE') END,
              'references', CASE WHEN r.kind = 'S' THEN NULL ELSE has_table_privilege(roles.role_name, r.oid, 'REFERENCES') END,
-             'trigger', CASE WHEN r.kind = 'S' THEN NULL ELSE has_table_privilege(roles.role_name, r.oid, 'TRIGGER') END
+             'trigger', CASE WHEN r.kind = 'S' THEN NULL ELSE has_table_privilege(roles.role_name, r.oid, 'TRIGGER') END,
+             'maintain', CASE WHEN r.kind IN ('r', 'p', 'm') THEN has_table_privilege(roles.role_name, r.oid, 'MAINTAIN') ELSE NULL END
            ) ORDER BY roles.role_name), '[]'::jsonb)
              FROM (VALUES ('anon'), ('authenticated'), ('service_role')) roles(role_name)),
            'columnAcl', (SELECT coalesce(jsonb_agg(jsonb_build_object(
@@ -60,6 +68,10 @@ WITH target_relations AS (
          )::text, 'UTF8'), 'sha256'), 'hex') AS acl_sha256,
          encode(extensions.digest(convert_to(jsonb_build_object(
            'enabled', r.relrowsecurity, 'forced', r.relforcerowsecurity,
+           'apiRoleAttributes', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'role', rolname, 'superuser', rolsuper, 'bypassRls', rolbypassrls)
+             ORDER BY rolname), '[]'::jsonb)
+             FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')),
            'policies', (SELECT coalesce(jsonb_agg(jsonb_build_object(
              'name', p.polname, 'permissive', p.polpermissive,
              'command', p.polcmd::text,
@@ -81,7 +93,10 @@ WITH target_relations AS (
            'settings', p.proconfig, 'explicitAcl', p.proacl::text,
            'anonExecute', has_function_privilege('anon', p.oid, 'EXECUTE'),
            'authenticatedExecute', has_function_privilege('authenticated', p.oid, 'EXECUTE'),
-           'serviceExecute', has_function_privilege('service_role', p.oid, 'EXECUTE')
+           'serviceExecute', has_function_privilege('service_role', p.oid, 'EXECUTE'),
+           'anonSchemaUsage', has_schema_privilege('anon', n.oid, 'USAGE'),
+           'authenticatedSchemaUsage', has_schema_privilege('authenticated', n.oid, 'USAGE'),
+           'serviceSchemaUsage', has_schema_privilege('service_role', n.oid, 'USAGE')
          )::text, 'UTF8'), 'sha256'), 'hex') AS function_sha256
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname IN ('public', 'kova_private')
