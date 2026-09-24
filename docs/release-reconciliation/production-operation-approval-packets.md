@@ -151,6 +151,14 @@ Supabase branch quote of **$0.01344 per branch-hour** (two hours **$0.02688**,
 before usage), and a **$0/month** new-project quote with no free-slot guarantee.
 The September 24 read-only organization lookup found `Blockigaming's Org`
 (`uwioudpaooagmhtdmokx`) on the Free plan, with no isolated branch. The
+current [Supabase pricing page](https://supabase.com/pricing) lists branching
+as unavailable on Free. A further read-only inventory found two active projects
+in that organization. The existing `KovaGPT Auth Rehearsal` project
+(`oztdrjtdglkizlewnulh`) has 103 recorded migrations, 118 public relations,
+one Auth user and identity, and one Storage bucket. It is **not** the empty
+isolated restore target and must not be reset or overwritten. A new project
+slot and its actual cost must be confirmed, or another isolated PG17 target
+identified and quoted, before seeking paid-project or restore approval. The
 cost connector requires an explicit owner organization selection for a new
 quote; none was received in this continuation. Neither historical amount
 authorizes a clock-billed branch or a restore.
