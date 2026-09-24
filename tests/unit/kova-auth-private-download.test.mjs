@@ -50,6 +50,7 @@ const rows = {
     expires_at: new Date(Date.now() + 3600000).toISOString(),
     size_bytes: text.length,
     storage_path: `${owner}/${id}/${generation}.json`,
+    content_sha256: hash(text),
   },
   evidence: {
     id: 7,
