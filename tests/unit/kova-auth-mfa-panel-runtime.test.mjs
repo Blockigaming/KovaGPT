@@ -87,6 +87,7 @@ function fixture(options = {}) {
     "@/components/KovaPasskeyPanel": { KovaPasskeyPanel: "owned-passkeys" },
     "@/lib/kova-auth-browser": {
       isKovaSessionActive: () => options.owned !== false,
+      browserKovaAuthMode: () => options.browserMode ?? "dual",
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
       async kovaAuthJson(path, body) {
         calls.push(["owned", path, plain(body)]);
@@ -121,6 +122,15 @@ function fixture(options = {}) {
               return { data: { totp: [{ id: "factor", status: "verified" }] } };
             },
           },
+          getSession: async () => ({
+            data: {
+              session: {
+                access_token: "legacy.fixture.token",
+                user: { id: "10000000-0000-4000-8000-000000000001" },
+              },
+            },
+            error: null,
+          }),
           signOut: async (value) => {
             calls.push(["legacy-signout", plain(value)]);
             return {};
