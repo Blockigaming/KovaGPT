@@ -18,6 +18,20 @@ export function verifyKovaTotp(code: string, base32Secret: string, now?: number)
 export function generateKovaTotpEnrollment(email: string): { secret: string; uri: string };
 export function encryptKovaSecret(plaintext: string, env?: NodeJS.ProcessEnv): string;
 export function decryptKovaSecret(envelope: string, env?: NodeJS.ProcessEnv): string;
+export function kovaCompatibilityJwtHasMarker(token: string): boolean;
+export function verifyKovaCompatibilityJwt(
+  token: string,
+  env?: NodeJS.ProcessEnv,
+  now?: number,
+): {
+  accountId: string;
+  sessionId: string;
+  email: string;
+  emailVerified: true;
+  assuranceLevel: "aal1" | "aal2";
+  issuedAt: number;
+  expiresAt: number;
+};
 export function signKovaCompatibilityJwt(
   principal: KovaPrincipal,
   env?: NodeJS.ProcessEnv,
