@@ -89,13 +89,30 @@ node scripts/release/compare-live-scheduled-catalog.mjs \
 ```
 
 The comparator verifies the receipt's artifact byte hashes, exact collector
-query hashes, source commit/tree consistency, complete ledger sets, capture
-shapes, chronology, and recomputed fingerprints. Its output includes bounded
+query hashes, source commit/tree consistency, complete rehearsal ledger sets,
+capture shapes, chronology, and recomputed fingerprints. Its output includes bounded
 schema changes and grant deltas: grantor and grantee role names, privilege type,
 grantability, and effective API-role privilege values. It never emits
 application rows or raw function bodies. Every promotion/readiness flag is
-false. The selected live project identity is an operator-side fact: the catalog
-JSON does not independently attest its Supabase project ref. Do not use this
+false. Its `rehearsalQuerySha256` does not identify the SQL that produced the
+live JSON; `liveQueryIdentityVerified` is false. The selected live project
+identity is an operator-side fact: the catalog JSON does not independently
+attest its Supabase project ref. Do not use this
 scoped comparison as the v2 full-schema proof for either mapping; later-writer
 scope, dependency closure, synthetic behavior, independent review and
 production-history reconciliation remain separate gates.
+
+## Dated September 24 continuation
+
+New read-only captures at `01:47:37.767Z` and `01:47:39.221Z` are retained as
+[`scheduled-tables-live-capture-20260924.json`](./evidence/scheduled-tables-live-capture-20260924.json)
+(`d77bfeb32bf24dd5d7de0d8b3c3918f59cc71ed097938d41ebcb2ccd0b07d3f4`)
+and [`scheduled-routines-live-capture-20260924.json`](./evidence/scheduled-routines-live-capture-20260924.json)
+(`cb1b00fc44242f44ca14a4753281b2bcad31ed4f75ecc4257bdbfe3abdb0e4f7`).
+Both reported a 98-version read-only repeatable-read snapshot. The
+[`saved comparison`](./evidence/scheduled-live-comparison-20260924.json)
+replays against hosted artifact `10656073978`: two table and one routine
+baseline changes; two table and seven routine source-final changes. Every
+promotion, canonical-history and production-readiness flag remains false.
+The two live captures are separate snapshots and their bytes alone do not
+independently attest the selected project or exact executed query.

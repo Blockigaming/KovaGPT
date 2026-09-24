@@ -216,6 +216,29 @@ test("read-only aggregate audit finds historical drift and verifies candidate co
   }
 });
 
+test("named server and connector views cannot satisfy required table inventories", async () => {
+  const db = await fixture();
+  try {
+    await db.exec(migration);
+    const before = await aggregateAudit(db);
+    assert.equal(before.serverTableMissing, 0);
+    assert.equal(before.connectorTableMissing, 0);
+    await db.exec(`
+      drop table public.api_emergency_controls cascade;
+      create view public.api_emergency_controls as select id from public.family_groups;
+      drop table public.github_sync_records cascade;
+      create view public.github_sync_records as select id from public.family_groups;
+      grant select on public.github_sync_records to authenticated, service_role;
+    `);
+    const after = await aggregateAudit(db);
+    assert.equal(after.serverTableMissing, 1);
+    assert.equal(after.connectorTableMissing, 1);
+    assert.equal(after.publicRelationCount, before.publicRelationCount);
+  } finally {
+    await db.close();
+  }
+});
+
 async function identify(db, role, id) {
   await db.exec(`set role ${role}`);
   await db.query("select set_config('request.jwt.claim.role',$1,false)", [role]);

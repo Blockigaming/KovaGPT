@@ -89,5 +89,5 @@ acceptance. Until then, all 19 mappings remain blocked.
 Run `node scripts/release/compare-live-scheduled-catalog.mjs` with the five
 receipt/artifact/capture paths in the linked comparison report to reproduce
 the full scoped differences. Its `baseline.grantDeltas` and
-`sourceFinal.grantDeltas` fields distinguish added/removed explicit grants
+`sourceFinal.grantDeltas` fields distinguish added/removed ACL entries
 from effective role access. All promotion and readiness flags remain false.

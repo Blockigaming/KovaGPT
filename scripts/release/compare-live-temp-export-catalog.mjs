@@ -87,7 +87,8 @@ export function compareLiveTemporaryExportCatalog({ receiptPath, artifactPath, l
     !Array.isArray(replayVersions) ||
     replayVersions.length === 0 ||
     expectedFinalVersions.length !== before.capture.ledgerVersionCount + replayVersions.length ||
-    JSON.stringify(expectedFinalVersions) !== JSON.stringify(after.capture.ledgerVersions)
+    JSON.stringify(expectedFinalVersions) !== JSON.stringify(after.capture.ledgerVersions) ||
+    Date.parse(after.capture.capturedAt) < Date.parse(before.capture.capturedAt)
   )
     fail("artifact_fingerprint_mismatch");
 
@@ -109,7 +110,8 @@ export function compareLiveTemporaryExportCatalog({ receiptPath, artifactPath, l
     proofId: TEMP_EXPORT_PROOF_ID,
     sourceCommit: proof.sourceCommit,
     sourceTree: proof.sourceTree,
-    querySha256: TEMP_EXPORT_QUERY_SHA256,
+    rehearsalQuerySha256: TEMP_EXPORT_QUERY_SHA256,
+    liveQueryIdentityVerified: false,
     artifactSha256: artifact.sha256,
     liveCaptureSha256: live.sha256,
     capturedAt: observed.capture.capturedAt,

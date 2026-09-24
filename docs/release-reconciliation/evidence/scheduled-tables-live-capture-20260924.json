@@ -1,0 +1,1103 @@
+{
+  "tables": [
+    {
+      "acl": [
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "scheduled_task_runs",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "task_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "scheduled_for",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "result_summary",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 8,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "delivery_status",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 9,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "failure_type",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 10,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "retry_eligible",
+          "type": "boolean",
+          "notNull": true,
+          "ordinal": 11,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "name": "safe_logs",
+          "type": "text[]",
+          "notNull": true,
+          "ordinal": 12,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 1,
+          "defaultSha256": "de9b902a0abb75d50771c319ee6d6a50d3963e3d28ce30e76b96e3c382b0c4ab"
+        },
+        {
+          "name": "next_run_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 13,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 14,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_scheduled_task_runs_user_task",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "a3d476524ee11750d067066269db4c9a273ac9b6b92a21cd9ec52621c8a88b70",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "scheduled_task_runs_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "8ba7a53a28097461adb19a72ac2c3a031911d7cf190ef660938c092c772e04f6",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "scheduled_task_runs_task_id_scheduled_for_key",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "9353805d80e92614374a209d4522ea947ba01693f4c23be92bd8168d7480a27a",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "task runs owner read",
+          "roles": ["PUBLIC"],
+          "command": "r",
+          "permissive": true,
+          "checkSha256": null,
+          "usingSha256": "abb2d82683183540acec49069ec5c2b403521340fc0e48e77b80ca1a0f449c54"
+        }
+      ],
+      "triggers": [],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "scheduled_task_runs_delivery_status_check",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "c0566002449843cbba3c6445f17d6dd7ff48cadfc853689a9b17dbedaaa7ce1f",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "scheduled_task_runs_failure_type_check",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "cbd211c06ee05037bcd2fc871358068f2467e8ecdb83d424458d99a3e31ea799",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "p",
+          "name": "scheduled_task_runs_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "scheduled_task_runs_status_check",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "3b220f8d61750de4660f745cd41c42bc01d8136c0e5bf8d5f995832c7945a545",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "scheduled_task_runs_task_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "c8db743130b298c80a289e91948ef412317d9fa6a52eeac2db2f0619cc898564",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "u",
+          "name": "scheduled_task_runs_task_id_scheduled_for_key",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "31aa16ce5de7fd15086273814da5ec77a3b2822d845a8df47a6146806ec665f1",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "scheduled_task_runs_user_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 14,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [
+        {
+          "name": "notification_deliveries_task_run_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "sourceTable": "public.notification_deliveries",
+          "definitionSha256": "f7bcab6d7e694828882220756b3495a669be370c0a7b64b03c1a68e62f9cc232",
+          "initiallyDeferred": false
+        }
+      ],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    },
+    {
+      "acl": [
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "DELETE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "INSERT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "MAINTAIN"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "REFERENCES"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "SELECT"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRIGGER"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "TRUNCATE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "UPDATE"
+        }
+      ],
+      "kind": "r",
+      "name": "scheduled_tasks",
+      "owner": "postgres",
+      "schema": "public",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 1,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "eea9a3e7c2abe43835e2a6fdf92a7d1e6f145ad6dfbfd243fc5d395e5b390a33"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true,
+          "ordinal": 2,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 3,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "prompt",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 4,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "run_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 5,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "repeat",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 6,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "2d535e53e1d5033d2440d2e92193eff71d896d4a65e28ae2bc36158204a3f726"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "ordinal": 7,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "165ed4fa2eec2ff84119c388e4915749b19928a991ec9d197b25694ab82671a7"
+        },
+        {
+          "name": "last_run_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 8,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "next_run_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 9,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "last_result",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 10,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 11,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "notNull": true,
+          "ordinal": 12,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "28a4dae0461e17af56e979c2095abfbe0bfc45fe9ca8abf3144338a518a1bb8f"
+        },
+        {
+          "name": "worker_id",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 13,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 14,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "execution_attempts",
+          "type": "integer",
+          "notNull": true,
+          "ordinal": 15,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+        },
+        {
+          "name": "retry_after",
+          "type": "timestamp with time zone",
+          "notNull": false,
+          "ordinal": 16,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": null,
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "last_failure_type",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 17,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        },
+        {
+          "name": "last_error",
+          "type": "text",
+          "notNull": false,
+          "ordinal": 18,
+          "identity": "",
+          "aclIsNull": true,
+          "collation": "pg_catalog.\"default\"",
+          "generated": "",
+          "dimensions": 0,
+          "defaultSha256": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_scheduled_tasks_due_execution",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "a4a980fb497a3ca4c2e6ca2f8be6c0f733b2c72934a53f4a3991542312dfad40",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "idx_scheduled_tasks_execution_lease",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "036dab5f25cccb55f3c1a64dc05a302228832b84113dcaa6fedb609ef8357420",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "scheduled_tasks_pkey",
+          "ready": true,
+          "valid": true,
+          "unique": true,
+          "primary": true,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "4258a59b4222e991c96fe9b920ebc1ec826d5375da8c23ca91bcd5405c82f9fb",
+          "nullsNotDistinct": false
+        },
+        {
+          "name": "scheduled_tasks_user_idx",
+          "ready": true,
+          "valid": true,
+          "unique": false,
+          "primary": false,
+          "clustered": false,
+          "replicaIdentity": false,
+          "definitionSha256": "9594059c9aa5dd59550e1d0bfcd74cba36027fb2e3f60e7ab813357116bda8a8",
+          "nullsNotDistinct": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "Users manage their own scheduled tasks",
+          "roles": ["PUBLIC"],
+          "command": "*",
+          "permissive": true,
+          "checkSha256": "abb2d82683183540acec49069ec5c2b403521340fc0e48e77b80ca1a0f449c54",
+          "usingSha256": "abb2d82683183540acec49069ec5c2b403521340fc0e48e77b80ca1a0f449c54"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "scheduled_tasks_touch_updated_at",
+          "enabled": "O",
+          "function": "public.touch_updated_at()",
+          "functionOwner": "postgres",
+          "definitionSha256": "fe89c1f5173a1ad1470489752561404eb1427ab36acfbae0b2ae48dd1e773668",
+          "functionDefinitionSha256": "5d4726fc97eed40f28018474f093ac398a5fb1d1755b9828aabb5d5fd6e38aba"
+        }
+      ],
+      "aclIsNull": false,
+      "columnAcl": [],
+      "partition": false,
+      "constraints": [
+        {
+          "kind": "p",
+          "name": "scheduled_tasks_pkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "scheduled_tasks_repeat_check",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "a36a1e7320c33030d00f006995607bc864e07a9cb9cdb185e3690be1fafbb5b2",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "c",
+          "name": "scheduled_tasks_status_check",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "ceb037e95cfcf203c8da42e0b6e2e564e9509f3b8a1072dce92bfd54ede544b3",
+          "initiallyDeferred": false
+        },
+        {
+          "kind": "f",
+          "name": "scheduled_tasks_user_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "definitionSha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a",
+          "initiallyDeferred": false
+        }
+      ],
+      "parentCount": 0,
+      "persistence": "p",
+      "rowSecurity": true,
+      "attributeSlots": 18,
+      "droppedColumns": [],
+      "replicaIdentity": "d",
+      "forceRowSecurity": false,
+      "inboundForeignKeys": [
+        {
+          "name": "scheduled_task_runs_task_id_fkey",
+          "validated": true,
+          "deferrable": false,
+          "sourceTable": "public.scheduled_task_runs",
+          "definitionSha256": "c8db743130b298c80a289e91948ef412317d9fa6a52eeac2db2f0619cc898564",
+          "initiallyDeferred": false
+        }
+      ],
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "privileges": ["DELETE", "INSERT", "SELECT", "UPDATE"],
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "privileges": [
+            "DELETE",
+            "INSERT",
+            "MAINTAIN",
+            "REFERENCES",
+            "SELECT",
+            "TRIGGER",
+            "TRUNCATE",
+            "UPDATE"
+          ],
+          "schemaUsage": true
+        }
+      ]
+    }
+  ],
+  "readOnly": true,
+  "isolation": "repeatable read",
+  "capturedAt": "2026-09-24T01:47:37.767Z",
+  "tableCount": 2,
+  "captureKind": "scheduled-table-catalog",
+  "databaseName": "postgres",
+  "schemaVersion": 1,
+  "ledgerVersions": [
+    "20260622225346",
+    "20260623005558",
+    "20260623005610",
+    "20260623145549",
+    "20260623154814",
+    "20260623154832",
+    "20260623155803",
+    "20260623161227",
+    "20260623161519",
+    "20260623194741",
+    "20260623195646",
+    "20260623201628",
+    "20260624124535",
+    "20260624124557",
+    "20260624230040",
+    "20260625132920",
+    "20260625135417",
+    "20260627004905",
+    "20260627210732",
+    "20260702142256",
+    "20260702161114",
+    "20260702163905",
+    "20260702163922",
+    "20260704033129",
+    "20260707004617",
+    "20260707005030",
+    "20260712011732",
+    "20260712013949",
+    "20260713010018",
+    "20260718151609",
+    "20260718152250",
+    "20260718154259",
+    "20260721211500",
+    "20260722123000",
+    "20260722130000",
+    "20260727090000",
+    "20260727120000",
+    "20260727150000",
+    "20260727210000",
+    "20260727230000",
+    "20260728090000",
+    "20260728120000",
+    "20260728150000",
+    "20260728180000",
+    "20260728200000",
+    "20260728220000",
+    "20260731120000",
+    "20260801120000",
+    "20260801123000",
+    "20260801235959",
+    "20260802003000",
+    "20260802120000",
+    "20260802130000",
+    "20260802131000",
+    "20260802132000",
+    "20260803100000",
+    "20260803101000",
+    "20260803110000",
+    "20260803120000",
+    "20260803121000",
+    "20260803122000",
+    "20260803123000",
+    "20260803130000",
+    "20260803143000",
+    "20260803184741",
+    "20260803184803",
+    "20260803200951",
+    "20260803202921",
+    "20260804004928",
+    "20260804015247",
+    "20260805123909",
+    "20260815213024",
+    "20260816213000",
+    "20260820220000",
+    "20260823092042",
+    "20260823092107",
+    "20260823092405",
+    "20260823092450",
+    "20260823100156",
+    "20260823120804",
+    "20260823151901",
+    "20260823151927",
+    "20260823214802",
+    "20260823215044",
+    "20260823215132",
+    "20260823215222",
+    "20260823215259",
+    "20260823215454",
+    "20260823215619",
+    "20260823215848",
+    "20260824081357",
+    "20260824081812",
+    "20260824081926",
+    "20260824082127",
+    "20260824084005",
+    "20260824085042",
+    "20260824085444",
+    "20260906024459"
+  ],
+  "ledgerVersionCount": 98,
+  "postgresVersionNum": 170006,
+  "publicSchemaPresent": true,
+  "catalogSentinelPresent": true
+}
