@@ -97,6 +97,16 @@ test("cutover receipt binds the deployed build, live database and fresh evidence
   );
 });
 
+test("cutover receipt rejects a passkey origin on a different application", () => {
+  const altered = evidence();
+  altered.authPublicOrigin = "https://login.example.invalid";
+  altered.passkeyRpId = "login.example.invalid";
+  assert.throws(
+    () => validateCutoverEvidence(altered, options),
+    /kova_auth_cutover_passkey_rp/u,
+  );
+});
+
 test("cutover receipt fails closed on missing proof, public function access and unexpired tokens", () => {
   const mutations = [
     (item) => item.appliedMigrations.pop(),

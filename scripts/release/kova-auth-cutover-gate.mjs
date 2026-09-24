@@ -97,7 +97,12 @@ export function validateCutoverEvidence(
     fail("deployment_identity");
   if (!httpsOrigin(evidence.deploymentOrigin)) fail("deployment_origin");
   const publicOrigin = httpsOrigin(evidence.authPublicOrigin);
-  if (!publicOrigin || evidence.passkeyRpId !== publicOrigin.hostname) fail("passkey_rp");
+  if (
+    !publicOrigin ||
+    evidence.authPublicOrigin !== evidence.deploymentOrigin ||
+    evidence.passkeyRpId !== publicOrigin.hostname
+  )
+    fail("passkey_rp");
   const captured = timestamp(evidence.capturedAt, "capture_time");
   if (!Number.isFinite(now) || captured > now + 60_000 || now - captured > 15 * 60_000)
     fail("stale_capture");

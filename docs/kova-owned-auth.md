@@ -360,7 +360,9 @@ signed Storage URL that precede capture. JSON field names are defined by the
 validator and exercised in `tests/unit/kova-auth-cutover-gate.test.mjs`.
 
 The receipt also pins the exact HTTPS `authPublicOrigin` deployed as
-`KOVA_AUTH_PUBLIC_ORIGIN` and a `passkeyRpId` equal to that URL's hostname.
+`KOVA_AUTH_PUBLIC_ORIGIN`; it must equal the audited `deploymentOrigin`.
+The `passkeyRpId` must equal that URL's hostname. A separately hosted auth
+service may use its own `KOVA_AUTH_ORIGIN`.
 Call the service-only `kova_auth_legacy_adoption_gap_count` RPC with that
 audited RP ID and capture its zero count in the same fresh database snapshot.
 The earlier one-argument RPC is dropped by the forward migration. The census
