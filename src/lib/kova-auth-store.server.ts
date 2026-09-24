@@ -320,6 +320,85 @@ export async function finishMfaRecoveryLogin(input: {
   return principalFromRow(firstRow(value, "kova_auth_finish_mfa_recovery_login"));
 }
 
+export async function legacyMfaMigrationStatus(accountId: string): Promise<{
+  email: string;
+  primaryReady: boolean;
+  legacyMfa: boolean;
+}> {
+  const value = await rpc<unknown>("kova_auth_legacy_mfa_migration_status", {
+    p_account_id: accountId,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_legacy_mfa_migration_status");
+  if (
+    typeof row.email !== "string" ||
+    typeof row.primary_ready !== "boolean" ||
+    typeof row.legacy_mfa !== "boolean"
+  ) {
+    throw new KovaAuthStoreError("kova_auth_legacy_mfa_migration_status");
+  }
+  return { email: row.email, primaryReady: row.primary_ready, legacyMfa: row.legacy_mfa };
+}
+
+export async function beginLegacyMfaMigration(input: {
+  accountId: string;
+  secretEnvelope: string;
+  friendlyName: string;
+  passwordHash?: string;
+}): Promise<{ factorId: string; email: string; expiresAt: string }> {
+  const value = await rpc<unknown>("kova_auth_begin_legacy_mfa_migration", {
+    p_account_id: input.accountId,
+    p_secret_envelope: input.secretEnvelope,
+    p_friendly_name: input.friendlyName,
+    p_password_hash: input.passwordHash ?? null,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_begin_legacy_mfa_migration");
+  if (
+    typeof row.factor_id !== "string" ||
+    typeof row.email !== "string" ||
+    typeof row.expires_at !== "string"
+  ) {
+    throw new KovaAuthStoreError("kova_auth_begin_legacy_mfa_migration");
+  }
+  return { factorId: row.factor_id, email: row.email, expiresAt: row.expires_at };
+}
+
+export async function readLegacyMfaMigration(input: {
+  accountId: string;
+  factorId: string;
+}): Promise<string> {
+  const value = await rpc<unknown>("kova_auth_read_legacy_mfa_migration", {
+    p_account_id: input.accountId,
+    p_factor_id: input.factorId,
+  });
+  const row = firstRow<Record<string, unknown>>(value, "kova_auth_read_legacy_mfa_migration");
+  if (typeof row.secret_envelope !== "string") {
+    throw new KovaAuthStoreError("kova_auth_read_legacy_mfa_migration");
+  }
+  return row.secret_envelope;
+}
+
+export async function activateLegacyMfaMigration(input: {
+  accountId: string;
+  factorId: string;
+  recoveryDigests: string[];
+  sessionDigest: string;
+  sessionExpiresAt: string;
+}): Promise<KovaPrincipal> {
+  const operation = "kova_auth_activate_legacy_mfa_migration";
+  const value = await rpc<unknown>(operation, {
+    p_account_id: input.accountId,
+    p_factor_id: input.factorId,
+    p_recovery_digest_hexes: input.recoveryDigests,
+    p_token_digest_hex: input.sessionDigest,
+    p_expires_at: input.sessionExpiresAt,
+  });
+  const principal = principalFromRow(firstRow(value, operation));
+  if (!principal.emailVerified || principal.assuranceLevel !== "aal2") {
+    throw new KovaAuthStoreError(operation);
+  }
+  return principal;
+}
+
 export async function beginTotpEnrollment(input: {
   sessionDigest: string;
   secretEnvelope: string;
