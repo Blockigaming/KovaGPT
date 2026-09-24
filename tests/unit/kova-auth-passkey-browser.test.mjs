@@ -24,6 +24,7 @@ function fixture(options = {}) {
     ),
     "@/lib/kova-auth-browser": {
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
+      getCachedKovaSession: async () => ({ accountId: "owner", sessionId: "session" }),
       kovaAuthJson: async (path, body) => {
         calls.push(["POST", path, JSON.parse(JSON.stringify(body))]);
         if (path.endsWith("options"))
@@ -39,6 +40,8 @@ function fixture(options = {}) {
           { status: options.failure ? 401 : 200 },
         );
       },
+      kovaPublicAuthJson: async (path, body) =>
+        modules["@/lib/kova-auth-browser"].kovaAuthJson(path, body),
     },
   };
   const exports = {};

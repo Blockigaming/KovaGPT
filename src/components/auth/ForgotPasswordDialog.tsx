@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, KeyRound, Mail } from "lucide-react";
-import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 
 export function ForgotPasswordDialog({
   open,
@@ -35,7 +35,7 @@ export function ForgotPasswordDialog({
     setLoading(true);
     try {
       if (browserKovaAuthEnabled()) {
-        const response = await kovaAuthJson("/api/auth/recovery/request", {
+        const response = await kovaPublicAuthJson("/api/auth/recovery/request", {
           email: normalizedEmail,
         });
         if (!response.ok) throw new Error(`Kova recovery request failed (${response.status})`);

@@ -76,17 +76,14 @@ test("MCP compatibility-session proof follows live revocation and account state"
     const token = signKovaCompatibilityJwt(principal(session), signingEnv, Date.parse(now));
     const claims = verifyKovaCompatibilityJwt(token, signingEnv, Date.parse(now) + 1_000);
     const validate = () =>
-      db.query(
-        "select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6) as ok",
-        [
-          claims.accountId,
-          claims.sessionId,
-          claims.email,
-          claims.assuranceLevel,
-          claims.issuedAt,
-          now,
-        ],
-      );
+      db.query("select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6) as ok", [
+        claims.accountId,
+        claims.sessionId,
+        claims.email,
+        claims.assuranceLevel,
+        claims.issuedAt,
+        now,
+      ]);
 
     assert.equal((await validate()).rows[0].ok, true);
     await db.query("select public.kova_auth_revoke_session($1)", [digest("owned-mcp-session")]);
@@ -126,17 +123,21 @@ test("compatibility-session validation rejects mismatched identity and remains s
       (
         await db.query(
           "select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6) as ok",
-          [session.account_id, session.session_id, "other@example.invalid", session.assurance_level, issued, now],
+          [
+            session.account_id,
+            session.session_id,
+            "other@example.invalid",
+            session.assurance_level,
+            issued,
+            now,
+          ],
         )
       ).rows[0].ok,
       false,
     );
     await db.exec("set role authenticated");
     await assert.rejects(
-      db.query(
-        "select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6)",
-        args,
-      ),
+      db.query("select public.kova_auth_validate_compatibility_session($1,$2,$3,$4,$5,$6)", args),
       /permission denied/u,
     );
     await db.exec("reset role");

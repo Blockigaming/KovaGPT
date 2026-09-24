@@ -12,7 +12,7 @@ const env = {
 };
 const state = "s".repeat(43);
 
-function harness(db, kind, response) {
+function harness(db, kind, response, options = {}) {
   let candidate;
   const deletes = [];
   const operation =
@@ -55,6 +55,7 @@ function harness(db, kind, response) {
             }
             if (name === "kova_auth_delete_unused_compatibility_principal") {
               deletes.push(args.p_account_id);
+              if (options.cleanupFailure) return { error: { code: "P0001" } };
               return {
                 data: (
                   await db.query(
@@ -75,6 +76,8 @@ function harness(db, kind, response) {
                   },
                 ],
               };
+            if (name === operation && options.definitiveError)
+              return { error: { code: "23505", message: "synthetic database rejection" } };
             const result = await transport(name, args);
             assert.equal(result.error, undefined, result.error?.message);
             return response(result, candidate);
@@ -104,6 +107,32 @@ function harness(db, kind, response) {
       return candidate;
     },
   };
+}
+
+for (const cleanupFailure of [false, true]) {
+  test(`Google: definitive database rejection attempts safe candidate cleanup (cleanup failure: ${cleanupFailure})`, async () => {
+    const db = await authDatabase();
+    try {
+      const h = harness(db, "google", (result) => result, {
+        definitiveError: true,
+        cleanupFailure,
+      });
+      const result = await h.run();
+      assert.equal(result.status, 303);
+      assert.match(result.headers.get("location"), /google_exchange_failed/u);
+      assert.deepEqual(h.deletes, [h.id]);
+      assert.equal(
+        (await db.query("select count(*)::int n from kova_private.auth_accounts")).rows[0].n,
+        0,
+      );
+      assert.equal(
+        (await db.query("select count(*)::int n from auth.users")).rows[0].n,
+        cleanupFailure ? 1 : 0,
+      );
+    } finally {
+      await db.close();
+    }
+  });
 }
 
 for (const kind of ["password", "google"]) {

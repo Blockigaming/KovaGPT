@@ -11,7 +11,7 @@ import {
   setKovaSessionActive,
   kovaAuthGeneration,
   resolveKovaSessionAuthority,
-  kovaAuthJson,
+  kovaPublicAuthJson,
   announceKovaAuthChange,
 } from "@/lib/kova-auth-browser";
 import type { Session, User } from "@supabase/supabase-js";
@@ -195,7 +195,7 @@ const kovaAuth = {
   resend: async (input: { type?: string; email?: string }) => {
     if (input?.type !== "signup" || typeof input.email !== "string") return unsupportedKovaAuth();
     try {
-      const response = await kovaAuthJson("/api/auth/verify/resend", { email: input.email });
+      const response = await kovaPublicAuthJson("/api/auth/verify/resend", { email: input.email });
       return { data: null, error: response.ok ? null : new Error("Verification request failed") };
     } catch {
       return { data: null, error: new Error("Verification request failed") };

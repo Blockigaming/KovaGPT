@@ -62,7 +62,7 @@ function fixture({
       "@/lib/kova-auth-browser": {
         browserKovaAuthEnabled: () => mode !== "supabase",
         browserKovaAuthMode: () => mode,
-        async kovaAuthJson(path, body) {
+        async kovaPublicAuthJson(path, body) {
           calls.push([path, body]);
           if (delay) await delay;
           return response;

@@ -9,7 +9,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
-import { browserKovaAuthEnabled, kovaAuthJson } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
@@ -145,11 +145,14 @@ function AuthPage() {
     const normalizedEmail = email.trim().toLowerCase();
     try {
       if (useKovaAuth) {
-        const response = await kovaAuthJson(isSignUp ? "/api/auth/signup" : "/api/auth/login", {
-          email: normalizedEmail,
-          password,
-          ...(isSignUp && fullName.trim() ? { displayName: fullName.trim() } : {}),
-        });
+        const response = await kovaPublicAuthJson(
+          isSignUp ? "/api/auth/signup" : "/api/auth/login",
+          {
+            email: normalizedEmail,
+            password,
+            ...(isSignUp && fullName.trim() ? { displayName: fullName.trim() } : {}),
+          },
+        );
         const payload = (await response.json().catch(() => ({}))) as {
           error?: unknown;
           mfaRequired?: unknown;
@@ -224,7 +227,7 @@ function AuthPage() {
     const mfaInputValid = mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
     if (!hasMfaChallenge || !mfaInputValid || !guard()) return;
     try {
-      const response = await kovaAuthJson("/api/auth/login", {
+      const response = await kovaPublicAuthJson("/api/auth/login", {
         ...(search.googleMfa ? { googleMfa: true } : { challengeToken: mfaChallengeToken }),
         ...(mfaMethod === "totp" ? { code: mfaCode } : { recoveryCode: mfaCode }),
       });
@@ -296,7 +299,7 @@ function AuthPage() {
   const resendVerification = async () => {
     if (!emailValid || cooldown > 0 || !guard()) return;
     try {
-      const response = await kovaAuthJson("/api/auth/verify/resend", {
+      const response = await kovaPublicAuthJson("/api/auth/verify/resend", {
         email: email.trim().toLowerCase(),
       });
       if (!response.ok) throw new Error("verification_unavailable");

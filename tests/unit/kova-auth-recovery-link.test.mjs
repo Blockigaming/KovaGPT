@@ -103,7 +103,7 @@ function page(suffix, mode = "kova", scrubFails = false) {
       "@/lib/kova-auth-browser": {
         browserKovaAuthEnabled: () => mode !== "supabase",
         browserKovaAuthMode: () => mode,
-        kovaAuthJson: async (path, body) => {
+        kovaPublicAuthJson: async (path, body) => {
           events.push(["submit", path, body]);
           return Response.json({
             session: { accountId: "10000000-0000-4000-8000-000000000001", emailVerified: true },

@@ -292,6 +292,17 @@ async function readJsonObject(
   }
 }
 
+function publicAuthMutationGuard(request: Request): Response | null {
+  if (request.method !== "POST") return jsonError("Method not allowed", 405);
+  if (
+    isCrossSiteMutation(request) ||
+    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
+  ) {
+    return jsonError("Cross-origin request rejected", 403);
+  }
+  return null;
+}
+
 async function rateLimit(
   request: Request,
   action: string,
@@ -362,17 +373,12 @@ export async function resolveKovaRequestPrincipal(request: Request): Promise<Kov
 export async function handleKovaSignup(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  if (request.method !== "POST") return jsonError("Method not allowed", 405);
-  if (
-    isCrossSiteMutation(request) ||
-    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
-  ) {
-    return jsonError("Cross-origin request rejected", 403);
-  }
-  const limited = await rateLimit(request, "kova_auth_signup", 5, 3600);
-  if (limited) return limited;
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const limited = await rateLimit(request, "kova_auth_signup", 5, 3600);
+  if (limited) return limited;
 
   let email: string;
   try {
@@ -436,17 +442,12 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
 export async function handleKovaVerificationResend(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  if (request.method !== "POST") return jsonError("Method not allowed", 405);
-  if (
-    isCrossSiteMutation(request) ||
-    (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
-  ) {
-    return jsonError("Cross-origin request rejected", 403);
-  }
-  const limited = await rateLimit(request, "kova_auth_verify_resend", 5, 3600);
-  if (limited) return limited;
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const limited = await rateLimit(request, "kova_auth_verify_resend", 5, 3600);
+  if (limited) return limited;
   if (Object.keys(body).some((key) => key !== "email")) return jsonError("Invalid request.", 400);
   let email: string;
   try {
@@ -493,10 +494,12 @@ export async function handleKovaVerificationResend(request: Request): Promise<Re
 export async function handleKovaLogin(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  const limited = await rateLimit(request, "kova_auth_login", 20, 900);
-  if (limited) return limited;
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const limited = await rateLimit(request, "kova_auth_login", 20, 900);
+  if (limited) return limited;
 
   const googleMfaRequested = body.googleMfa === true;
   const bodyChallengeToken = typeof body.challengeToken === "string" ? body.challengeToken : "";
@@ -1294,10 +1297,12 @@ export async function handleKovaVerification(request: Request): Promise<Response
 export async function handleKovaRecoveryRequest(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  const limited = await rateLimit(request, "kova_auth_recovery", 5, 3600);
-  if (limited) return limited;
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const limited = await rateLimit(request, "kova_auth_recovery", 5, 3600);
+  if (limited) return limited;
   let email: string;
   try {
     email = normalizeKovaEmail(typeof body.email === "string" ? body.email : "");
@@ -1340,10 +1345,12 @@ export async function handleKovaRecoveryRequest(request: Request): Promise<Respo
 export async function handleKovaRecoveryReset(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  const limited = await rateLimit(request, "kova_auth_recovery_reset", 10, 3600);
-  if (limited) return limited;
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
+  const limited = await rateLimit(request, "kova_auth_recovery_reset", 10, 3600);
+  if (limited) return limited;
   const token = typeof body.token === "string" ? body.token : "";
   const password = typeof body.password === "string" ? body.password : "";
   let recoveryDigest: string;
@@ -1514,6 +1521,7 @@ function googleFailureRedirect(code: string): Response {
 export async function handleKovaGoogleCallback(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  let candidateAccountId: string | null = null;
   try {
     const configuredAuthOrigin = authOrigin();
     if (new URL(request.url).origin !== configuredAuthOrigin) return jsonError("Not found", 404);
@@ -1561,7 +1569,7 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       expectedNonceDigest: stateRecord.nonceDigest,
     });
 
-    const candidateAccountId = await createCompatibilityPrincipal();
+    candidateAccountId = await createCompatibilityPrincipal();
     const handoff = generateKovaToken();
     const result = await finishGoogle({
       candidateAccountId,
@@ -1592,7 +1600,17 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       }),
     });
   } catch (error) {
-    // Preserve a possibly committed account after an ambiguous response.
+    // A PostgreSQL rejection rolls back the transaction and cannot adopt the
+    // candidate. A lost or malformed reply may follow a commit; preserve it.
+    if (
+      candidateAccountId &&
+      error instanceof KovaAuthStoreError &&
+      error.operation === "kova_auth_finish_google" &&
+      error.databaseCode &&
+      /^[A-Z0-9]{5}$/u.test(error.databaseCode)
+    ) {
+      await cleanupCandidate(candidateAccountId);
+    }
     console.error("[KovaAuth] Google callback failed", {
       error: error instanceof Error ? error.name : "unknown_error",
     });

@@ -65,6 +65,64 @@ function browserFixture() {
   };
 }
 
+test("signed-out public authentication dispatches without a principal; owner mutations keep both captured bindings", async () => {
+  const calls = [];
+  const exports = {};
+  let current = null;
+  vm.runInNewContext(browserSource, {
+    exports,
+    Response,
+    URL,
+    Error,
+    TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
+    fetch: async (path, options) => {
+      calls.push({ path, options });
+      return path === "/api/auth/session"
+        ? Response.json({ session: current })
+        : Response.json({ accepted: true });
+    },
+  });
+  for (const path of [
+    "/api/auth/signup",
+    "/api/auth/login",
+    "/api/auth/recovery/request",
+    "/api/auth/recovery/reset",
+    "/api/auth/verify/resend",
+    "/api/auth/passkeys/login/options",
+    "/api/auth/passkeys/login/verify",
+  ]) {
+    assert.equal((await exports.kovaPublicAuthJson(path, {})).status, 200);
+  }
+  assert.ok(calls.every(({ path }) => path !== "/api/auth/session"));
+  assert.ok(
+    calls.every(
+      ({ options }) => options.credentials === "same-origin" && options.mode === "same-origin",
+    ),
+  );
+  assert.ok(
+    calls.every(
+      ({ options }) => !Object.keys(options.headers).some((key) => key.startsWith("X-Kova-")),
+    ),
+  );
+  await assert.rejects(
+    exports.kovaAuthJson("/api/auth/mfa/recovery/regenerate", {}),
+    exports.isKovaSessionRejectedError,
+  );
+  current = principal("session-A");
+  exports.clearKovaAuthCache();
+  await exports.kovaAuthJson("/api/auth/mfa/recovery/regenerate", { confirm: true });
+  const mutation = calls.at(-1).options;
+  assert.equal(mutation.headers["X-Kova-Owner"], current.accountId);
+  assert.equal(mutation.headers["X-Kova-Session"], "session-A");
+  current = principal("session-B");
+  await exports.kovaAuthJson(
+    "/api/auth/passkeys/register/verify",
+    {},
+    { accountId: "owner", sessionId: "session-A" },
+  );
+  assert.equal(calls.at(-1).options.headers["X-Kova-Session"], "session-A");
+});
+
 test("MFA cache invalidation discards prior compatibility tokens and cached principals", async () => {
   const f = browserFixture();
   assert.equal(await f.api.getKovaCompatibilityToken(), "token-1");

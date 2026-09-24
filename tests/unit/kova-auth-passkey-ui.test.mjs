@@ -159,6 +159,9 @@ function loginSurface(dialog, options = {}) {
       kovaAuthJson: () => {
         throw Error("Unexpected password request");
       },
+      kovaPublicAuthJson: () => {
+        throw Error("Unexpected password request");
+      },
     },
     "@/lib/kova-auth-passkey-browser": {
       signInWithKovaPasskey: async () => {

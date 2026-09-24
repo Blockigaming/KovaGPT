@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 176,
-  "latest": "20260924010000_kova_owned_mfa_binding_and_global_signout.sql",
+  "count": 179,
+  "latest": "20260924125525_kova_owned_mcp_session_authority.sql",
   "migrations": [
     {
       "order": 1,
@@ -3755,6 +3755,54 @@
       "functions": ["kova_auth_bind_mfa_login_factor", "kova_auth_revoke_other_sessions"],
       "destructive": true,
       "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 177,
+      "filename": "20260924013419_kova_owned_multi_factor_login_v2.sql",
+      "timestamp": "20260924013419",
+      "sha256": "9bdf2c2cde1382f2d53aa31806589c7896abf4795cd669aa476d7a588ba5b8f7",
+      "tables": [],
+      "functions": ["kova_auth_read_mfa_login_challenge", "kova_auth_bind_mfa_login_factor"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 178,
+      "filename": "20260924015001_kova_owned_legacy_mfa_bridge.sql",
+      "timestamp": "20260924015001",
+      "sha256": "172c86f5bbd1c23854154f5dc85f3e23a8709a897b2ecdb81b84ae82cf7e546e",
+      "tables": ["kova_private"],
+      "functions": [
+        "kova_auth_legacy_mfa_migration_status",
+        "kova_auth_begin_legacy_mfa_migration",
+        "kova_auth_read_legacy_mfa_migration",
+        "kova_auth_activate_legacy_mfa_migration",
+        "kova_auth_legacy_mfa_gap_count"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["auth_legacy_mfa_migrations_active_account_idx"]
+    },
+    {
+      "order": 179,
+      "filename": "20260924125525_kova_owned_mcp_session_authority.sql",
+      "timestamp": "20260924125525",
+      "sha256": "0da5854dd0f2c631610da39bfed4a978495760c7ea4456d5bbc8333498c1af4c",
+      "tables": [],
+      "functions": ["kova_auth_validate_compatibility_session"],
+      "destructive": false,
+      "dataBackfill": false,
       "reversible": false,
       "rls": [],
       "policies": [],

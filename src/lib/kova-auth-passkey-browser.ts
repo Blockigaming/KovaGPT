@@ -3,7 +3,12 @@ import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
-import { clearKovaAuthCache, kovaAuthJson } from "@/lib/kova-auth-browser";
+import {
+  clearKovaAuthCache,
+  getCachedKovaSession,
+  kovaAuthJson,
+  kovaPublicAuthJson,
+} from "@/lib/kova-auth-browser";
 
 const ROOT = "/api/auth/passkeys";
 async function payload(response: Response): Promise<Record<string, unknown>> {
@@ -25,10 +30,14 @@ function options<T extends { challenge: string }>(
     throw new Error("kova_passkey_options_invalid");
   return { optionsJSON: value as T, challengeToken: data.challengeToken };
 }
-async function finish(path: string, body: Record<string, unknown>): Promise<void> {
+async function finish(
+  path: string,
+  body: Record<string, unknown>,
+  request: (path: string, body: Record<string, unknown>) => Promise<Response> = kovaPublicAuthJson,
+): Promise<void> {
   // An uncertain response can follow an already committed cookie rotation.
   try {
-    const data = await payload(await kovaAuthJson(path, body));
+    const data = await payload(await request(path, body));
     const session = data.session as { accountId?: unknown; assuranceLevel?: unknown } | undefined;
     if (
       typeof session?.accountId !== "string" ||
@@ -44,15 +53,21 @@ export async function registerKovaPasskey(input: {
   friendlyName: string;
   currentPassword?: string;
 }): Promise<void> {
+  const captured = await getCachedKovaSession();
+  if (!captured) throw new Error("kova_session_rejected");
   const data = options<PublicKeyCredentialCreationOptionsJSON>(
-    await payload(await kovaAuthJson(`${ROOT}/register/options`, input)),
+    await payload(await kovaAuthJson(`${ROOT}/register/options`, input, captured)),
   );
   const response = await startRegistration({ optionsJSON: data.optionsJSON });
-  await finish(`${ROOT}/register/verify`, { challengeToken: data.challengeToken, response });
+  await finish(
+    `${ROOT}/register/verify`,
+    { challengeToken: data.challengeToken, response },
+    (path, body) => kovaAuthJson(path, body, captured),
+  );
 }
 export async function signInWithKovaPasskey(): Promise<void> {
   const data = options<PublicKeyCredentialRequestOptionsJSON>(
-    await payload(await kovaAuthJson(`${ROOT}/login/options`, {})),
+    await payload(await kovaPublicAuthJson(`${ROOT}/login/options`, {})),
   );
   const response = await startAuthentication({ optionsJSON: data.optionsJSON });
   await finish(`${ROOT}/login/verify`, { challengeToken: data.challengeToken, response });

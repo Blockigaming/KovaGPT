@@ -71,6 +71,25 @@ function mutationGuard(request: Request): { origin: string; rpID: string } | Res
   }
 }
 
+async function boundRegistrationSession(
+  request: Request,
+  sessionDigest: string,
+): Promise<NonNullable<Awaited<ReturnType<typeof resolveSession>>> | Response> {
+  try {
+    const principal = await resolveSession(sessionDigest);
+    if (!principal) return jsonError("Invalid or expired session.", 401);
+    if (
+      request.headers.get("X-Kova-Owner") !== principal.accountId ||
+      request.headers.get("X-Kova-Session") !== principal.sessionId
+    ) {
+      return jsonError("Session changed.", 409);
+    }
+    return principal;
+  } catch {
+    return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+}
+
 export async function handleKovaPasskeyList(request: Request): Promise<Response> {
   if (request.method !== "GET") return jsonError("Method not allowed.", 405);
   const unavailable = kovaModeAvailable();
@@ -107,15 +126,16 @@ export async function handleKovaPasskeyRegisterOptions(request: Request): Promis
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
+  const bound = await boundRegistrationSession(request, sessionDigest);
+  if (bound instanceof Response) return bound;
   const body = await readJsonObject(request);
   if (body instanceof Response) return body;
   const name = friendlyName(body.friendlyName ?? "Passkey");
   if (!allowedKeys(body, ["friendlyName", "currentPassword"]) || !name)
     return jsonError("Invalid request.", 400);
   try {
-    const principal = await resolveSession(sessionDigest);
-    if (!principal || !principal.emailVerified)
-      return jsonError("Invalid or expired session.", 401);
+    const principal = bound;
+    if (!principal.emailVerified) return jsonError("Invalid or expired session.", 401);
     const accountLimit = await rateLimit(
       request,
       "kova_auth_passkey_register_account",
@@ -218,6 +238,8 @@ async function verify(
     const result = requireSessionDigest(request);
     if (result instanceof Response) return result;
     sessionDigest = result;
+    const bound = await boundRegistrationSession(request, sessionDigest);
+    if (bound instanceof Response) return bound;
   }
   try {
     const binding = parseCookieHeader(request.headers.get("cookie")).get(BINDING_COOKIE) ?? "";

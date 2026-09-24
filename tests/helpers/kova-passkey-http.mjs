@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { authHttp, authRequest } from "./kova-auth-http.mjs";
 import * as passkeyCrypto from "../../src/lib/kova-auth-passkey-crypto.server.mjs";
 
@@ -47,6 +48,7 @@ export function passkeyHttp(db, options = {}) {
   );
   return {
     ...harness,
+    db,
     passkeyStore: store,
     ...harness.loadModule(
       "@/lib/kova-auth-passkey-http.server",
@@ -64,6 +66,23 @@ export function request(body, { binding, token = "s".repeat(43), ...options } = 
     .join("; ");
   return authRequest(body, { ...options, token, headers: { Cookie: cookies, ...options.headers } });
 }
+export async function boundRequest(db, body, options = {}) {
+  const token = options.token ?? "s".repeat(43);
+  const row = (
+    await db.query(
+      `select account_id, id from kova_private.auth_sessions where token_digest=decode($1,'hex')`,
+      [createHash("sha256").update(token).digest("hex")],
+    )
+  ).rows[0];
+  return request(body, {
+    ...options,
+    headers: {
+      "X-Kova-Owner": row?.account_id ?? "",
+      "X-Kova-Session": row?.id ?? "",
+      ...options.headers,
+    },
+  });
+}
 export function cookieValue(response, name) {
   return response.headers
     .getSetCookie()
@@ -73,7 +92,7 @@ export function cookieValue(response, name) {
 }
 export async function startRegistration(f, currentPassword, token = "s".repeat(43)) {
   const response = await f.handleKovaPasskeyRegisterOptions(
-    request({ friendlyName: "My device", currentPassword }, { token }),
+    await boundRequest(f.db, { friendlyName: "My device", currentPassword }, { token }),
   );
   assert.equal(response.status, 200, await response.clone().text());
   return { ...(await response.json()), binding: cookieValue(response, "__Host-kova_passkey") };

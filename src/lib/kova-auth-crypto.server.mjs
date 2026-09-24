@@ -311,9 +311,9 @@ export function kovaCompatibilityJwtHasMarker(token) {
     const payload = decodeJson(parts[1], "Kova auth token payload");
     return Boolean(
       payload &&
-        typeof payload === "object" &&
-        !Array.isArray(payload) &&
-        Object.prototype.hasOwnProperty.call(payload, "kova_auth"),
+      typeof payload === "object" &&
+      !Array.isArray(payload) &&
+      Object.prototype.hasOwnProperty.call(payload, "kova_auth"),
     );
   } catch {
     return false;
@@ -357,8 +357,7 @@ export function verifyKovaCompatibilityJwt(token, env = process.env, now = Date.
   ) {
     throw new Error("Kova auth compatibility token signature is invalid");
   }
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
   const nowSeconds = Math.floor(now / 1000);
   if (
     !payload ||

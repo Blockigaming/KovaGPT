@@ -16,7 +16,11 @@ import {
   completeOAuthSessionFromUrl,
   clearOAuthResponseFromUrl,
 } from "@/lib/oauth-session";
-import { browserKovaAuthEnabled, browserKovaAuthMode, kovaAuthJson } from "@/lib/kova-auth-browser";
+import {
+  browserKovaAuthEnabled,
+  browserKovaAuthMode,
+  kovaPublicAuthJson,
+} from "@/lib/kova-auth-browser";
 import { readKovaRecoveryLanding } from "@/lib/kova-recovery-landing.mjs";
 
 export const Route = createFileRoute("/reset-password")({
@@ -156,7 +160,7 @@ function ResetPassword() {
     submitting.current = true;
     try {
       if (useKovaRecovery && recoveryToken) {
-        const response = await kovaAuthJson("/api/auth/recovery/reset", {
+        const response = await kovaPublicAuthJson("/api/auth/recovery/reset", {
           token: recoveryToken,
           password,
         });

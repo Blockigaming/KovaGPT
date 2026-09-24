@@ -195,8 +195,28 @@ export async function getKovaCompatibilityToken(): Promise<string | null> {
   return tokenCache.token;
 }
 
-export async function kovaAuthJson(path: string, body: Record<string, unknown>): Promise<Response> {
-  const captured = await getCachedKovaSession();
+export async function kovaPublicAuthJson(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    mode: "same-origin",
+    redirect: "error",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (response.ok) announceKovaAuthChange();
+  return response;
+}
+
+export async function kovaAuthJson(
+  path: string,
+  body: Record<string, unknown>,
+  expected?: Pick<KovaBrowserPrincipal, "accountId" | "sessionId">,
+): Promise<Response> {
+  const captured = expected ?? (await getCachedKovaSession());
   if (!captured) throw new KovaSessionRejectedError();
   const response = await fetch(path, {
     method: "POST",

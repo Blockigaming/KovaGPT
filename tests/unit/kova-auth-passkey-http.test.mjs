@@ -12,6 +12,7 @@ import { passkeyFixture } from "../helpers/kova-passkey-fixture.mjs";
 import {
   passkeyHttp,
   request,
+  boundRequest,
   cookieValue,
   startRegistration,
   startLogin,
@@ -27,7 +28,8 @@ async function register(db, f, fixture = passkeyFixture()) {
   await account(db);
   const begin = await startRegistration(f, password);
   const response = await f.handleKovaPasskeyRegisterVerify(
-    request(
+    await boundRequest(
+      db,
       {
         challengeToken: begin.challengeToken,
         response: fixture.registration(begin.challengeToken),
@@ -144,7 +146,10 @@ test("password reauthentication is mandatory for AAL1 registration, while AAL2 u
       { currentPassword: 100 },
       { currentPassword: "x".repeat(1025) },
     ]) {
-      assert.equal((await f.handleKovaPasskeyRegisterOptions(request(body))).status, 401);
+      assert.equal(
+        (await f.handleKovaPasskeyRegisterOptions(await boundRequest(db, body))).status,
+        401,
+      );
     }
     assert.equal(await count(db, "auth_passkey_challenges"), 0);
     const status = await (
@@ -154,7 +159,7 @@ test("password reauthentication is mandatory for AAL1 registration, while AAL2 u
     assert.equal(status.canRegister, true);
     await enableMfa(db, "s".repeat(43), "t".repeat(43));
     const begin = await f.handleKovaPasskeyRegisterOptions(
-      request({ friendlyName: "Security key" }, { token: "t".repeat(43) }),
+      await boundRequest(db, { friendlyName: "Security key" }, { token: "t".repeat(43) }),
     );
     assert.equal(begin.status, 200, await begin.clone().text());
     assert.match(
@@ -184,18 +189,70 @@ test("browser binding, actual password revision, and credential ownership surviv
       { binding: "b".repeat(43) },
       { binding: begin.binding, token: "o".repeat(43) },
     ]) {
-      assert.equal((await f.handleKovaPasskeyRegisterVerify(request(body, options))).status, 401);
+      assert.equal(
+        (await f.handleKovaPasskeyRegisterVerify(await boundRequest(db, body, options))).status,
+        401,
+      );
     }
     await db.query(
       `update kova_private.auth_credentials set revision=revision+1 where account_id=$1`,
       [owner],
     );
     const stale = await f.handleKovaPasskeyRegisterVerify(
-      request(body, { binding: begin.binding }),
+      await boundRequest(db, body, { binding: begin.binding }),
     );
     assert.equal(stale.status, 401);
     assert.equal(await count(db, "auth_passkeys"), 0);
     assert.equal(f.logs.length, 0);
+  } finally {
+    await db.close();
+  }
+});
+
+test("registration options and verification reject an account switch before creating or claiming a challenge", async () => {
+  const db = await authDatabase();
+  try {
+    const a = await account(db);
+    await account(db, other, "o".repeat(43));
+    await enableMfa(db, "o".repeat(43), "b".repeat(43));
+    const f = passkeyHttp(db);
+    const capturedA = { "X-Kova-Owner": owner, "X-Kova-Session": a.session_id };
+    const wrongCookie = { token: "b".repeat(43), headers: capturedA };
+    assert.equal(
+      (
+        await f.handleKovaPasskeyRegisterOptions(
+          request({ friendlyName: "Attacker's key" }, wrongCookie),
+        )
+      ).status,
+      409,
+    );
+    assert.equal(await count(db, "auth_passkey_challenges"), 0);
+    const begin = await startRegistration(f, password);
+    const body = {
+      challengeToken: begin.challengeToken,
+      response: passkeyFixture().registration(begin.challengeToken),
+    };
+    assert.equal(
+      (
+        await f.handleKovaPasskeyRegisterVerify(
+          request(body, { ...wrongCookie, binding: begin.binding }),
+        )
+      ).status,
+      409,
+    );
+    assert.equal(
+      (await db.query("select consumed_at from kova_private.auth_passkey_challenges")).rows[0]
+        .consumed_at,
+      null,
+    );
+    assert.equal(
+      (
+        await f.handleKovaPasskeyRegisterVerify(
+          await boundRequest(db, body, { binding: begin.binding }),
+        )
+      ).status,
+      200,
+    );
   } finally {
     await db.close();
   }
@@ -319,7 +376,11 @@ test("shared throttling fails closed, account throttling uses only the verified 
           : { allowed: true },
     });
     assert.equal(
-      (await f.handleKovaPasskeyRegisterOptions(request({ currentPassword: password }))).status,
+      (
+        await f.handleKovaPasskeyRegisterOptions(
+          await boundRequest(db, { currentPassword: password }),
+        )
+      ).status,
       429,
     );
     assert.equal(f.limits.at(-1).identity, `account:${owner}`);
