@@ -526,9 +526,7 @@
       },
       "scoped_function_metadata": [
         {
-          "settings": [
-            "search_path=pg_catalog, public, pg_temp"
-          ],
+          "settings": ["search_path=pg_catalog, public, pg_temp"],
           "owner_role": "postgres",
           "volatility": "s",
           "result_type": "uuid",
@@ -548,9 +546,7 @@
           "authenticated_schema_usage": true
         },
         {
-          "settings": [
-            "search_path=pg_catalog"
-          ],
+          "settings": ["search_path=pg_catalog"],
           "owner_role": "postgres",
           "volatility": "s",
           "result_type": "uuid",
@@ -570,9 +566,7 @@
           "authenticated_schema_usage": true
         },
         {
-          "settings": [
-            "search_path=public, pg_temp"
-          ],
+          "settings": ["search_path=public, pg_temp"],
           "owner_role": "postgres",
           "volatility": "s",
           "result_type": "text",

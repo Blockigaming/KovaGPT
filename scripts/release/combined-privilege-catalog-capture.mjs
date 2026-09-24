@@ -63,6 +63,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     new URL("./privilege-live-violation-counts.sql", import.meta.url),
     "utf8",
   );
-  const helperSql = readFileSync(new URL("./rls-helper-live-aggregate.sql", import.meta.url), "utf8");
+  const helperSql = readFileSync(
+    new URL("./rls-helper-live-aggregate.sql", import.meta.url),
+    "utf8",
+  );
   process.stdout.write(buildCombinedPrivilegeCatalogCapture(privilegeSql, helperSql));
 }

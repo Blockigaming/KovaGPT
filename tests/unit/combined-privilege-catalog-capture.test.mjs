@@ -61,7 +61,8 @@ test("reviewed collector inputs recreate the exact single-checkpoint live query"
 });
 
 test("collector input must be a single read-only SELECT transaction", () => {
-  const safe = "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY; WITH c AS (SELECT 1) SELECT 1; COMMIT;";
+  const safe =
+    "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY; WITH c AS (SELECT 1) SELECT 1; COMMIT;";
   assert.match(buildCombinedPrivilegeCatalogCapture(safe, safe), /SELECT 1/iu);
   for (const unsafe of [
     safe.replace("READ ONLY", "READ WRITE"),
