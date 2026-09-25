@@ -72,9 +72,11 @@ export const createFamilyGroup = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: groupId, error } = await loose(supabaseAdmin).rpc(
       "create_or_repair_family_group",
-      p_owner_id: context.userId,
-      p_name: data.name,
-    });
+      {
+        p_owner_id: context.userId,
+        p_name: data.name,
+      },
+    );
     if (error || typeof groupId !== "string") {
       throw new Error(
         "Family group could not be saved. If you belong to another family, leave it first.",
