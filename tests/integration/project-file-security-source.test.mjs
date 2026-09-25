@@ -8,6 +8,7 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   const route = read("src/routes/api/project-files.ts");
   const ui = read("src/routes/projects.$projectId.tsx");
   const workspace = read("src/lib/project-workspace.functions.ts");
+  const privateColumns = read("src/lib/kova-auth-private-download.mjs");
   const auth = read("src/lib/api-auth.server.ts");
   const lifecycle = route + read("src/lib/project-file-maintenance.server.ts");
 
@@ -81,9 +82,10 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.doesNotMatch(ui, /storage\.from\("project-files"\)\.upload/);
   assert.doesNotMatch(workspace, /registerUploadedFile|deleteProjectFile/);
   assert.doesNotMatch(workspace, /\.from\("project_files"\)\s*\.select\("\*"\)/);
+  assert.match(workspace, /\.select\(`\$\{PRIVATE_PROJECT_COLUMNS\},created_at`\)/);
   assert.match(
-    workspace,
-    /\.select\("id, project_id, name, storage_path, mime_type, size_bytes, kind, created_at"\)/,
+    privateColumns,
+    /PRIVATE_PROJECT_COLUMNS\s*=\s*"id,project_id,name,storage_path,mime_type,size_bytes,kind,status,content_sha256"/,
   );
   assert.match(workspace, /item\.kind === "agent-deliverable"/);
   assert.match(workspace, /Promise\.all/);

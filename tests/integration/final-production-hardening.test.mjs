@@ -7,7 +7,7 @@ test("agent controls use the transactional caller-scoped routine and reject fals
   const migration = await read(
     "supabase/migrations/20260905001247_legacy_browser_atomic_controls.sql",
   );
-  assert.match(source, /supabaseUser\.rpc\("control_disabled_browser_run"/);
+  assert.match(source, /loose\(caller\.supabaseUser\)\.rpc\("control_disabled_browser_run"/);
   assert.match(source, /if \(!data\) throw new Error\("agent_control_unavailable"\)/);
   assert.match(migration, /owner_id=principal FOR UPDATE/);
   assert.match(migration, /INSERT INTO public\.agent_run_events/);
