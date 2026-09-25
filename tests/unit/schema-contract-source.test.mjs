@@ -21,6 +21,15 @@ CREATE POLICY "read_flags" ON public.other FOR SELECT USING (true);
     { table: "public.feature_flags", role: "anon", granted: false },
     { table: "public.feature_flags", role: "authenticated", granted: false },
   ]);
+  const sameLine = `
+CREATE POLICY "first" ON public.one FOR SELECT USING (true);CREATE POLICY "second" ON public.two FOR SELECT USING (true);DROP POLICY "first" ON public.one;
+GRANT SELECT ON public.two TO authenticated; GRANT ALL ON public.two TO service_role; REVOKE SELECT ON public.two FROM authenticated;
+`;
+  assert.deepEqual(activePolicyNames(sameLine), ["second"]);
+  assert.deepEqual(directTableSelectDecisions(sameLine), [
+    { table: "public.two", role: "authenticated", granted: false },
+    { table: "public.two", role: "service_role", granted: true },
+  ]);
 });
 
 test("current migration inventory does not advertise revoked feature-flag client access", () => {
@@ -31,6 +40,8 @@ test("current migration inventory does not advertise revoked feature-flag client
     .map((name) => readFileSync(new URL(name, dir), "utf8"))
     .join("\n");
   assert.equal(activePolicyNames(sql).includes("feature_flags_authenticated_read"), false);
+  assert.ok(activePolicyNames(sql).includes("Owners read resource relationships"));
+  assert.ok(activePolicyNames(sql).includes("Owners read GitHub installations"));
   const direct = directTableSelectDecisions(sql);
   assert.deepEqual(
     direct.find(
@@ -42,6 +53,8 @@ test("current migration inventory does not advertise revoked feature-flag client
     readFileSync(new URL("../../database-contract.json", import.meta.url), "utf8"),
   );
   assert.equal(contract.policies.includes("feature_flags_authenticated_read"), false);
+  assert.ok(contract.policies.includes("Owners read resource relationships"));
+  assert.ok(contract.policies.includes("Owners read GitHub installations"));
   assert.equal(Object.hasOwn(contract, "grants"), false);
   assert.equal(
     contract.directTableSelectDecisions.find(
@@ -49,4 +62,12 @@ test("current migration inventory does not advertise revoked feature-flag client
     )?.granted,
     false,
   );
+  for (const table of ["public.ai_usage_events", "public.api_profitability_admin"]) {
+    assert.equal(
+      contract.directTableSelectDecisions.find(
+        (entry) => entry.table === table && entry.role === "service_role",
+      )?.granted,
+      true,
+    );
+  }
 });

@@ -4,7 +4,7 @@
 export function activePolicyNames(sql) {
   const policies = new Map();
   const events =
-    /(?:^|\n)[ \t]*(create|drop)\s+policy\s+(?:if\s+(?:not\s+)?exists\s+)?(?:"([^"]+)"|([a-z_][\w]*))\s+on\s+(?:(?:"?([a-z_][\w]*)"?)\.)?"?([a-z_][\w]*)"?/giu;
+    /(?:^|[;\n])[ \t]*(create|drop)\s+policy\s+(?:if\s+(?:not\s+)?exists\s+)?(?:"([^"]+)"|([a-z_][\w]*))\s+on\s+(?:(?:"?([a-z_][\w]*)"?)\.)?"?([a-z_][\w]*)"?/giu;
   for (const match of sql.matchAll(events)) {
     const name = match[2] ?? match[3];
     const key = `${(match[4] ?? "public").toLowerCase()}.${match[5].toLowerCase()}.${name}`;
@@ -20,7 +20,7 @@ export function activePolicyNames(sql) {
 export function directTableSelectDecisions(sql) {
   const decisions = new Map();
   const events =
-    /(?:^|\n)[ \t]*(grant|revoke)\s+(select|all(?:\s+privileges)?)\s+on\s+(?:table\s+)?(public\.[a-z_][\w]*)\s+(?:to|from)\s+((?:[a-z_][\w]*\s*,\s*)*[a-z_][\w]*)\s*;/giu;
+    /(?:^|[;\n])[ \t]*(grant|revoke)\s+(select|all(?:\s+privileges)?)\s+on\s+(?:table\s+)?(public\.[a-z_][\w]*)\s+(?:to|from)\s+((?:[a-z_][\w]*\s*,\s*)*[a-z_][\w]*)\s*(?=;)/giu;
   for (const match of sql.matchAll(events)) {
     const table = match[3].toLowerCase();
     const granted = match[1].toLowerCase() === "grant";

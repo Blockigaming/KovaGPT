@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -61,6 +62,12 @@ const capture = () => ({
 });
 
 test("same-query inventory is read-only and binds all nineteen histories", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
+  assert.match(workflow, /scripts\/release\/migration-proof-catalog\\\.\(mjs\|sql\)/u);
+  assert.match(
+    workflow,
+    /isolated-database:\s+needs: verify\s+#[\s\S]*?if: always\(\) && needs\.verify\.outputs\.run_database == 'true'/u,
+  );
   assert.match(MIGRATION_PROOF_CATALOG_QUERY_SHA256, /^[a-f0-9]{64}$/u);
   assert.match(
     MIGRATION_PROOF_CATALOG_SQL,
