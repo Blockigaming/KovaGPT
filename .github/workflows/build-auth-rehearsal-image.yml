@@ -7,6 +7,10 @@ on:
         description: "Migration branch, tag, or commit SHA to build"
         required: true
         type: string
+      rehearsal_publishable_key:
+        description: "Browser-safe sb_publishable key for the isolated Auth Rehearsal project"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -66,12 +70,12 @@ jobs:
       - name: Verify isolated dual-mode browser configuration
         shell: bash
         env:
-          REHEARSAL_PUBLISHABLE_KEY: ${{ secrets.KOVA_AUTH_REHEARSAL_SUPABASE_PUBLISHABLE_KEY }}
+          REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
         run: |
           set -euo pipefail
           test -z "$(git status --porcelain)"
           if [[ ! "$REHEARSAL_PUBLISHABLE_KEY" =~ ^sb_publishable_[A-Za-z0-9_-]{16,}$ ]]; then
-            echo "::error::The Auth Rehearsal publishable key must be configured before building."
+            echo "::error::A valid Auth Rehearsal publishable key is required."
             exit 1
           fi
           if [ "$REHEARSAL_PROJECT_REF" = "$PRODUCTION_PROJECT_REF" ]; then
@@ -118,7 +122,7 @@ jobs:
           IMAGE_REF: ${{ steps.source.outputs.image_ref }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_TREE: ${{ steps.source.outputs.tree }}
-          REHEARSAL_PUBLISHABLE_KEY: ${{ secrets.KOVA_AUTH_REHEARSAL_SUPABASE_PUBLISHABLE_KEY }}
+          REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
         run: |
           set -euo pipefail
 
