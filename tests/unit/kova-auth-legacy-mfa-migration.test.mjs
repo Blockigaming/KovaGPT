@@ -130,6 +130,64 @@ test("cutover census includes untouched hosted users and accounts without a usab
   }
 });
 
+test("mailbox-proven recovery adopts an email-only hosted account and retires hosted authority", async () => {
+  const db = await authDatabase();
+  try {
+    const email = `${owner}@example.invalid`;
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)", [
+      owner,
+      email,
+      now,
+    ]);
+    await db.query("insert into auth.identities(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    assert.equal(await adoptionGapCount(db), 1);
+
+    await db.query("select public.kova_auth_create_recovery($1,$2,$3,'{}',$4)", [
+      email,
+      digest("email-only-recovery"),
+      expiry,
+      now,
+    ]);
+    assert.equal(await adoptionGapCount(db), 1); // Email delivery alone does not prove ownership.
+    await db.query("select * from public.kova_auth_consume_recovery($1,$2,$3,$4,$5)", [
+      digest("email-only-recovery"),
+      stagedHash,
+      digest("email-only-owned-session"),
+      expiry,
+      now,
+    ]);
+    assert.equal(await adoptionGapCount(db), 0);
+    assert.equal(await gapCount(db), 0);
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int as n from kova_private.auth_legacy_retirements where account_id=$1",
+          [owner],
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int as n from auth.sessions where user_id=$1", [owner]))
+        .rows[0].n,
+      0,
+    );
+    await assert.rejects(
+      db.query("select * from public.kova_auth_consume_recovery($1,$2,$3,$4,$5)", [
+        digest("email-only-recovery"),
+        stagedHash,
+        digest("replayed-owned-session"),
+        expiry,
+        now,
+      ]),
+      /kova_auth_invalid_recovery/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
 test("cutover census accepts a verified owned Google credential for an adopted hosted identity", async () => {
   const db = await authDatabase();
   try {
