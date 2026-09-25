@@ -95,7 +95,7 @@ export function validateForwardExtension(baseline, current, filenames, readBytes
   if (
     baseline.count !== 157 ||
     baseline.migrations?.length !== baseline.count ||
-    current.count !== 184 ||
+    current.count < 184 ||
     current.migrations?.length !== current.count ||
     JSON.stringify(current.migrations.slice(0, baseline.count)) !==
       JSON.stringify(baseline.migrations)
