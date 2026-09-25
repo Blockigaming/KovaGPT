@@ -13,7 +13,7 @@ export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
   raise exception 'upgrade_history_only_source_body_was_executed';
 end $kova_history_only$;\n`;
 
-// A separate, explicitly selected synthetic rehearsal of the proposed 80+3
+// A separate, explicitly selected synthetic rehearsal of the proposed 81+3
 // inventory. This function cannot repair a remote ledger or accept the plan.
 export function extendProposedCanonicalHistory(
   plan,
@@ -30,14 +30,14 @@ export function extendProposedCanonicalHistory(
   if (
     decision.targetProjectRef !== plan.currentHistory.projectRef ||
     decision.capturedLedgerMetadataSha256 !== plan.currentHistory.ledgerMetadataSha256 ||
-    decision.counts.conditionalForwardBodies !== 80 ||
+    decision.counts.conditionalForwardBodies !== 81 ||
     decision.counts.conditionalRecordOnlyVersions !== 3 ||
-    decision.counts.proposedFinalLedgerCount !== 181
+    decision.counts.proposedFinalLedgerCount !== 182
   )
     throw new Error("upgrade_canonical_history_inventory_mismatch");
 
   const pending = new Map(plan.forward.map((row) => [row.version, row]));
-  if (pending.size !== 83 || decision.sourceOnly.length !== 83)
+  if (pending.size !== 84 || decision.sourceOnly.length !== 84)
     throw new Error("upgrade_canonical_history_pending_mismatch");
   const recordOnly = [];
   const executionForward = [];
@@ -72,7 +72,7 @@ export function extendProposedCanonicalHistory(
   }
   if (
     pending.size ||
-    executionForward.length !== 80 ||
+    executionForward.length !== 81 ||
     JSON.stringify(recordOnly.sort()) !== JSON.stringify(RECORD_ONLY)
   )
     throw new Error("upgrade_canonical_history_action_counts_invalid");
@@ -88,7 +88,7 @@ export function extendProposedCanonicalHistory(
       recordOnlyVersions: recordOnly,
       historyOnlySentinelSha256: sha256(HISTORY_ONLY_SENTINEL),
       forwardVersions: executionForward.map((row) => row.version),
-      expectedFinalLedgerCount: 181,
+      expectedFinalLedgerCount: 182,
       productionReleaseReady: false,
       productionRowsRestored: false,
       schemaProofsAccepted: false,

@@ -14,7 +14,7 @@ const baselinePath = "tests/fixtures/production-migration-history-20260904/manif
 const supplementPath =
   "tests/fixtures/production-migration-history-20260904/current-supplement-20260918.json";
 const decisionPath = "docs/release-reconciliation/canonical-history-actions-20260923.json";
-const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
+const migrationTree = "f7bcced92e8abb546ac48b277df71bd16c6886b7";
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
 const capturedAtPattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
@@ -184,8 +184,12 @@ export function buildCanonicalHistoryDecision({
           "migration_specific_before_after_transformations_and_no_unintended_loss",
         requiredValidation: "exact_ledger_delta_and_scoped_catalog_and_synthetic_two_user_contract",
         requiredRecoveryGate: "verified_actual_backup_restore_and_approved_rollback",
+        // The pinned 158-file tree includes this migration after the hosted
+        // 157-file replay; the older receipt cannot cover its effects.
         captured98RowRehearsal:
-          entry.timestamp === "20260903145843"
+          entry.timestamp === "20260925000821"
+            ? "not_rehearsed_in_historical_98_row_upgrade"
+            : entry.timestamp === "20260903145843"
             ? "body_executed_in_baseline_under_remote_version"
             : "body_replayed_forward_in_isolated_database",
         reviewStatus: "blocked_pending_per_version_prestate_and_effect_review",
@@ -216,9 +220,9 @@ export function buildCanonicalHistoryDecision({
       };
     });
   if (
-    source.migrations.length !== 157 ||
+    source.migrations.length !== 158 ||
     remote.length !== 98 ||
-    sourceOnly.length !== 83 ||
+    sourceOnly.length !== 84 ||
     remoteOnly.length !== 24 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "equivalent").length !== 5 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "requires_schema_proof").length !== 19 ||
@@ -240,7 +244,7 @@ export function buildCanonicalHistoryDecision({
     schemaVersion: 1,
     status: "proposed_only_no_history_repair_or_production_action",
     targetProjectRef: supplement.projectRef,
-    sourceCheckpointCommit: "5734b9e3d96224b06cdf2bc6f824078738b86ce1",
+    sourceCheckpointCommit: "2d8ad886b7b201aaf87beecb4d5b5f75df009cac",
     sourceMigrationTree: migrationTree,
     sourceManifestSha256: sha256(bytes(sourcePath)),
     lineageSha256: sha256(bytes(lineagePath)),

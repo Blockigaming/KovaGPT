@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 157,
-  "latest": "20260915120000_maps_geocoder_cache.sql",
+  "count": 158,
+  "latest": "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql",
   "migrations": [
     {
       "order": 1,
@@ -3350,6 +3350,20 @@
       "rls": ["maps_geocoder_cache"],
       "policies": [],
       "indexes": ["maps_geocoder_cache_expires_idx"]
+    },
+    {
+      "order": 158,
+      "filename": "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql",
+      "timestamp": "20260925000821",
+      "sha256": "6642fa2d37b783ba91640bc8c36fc9de1c168f6025d9934c595cb680d04cae2e",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

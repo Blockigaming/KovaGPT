@@ -1,29 +1,37 @@
 # Canonical migration history: proposed reconciliation decision
 
+> **Current-tree proposal:** The 158-file source includes
+> `20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql`.
+> The [proposed action inventory](canonical-history-actions-20260923.json)
+> has 84 absent versions, 81 proposed forward bodies, three history-only records
+> and a projected 182-row ledger. The older 157-file, 80+3-body, 181-row hosted
+> rehearsal is historical; its receipt cannot validate the added body.
+
 Status: **proposed for independent review; no production action approved**. This
 decision uses the 97-version captured fixture in
 `tests/fixtures/production-migration-history-20260904/manifest.json`, its
 98th-row `current-supplement-20260918.json` in the same directory, and the
-157-version source set in `release-migrations.json`. The 24 remote-only mappings
+158-version source set in `release-migrations.json`. The 24 remote-only mappings
 and blocked proof states are in `release-migration-lineage.json`. Refresh the
 actual ledger and source manifest before accepting an execution plan. A source
 timestamp absent from production is not an execution instruction.
 
 ## Exact inventory and disposition
 
-| Set                                          | Count | Proposed disposition                                                                                                                                                                                                          |
-| -------------------------------------------- | ----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared source and captured remote timestamps |    74 | Retain; verify full statement identity and current ledger before application.                                                                                                                                                 |
-| Remote-only versions                         |    24 | Retain all 24. Five have reviewed content equivalence; 19 remain `requires_schema_proof`. Never delete or silently relabel them.                                                                                              |
-| Source-only timestamps                       |    83 | Preserve as the raw gap. The isolated 98-version rehearsal executes 82; the remaining security body was executed once under its equivalent remote timestamp. This replay exception does not create its canonical history row. |
-| Isolated final ledger                        |   180 | 98 existing + 82 forward executions. This is a disposable database result, not current production history.                                                                                                                    |
+| Set                                          | Count | Proposed disposition                                                                                                                                    |
+| -------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared source and captured remote timestamps |    74 | Retain; verify full statement identity and current ledger before application.                                                                           |
+| Remote-only versions                         |    24 | Retain all 24. Five have reviewed content equivalence; 19 remain `requires_schema_proof`. Never delete or silently relabel them.                        |
+| Source-only timestamps                       |    84 | Preserve as the raw gap. Three need separate history-only decisions; 81 are proposed forward bodies. The new September 25 body has no hosted rehearsal. |
+| Historical isolated final ledger             |   180 | The older control replay recorded 98 existing + 82 forward executions, before the September 25 source addition.                                         |
+| Proposed canonical final ledger              |   182 | 98 existing + 84 canonical source versions, conditional on proof, independent review, recovery and separate approval.                                   |
 
-The full, machine-checked **proposed** action for each of the 83 source-only
+The full, machine-checked **proposed** action for each of the 84 source-only
 versions and the retain decision for each of the 24 remote-only versions is in
 `canonical-history-actions-20260923.json`. Generate and verify that inventory
 without a database connection using
 `node scripts/release/canonical-history-decision.mjs --check`. It pins the
-157-version source manifest, source migration Git tree, all source-file hashes,
+158-version source manifest, source migration Git tree, all source-file hashes,
 the 97-row historical fixture manifest, the 98th-row supplement, 23 remote
 structural fixture hashes, the supplement hash, and the captured ledger metadata digest. The
 capture in that file is dated September 18; it must be refreshed before any
@@ -36,15 +44,15 @@ files fail the check even when the committed Git tree remains unchanged.
 Three source-only versions (`20260822122000`, `20260823113000`, and
 `20260903145843`) are **proposed** as history-only canonical records after
 verification of their equivalent remote effects, without executing their SQL
-again. The other 80 are **proposed** for execution and recording only after
+again. The other 81 are **proposed** for execution and recording only after
 their individual pre-state, data transformation, and schema contracts are
-reviewed. The 98-row synthetic rehearsal executed 82 source bodies (including
+reviewed. The historical 98-row control replay executed 82 source bodies (including
 the earlier two equivalent goals/settlement files) and skipped only the
-security body, so it does **not** validate the proposed 80-body execution
-sequence. A complete canonical ledger would contain 181 versions (98 existing
-plus 83 canonical versions) if all these proposed actions were separately
-accepted and applied. Neither the 180-row rehearsal nor the 181-row projection
-is a claim about current production. Every source action in the inventory
+security body. The older 80+3 canonical rehearsal also predates the added
+September 25 body. Neither validates the proposed 81-body execution sequence.
+A complete canonical ledger would contain 182 versions (98 existing plus 84
+canonical versions) if all proposed actions were separately accepted and applied.
+Neither historical receipt is a claim about current production. Every source action in the inventory
 remains blocked pending its per-version effect review and a rehearsal of the
 exact proposed sequence.
 
@@ -76,14 +84,14 @@ proofs.
    target. Preserve any unexplained privilege or function difference as a
    blocker. Promote entries only through the reviewed proof contract and
    independent approval.
-3. Review the **proposed per-source-version action** for all 83 absent source
+3. Review the **proposed per-source-version action** for all 84 absent source
    timestamps in the checked inventory. For each, approve or revise its
    already-executed-equivalent versus forward-execution disposition, pin the
    expected prior state and intended row transformations, then demonstrate the
    exact target ledger change and recovery gate. Choose and rehearse the
    history-recording mechanism, especially for `20260903145843`, without
    rerunning its body. Do not invent an applied timestamp or rely on the
-   disposable rehearsal's 180 rows as a production target.
+   historical disposable rehearsal's 180 or 181 rows as a production target.
 4. Rehearse that exact proposed history operation in an isolated copy with
    synthetic data, then with an authorized actual-backup restore; validate
    each migration's expected data transformations against a reviewed
@@ -104,7 +112,7 @@ authorization for M20. No
 production SQL, history repair, restore, deployment, or mapping promotion was
 performed to prepare it.
 
-## Separate local rehearsal of the proposed 80+3 action sequence
+## Separate local rehearsal of the proposed 81+3 action sequence
 
 Run `node scripts/release/upgrade-database.mjs --canonical-history --dry-run`
 to verify the pinned inventory without starting a database. The full command
@@ -116,27 +124,28 @@ three timestamps, so only the disposable project receives matching filenames
 whose SQL deliberately raises an error if run. Source files stay unchanged;
 an unexpected replay fails instead of re-executing equivalent bodies. It checks
 that 101-row ledger, inserts
-synthetic two-user data, applies only the other 80 source migration bodies with
-`migration up --local --include-all`, and requires exactly 181 rows before
+synthetic two-user data, applies only the other 81 source migration bodies with
+`migration up --local --include-all`, and requires exactly 182 rows before
 cleaning up. The proposed result is written separately to
-`artifacts/release/upgrade-canonical-history.json`; the 82-body control
-rehearsal stays in `upgrade-database.json`. CI runs both and uploads both
-receipts. A failed repair or changed inventory fails before the 80 bodies.
+`artifacts/release/upgrade-canonical-history.json`; the current-tree control
+rehearsal would stay in `upgrade-database.json`. The previously hosted receipts
+predate the added body. A new exact-tree CI run must execute and upload both;
+a failed repair or changed inventory fails before the 81 bodies.
 
 The repair mechanism is demonstrated **only against disposable local history**.
 The pinned September 18 production capture, remote-only structural gaps,
 actual production rows, managed Auth/Storage configuration, and recovery
-package still require separate verification. Even a passing local 181-row
+package still require separate verification. Even a passing local 182-row
 receipt does not accept this canonical decision or authorize production repair.
 
-The observed 98-row production ledger has 83 absent source timestamps. A
+The observed 98-row production ledger has 84 absent source timestamps. A
 default linked `db push` may skip older out-of-order versions, while an
-`--include-all` push would include the already-applied security body among all 83. Neither produces the proposed 80+3 sequence. This proposal makes
+`--include-all` push would include the already-applied security body among all 84. Neither produces the proposed 81+3 sequence. This proposal makes
 `scripts/release/supabase-db-push.mjs` reject a write invocation for the exact
 production project **before linking**, while allowing only the exact
 `--dry-run` and `--include-all --dry-run` preview forms. There is no environment
 bypass. A later production write needs
 accepted M12/M13 and real-backup recovery evidence, a separate approval for
 history-only recording, a verified 101-row pre-state, a read-only dry run that
-selects exactly 80 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
+selects exactly 81 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
 the guarded execution. The local rehearsal is not that production mechanism.

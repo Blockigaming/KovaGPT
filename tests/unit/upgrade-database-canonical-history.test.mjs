@@ -8,6 +8,7 @@ import {
   extendProposedCanonicalHistory,
   HISTORY_ONLY_SENTINEL,
 } from "../../scripts/release/upgrade-database-canonical-history.mjs";
+import { buildCanonicalHistoryDecision } from "../../scripts/release/canonical-history-decision.mjs";
 import {
   extendCurrentHistory,
   CURRENT_HISTORY_SNAPSHOT,
@@ -24,19 +25,27 @@ const inspectSource = () => ({
   readDirectory: readdirSync,
 });
 
-test("canonical history rehearsal pins exactly 80 bodies and 3 equivalent history records", () => {
+test("canonical history rehearsal pins exactly 81 bodies and 3 equivalent history records", () => {
   const dry = rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true });
   assert.equal(dry.baselineVersions, 98);
-  assert.equal(dry.pendingVersions.length, 83);
-  assert.equal(dry.replayPendingVersions.length, 80);
+  assert.equal(dry.pendingVersions.length, 84);
+  assert.equal(dry.replayPendingVersions.length, 81);
   assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
-  assert.equal(dry.canonicalHistoryProposal.expectedFinalLedgerCount, 181);
+  assert.equal(dry.canonicalHistoryProposal.expectedFinalLedgerCount, 182);
   assert.equal(dry.canonicalHistoryProposal.productionReleaseReady, false);
   assert.equal(dry.executed, false);
   assert.throws(
     () => rehearseUpgrade({ canonicalHistory: true, dryRun: true }),
     /upgrade_canonical_history_current_history_required/u,
   );
+});
+
+test("current-tree migration never inherits an earlier hosted rehearsal claim", () => {
+  const decision = buildCanonicalHistoryDecision();
+  const added = decision.sourceOnly.find((row) => row.version === "20260925000821");
+  assert.equal(added?.captured98RowRehearsal, "not_rehearsed_in_historical_98_row_upgrade");
+  assert.equal(added?.proposedAction, "execute_pinned_source_body_then_record_version");
+  assert.equal(decision.counts.proposedFinalLedgerCount, 182);
 });
 
 test("canonical history proposal rejects a changed body before local commands", () => {
@@ -78,7 +87,7 @@ test("canonical rehearsal reads the decision and all manifests through its captu
     assert.ok(files.has(join(ROOT, filename)), `captured reader missed ${filename}`);
   }
   assert.ok(directories.has(join(ROOT, "supabase/migrations")));
-  assert.equal(result.executionForward.length, 80);
+  assert.equal(result.executionForward.length, 81);
 });
 
 test("canonical history mock confines three repairs to local project and checks both ledgers", () => {
@@ -103,7 +112,7 @@ test("canonical history mock confines three repairs to local project and checks 
             HISTORY_ONLY_SENTINEL,
           );
         if (args[1] === "up")
-          assert.equal(readdirSync(join(project, "supabase/migrations")).length, 181);
+          assert.equal(readdirSync(join(project, "supabase/migrations")).length, 182);
       }
       return { status: 0, stdout: command === "git" ? "a".repeat(40) : "", stderr: "" };
     },
@@ -121,7 +130,7 @@ test("canonical history mock confines three repairs to local project and checks 
   assert.equal(repair.args[7], REPAIRED[2]);
   assert.ok(calls.indexOf(repair) < calls.indexOf(up));
   assert.deepEqual(up.args.slice(0, 4), ["migration", "up", "--local", "--include-all"]);
-  assert.equal(result.forwardMigrations.length, 80);
+  assert.equal(result.forwardMigrations.length, 81);
   const sql = calls.filter((call) => call.command === "docker");
   assert.match(sql[1].input, /upgrade_repaired_history_mismatch/u);
   assert.match(sql.at(-1).input, /upgrade_final_history_mismatch/u);
