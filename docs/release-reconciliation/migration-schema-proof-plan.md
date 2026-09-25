@@ -15,6 +15,8 @@ Optional environment overrides:
 
 The command is source-only and read-only. It does not connect to Supabase, repair migration history, apply DDL, alter production, or mark any lineage entry proven. Its version-2 output lists every unresolved remote version, the candidate source versions that must be rehearsed, the required provenance fields, and the four fingerprint categories required by the preflight contract: schema, ACL, RLS, and functions.
 
+The plan reports both `observedSourceMigrationCount` from the pinned historical lineage and `currentSourceMigrationCount` from the validated current manifest. `currentSourceDelta` lists added, modified, and removed source versions relative to the historical Git checkpoint. `requiresCurrentSourceReview` means at least one such difference requires scope and later-writer review; it does not promote a proof or by itself declare a migration safe to run. The September 25 manifest has 158 migrations against the lineage's 157-file checkpoint; its added version is `20260925000821`. That migration drops the authenticated read policy and revokes authenticated SELECT on `public.feature_flags`. Include this later ACL/RLS writer when reviewing any overlapping privilege proof scope. The new migration has not been rehearsed against production.
+
 A lineage entry may move to `schema_proven` only after an isolated source-state rehearsal and the reviewed remote state produce equal normalized fingerprints accepted by `validateSchemaProofEvidence()` in `scripts/release/migration-preflight.mjs`. Version-1 proof files are rejected.
 
 ## Version-2 proof binding
