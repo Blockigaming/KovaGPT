@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { loose } from "@/lib/supabase-loose";
 import { STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import type { BillingTier } from "@/lib/billing-plans";
 
@@ -23,7 +24,7 @@ export const getMyStorage = createServerFn({ method: "GET" })
         .from("user_library_items")
         .select("id", { count: "exact", head: true })
         .eq("user_id", context.userId),
-      context.supabase.rpc("current_subscription_summary"),
+      loose(context.supabase).rpc("current_subscription_summary"),
     ]);
 
     if (storage.error || library.error) {

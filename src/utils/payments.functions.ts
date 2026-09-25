@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabase-loose";
 import {
   type StripeEnv,
   createStripeClient,
@@ -122,7 +123,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         };
       }
 
-      const { data: checkoutAttempt, error: checkoutAttemptError } = await supabaseAdmin.rpc(
+      const { data: checkoutAttempt, error: checkoutAttemptError } = await loose(supabaseAdmin).rpc(
         "claim_stripe_checkout_attempt",
         {
           _user_id: userId,
@@ -219,7 +220,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<PortalResult> => {
     if (!durableStripeBillingEnabled())
       return { error: "Billing is awaiting its verified rollout. Contact support." };
-    const { data: mapping, error: mappingError } = await supabaseAdmin
+    const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
       .from("stripe_customer_mappings")
       .select("stripe_customer_id")
       .eq("user_id", context.userId)
@@ -231,7 +232,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
     if (!mapping?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
     }
-    const { data: rows, error: subscriptionError } = await context.supabase
+    const { data: rows, error: subscriptionError } = await loose(context.supabase)
       .from("subscriptions")
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", context.userId)
@@ -300,7 +301,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { userId } = context;
-    const { data: resolvedSummary, error: summaryError } = await supabaseAdmin.rpc(
+    const { data: resolvedSummary, error: summaryError } = await loose(supabaseAdmin).rpc(
       "user_subscription_summary",
       { _user_id: userId },
     );
@@ -345,7 +346,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const cancelAtPeriodEnd = summary.cancelAtPeriodEnd === true;
     const trialing = summary.trialing === true;
 
-    const { data: mapping, error: mappingError } = await supabaseAdmin
+    const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
       .from("stripe_customer_mappings")
       .select("stripe_customer_id")
       .eq("user_id", userId)
