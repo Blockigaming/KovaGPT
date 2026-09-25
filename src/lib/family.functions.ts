@@ -113,13 +113,10 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .validator((i: unknown) => z.object({ token: z.string().regex(/^[0-9a-f]{48}$/u) }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: groupId, error } = await loose(supabaseAdmin).rpc(
-      "accept_family_invite_atomic",
-      {
-        p_user_id: context.userId,
-        p_token: data.token,
-      },
-    );
+    const { data: groupId, error } = await loose(supabaseAdmin).rpc("accept_family_invite_atomic", {
+      p_user_id: context.userId,
+      p_token: data.token,
+    });
     if (error || typeof groupId !== "string") {
       throw new Error(
         "Invite could not be accepted. Check that it is current, matches your verified email, and that you are not already in a family.",
