@@ -29,7 +29,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
-RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" NODE_OPTIONS=--max-old-space-size=3072 npm run build \
+RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=3072 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
       env \
