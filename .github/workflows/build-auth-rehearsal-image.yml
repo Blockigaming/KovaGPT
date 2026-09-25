@@ -53,19 +53,21 @@ jobs:
           echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify Auth rehearsal receiver exists
+      - name: Verify owned Auth rehearsal routes exist
         shell: bash
         run: |
           set -euo pipefail
 
-          if ! grep -R --line-number \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            'auth-migration/rehearsal' \
-            src; then
-            echo "The selected source does not contain the Auth rehearsal receiver."
-            exit 1
-          fi
+          for path in \
+            src/routes/api/auth/session.ts \
+            src/routes/api/auth/recovery/request.ts \
+            src/lib/kova-auth-http.server.ts \
+            src/lib/kova-auth-store.server.ts; do
+            if [ ! -f "$path" ]; then
+              echo "::error::Missing owned Auth rehearsal source: $path"
+              exit 1
+            fi
+          done
 
       - name: Verify isolated dual-mode browser configuration
         shell: bash
