@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
@@ -132,15 +133,8 @@ export async function authenticateDeveloper(request: Request) {
     .abortSignal(AbortSignal.timeout(10000))
     .maybeSingle();
   if (owner.error || !owner.data) throw new Error("developer_unauthorized");
-  const current = await db.auth.admin.getUserById(owner.data.owner_id);
-  const user = current.data?.user;
-  if (
-    current.error ||
-    !user ||
-    !user.email_confirmed_at ||
-    (user.banned_until && Date.parse(user.banned_until) > Date.now())
-  )
-    throw new Error("developer_unauthorized");
+  const user = await readAccountIdentity(db, owner.data.owner_id);
+  if (!user) throw new Error("developer_unauthorized");
   const [fence, banned] = await Promise.all([
     db.from("account_deletion_fences").select("user_id").eq("user_id", user.id).maybeSingle(),
     db.from("banned_users").select("user_id").eq("user_id", user.id).maybeSingle(),

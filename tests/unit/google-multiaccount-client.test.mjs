@@ -66,13 +66,13 @@ test("selection and disconnect submit the exact account and captured actor", asy
       path: "/api/google/select",
       body: { connectionId: account, expectedRevision: 7 },
       authorization: "Bearer fixture-access-token",
-      credentials: "omit",
+      credentials: "same-origin",
     },
     {
       path: "/api/google/disconnect",
       body: { connectionId: account, expectedRevision: 3 },
       authorization: "Bearer fixture-access-token",
-      credentials: "omit",
+      credentials: "same-origin",
     },
   ]);
 });

@@ -188,7 +188,9 @@ test("browser listing keeps full bodies out of cached page items and rejects sta
   assert.equal(page.items[0].content_text, null);
   assert.equal(page.items[0].content_excerpt, "preview");
   assert.equal(page.items[0].content_loaded, false);
-  assert.equal(calls[0].init.credentials, "omit");
+  assert.equal(calls[0].init.credentials, "same-origin");
+  assert.equal(calls[0].init.mode, "same-origin");
+  assert.equal(calls[0].init.redirect, "error");
   assert.equal(headers[0].owner, owner);
   await assert.rejects(
     client.readLibraryItem(owner, { ...page.items[0], content_revision: 1 }, signal),

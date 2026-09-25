@@ -6,7 +6,7 @@ import {
   type AuthedCaller,
 } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { isCrossSiteMutation, parseBearerToken } from "@/lib/auth-security.mjs";
+import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { readBoundedJsonObject, BoundedJsonError } from "@/lib/bounded-json.server.mjs";
 import { STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import {
@@ -48,21 +48,32 @@ async function rpc(client: Admin, name: string, args: Record<string, unknown>) {
   }
 }
 async function currentSiteSession(auth: AuthedCaller, request: Request): Promise<string> {
-  const token = parseBearerToken(request.headers.get("authorization"));
-  if (!token) throw Object.assign(new Error("site_access_denied"), { databaseCode: "42501" });
-  const claims = await auth.supabaseUser.auth.getClaims(token);
+  // requireVerifiedUser has already authenticated these claims. An owned
+  // cookie must never be reinterpreted as a hosted bearer/session identity.
+  void request;
+  if (
+    (auth.authProvider !== "kova" && auth.authProvider !== "supabase") ||
+    auth.claims?.sub !== auth.userId
+  ) {
+    throw Object.assign(new Error("site_access_denied"), { databaseCode: "42501" });
+  }
   let session: string;
   try {
-    session = siteUuid(claims.data?.claims?.session_id);
+    session = siteUuid(auth.claims?.session_id);
   } catch {
     throw Object.assign(new Error("site_access_denied"), { databaseCode: "42501" });
   }
   if (
-    claims.error ||
-    (await rpc(auth.supabaseAdmin as unknown as Admin, "check_kova_site_auth_session", {
-      p_user: auth.userId,
-      p_session: session,
-    })) !== true
+    (await rpc(
+      auth.supabaseAdmin as unknown as Admin,
+      auth.authProvider === "kova"
+        ? "check_kova_owned_site_auth_session"
+        : "check_kova_site_auth_session",
+      {
+        p_user: auth.userId,
+        p_session: session,
+      },
+    )) !== true
   )
     throw Object.assign(new Error("site_access_denied"), { databaseCode: "42501" });
   return session;
@@ -197,13 +208,19 @@ export const Route = createFileRoute("/api/sites")({
             const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
               b.toString(16).padStart(2, "0"),
             ).join("");
-            await rpc(admin, "issue_kova_site_ticket", {
-              p_user: auth.userId,
-              p_site: siteId,
-              p_token_hash: await sha256(token),
-              p_auth_session: authSession,
-              p_preview: preview,
-            });
+            await rpc(
+              admin,
+              auth.authProvider === "kova"
+                ? "issue_kova_owned_site_ticket"
+                : "issue_kova_site_ticket",
+              {
+                p_user: auth.userId,
+                p_site: siteId,
+                p_token_hash: await sha256(token),
+                p_auth_session: authSession,
+                p_preview: preview,
+              },
+            );
             return json({ url: siteOrigin(hosting, siteId) + "/__kova/access#" + token });
           }
           const mutationId = siteUuid(input.mutationId);

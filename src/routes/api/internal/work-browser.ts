@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -34,21 +35,8 @@ export async function handleBrowserAuthority(request: Request) {
       windowSeconds: 60,
     });
     if (!rate.allowed) return reject(rate.status === "limited" ? 429 : 503);
-    const owner = await supabaseAdmin.auth.admin.getUserById(invocation.payload.ownerId);
-    const user = owner.data?.user as {
-      id: string;
-      email_confirmed_at?: string;
-      banned_until?: string;
-      deleted_at?: string;
-    } | null;
-    if (
-      owner.error ||
-      !user ||
-      !user.email_confirmed_at ||
-      user.deleted_at ||
-      (user.banned_until && Date.parse(user.banned_until) > Date.now())
-    )
-      return reject();
+    const user = await readAccountIdentity(supabaseAdmin, invocation.payload.ownerId);
+    if (!user) return reject();
     const url = runtimeEnv("SUPABASE_URL"),
       key = runtimeEnv("SUPABASE_PUBLISHABLE_KEY");
     if (!url || !key) return reject(503);

@@ -14,6 +14,10 @@ const baselinePath = "tests/fixtures/production-migration-history-20260904/manif
 const supplementPath =
   "tests/fixtures/production-migration-history-20260904/current-supplement-20260918.json";
 const decisionPath = "docs/release-reconciliation/canonical-history-actions-20260923.json";
+const checkpoint = "5734b9e3d96224b06cdf2bc6f824078738b86ce1";
+const decisionCommit = "bd0d2878ea41b4972bae13494288bd15c24b51aa";
+const decisionSha256 = "6c0aa894709e131dade3c93e3597fbd45c3a55ec8cdde8130babfdfb34552df0";
+const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql";
 const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
 const capturedAtPattern =
@@ -87,6 +91,30 @@ export function validateCheckedOutMigrationSet(migrations, filenames, readBytes)
   }
 }
 
+export function validateForwardExtension(baseline, current, filenames, readBytes) {
+  if (
+    baseline.count !== 157 ||
+    baseline.migrations?.length !== baseline.count ||
+    current.count < 184 ||
+    current.migrations?.length !== current.count ||
+    JSON.stringify(current.migrations.slice(0, baseline.count)) !==
+      JSON.stringify(baseline.migrations)
+  )
+    throw new Error("canonical_history_source_prefix_changed");
+
+  validateCheckedOutMigrationSet(current.migrations, filenames, readBytes);
+  for (const [index, entry] of current.migrations.entries()) {
+    if (
+      entry.order !== index + 1 ||
+      (index > 0 && entry.timestamp <= current.migrations[index - 1].timestamp) ||
+      (index >= baseline.count &&
+        !entry.filename.includes("_kova_") &&
+        entry.filename !== mergedMainMigration)
+    )
+      throw new Error("canonical_history_forward_extension_changed");
+  }
+}
+
 export function validateEquivalentSupplement(supplement, sourceMigration, sourceBytes) {
   const entry = supplement.supplement[0];
   if (
@@ -114,20 +142,30 @@ export function buildCanonicalHistoryDecision({
   const repositoryRoot = resolve(root);
   const bytes = (path) => readFile(join(repositoryRoot, path));
   const json = (path) => JSON.parse(bytes(path).toString("utf8"));
+  const pinned = (commit, path) =>
+    execFileSync("git", ["show", `${commit}:${path}`], { cwd: repositoryRoot });
   if (
-    execFileSync("git", ["rev-parse", "HEAD:supabase/migrations"], {
+    execFileSync("git", ["rev-parse", `${checkpoint}:supabase/migrations`], {
       cwd: repositoryRoot,
       encoding: "utf8",
     }).trim() !== migrationTree
   )
     throw new Error("canonical_history_migration_tree_changed");
-  const source = json(sourcePath);
+  const pinnedSource = pinned(checkpoint, sourcePath);
+  const source = JSON.parse(pinnedSource);
   const lineage = json(lineagePath);
+  if (
+    !bytes(lineagePath).equals(pinned(checkpoint, lineagePath)) ||
+    sha256(bytes(decisionPath)) !== decisionSha256 ||
+    sha256(pinned(decisionCommit, decisionPath)) !== decisionSha256
+  )
+    throw new Error("canonical_history_pinned_evidence_changed");
   const baseline = json(baselinePath);
   const supplement = json(supplementPath);
   validateCanonicalHistoryCapture(lineage, baseline, supplement, sha256(bytes(baselinePath)));
-  validateCheckedOutMigrationSet(
-    source.migrations,
+  validateForwardExtension(
+    source,
+    json(sourcePath),
     readDirectory(join(repositoryRoot, "supabase/migrations")),
     (filename) => bytes(`supabase/migrations/${filename}`),
   );
@@ -240,9 +278,9 @@ export function buildCanonicalHistoryDecision({
     schemaVersion: 1,
     status: "proposed_only_no_history_repair_or_production_action",
     targetProjectRef: supplement.projectRef,
-    sourceCheckpointCommit: "5734b9e3d96224b06cdf2bc6f824078738b86ce1",
+    sourceCheckpointCommit: checkpoint,
     sourceMigrationTree: migrationTree,
-    sourceManifestSha256: sha256(bytes(sourcePath)),
+    sourceManifestSha256: sha256(pinnedSource),
     lineageSha256: sha256(bytes(lineagePath)),
     historicalFixtureManifestSha256: sha256(bytes(baselinePath)),
     currentSupplementSha256: sha256(bytes(supplementPath)),
@@ -280,8 +318,11 @@ export function buildCanonicalHistoryDecision({
 
 if (process.argv[1]?.endsWith("canonical-history-decision.mjs")) {
   const expected = `${JSON.stringify(buildCanonicalHistoryDecision(), null, 2)}\n`;
-  if (process.argv.includes("--write")) writeFileSync(join(ROOT, decisionPath), expected);
-  else if (process.argv.includes("--check")) {
+  if (process.argv.includes("--write")) {
+    if (read(join(ROOT, sourcePath)).count !== 157)
+      throw new Error("canonical_history_checkpoint_is_immutable");
+    writeFileSync(join(ROOT, decisionPath), expected);
+  } else if (process.argv.includes("--check")) {
     if (JSON.stringify(read(join(ROOT, decisionPath))) !== JSON.stringify(JSON.parse(expected)))
       throw new Error("canonical_history_decision_stale");
   } else throw new Error("use --check or --write");

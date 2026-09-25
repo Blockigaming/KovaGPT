@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
+import { clearKovaSessionCookie } from "../../src/lib/kova-auth-contract.mjs";
 
 async function runDeletion({
   exportReady = true,
@@ -22,6 +23,8 @@ async function runDeletion({
   ambiguousAdmission = false,
   authFailure = null,
   authDeleted = false,
+  authProvider = "supabase",
+  sessionId = "22222222-2222-4222-8222-222222222222",
   method = "DELETE",
   expectedUser = "11111111-1111-4111-8111-111111111111",
   confirmation = "DELETE",
@@ -36,6 +39,14 @@ async function runDeletion({
     }
   }
   const mock = {
+    clearKovaSessionCookie,
+    finalizeOwnedAccountDeletion: async (accountId, actualSessionId) => {
+      assert.equal(accountId, "11111111-1111-4111-8111-111111111111");
+      assert.equal(actualSessionId, sessionId);
+      calls.push("owned-auth-delete");
+      if (authDeleted || !authFailure) state = "deleted";
+      if (authFailure) throw new Error("owned deletion unconfirmed");
+    },
     OrganizationAccountDeletionError,
     readAccountDeletionState: async () => {
       calls.push("status-read");
@@ -59,6 +70,8 @@ async function runDeletion({
     createFileRoute: () => (config) => config,
     requireUser: async () => ({
       userId: "11111111-1111-4111-8111-111111111111",
+      authProvider,
+      claims: { session_id: sessionId },
       supabaseAdmin: {
         from: () => ({
           select: () => ({
@@ -385,4 +398,40 @@ test("account image byte cleanup must finish before external retirement and Auth
   assert.equal(response.status, 409);
   assert.equal(calls.includes("auth-delete"), false);
   assert.equal(calls.includes("billing-retire"), false);
+});
+
+test("owned deletion preserves every existing cleanup stage and never calls hosted Auth deletion", async () => {
+  const result = await runDeletion({ authProvider: "kova" });
+  assert.equal(result.response.status, 204);
+  assert.match(result.response.headers.get("set-cookie"), /__Host-kova_session=;.*Max-Age=0/u);
+  assert.equal(result.calls.includes("auth-delete"), false);
+  assert.ok(result.calls.indexOf("owned-auth-delete") > result.calls.indexOf("oauth-disconnect"));
+  const failure = await runDeletion({ authProvider: "kova", failProjects: true });
+  assert.equal(failure.calls.includes("owned-auth-delete"), false);
+});
+
+test("unknown authority or an unbound owned session stops account deletion before any cleanup", async () => {
+  for (const options of [
+    { authProvider: null },
+    { authProvider: "unknown" },
+    { authProvider: "kova", sessionId: null },
+    { authProvider: "kova", sessionId: "forged" },
+  ]) {
+    const result = await runDeletion(options);
+    assert.equal(result.response.status, 503);
+    assert.deepEqual(result.calls, []);
+  }
+});
+
+test("an uncertain owned final deletion never falls back to hosted Auth; actual deletion is reconciled", async () => {
+  const failed = await runDeletion({ authProvider: "kova", authFailure: "throw" });
+  assert.equal(failed.response.status, 500);
+  assert.equal(failed.calls.includes("auth-delete"), false);
+  const deleted = await runDeletion({
+    authProvider: "kova",
+    authFailure: "throw",
+    authDeleted: true,
+  });
+  assert.equal(deleted.response.status, 204);
+  assert.equal(deleted.calls.at(-1), "status-read");
 });

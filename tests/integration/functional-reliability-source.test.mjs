@@ -12,10 +12,11 @@ const apiAuth = await readFile("src/lib/api-auth.server.ts", "utf8");
 const authSecurity = await readFile("src/lib/auth-security.mjs", "utf8");
 
 test("anonymous protected requests fail as unauthorized before auth configuration is consulted", () => {
-  const headerCheck = apiAuth.indexOf('request.headers.get("authorization")');
+  const credentialCheck = apiAuth.indexOf("selectAuthCredential(request, resolveKovaAuthMode())");
   const envCheck = apiAuth.indexOf("process.env.SUPABASE_URL");
-  assert.ok(headerCheck > -1 && envCheck > -1 && headerCheck < envCheck);
-  assert.match(apiAuth, /parseBearerToken\(header\)/);
+  assert.ok(credentialCheck > -1 && envCheck > -1 && credentialCheck < envCheck);
+  assert.match(apiAuth, /credential\.kind === "anonymous"/);
+  assert.match(apiAuth, /parseBearerToken\(credential\.authorization\)/);
   assert.match(authSecurity, /export function parseBearerToken/);
   assert.match(authSecurity, /const match = \/\^Bearer/);
 });

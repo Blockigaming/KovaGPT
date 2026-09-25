@@ -15,7 +15,7 @@ const compiled = ts.transpileModule(
 ).outputText;
 const owner = "123e4567-e89b-42d3-a456-426614174000",
   site = "223e4567-e89b-42d3-a456-426614174000";
-function fixture({ current = true, claims = owner, hosting = null } = {}) {
+function fixture({ current = true, claims = owner, hosting = null, provider = "supabase" } = {}) {
   const calls = [];
   const context = {
     ...policy,
@@ -32,12 +32,18 @@ function fixture({ current = true, claims = owner, hosting = null } = {}) {
     process: { env: {} },
     requireVerifiedUser: async () => ({
       userId: owner,
+      authProvider: provider,
+      claims: { sub: owner, session_id: claims },
       supabaseAdmin: {
         rpc(name, args) {
           calls.push([name, args]);
           return {
             abortSignal: async () => ({
-              data: name === "check_kova_site_auth_session" ? current : {},
+              data: ["check_kova_site_auth_session", "check_kova_owned_site_auth_session"].includes(
+                name,
+              )
+                ? current
+                : {},
               error: null,
             }),
           };
@@ -45,7 +51,9 @@ function fixture({ current = true, claims = owner, hosting = null } = {}) {
       },
       supabaseUser: {
         auth: {
-          getClaims: async () => ({ data: { claims: { session_id: claims } }, error: null }),
+          getClaims: async () => {
+            throw new Error("A verified principal must not require another hosted lookup");
+          },
         },
       },
     }),
@@ -76,6 +84,31 @@ test("revoked and malformed Auth sessions cannot reach private Site reads or mut
     assert.equal((await f.handlers.GET({ request: request() })).status, 403);
     assert.equal((await f.handlers.POST({ request: request(mutation("delete", {})) })).status, 403);
     assert.ok(f.calls.every(([name]) => name === "check_kova_site_auth_session"));
+  }
+});
+
+test("Sites reads use the already-verified owned cookie principal, with no hosted bearer lookup", async () => {
+  const f = fixture({ provider: "kova" });
+  const response = await f.handlers.GET({ request: new Request("https://kovagpt.test/api/sites") });
+  assert.equal(response.status, 200);
+  assert.equal(f.calls[0][0], "check_kova_owned_site_auth_session");
+  assert.equal(f.calls[0][1].p_user, owner);
+  assert.equal(f.calls[0][1].p_session, owner);
+  assert.ok(!f.calls.some(([name]) => name === "check_kova_site_auth_session"));
+});
+
+test("missing, revoked or unrecognized owned Sites authority cannot reach a read", async () => {
+  for (const options of [
+    { provider: "kova", current: false },
+    { provider: "unknown" },
+    { provider: "kova", claims: "missing" },
+  ]) {
+    const f = fixture(options);
+    assert.equal(
+      (await f.handlers.GET({ request: new Request("https://kovagpt.test/api/sites") })).status,
+      403,
+    );
+    assert.ok(f.calls.every(([name]) => name === "check_kova_owned_site_auth_session"));
   }
 });
 test("an unavailable isolated host cannot mint an access ticket or publish a version", async () => {

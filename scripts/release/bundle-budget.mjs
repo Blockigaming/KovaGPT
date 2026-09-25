@@ -23,14 +23,26 @@ export const BUNDLE_BASELINE = Object.freeze({
   finalEntryObservations: Object.freeze([
     Object.freeze({ node: "24.15.0", raw: 641_029, gzip: 193_026 }),
     Object.freeze({ node: "24.19.0", raw: 617_345, gzip: 185_685 }),
+    Object.freeze({
+      node: "24.19.0",
+      head: "b5a09278a8c984b7a394a419e6522e2333c9dd89",
+      raw: 667_469,
+      gzip: 198_845,
+    }),
+    Object.freeze({
+      node: "24.19.0",
+      head: "auth-review-batch-local",
+      raw: 667_800,
+      gzip: 198_923,
+    }),
   ]),
   adjustment:
-    "The 2026-09-14 final build adds generated four-segment routing, a dedicated Academy catalog, 177 ecosystem references, 43 form-status references, and 50 global-affairs references. With the committed lockfile, supported Node 24 patch releases emitted the same entry between 617,345 and 641,029 raw bytes and between 185,685 and 193,026 gzip bytes. The ceiling covers the larger complete-final-build observation with less than 1% headroom while each substantive page registry remains route-lazy.",
+    "The 2026-09-14 final build adds generated four-segment routing and expanded catalog registries. A clean rebuild of the authorized auth PR head b5a09278 on Node 24.19.0 already exceeded the older ceiling at 667,469 raw / 198,845 gzip before the current review fixes. The current source-only review batch measured 667,800 raw / 198,923 gzip on the same Node version and lockfile. The refreshed ceiling gives less than 1% headroom over that complete build while keeping the home route, omega, and chart ceilings unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
   initial: Object.freeze({ raw: 62_500, gzip: 20_000 }),
-  main: Object.freeze({ raw: 645_000, gzip: 194_500 }),
+  main: Object.freeze({ raw: 670_000, gzip: 200_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });

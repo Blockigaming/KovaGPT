@@ -73,14 +73,20 @@ export async function getAgentTeamRuns(caller: AuthedCaller, runId?: string) {
       safeEvents.push(event);
       continue;
     }
-    const { data: signed } = await caller.supabaseAdmin.storage
-      .from("agent-evidence")
-      .createSignedUrl(storagePath, 300);
     const payload = { ...event.safe_payload };
     delete payload.storagePath;
+    // Legacy agent-team evidence has no owned private delivery route. The
+    // worker is retired; never issue a transferable Storage URL in Kova mode.
+    let screenshotUrl: string | null = null;
+    if (caller.authProvider !== "kova") {
+      const { data: signed } = await caller.supabaseAdmin.storage
+        .from("agent-evidence")
+        .createSignedUrl(storagePath, 300);
+      screenshotUrl = signed?.signedUrl ?? null;
+    }
     safeEvents.push({
       ...event,
-      safe_payload: { ...payload, screenshotUrl: signed?.signedUrl ?? null },
+      safe_payload: { ...payload, screenshotUrl },
     });
   }
   return { runs: runs ?? [], tasks: tasks ?? [], events: safeEvents };

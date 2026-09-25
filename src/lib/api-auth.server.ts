@@ -4,17 +4,33 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { BillingTier } from "@/lib/billing-plans";
 import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
-import { evaluateAuthenticatedUser, parseBearerToken } from "@/lib/auth-security.mjs";
+import {
+  evaluateAuthenticatedUser,
+  isCrossSiteMutation,
+  parseBearerToken,
+} from "@/lib/auth-security.mjs";
+import { resolveKovaAuthMode, selectAuthCredential } from "@/lib/kova-auth-contract.mjs";
+import { digestKovaToken, signKovaCompatibilityJwt } from "@/lib/kova-auth-crypto.server.mjs";
+import { resolveSession } from "@/lib/kova-auth-store.server";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
 export const DAILY_UPLOAD_LIMIT = 2;
 export type AuthedCaller = {
   userId: string;
+  // Internal, separately authenticated service actors also reuse this data
+  // context. Only an HTTP session principal must carry a browser authority.
+  authProvider?: "kova" | "supabase";
   supabaseUser: SupabaseClient<Database>;
   supabaseAdmin: SupabaseClient<Database>;
   emailVerified: boolean;
+  claims?: Record<string, unknown>;
+  // Server-only closure bound to the original cookie. Never serialized or
+  // supplied by the browser; long operations use it before exposing results.
+  revalidateSession?: () => Promise<boolean>;
 };
+
+export type HttpAuthedCaller = AuthedCaller & { authProvider: "kova" | "supabase" };
 
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
@@ -34,7 +50,7 @@ export function tooMany(message = "Daily limit reached") {
   return jsonError(message, 429);
 }
 
-export async function requireUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireUser(request: Request): Promise<HttpAuthedCaller | Response> {
   const result = await optionalUser(request);
   if (!result) return unauthorized();
   if (result instanceof Response) return result;
@@ -46,15 +62,29 @@ export async function requireUser(request: Request): Promise<AuthedCaller | Resp
  * `null` if the request is anonymous (no token at all), or a Response when
  * the token is present but invalid/expired.
  */
-export async function optionalUser(request: Request): Promise<AuthedCaller | null | Response> {
+export async function optionalUser(request: Request): Promise<HttpAuthedCaller | null | Response> {
   // Anonymous requests do not need an auth client. Check the credential first
   // so protected routes return a truthful 401 even when a deployment is
   // missing auth configuration, rather than exposing configuration state as a
   // 500 response to unauthenticated callers.
-  const header = request.headers.get("authorization");
-  if (!header) return null;
-  const token = parseBearerToken(header);
-  if (!token) return unauthorized("Invalid or expired session");
+  let credential: ReturnType<typeof selectAuthCredential>;
+  try {
+    credential = selectAuthCredential(request, resolveKovaAuthMode());
+  } catch {
+    return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+  if (credential.kind === "anonymous") return null;
+  if (credential.kind === "invalid") return unauthorized("Invalid or expired session");
+  // Cookie authority is ambient. Existing bearer-only callers did not all need
+  // an origin check, so enforce this once before any owned-auth/database work.
+  if (
+    credential.provider === "kova" &&
+    !["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase()) &&
+    (isCrossSiteMutation(request) ||
+      (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin"))
+  ) {
+    return jsonError("Cross-origin request rejected", 403);
+  }
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -69,6 +99,69 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     });
     return jsonError("Authentication is temporarily unavailable.", 503);
   }
+  const createAdminClient = () =>
+    createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+  if (credential.provider === "kova") {
+    try {
+      const sessionDigest = digestKovaToken(credential.token);
+      const principal = await resolveSession(sessionDigest);
+      if (!principal) return unauthorized("Invalid or expired session");
+      const expectedOwner = request.headers.get("x-kova-owner");
+      if (expectedOwner !== principal.accountId)
+        return jsonError("Your account changed. Please try again.", 409);
+      const compatibilityToken = signKovaCompatibilityJwt(principal);
+      const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        global: { headers: { Authorization: `Bearer ${compatibilityToken}` } },
+        auth: {
+          storage: undefined,
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+      const claims = {
+        sub: principal.accountId,
+        email: principal.email,
+        email_verified: principal.emailVerified,
+        aal: principal.assuranceLevel,
+        session_id: principal.sessionId,
+        role: "authenticated",
+      };
+      return {
+        userId: principal.accountId,
+        authProvider: "kova",
+        supabaseUser: verifier,
+        supabaseAdmin: createAdminClient(),
+        emailVerified: principal.emailVerified,
+        claims,
+        revalidateSession: async () => {
+          const current = await resolveSession(sessionDigest);
+          return (
+            current !== null &&
+            current.accountId === principal.accountId &&
+            current.sessionId === principal.sessionId &&
+            current.email === principal.email &&
+            current.emailVerified &&
+            current.assuranceLevel === principal.assuranceLevel
+          );
+        },
+      };
+    } catch (error) {
+      console.error("[auth] Kova session validation failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return jsonError("Authentication is temporarily unavailable.", 503);
+    }
+  }
+
+  const token = parseBearerToken(credential.authorization);
+  if (!token) return unauthorized("Invalid or expired session");
   const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: {
@@ -87,6 +180,14 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     return unauthorized("Invalid or expired session");
   }
 
+  // Compatibility JWTs authorize guarded data-plane requests, not the hosted
+  // API bearer branch. Kova application requests must supply the owned cookie
+  // so its live session is resolved above. Check only signature-verified claims,
+  // and reject malformed marker values rather than treating them as legacy.
+  if (Object.prototype.hasOwnProperty.call(claimsData.claims, "kova_auth")) {
+    return unauthorized("Invalid or expired session");
+  }
+
   const access = evaluateAuthenticatedUser(userData.user, claimsData.claims);
   if (!access.ok) {
     if (access.code === "account_suspended") {
@@ -101,20 +202,34 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     return unauthorized("Invalid or expired session");
   }
 
-  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      storage: undefined,
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  const expectedOwner = request.headers.get("x-kova-owner");
+  if (expectedOwner !== null && expectedOwner !== access.userId)
+    return jsonError("Your account changed. Please try again.", 409);
+  const admin = createAdminClient();
+  if (resolveKovaAuthMode() === "dual") {
+    // Hosted JWT signatures do not prove that the account still accepts that
+    // authority after a Kova password change or recovery. No fallback on error.
+    try {
+      const { data, error } = await admin.rpc(
+        "kova_auth_legacy_session_allowed" as never,
+        { p_account_id: access.userId } as never,
+      );
+      if (error) return jsonError("Authentication is temporarily unavailable.", 503);
+      if (data !== true) return unauthorized("Invalid or expired session");
+    } catch {
+      return jsonError("Authentication is temporarily unavailable.", 503);
+    }
+  }
+
   return {
     userId: access.userId,
+    authProvider: "supabase",
     // This client carries the verified caller's JWT and is therefore subject
     // to RLS. Use it for authorization lookups before service-role writes.
     supabaseUser: verifier,
-    supabaseAdmin,
+    supabaseAdmin: admin,
     emailVerified: access.emailVerified,
+    claims: claimsData.claims as Record<string, unknown>,
   };
 }
 
@@ -122,7 +237,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
  * Like requireUser, but additionally requires a verified email address.
  * Use for high-cost / abuse-prone actions (image generation and uploads).
  */
-export async function requireVerifiedUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireVerifiedUser(request: Request): Promise<HttpAuthedCaller | Response> {
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   if (!auth.emailVerified) {

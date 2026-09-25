@@ -32,6 +32,7 @@ import {
   type AccountExportReadBudget,
 } from "@/lib/account-export-pagination.mjs";
 import { readAccountExportSiteFiles } from "@/lib/account-export-sites.mjs";
+import { readAccountExportIdentity } from "@/lib/account-export-identity.mjs";
 
 const EXPORT_BUCKET = "account-exports";
 const MAX_ROWS = 100_000;
@@ -612,9 +613,7 @@ async function collectFiles(
 
 export async function buildAccountExport(userId: string, jobId: string) {
   const budget = createAccountExportReadBudget(ACCOUNT_EXPORT_MAX_BYTES);
-  const authResult = await admin.auth.admin.getUserById(userId);
-  if (authResult.error || !authResult.data.user)
-    throw exportError("account_export_user_unavailable");
+  const account = await readAccountExportIdentity(admin, userId);
 
   const direct = await collectDirectRecords(budget, userId);
   const [project, family, related] = await Promise.all([
@@ -636,7 +635,7 @@ export async function buildAccountExport(userId: string, jobId: string) {
     version: ACCOUNT_EXPORT_VERSION,
     exportId: jobId,
     generatedAt,
-    account: authResult.data.user,
+    account,
     records,
     files,
     notes: [

@@ -21,10 +21,15 @@ import {
   LibraryOriginalError,
 } from "@/lib/library-original-policy.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
+import {
+  handlePrivateLibraryImage,
+  reauthorizeLibraryDelivery,
+} from "@/lib/library-private-delivery.server";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 async function handle(request: Request) {
+  if (new URL(request.url).searchParams.has("kind")) return handlePrivateLibraryImage(request);
   const deadline = createRequestDeadline(request.signal, 45_000, "library_original");
   try {
     const auth = await waitForPromiseWithSignal(requireVerifiedUser(request), deadline.signal);
@@ -63,6 +68,8 @@ async function handle(request: Request) {
         deadline.signal,
         { supabaseUrl },
       );
+      const rejected = await reauthorizeLibraryDelivery(request, auth, deadline.signal);
+      if (rejected) return rejected;
       return new Response(bytes as BodyInit, {
         headers: {
           "Content-Type": row.mime_type,
@@ -71,6 +78,8 @@ async function handle(request: Request) {
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
           "Content-Security-Policy": "sandbox",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          Vary: "Cookie, Authorization",
         },
       });
     }

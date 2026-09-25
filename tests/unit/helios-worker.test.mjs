@@ -85,7 +85,7 @@ test("duplicated deliverables get a new identity while revisions retain their li
   assert.match(workFunctions, /eq\("deliverable_key", source\.data\.deliverable_key\)/);
   assert.match(
     workFunctions,
-    /downloadDeliverable[\s\S]+select\("storage_reference"\)[\s\S]+createSignedUrl/,
+    /downloadDeliverable[\s\S]+ownedPrivateFileLink\("deliverable"[\s\S]+createSignedUrl/,
   );
   assert.match(workFunctions, /listDeliverableVersions[\s\S]+select\("deliverable_key"\)/);
 });

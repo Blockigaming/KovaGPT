@@ -1,4 +1,5 @@
 import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
+import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, categorizeError } from "@/lib/request-id";
 import {
@@ -608,11 +609,10 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 const ownerLookup = await preflight.run(
                   "owner_lookup",
-                  () => auth.supabaseAdmin.auth.admin.getUserById(auth.userId),
+                  () => readAccountIdentity(auth.supabaseAdmin, auth.userId),
                   { required: false },
                 );
-                const data = ownerLookup?.data;
-                const email = data?.user?.email?.toLowerCase();
+                const email = ownerLookup?.email?.toLowerCase();
                 if (email === OWNER_EMAIL) isOwner = true;
               } catch (error) {
                 if (error instanceof ChatPreflightError) throw error;

@@ -125,11 +125,14 @@ export async function deleteProjectStorageFirst({
   deletingAccountUserId?: string | null;
 }): Promise<DeletionOutcome> {
   const attemptId = crypto.randomUUID();
-  const { data: claimValue, error: claimFailure } = await loose(admin).rpc("claim_project_deletion", {
-    p_attempt_id: attemptId,
-    p_project_id: projectId,
-    p_user_id: userId,
-  });
+  const { data: claimValue, error: claimFailure } = await loose(admin).rpc(
+    "claim_project_deletion",
+    {
+      p_attempt_id: attemptId,
+      p_project_id: projectId,
+      p_user_id: userId,
+    },
+  );
   if (claimFailure) throw claimError(claimFailure);
 
   const claim = record(claimValue);

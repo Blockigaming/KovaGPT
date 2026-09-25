@@ -21,26 +21,50 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
     read("src/lib/api-auth.server.ts"),
     read("src/integrations/supabase/auth-middleware.ts"),
   ]);
-  for (const source of [apiAuth, middleware]) {
-    assert.match(source, /auth\.getUser\(token\)/);
-    assert.match(source, /auth\.getClaims\(token\)/);
-    assert.match(source, /evaluateAuthenticatedUser/);
-    assert.match(source, /mfa_required/);
-  }
+  assert.match(apiAuth, /auth\.getUser\(token\)/);
+  assert.match(apiAuth, /auth\.getClaims\(token\)/);
+  assert.match(apiAuth, /evaluateAuthenticatedUser/);
+  assert.match(apiAuth, /mfa_required/);
+  assert.match(middleware, /import \{ optionalUser \} from "@\/lib\/api-auth\.server"/);
+  assert.match(middleware, /const auth = await optionalUser\(request\)/);
+  assert.match(middleware, /if \(!auth\) failAuthentication\(401, "Unauthorized"\)/);
+  assert.match(middleware, /if \(auth instanceof Response\)/);
+  assert.doesNotMatch(middleware, /createClient/);
   const authoritativeUserCheck = apiAuth.indexOf("verifier.auth.getUser(token)");
-  const privilegedClient = apiAuth.indexOf("const supabaseAdmin = createClient<Database>");
+  const privilegedClient = apiAuth.indexOf(
+    "const admin = createAdminClient()",
+    authoritativeUserCheck,
+  );
   assert.ok(authoritativeUserCheck >= 0);
   assert.ok(privilegedClient > authoritativeUserCheck);
+  const ownedSessionDigest = apiAuth.indexOf(
+    "const sessionDigest = digestKovaToken(credential.token)",
+  );
+  const ownedSessionCheck = apiAuth.indexOf(
+    "const principal = await resolveSession(sessionDigest)",
+  );
+  const ownedRejection = apiAuth.indexOf("if (!principal) return unauthorized(", ownedSessionCheck);
+  const ownedToken = apiAuth.indexOf("signKovaCompatibilityJwt(principal)", ownedRejection);
+  assert.ok(ownedSessionDigest >= 0);
+  assert.ok(ownedSessionCheck > ownedSessionDigest);
+  assert.ok(ownedRejection > ownedSessionCheck);
+  assert.ok(ownedToken > ownedRejection);
+  assert.ok(apiAuth.indexOf("supabaseAdmin: createAdminClient()") > ownedToken);
+  assert.match(
+    apiAuth,
+    /revalidateSession: async \(\) => \{\s*const current = await resolveSession\(sessionDigest\)/,
+  );
   assert.doesNotMatch(middleware, /Missing Supabase environment variable\(s\).*throw new Error/s);
   assert.ok(
-    middleware.indexOf("parseBearerToken(authHeader)") <
-      middleware.indexOf("process.env.SUPABASE_URL"),
+    middleware.indexOf("const auth = await optionalUser(request)") <
+      middleware.indexOf("return next("),
   );
 });
 
 test("browser auth gates aal1 sessions and keeps normal sign-out device-local", async () => {
-  const [provider, challenge, panel] = await Promise.all([
+  const [provider, browserAuth, challenge, panel] = await Promise.all([
     read("src/components/auth/ClerkSafe.tsx"),
+    read("src/lib/kova-auth-browser.ts"),
     read("src/components/auth/MfaChallengeDialog.tsx"),
     read("src/components/MfaPanel.tsx"),
   ]);
@@ -48,11 +72,19 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(provider, /nextLevel === "aal2"/);
   assert.match(provider, /setPendingMfaSession\(candidate\)/);
   assert.match(provider, /signOut\(\{ scope: "local" \}\)/);
+  assert.match(browserAuth, /response\.status === 401[\s\S]*new KovaSessionRejectedError\(\)/);
+  assert.match(
+    provider,
+    /isKovaSessionRejectedError\(error\)[\s\S]*setKovaSessionActive\(true\)[\s\S]*setUseLegacy\(false\)[\s\S]*setIsLoaded\(true\)/,
+  );
   assert.match(challenge, /challengeAndVerify/);
   assert.match(challenge, /\^\\d\{6\}\$/);
   assert.match(challenge, /expires_at: Math\.round\(Date\.now\(\) \/ 1000\) \+ data\.expires_in/);
   assert.doesNotMatch(challenge, /data\.session/);
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
+  assert.match(panel, /const useKovaAuth = isKovaSessionActive\(\)/);
+  assert.match(panel, /!useKovaAuth \? <PasskeyPanel \/> : null/);
+  assert.match(panel, /kovaAuthJson\("\/api\/auth\/sessions\/revoke-others", \{\}\)/);
 });
 
 test("passkey sign-in and credential management stay deployment-gated and WebAuthn-backed", async () => {
@@ -98,8 +130,16 @@ test("recovery and OAuth flows avoid open redirects, query-token consumption, an
   assert.match(oauth, /safeRelativeRedirect/);
   assert.match(oauth, /const accessToken = hash\.get\("access_token"\)/);
   assert.doesNotMatch(oauth, /const accessToken = getOAuthParam/);
-  assert.match(reset, /event === "PASSWORD_RECOVERY" && session/);
-  assert.match(reset, /hasRecentPasswordRecoveryFlow\(data\.session\.user\.id\)/);
+  assert.match(
+    reset,
+    /completeOAuthSessionFromUrl\("password recovery", controller\.signal,\s*\{\s*recoveryOnly: true/,
+  );
+  assert.match(oauth, /options\.recoveryOnly && redirectType !== "recovery"/);
+  assert.match(
+    oauth,
+    /options\.recoveryOnly && \(!restored \|\| !hasRecentPasswordRecoveryFlow\(restored\.user\.id\)\)/,
+  );
+  assert.match(reset, /current\.data\.session\?\.user\.id !== boundary\.userId/);
   assert.doesNotMatch(reset, /recoveryExpected\s*=\s*hasOAuthResponseInUrl/);
   assert.match(reset, /signOut\(\{\s*scope: "others"/);
   assert.doesNotMatch(callback, /setError\(message\)/);

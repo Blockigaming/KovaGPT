@@ -619,7 +619,9 @@
   font-size: 0.8125rem;
   line-height: 1.4;
   text-decoration: none;
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 [data-public-shell] .legal-toc-list a:hover {
   color: var(--foreground);

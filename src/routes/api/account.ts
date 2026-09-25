@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
+import { finalizeOwnedAccountDeletion } from "@/lib/kova-auth-store.server";
+import { clearKovaSessionCookie } from "@/lib/kova-auth-contract.mjs";
 import { createStripeClient } from "@/lib/stripe.server";
 import { disconnectAllGoogle } from "@/lib/google-oauth.server";
 import { disconnectAllGitHub } from "@/lib/github-oauth.server";
@@ -29,8 +31,10 @@ function jsonError(error: string, status: number) {
   return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-function deletionComplete() {
-  return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+function deletionComplete(authProvider: "kova" | "supabase") {
+  const headers = new Headers({ "Cache-Control": "no-store" });
+  if (authProvider === "kova") headers.set("Set-Cookie", clearKovaSessionCookie());
+  return new Response(null, { status: 204, headers });
 }
 function deletionPending(
   error: string,
@@ -110,6 +114,20 @@ export const Route = createFileRoute("/api/account")({
           return jsonError("Type DELETE to confirm account deletion.", 400);
         }
 
+        // Authority comes from the verified server principal, never the body,
+        // headers, or deployment's support for dual authentication.
+        if (auth.authProvider !== "kova" && auth.authProvider !== "supabase") {
+          return jsonError("The account authority could not be verified.", 503);
+        }
+        const ownedSessionId = auth.claims?.session_id;
+        if (
+          auth.authProvider === "kova" &&
+          (typeof ownedSessionId !== "string" ||
+            !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu.test(ownedSessionId))
+        ) {
+          return jsonError("The account session could not be verified.", 503);
+        }
+
         let priorState;
         try {
           priorState = await readAccountDeletionState(auth.supabaseAdmin, auth.userId);
@@ -120,7 +138,7 @@ export const Route = createFileRoute("/api/account")({
             "unknown",
           );
         }
-        if (priorState.state === "deleted") return deletionComplete();
+        if (priorState.state === "deleted") return deletionComplete(auth.authProvider);
         if (priorState.state === "active") {
           try {
             // This RPC checks organization ownership and the funding trigger
@@ -137,7 +155,7 @@ export const Route = createFileRoute("/api/account")({
                 "unknown",
               );
             }
-            if (observed.state === "deleted") return deletionComplete();
+            if (observed.state === "deleted") return deletionComplete(auth.authProvider);
             if (observed.state === "deleting")
               return deletionPending(
                 "Account deletion has started. Retry shortly to continue cleanup.",
@@ -367,9 +385,12 @@ export const Route = createFileRoute("/api/account")({
         if (!deletionFailure) {
           try {
             authDeletionAttempted = true;
-            const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(
-              auth.userId,
-            );
+            let deleteError: { code?: string } | null = null;
+            if (auth.authProvider === "kova") {
+              await finalizeOwnedAccountDeletion(auth.userId, ownedSessionId as string);
+            } else {
+              deleteError = (await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId)).error;
+            }
             if (deleteError) {
               console.error("[account-delete] auth deletion failed", {
                 code: deleteError.code,
@@ -395,7 +416,7 @@ export const Route = createFileRoute("/api/account")({
             if (
               (await readAccountDeletionState(auth.supabaseAdmin, auth.userId)).state === "deleted"
             )
-              return deletionComplete();
+              return deletionComplete(auth.authProvider);
           } catch {
             /* Keep the irreversible pending state on an ambiguous reply. */
           }
@@ -413,7 +434,7 @@ export const Route = createFileRoute("/api/account")({
             detail?.code,
           );
         }
-        return deletionComplete();
+        return deletionComplete(auth.authProvider);
       },
     },
   },

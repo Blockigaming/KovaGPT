@@ -58,8 +58,12 @@ export async function siteRequest(
     const response = await fetch(path, {
       method: body ? "POST" : "GET",
       signal: controller.signal,
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
       headers: {
         Authorization: `Bearer ${data.session.access_token}`,
+        "X-Kova-Owner": userId,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,

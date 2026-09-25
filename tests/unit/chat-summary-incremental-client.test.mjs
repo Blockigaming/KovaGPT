@@ -48,7 +48,10 @@ test("a delayed foreground request refuses account retargeting and pins the orig
     { getSession: async () => ({ data: { session } }), fetchImpl },
   );
   assert.equal(calls[0].headers.get("authorization"), "Bearer owner-token");
-  assert.equal(calls[0].credentials, "omit");
+  assert.equal(calls[0].credentials, "same-origin");
+  assert.equal(calls[0].headers.get("x-kova-owner"), id);
+  assert.equal(calls[0].mode, "same-origin");
+  assert.equal(calls[0].redirect, "error");
 });
 function completed(snapshot) {
   return {

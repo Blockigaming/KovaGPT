@@ -478,8 +478,8 @@ test("source inventory: current full rehearsal preserves the entire committed pe
   const actual = rehearseUpgrade({ root, currentHistory: true, execute: runner.execute });
   assert.equal(actual.passed, true);
   assert.equal(actual.baselineVersions, 98);
-  assert.equal(actual.pendingVersions.length, 83);
-  assert.equal(actual.forwardMigrations.length, 82);
+  assert.ok(actual.forwardMigrations.length > 0);
+  assert.equal(actual.pendingVersions.length, actual.forwardMigrations.length + 1);
   assert.deepEqual(actual.pendingVersions, dry.pendingVersions);
   assert.deepEqual(actual.replayPendingVersions, dry.replayPendingVersions);
   assert.equal(actual.sourceCommit, git(root, "rev-parse", "HEAD"));

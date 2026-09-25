@@ -1,0 +1,199 @@
+name: Kova Owned Auth Source
+
+on:
+  push:
+    branches: [codex/kova-owned-auth-foundation]
+    paths:
+      - .github/workflows/kova-owned-auth-source.yml
+      - src/lib/kova-auth*
+      - src/lib/kova-recovery-landing*
+      - src/lib/account-identity.server.*
+      - src/lib/account-export.server.ts
+      - src/lib/collaboration.ts
+      - src/lib/collaboration-client.mjs
+      - src/lib/oauth-session.ts
+      - src/lib/pricing/developer-platform.server.ts
+      - src/lib/kova-session*
+      - src/lib/api-auth.server.ts
+      - src/lib/image-api-client.ts
+      - src/lib/library-images.functions.ts
+      - src/lib/library-original-client.ts
+      - src/lib/library-private-delivery.server.ts
+      - src/lib/multimodal/image-source.server.mjs
+      - src/routes/api/library/files.ts
+      - src/integrations/supabase/auth-middleware.ts
+      - src/lib/account-export*.mjs
+      - src/lib/account-export*.mts
+      - src/lib/kova-recovery-link.*
+      - src/lib/projects.functions.ts
+      - src/routes/api/account.ts
+      - src/routes/api/chat.ts
+      - src/routes/api/internal/work-browser.ts
+      - src/routes/api/internal/work-execution.ts
+      - src/routes/oauth.consent.tsx
+      - src/routes/reset-password.tsx
+      - src/routes/~oauth.callback.tsx
+      - src/integrations/supabase/client.ts
+      - src/components/MfaPanel.tsx
+      - src/components/KovaPasswordPanel.tsx
+      - src/components/KovaPasskeyPanel.tsx
+      - src/components/auth/AuthDialog.tsx
+      - src/components/auth/ClerkSafe.tsx
+      - src/routes/auth.tsx
+      - src/routes/api/auth/**
+      - supabase/migrations/**
+      - tests/unit/kova-auth*
+      - tests/unit/image*.test.mjs
+      - tests/unit/library-original-api-client.test.mjs
+      - tests/unit/kova-owned-auth*
+      - tests/unit/kova-session*
+      - tests/unit/account-delete-ordering.test.mjs
+      - tests/unit/account-export-sites.test.mjs
+      - tests/unit/library-original-export.test.mjs
+      - tests/unit/collaboration-client.test.mjs
+      - tests/unit/project-canvas-collaboration.test.mjs
+      - tests/unit/upgrade-database-scheduled-catalog.test.mjs
+      - tests/unit/upgrade-database-scheduled-tables.test.mjs
+      - tests/unit/upgrade-database-temp-export-proof.test.mjs
+      - tests/unit/upgrade-source-provenance.test.mjs
+      - tests/integration/auth-account-security-source.test.mjs
+      - tests/helpers/kova-auth*.mjs
+      - scripts/release/kova-auth-revocation-proof.sql
+      - scripts/release/kova-auth-cutover-gate.mjs
+      - package.json
+      - package-lock.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kova-owned-auth-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/codex/kova-owned-auth-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact source head without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install lockfile dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Preserve exact-head source for continued isolated validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          evidence="$RUNNER_TEMP/kova-auth-source"
+          mkdir -p "$evidence"
+          git bundle create "$evidence/source.bundle" HEAD
+          git bundle verify "$evidence/source.bundle"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree.txt"
+          cd "$evidence"
+          sha256sum source.bundle commit.txt tree.txt > SHA256SUMS
+
+      - name: Upload exact-head source without dependencies or credentials
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: kova-auth-source-${{ github.sha }}
+          path: ${{ runner.temp }}/kova-auth-source/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      # Opt-in export repairs a missing local checkout; it is not a release or
+      # an application deployment. Only repository objects, dependency files,
+      # and the Node executable are archived, never environment/config files.
+      - name: Prepare offline validation workspace
+        if: contains(github.event.head_commit.message, '[auth-workspace]')
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm rebuild supabase
+          npx --no-install supabase --version
+          evidence="$RUNNER_TEMP/kova-auth-workspace"
+          mkdir -p "$evidence"
+          git bundle create "$evidence/source.bundle" HEAD
+          git bundle verify "$evidence/source.bundle"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree.txt"
+          cp "$(command -v node)" "$evidence/node"
+          tar -czf "$evidence/dependencies.tar.gz" node_modules
+          test "$(stat -c %s "$evidence/dependencies.tar.gz")" -le 536870912
+          node --version > "$evidence/versions.txt"
+          npm --version >> "$evidence/versions.txt"
+          npx --no-install supabase --version >> "$evidence/versions.txt"
+          cd "$evidence"
+          sha256sum source.bundle dependencies.tar.gz node commit.txt tree.txt versions.txt > SHA256SUMS
+
+      - name: Upload offline validation workspace
+        if: contains(github.event.head_commit.message, '[auth-workspace]')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: kova-auth-workspace-${{ github.sha }}
+          path: ${{ runner.temp }}/kova-auth-workspace/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Owned-auth and account-security regression tests
+        run: >-
+          node --test --test-concurrency=2 tests/unit/kova-auth*.test.mjs
+          tests/unit/kova-owned-auth-database.test.mjs
+          tests/unit/kova-session.server.test.mjs
+          tests/unit/account-delete-ordering.test.mjs
+          tests/integration/auth-account-security-source.test.mjs
+          tests/unit/upgrade-database-scheduled-catalog.test.mjs
+          tests/unit/upgrade-database-scheduled-tables.test.mjs
+          tests/unit/upgrade-database-temp-export-proof.test.mjs
+          tests/unit/upgrade-source-provenance.test.mjs
+          tests/unit/image*.test.mjs
+          tests/unit/library-original-api-client.test.mjs
+          tests/unit/account-export-sites.test.mjs
+          tests/unit/library-original-export.test.mjs
+          tests/unit/collaboration-client.test.mjs
+          tests/unit/project-canvas-collaboration.test.mjs
+
+      - name: Verify committed migration inventory
+        run: npm run release:migrations
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build without deploying
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072 --max-semi-space-size=8
+        run: npm run build
+
+      - name: Verify generated contracts match the exact head
+        run: >-
+          npm run release:manifest && npm run release:schema &&
+          git diff --exit-code -- release-migrations.json database-contract.json src/routeTree.gen.ts
+
+      - name: Verify release bundle
+        run: npm run release:bundle

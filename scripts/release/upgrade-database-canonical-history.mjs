@@ -7,6 +7,8 @@ import { buildCanonicalHistoryDecision } from "./canonical-history-decision.mjs"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DECISION = "docs/release-reconciliation/canonical-history-actions-20260923.json";
+const SOURCE = "release-migrations.json";
+const CHECKPOINT_SOURCE_COUNT = 157;
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const RECORD_ONLY = ["20260822122000", "20260823113000", "20260903145843"];
 export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
@@ -36,8 +38,11 @@ export function extendProposedCanonicalHistory(
   )
     throw new Error("upgrade_canonical_history_inventory_mismatch");
 
+  const extension = JSON.parse(readFile(join(root, SOURCE))).migrations.slice(
+    CHECKPOINT_SOURCE_COUNT,
+  );
   const pending = new Map(plan.forward.map((row) => [row.version, row]));
-  if (pending.size !== 83 || decision.sourceOnly.length !== 83)
+  if (pending.size !== 83 + extension.length || decision.sourceOnly.length !== 83)
     throw new Error("upgrade_canonical_history_pending_mismatch");
   const recordOnly = [];
   const executionForward = [];
@@ -70,6 +75,14 @@ export function extendProposedCanonicalHistory(
       executionForward.push(source);
     } else throw new Error("upgrade_canonical_history_action_invalid");
   }
+  const deferredExtensionVersions = [];
+  for (const entry of extension) {
+    const source = pending.get(entry.timestamp);
+    if (!source || source.name !== entry.filename || source.sha256 !== entry.sha256)
+      throw new Error("upgrade_canonical_history_extension_mismatch");
+    pending.delete(entry.timestamp);
+    deferredExtensionVersions.push(entry.timestamp);
+  }
   if (
     pending.size ||
     executionForward.length !== 80 ||
@@ -78,6 +91,7 @@ export function extendProposedCanonicalHistory(
     throw new Error("upgrade_canonical_history_action_counts_invalid");
   return {
     ...plan,
+    pending: decision.sourceOnly.map((entry) => entry.path.slice("supabase/migrations/".length)),
     executionForward,
     recordOnlyVersions: recordOnly,
     canonicalHistoryProposal: {
@@ -88,6 +102,7 @@ export function extendProposedCanonicalHistory(
       recordOnlyVersions: recordOnly,
       historyOnlySentinelSha256: sha256(HISTORY_ONLY_SENTINEL),
       forwardVersions: executionForward.map((row) => row.version),
+      deferredExtensionVersions,
       expectedFinalLedgerCount: 181,
       productionReleaseReady: false,
       productionRowsRestored: false,

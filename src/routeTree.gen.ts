@@ -79,6 +79,7 @@ import { Route as ApiKovasRouteImport } from './routes/api/kovas'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
+import { Route as ApiPrivateFilesRouteImport } from './routes/api/private-files'
 import { Route as ApiProjectFilesRouteImport } from './routes/api/project-files'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-templates'
@@ -119,6 +120,14 @@ import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
+import { Route as ApiAuthRefreshRouteImport } from './routes/api/auth/refresh'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
+import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiAuthTokenRouteImport } from './routes/api/auth/token'
+import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
 import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/console'
@@ -178,12 +187,31 @@ import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
 import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './routes/$section.$category.$subcategory.$articleSlug'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
+import { Route as ApiAuthGoogleExchangeRouteImport } from './routes/api/auth/google/exchange'
+import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
+import { Route as ApiAuthMfaEnrollRouteImport } from './routes/api/auth/mfa/enroll'
+import { Route as ApiAuthMfaFactorsRouteImport } from './routes/api/auth/mfa/factors'
+import { Route as ApiAuthMfaRemoveRouteImport } from './routes/api/auth/mfa/remove'
+import { Route as ApiAuthMfaVerifyRouteImport } from './routes/api/auth/mfa/verify'
+import { Route as ApiAuthPasskeysIndexRouteImport } from './routes/api/auth/passkeys/index'
+import { Route as ApiAuthPasskeysRemoveRouteImport } from './routes/api/auth/passkeys/remove'
+import { Route as ApiAuthPasskeysRenameRouteImport } from './routes/api/auth/passkeys/rename'
+import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/recovery/request'
+import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
+import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
+import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify/resend'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiTasksEventsProviderRouteImport } from './routes/api/tasks/events/$provider'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
+import { Route as ApiAuthMfaRecoveryRegenerateRouteImport } from './routes/api/auth/mfa/recovery/regenerate'
+import { Route as ApiAuthPasskeysLoginOptionsRouteImport } from './routes/api/auth/passkeys/login/options'
+import { Route as ApiAuthPasskeysLoginVerifyRouteImport } from './routes/api/auth/passkeys/login/verify'
+import { Route as ApiAuthPasskeysRegisterOptionsRouteImport } from './routes/api/auth/passkeys/register/options'
+import { Route as ApiAuthPasskeysRegisterVerifyRouteImport } from './routes/api/auth/passkeys/register/verify'
 import { Route as ApiIntegrationsOauthCallbackProviderRouteImport } from './routes/api/integrations/oauth/callback/$provider'
 import { Route as ApiScimV2OrganizationIdSplatRouteImport } from './routes/api/scim/v2/$organizationId/$'
 
@@ -540,6 +568,11 @@ const ApiOrganizationsRoute = ApiOrganizationsRouteImport.update({
   path: '/api/organizations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPrivateFilesRoute = ApiPrivateFilesRouteImport.update({
+  id: '/api/private-files',
+  path: '/api/private-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProjectFilesRoute = ApiProjectFilesRouteImport.update({
   id: '/api/project-files',
   path: '/api/project-files',
@@ -743,6 +776,46 @@ const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
 const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
   id: '/api/agents/teams',
   path: '/api/agents/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRefreshRoute = ApiAuthRefreshRouteImport.update({
+  id: '/api/auth/refresh',
+  path: '/api/auth/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
+  id: '/api/auth/signup',
+  path: '/api/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthTokenRoute = ApiAuthTokenRouteImport.update({
+  id: '/api/auth/token',
+  path: '/api/auth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
+  id: '/api/auth/verify',
+  path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
@@ -1052,6 +1125,77 @@ const SectionCategorySubcategoryArticleSlugRoute =
     path: '/$section/$category/$subcategory/$articleSlug',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/api/auth/google/callback',
+  path: '/api/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleExchangeRoute = ApiAuthGoogleExchangeRouteImport.update({
+  id: '/api/auth/google/exchange',
+  path: '/api/auth/google/exchange',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
+  id: '/api/auth/google/start',
+  path: '/api/auth/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaEnrollRoute = ApiAuthMfaEnrollRouteImport.update({
+  id: '/api/auth/mfa/enroll',
+  path: '/api/auth/mfa/enroll',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaFactorsRoute = ApiAuthMfaFactorsRouteImport.update({
+  id: '/api/auth/mfa/factors',
+  path: '/api/auth/mfa/factors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaRemoveRoute = ApiAuthMfaRemoveRouteImport.update({
+  id: '/api/auth/mfa/remove',
+  path: '/api/auth/mfa/remove',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMfaVerifyRoute = ApiAuthMfaVerifyRouteImport.update({
+  id: '/api/auth/mfa/verify',
+  path: '/api/auth/mfa/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasskeysIndexRoute = ApiAuthPasskeysIndexRouteImport.update({
+  id: '/api/auth/passkeys/',
+  path: '/api/auth/passkeys/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasskeysRemoveRoute = ApiAuthPasskeysRemoveRouteImport.update({
+  id: '/api/auth/passkeys/remove',
+  path: '/api/auth/passkeys/remove',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasskeysRenameRoute = ApiAuthPasskeysRenameRouteImport.update({
+  id: '/api/auth/passkeys/rename',
+  path: '/api/auth/passkeys/rename',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRecoveryRequestRoute = ApiAuthRecoveryRequestRouteImport.update({
+  id: '/api/auth/recovery/request',
+  path: '/api/auth/recovery/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRecoveryResetRoute = ApiAuthRecoveryResetRouteImport.update({
+  id: '/api/auth/recovery/reset',
+  path: '/api/auth/recovery/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionsRevokeOthersRoute =
+  ApiAuthSessionsRevokeOthersRouteImport.update({
+    id: '/api/auth/sessions/revoke-others',
+    path: '/api/auth/sessions/revoke-others',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
+  id: '/resend',
+  path: '/resend',
+  getParentRoute: () => ApiAuthVerifyRoute,
+} as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1086,6 +1230,36 @@ const ProjectsProjectIdChatChatIdRoute =
     id: '/chat/$chatId',
     path: '/chat/$chatId',
     getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ApiAuthMfaRecoveryRegenerateRoute =
+  ApiAuthMfaRecoveryRegenerateRouteImport.update({
+    id: '/api/auth/mfa/recovery/regenerate',
+    path: '/api/auth/mfa/recovery/regenerate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysLoginOptionsRoute =
+  ApiAuthPasskeysLoginOptionsRouteImport.update({
+    id: '/api/auth/passkeys/login/options',
+    path: '/api/auth/passkeys/login/options',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysLoginVerifyRoute =
+  ApiAuthPasskeysLoginVerifyRouteImport.update({
+    id: '/api/auth/passkeys/login/verify',
+    path: '/api/auth/passkeys/login/verify',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysRegisterOptionsRoute =
+  ApiAuthPasskeysRegisterOptionsRouteImport.update({
+    id: '/api/auth/passkeys/register/options',
+    path: '/api/auth/passkeys/register/options',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthPasskeysRegisterVerifyRoute =
+  ApiAuthPasskeysRegisterVerifyRouteImport.update({
+    id: '/api/auth/passkeys/register/verify',
+    path: '/api/auth/passkeys/register/verify',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiIntegrationsOauthCallbackProviderRoute =
   ApiIntegrationsOauthCallbackProviderRouteImport.update({
@@ -1171,6 +1345,7 @@ export interface FileRoutesByFullPath {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1211,6 +1386,14 @@ export interface FileRoutesByFullPath {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1270,12 +1453,31 @@ export interface FileRoutesByFullPath {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1350,6 +1552,7 @@ export interface FileRoutesByTo {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1390,6 +1593,14 @@ export interface FileRoutesByTo {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1449,12 +1660,31 @@ export interface FileRoutesByTo {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys': typeof ApiAuthPasskeysIndexRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1530,6 +1760,7 @@ export interface FileRoutesById {
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
+  '/api/private-files': typeof ApiPrivateFilesRoute
   '/api/project-files': typeof ApiProjectFilesRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/project-templates': typeof ApiProjectTemplatesRoute
@@ -1570,6 +1801,14 @@ export interface FileRoutesById {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/refresh': typeof ApiAuthRefreshRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/token': typeof ApiAuthTokenRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1629,12 +1868,31 @@ export interface FileRoutesById {
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
   '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/auth/mfa/enroll': typeof ApiAuthMfaEnrollRoute
+  '/api/auth/mfa/factors': typeof ApiAuthMfaFactorsRoute
+  '/api/auth/mfa/remove': typeof ApiAuthMfaRemoveRoute
+  '/api/auth/mfa/verify': typeof ApiAuthMfaVerifyRoute
+  '/api/auth/passkeys/remove': typeof ApiAuthPasskeysRemoveRoute
+  '/api/auth/passkeys/rename': typeof ApiAuthPasskeysRenameRoute
+  '/api/auth/recovery/request': typeof ApiAuthRecoveryRequestRoute
+  '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
+  '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/tasks/events/$provider': typeof ApiTasksEventsProviderRoute
   '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
+  '/api/auth/passkeys/': typeof ApiAuthPasskeysIndexRoute
+  '/api/auth/mfa/recovery/regenerate': typeof ApiAuthMfaRecoveryRegenerateRoute
+  '/api/auth/passkeys/login/options': typeof ApiAuthPasskeysLoginOptionsRoute
+  '/api/auth/passkeys/login/verify': typeof ApiAuthPasskeysLoginVerifyRoute
+  '/api/auth/passkeys/register/options': typeof ApiAuthPasskeysRegisterOptionsRoute
+  '/api/auth/passkeys/register/verify': typeof ApiAuthPasskeysRegisterVerifyRoute
   '/api/integrations/oauth/callback/$provider': typeof ApiIntegrationsOauthCallbackProviderRoute
   '/api/scim/v2/$organizationId/$': typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -1711,6 +1969,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -1751,6 +2010,14 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -1810,12 +2077,31 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
+    | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys/'
+    | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesByTo: FileRoutesByTo
@@ -1890,6 +2176,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -1930,6 +2217,14 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -1989,12 +2284,31 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
+    | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys'
+    | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   id:
@@ -2069,6 +2383,7 @@ export interface FileRouteTypes {
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
+    | '/api/private-files'
     | '/api/project-files'
     | '/api/project-suggest'
     | '/api/project-templates'
@@ -2109,6 +2424,14 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/refresh'
+    | '/api/auth/session'
+    | '/api/auth/signup'
+    | '/api/auth/token'
+    | '/api/auth/verify'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -2168,12 +2491,31 @@ export interface FileRouteTypes {
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
     | '/$section/$category/$subcategory/$articleSlug'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/exchange'
+    | '/api/auth/google/start'
+    | '/api/auth/mfa/enroll'
+    | '/api/auth/mfa/factors'
+    | '/api/auth/mfa/remove'
+    | '/api/auth/mfa/verify'
+    | '/api/auth/passkeys/remove'
+    | '/api/auth/passkeys/rename'
+    | '/api/auth/recovery/request'
+    | '/api/auth/recovery/reset'
+    | '/api/auth/sessions/revoke-others'
+    | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
     | '/api/tasks/events/$provider'
     | '/projects/$projectId/chat/$chatId'
+    | '/api/auth/passkeys/'
+    | '/api/auth/mfa/recovery/regenerate'
+    | '/api/auth/passkeys/login/options'
+    | '/api/auth/passkeys/login/verify'
+    | '/api/auth/passkeys/register/options'
+    | '/api/auth/passkeys/register/verify'
     | '/api/integrations/oauth/callback/$provider'
     | '/api/scim/v2/$organizationId/$'
   fileRoutesById: FileRoutesById
@@ -2249,6 +2591,7 @@ export interface RootRouteChildren {
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiOrganizationsRoute: typeof ApiOrganizationsRouteWithChildren
+  ApiPrivateFilesRoute: typeof ApiPrivateFilesRoute
   ApiProjectFilesRoute: typeof ApiProjectFilesRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiProjectTemplatesRoute: typeof ApiProjectTemplatesRoute
@@ -2286,6 +2629,14 @@ export interface RootRouteChildren {
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
+  ApiAuthRefreshRoute: typeof ApiAuthRefreshRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
+  ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiAuthTokenRoute: typeof ApiAuthTokenRoute
+  ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
   ApiDeveloperConsoleRoute: typeof ApiDeveloperConsoleRoute
   ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
   ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
@@ -2340,11 +2691,29 @@ export interface RootRouteChildren {
   ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   OauthMcpActionRoute: typeof OauthMcpActionRoute
   SectionCategorySubcategoryArticleSlugRoute: typeof SectionCategorySubcategoryArticleSlugRoute
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+  ApiAuthGoogleExchangeRoute: typeof ApiAuthGoogleExchangeRoute
+  ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
+  ApiAuthMfaEnrollRoute: typeof ApiAuthMfaEnrollRoute
+  ApiAuthMfaFactorsRoute: typeof ApiAuthMfaFactorsRoute
+  ApiAuthMfaRemoveRoute: typeof ApiAuthMfaRemoveRoute
+  ApiAuthMfaVerifyRoute: typeof ApiAuthMfaVerifyRoute
+  ApiAuthPasskeysRemoveRoute: typeof ApiAuthPasskeysRemoveRoute
+  ApiAuthPasskeysRenameRoute: typeof ApiAuthPasskeysRenameRoute
+  ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
+  ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
+  ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiTasksEventsProviderRoute: typeof ApiTasksEventsProviderRoute
+  ApiAuthPasskeysIndexRoute: typeof ApiAuthPasskeysIndexRoute
+  ApiAuthMfaRecoveryRegenerateRoute: typeof ApiAuthMfaRecoveryRegenerateRoute
+  ApiAuthPasskeysLoginOptionsRoute: typeof ApiAuthPasskeysLoginOptionsRoute
+  ApiAuthPasskeysLoginVerifyRoute: typeof ApiAuthPasskeysLoginVerifyRoute
+  ApiAuthPasskeysRegisterOptionsRoute: typeof ApiAuthPasskeysRegisterOptionsRoute
+  ApiAuthPasskeysRegisterVerifyRoute: typeof ApiAuthPasskeysRegisterVerifyRoute
   ApiIntegrationsOauthCallbackProviderRoute: typeof ApiIntegrationsOauthCallbackProviderRoute
   ApiScimV2OrganizationIdSplatRoute: typeof ApiScimV2OrganizationIdSplatRoute
 }
@@ -2841,6 +3210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrganizationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/private-files': {
+      id: '/api/private-files'
+      path: '/api/private-files'
+      fullPath: '/api/private-files'
+      preLoaderRoute: typeof ApiPrivateFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/project-files': {
       id: '/api/project-files'
       path: '/api/project-files'
@@ -3119,6 +3495,62 @@ declare module '@tanstack/react-router' {
       path: '/api/agents/teams'
       fullPath: '/api/agents/teams'
       preLoaderRoute: typeof ApiAgentsTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/refresh': {
+      id: '/api/auth/refresh'
+      path: '/api/auth/refresh'
+      fullPath: '/api/auth/refresh'
+      preLoaderRoute: typeof ApiAuthRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/signup': {
+      id: '/api/auth/signup'
+      path: '/api/auth/signup'
+      fullPath: '/api/auth/signup'
+      preLoaderRoute: typeof ApiAuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/token': {
+      id: '/api/auth/token'
+      path: '/api/auth/token'
+      fullPath: '/api/auth/token'
+      preLoaderRoute: typeof ApiAuthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/verify': {
+      id: '/api/auth/verify'
+      path: '/api/auth/verify'
+      fullPath: '/api/auth/verify'
+      preLoaderRoute: typeof ApiAuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat/confirm': {
@@ -3534,6 +3966,104 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SectionCategorySubcategoryArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/api/auth/google/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/exchange': {
+      id: '/api/auth/google/exchange'
+      path: '/api/auth/google/exchange'
+      fullPath: '/api/auth/google/exchange'
+      preLoaderRoute: typeof ApiAuthGoogleExchangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/start': {
+      id: '/api/auth/google/start'
+      path: '/api/auth/google/start'
+      fullPath: '/api/auth/google/start'
+      preLoaderRoute: typeof ApiAuthGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/enroll': {
+      id: '/api/auth/mfa/enroll'
+      path: '/api/auth/mfa/enroll'
+      fullPath: '/api/auth/mfa/enroll'
+      preLoaderRoute: typeof ApiAuthMfaEnrollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/factors': {
+      id: '/api/auth/mfa/factors'
+      path: '/api/auth/mfa/factors'
+      fullPath: '/api/auth/mfa/factors'
+      preLoaderRoute: typeof ApiAuthMfaFactorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/remove': {
+      id: '/api/auth/mfa/remove'
+      path: '/api/auth/mfa/remove'
+      fullPath: '/api/auth/mfa/remove'
+      preLoaderRoute: typeof ApiAuthMfaRemoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/mfa/verify': {
+      id: '/api/auth/mfa/verify'
+      path: '/api/auth/mfa/verify'
+      fullPath: '/api/auth/mfa/verify'
+      preLoaderRoute: typeof ApiAuthMfaVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/': {
+      id: '/api/auth/passkeys/'
+      path: '/api/auth/passkeys'
+      fullPath: '/api/auth/passkeys/'
+      preLoaderRoute: typeof ApiAuthPasskeysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/remove': {
+      id: '/api/auth/passkeys/remove'
+      path: '/api/auth/passkeys/remove'
+      fullPath: '/api/auth/passkeys/remove'
+      preLoaderRoute: typeof ApiAuthPasskeysRemoveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/rename': {
+      id: '/api/auth/passkeys/rename'
+      path: '/api/auth/passkeys/rename'
+      fullPath: '/api/auth/passkeys/rename'
+      preLoaderRoute: typeof ApiAuthPasskeysRenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/recovery/request': {
+      id: '/api/auth/recovery/request'
+      path: '/api/auth/recovery/request'
+      fullPath: '/api/auth/recovery/request'
+      preLoaderRoute: typeof ApiAuthRecoveryRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/recovery/reset': {
+      id: '/api/auth/recovery/reset'
+      path: '/api/auth/recovery/reset'
+      fullPath: '/api/auth/recovery/reset'
+      preLoaderRoute: typeof ApiAuthRecoveryResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/sessions/revoke-others': {
+      id: '/api/auth/sessions/revoke-others'
+      path: '/api/auth/sessions/revoke-others'
+      fullPath: '/api/auth/sessions/revoke-others'
+      preLoaderRoute: typeof ApiAuthSessionsRevokeOthersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/verify/resend': {
+      id: '/api/auth/verify/resend'
+      path: '/resend'
+      fullPath: '/api/auth/verify/resend'
+      preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
+      parentRoute: typeof ApiAuthVerifyRoute
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -3575,6 +4105,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId/chat/$chatId'
       preLoaderRoute: typeof ProjectsProjectIdChatChatIdRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/api/auth/mfa/recovery/regenerate': {
+      id: '/api/auth/mfa/recovery/regenerate'
+      path: '/api/auth/mfa/recovery/regenerate'
+      fullPath: '/api/auth/mfa/recovery/regenerate'
+      preLoaderRoute: typeof ApiAuthMfaRecoveryRegenerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/login/options': {
+      id: '/api/auth/passkeys/login/options'
+      path: '/api/auth/passkeys/login/options'
+      fullPath: '/api/auth/passkeys/login/options'
+      preLoaderRoute: typeof ApiAuthPasskeysLoginOptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/login/verify': {
+      id: '/api/auth/passkeys/login/verify'
+      path: '/api/auth/passkeys/login/verify'
+      fullPath: '/api/auth/passkeys/login/verify'
+      preLoaderRoute: typeof ApiAuthPasskeysLoginVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/register/options': {
+      id: '/api/auth/passkeys/register/options'
+      path: '/api/auth/passkeys/register/options'
+      fullPath: '/api/auth/passkeys/register/options'
+      preLoaderRoute: typeof ApiAuthPasskeysRegisterOptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/passkeys/register/verify': {
+      id: '/api/auth/passkeys/register/verify'
+      path: '/api/auth/passkeys/register/verify'
+      fullPath: '/api/auth/passkeys/register/verify'
+      preLoaderRoute: typeof ApiAuthPasskeysRegisterVerifyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/integrations/oauth/callback/$provider': {
       id: '/api/integrations/oauth/callback/$provider'
@@ -3687,6 +4252,18 @@ const ApiPushRouteChildren: ApiPushRouteChildren = {
 const ApiPushRouteWithChildren =
   ApiPushRoute._addFileChildren(ApiPushRouteChildren)
 
+interface ApiAuthVerifyRouteChildren {
+  ApiAuthVerifyResendRoute: typeof ApiAuthVerifyResendRoute
+}
+
+const ApiAuthVerifyRouteChildren: ApiAuthVerifyRouteChildren = {
+  ApiAuthVerifyResendRoute: ApiAuthVerifyResendRoute,
+}
+
+const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
+  ApiAuthVerifyRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
@@ -3760,6 +4337,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiOrganizationsRoute: ApiOrganizationsRouteWithChildren,
+  ApiPrivateFilesRoute: ApiPrivateFilesRoute,
   ApiProjectFilesRoute: ApiProjectFilesRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiProjectTemplatesRoute: ApiProjectTemplatesRoute,
@@ -3797,6 +4375,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
+  ApiAuthRefreshRoute: ApiAuthRefreshRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
+  ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiAuthTokenRoute: ApiAuthTokenRoute,
+  ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
   ApiDeveloperConsoleRoute: ApiDeveloperConsoleRoute,
   ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
   ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
@@ -3853,11 +4439,29 @@ const rootRouteChildren: RootRouteChildren = {
   OauthMcpActionRoute: OauthMcpActionRoute,
   SectionCategorySubcategoryArticleSlugRoute:
     SectionCategorySubcategoryArticleSlugRoute,
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+  ApiAuthGoogleExchangeRoute: ApiAuthGoogleExchangeRoute,
+  ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
+  ApiAuthMfaEnrollRoute: ApiAuthMfaEnrollRoute,
+  ApiAuthMfaFactorsRoute: ApiAuthMfaFactorsRoute,
+  ApiAuthMfaRemoveRoute: ApiAuthMfaRemoveRoute,
+  ApiAuthMfaVerifyRoute: ApiAuthMfaVerifyRoute,
+  ApiAuthPasskeysRemoveRoute: ApiAuthPasskeysRemoveRoute,
+  ApiAuthPasskeysRenameRoute: ApiAuthPasskeysRenameRoute,
+  ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
+  ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
+  ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiTasksEventsProviderRoute: ApiTasksEventsProviderRoute,
+  ApiAuthPasskeysIndexRoute: ApiAuthPasskeysIndexRoute,
+  ApiAuthMfaRecoveryRegenerateRoute: ApiAuthMfaRecoveryRegenerateRoute,
+  ApiAuthPasskeysLoginOptionsRoute: ApiAuthPasskeysLoginOptionsRoute,
+  ApiAuthPasskeysLoginVerifyRoute: ApiAuthPasskeysLoginVerifyRoute,
+  ApiAuthPasskeysRegisterOptionsRoute: ApiAuthPasskeysRegisterOptionsRoute,
+  ApiAuthPasskeysRegisterVerifyRoute: ApiAuthPasskeysRegisterVerifyRoute,
   ApiIntegrationsOauthCallbackProviderRoute:
     ApiIntegrationsOauthCallbackProviderRoute,
   ApiScimV2OrganizationIdSplatRoute: ApiScimV2OrganizationIdSplatRoute,

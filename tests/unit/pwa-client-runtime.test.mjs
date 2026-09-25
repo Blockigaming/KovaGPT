@@ -146,6 +146,16 @@ test("a subscribe response arriving after account change is compensated with its
   const calls = [];
   const f = fixture({
     fetcher: async (path, init) => {
+      if (path === "/api/push") {
+        assert.equal(init.credentials, "same-origin");
+        assert.equal(init.mode, "same-origin");
+        assert.equal(init.redirect, "error");
+        assert.equal(init.headers["X-Kova-Owner"], owner);
+      } else {
+        // Compensating device revocation uses its own one-time capability, not
+        // the possibly changed browser's account cookie.
+        assert.equal(init.credentials, "omit");
+      }
       calls.push({ path, body: init.body ? JSON.parse(init.body) : null });
       if (path === "/api/push")
         return new Promise((resolve) => {

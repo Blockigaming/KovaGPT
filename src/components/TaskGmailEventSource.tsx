@@ -29,8 +29,8 @@ async function sourceRequest(
   signal.addEventListener("abort", rejectAbort, { once: true });
   if (signal.aborted) rejectAbort();
   try {
-    const { data } = await Promise.race([supabase.auth.getSession(), canceled]);
-    if (signal.aborted || data.session?.user.id !== userId || !data.session.access_token)
+    const { data, error } = await Promise.race([supabase.auth.getSession(), canceled]);
+    if (error || signal.aborted || data.session?.user.id !== userId || !data.session.access_token)
       throw new Error("Your account changed.");
     const response = await fetch(
       `/api/tasks/event-sources${body ? "" : `?expectedUserId=${encodeURIComponent(userId)}&grantId=${encodeURIComponent(grantId)}`}`,
@@ -38,10 +38,14 @@ async function sourceRequest(
         method: body ? "POST" : "GET",
         headers: {
           Authorization: `Bearer ${data.session.access_token}`,
+          "X-Kova-Owner": userId,
           ...(body ? { "Content-Type": "application/json" } : {}),
         },
         body: body ? JSON.stringify({ ...body, expectedUserId: userId }) : undefined,
-        credentials: "omit",
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
+        cache: "no-store",
         signal,
       },
     );

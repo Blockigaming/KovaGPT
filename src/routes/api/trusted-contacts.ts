@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash, randomBytes } from "node:crypto";
 import { requireUser } from "@/lib/api-auth.server";
+import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
@@ -149,13 +150,21 @@ export const Route = createFileRoute("/api/trusted-contacts")({
         try {
           if (command.action === "invite") {
             // Resolve the verified current sender from Auth, never a caller-supplied label.
+            const identity =
+              caller.authProvider === "kova"
+                ? await readAccountIdentity(caller.supabaseAdmin, caller.userId)
+                : null;
             const token = parseBearerToken(request.headers.get("authorization") ?? "");
-            const { data, error } = await caller.supabaseUser.auth.getUser(token ?? undefined);
+            const hosted =
+              caller.authProvider === "kova"
+                ? null
+                : await caller.supabaseUser.auth.getUser(token ?? undefined);
+            const sender = caller.authProvider === "kova" ? identity : hosted?.data.user;
             if (
-              error ||
-              data.user?.id !== caller.userId ||
-              !data.user.email ||
-              !data.user.email_confirmed_at
+              hosted?.error ||
+              sender?.id !== caller.userId ||
+              !sender.email ||
+              !sender.email_confirmed_at
             )
               throw new Error();
             const result = await rpc(
@@ -163,7 +172,7 @@ export const Route = createFileRoute("/api/trusted-contacts")({
               "create_trusted_contact_invitation",
               {
                 p_actor: caller.userId,
-                p_actor_email: data.user.email,
+                p_actor_email: sender.email,
                 p_recipient_email: command.recipientEmail,
                 p_id: command.id,
                 p_consent: true,

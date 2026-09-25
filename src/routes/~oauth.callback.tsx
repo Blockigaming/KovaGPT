@@ -24,11 +24,14 @@ function OAuthCallbackPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     const revealTransition = window.setTimeout(() => {
       if (!cancelled) setShowTransition(true);
     }, TRANSITION_REVEAL_DELAY_MS);
     const timeout = window.setTimeout(() => {
       if (cancelled) return;
+      cancelled = true;
+      controller.abort();
       setShowTransition(true);
       setError("Sign in timed out. Check your connection and try again.");
     }, CALLBACK_TIMEOUT_MS);
@@ -36,7 +39,7 @@ function OAuthCallbackPage() {
     async function finishSignIn() {
       try {
         const callbackRedirect = getCallbackPostAuthRedirect();
-        const session = await completeOAuthSessionFromUrl("callback route");
+        const session = await completeOAuthSessionFromUrl("callback route", controller.signal);
         if (cancelled) return;
 
         if (!session?.user) {
@@ -63,6 +66,7 @@ function OAuthCallbackPage() {
     finishSignIn();
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearTimeout(revealTransition);
       window.clearTimeout(timeout);
     };

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, KeyRound, Mail } from "lucide-react";
+import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 
 export function ForgotPasswordDialog({
   open,
@@ -33,10 +34,17 @@ export function ForgotPasswordDialog({
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      if (browserKovaAuthEnabled()) {
+        const response = await kovaPublicAuthJson("/api/auth/recovery/request", {
+          email: normalizedEmail,
+        });
+        if (!response.ok) throw new Error(`Kova recovery request failed (${response.status})`);
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+      }
       setSent(true);
       toast.success("Reset link sent. Check your inbox & spam folder.");
     } catch (err) {

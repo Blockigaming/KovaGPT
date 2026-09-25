@@ -1,0 +1,64 @@
+-- Run in a REPEATABLE READ, READ ONLY transaction. Aggregate metadata only.
+-- All violation counts must be zero before enabling a Kova-signed data plane.
+-- This cannot prove external PostgREST config reload or active-channel teardown.
+with targets as (
+  select c.oid from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where c.relkind in ('r','p') and c.relrowsecurity
+    and (n.nspname='public'
+      or (n.nspname='storage' and c.relname in ('buckets','objects'))
+      or (n.nspname='realtime' and c.relname='messages'))
+), expected_roles as (
+  select array_agg(oid order by oid) as ids from pg_catalog.pg_roles where rolname in ('anon','authenticated')
+), guarded as (
+  select p.polrelid from pg_catalog.pg_policy p
+  where p.polname='kova_owned_session_guard' and not p.polpermissive and p.polcmd='*'
+    and (select array_agg(role_id order by role_id) from unnest(p.polroles) role_id)=(select ids from expected_roles)
+    and regexp_replace(pg_catalog.pg_get_expr(p.polqual,p.polrelid),'\s','','g')='(SELECTkova_auth_guard.session_is_active()ASsession_is_active)'
+    and regexp_replace(pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid),'\s','','g')='(SELECTkova_auth_guard.session_is_active()ASsession_is_active)'
+), expected_functions(schema_name,name,args,definer,config,execute_roles,body_sha256) as (
+  values ('kova_auth_guard','session_is_active',''::oidvector,true,array['search_path=""'],array['anon','authenticated','service_role'],'2e3b09bd213f3916b5509b8cf787a86605a101cfd0efc07d3b79782286ab47ab'),
+    ('kova_auth_guard','check_request',''::oidvector,false,array['search_path=""'],array['anon','authenticated','service_role'],'c8aa8a9974380dddf33a52ae229f5a645581494da4570c74b8fececb189853a9'),
+    ('kova_private','legacy_principal_permitted','2950'::oidvector,true,array['search_path=""','statement_timeout=5s'],array[]::text[],'8396a0ba4de039db3304c45bedd3cbc9d571cdb38aa446bad795f556859b3b37'),
+    ('public','kova_auth_legacy_session_allowed','2950'::oidvector,true,array['search_path=""','statement_timeout=5s'],array['service_role'],'9c9fbcd225bfccd557d5fdf057ec8043d44e42843602d93041cd1080cb0545af')
+)
+select
+  (select count(*) from targets) as scoped_rls_tables,
+  (select count(*) from targets t where not exists(select 1 from guarded g where g.polrelid=t.oid)) as unguarded_rls_tables,
+  (select count(*) from expected_functions e where not exists(
+    select 1 from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+    where n.nspname=e.schema_name and p.proname=e.name and p.proargtypes=e.args
+      and p.prosecdef=e.definer and p.provolatile='s' and p.proconfig=e.config
+      and encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')=e.body_sha256
+      and has_function_privilege('anon',p.oid,'execute')=('anon'=any(e.execute_roles))
+      and has_function_privilege('authenticated',p.oid,'execute')=('authenticated'=any(e.execute_roles))
+      and has_function_privilege('service_role',p.oid,'execute')=('service_role'=any(e.execute_roles))
+      and not exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+        where a.privilege_type='EXECUTE' and a.grantee<>p.proowner
+          and a.grantee not in(select oid from pg_catalog.pg_roles where rolname=any(e.execute_roles)))
+  )) as invalid_guard_functions,
+  (select count(*) from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='kova_private' and c.relkind in('r','p') and
+      (has_table_privilege('anon',c.oid,'select,insert,update,delete') or
+       has_table_privilege('authenticated',c.oid,'select,insert,update,delete'))) as browser_accessible_private_tables,
+  -- Authenticated needs USAGE to invoke the already scoped legacy helpers.
+  -- Neither browser role may create objects; anon must not look up private ones.
+  (has_schema_privilege('anon','kova_private','usage') or
+   has_schema_privilege('anon','kova_private','create') or
+   has_schema_privilege('authenticated','kova_private','create'))::int as browser_private_schema_exposure,
+  (select count(*) from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='kova_private' and p.proname in (
+      'require_digest','audit','legacy_mfa_required','verified_auth_user_for_email',
+      'lock_auth_session','rotate_security_session','auth_account_available',
+      'bind_primary_auth_challenge','guard_legacy_account_adoption',
+      'retire_legacy_password_on_owned_change','adopt_compatibility_candidate',
+      'bind_recovery_account_authority','legacy_principal_permitted','guard_legacy_adoption',
+      'retire_legacy_auth','retire_password_authority','guard_session_legacy_principal',
+      'site_authorized_session','issue_site_ticket_authorized'
+    ) and (has_function_privilege('anon',p.oid,'execute') or
+           has_function_privilege('authenticated',p.oid,'execute')))
+    as browser_private_auth_function_access,
+  (not exists(select 1 from pg_catalog.pg_db_role_setting s join pg_catalog.pg_roles r on r.oid=s.setrole
+    cross join lateral unnest(s.setconfig) setting
+    where r.rolname='authenticator' and s.setdatabase=(select oid from pg_catalog.pg_database where datname=current_database())
+      and setting='pgrst.db_pre_request=kova_auth_guard.check_request'))::int as missing_database_request_hook;

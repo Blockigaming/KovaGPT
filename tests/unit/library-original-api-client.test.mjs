@@ -45,6 +45,10 @@ function routeFixture() {
     "@/lib/ai/provider-transport.server.mjs": transport,
     "@/lib/library-original-policy.mjs": policy,
     "@/lib/runtime-env.server": { runtimeEnv: () => "https://fixture.supabase.co" },
+    "@/lib/library-private-delivery.server": {
+      handlePrivateLibraryImage: () => assert.fail("Unexpected image request"),
+      reauthorizeLibraryDelivery: async () => null,
+    },
     "@/lib/library-original-files.server.mjs": {
       publishOriginalLibraryDocument: async (_admin, user, input, options) => {
         if (state.fail) throw new Error("Private SQL contents");
@@ -173,7 +177,8 @@ test("browser original-file transport pins the initiating account and sends the 
     async (url, init) => {
       calls++;
       assert.equal(init.headers["X-Kova-Owner"], owner);
-      assert.equal(init.credentials, "omit");
+      assert.equal(init.credentials, "same-origin");
+      assert.equal(init.redirect, "error");
       assert.ok(init.body instanceof FormData);
       assert.equal(await init.body.get("file").text(), "%PDF-1.7 exact bytes");
       assert.equal(init.body.get("file").name, "Original.pdf");
@@ -193,4 +198,36 @@ test("browser original-file transport pins the initiating account and sends the 
     generation: gen,
   });
   assert.equal(calls, 1);
+});
+
+test("original downloads carry same-origin cookies and a captured owner without following redirects", async () => {
+  let requests = 0;
+  const api = load(
+    "src/lib/library-original-client.ts",
+    {
+      sonner: { toast: {} },
+      "@/integrations/supabase/client": {
+        supabase: {
+          auth: {
+            getSession: async () => ({
+              data: { session: { user: { id: owner }, access_token: "compatibility" } },
+            }),
+          },
+        },
+      },
+      "@/lib/endpoint-reliability.mjs": reliability,
+      "@/lib/library-original-policy.mjs": policy,
+    },
+    async (url, init) => {
+      requests++;
+      assert.equal(url, `/api/library/files?id=${id}&generation=${gen}`);
+      assert.equal(init.headers["X-Kova-Owner"], owner);
+      assert.equal(init.credentials, "same-origin");
+      assert.equal(init.redirect, "error");
+      return new Response("%PDF-1.7 original", { headers: { "Content-Type": "application/pdf" } });
+    },
+  );
+  const blob = await api.readOriginalLibraryFile(owner, id, gen, new AbortController().signal);
+  assert.equal(await blob.text(), "%PDF-1.7 original");
+  assert.equal(requests, 1);
 });

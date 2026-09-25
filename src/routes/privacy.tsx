@@ -60,16 +60,16 @@ function PrivacyPage() {
             </p>
             <ul>
               <li>
-                <strong>Account information:</strong> identifiers and profile claims supplied by
-                the configured sign-in provider, such as user ID and email.
+                <strong>Account information:</strong> identifiers and profile claims supplied by the
+                configured sign-in provider, such as user ID and email.
               </li>
               <li>
                 <strong>Content you submit:</strong> prompts, messages, files, images, project
                 content, connected-app requests, feedback, and support messages.
               </li>
               <li>
-                <strong>Saved content:</strong> account-backed items you choose to keep in
-                projects, Library, shared workspaces, or other storage-enabled features.
+                <strong>Saved content:</strong> account-backed items you choose to keep in projects,
+                Library, shared workspaces, or other storage-enabled features.
               </li>
               <li>
                 <strong>Billing information:</strong> subscription status and payment-provider
@@ -105,10 +105,9 @@ function PrivacyPage() {
             <p>
               The KovaGPT application does not include a Kova-owned model-training workflow.
               Third-party providers process data under the provider terms, Kova configuration, and
-              agreements that apply to that service at the time. Those terms and retention
-              practices can differ by provider and feature, so do not submit secrets or regulated
-              information unless you have independently confirmed the workflow is appropriate for
-              it.
+              agreements that apply to that service at the time. Those terms and retention practices
+              can differ by provider and feature, so do not submit secrets or regulated information
+              unless you have independently confirmed the workflow is appropriate for it.
             </p>
           </section>
 
@@ -126,12 +125,12 @@ function PrivacyPage() {
           <section id="local-history" data-legal-section className="legal-section">
             <h2>Local History, Temporary Chats, Projects, and Sharing</h2>
             <p>
-              Standard conversation history can be stored in your browser. Device-local history
-              does not automatically become a complete cloud archive or follow you to every device.
+              Standard conversation history can be stored in your browser. Device-local history does
+              not automatically become a complete cloud archive or follow you to every device.
               Account-backed project chats, files, Library items, and other saved features can be
               stored server-side. Temporary Chat is intended not to add the conversation to normal
-              history or memory, but its content still has to be processed to answer the request
-              and may appear in security or provider systems subject to their retention practices.
+              history or memory, but its content still has to be processed to answer the request and
+              may appear in security or provider systems subject to their retention practices.
             </p>
             <p>
               Content is not public merely because it is saved. If you create a share link, invite
@@ -175,9 +174,9 @@ function PrivacyPage() {
               Use the in-product delete controls for chats, projects, files, connections, or the
               account when those controls are available. The Settings data export covers the device
               data identified by that control; it is not a promise of an emailed or complete
-              provider-side archive. For an account-data request that is not covered in the
-              product, email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the
-              address associated with the account.
+              provider-side archive. For an account-data request that is not covered in the product,
+              email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the address
+              associated with the account.
             </p>
             <p>
               Kova may require identity or account verification before processing a deletion
@@ -193,8 +192,8 @@ function PrivacyPage() {
             <h2>Sale and Advertising</h2>
             <p>
               Kova does not sell the contents of your prompts, chats, projects, or files for
-              third-party advertising. External services used to operate the product receive data
-              as described in this policy and under their applicable terms.
+              third-party advertising. External services used to operate the product receive data as
+              described in this policy and under their applicable terms.
             </p>
           </section>
 

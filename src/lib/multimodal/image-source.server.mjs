@@ -11,6 +11,25 @@ const unavailable = () => {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 export async function assertImagePrincipal(auth, signal) {
   signal?.throwIfAborted();
+  if (auth.authProvider === "kova") {
+    if (!auth.emailVerified || typeof auth.revalidateSession !== "function") unavailable();
+    const bound = signal ?? AbortSignal.timeout(5000);
+    const [valid, fence] = await Promise.all([
+      waitForPromiseWithSignal(auth.revalidateSession(), bound),
+      waitForPromiseWithSignal(
+        auth.supabaseAdmin
+          .from("account_deletion_fences")
+          .select("user_id")
+          .eq("user_id", auth.userId)
+          .abortSignal(bound)
+          .maybeSingle(),
+        bound,
+      ),
+    ]);
+    if (valid !== true || fence.error || fence.data) unavailable();
+    bound.throwIfAborted();
+    return;
+  }
   const [user, fence] = await Promise.all([
     waitForPromiseWithSignal(auth.supabaseUser.auth.getUser(), signal),
     auth.supabaseAdmin

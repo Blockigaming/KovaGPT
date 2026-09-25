@@ -229,6 +229,22 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
       .abortSignal(AbortSignal.timeout(10000));
     if (active.error || !active.data || active.data.storage_path !== row.file_url)
       throw new Error("Image not found");
+    if (context.authProvider === "kova") {
+      if (
+        active.data.owner_id !== context.userId ||
+        active.data.state !== "ready" ||
+        !z.string().uuid().safeParse(active.data.generation).success
+      )
+        throw new Error("Image not found");
+      return {
+        url: `/api/library/files?${new URLSearchParams({
+          kind: "image",
+          id: data.id,
+          owner: context.userId,
+          generation: active.data.generation,
+        })}`,
+      };
+    }
     const { data: signed, error: sErr } = await context.supabase.storage
       .from(BUCKET)
       .createSignedUrl(row.file_url, 60);

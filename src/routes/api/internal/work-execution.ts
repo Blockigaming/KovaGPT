@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -78,21 +79,8 @@ export const Route = createFileRoute("/api/internal/work-execution")({
             record.data.state.runnerBuild !== configuration.build
           )
             return json({ error: "work_run_unavailable" }, 404);
-          const owner = await supabaseAdmin.auth.admin.getUserById(record.data.owner_id);
-          const user = owner.data?.user as {
-            id: string;
-            email_confirmed_at?: string;
-            banned_until?: string;
-            deleted_at?: string;
-          } | null;
-          if (
-            owner.error ||
-            !user ||
-            !user.email_confirmed_at ||
-            user.deleted_at ||
-            (user.banned_until && Date.parse(user.banned_until) > Date.now())
-          )
-            return json({ error: "work_owner_unavailable" }, 403);
+          const user = await readAccountIdentity(supabaseAdmin, record.data.owner_id);
+          if (!user) return json({ error: "work_owner_unavailable" }, 403);
           const url = runtimeEnv("SUPABASE_URL"),
             publishable = runtimeEnv("SUPABASE_PUBLISHABLE_KEY");
           if (!url || !publishable) return json({ error: "work_auth_unavailable" }, 503);

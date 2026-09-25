@@ -27,10 +27,13 @@ async function accountRequest(path: string, init: RequestInit, expectedUserId: s
     const session = await sessionFor(expectedUserId, controller.signal);
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${session.access_token}`);
+    headers.set("X-Kova-Owner", expectedUserId);
     const response = await fetch(path, {
       ...init,
       headers,
-      credentials: path.startsWith("/api/google/auth") ? "same-origin" : "omit",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
       signal: controller.signal,
     });
 

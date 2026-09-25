@@ -11,6 +11,7 @@ import {
   validateCanonicalHistoryCapture,
   validateCheckedOutMigrationSet,
   validateEquivalentSupplement,
+  validateForwardExtension,
 } from "../../scripts/release/canonical-history-decision.mjs";
 
 const path = "docs/release-reconciliation/canonical-history-actions-20260923.json";
@@ -180,6 +181,45 @@ test("checked-out migration validation rejects edited and additional SQL files",
     () =>
       validateCheckedOutMigrationSet([migration], [filename, "20260901000001_untracked.sql"], () =>
         Buffer.from(content),
+      ),
+    /canonical_history_checked_out_migration_set_changed/u,
+  );
+});
+
+test("the auth extension cannot rewrite the pinned 157 migrations", () => {
+  const baseline = JSON.parse(
+    spawnSync("git", ["show", "5734b9e3d96224b06cdf2bc6f824078738b86ce1:release-migrations.json"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    }).stdout,
+  );
+  const current = JSON.parse(readFileSync("release-migrations.json", "utf8"));
+  const files = readdirSync("supabase/migrations");
+  const readMigration = (name) => readFileSync(join(ROOT, "supabase/migrations", name));
+  assert.doesNotThrow(() => validateForwardExtension(baseline, current, files, readMigration));
+  assert.throws(
+    () =>
+      validateForwardExtension(
+        baseline,
+        {
+          ...current,
+          migrations: [
+            { ...current.migrations[0], destructive: true },
+            ...current.migrations.slice(1),
+          ],
+        },
+        files,
+        readMigration,
+      ),
+    /canonical_history_source_prefix_changed/u,
+  );
+  assert.throws(
+    () =>
+      validateForwardExtension(
+        baseline,
+        current,
+        [...files, "20260926000000_extra.sql"],
+        readMigration,
       ),
     /canonical_history_checked_out_migration_set_changed/u,
   );

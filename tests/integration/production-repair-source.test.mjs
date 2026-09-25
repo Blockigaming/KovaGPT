@@ -43,9 +43,9 @@ test("moderation lookup failure is fail-closed and webhook bodies are bounded", 
 });
 
 test("password recovery waits for the provider exchange instead of racing it", () => {
-  assert.match(recovery, /PASSWORD_RECOVERY/);
+  assert.match(recovery, /completeOAuthSessionFromUrl\("password recovery", controller\.signal/);
   assert.match(recovery, /markPasswordRecoveryFlow/);
-  assert.match(recovery, /hasRecentPasswordRecoveryFlow/);
+  assert.match(recovery, /recoveryOnly: true/);
   assert.match(recovery, /15_000/);
   assert.doesNotMatch(recovery, /event === "SIGNED_IN"/);
   assert.doesNotMatch(recovery, /setTimeout\(check, 200\)/);

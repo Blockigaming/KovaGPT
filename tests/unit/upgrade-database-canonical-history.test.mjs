@@ -29,6 +29,12 @@ test("canonical history rehearsal pins exactly 80 bodies and 3 equivalent histor
   assert.equal(dry.baselineVersions, 98);
   assert.equal(dry.pendingVersions.length, 83);
   assert.equal(dry.replayPendingVersions.length, 80);
+  const extensionVersions = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")))
+    .migrations.slice(157)
+    .map((entry) => entry.timestamp);
+  assert.equal(extensionVersions.length, 28);
+  assert.deepEqual(dry.canonicalHistoryProposal.deferredExtensionVersions, extensionVersions);
+  assert.ok(dry.replayPendingVersions.every((version) => !extensionVersions.includes(version)));
   assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
   assert.equal(dry.canonicalHistoryProposal.expectedFinalLedgerCount, 181);
   assert.equal(dry.canonicalHistoryProposal.productionReleaseReady, false);
@@ -48,6 +54,18 @@ test("canonical history proposal rejects a changed body before local commands", 
   assert.throws(
     () => extendProposedCanonicalHistory(plan),
     /upgrade_canonical_history_source_mismatch/u,
+  );
+});
+
+test("canonical history proposal rejects a changed deferred migration", () => {
+  const plan = extendCurrentHistory(
+    planUpgrade(),
+    readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
+  );
+  plan.forward.find((row) => row.version === "20260925000821").sha256 = "0".repeat(64);
+  assert.throws(
+    () => extendProposedCanonicalHistory(plan),
+    /upgrade_canonical_history_extension_mismatch/u,
   );
 });
 

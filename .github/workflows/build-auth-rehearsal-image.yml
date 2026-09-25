@@ -7,6 +7,10 @@ on:
         description: "Migration branch, tag, or commit SHA to build"
         required: true
         type: string
+      rehearsal_publishable_key:
+        description: "Browser-safe sb_publishable key for the isolated Auth Rehearsal project"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,6 +21,8 @@ env:
   ACR_NAME: kovagptacr
   ACR_LOGIN_SERVER: kovagptacr-dte9hugbhjghcyb8.azurecr.io
   IMAGE_REPOSITORY: kovagpt-web-auth-rehearsal
+  REHEARSAL_PROJECT_REF: oztdrjtdglkizlewnulh
+  PRODUCTION_PROJECT_REF: mfbycmbjygcfkrsuepxf
 
 jobs:
   build-and-push:
@@ -38,24 +44,44 @@ jobs:
           set -euo pipefail
 
           SOURCE_SHA="$(git rev-parse HEAD)"
+          SOURCE_TREE="$(git rev-parse HEAD^{tree})"
           IMAGE_TAG="auth-rehearsal-${SOURCE_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           IMAGE_REF="${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}:${IMAGE_TAG}"
 
           echo "sha=${SOURCE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "tree=${SOURCE_TREE}" >> "$GITHUB_OUTPUT"
           echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify Auth rehearsal receiver exists
+      - name: Verify owned Auth rehearsal routes exist
         shell: bash
         run: |
           set -euo pipefail
 
-          if ! grep -R --line-number \
-            --exclude-dir=node_modules \
-            --exclude-dir=.git \
-            'auth-migration/rehearsal' \
-            src; then
-            echo "The selected source does not contain the Auth rehearsal receiver."
+          for path in \
+            src/routes/api/auth/session.ts \
+            src/routes/api/auth/recovery/request.ts \
+            src/lib/kova-auth-http.server.ts \
+            src/lib/kova-auth-store.server.ts; do
+            if [ ! -f "$path" ]; then
+              echo "::error::Missing owned Auth rehearsal source: $path"
+              exit 1
+            fi
+          done
+
+      - name: Verify isolated dual-mode browser configuration
+        shell: bash
+        env:
+          REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          if [[ ! "$REHEARSAL_PUBLISHABLE_KEY" =~ ^sb_publishable_[A-Za-z0-9_-]{16,}$ ]]; then
+            echo "::error::A valid Auth Rehearsal publishable key is required."
+            exit 1
+          fi
+          if [ "$REHEARSAL_PROJECT_REF" = "$PRODUCTION_PROJECT_REF" ]; then
+            echo "::error::Auth Rehearsal must not target production."
             exit 1
           fi
 
@@ -96,12 +122,23 @@ jobs:
         shell: bash
         env:
           IMAGE_REF: ${{ steps.source.outputs.image_ref }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_TREE: ${{ steps.source.outputs.tree }}
+          REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
         run: |
           set -euo pipefail
 
           docker build \
             --platform linux/amd64 \
             --file Dockerfile \
+            --build-arg KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            --build-arg KOVA_SOURCE_TREE="$SOURCE_TREE" \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
+            --build-arg KOVA_EXPECTED_SUPABASE_PROJECT_REF="$REHEARSAL_PROJECT_REF" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$PRODUCTION_PROJECT_REF" \
+            --build-arg VITE_SUPABASE_URL="https://${REHEARSAL_PROJECT_REF}.supabase.co" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$REHEARSAL_PUBLISHABLE_KEY" \
+            --build-arg VITE_KOVA_AUTH_MODE=dual \
             --tag "$IMAGE_REF" \
             .
 

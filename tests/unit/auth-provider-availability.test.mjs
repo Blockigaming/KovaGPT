@@ -18,9 +18,18 @@ test("the probe uses only the publishable key and never a service role secret", 
 });
 
 test("the sign-in dialog only enables Google once the deployment confirms it", () => {
-  assert.match(dialog, /googleAvailable = providers\.resolved && providers\.google/);
-  assert.match(dialog, /googleUnavailable = providers\.resolved && !providers\.google/);
+  assert.match(
+    dialog,
+    /googleAvailable = useKovaAuth\s+\? import\.meta\.env\.VITE_KOVA_GOOGLE_AUTH_ENABLED === "true"\s+: providers\.resolved && providers\.google/,
+  );
+  assert.match(
+    dialog,
+    /googleUnavailable = useKovaAuth\s+\? !googleAvailable\s+: providers\.resolved && !providers\.google/,
+  );
   assert.match(dialog, /disabled=\{loading \|\| !googleAvailable\}/);
+  // The configured entrypoint returns to the canonical public origin to set its
+  // browser cookie before beginning OAuth; aliases must not invent an auth host.
+  assert.match(dialog, /new URL\("\/api\/auth\/google\/start", browserKovaAuthOrigin\(\)\)/);
 });
 
 test("the dialog has no unreachable password step and defers passwords to /auth", () => {

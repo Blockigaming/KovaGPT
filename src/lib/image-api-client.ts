@@ -7,6 +7,13 @@ export async function imageApiRequest(
   signal: AbortSignal,
   body?: unknown,
 ) {
+  // Only this same-origin endpoint may receive cookies or a legacy bearer.
+  if (
+    typeof path !== "string" ||
+    path.length > 2048 ||
+    !/^\/api\/generate-image(?:\?[^#\\\s]*)?$/u.test(path)
+  )
+    throw new Error("Invalid image service endpoint.");
   const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(50_000)]);
   const sessionResult = await new Promise<Awaited<ReturnType<typeof supabase.auth.getSession>>>(
     (resolve, reject) => {
@@ -28,10 +35,12 @@ export async function imageApiRequest(
   const response = await fetch(path, {
     method: body === undefined ? "GET" : "POST",
     signal: requestSignal,
-    credentials: "omit",
+    credentials: "same-origin",
+    redirect: "error",
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${session.access_token}`,
+      "X-Kova-Owner": ownerId,
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
