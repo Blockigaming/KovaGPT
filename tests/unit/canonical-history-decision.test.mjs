@@ -55,7 +55,7 @@ test("canonical inputs use the supplied source readers and work outside the chec
     if (args.includes("--dry-run")) {
       const result = JSON.parse(run.stdout);
       assert.equal(result.baselineVersions, 98);
-      assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 181);
+      assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 182);
       assert.equal(result.executed, false);
     }
   }
@@ -67,12 +67,12 @@ test("the decision accounts for each source-only and remote-only version at the 
   assert.deepEqual(decision.counts, {
     shared: 74,
     remoteOnly: 24,
-    sourceOnly: 83,
+    sourceOnly: 84,
     equivalentRemoteRows: 5,
     blockedRemoteRows: 19,
-    conditionalForwardBodies: 80,
+    conditionalForwardBodies: 81,
     conditionalRecordOnlyVersions: 3,
-    proposedFinalLedgerCount: 181,
+    proposedFinalLedgerCount: 182,
   });
   assert.deepEqual(
     decision.sourceOnly
