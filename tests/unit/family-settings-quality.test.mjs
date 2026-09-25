@@ -332,6 +332,7 @@ function familyRead(results) {
       }),
     },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: auth },
+    "@/lib/supabase-loose": { loose: (client) => client },
     zod: { z: {} },
   });
   return {

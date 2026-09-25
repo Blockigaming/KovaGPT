@@ -16,6 +16,7 @@ function fixture({ failure = false } = {}) {
   const modules = {
     zod: { z },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: "verified-middleware" },
+    "@/lib/supabase-loose": { loose: (client) => client },
     "./response-sources.ts": { normalizeResponseSources: () => [] },
     "@tanstack/react-start": {
       createServerFn: () => {
