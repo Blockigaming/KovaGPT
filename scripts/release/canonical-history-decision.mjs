@@ -190,8 +190,8 @@ export function buildCanonicalHistoryDecision({
           entry.timestamp === "20260925000821"
             ? "not_rehearsed_in_historical_98_row_upgrade"
             : entry.timestamp === "20260903145843"
-            ? "body_executed_in_baseline_under_remote_version"
-            : "body_replayed_forward_in_isolated_database",
+              ? "body_executed_in_baseline_under_remote_version"
+              : "body_replayed_forward_in_isolated_database",
         reviewStatus: "blocked_pending_per_version_prestate_and_effect_review",
         expectedLedgerAddition: entry.timestamp,
       };
