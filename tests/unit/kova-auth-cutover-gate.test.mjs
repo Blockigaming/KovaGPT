@@ -37,7 +37,8 @@ const evidence = () => ({
     unguarded_rls_tables: 0,
     invalid_guard_functions: 0,
     browser_accessible_private_tables: 0,
-    browser_private_schema_access: 0,
+    browser_private_schema_exposure: 0,
+    browser_private_auth_function_access: 0,
     missing_database_request_hook: 0,
   },
   serviceOnlyFunctions: Object.fromEntries(
@@ -115,6 +116,8 @@ test("cutover receipt fails closed on missing proof, public function access and 
       (item.serviceOnlyFunctions.kova_auth_legacy_adoption_gap_count.argumentTypes = "timestamptz"),
     (item) => (item.deployedChecks.hosted_bearer_denied_after_retirement = false),
     (item) => (item.revocationProof.unguarded_rls_tables = 1),
+    (item) => (item.revocationProof.browser_private_schema_exposure = 1),
+    (item) => (item.revocationProof.browser_private_auth_function_access = 1),
     (item) => (item.revocationProof.scoped_rls_tables = 0),
     (item) =>
       (item.serviceOnlyFunctions.kova_auth_validate_compatibility_session.anonExecute = true),

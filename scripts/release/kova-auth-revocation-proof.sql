@@ -41,8 +41,23 @@ select
     where n.nspname='kova_private' and c.relkind in('r','p') and
       (has_table_privilege('anon',c.oid,'select,insert,update,delete') or
        has_table_privilege('authenticated',c.oid,'select,insert,update,delete'))) as browser_accessible_private_tables,
+  -- Authenticated needs USAGE to invoke the already scoped legacy helpers.
+  -- Neither browser role may create objects; anon must not look up private ones.
   (has_schema_privilege('anon','kova_private','usage') or
-   has_schema_privilege('authenticated','kova_private','usage'))::int as browser_private_schema_access,
+   has_schema_privilege('anon','kova_private','create') or
+   has_schema_privilege('authenticated','kova_private','create'))::int as browser_private_schema_exposure,
+  (select count(*) from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='kova_private' and p.proname in (
+      'require_digest','audit','legacy_mfa_required','verified_auth_user_for_email',
+      'lock_auth_session','rotate_security_session','auth_account_available',
+      'bind_primary_auth_challenge','guard_legacy_account_adoption',
+      'retire_legacy_password_on_owned_change','adopt_compatibility_candidate',
+      'bind_recovery_account_authority','legacy_principal_permitted','guard_legacy_adoption',
+      'retire_legacy_auth','retire_password_authority','guard_session_legacy_principal',
+      'site_authorized_session','issue_site_ticket_authorized'
+    ) and (has_function_privilege('anon',p.oid,'execute') or
+           has_function_privilege('authenticated',p.oid,'execute')))
+    as browser_private_auth_function_access,
   (not exists(select 1 from pg_catalog.pg_db_role_setting s join pg_catalog.pg_roles r on r.oid=s.setrole
     cross join lateral unnest(s.setconfig) setting
     where r.rolname='authenticator' and s.setdatabase=(select oid from pg_catalog.pg_database where datname=current_database())

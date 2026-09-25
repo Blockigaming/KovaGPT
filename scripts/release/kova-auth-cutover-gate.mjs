@@ -43,7 +43,8 @@ const violationFields = Object.freeze([
   "unguarded_rls_tables",
   "invalid_guard_functions",
   "browser_accessible_private_tables",
-  "browser_private_schema_access",
+  "browser_private_schema_exposure",
+  "browser_private_auth_function_access",
   "missing_database_request_hook",
 ]);
 const serviceOnlyFunctions = Object.freeze([

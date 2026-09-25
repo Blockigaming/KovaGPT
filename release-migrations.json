@@ -3882,7 +3882,7 @@
       "order": 185,
       "filename": "20260925143706_kova_restore_legacy_private_helper_usage.sql",
       "timestamp": "20260925143706",
-      "sha256": "2d412faa49148f6ec733412dd7cd7e920671b0df9842ff70333c178c46083387",
+      "sha256": "0da3875693fabfef5814df83117c1eb4ab7ba5e0dbc36cc424951ecde0115e97",
       "tables": [],
       "functions": [],
       "destructive": false,

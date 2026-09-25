@@ -17,8 +17,12 @@ begin
         'require_digest', 'audit', 'legacy_mfa_required',
         'verified_auth_user_for_email', 'lock_auth_session',
         'rotate_security_session', 'auth_account_available',
-        'legacy_principal_permitted', 'retire_legacy_auth',
-        'retire_password_authority'
+        'bind_primary_auth_challenge', 'guard_legacy_account_adoption',
+        'retire_legacy_password_on_owned_change', 'adopt_compatibility_candidate',
+        'bind_recovery_account_authority', 'legacy_principal_permitted',
+        'guard_legacy_adoption', 'retire_legacy_auth', 'retire_password_authority',
+        'guard_session_legacy_principal', 'site_authorized_session',
+        'issue_site_ticket_authorized'
       )
       and has_function_privilege('authenticated', p.oid, 'EXECUTE')
   ) then

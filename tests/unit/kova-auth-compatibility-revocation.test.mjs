@@ -545,6 +545,19 @@ test("the aggregate release proof rejects later unguarded tables and weakened po
     (error) => error === rollback,
   );
   assert.deepEqual(await proof(), original);
+  await assert.rejects(
+    db.transaction(async (tx) => {
+      await tx.exec("grant usage on schema kova_private to authenticated");
+      const scoped = (await tx.query(sql)).rows[0];
+      assert.equal(Number(scoped.browser_private_schema_exposure), 0);
+      assert.equal(Number(scoped.browser_private_auth_function_access), 0);
+      await tx.exec("grant execute on function kova_private.require_digest(text) to authenticated");
+      assert.equal(Number((await tx.query(sql)).rows[0].browser_private_auth_function_access), 1);
+      throw rollback;
+    }),
+    (error) => error === rollback,
+  );
+  assert.deepEqual(await proof(), original);
   for (const target of [
     "kova_private.legacy_principal_permitted",
     "public.kova_auth_legacy_session_allowed",
