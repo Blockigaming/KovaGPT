@@ -435,7 +435,9 @@ jobs:
 
   isolated-database:
     needs: verify
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_database == 'true'
+    # The isolated local PostgreSQL rehearsal can provide source evidence even
+    # when an unrelated unit test fails. A failed verify job still blocks merge.
+    if: always() && needs.verify.outputs.run_database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -450,7 +452,7 @@ jobs:
       - run: npm run release:db:isolated
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade
-      - name: Rehearse proposed 80-body and 3-history-only sequence
+      - name: Rehearse proposed canonical history sequence
         run: node scripts/release/upgrade-database.mjs --canonical-history
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence
