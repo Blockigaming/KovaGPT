@@ -128,9 +128,16 @@ synthetic two-user data, applies only the other 81 source migration bodies with
 `migration up --local --include-all`, and requires exactly 182 rows before
 cleaning up. The proposed result is written separately to
 `artifacts/release/upgrade-canonical-history.json`; the current-tree control
-rehearsal would stay in `upgrade-database.json`. The previously hosted receipts
-predate the added body. A new exact-tree CI run must execute and upload both;
-a failed repair or changed inventory fails before the 81 bodies.
+rehearsal would stay in `upgrade-database.json`. The earlier 180- and 181-row
+receipts predate the added body. The
+[exact-tree CI run 36188483959](https://github.com/Blockigaming/KovaGPT/actions/runs/36188483959)
+at `c716094f21c50f5d12ab6a5e417fcec5ff6b8e30` completed the isolated
+PostgreSQL 17 job and uploaded artifact `10887950700` (ZIP SHA-256
+`4d07914439bede494ba952f61a3506c9e22df0db4b8615feb3215dd13f0a8d6e`).
+Its separate canonical receipt records the synthetic 98 → 101 → 182 sequence,
+three local history-only records, and 81 forward bodies. The full CI still fails
+in ten product unit tests; this synthetic result does not prove the production
+history repair, real-backup restore, or the nineteen remote-only mappings.
 
 The repair mechanism is demonstrated **only against disposable local history**.
 The pinned September 18 production capture, remote-only structural gaps,

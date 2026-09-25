@@ -104,8 +104,15 @@ final M23 traffic cutover follows later. If a safe canary cannot be arranged,
 M19 remains blocked and M23 cannot be claimed. M20's 81-body queue is a proposal, not a
 verified or approved production sequence. Recheck the source and live ledger on
 the final approved SHA; the earlier isolated 180-version rehearsal preceded
-the September 25 source migration. Its 181-version canonical receipt is historical;
-the revised 182-row proposal requires a fresh exact-tree hosted rehearsal.
+the September 25 source migration. Its 181-version canonical receipt is historical.
+The exact-tree isolated PostgreSQL 17 run
+[36188483959](https://github.com/Blockigaming/KovaGPT/actions/runs/36188483959)
+at `c716094f21c50f5d12ab6a5e417fcec5ff6b8e30` produced a synthetic
+98 → 101 → 182 receipt in artifact `10887950700` (ZIP SHA-256
+`4d07914439bede494ba952f61a3506c9e22df0db4b8615feb3215dd13f0a8d6e`).
+It still does not establish a successful real-backup restore, production
+pre-state contracts, or any of the nineteen schema proofs; full CI failed on ten
+product unit tests.
 
 The protected PLAN deliberately prints `ResourceIdOnly`, which cannot expose
 ingress, environment, secret-reference, or traffic property changes. Before an
